@@ -33,6 +33,7 @@ from mindsdb_sql.parser.ast import (
     CommitTransaction,
     StartTransaction,
     BinaryOperation,
+    NullConstant,
     Identifier,
     Parameter,
     Describe,
@@ -479,51 +480,133 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         return cleaned_predict_column_names
 
-    def answer_describe_predictor(self, predictor_name):
+    def _get_model_info(self, data):
+        models_data = data.get("submodel_data", [])
+        if models_data == []:
+            raise ErBadTableError("predictor doesn't contain enough data to generate 'model' attribute")
+        data = []
+        for model in models_data:
+            m_data = []
+            m_data.append(model["name"])
+            m_data.append(model["accuracy"])
+            m_data.append(1 if model["is_best"] else 0)
+            data.append(m_data)
+        return data
+
+    def _get_features_info(self, data):
+        ai_info = data.get('json_ai', {})
+        if ai_info == {}:
+            raise ErBadTableError("predictor doesn't contain enough data to generate 'feature' attribute.")
+        data = []
+        dtype_dict = ai_info["dtype_dict"]
+        for column in dtype_dict:
+            c_data = []
+            c_data.append(column)
+            c_data.append(dtype_dict[column])
+            c_data.append(ai_info["encoders"][column]["module"])
+            if ai_info["encoders"][column]["args"].get("is_target", "False") == "True":
+                c_data.append("target")
+            else:
+                c_data.append("feature")
+            data.append(c_data)
+        return data
+
+    def answer_describe_predictor(self, predictor_value):
+        predictor_attr = None
+        if isinstance(predictor_value, (list, tuple)):
+            predictor_name = predictor_value[0]
+            predictor_attr = predictor_value[1]
+        else:
+            predictor_name = predictor_value
         model_interface = self.session.model_interface
         models = model_interface.get_models()
         if predictor_name not in [x['name'] for x in models]:
             raise ErBadTableError(f"Can't describe predictor. There is no predictor with name '{predictor_name}'")
         description = model_interface.get_model_description(predictor_name)
-        description = [
-            description['accuracies'],
-            description['column_importances'],
-            description['outputs'],
-            description['inputs'],
-            description['datasource'],
-            description['model']
-        ]
-        packages = self.get_tabel_packets(
-            columns=[{
-                'table_name': '',
-                'name': 'accuracies',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'column_importances',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': "outputs",
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'inputs',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'datasource',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'model',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }],
-            data=[description]
-        )
+
+        if predictor_attr is None:
+            description = [
+                description['accuracies'],
+                description['column_importances'],
+                description['outputs'],
+                description['inputs'],
+                description['datasource'],
+                description['model']
+            ]
+            packages = self.get_tabel_packets(
+                columns=[{
+                    'table_name': '',
+                    'name': 'accuracies',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': 'column_importances',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': "outputs",
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': 'inputs',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': 'datasource',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': 'model',
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }],
+                data=[description]
+            )
+        else:
+            data = model_interface.get_model_data(predictor_name)
+            if predictor_attr == "features":
+                data = self._get_features_info(data)
+                packages = self.get_tabel_packets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'column',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'type',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': "encoder",
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'role',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=data
+                )
+            elif predictor_attr == "model":
+                data = self._get_model_info(data)
+                packages = self.get_tabel_packets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'name',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'performance',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': "selected",
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=data
+                )
+            else:
+                raise ErNotSupportedYet("DESCRIBE '%s' predictor attribute is not supported yet" % predictor_attr)
         packages.append(self.last_packet())
         self.send_package_group(packages)
-        return
 
     def answer_retrain_predictor(self, predictor_name):
         model_interface = self.session.model_interface
@@ -1209,7 +1292,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.answer_drop_datasource(ds_name)
             return
         elif type(statement) == Describe:
-            self.answer_describe_predictor(statement.value.parts[-1])
+            if statement.value.parts[-1] in ("model", "features"):
+                self.answer_describe_predictor(statement.value.parts[-2:])
+            else:
+                self.answer_describe_predictor(statement.value.parts[-1])
             return
         elif type(statement) == RetrainPredictor:
             self.answer_retrain_predictor(statement.name.parts[-1])
@@ -1567,7 +1653,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         columns = []
         data = []
         for target in statement.targets:
-            if type(target) == Variable:
+            target_type = type(target)
+            if target_type == Variable:
                 var_name = target.value
                 column_name = f'@@{var_name}'
                 column_alias = target.alias or column_name
@@ -1577,7 +1664,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     result = ''
                 else:
                     result = result[0]
-            elif type(target) == Function:
+            elif target_type == Function:
                 functions_results = {
                     'connection_id': self.connection_id,
                     'database': self.session.database,
@@ -1589,14 +1676,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 column_name = f'{target.op}()'
                 column_alias = target.alias or column_name
                 result = functions_results[function_name]
-            elif type(target) == Constant:
+            elif target_type == Constant:
                 result = target.value
                 column_name = str(result)
                 column_alias = '.'.join(target.alias.parts) if type(target.alias) == Identifier else column_name
-            elif type(target) == Identifier:
+            elif target_type == NullConstant:
+                result = None
+                column_name = 'NULL'
+                column_alias = 'NULL'
+            elif target_type == Identifier:
                 result = '.'.join(target.parts)
                 column_name = str(result)
                 column_alias = '.'.join(target.alias.parts) if type(target.alias) == Identifier else column_name
+            else:
+                raise Exception(f'Unknown constant type: {target_type}')
 
             columns.append({
                 'table_name': '',

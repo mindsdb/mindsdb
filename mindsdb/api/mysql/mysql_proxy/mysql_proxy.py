@@ -819,7 +819,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             )
 
             query = SQLQuery(
-                str(new_statement),
+                new_statement,
                 session=self.session
             )
 
@@ -1300,113 +1300,145 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif type(statement) == RetrainPredictor:
             self.answer_retrain_predictor(statement.name.parts[-1])
             return
-        elif type(statement) == Show or keyword == 'show':
+        elif type(statement) == Show:
             sql_category = statement.category.lower()
-            condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition
-            expression = statement.expression
             if sql_category == 'predictors':
-                if expression is not None:
-                    raise SqlApiException("'SHOW PREDICTORS' query should be used without filters")
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
                 new_statement = Select(
                     targets=[Star()],
-                    from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors'])
+                    from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors']),
+                    where=where
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
             elif sql_category == 'views':
-                schema = 'views'
+                where = BinaryOperation('and', args=[
+                    BinaryOperation('=', args=[Identifier('table_schema'), Constant('views')]),
+                    BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
+                ])
+                if statement.where is not None:
+                    where = BinaryOperation('and', args=[where, statement.where])
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('View'), Constant(statement.like)])
+                    where = BinaryOperation('and', args=[where, like])
+
                 new_statement = Select(
                     targets=[Identifier(parts=['table_name'], alias=Identifier('View'))],
                     from_table=Identifier(parts=['information_schema', 'TABLES']),
-                    where=BinaryOperation('and', args=[
-                        BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
-                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
-                    ])
+                    where=where
                 )
 
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
                 return
             elif sql_category == 'plugins':
-                if expression is not None:
+                if statement.where is not None or statement.like:
                     raise SqlApiException("'SHOW PLUGINS' query should be used without filters")
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=['information_schema', 'PLUGINS'])
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
                 return
             elif sql_category in ('databases', 'schemas'):
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('Database'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
+
                 new_statement = Select(
                     targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
-                    from_table=Identifier(parts=['information_schema', 'SCHEMATA'])
+                    from_table=Identifier(parts=['information_schema', 'SCHEMATA']),
+                    where=where
                 )
-                if condition == 'like':
-                    new_statement.where = BinaryOperation('like', args=[Identifier('schema_name'), expression])
-                elif condition is not None:
-                    raise ErNotSupportedYet(f'Not implemented: {sql}')
+                if statement.where is not None:
+                    new_statement.where = statement.where
 
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
                 return
             elif sql_category == 'datasources':
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
                 new_statement = Select(
                     targets=[Star()],
-                    from_table=Identifier(parts=['mindsdb', 'datasources'])
+                    from_table=Identifier(parts=['mindsdb', 'datasources']),
+                    where=where
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
                 return
             elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
-                if condition == 'from':
-                    schema = expression.parts[0]
-                elif condition is not None:
-                    raise SqlApiException(f'Unknown condition in query: {statement}')
+                where = BinaryOperation('and', args=[
+                    BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
+                    BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
+                ])
+                if statement.where is not None:
+                    where = BinaryOperation('and', args=[statement.where, where])
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier(f'Tables_in_{schema}'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
 
                 new_statement = Select(
                     targets=[Identifier(parts=['table_name'], alias=Identifier(f'Tables_in_{schema}'))],
                     from_table=Identifier(parts=['information_schema', 'TABLES']),
-                    where=BinaryOperation('and', args=[
-                        BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
-                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
-                    ])
+                    where=where
                 )
 
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
                 return
             elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
+
                 new_statement = Select(
                     targets=[Identifier(parts=['Variable_name']), Identifier(parts=['Value'])],
                     from_table=Identifier(parts=['dataframe']),
+                    where=where
                 )
-
-                if condition == 'like':
-                    new_statement.where = BinaryOperation('like', args=[Identifier('Variable_name'), expression])
-                elif condition == 'where':
-                    new_statement.where = expression
-                elif condition is not None:
-                    raise SqlApiException(f'Unknown condition in query: {statement}')
 
                 data = {}
                 is_session = 'session' in sql_category
@@ -1465,9 +1497,33 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB' AND Name LIKE '%';
                 self.answer_function_status()
                 return
-            elif 'show index from' in sql_lower:
-                # SHOW INDEX FROM `ny_output` FROM `data`;
-                self.answer_show_index()
+            elif sql_category == 'index':
+                new_statement = Select(
+                    targets=[
+                        Identifier('TABLE_NAME', alias=Identifier('Table')),
+                        Identifier('NON_UNIQUE', alias=Identifier('Non_unique')),
+                        Identifier('INDEX_NAME', alias=Identifier('Key_name')),
+                        Identifier('SEQ_IN_INDEX', alias=Identifier('Seq_in_index')),
+                        Identifier('COLUMN_NAME', alias=Identifier('Column_name')),
+                        Identifier('COLLATION', alias=Identifier('Collation')),
+                        Identifier('CARDINALITY', alias=Identifier('Cardinality')),
+                        Identifier('SUB_PART', alias=Identifier('Sub_part')),
+                        Identifier('PACKED', alias=Identifier('Packed')),
+                        Identifier('NULLABLE', alias=Identifier('Null')),
+                        Identifier('INDEX_TYPE', alias=Identifier('Index_type')),
+                        Identifier('COMMENT', alias=Identifier('Comment')),
+                        Identifier('INDEX_COMMENT', alias=Identifier('Index_comment')),
+                        Identifier('IS_VISIBLE', alias=Identifier('Visible')),
+                        Identifier('EXPRESSION', alias=Identifier('Expression'))
+                    ],
+                    from_table=Identifier(parts=['information_schema', 'STATISTICS']),
+                    where=statement.where
+                )
+                query = SQLQuery(
+                    new_statement,
+                    session=self.session
+                )
+                self.answer_select(query)
                 return
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif 'show create table' in sql_lower:
@@ -1476,39 +1532,23 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.answer_show_create_table(table)
                 return
             elif sql_category in ('character set', 'charset'):
-                charset = None
-                if condition == 'where':
-                    if type(expression) == BinaryOperation:
-                        if expression.op == '=':
-                            if type(expression.args[0]) == Identifier:
-                                if expression.args[0].parts[0].lower() == 'charset':
-                                    charset = expression.args[1].value
-                                else:
-                                    raise SqlApiException(
-                                        f'Error during processing query: {sql}\n'
-                                        f"Only filter by 'charset' supported 'WHERE', but '{expression.args[0].parts[0]}' found"
-                                    )
-                            else:
-                                raise SqlApiException(
-                                    f'Error during processing query: {sql}\n'
-                                    f"Expected identifier in 'WHERE', but '{expression.args[0]}' found"
-                                )
-                        else:
-                            raise SqlApiException(
-                                f'Error during processing query: {sql}\n'
-                                f"Expected '=' comparison in 'WHERE', but '{expression.op}' found"
-                            )
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('CHARACTER_SET_NAME'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
                     else:
-                        raise SqlApiException(
-                            f'Error during processing query: {sql}\n'
-                            f"Expected binary operation in 'WHERE', but '{expression}' found"
-                        )
-                elif condition is not None:
-                    raise SqlApiException(
-                        f'Error during processing query: {sql}\n'
-                        f"Only 'WHERE' filter supported, but '{condition}' found"
-                    )
-                self.answer_show_charset(charset)
+                        where = like
+                new_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(parts=['INFORMATION_SCHEMA', 'CHARACTER_SETS']),
+                    where=where
+                )
+                query = SQLQuery(
+                    new_statement,
+                    session=self.session
+                )
+                self.answer_select(query)
                 return
             elif sql_category == 'warnings':
                 self.answer_show_warnings()
@@ -1519,21 +1559,46 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     from_table=Identifier(parts=['information_schema', 'ENGINES'])
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
                 return
             elif sql_category == 'collation':
-                self.answer_show_collation()
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('Collation'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
+                new_statement = Select(
+                    targets=[
+                        Identifier('COLLATION_NAME', alias=Identifier('Collation')),
+                        Identifier('CHARACTER_SET_NAME', alias=Identifier('Charset')),
+                        Identifier('ID', alias=Identifier('Id')),
+                        Identifier('IS_DEFAULT', alias=Identifier('Default')),
+                        Identifier('IS_COMPILED', alias=Identifier('Compiled')),
+                        Identifier('SORTLEN', alias=Identifier('Sortlen')),
+                        Identifier('PAD_ATTRIBUTE', alias=Identifier('Pad_attribute'))
+                    ],
+                    from_table=Identifier(parts=['INFORMATION_SCHEMA', 'COLLATIONS']),
+                    where=where
+                )
+                query = SQLQuery(
+                    new_statement,
+                    session=self.session
+                )
+                self.answer_select(query)
                 return
             elif sql_category == 'table status':
+                # TODO improve it
                 # SHOW TABLE STATUS LIKE 'table'
                 table_name = None
-                if condition == 'like' and type(expression) == Constant:
-                    table_name = expression.value
-                elif condition == 'from' and type(expression) == Identifier:
-                    table_name = expression.parts[-1]
+                if statement.like is not None:
+                    table_name = statement.like
+                # elif condition == 'from' and type(expression) == Identifier:
+                #     table_name = expression.parts[-1]
                 if table_name is None:
                     err_str = f"Can't determine table name in query: {sql}"
                     log.warning(err_str)
@@ -1721,136 +1786,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'type': TYPES.MYSQL_TYPE_VAR_STRING
             }],
             data=[[table, f'create table {table} ()']]
-        )
-
-        packages.append(self.last_packet())
-        self.send_package_group(packages)
-
-    def answer_show_index(self):
-        packages = []
-        packages += self.get_tabel_packets(
-            columns=[{
-                'database': 'mysql',
-                'table_name': 'tables',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Table',
-                'alias': 'Table',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': CHARSET_NUMBERS['utf8_bin']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Non_unique',
-                'alias': 'Non_unique',
-                'type': TYPES.MYSQL_TYPE_LONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Key_name',
-                'alias': 'Key_name',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'mysql',
-                'table_name': 'index_column_usage',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Seq_in_index',
-                'alias': 'Seq_in_index',
-                'type': TYPES.MYSQL_TYPE_LONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Column_name',
-                'alias': 'Column_name',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Collation',
-                'alias': 'Collation',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Cardinality',
-                'alias': 'Cardinality',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Sub_part',
-                'alias': 'Sub_part',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': '',
-                'name': '',
-                'alias': 'Packed',
-                'type': TYPES.MYSQL_TYPE_NULL,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Null',
-                'alias': 'Null',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Index_type',
-                'alias': 'Index_type',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': CHARSET_NUMBERS['utf8_bin']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Comment',
-                'alias': 'Comment',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'mysql',
-                'table_name': 'indexes',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Index_comment',
-                'alias': 'Index_comment',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': CHARSET_NUMBERS['utf8_bin']
-            }, {
-                'database': 'mysql',
-                'table_name': 'indexes',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Visible',
-                'alias': 'Visible',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Expression',
-                'alias': 'Expression',
-                'type': TYPES.MYSQL_TYPE_BLOB,
-                'charset': CHARSET_NUMBERS['utf8_bin']
-            }],
-            data=[]
         )
 
         packages.append(self.last_packet())
@@ -2139,112 +2074,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packages.append(self.last_packet())
         self.send_package_group(packages)
 
-    def answer_show_collation(self):
-        packages = []
-        packages += self.get_tabel_packets(
-            columns=[{
-                'database': 'information_schema',
-                'table_name': 'COLLATIONS',
-                'name': 'COLLATION_NAME',
-                'alias': 'Collation',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'COLLATIONS',
-                'name': 'CHARACTER_SET_NAME',
-                'alias': 'Charset',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'COLLATIONS',
-                'name': 'ID',
-                'alias': 'Id',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': 'information_schema',
-                'table_name': 'COLLATIONS',
-                'name': 'IS_DEFAULT',
-                'alias': 'Default',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'COLLATIONS',
-                'name': 'IS_COMPILED',
-                'alias': 'Compiled',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'COLLATIONS',
-                'name': 'SORTLEN',
-                'alias': 'Sortlen',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }],
-            data=[
-                ['utf8_general_ci', 'utf8', 33, 'Yes', 'Yes', 1],
-                ['latin1_swedish_ci', 'latin1', 8, 'Yes', 'Yes', 1]
-            ]
-        )
-        packages.append(self.last_packet())
-        self.send_package_group(packages)
-
-    def answer_show_charset(self, charset=None):
-        charsets = {
-            'utf8': ['utf8', 'UTF-8 Unicode', 'utf8_general_ci', 3],
-            'latin1': ['latin1', 'cp1252 West European', 'latin1_swedish_ci', 1],
-            'utf8mb4': ['utf8mb4', 'UTF-8 Unicode', 'utf8mb4_general_ci', 4]
-        }
-        if charset is None:
-            data = list(charsets.values())
-        elif charset not in charsets:
-            err_str = f'Unknown charset: {charset}'
-            log.warning(err_str)
-            raise SqlApiException(err_str)
-        else:
-            data = [charsets.get(charset)]
-
-        packages = []
-        packages += self.get_tabel_packets(
-            columns=[{
-                'database': 'information_schema',
-                'table_name': 'CHARACTER_SETS',
-                'name': 'CHARACTER_SET_NAME',
-                'alias': 'Charset',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'CHARACTER_SETS',
-                'name': 'DESCRIPTION',
-                'alias': 'Description',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'CHARACTER_SETS',
-                'name': 'DEFAULT_COLLATE_NAME',
-                'alias': 'Default collation',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'CHARACTER_SETS',
-                'name': 'MAXLEN',
-                'alias': 'Maxlen',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }],
-            data=data
-        )
-
-        packages.append(self.last_packet())
-        self.send_package_group(packages)
-
     def answer_connection_id(self, sql):
         packages = self.get_tabel_packets(
             columns=[{
@@ -2396,7 +2225,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             where=BinaryOperation('=', args=[Identifier('schema_name'), Constant(db_name)])
         )
         query = SQLQuery(
-            str(sql_statement),
+            sql_statement,
             session=self.session
         )
         result = query.fetch(

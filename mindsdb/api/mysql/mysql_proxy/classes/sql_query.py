@@ -45,6 +45,7 @@ from mindsdb_sql.planner.steps import (
     UnionStep,
     JoinStep
 )
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, ERR
@@ -179,18 +180,24 @@ class SQLQuery():
 
         self.mindsdb_database_name = 'mindsdb'
 
-        # +++ workaround for subqueries in superset
-        if 'as virtual_table' in sql.lower():
-            subquery = re.findall(superset_subquery, sql)
-            if isinstance(subquery, list) and len(subquery) == 1:
-                subquery = subquery[0]
-                self.outer_query = sql.replace(subquery, 'dataframe')
-                sql = subquery.strip('()')
-        # ---
+        if isinstance(sql, str):
+            # +++ workaround for subqueries in superset
+            if 'as virtual_table' in sql.lower():
+                subquery = re.findall(superset_subquery, sql)
+                if isinstance(subquery, list) and len(subquery) == 1:
+                    subquery = subquery[0]
+                    self.outer_query = sql.replace(subquery, 'dataframe')
+                    sql = subquery.strip('()')
+            # ---
+            self.sql_ast = parse_sql(sql, dialect='mindsdb')
+            self.sql_str = sql
+        else:
+            self.sql_ast = sql
+            renderer = SqlalchemyRender('mysql')
+            self.sql_str = renderer.get_string(self.sql_ast, with_failback=True)
 
-        self.raw = sql
         self.model_types = {}
-        self._parse_query(sql)
+        self._process_query(sql)
 
     def fetch(self, datahub, view='list'):
         data = self.fetched_data
@@ -269,21 +276,21 @@ class SQLQuery():
 
         return data
 
-    def _parse_query(self, sql):
-        mindsdb_sql_struct = parse_sql(sql, dialect='mindsdb')
+    def _process_query(self, sql):
+        sql_ast = self.sql_ast
 
         # is it query to 'predictors'?
         if (
-            isinstance(mindsdb_sql_struct.from_table, Identifier)
-            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors'
+            isinstance(sql_ast.from_table, Identifier)
+            and sql_ast.from_table.parts[-1].lower() == 'predictors'
             and (
                 self.database == 'mindsdb'
-                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+                or sql_ast.from_table.parts[0].lower() == 'mindsdb'
             )
         ):
 
             dn = self.datahub.get(self.mindsdb_database_name)
-            data, columns = dn.get_predictors(mindsdb_sql_struct)
+            data, columns = dn.get_predictors(sql_ast)
             table_name = ('mindsdb', 'predictors', 'predictors')
             data = [{(key, key): value for key, value in row.items()} for row in data]
             data = [{table_name: x} for x in data]
@@ -303,11 +310,11 @@ class SQLQuery():
 
         # is it query to 'commands'?
         if (
-            isinstance(mindsdb_sql_struct.from_table, Identifier)
-            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'
+            isinstance(sql_ast.from_table, Identifier)
+            and sql_ast.from_table.parts[-1].lower() == 'commands'
             and (
                 self.database == 'mindsdb'
-                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+                or sql_ast.from_table.parts[0].lower() == 'mindsdb'
             )
         ):
 
@@ -321,16 +328,16 @@ class SQLQuery():
 
         # is it query to 'datasources'?
         if (
-            isinstance(mindsdb_sql_struct.from_table, Identifier)
-            and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'
+            isinstance(sql_ast.from_table, Identifier)
+            and sql_ast.from_table.parts[-1].lower() == 'datasources'
             and (
                 self.database == 'mindsdb'
-                or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+                or sql_ast.from_table.parts[0].lower() == 'mindsdb'
             )
         ):
 
             dn = self.datahub.get(self.mindsdb_database_name)
-            data, columns = dn.get_datasources(mindsdb_sql_struct)
+            data, columns = dn.get_datasources(sql_ast)
             table_name = ('mindsdb', 'datasources', 'datasources')
             data = [{(key, key): value for key, value in row.items()} for row in data]
             data = [{table_name: x} for x in data]
@@ -354,7 +361,7 @@ class SQLQuery():
         integrations_names.append('files')
         integrations_names.append('views')
 
-        all_tables = get_all_tables(mindsdb_sql_struct)
+        all_tables = get_all_tables(sql_ast)
 
         predictor_metadata = {}
         predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
@@ -383,7 +390,7 @@ class SQLQuery():
                         self.model_types.update(p.data.get('dtypes', {}))
 
         plan = plan_query(
-            mindsdb_sql_struct,
+            sql_ast,
             integrations=integrations_names,
             predictor_namespace=self.mindsdb_database_name,
             predictor_metadata=predictor_metadata,
@@ -508,7 +515,7 @@ class SQLQuery():
                     is_timeseries = predictor_metadata[predictor]['timeseries']
                     _mdb_make_predictions = None
                     if is_timeseries:
-                        if 'LATEST' in self.raw:
+                        if 'LATEST' in self.sql_str:
                             _mdb_make_predictions = False
                         else:
                             _mdb_make_predictions = True

@@ -66,6 +66,40 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SqlError
 )
 
+# DELETE this before merge
+# ----------
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
+
+class SqlApiException(Exception):
+    err_code = ERR.ER_SYNTAX_ERROR
+
+
+
+class ErBadDbError(SqlApiException):
+    err_code = ERR.ER_SYNTAX_ERROR
+
+class ErBadTableError(SqlApiException):
+    err_code = ERR.ER_SYNTAX_ERROR
+
+class ErKeyColumnDoesNotExist(SqlApiException):
+    err_code = ERR.ER_SYNTAX_ERROR
+
+class ErTableExistError(SqlApiException):
+    err_code = ERR.ER_TABLE_EXISTS_ERROR
+
+class ErDubFieldName(SqlApiException):
+    err_code = ERR.ER_SYNTAX_ERROR
+
+class ErDbDropDelete(SqlApiException):
+    err_code = ERR.ER_SYNTAX_ERROR
+
+class ErNonInsertableTable(SqlApiException):
+    err_code = ERR.ER_SYNTAX_ERROR
+
+class ErNotSupportedYet(SqlApiException):
+    err_code = ERR.ER_SYNTAX_ERROR
+# ----------
+
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     getConstName,
     CHARSET_NUMBERS,
@@ -1182,14 +1216,18 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
         elif type(statement) == Show or keyword == 'show':
             sql_category = statement.category.lower()
-            condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition
-            expression = statement.expression
             if sql_category == 'predictors':
-                if expression is not None:
-                    raise Exception("'SHOW PREDICTORS' query should be used without filters")
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
                 new_statement = Select(
                     targets=[Star()],
-                    from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors'])
+                    from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors']),
+                    where=where
                 )
                 query = SQLQuery(
                     str(new_statement),
@@ -1197,9 +1235,32 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 )
                 self.answer_select(query)
                 return
-            if sql_category == 'plugins':
-                if expression is not None:
-                    raise Exception("'SHOW PLUGINS' query should be used without filters")
+            elif sql_category == 'views':
+                where = BinaryOperation('and', args=[
+                    BinaryOperation('=', args=[Identifier('table_schema'), Constant('views')]),
+                    BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
+                ])
+                if statement.where is not None:
+                    where = BinaryOperation('and', args=[where, statement.where])
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('View'), Constant(statement.like)])
+                    where = BinaryOperation('and', args=[where, like])
+
+                new_statement = Select(
+                    targets=[Identifier(parts=['table_name'], alias=Identifier('View'))],
+                    from_table=Identifier(parts=['information_schema', 'TABLES']),
+                    where=where
+                )
+
+                query = SQLQuery(
+                    str(new_statement),
+                    session=self.session
+                )
+                self.answer_select(query)
+                return
+            elif sql_category == 'plugins':
+                if statement.where is not None or statement.like:
+                    raise SqlApiException("'SHOW PLUGINS' query should be used without filters")
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=['information_schema', 'PLUGINS'])
@@ -1211,14 +1272,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.answer_select(query)
                 return
             elif sql_category in ('databases', 'schemas'):
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('Database'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
+
                 new_statement = Select(
                     targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
-                    from_table=Identifier(parts=['information_schema', 'SCHEMATA'])
+                    from_table=Identifier(parts=['information_schema', 'SCHEMATA']),
+                    where=where
                 )
-                if condition == 'like':
-                    new_statement.where = BinaryOperation('like', args=[Identifier('schema_name'), expression])
-                elif condition is not None:
-                    raise Exception(f'Not implemented: {sql}')
+                if statement.where is not None:
+                    new_statement.where = statement.where
 
                 query = SQLQuery(
                     str(new_statement),
@@ -1239,18 +1307,23 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
             elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
-                if condition == 'from':
-                    schema = expression.parts[0]
-                elif condition is not None:
-                    raise Exception(f'Unknown condition in query: {statement}')
+                where = BinaryOperation('and', args=[
+                    BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
+                    BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
+                ])
+                if statement.where is not None:
+                    where = BinaryOperation('and', args=[statement.where, where])
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier(f'Tables_in_{schema}'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
 
                 new_statement = Select(
                     targets=[Identifier(parts=['table_name'], alias=Identifier(f'Tables_in_{schema}'))],
                     from_table=Identifier(parts=['information_schema', 'TABLES']),
-                    where=BinaryOperation('and', args=[
-                        BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
-                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
-                    ])
+                    where=where
                 )
 
                 query = SQLQuery(
@@ -1260,17 +1333,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.answer_select(query)
                 return
             elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
+
                 new_statement = Select(
                     targets=[Identifier(parts=['Variable_name']), Identifier(parts=['Value'])],
                     from_table=Identifier(parts=['dataframe']),
+                    where=where
                 )
-
-                if condition == 'like':
-                    new_statement.where = BinaryOperation('like', args=[Identifier('Variable_name'), expression])
-                elif condition == 'where':
-                    new_statement.where = expression
-                elif condition is not None:
-                    raise Exception(f'Unknown condition in query: {statement}')
 
                 data = {}
                 is_session = 'session' in sql_category
@@ -1340,39 +1415,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.answer_show_create_table(table)
                 return
             elif sql_category in ('character set', 'charset'):
-                charset = None
-                if condition == 'where':
-                    if type(expression) == BinaryOperation:
-                        if expression.op == '=':
-                            if type(expression.args[0]) == Identifier:
-                                if expression.args[0].parts[0].lower() == 'charset':
-                                    charset = expression.args[1].value
-                                else:
-                                    raise Exception(
-                                        f'Error during processing query: {sql}\n'
-                                        f"Only filter by 'charset' supported 'WHERE', but '{expression.args[0].parts[0]}' found"
-                                    )
-                            else:
-                                raise Exception(
-                                    f'Error during processing query: {sql}\n'
-                                    f"Expected identifier in 'WHERE', but '{expression.args[0]}' found"
-                                )
-                        else:
-                            raise Exception(
-                                f'Error during processing query: {sql}\n'
-                                f"Expected '=' comparison in 'WHERE', but '{expression.op}' found"
-                            )
-                    else:
-                        raise Exception(
-                            f'Error during processing query: {sql}\n'
-                            f"Expected binary operation in 'WHERE', but '{expression}' found"
-                        )
-                elif condition is not None:
-                    raise Exception(
-                        f'Error during processing query: {sql}\n'
-                        f"Only 'WHERE' filter supported, but '{condition}' found"
-                    )
-                self.answer_show_charset(charset)
+                self.answer_show_charset()
                 return
             elif sql_category == 'warnings':
                 self.answer_show_warnings()
@@ -1392,20 +1435,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.answer_show_collation()
                 return
             elif sql_category == 'table status':
+                # TODO improve it
                 # SHOW TABLE STATUS LIKE 'table'
                 table_name = None
-                if condition == 'like' and type(expression) == Constant:
-                    table_name = expression.value
-                elif condition == 'from' and type(expression) == Identifier:
-                    table_name = expression.parts[-1]
+                if statement.like is not None:
+                    table_name = statement.like
+                # elif condition == 'from' and type(expression) == Identifier:
+                #     table_name = expression.parts[-1]
                 if table_name is None:
                     err_str = f"Can't determine table name in query: {sql}"
                     log.warning(err_str)
-                    raise Exception(err_str)
+                    raise ErTableExistError(err_str)
                 self.answer_show_table_status(table_name)
                 return
             else:
-                raise Exception(f'Statement not implemented: {sql}')
+                raise ErNotSupportedYet(f'Statement not implemented: {sql}')
         elif type(statement) in (StartTransaction, CommitTransaction, RollbackTransaction):
             self.packet(OkPacket).send()
         elif type(statement) == Set:

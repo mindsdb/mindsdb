@@ -1497,9 +1497,33 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB' AND Name LIKE '%';
                 self.answer_function_status()
                 return
-            elif 'show index from' in sql_lower:
-                # SHOW INDEX FROM `ny_output` FROM `data`;
-                self.answer_show_index()
+            elif sql_category == 'index':
+                new_statement = Select(
+                    targets=[
+                        Identifier('TABLE_NAME', alias=Identifier('Table')),
+                        Identifier('NON_UNIQUE', alias=Identifier('Non_unique')),
+                        Identifier('INDEX_NAME', alias=Identifier('Key_name')),
+                        Identifier('SEQ_IN_INDEX', alias=Identifier('Seq_in_index')),
+                        Identifier('COLUMN_NAME', alias=Identifier('Column_name')),
+                        Identifier('COLLATION', alias=Identifier('Collation')),
+                        Identifier('CARDINALITY', alias=Identifier('Cardinality')),
+                        Identifier('SUB_PART', alias=Identifier('Sub_part')),
+                        Identifier('PACKED', alias=Identifier('Packed')),
+                        Identifier('NULLABLE', alias=Identifier('Null')),
+                        Identifier('INDEX_TYPE', alias=Identifier('Index_type')),
+                        Identifier('COMMENT', alias=Identifier('Comment')),
+                        Identifier('INDEX_COMMENT', alias=Identifier('Index_comment')),
+                        Identifier('IS_VISIBLE', alias=Identifier('Visible')),
+                        Identifier('EXPRESSION', alias=Identifier('Expression'))
+                    ],
+                    from_table=Identifier(parts=['information_schema', 'STATISTICS']),
+                    where=statement.where
+                )
+                query = SQLQuery(
+                    new_statement,
+                    session=self.session
+                )
+                self.answer_select(query)
                 return
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif 'show create table' in sql_lower:
@@ -1764,136 +1788,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'type': TYPES.MYSQL_TYPE_VAR_STRING
             }],
             data=[[table, f'create table {table} ()']]
-        )
-
-        packages.append(self.last_packet())
-        self.send_package_group(packages)
-
-    def answer_show_index(self):
-        packages = []
-        packages += self.get_tabel_packets(
-            columns=[{
-                'database': 'mysql',
-                'table_name': 'tables',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Table',
-                'alias': 'Table',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': CHARSET_NUMBERS['utf8_bin']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Non_unique',
-                'alias': 'Non_unique',
-                'type': TYPES.MYSQL_TYPE_LONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Key_name',
-                'alias': 'Key_name',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'mysql',
-                'table_name': 'index_column_usage',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Seq_in_index',
-                'alias': 'Seq_in_index',
-                'type': TYPES.MYSQL_TYPE_LONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Column_name',
-                'alias': 'Column_name',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Collation',
-                'alias': 'Collation',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Cardinality',
-                'alias': 'Cardinality',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Sub_part',
-                'alias': 'Sub_part',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': '',
-                'name': '',
-                'alias': 'Packed',
-                'type': TYPES.MYSQL_TYPE_NULL,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Null',
-                'alias': 'Null',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Index_type',
-                'alias': 'Index_type',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': CHARSET_NUMBERS['utf8_bin']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Comment',
-                'alias': 'Comment',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'mysql',
-                'table_name': 'indexes',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Index_comment',
-                'alias': 'Index_comment',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': CHARSET_NUMBERS['utf8_bin']
-            }, {
-                'database': 'mysql',
-                'table_name': 'indexes',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Visible',
-                'alias': 'Visible',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Expression',
-                'alias': 'Expression',
-                'type': TYPES.MYSQL_TYPE_BLOB,
-                'charset': CHARSET_NUMBERS['utf8_bin']
-            }],
-            data=[]
         )
 
         packages.append(self.last_packet())

@@ -82,7 +82,8 @@ class Datasource(Base):
     name = Column(String)
     data = Column(String)  # Including, e.g. the query used to create it and even the connection info when there's no integration associated with it -- A JSON
     creation_info = Column(String)
-    analysis = Column(String)  # A JSON
+    # analysis = Column(String)  # A JSON
+    analysis_id = Column(ForeignKey('analysis.id'), nullable=True)
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     datasources_version = Column(String)
@@ -164,6 +165,29 @@ class Stream(Base):
     connection_info = Column(Json, default={})
     learning_params = Column(Json, default={})
     learning_threshold = Column(Integer, default=0)
+
+
+class Analysis(Base):
+    __tablename__ = 'analysis'
+    id = Column(Integer, primary_key=True)
+    analysis = Column(Json, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+
+
+class File(Base):
+    __tablename__ = 'file'
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    company_id = Column(Integer)
+    source_file_path = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    row_count = Column(Integer, nullable=False)
+    columns = Column(Json, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    analysis_id = Column(ForeignKey('analysis.id'), nullable=True)
+    uniq_const = UniqueConstraint('name', 'company_id')
 
 
 class View(Base):

@@ -819,7 +819,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             )
 
             query = SQLQuery(
-                str(new_statement),
+                new_statement,
                 session=self.session
             )
 
@@ -1316,7 +1316,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     where=where
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
@@ -1338,7 +1338,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 )
 
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
@@ -1351,7 +1351,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     from_table=Identifier(parts=['information_schema', 'PLUGINS'])
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
@@ -1374,7 +1374,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     new_statement.where = statement.where
 
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
@@ -1393,7 +1393,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     where=where
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
@@ -1420,7 +1420,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 )
 
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
@@ -1545,7 +1545,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     where=where
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
@@ -1559,7 +1559,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     from_table=Identifier(parts=['information_schema', 'ENGINES'])
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
@@ -1574,12 +1574,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                         where = like
                 new_statement = Select(
                     targets=[
-                        # FIXME https://github.com/mindsdb/mindsdb_sql/issues/177
-                        # Identifier('COLLATION_NAME', alias=Identifier('Collation')),
+                        Identifier('COLLATION_NAME', alias=Identifier('Collation')),
                         Identifier('CHARACTER_SET_NAME', alias=Identifier('Charset')),
                         Identifier('ID', alias=Identifier('Id')),
-                        # FIXME https://github.com/mindsdb/mindsdb_sql/issues/177
-                        # Identifier('IS_DEFAULT', alias=Identifier('Default')),
+                        Identifier('IS_DEFAULT', alias=Identifier('Default')),
                         Identifier('IS_COMPILED', alias=Identifier('Compiled')),
                         Identifier('SORTLEN', alias=Identifier('Sortlen')),
                         Identifier('PAD_ATTRIBUTE', alias=Identifier('Pad_attribute'))
@@ -1588,7 +1586,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     where=where
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
@@ -2227,7 +2225,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             where=BinaryOperation('=', args=[Identifier('schema_name'), Constant(db_name)])
         )
         query = SQLQuery(
-            str(sql_statement),
+            sql_statement,
             session=self.session
         )
         result = query.fetch(

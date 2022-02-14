@@ -2178,7 +2178,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             columns=query.columns,
             data=query.result
         )
-        packages.append(self.packet(OkPacket, eof=True))
+        # packages.append(self.packet(OkPacket, eof=True))
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def _get_column_defenition_packets(self, columns, data=[]):

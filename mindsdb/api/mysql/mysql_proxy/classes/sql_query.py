@@ -189,12 +189,12 @@ class SQLQuery():
                     self.outer_query = sql.replace(subquery, 'dataframe')
                     sql = subquery.strip('()')
             # ---
-            self.sql_ast = parse_sql(sql, dialect='mindsdb')
-            self.sql_str = sql
+            self.query_ast = parse_sql(sql, dialect='mindsdb')
+            self.query_str = sql
         else:
-            self.sql_ast = sql
+            self.query_ast = sql
             renderer = SqlalchemyRender('mysql')
-            self.sql_str = renderer.get_string(self.sql_ast, with_failback=True)
+            self.query_str = renderer.get_string(self.query_ast, with_failback=True)
 
         self.model_types = {}
         self._process_query(sql)
@@ -277,20 +277,20 @@ class SQLQuery():
         return data
 
     def _process_query(self, sql):
-        sql_ast = self.sql_ast
+        query_ast = self.query_ast
 
         # is it query to 'predictors'?
         if (
-            isinstance(sql_ast.from_table, Identifier)
-            and sql_ast.from_table.parts[-1].lower() == 'predictors'
+            isinstance(query_ast.from_table, Identifier)
+            and query_ast.from_table.parts[-1].lower() == 'predictors'
             and (
                 self.database == 'mindsdb'
-                or sql_ast.from_table.parts[0].lower() == 'mindsdb'
+                or query_ast.from_table.parts[0].lower() == 'mindsdb'
             )
         ):
 
             dn = self.datahub.get(self.mindsdb_database_name)
-            data, columns = dn.get_predictors(sql_ast)
+            data, columns = dn.get_predictors(query_ast)
             table_name = ('mindsdb', 'predictors', 'predictors')
             data = [{(key, key): value for key, value in row.items()} for row in data]
             data = [{table_name: x} for x in data]
@@ -310,11 +310,11 @@ class SQLQuery():
 
         # is it query to 'commands'?
         if (
-            isinstance(sql_ast.from_table, Identifier)
-            and sql_ast.from_table.parts[-1].lower() == 'commands'
+            isinstance(query_ast.from_table, Identifier)
+            and query_ast.from_table.parts[-1].lower() == 'commands'
             and (
                 self.database == 'mindsdb'
-                or sql_ast.from_table.parts[0].lower() == 'mindsdb'
+                or query_ast.from_table.parts[0].lower() == 'mindsdb'
             )
         ):
 
@@ -328,16 +328,16 @@ class SQLQuery():
 
         # is it query to 'datasources'?
         if (
-            isinstance(sql_ast.from_table, Identifier)
-            and sql_ast.from_table.parts[-1].lower() == 'datasources'
+            isinstance(query_ast.from_table, Identifier)
+            and query_ast.from_table.parts[-1].lower() == 'datasources'
             and (
                 self.database == 'mindsdb'
-                or sql_ast.from_table.parts[0].lower() == 'mindsdb'
+                or query_ast.from_table.parts[0].lower() == 'mindsdb'
             )
         ):
 
             dn = self.datahub.get(self.mindsdb_database_name)
-            data, columns = dn.get_datasources(sql_ast)
+            data, columns = dn.get_datasources(query_ast)
             table_name = ('mindsdb', 'datasources', 'datasources')
             data = [{(key, key): value for key, value in row.items()} for row in data]
             data = [{table_name: x} for x in data]
@@ -361,7 +361,7 @@ class SQLQuery():
         integrations_names.append('files')
         integrations_names.append('views')
 
-        all_tables = get_all_tables(sql_ast)
+        all_tables = get_all_tables(query_ast)
 
         predictor_metadata = {}
         predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
@@ -390,7 +390,7 @@ class SQLQuery():
                         self.model_types.update(p.data.get('dtypes', {}))
 
         plan = plan_query(
-            sql_ast,
+            query_ast,
             integrations=integrations_names,
             predictor_namespace=self.mindsdb_database_name,
             predictor_metadata=predictor_metadata,
@@ -515,7 +515,7 @@ class SQLQuery():
                     is_timeseries = predictor_metadata[predictor]['timeseries']
                     _mdb_make_predictions = None
                     if is_timeseries:
-                        if 'LATEST' in self.sql_str:
+                        if 'LATEST' in self.query_str:
                             _mdb_make_predictions = False
                         else:
                             _mdb_make_predictions = True

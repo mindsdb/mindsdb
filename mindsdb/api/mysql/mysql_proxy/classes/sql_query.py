@@ -217,15 +217,15 @@ class SQLQuery():
                     self.outer_query = sql.replace(subquery, 'dataframe')
                     sql = subquery.strip('()')
             # ---
-            self.query_ast = parse_sql(sql, dialect='mindsdb')
+            self.query = parse_sql(sql, dialect='mindsdb')
             self.query_str = sql
         else:
-            self.query_ast = sql
+            self.query = sql
             renderer = SqlalchemyRender('mysql')
-            self.query_str = renderer.get_string(self.query_ast, with_failback=True)
+            self.query_str = renderer.get_string(self.query, with_failback=True)
 
-        self.raw = sql
-        self.query = None
+        # self.raw = sql
+        # self.query = None
         self.planner = None
         self.parameters = []
         self.fetched_data = None
@@ -314,7 +314,7 @@ class SQLQuery():
         return data
 
     def _process_query(self, sql):
-        self.query = parse_sql(sql, dialect='mindsdb')
+        # self.query = parse_sql(sql, dialect='mindsdb')
 
         integrations_names = self.datahub.get_datasources_names()
         integrations_names.append('information_schema')

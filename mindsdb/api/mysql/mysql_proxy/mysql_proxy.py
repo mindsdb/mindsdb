@@ -850,8 +850,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # num_columns = len(query.columns) - num_params
 
             # ???
-            if len(sqlquery.columns) != len(sqlquery.parameters):
-                raise ErNonInsertableTable("At this moment supported only insert where all values is parameters.")
+            # if len(sqlquery.columns) != len(sqlquery.parameters):
+            #     raise ErNonInsertableTable("At this moment supported only insert where all values is parameters.")
 
             columns_def = []
             for col in sqlquery.columns:

@@ -10,15 +10,15 @@ The `DESCRIBE [...].features` statement is used to display the way that the mode
 ## Syntax:
 
 ```sql
-DESCRIBE [name_of_your _predictor].features;
+DESCRIBE [name_of_your_predictor].features;
 ```
 ## Expected Output
 
 
 column: name of the feature 
 type: binary integer... 
-encoder: name of the ecoder used for that column
-role: describes wheather the column is a target or a feature
+encoder: name of the encoder used for that column
+role: describes whether the column is a target or a feature
 
 # DESCRIBE MODEL  
 
@@ -33,8 +33,8 @@ DESCRIBE [name_of_your _predictor].model;
 ## Expected Output
 
 name: name of the model
-performance : obtained accuracy (From 0.0 to 1.0) for that candidate model
-selected: the Auto_ML pick the best performed cadidate (1)
+performance : obtained accuracy (from 0.0 to 1.0) for that candidate model
+selected: the Auto ML pick the best performed cadidate (1)
 
 
 If you're unsure on how to DESCRIBE your model or understand the results feel free to ask us how to do it on the community [Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).

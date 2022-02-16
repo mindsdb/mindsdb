@@ -73,8 +73,8 @@ class Semaphor(Base):
     uniq_const = UniqueConstraint('entity_type', 'entity_id')
 
 
-class Datasource(Base):
-    __tablename__ = 'datasource'
+class Dataset(Base):
+    __tablename__ = 'dataset'
 
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
@@ -87,7 +87,8 @@ class Datasource(Base):
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     datasources_version = Column(String)
-    integration_id = Column(Integer)
+    # integration_id = Column(Integer)            # ???????
+    datasource_id = Column(ForeignKey('datasource.id'), nullable=True)
 
 
 class Predictor(Base):
@@ -102,7 +103,7 @@ class Predictor(Base):
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     native_version = Column(String)
-    datasource_id = Column(Integer)
+    dataset_id = Column(ForeignKey('dataset.id'), nullable=True)
     is_custom = Column(Boolean)     # to del
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')
@@ -113,18 +114,18 @@ class Predictor(Base):
     dtype_dict = Column(Json, nullable=True)
 
 
-class AITable(Base):
-    __tablename__ = 'ai_table'
-    id = Column(Integer, primary_key=True)
-    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    name = Column(String)
-    integration_name = Column(String)
-    integration_query = Column(String)
-    query_fields = Column(Json)
-    predictor_name = Column(String)
-    predictor_columns = Column(Json)
-    company_id = Column(Integer)
+# class AITable(Base):
+#     __tablename__ = 'ai_table'
+#     id = Column(Integer, primary_key=True)
+#     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+#     created_at = Column(DateTime, default=datetime.datetime.now)
+#     name = Column(String)
+#     integration_name = Column(String)
+#     integration_query = Column(String)
+#     query_fields = Column(Json)
+#     predictor_name = Column(String)
+#     predictor_columns = Column(Json)
+#     company_id = Column(Integer)
 
 
 class Log(Base):
@@ -139,8 +140,8 @@ class Log(Base):
     created_at_index = Index("some_index", "created_at_index")
 
 
-class Integration(Base):
-    __tablename__ = 'integration'
+class Datasource(Base):
+    __tablename__ = 'datasource'
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)

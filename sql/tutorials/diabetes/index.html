@@ -579,6 +579,18 @@
   
 
           
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/using/" class="md-nav__link">
+        USING
+      </a>
+    </li>
+  
+
+          
         </ul>
       </nav>
     </li>
@@ -1242,21 +1254,27 @@ In this section, you will create a Postgres database and a table into which you 
 <span class="p">);</span>
 </code></pre></div>
 <p><img alt="Create table" src="/assets/tutorials/diabetes/pg4admin/Create_pgtable.gif" /></p>
-<ol>
-<li>
+<p><strong>7. Import Data</strong></p>
 <p>Before you import the data, please delete the first row as it is a table header. To import rows into your table, right click on the table name and select <em>Import/Export</em>.</p>
-<p>7.1 Under the Options tab, ensure the slider is set to <em>Import</em>.</p>
-<p>7.2 Select your file name and ensure that the delimiters are set.</p>
-</li>
-</ol>
-<p><img alt="Import rows" src="/assets/tutorials/diabetes/pg4admin/Import_rows.gif" /></p>
-<ol>
+<ul>
 <li>
-<p>By making a select query, the data that has been loaded can be verified.</p>
-<p>8.1 Navigate to the table name to right click and select 'SCRIPTS', then choose 'SELECT scripts'.</p>
-<p>8.2 Run the below query and see the results returned.</p>
+<p>Under the Options tab, ensure the slider is set to <em>Import</em>.</p>
 </li>
-</ol>
+<li>
+<p>Select your file name and ensure that the delimiters are set.</p>
+</li>
+</ul>
+<p><img alt="Import rows" src="/assets/tutorials/diabetes/pg4admin/Import_rows.gif" /></p>
+<p><strong>8. Select the data</strong> </p>
+<p>By making a select query, the data that has been loaded can be verified.</p>
+<ul>
+<li>
+<p>Navigate to the table name to right click and select 'SCRIPTS', then choose 'SELECT scripts'.</p>
+</li>
+<li>
+<p>Run the below query and see the results returned.</p>
+</li>
+</ul>
 <div class="highlight"><pre><span></span><code>    <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="ss">&quot;DIABETES_DATA&quot;</span><span class="p">.</span><span class="n">diabetes</span><span class="p">;</span>
 </code></pre></div>
 <p>You can use the below query structure to show your database</p>

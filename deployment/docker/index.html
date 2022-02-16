@@ -662,6 +662,18 @@
   
 
           
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/api/using/" class="md-nav__link">
+        USING
+      </a>
+    </li>
+  
+
+          
         </ul>
       </nav>
     </li>
@@ -1135,8 +1147,9 @@
 </ul>
 <h4 id="start-container">Start container</h4>
 <p>Next, run the below command to start the container:</p>
-<div class="highlight"><pre><span></span><code>docker run -p 47334:47334 mindsdb/mindsdb
+<p><div class="highlight"><pre><span></span><code>docker run -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 </code></pre></div>
+Note. the above command only have ports for GUI and MYSQL. Please add your desired db port before you run the command. </p>
 <p><img alt="Docker run" src="/assets/docker-install.gif" /></p>
 <p>That's it. MindsDB should automatically start the Studio on your default browser.</p>
 <div class="admonition warning">

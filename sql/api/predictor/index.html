@@ -684,6 +684,18 @@
   
 
           
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../using/" class="md-nav__link">
+        USING
+      </a>
+    </li>
+  
+
+          
         </ul>
       </nav>
     </li>
@@ -1248,10 +1260,18 @@
 <h2 id="time-series-keywords">Time Series keywords</h2>
 <p>To train a timeseries model, MindsDB provides additional keywords.</p>
 <ul>
-<li><code>ORDER BY</code> -  keyword is used as the column that defines the time series order by, these can be a date, or anything that defines the sequence of events to order the data by descending (DESC) or ascending (ASC) order. The default order will always be <code>ASC</code>.</li>
-<li><code>WINDOW</code> - keyword specifies the number of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be used to specify something like "Always use the previous 10 rows". </li>
-<li><code>HORIZON</code> - (OPTIONAL, default value is 1) keyword specifies the number of future predictions. </li>
-<li><code>GROUP BY</code> - (OPTIONAL) keyword is used to group the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series. </li>
+<li>
+<p><code>ORDER BY</code> -  keyword is used as the column that defines the time series order by, these can be a date, or anything that defines the sequence of events to order the data by descending (DESC) or ascending (ASC) order. (The default order will always be <code>ASC</code>).</p>
+</li>
+<li>
+<p><code>WINDOW</code> - keyword specifies the number of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be used to specify something like "Always use the previous 10 rows". </p>
+</li>
+<li>
+<p><code>HORIZON</code> - (OPTIONAL, default value is 1) keyword specifies the number of future predictions. </p>
+</li>
+<li>
+<p><code>GROUP BY</code> - (OPTIONAL) keyword is used to group the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series. </p>
+</li>
 </ul>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">predictor_name</span>
 <span class="k">FROM</span> <span class="n">db_integration</span> 
@@ -1287,9 +1307,9 @@
 </ul>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">predictor_name</span>
 <span class="k">FROM</span> <span class="n">integration_name</span> 
-<span class="p">(</span><span class="k">SELECT</span> <span class="k">column_name</span><span class="p">,</span> <span class="n">column_name2</span> <span class="k">FROM</span> <span class="k">table_name</span><span class="p">)</span> <span class="k">as</span> <span class="n">ds_name</span>
+<span class="p">(</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="k">table_name</span><span class="p">)</span> <span class="k">as</span> <span class="n">ds_name</span>
 <span class="n">PREDICT</span> <span class="k">column_name</span> <span class="k">as</span> <span class="n">column_alias</span>
-<span class="k">USING</span> <span class="err">{</span><span class="ss">&quot;ignore_columns&quot;</span><span class="p">:</span> <span class="ss">&quot;column_name3&quot;</span><span class="err">}</span><span class="p">;</span>
+<span class="k">USING</span> <span class="n">ignore_columns</span><span class="o">=</span><span class="ss">&quot;column_name3&quot;</span><span class="p">;</span>
 </code></pre></div>
 <h3 id="using-example">USING example</h3>
 <p>The following example trains the new <code>home_rentals_model</code> model which predicts the <code>rental_price</code> and removes the number of bathrooms.</p>
@@ -1297,7 +1317,7 @@
 <span class="k">FROM</span> <span class="n">db_integration</span> 
 <span class="p">(</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">house_rentals_data</span><span class="p">)</span> <span class="k">as</span> <span class="n">rentals</span>
 <span class="n">PREDICT</span> <span class="n">rental_price</span> <span class="k">as</span> <span class="n">price</span>
-<span class="k">USING</span> <span class="err">{</span><span class="ss">&quot;ignore_columns&quot;</span><span class="p">:</span> <span class="ss">&quot;number_of_bathrooms&quot;</span><span class="err">}</span><span class="p">;</span>
+<span class="k">USING</span> <span class="n">ignore_columns</span><span class="o">=</span><span class="ss">&quot;number_of_bathrooms&quot;</span><span class="p">;</span>
 </code></pre></div>
                 
               

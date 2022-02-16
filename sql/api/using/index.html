@@ -9,21 +9,21 @@
       
       
       
-        <link rel="canonical" href="https://docs.mindsdb.com/datasources/postgresql/">
+        <link rel="canonical" href="https://docs.mindsdb.com/sql/api/using/">
       
-      <link rel="icon" href="../../assets/mdb_logo.png">
+      <link rel="icon" href="../../../assets/mdb_logo.png">
       <meta name="generator" content="mkdocs-1.2.2, mkdocs-material-7.2.8">
     
     
       
-        <title>Connect to PostgreSQL database - MindsDB Documentation</title>
+        <title>USING - MindsDB Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.92558b1b.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.92558b1b.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.3f5d1f46.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.3f5d1f46.min.css">
         
       
     
@@ -38,7 +38,7 @@
     
     
     
-      <link rel="stylesheet" href="../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
     
 
@@ -74,7 +74,7 @@
     <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="" data-md-color-accent="">
   
     
-    <script>function __prefix(e){return new URL("../..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
+    <script>function __prefix(e){return new URL("../../..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
     
       <script>var palette=__get("__palette");if(null!==palette&&"object"==typeof palette.color)for(var key in palette.color)document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
     
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#connect-to-postgresql-database" class="md-skip">
+        <a href="#create-predictor-using-statement" class="md-skip">
           Skip to content
         </a>
       
@@ -128,14 +128,14 @@
 
     <!-- Link to home -->
     <a
-      href="../.."
+      href="../../.."
       title="MindsDB Documentation"
       class="md-header__button md-logo"
       aria-label="MindsDB Documentation"
       data-md-component="logo"
     >
       
-  <img src="../../assets/mdb_logo_w.svg" alt="logo">
+  <img src="../../../assets/mdb_logo_w.svg" alt="logo">
 
     </a>
 
@@ -155,7 +155,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Connect to PostgreSQL database
+              USING
             
           </span>
         </div>
@@ -313,9 +313,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="MindsDB Documentation" class="md-nav__button md-logo" aria-label="MindsDB Documentation" data-md-component="logo">
+    <a href="../../.." title="MindsDB Documentation" class="md-nav__button md-logo" aria-label="MindsDB Documentation" data-md-component="logo">
       
-  <img src="../../assets/mdb_logo_w.svg" alt="logo">
+  <img src="../../../assets/mdb_logo_w.svg" alt="logo">
 
     </a>
     MindsDB Documentation
@@ -344,7 +344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         What is MindsDB
       </a>
     </li>
@@ -380,7 +380,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../info/" class="md-nav__link">
+      <a href="../../../info/" class="md-nav__link">
         Getting Started
       </a>
     </li>
@@ -392,7 +392,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deployment/docker/" class="md-nav__link">
+      <a href="../../../deployment/docker/" class="md-nav__link">
         Docker
       </a>
     </li>
@@ -404,7 +404,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deployment/pypi/" class="md-nav__link">
+      <a href="../../../deployment/pypi/" class="md-nav__link">
         Pip
       </a>
     </li>
@@ -416,7 +416,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deployment/cloud/" class="md-nav__link">
+      <a href="../../../deployment/cloud/" class="md-nav__link">
         MindsDB Cloud
       </a>
     </li>
@@ -437,7 +437,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../connect/" class="md-nav__link">
+      <a href="../../../connect/" class="md-nav__link">
         Plug your data
       </a>
     </li>
@@ -473,7 +473,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/connect/local/" class="md-nav__link">
+      <a href="../../connect/local/" class="md-nav__link">
         Local Deployment
       </a>
     </li>
@@ -485,7 +485,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/connect/cloud/" class="md-nav__link">
+      <a href="../../connect/cloud/" class="md-nav__link">
         MindsDB Cloud
       </a>
     </li>
@@ -504,12 +504,14 @@
 
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" checked>
       
       <label class="md-nav__link" for="__nav_5">
         SQL
@@ -527,7 +529,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/use/" class="md-nav__link">
+      <a href="../use/" class="md-nav__link">
         USE
       </a>
     </li>
@@ -537,12 +539,14 @@
             
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5_2" type="checkbox" id="__nav_5_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5_2" type="checkbox" id="__nav_5_2" checked>
       
       <label class="md-nav__link" for="__nav_5_2">
         CREATE
@@ -560,7 +564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/predictor/" class="md-nav__link">
+      <a href="../predictor/" class="md-nav__link">
         Predictor
       </a>
     </li>
@@ -572,9 +576,68 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/view/" class="md-nav__link">
+      <a href="../view/" class="md-nav__link">
         View
       </a>
+    </li>
+  
+
+          
+            
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          USING
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        USING
+      </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#more-examples" class="md-nav__link">
+    More examples
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#json-and-json-ai" class="md-nav__link">
+    Json and Json AI
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -590,7 +653,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/retrain/" class="md-nav__link">
+      <a href="../retrain/" class="md-nav__link">
         RETRAIN
       </a>
     </li>
@@ -602,7 +665,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/drop/" class="md-nav__link">
+      <a href="../drop/" class="md-nav__link">
         DROP
       </a>
     </li>
@@ -614,7 +677,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/select/" class="md-nav__link">
+      <a href="../select/" class="md-nav__link">
         SELECT
       </a>
     </li>
@@ -626,7 +689,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/join/" class="md-nav__link">
+      <a href="../join/" class="md-nav__link">
         JOIN
       </a>
     </li>
@@ -668,7 +731,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/ai-tables/" class="md-nav__link">
+      <a href="../../tutorials/ai-tables/" class="md-nav__link">
         AI Tables Intro
       </a>
     </li>
@@ -701,7 +764,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/process-quality/" class="md-nav__link">
+      <a href="../../tutorials/process-quality/" class="md-nav__link">
         Process Quality
       </a>
     </li>
@@ -713,7 +776,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/bodyfat/" class="md-nav__link">
+      <a href="../../tutorials/bodyfat/" class="md-nav__link">
         Body Fat Prediction
       </a>
     </li>
@@ -725,7 +788,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/insurance-cost-prediction/" class="md-nav__link">
+      <a href="../../tutorials/insurance-cost-prediction/" class="md-nav__link">
         Insurance Cost
       </a>
     </li>
@@ -764,7 +827,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/crop-prediction/" class="md-nav__link">
+      <a href="../../tutorials/crop-prediction/" class="md-nav__link">
         Crop Recommendation
       </a>
     </li>
@@ -776,7 +839,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/customer-churn/" class="md-nav__link">
+      <a href="../../tutorials/customer-churn/" class="md-nav__link">
         Customer Churn
       </a>
     </li>
@@ -788,7 +851,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/diabetes/" class="md-nav__link">
+      <a href="../../tutorials/diabetes/" class="md-nav__link">
         Diabetes
       </a>
     </li>
@@ -800,7 +863,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/heart-disease/" class="md-nav__link">
+      <a href="../../tutorials/heart-disease/" class="md-nav__link">
         Heart Disease
       </a>
     </li>
@@ -812,7 +875,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/mushrooms/" class="md-nav__link">
+      <a href="../../tutorials/mushrooms/" class="md-nav__link">
         Mushrooms
       </a>
     </li>
@@ -851,7 +914,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/mindsdb-superset-snowflake/" class="md-nav__link">
+      <a href="../../tutorials/mindsdb-superset-snowflake/" class="md-nav__link">
         AI powered forecasts with MindsDB
       </a>
     </li>
@@ -899,7 +962,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contribute/" class="md-nav__link">
+      <a href="../../../contribute/" class="md-nav__link">
         How to contribute
       </a>
     </li>
@@ -911,7 +974,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/" class="md-nav__link">
+      <a href="../../../community/" class="md-nav__link">
         Join our community
       </a>
     </li>
@@ -923,7 +986,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../faq/" class="md-nav__link">
+      <a href="../../../faq/" class="md-nav__link">
         FAQ
       </a>
     </li>
@@ -962,42 +1025,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#prerequisite" class="md-nav__link">
-    Prerequisite
+  <a href="#more-examples" class="md-nav__link">
+    More examples
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#mindsdb-studio" class="md-nav__link">
-    MindsDB Studio
-  </a>
-  
-    <nav class="md-nav" aria-label="MindsDB Studio">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#connect-to-database" class="md-nav__link">
-    Connect to database
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#create-new-datasource" class="md-nav__link">
-    Create new Datasource
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#psql-client" class="md-nav__link">
-    PSQL client
+  <a href="#json-and-json-ai" class="md-nav__link">
+    Json and Json AI
   </a>
   
 </li>
@@ -1014,79 +1050,51 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/datasources/postgresql.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/sql/api/using.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
                 
-                <h1 id="connect-to-postgresql-database">Connect to PostgreSQL database</h1>
-<p>Connecting MindsDB to your PostgreSQL database can be done in two ways:</p>
-<ul>
-<li>Using <a href="#mindsdb-studio">MindsDB Studio</a>.</li>
-<li>Using <a href="#psql-client">psql client</a>.</li>
-</ul>
-<h2 id="prerequisite">Prerequisite</h2>
-<p>To connect to your PostgreSQL Server from MindsDB, you will need to install the MySQL foreign data wrapper for PostgreSQL.</p>
-<div class="admonition tip">
-<p class="admonition-title">How to install the MySQL foreign data wrapper</p>
-<ul>
-<li>Please check the mysql_fdw <a href="https://github.com/EnterpriseDB/mysql_fdw#installation" target="_blank">documentation</a>.</li>
-<li>Stackoverflow <a href="https://stackoverflow.com/questions/24683035/setup-mysql-foreign-data-wrapper-in-postgresql" target="_blank">answers</a>.</li>
-</ul>
-</div>
-<h2 id="mindsdb-studio">MindsDB Studio</h2>
-<p>Using MindsDB Studio, you can connect to the PostgreSQL database with a few clicks.</p>
-<h4 id="connect-to-database">Connect to database</h4>
-<ol>
-<li>From the left navigation menu, select Database Integration.</li>
-<li>Click on the <code>ADD DATABASE</code> button.</li>
-<li>In the <code>Connect to Database</code> modal:<ol>
-<li>Select PostgreSQL as the Supported Database.</li>
-<li>Add the Database name.</li>
-<li>Add the Hostname.</li>
-<li>Add Port.</li>
-<li>Add PostgreSQL user.</li>
-<li>Add Password for PostgreSQL user.</li>
-<li>Click on <code>CONNECT</code>.</li>
-</ol>
-</li>
-</ol>
-<p><img alt="Connect to PostgreSQL" src="/assets/data/postgresql.gif" /></p>
-<h4 id="create-new-datasource">Create new Datasource</h4>
-<ol>
-<li>Click on the <code>NEW DATASOURCE</code> button.</li>
-<li>In the <code>Datasource from DB integration</code> modal:<ol>
-<li>Add Datasource Name.</li>
-<li>Add Database name.</li>
-<li>Add SELECT Query (e.g. SELECT * FROM my_database)</li>
-<li>Click on <code>CREATE</code>.</li>
-</ol>
-</li>
-</ol>
-<p><img alt="Create PostgreSQL Datasource" src="/assets/data/postgresql-ds.gif" /></p>
-<div class="admonition success">
-<p class="admonition-title">That's it<img alt="🎉" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/72x72/1f389.png" title=":tada:" /> <img alt="🏆" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/72x72/1f3c6.png" title=":trophy:" />  <img alt="💻" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/72x72/1f4bb.png" title=":computer:" /></p>
-<p>You have successfully connected to PostgreSQL from MindsDB Studio. The next step is to train the <a href="/model/train">Machine Learning model</a>.</p>
-</div>
-<h2 id="psql-client">PSQL client</h2>
-<div class="admonition info">
-<p class="admonition-title">How to extend MindsDB configuration</p>
-<p>Our suggestion is to always use <a href="/datasources/postgresql/#mindsdb-studio">MindsDB Studio</a> to connect MindsDB to your database. If you still want to extend the configuration without using MindsDB Studio follow <a href="/datasources/configuration/#postgresql-configuration">configuration example</a>.</p>
-</div>
-<p>After creating the required configuration, you will need to start MindsDB and provide the path to the newly created <code>config.json</code>:</p>
-<div class="highlight"><pre><span></span><code>python3 -m mindsdb --api=http,mysql --config=config.json
+                <h1 id="create-predictor-using-statement">CREATE PREDICTOR USING statement</h1>
+<p>In MindsDB, the underlying automl models are based on <a href="lightwood.io">Lightwood</a>. This library generates model automatically based on the data and the problem definition, but the default configuration can be overridden by the user with the <code>USING</code> keyword during predictor creation as:</p>
+<div class="highlight"><pre><span></span><code> <span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">home_rentals_predictor_5</span> <span class="k">FROM</span> <span class="n">mydb</span> <span class="p">(</span><span class="k">select</span> <span class="o">*</span> <span class="k">from</span> <span class="n">test_data</span><span class="p">.</span><span class="n">home_rentals</span><span class="p">)</span>  <span class="n">PREDICT</span> <span class="n">rental_price</span> 
+ <span class="k">USING</span> <span class="n">encoders</span><span class="p">.</span><span class="k">location</span><span class="p">.</span><span class="n">module</span><span class="o">=</span><span class="s1">&#39;CategoricalAutoEncoder&#39;</span><span class="p">,</span> <span class="n">encoders</span><span class="p">.</span><span class="n">rental_price</span><span class="p">.</span><span class="n">module</span><span class="o">=</span><span class="s1">&#39;NumericEncoder&#39;</span><span class="p">,</span>
+ <span class="n">encoders</span><span class="p">.</span><span class="n">rental_price</span><span class="p">.</span><span class="n">args</span><span class="p">.</span><span class="n">positive_domain</span><span class="o">=</span><span class="s1">&#39;False&#39;</span><span class="p">,</span>
+<span class="o">`</span><span class="n">model</span><span class="o">`</span><span class="p">.</span><span class="n">args</span><span class="o">=</span><span class="s1">&#39;{&quot;submodels&quot;: [{&quot;module&quot;: &quot;LightGBM&quot;, &quot;args&quot;: {&quot;stop_after&quot;: 12, &quot;fit_on_dev&quot;: true}}]}&#39;</span><span class="p">;</span>
 </code></pre></div>
-<p>The <code>--api</code> parameter specifies the type of API to use, in this case HTTP and MySQL. The <code>--config</code> parameter specifies the location of the configuration file.</p>
-<p><img alt="Start MindsDB with config" src="/assets/data/start-config.gif" /></p>
-<p>If MindsDB is successfully connected to your PostgreSQL database, it will create a new schema <code>mindsdb</code> and new table <code>predictors</code>.
-After starting the server, you can run a <code>SELECT</code> query from your psql-client to make sure integration has been successful.</p>
-<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">predictors</span><span class="p">;</span>
+<p>For example, let say we want to change the <code>location</code> column's encoding from a One-Hot encoder to a label encoder or an autoencoder. We could change this query:</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">home_rentals_predictor</span> 
+<span class="k">FROM</span> <span class="n">my_db_integration</span> <span class="p">(</span>
+    <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">home_rentals</span>
+<span class="p">)</span> <span class="n">PREDICT</span> <span class="n">rental_price</span><span class="p">;</span>
 </code></pre></div>
-<p><img alt="SELECT from MindsDB predictors table" src="/assets/data/psql-select.gif" /></p>
-<div class="admonition success">
-<p class="admonition-title">That's it <img alt="🎉" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/72x72/1f389.png" title=":tada:" /> <img alt="🏆" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/72x72/1f3c6.png" title=":trophy:" />  <img alt="💻" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/72x72/1f4bb.png" title=":computer:" /></p>
-<p>You have successfully connected MindsDB Server and PostgreSQL. The next step is to <a href="/model/postgresql">train the Machine Learning model</a>.</p>
-</div>
+<p>to</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">home_rentals_predictor</span> 
+<span class="k">FROM</span> <span class="n">my_db_integration</span> <span class="p">(</span>
+    <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">home_rentals</span>
+<span class="p">)</span> <span class="n">PREDICT</span> <span class="n">rental_price</span>
+<span class="k">USING</span> <span class="n">encoders</span><span class="p">.</span><span class="k">location</span><span class="p">.</span><span class="n">module</span><span class="o">=</span><span class="s1">&#39;CategoricalAutoEncoder&#39;</span><span class="p">;</span>
+</code></pre></div>
+<h2 id="more-examples">More examples</h2>
+<p>In the query bellow we'll showcase modifying a few things about the model with <code>USING</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">home_rentals_predictor</span> 
+<span class="k">FROM</span> <span class="n">my_db_integration</span> <span class="p">(</span>
+    <span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">home_rentals</span>
+<span class="p">)</span> <span class="n">PREDICT</span> <span class="n">rental_price</span>
+<span class="k">USING</span> 
+    <span class="cm">/* Change the encoder for a column */</span>
+    <span class="n">encoders</span><span class="p">.</span><span class="k">location</span><span class="p">.</span><span class="n">module</span><span class="o">=</span><span class="s1">&#39;CategoricalAutoEncoder&#39;</span><span class="p">,</span>
+    <span class="cm">/* Change the encoder for another colum (the target) */</span>
+    <span class="n">encoders</span><span class="p">.</span><span class="n">rental_price</span><span class="p">.</span><span class="n">module</span> <span class="o">=</span> <span class="s1">&#39;NumericEncoder&#39;</span><span class="p">,</span>
+    <span class="cm">/* Change the arguments that will be passed to that encoder */</span>
+    <span class="n">encoders</span><span class="p">.</span><span class="n">rental_price</span><span class="p">.</span><span class="n">args</span><span class="p">.</span><span class="n">positive_domain</span> <span class="o">=</span> <span class="s1">&#39;True&#39;</span><span class="p">,</span>
+    <span class="cm">/* Set the list of models lightwood will try to use to a single one, a Light Gradient Boosting Machine.*/</span>
+    <span class="n">model</span><span class="p">.</span><span class="n">args</span><span class="o">=</span><span class="s1">&#39;{&quot;submodels&quot;: [{&quot;module&quot;: &quot;LightGBM&quot;, &quot;args&quot;: {&quot;stop_after&quot;: 12, &quot;fit_on_dev&quot;: true}}]}&#39;</span><span class="p">;</span>
+</code></pre></div>
+<h2 id="json-and-json-ai">Json and Json AI</h2>
+<p>As you can see in the example above, we support json-like syntax as well as a <code>.</code> access notation for said json.</p>
+<p>In that sense it's equivalent to write <code>USING a.b.c=5</code> or <code>USING a = {"b":{"c":5}}</code>.</p>
+<p>You have <strong>a lot</strong> of options in terms of what you can configure with <code>USING</code>. Since lightwood model are fully-generated by a json configuration we call "JsonAI", and with the <code>USING</code> statement you can modify all bits of that. The most common usecases for configuring predictors will be listed and explained in the above examples. To see all options available to you checkout the <a href="https://lightwood.io/api/types.html#api.types.JsonAI">lightwood docs about JsonAI</a>. If you're unsure how to configure a model to solve your problem, feel free to ask us how to do it on the community slack :)</p>
                 
               
               
@@ -1106,10 +1114,10 @@ After starting the server, you can run a <code>SELECT</code> query from your psq
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../assets/javascripts/workers/search.94ec81fe.min.js", "version": null}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../assets/javascripts/workers/search.94ec81fe.min.js", "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.48dfec6c.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.48dfec6c.min.js"></script>
       
     
   </body>

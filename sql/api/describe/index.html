@@ -9,21 +9,21 @@
       
       
       
-        <link rel="canonical" href="https://docs.mindsdb.com/datasources/snowflake/">
+        <link rel="canonical" href="https://docs.mindsdb.com/sql/api/describe/">
       
-      <link rel="icon" href="../../assets/mdb_logo.png">
+      <link rel="icon" href="../../../assets/mdb_logo.png">
       <meta name="generator" content="mkdocs-1.2.2, mkdocs-material-7.2.8">
     
     
       
-        <title>Connect to Snowflake Data Warehouse - MindsDB Documentation</title>
+        <title>DESCRIBE statement - MindsDB Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.92558b1b.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.92558b1b.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.3f5d1f46.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.3f5d1f46.min.css">
         
       
     
@@ -38,7 +38,7 @@
     
     
     
-      <link rel="stylesheet" href="../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
     
 
@@ -74,7 +74,7 @@
     <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="" data-md-color-accent="">
   
     
-    <script>function __prefix(e){return new URL("../..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
+    <script>function __prefix(e){return new URL("../../..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
     
       <script>var palette=__get("__palette");if(null!==palette&&"object"==typeof palette.color)for(var key in palette.color)document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
     
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#connect-to-snowflake-data-warehouse" class="md-skip">
+        <a href="#describe-statement" class="md-skip">
           Skip to content
         </a>
       
@@ -128,14 +128,14 @@
 
     <!-- Link to home -->
     <a
-      href="../.."
+      href="../../.."
       title="MindsDB Documentation"
       class="md-header__button md-logo"
       aria-label="MindsDB Documentation"
       data-md-component="logo"
     >
       
-  <img src="../../assets/mdb_logo_w.svg" alt="logo">
+  <img src="../../../assets/mdb_logo_w.svg" alt="logo">
 
     </a>
 
@@ -155,7 +155,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Connect to Snowflake Data Warehouse
+              DESCRIBE statement
             
           </span>
         </div>
@@ -313,9 +313,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="MindsDB Documentation" class="md-nav__button md-logo" aria-label="MindsDB Documentation" data-md-component="logo">
+    <a href="../../.." title="MindsDB Documentation" class="md-nav__button md-logo" aria-label="MindsDB Documentation" data-md-component="logo">
       
-  <img src="../../assets/mdb_logo_w.svg" alt="logo">
+  <img src="../../../assets/mdb_logo_w.svg" alt="logo">
 
     </a>
     MindsDB Documentation
@@ -344,7 +344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         What is MindsDB
       </a>
     </li>
@@ -380,7 +380,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../info/" class="md-nav__link">
+      <a href="../../../info/" class="md-nav__link">
         Getting Started
       </a>
     </li>
@@ -392,7 +392,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deployment/docker/" class="md-nav__link">
+      <a href="../../../deployment/docker/" class="md-nav__link">
         Docker
       </a>
     </li>
@@ -404,7 +404,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deployment/pypi/" class="md-nav__link">
+      <a href="../../../deployment/pypi/" class="md-nav__link">
         Pip
       </a>
     </li>
@@ -416,7 +416,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deployment/cloud/" class="md-nav__link">
+      <a href="../../../deployment/cloud/" class="md-nav__link">
         MindsDB Cloud
       </a>
     </li>
@@ -437,7 +437,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../connect/" class="md-nav__link">
+      <a href="../../../connect/" class="md-nav__link">
         Plug your data
       </a>
     </li>
@@ -473,7 +473,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/connect/local/" class="md-nav__link">
+      <a href="../../connect/local/" class="md-nav__link">
         Local Deployment
       </a>
     </li>
@@ -485,7 +485,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/connect/cloud/" class="md-nav__link">
+      <a href="../../connect/cloud/" class="md-nav__link">
         MindsDB Cloud
       </a>
     </li>
@@ -527,7 +527,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/use/" class="md-nav__link">
+      <a href="../use/" class="md-nav__link">
         USE
       </a>
     </li>
@@ -560,7 +560,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/predictor/" class="md-nav__link">
+      <a href="../predictor/" class="md-nav__link">
         Predictor
       </a>
     </li>
@@ -572,8 +572,20 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/view/" class="md-nav__link">
+      <a href="../view/" class="md-nav__link">
         View
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../using/" class="md-nav__link">
+        USING
       </a>
     </li>
   
@@ -590,7 +602,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/retrain/" class="md-nav__link">
+      <a href="../retrain/" class="md-nav__link">
         RETRAIN
       </a>
     </li>
@@ -602,7 +614,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/drop/" class="md-nav__link">
+      <a href="../drop/" class="md-nav__link">
         DROP
       </a>
     </li>
@@ -614,7 +626,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/select/" class="md-nav__link">
+      <a href="../select/" class="md-nav__link">
         SELECT
       </a>
     </li>
@@ -626,7 +638,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/api/join/" class="md-nav__link">
+      <a href="../join/" class="md-nav__link">
         JOIN
       </a>
     </li>
@@ -668,7 +680,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/ai-tables/" class="md-nav__link">
+      <a href="../../tutorials/ai-tables/" class="md-nav__link">
         AI Tables Intro
       </a>
     </li>
@@ -701,7 +713,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/process-quality/" class="md-nav__link">
+      <a href="../../tutorials/process-quality/" class="md-nav__link">
         Process Quality
       </a>
     </li>
@@ -713,7 +725,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/bodyfat/" class="md-nav__link">
+      <a href="../../tutorials/bodyfat/" class="md-nav__link">
         Body Fat Prediction
       </a>
     </li>
@@ -725,7 +737,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/insurance-cost-prediction/" class="md-nav__link">
+      <a href="../../tutorials/insurance-cost-prediction/" class="md-nav__link">
         Insurance Cost
       </a>
     </li>
@@ -764,7 +776,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/crop-prediction/" class="md-nav__link">
+      <a href="../../tutorials/crop-prediction/" class="md-nav__link">
         Crop Recommendation
       </a>
     </li>
@@ -776,7 +788,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/customer-churn/" class="md-nav__link">
+      <a href="../../tutorials/customer-churn/" class="md-nav__link">
         Customer Churn
       </a>
     </li>
@@ -788,7 +800,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/diabetes/" class="md-nav__link">
+      <a href="../../tutorials/diabetes/" class="md-nav__link">
         Diabetes
       </a>
     </li>
@@ -800,7 +812,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/heart-disease/" class="md-nav__link">
+      <a href="../../tutorials/heart-disease/" class="md-nav__link">
         Heart Disease
       </a>
     </li>
@@ -812,7 +824,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/mushrooms/" class="md-nav__link">
+      <a href="../../tutorials/mushrooms/" class="md-nav__link">
         Mushrooms
       </a>
     </li>
@@ -851,7 +863,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/tutorials/mindsdb-superset-snowflake/" class="md-nav__link">
+      <a href="../../tutorials/mindsdb-superset-snowflake/" class="md-nav__link">
         AI powered forecasts with MindsDB
       </a>
     </li>
@@ -899,7 +911,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contribute/" class="md-nav__link">
+      <a href="../../../contribute/" class="md-nav__link">
         How to contribute
       </a>
     </li>
@@ -911,7 +923,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/" class="md-nav__link">
+      <a href="../../../community/" class="md-nav__link">
         Join our community
       </a>
     </li>
@@ -923,7 +935,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../faq/" class="md-nav__link">
+      <a href="../../../faq/" class="md-nav__link">
         FAQ
       </a>
     </li>
@@ -962,15 +974,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#connect-to-snowflake" class="md-nav__link">
-    Connect to Snowflake
+  <a href="#describe-tablefeatures-statement" class="md-nav__link">
+    DESCRIBE TABLE.features statement
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#create-new-datasource" class="md-nav__link">
-    Create new Datasource
+  <a href="#describe-tablemodel-statement" class="md-nav__link">
+    DESCRIBE TABLE.model statement
   </a>
   
 </li>
@@ -987,49 +999,21 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/datasources/snowflake.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/sql/api/describe.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
                 
-                <h1 id="connect-to-snowflake-data-warehouse">Connect to Snowflake Data Warehouse</h1>
-<p>Connecting MindsDB to the <a href="https://www.snowflake.com/" target="_blank">Snowflake</a> can be easily done with a few clicks.</p>
-<h4 id="connect-to-snowflake">Connect to Snowflake</h4>
-<ol>
-<li>From the left navigation menu, select Database Integration.</li>
-<li>Click on the <code>ADD DATABASE</code> button.</li>
-<li>In the <code>Connect to Database</code> modal window:<ol>
-<li>Select Snowflake as the Supported Database.</li>
-<li>Add the Database name.</li>
-<li>Add the Hostname.</li>
-<li>Add Port.</li>
-<li>Add Account.</li>
-<li>Add Warehouse.</li>
-<li>Add Schema.</li>
-<li>Add protocol.</li>
-<li>Add User.</li>
-<li>Add Password for the user.</li>
-<li>Click on <code>CONNECT</code>.</li>
-</ol>
-</li>
-</ol>
-<p><img alt="Connect to Snowflake" src="/assets/data/snowflake.gif" /></p>
-<h4 id="create-new-datasource">Create new Datasource</h4>
-<ol>
-<li>Click on the <code>NEW DATASOURCE</code> button.</li>
-<li>In the <code>Datasource from DB integration</code> modal window:<ol>
-<li>Add Datasource Name.</li>
-<li>Add Database name.</li>
-<li>Add SELECT Query (e.g. SELECT * FROM my_database).</li>
-<li>Click on <code>CREATE</code>.</li>
-</ol>
-</li>
-</ol>
-<p><img alt="Create Snowflake Datasource" src="/assets/data/snowflake-ds.gif" /></p>
-<div class="admonition success">
-<p class="admonition-title">That's it <img alt="🎉" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/72x72/1f389.png" title=":tada:" /> <img alt="🏆" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/72x72/1f3c6.png" title=":trophy:" />  <img alt="💻" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/72x72/1f4bb.png" title=":computer:" /></p>
-<p>You have successfully connected to Snowflake from MindsDB Studio. The next step is to train the <a href="/model/train">Machine Learning model</a>.</p>
-</div>
+                <h1 id="describe-statement">DESCRIBE statement</h1>
+<p>The <code>DESCRIBE</code> statement is used to describe attributes of existing model.</p>
+<h2 id="describe-tablefeatures-statement">DESCRIBE TABLE.features statement</h2>
+<p>The <code>DESCRIBE PREDICTOR.features</code> statement is used to describe features of a model:</p>
+<div class="highlight"><pre><span></span><code><span class="k">DESCRIBE</span> <span class="n">PREDICTOR</span><span class="p">.</span><span class="n">features</span><span class="p">;</span>
+</code></pre></div>
+<h2 id="describe-tablemodel-statement">DESCRIBE TABLE.model statement</h2>
+<p>The <code>DESCRIBE PREDICTOR.model</code> statement is used to describe all models which were tried:</p>
+<div class="highlight"><pre><span></span><code><span class="k">DESCRIBE</span> <span class="n">PREDICTOR</span><span class="p">.</span><span class="n">model</span><span class="p">;</span>
+</code></pre></div>
                 
               
               
@@ -1049,10 +1033,10 @@
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../assets/javascripts/workers/search.94ec81fe.min.js", "version": null}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../assets/javascripts/workers/search.94ec81fe.min.js", "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.48dfec6c.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.48dfec6c.min.js"></script>
       
     
   </body>

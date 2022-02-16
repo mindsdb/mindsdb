@@ -579,6 +579,18 @@
   
 
           
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/using/" class="md-nav__link">
+        USING
+      </a>
+    </li>
+  
+
+          
         </ul>
       </nav>
     </li>
@@ -1182,8 +1194,8 @@
 <h2 id="docker">Docker</h2>
 <ol>
 <li>Create a new project directory named e.g. <code>mindsdb-tutorial</code></li>
-<li>Inside your project directory:
-    2.1 Create a new file named <code>docker-compose.yml</code>.</li>
+<li>Inside your project directory:</li>
+<li>Create a new file named <code>docker-compose.yml</code>.</li>
 </ol>
 <p>Open the <code>docker-compose.yml</code> file with any text-editor, copy the following and save.</p>
 <div class="highlight"><pre><span></span><code>version: <span class="s1">&#39;3.5&#39;</span>
@@ -1214,7 +1226,7 @@ For the database to connect to MindsDB we will use a tunneling program Ngrok to 
 <p>Data will be loaded from a csv file using the import tool.
 <a href="https://docs.docker.com/storage/volumes/">Docker Volumes</a> are used for persistent storage of data.</p>
 <p>To run, open a terminal in the project folder and run <code>docker-compose up -d</code> .
-If you do not have the Docker images locally, it will first download them from docker hub and might take.</p>
+If you do not have the Docker images locally, it will first download them from docker hub and might take a while.</p>
 <h2 id="creating-a-database">Creating a database</h2>
 <p>The goal of creating a database in Visual Studio is to simplify the method used. We have two options- to create a python file with the relevant code in it or create a Jupyter Notebook. For the purpose of this exercise we are going to use Jupyter Notebook which will help execute the code.</p>
 <p>We will use the libraries <code>sqlalchemy</code> and <code>pandas</code> to create the database and load data into tables.</p>

@@ -7,7 +7,7 @@ from copy import deepcopy
 from sqlalchemy import func
 
 from mindsdb.interfaces.storage.db import session
-from mindsdb.interfaces.storage.db import Integration
+from mindsdb.interfaces.storage.db import Datasource
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.fs import create_directory
@@ -33,7 +33,7 @@ class DatasourceController:
             p = Path(bundle_path)
             data['secure_connect_bundle'] = p.name
 
-            integration_record = Integration(name=name, data=data, company_id=company_id)
+            integration_record = Datasource(name=name, data=data, company_id=company_id)
             session.add(integration_record)
             session.commit()
             integration_id = integration_record.id
@@ -69,7 +69,7 @@ class DatasourceController:
                     files[key] = data[key]
                     p = Path(data[key])
                     data[key] = p.name
-            integration_record = Integration(name=name, data=data, company_id=company_id)
+            integration_record = Datasource(name=name, data=data, company_id=company_id)
             session.add(integration_record)
             session.commit()
             integration_id = integration_record.id
@@ -88,12 +88,12 @@ class DatasourceController:
                     integrations_dir
                 )
         else:
-            integration_record = Integration(name=name, data=data, company_id=company_id)
+            integration_record = Datasource(name=name, data=data, company_id=company_id)
             session.add(integration_record)
             session.commit()
 
     def modify_db_integration(self, name, data, company_id):
-        integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+        integration_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
         old_data = deepcopy(integration_record.data)
         for k in old_data:
             if k not in data:
@@ -103,7 +103,7 @@ class DatasourceController:
         session.commit()
 
     def remove_db_integration(self, name, company_id=None):
-        integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+        integration_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
         integrations_dir = Config()['paths']['integrations']
         folder_name = f'integration_files_{company_id}_{integration_record.id}'
         integration_dir = os.path.join(integrations_dir, folder_name)
@@ -164,21 +164,21 @@ class DatasourceController:
         return data
 
     def get_db_integration_by_id(self, id, company_id=None, sensitive_info=True):
-        integration_record = session.query(Integration).filter_by(company_id=company_id, id=id).first()
+        integration_record = session.query(Datasource).filter_by(company_id=company_id, id=id).first()
         return self._get_integration_record_data(integration_record, sensitive_info)
 
     def get_db_integration(self, name, company_id=None, sensitive_info=True, case_sensitive=False):
         if case_sensitive:
-            integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+            integration_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
         else:
-            integration_record = session.query(Integration).filter(
-                (Integration.company_id == company_id)
-                & (func.lower(Integration.name) == func.lower(name))
+            integration_record = session.query(Datasource).filter(
+                (Datasource.company_id == company_id)
+                & (func.lower(Datasource.name) == func.lower(name))
             ).first()
         return self._get_integration_record_data(integration_record, sensitive_info)
 
     def get_db_integrations(self, company_id=None, sensitive_info=True):
-        integration_records = session.query(Integration).filter_by(company_id=company_id).all()
+        integration_records = session.query(Datasource).filter_by(company_id=company_id).all()
         integration_dict = {}
         for record in integration_records:
             if record is None or record.data is None:

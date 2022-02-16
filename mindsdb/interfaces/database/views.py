@@ -1,10 +1,10 @@
 from mindsdb.interfaces.storage.db import session
-from mindsdb.interfaces.storage.db import Integration, View
+from mindsdb.interfaces.storage.db import Datasource, View
 
 
 class ViewController:
     def add(self, name, query, datasource_name, company_id=None):
-        datasource_records = session.query(Integration).filter_by(company_id=company_id).all()
+        datasource_records = session.query(Datasource).filter_by(company_id=company_id).all()
         datasource_id = None
         for record in datasource_records:
             if record.name == datasource_name:

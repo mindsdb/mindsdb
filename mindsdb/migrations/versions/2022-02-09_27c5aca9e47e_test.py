@@ -56,6 +56,7 @@ def upgrade():
 
     with op.batch_alter_table('datasource', schema=None) as batch_op:
         batch_op.drop_column('analysis')
+        batch_op.add_column(sa.Column('ds_class', sa.String(), nullable=True))
 
     op.create_table(
         'file',
@@ -113,10 +114,10 @@ def upgrade():
             )
             session.add(file)
 
-        # what if it is file?
         conn.execute(f"""
             update datasource
-            set integration_id = (select id from integration where name = '{datasource_name}' and company_id = {ds['company_id']})
+            set integration_id = (select id from integration where name = '{datasource_name}' and company_id = {ds['company_id']}),
+                ds_class = '{creation_info['class']}'
             where id = {ds['id']}
         """)
         datasource_name

@@ -89,6 +89,7 @@ class Dataset(Base):
     datasources_version = Column(String)
     # integration_id = Column(Integer)            # ???????
     datasource_id = Column(ForeignKey('datasource.id'), nullable=True)
+    ds_class = Column(String)
 
 
 class Predictor(Base):

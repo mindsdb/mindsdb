@@ -743,15 +743,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.packet(OkPacket).send()
 
-    def delete_predictor_sql(self, sql):
-        fake_sql = sql.strip(' ')
-        fake_sql = 'select name ' + fake_sql[len('delete '):]
-        query = SQLQuery(
-            fake_sql,
+    def delete_predictor_query(self, query):
+
+        query2 = Select(targets=[Identifier('name')],
+                        from_table=query.table,
+                        where=query.where)
+        # fake_sql = sql.strip(' ')
+        # fake_sql = 'select name ' + fake_sql[len('delete '):]
+        sqlquery = SQLQuery(
+            query2.to_string(),
             session=self.session
         )
 
-        result = query.fetch(
+        result = sqlquery.fetch(
             self.session.datahub
         )
 
@@ -783,7 +787,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ).send()
                 return
             predictor_name = command[2]
-            self.delete_predictor_sql(f"delete from mindsdb.predictors where name = '{predictor_name}'")
+            self.delete_predictor_query(parse_sql(
+                f"delete from mindsdb.predictors where name = '{predictor_name}'",
+                'mindsdb'
+            ))
             self.packet(OkPacket).send()
             return
 
@@ -793,16 +800,33 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             msg="at this moment only 'delete predictor' command supported"
         ).send()
 
-    def answer_stmt_prepare(self, statement):
-        sql = statement.sql
-        sql_lower = sql.lower()
-        stmt_id = self.session.register_stmt(statement)
+
+    def to_mysql_type(self, type_name):
+        if type_name == 'str':
+            return TYPES.MYSQL_TYPE_VAR_STRING
+
+        # unknown
+        return TYPES.MYSQL_TYPE_VAR_STRING
+
+    def answer_stmt_prepare(self, sql):
+        sqlquery = SQLQuery(
+            sql,
+            session=self.session,
+            execute=False
+        )
+
+        stmt_id = self.session.register_stmt(sqlquery)
         prepared_stmt = self.session.prepared_stmts[stmt_id]
 
-        if statement.keyword == 'insert':
+        sqlquery.prepare_query()
+        parameters = sqlquery.parameters
+        columns_def = sqlquery.columns
+
+        statement = sqlquery.query
+        if isinstance(statement, Insert):
             prepared_stmt['type'] = 'insert'
 
-            statement = parse_sql(sql, dialect='mindsdb')
+            # ???
             if (
                 len(statement.table.parts) > 1 and statement.table.parts[0].lower() != 'mindsdb'
                 or len(statement.table.parts) == 1 and self.session.database != 'mindsdb'
@@ -812,97 +836,86 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if table_name not in ['predictors', 'commands']:
                 raise ErNonInsertableTable("Only parametrized insert into 'predictors' or 'commands' supported at this moment")
 
-            new_statement = Select(
-                targets=statement.columns,
-                from_table=Identifier(parts=['mindsdb', table_name]),
-                limit=Constant(0)
-            )
+            # new_statement = Select(
+            #     targets=statement.columns,
+            #     from_table=Identifier(parts=['mindsdb', table_name]),
+            #     limit=Constant(0)
+            # )
 
-            query = SQLQuery(
-                new_statement,
-                session=self.session
-            )
+            # parameters = []
+            # for row in statement.values:
+            #     for item in row:
+            #         if type(item) == Parameter:
+            #             num_params = num_params + 1
+            # num_columns = len(query.columns) - num_params
 
-            num_params = 0
-            for row in statement.values:
-                for item in row:
-                    if type(item) == Parameter:
-                        num_params = num_params + 1
-            num_columns = len(query.columns) - num_params
-
-            if num_columns != 0:
-                raise ErNonInsertableTable("At this moment supported only insert where all values is parameters.")
+            # ???
+            # if len(sqlquery.columns) != len(sqlquery.parameters):
+            #     raise ErNonInsertableTable("At this moment supported only insert where all values is parameters.")
 
             columns_def = []
-            for col in query.columns:
-                columns_def.append(dict(
-                    database='',
-                    table_alias='',
-                    table_name='',
-                    alias='',
-                    name='?',
-                    type=TYPES.MYSQL_TYPE_VAR_STRING,
-                    charset=CHARSET_NUMBERS['binary']
-                ))
-        elif statement.keyword == 'select' and statement.ends_with('for update'):
+            for col in sqlquery.columns:
+                col = col.copy()
+                col['charset'] = CHARSET_NUMBERS['binary']
+                columns_def.append(col)
+
+        elif isinstance(statement, Select) and statement.mode == 'FOR UPDATE':
             # postgres when execute "delete from mindsdb.predictors where name = 'x'" sends for it prepare statement:
             # 'select name from mindsdb.predictors where name = 'x' FOR UPDATE;'
             # and after it send prepare for delete query.
             prepared_stmt['type'] = 'lock'
-            statement.cut_from_tail('for update')
-            query = SQLQuery(statement.sql, session=self.session)
-            num_columns = len(query.columns)
-            num_params = 0
-            columns_def = query.columns
+
+            # statement.cut_from_tail('for update')
+            # query = SQLQuery(statement.sql, session=self.session)
+            # num_columns = len(query.columns)
+            # parameters = []
             for col in columns_def:
                 col['charset'] = CHARSET_NUMBERS['utf8_general_ci']
 
-        elif statement.keyword == 'delete':
+        elif isinstance(statement, Delete):
             prepared_stmt['type'] = 'delete'
-
-            fake_sql = sql.replace('?', '"?"')
-            fake_sql = 'select name ' + fake_sql[len('delete '):]
-            query = SQLQuery(fake_sql, session=self.session)
-            num_columns = 0
-            num_params = sql.count('?')
+            #
+            # fake_sql = sql.replace('?', '"?"')
+            # fake_sql = 'select name ' + fake_sql[len('delete '):]
+            # query = SQLQuery(fake_sql, session=self.session)
+            # num_columns = 0
+            # num_params = sql.count('?')
             columns_def = []
-            for i in range(num_params):
+            for col in sqlquery.parameters:
                 columns_def.append(dict(
                     database='',
                     table_alias='',
                     table_name='',
-                    alias='?',
+                    alias=col.name,
                     name='',
                     type=TYPES.MYSQL_TYPE_VAR_STRING,
                     charset=CHARSET_NUMBERS['utf8_general_ci'],
                     flags=sum([FIELD_FLAG.BINARY_COLLATION])
                 ))
-        elif statement.keyword == 'select' and 'connection_id()' in sql.lower():
+        # elif statement.keyword == 'select' and 'connection_id()' in sql.lower():
+        #     prepared_stmt['type'] = 'select'
+        #     num_columns = 1
+        #     parameters = []
+        #     columns_def = [{
+        #         'database': '',
+        #         'table_name': '',
+        #         'name': 'conn_id',
+        #         'alias': 'conn_id',
+        #         'type': TYPES.MYSQL_TYPE_LONG,
+        #         'charset': CHARSET_NUMBERS['binary']
+        #     }]
+        elif isinstance(statement, Select):
             prepared_stmt['type'] = 'select'
-            num_columns = 1
-            num_params = 0
-            columns_def = [{
-                'database': '',
-                'table_name': '',
-                'name': 'conn_id',
-                'alias': 'conn_id',
-                'type': TYPES.MYSQL_TYPE_LONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }]
-        elif statement.keyword == 'select':
-            prepared_stmt['type'] = 'select'
-            query = SQLQuery(sql, session=self.session)
-            num_columns = len(query.columns)
-            num_params = 0
-            columns_def = query.columns
-        elif (
-            'show variables' in sql_lower
-            or 'show session variables' in sql_lower
-            or 'show session status' in sql_lower
+        #     query = SQLQuery(sql, session=self.session)
+        #     num_columns = len(query.columns)
+        #     parameters = []
+        #     columns_def = query.columns
+        elif isinstance (statement, Show) and statement.category in (
+            'variables', 'session variables', 'show session status'
         ):
             prepared_stmt['type'] = 'show variables'
             num_columns = 2
-            num_params = 0
+            parameters = []
             columns_def = [{
                 'table_name': '',
                 'name': 'Variable_name',
@@ -919,80 +932,94 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(
                 STMTPrepareHeaderPacket,
                 stmt_id=stmt_id,
-                num_columns=num_columns,
-                num_params=num_params
+                num_columns=len(columns_def),
+                num_params=len(parameters)
             )
         ]
 
-        packages.extend(
-            self._get_column_defenition_packets(columns_def)
-        )
+        parameters_def = sqlquery.to_mysql_columns(parameters)
+        if len(parameters_def) > 0:
+            packages.extend(
+                self._get_column_defenition_packets(parameters_def)
+            )
+            if self.client_capabilities.DEPRECATE_EOF is False:
+                status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
+                packages.append(self.packet(EofPacket, status=status))
 
-        if self.client_capabilities.DEPRECATE_EOF is False:
-            status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
-            packages.append(self.packet(EofPacket, status=status))
+        if len(columns_def) > 0:
+            packages.extend(
+                self._get_column_defenition_packets(columns_def)
+            )
+
+            if self.client_capabilities.DEPRECATE_EOF is False:
+                status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
+                packages.append(self.packet(EofPacket, status=status))
 
         self.send_package_group(packages)
 
     def answer_stmt_execute(self, stmt_id, parameters):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
+
+        sqlquery = prepared_stmt['statement']
+        sqlquery.execute_query(parameters)
+        query = sqlquery.query
         if prepared_stmt['type'] == 'select':
-            sql = prepared_stmt['statement'].sql
+            # sql = prepared_stmt['statement'].sql
 
             # +++
-            if sql.lower() == 'select connection_id()':
-                self.answer_connection_id(sql)
+
+            if query == Select(targets=[Function(op='connection_id', args=())]):
+                self.answer_connection_id()
                 return
             # ---
 
             # +++
-            if "SELECT `table_name`, `column_name`" in sql:
-                # TABLEAU
-                # SELECT `table_name`, `column_name`
-                # FROM `information_schema`.`columns`
-                # WHERE `data_type`='enum' AND `table_schema`='mindsdb'
-                packages = self.get_tabel_packets(
-                    columns=[{
-                        'table_name': '',
-                        'name': 'TABLE_NAME',
-                        'type': TYPES.MYSQL_TYPE_VAR_STRING
-                    }, {
-                        'table_name': '',
-                        'name': 'COLUMN_NAME',
-                        'type': TYPES.MYSQL_TYPE_VAR_STRING
-                    }],
-                    data=[]
-                )
-                if self.client_capabilities.DEPRECATE_EOF is True:
-                    packages.append(self.packet(OkPacket, eof=True))
-                else:
-                    packages.append(self.packet(EofPacket))
-                self.send_package_group(packages)
-                return
-            # ---
+            # if "SELECT `table_name`, `column_name`" in sql:
+            #     # TABLEAU
+            #     # SELECT `table_name`, `column_name`
+            #     # FROM `information_schema`.`columns`
+            #     # WHERE `data_type`='enum' AND `table_schema`='mindsdb'
+            #     packages = self.get_tabel_packets(
+            #         columns=[{
+            #             'table_name': '',
+            #             'name': 'TABLE_NAME',
+            #             'type': TYPES.MYSQL_TYPE_VAR_STRING
+            #         }, {
+            #             'table_name': '',
+            #             'name': 'COLUMN_NAME',
+            #             'type': TYPES.MYSQL_TYPE_VAR_STRING
+            #         }],
+            #         data=[]
+            #     )
+            #     if self.client_capabilities.DEPRECATE_EOF is True:
+            #         packages.append(self.packet(OkPacket, eof=True))
+            #     else:
+            #         packages.append(self.packet(EofPacket))
+            #     self.send_package_group(packages)
+            #     return
+            # # ---
 
-            query = SQLQuery(sql, session=self.session)
-
-            columns = query.columns
+            columns = sqlquery.columns
             packages = [self.packet(ColumnCountPacket, count=len(columns))]
             packages.extend(self._get_column_defenition_packets(columns))
 
             packages.append(self.last_packet(status=0x0062))
             self.send_package_group(packages)
         elif prepared_stmt['type'] == 'insert':
-            statement = parse_sql(prepared_stmt['statement'].sql, dialect='mindsdb')
-            parameter_index = 0
-            for row in statement.values:
-                for item_index, item in enumerate(row):
-                    if type(item) == Parameter:
-                        row[item_index] = Constant(parameters[parameter_index])
-                        parameter_index += 1
-            self.process_insert(statement)
-        elif prepared_stmt['type'] == 'lock':
-            sql = prepared_stmt['statement'].sql
-            query = SQLQuery(sql, session=self.session)
+            # statement = parse_sql(prepared_stmt['statement'].sql, dialect='mindsdb')
+            # parameter_index = 0
+            # for row in query.values:
+            #     for item_index, item in enumerate(row):
+            #         if type(item) == Parameter:
+            #             row[item_index] = Constant(parameters[parameter_index])
+            #             parameter_index += 1
+            self.process_insert(query)
 
-            columns = query.columns
+        elif prepared_stmt['type'] == 'lock':
+            # sql = prepared_stmt['statement'].sql
+            # query = SQLQuery(sql, session=self.session)
+
+            columns = sqlquery.columns
             packages = [self.packet(ColumnCountPacket, count=len(columns))]
             packages.extend(self._get_column_defenition_packets(columns))
 
@@ -1006,12 +1033,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif prepared_stmt['type'] == 'delete':
             if len(parameters) == 0:
                 raise SqlApiException("Delete statement must content 'where' filter")
-            sql = prepared_stmt['statement'].sql
-            sql = sql[:sql.find('?')] + f"'{parameters[0]}'"
-            self.delete_predictor_sql(sql)
+            # sql = prepared_stmt['statement'].sql
+            # sql = sql[:sql.find('?')] + f"'{parameters[0]}'"
+            self.delete_predictor_query(query)
             self.packet(OkPacket, affected_rows=1).send()
         elif prepared_stmt['type'] == 'show variables':
-            sql = prepared_stmt['statement'].sql
+            # sql = prepared_stmt['statement'].sql
 
             packages = []
             packages += self.get_tabel_packets(
@@ -1035,11 +1062,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def answer_stmt_fetch(self, stmt_id, limit=100000):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
-        sql = prepared_stmt['statement'].sql
+        # sql = prepared_stmt['statement'].sql
         fetched = prepared_stmt['fetched']
-        query = SQLQuery(sql, session=self.session)
+        # query = SQLQuery(sql, session=self.session)
+        sqlquery = prepared_stmt['statement']
 
-        result = query.fetch(
+        result = sqlquery.fetch(
             self.session.datahub
         )
 
@@ -1052,15 +1080,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
 
         packages = []
-        columns = query.columns
-        for row in query.result[fetched:limit]:
+        columns = sqlquery.columns
+        for row in sqlquery.result[fetched:limit]:
             packages.append(
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
             )
 
-        prepared_stmt['fetched'] += len(query.result[fetched:limit])
+        prepared_stmt['fetched'] += len(sqlquery.result[fetched:limit])
 
-        if len(query.result) <= limit:
+        if len(sqlquery.result) <= limit:
             status = sum([
                 SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
                 SERVER_STATUS.SERVER_STATUS_LAST_ROW_SENT,
@@ -1655,7 +1683,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
             if statement.table.parts[-1] != 'predictors':
                 raise ErBadTableError("Only 'DELETE' from table 'mindsdb.predictors' is possible at this moment")
-            self.delete_predictor_sql(str(sql))
+            self.delete_predictor_query(statement)
             self.packet(OkPacket).send()
         elif type(statement) == Insert:
             self.process_insert(statement)
@@ -2074,7 +2102,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packages.append(self.last_packet())
         self.send_package_group(packages)
 
-    def answer_connection_id(self, sql):
+    def answer_connection_id(self):
         packages = self.get_tabel_packets(
             columns=[{
                 'database': '',
@@ -2107,7 +2135,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             columns=query.columns,
             data=query.result
         )
-        packages.append(self.packet(OkPacket, eof=True))
+        # there was hang of mysql client
+        # packages.append(self.packet(OkPacket, eof=True))
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def _get_column_defenition_packets(self, columns, data=[]):
@@ -2292,9 +2322,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
                     # https://dev.mysql.com/doc/internals/en/com-stmt-prepare.html
                     sql = self.decode_utf(p.sql.value)
-                    statement = SqlStatementParser(sql)
-                    log.debug(f'COM_STMT_PREPARE: {statement.sql}')
-                    self.answer_stmt_prepare(statement)
+                    # statement = SqlStatementParser(sql)
+                    # log.debug(f'COM_STMT_PREPARE: {statement.sql}')
+                    self.answer_stmt_prepare(sql)
                 elif p.type.value == COMMANDS.COM_STMT_EXECUTE:
                     self.answer_stmt_execute(p.stmt_id.value, p.parameters)
                 elif p.type.value == COMMANDS.COM_STMT_FETCH:

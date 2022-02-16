@@ -102,7 +102,7 @@ class Predictor(Base):
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     native_version = Column(String)
-    dataset_id = Column(ForeignKey('dataset.id'), nullable=True)
+    dataset_id = Column(ForeignKey('dataset.id', name='fk_dataset_id'), nullable=True)
     is_custom = Column(Boolean)
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')
@@ -172,7 +172,7 @@ class File(Base):
     columns = Column(Json, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    analysis_id = Column(ForeignKey('analysis.id'), nullable=True)
+    analysis_id = Column(ForeignKey('analysis.id', name='fk_analysis_id'), nullable=True)
     uniq_const = UniqueConstraint('name', 'company_id')
 
 

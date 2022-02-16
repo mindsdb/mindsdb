@@ -11,6 +11,7 @@ import datetime
 from alembic import op
 import sqlalchemy as sa
 import mindsdb.interfaces.storage.db
+from sqlalchemy.sql import text
 
 
 # revision identifiers, used by Alembic.
@@ -43,15 +44,24 @@ def upgrade():
     for row in dsatasources:
         if row['analysis'] is not None:
             # NOTE 'returning' is relatively new in sqlite, so better will be use select after insert.
-            conn.execute(f"""
-                insert into analysis (analysis) select analysis from datasource where id = {row['id']};
-            """)
-            analysis_id = conn.execute("""
+            conn.execute(
+                text("""
+                    insert into analysis (analysis) select analysis from datasource where id = :id;
+                """), {
+                    'id': row['id']
+                }
+            )
+            analysis_id = conn.execute(text("""
                 select id from analysis order by id desc limit 1;
-            """).fetchall()
-            conn.execute(f"""
-                update datasource set analysis_id = {analysis_id[0][0]} where id = {row['id']}
-            """)
+            """)).fetchall()
+            conn.execute(
+                text("""
+                    update datasource set analysis_id = :analysis_id where id = :id
+                """), {
+                    'analysis_id': analysis_id[0][0],
+                    'id': row['id']
+                }
+            )
 
     with op.batch_alter_table('datasource', schema=None) as batch_op:
         batch_op.drop_column('analysis')
@@ -72,16 +82,16 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(), nullable=True, server_default=sa.func.current_timestamp()),  # ?????
         sa.Column('updated_at', sa.DateTime(), nullable=True, server_default=sa.func.current_timestamp(), server_onupdate=sa.func.current_timestamp()),  # ????? erver_default=func.now()
         sa.Column('analysis_id', sa.Integer(), nullable=True),
-        sa.ForeignKeyConstraint(['analysis_id'], ['analysis.id'], ),
+        sa.ForeignKeyConstraint(['analysis_id'], ['analysis.id'], name='fk_analysis_id'),
         sa.PrimaryKeyConstraint('id')
     )
 
     # delete ds where data is none
 
-    dsatasources = conn.execute('select * from datasource').fetchall()
+    dsatasources = conn.execute(text('select * from datasource')).fetchall()
     for ds in dsatasources:
         if ds['data'] is None:
-            conn.execute(f"delete from datasource where id = {ds['id']}")
+            conn.execute(text('delete from datasource where id = :id'), {'id': ds['id']})
             continue
         ds_data = json.loads(ds['data'])
         creation_info = json.loads(ds['creation_info'])
@@ -112,14 +122,21 @@ def upgrade():
             )
             session.add(file)
 
-        conn.execute(f"""
-            update datasource
-            set integration_id = (select id from integration where name = '{datasource_name}' and company_id = {ds['company_id']}),
-                ds_class = '{creation_info['class']}'
-            where id = {ds['id']}
-        """)
-        datasource_name
-        # conn.execute(f"delete from datasource where id = {ds['id']}")
+        conn.execute(
+            text("""
+                update datasource
+                set integration_id = (select id from integration where name = :datasource_name and company_id = :company_id),
+                    ds_class = :ds_class
+                where id = :id
+            """), {
+                'datasource_name': datasource_name,
+                'company_id': ds['company_id'],
+                'ds_class': creation_info['class'],
+                'id': ds['id']
+            }
+        )
+
+    session.commit()
 
     op.rename_table('datasource', 'dataset')
     op.rename_table('integration', 'datasource')
@@ -128,16 +145,11 @@ def upgrade():
         batch_op.alter_column('integration_id', new_column_name='datasource_id')
         batch_op.create_foreign_key('fk_datasource_id', 'datasource', ['datasource_id'], ['id'])
 
-    # op.alter_column('predictor', 'datasource_id', new_column_name='dataset_id')
+    # NOTE two different 'batch' is necessary, in other way FK is not creating
     with op.batch_alter_table('predictor', schema=None) as batch_op:
         batch_op.alter_column('datasource_id', new_column_name='dataset_id')
+    with op.batch_alter_table('predictor', schema=None) as batch_op:
         batch_op.create_foreign_key('fk_dataset_id', 'dataset', ['dataset_id'], ['id'])
-        # batch_op.drop_column('datasource_id')
-        # batch_op.create_foreign_key(None, 'datasource', ['datasource_id'], ['id'])
-        # batch_op.execute() ???
-
-    # conn.execute("drop table if exists ai_table")
-    session.commit()
 
 
 def downgrade():
@@ -158,9 +170,9 @@ def downgrade():
     op.drop_table('file')
 
     conn = op.get_bind()
-    conn.execute("""
+    conn.execute(text("""
         update datasource set analysis = (select analysis from analysis where id = analysis_id)
-    """)
+    """))
 
     with op.batch_alter_table('dataset', schema=None) as batch_op:
         batch_op.drop_column('analysis_id')

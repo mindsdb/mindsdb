@@ -113,20 +113,6 @@ class Predictor(Base):
     dtype_dict = Column(Json, nullable=True)
 
 
-# class AITable(Base):
-#     __tablename__ = 'ai_table'
-#     id = Column(Integer, primary_key=True)
-#     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-#     created_at = Column(DateTime, default=datetime.datetime.now)
-#     name = Column(String)
-#     integration_name = Column(String)
-#     integration_query = Column(String)
-#     query_fields = Column(Json)
-#     predictor_name = Column(String)
-#     predictor_columns = Column(Json)
-#     company_id = Column(Integer)
-
-
 class Log(Base):
     __tablename__ = 'log'
 

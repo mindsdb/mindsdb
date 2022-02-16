@@ -9,7 +9,6 @@
  *******************************************************
 """
 
-from mindsdb.interfaces.ai_table.ai_table import AITableStore
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.utilities.config import Config
@@ -37,7 +36,6 @@ class SessionController():
         self.database = None
 
         self.config = Config()
-        self.ai_table = AITableStore(company_id=company_id)
 
         self.data_store = WithKWArgsWrapper(
             server.original_data_store,

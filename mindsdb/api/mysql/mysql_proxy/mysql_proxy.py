@@ -422,35 +422,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.packet(OkPacket).send()
 
-    def answer_create_ai_table(self, struct):
-        ai_table = self.session.ai_table
-        model_interface = self.session.model_interface
-
-        table = ai_table.get_ai_table(struct['ai_table_name'])
-        if table is not None:
-            raise ErTableExistError(f"AT Table with name {struct['ai_table_name']} already exists")
-
-        # check predictor exists
-        models = model_interface.get_models()
-        models_names = [x['name'] for x in models]
-        if struct['predictor_name'] not in models_names:
-            raise ErBadTableError(f"Predictor with name {struct['predictor_name']} not exists")
-
-        # check integration exists
-        if self.session.datasource_interface.get_db_integration(struct['integration_name']) is None:
-            raise ErBadDbError(f"Datasource with name {struct['integration_name']} not exists")
-
-        ai_table.add(
-            name=struct['ai_table_name'],
-            integration_name=struct['integration_name'],
-            integration_query=struct['integration_query'],
-            query_fields=struct['query_fields'],
-            predictor_name=struct['predictor_name'],
-            predictor_fields=struct['predictor_fields']
-        )
-
-        self.packet(OkPacket).send()
-
     def _check_predict_columns(self, predict_column_names, ds_column_names):
         ''' validate 'predict' column names
 
@@ -1676,8 +1647,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'set':
             log.warning(f'Unknown SET query, return OK package: {sql}')
             self.packet(OkPacket).send()
-        elif keyword == 'create_ai_table':
-            self.answer_create_ai_table(struct)
         elif type(statement) == Delete:
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")

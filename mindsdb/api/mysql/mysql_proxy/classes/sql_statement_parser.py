@@ -89,7 +89,6 @@ class SqlStatementParser():
 
             create_predictor
             create_table
-            create_ai_table
             create_datasource
             create_database
         '''
@@ -98,7 +97,6 @@ class SqlStatementParser():
             "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DATASOURCE DROP RETRAIN DESCRIBE DATABASE".split()
         )
         CREATE_PREDICTOR = CREATE + PREDICTOR
-        CREATE_AI_TABLE = CREATE + AI + TABLE
         CREATE_VIEW = CREATE + VIEW
         CREATE_DATASOURCE = CREATE + DATASOURCE
         CREATE_DATABASE = CREATE + DATABASE
@@ -109,7 +107,7 @@ class SqlStatementParser():
             | SHOW | DELETE | INSERT
             | UPDATE | ALTER | SELECT
             | ROLLBACK | COMMIT | EXPLAIN
-            | CREATE_PREDICTOR | CREATE_AI_TABLE
+            | CREATE_PREDICTOR
             | CREATE_VIEW | DROP | RETRAIN
             | CREATE_DATASOURCE | DESCRIBE
             | CREATE_DATABASE | CREATE_TABLE
@@ -121,9 +119,6 @@ class SqlStatementParser():
 
         if keyword == 0:
             raise Exception('Cant get keyword from statement')
-
-        if keyword == 'create_view':
-            keyword = 'create_ai_table'
 
         return keyword
 

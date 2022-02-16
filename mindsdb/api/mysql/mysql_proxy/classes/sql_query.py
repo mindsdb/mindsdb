@@ -54,7 +54,6 @@ from mindsdb_sql.planner import query_planner, utils as planner_utils
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, ERR
 from mindsdb.api.mysql.mysql_proxy.utilities import log
-from mindsdb.interfaces.ai_table.ai_table import AITableStore
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
@@ -201,7 +200,6 @@ class SQLQuery():
         self.integration = session.integration
         self.database = None if session.database == '' else session.database.lower()
         self.datahub = session.datahub
-        self.ai_table = None
         self.outer_query = None
         self.row_id = 0
         self.columns_list = None

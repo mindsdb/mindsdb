@@ -36,7 +36,6 @@ class InformationSchema(DataNode):
         self.persis_datanodes = {
             'mindsdb': MindsDBDataNode(
                 session.model_interface,
-                session.ai_table,
                 session.data_store,
                 session.datasource_interface
             ),

@@ -1428,6 +1428,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
             elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
+                if statement.from_table is not None:
+                    schema = statement.from_table.parts[-1]
                 where = BinaryOperation('and', args=[
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
                     BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])

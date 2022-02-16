@@ -82,12 +82,10 @@ class Dataset(Base):
     name = Column(String)
     data = Column(String)  # Including, e.g. the query used to create it and even the connection info when there's no integration associated with it -- A JSON
     creation_info = Column(String)
-    # analysis = Column(String)  # A JSON
     analysis_id = Column(ForeignKey('analysis.id'), nullable=True)
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     datasources_version = Column(String)
-    # integration_id = Column(Integer)            # ???????
     datasource_id = Column(ForeignKey('datasource.id'), nullable=True)
     ds_class = Column(String)
 
@@ -105,7 +103,7 @@ class Predictor(Base):
     mindsdb_version = Column(String)
     native_version = Column(String)
     dataset_id = Column(ForeignKey('dataset.id'), nullable=True)
-    is_custom = Column(Boolean)     # to del
+    is_custom = Column(Boolean)
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')
 

@@ -109,7 +109,7 @@ class MindsDBDataNode(DataNode):
         ] for x in models], columns=columns)
 
     def _select_datasources(self):
-        datasources = self.datasource_interface.get_db_integrations()
+        datasources = self.datasource_interface.get_all()
         result = [
             [ds_name, ds_meta.get('type'), ds_meta.get('host'), ds_meta.get('port'), ds_meta.get('user')]
             for ds_name, ds_meta in datasources.items()
@@ -173,7 +173,7 @@ class MindsDBDataNode(DataNode):
             select_data_query = where_data['select_data_query']
             del where_data['select_data_query']
 
-            integration_data = self.datasource_interface.get_db_integration(integration_name)
+            integration_data = self.datasource_interface.get(integration_name)
             if integration_type == 'clickhouse':
                 ch = Clickhouse(self.config, integration_name, integration_data)
                 res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')

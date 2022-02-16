@@ -122,7 +122,7 @@ class Datasource(Resource):
 
         if 'query' in data:
             integration_id = request.json['integration_id']
-            integration = request.datasource_interface.get_db_integration(integration_id)
+            integration = request.datasource_interface.get(integration_id)
             if integration is None:
                 abort(400, f"{integration_id} integration doesn't exist")
 

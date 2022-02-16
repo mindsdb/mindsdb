@@ -16,7 +16,7 @@ from flask_restx import Api
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
-from mindsdb.interfaces.database.integrations import DatasourceController
+from mindsdb.interfaces.database.datasource import DatasourceController
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.config import Config

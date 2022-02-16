@@ -18,7 +18,7 @@ class DatasourceController:
     def _is_not_empty_str(s):
         return isinstance(s, str) and len(s) > 0
 
-    def add_db_integration(self, name, data, company_id=None):
+    def add(self, name, data, company_id=None):
         if 'database_name' not in data:
             data['database_name'] = name
         if 'publish' not in data:
@@ -33,12 +33,12 @@ class DatasourceController:
             p = Path(bundle_path)
             data['secure_connect_bundle'] = p.name
 
-            integration_record = Datasource(name=name, data=data, company_id=company_id)
-            session.add(integration_record)
+            datasource_record = Datasource(name=name, data=data, company_id=company_id)
+            session.add(datasource_record)
             session.commit()
-            integration_id = integration_record.id
+            datasource_id = datasource_record.id
 
-            folder_name = f'integration_files_{company_id}_{integration_id}'
+            folder_name = f'integration_files_{company_id}_{datasource_id}'
             integration_dir = os.path.join(integrations_dir, folder_name)
             create_directory(integration_dir)
             shutil.copyfile(bundle_path, os.path.join(integration_dir, p.name))
@@ -69,14 +69,14 @@ class DatasourceController:
                     files[key] = data[key]
                     p = Path(data[key])
                     data[key] = p.name
-            integration_record = Datasource(name=name, data=data, company_id=company_id)
-            session.add(integration_record)
+            datasource_record = Datasource(name=name, data=data, company_id=company_id)
+            session.add(datasource_record)
             session.commit()
-            integration_id = integration_record.id
+            datasource_id = datasource_record.id
 
             if len(files) > 0:
                 integrations_dir = Config()['paths']['integrations']
-                folder_name = f'integration_files_{company_id}_{integration_id}'
+                folder_name = f'integration_files_{company_id}_{datasource_id}'
                 integration_dir = os.path.join(integrations_dir, folder_name)
                 create_directory(integration_dir)
                 for file_path in files.values():
@@ -88,24 +88,24 @@ class DatasourceController:
                     integrations_dir
                 )
         else:
-            integration_record = Datasource(name=name, data=data, company_id=company_id)
-            session.add(integration_record)
+            datasource_record = Datasource(name=name, data=data, company_id=company_id)
+            session.add(datasource_record)
             session.commit()
 
-    def modify_db_integration(self, name, data, company_id):
-        integration_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
-        old_data = deepcopy(integration_record.data)
+    def modify(self, name, data, company_id):
+        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+        old_data = deepcopy(datasource_record.data)
         for k in old_data:
             if k not in data:
                 data[k] = old_data[k]
 
-        integration_record.data = data
+        datasource_record.data = data
         session.commit()
 
-    def remove_db_integration(self, name, company_id=None):
-        integration_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+    def delete(self, name, company_id=None):
+        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
         integrations_dir = Config()['paths']['integrations']
-        folder_name = f'integration_files_{company_id}_{integration_record.id}'
+        folder_name = f'integration_files_{company_id}_{datasource_record.id}'
         integration_dir = os.path.join(integrations_dir, folder_name)
         if os.path.isdir(integration_dir):
             shutil.rmtree(integration_dir)
@@ -113,16 +113,16 @@ class DatasourceController:
             FsStore().delete(folder_name)
         except Exception:
             pass
-        session.delete(integration_record)
+        session.delete(datasource_record)
         session.commit()
 
-    def _get_integration_record_data(self, integration_record, sensitive_info=True):
-        if integration_record is None or integration_record.data is None:
+    def _get_datasource_record_data(self, datasource_record, sensitive_info=True):
+        if datasource_record is None or datasource_record.data is None:
             return None
-        data = deepcopy(integration_record.data)
+        data = deepcopy(datasource_record.data)
         if data.get('password', None) is None:
             data['password'] = ''
-        data['date_last_update'] = deepcopy(integration_record.updated_at)
+        data['date_last_update'] = deepcopy(datasource_record.updated_at)
 
         bundle_path = data.get('secure_connect_bundle')
         mysql_ssl_ca = data.get('ssl_ca')
@@ -140,7 +140,7 @@ class DatasourceController:
         ):
             fs_store = FsStore()
             integrations_dir = Config()['paths']['integrations']
-            folder_name = f'integration_files_{integration_record.company_id}_{integration_record.id}'
+            folder_name = f'integration_files_{datasource_record.company_id}_{datasource_record.id}'
             integration_dir = os.path.join(integrations_dir, folder_name)
             fs_store.get(
                 folder_name,
@@ -158,30 +158,30 @@ class DatasourceController:
             ):
                 data['connection'] = None
 
-        data['id'] = integration_record.id
-        data['name'] = integration_record.name
+        data['id'] = datasource_record.id
+        data['name'] = datasource_record.name
 
         return data
 
-    def get_db_integration_by_id(self, id, company_id=None, sensitive_info=True):
-        integration_record = session.query(Datasource).filter_by(company_id=company_id, id=id).first()
-        return self._get_integration_record_data(integration_record, sensitive_info)
+    def get_by_id(self, id, company_id=None, sensitive_info=True):
+        datasource_record = session.query(Datasource).filter_by(company_id=company_id, id=id).first()
+        return self._get_datasource_record_data(datasource_record, sensitive_info)
 
-    def get_db_integration(self, name, company_id=None, sensitive_info=True, case_sensitive=False):
+    def get(self, name, company_id=None, sensitive_info=True, case_sensitive=False):
         if case_sensitive:
-            integration_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
         else:
-            integration_record = session.query(Datasource).filter(
+            datasource_record = session.query(Datasource).filter(
                 (Datasource.company_id == company_id)
                 & (func.lower(Datasource.name) == func.lower(name))
             ).first()
-        return self._get_integration_record_data(integration_record, sensitive_info)
+        return self._get_datasource_record_data(datasource_record, sensitive_info)
 
-    def get_db_integrations(self, company_id=None, sensitive_info=True):
-        integration_records = session.query(Datasource).filter_by(company_id=company_id).all()
+    def get_all(self, company_id=None, sensitive_info=True):
+        datasource_records = session.query(Datasource).filter_by(company_id=company_id).all()
         integration_dict = {}
-        for record in integration_records:
+        for record in datasource_records:
             if record is None or record.data is None:
                 continue
-            integration_dict[record.name] = self._get_integration_record_data(record, sensitive_info)
+            integration_dict[record.name] = self._get_datasource_record_data(record, sensitive_info)
         return integration_dict

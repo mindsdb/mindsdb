@@ -18,7 +18,7 @@ from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.storage.db import session, Datasource, Semaphor, Predictor
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.interfaces.database.integrations import DatasourceController
+from mindsdb.interfaces.database.datasource import DatasourceController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
@@ -59,7 +59,7 @@ class QueryDS:
             table = query.from_table.parts[-1]
             view_metadata = view_interface.get(name=table)
 
-            datasource = datasource_interface.get_db_integration_by_id(view_metadata['datasource_id'])
+            datasource = datasource_interface.get_by_id(view_metadata['datasource_id'])
             datasource_name = datasource['name']
 
             dataset_name = data_store.get_vacant_name(table)
@@ -223,8 +223,8 @@ class DataStore():
                 'kwargs': {}
             }
 
-        elif datasource_controller.get_db_integration(source_type, company_id) is not None:
-            integration = datasource_controller.get_db_integration(source_type, company_id)
+        elif datasource_controller.get(source_type, company_id) is not None:
+            integration = datasource_controller.get(source_type, company_id)
 
             ds_class_map = {
                 'clickhouse': ClickhouseDS,

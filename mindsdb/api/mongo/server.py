@@ -14,7 +14,7 @@ from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.storage.db import session as db_session
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
-from mindsdb.interfaces.database.integrations import DatasourceController
+from mindsdb.interfaces.database.datasource import DatasourceController
 
 OP_REPLY = 1
 OP_UPDATE = 2001

@@ -23,8 +23,14 @@ In this tutorial you will learn how to predict the quality of a mining process u
 
 
 ## Connect to MindsDB SQL Sever
-1. `mysql -h127.0.0.1 -P47335 -umindsdb`
-2. `use mindsdb;`
+1. 
+```sql
+mysql -h127.0.0.1 -P47335 -umindsdb
+```
+2. 
+```sql
+USE mindsdb;
+```
 
 ## Create a predictor
 
@@ -35,8 +41,16 @@ Use the following query to create a Predictor that will foretell the silica_conc
 ```sql
 CREATE PREDICTOR process_quality_predictor
 FROM files (
-    SELECT iron_feed, silica_feed, starch_flow, amina_flow, ore_pulp_flow, ore_pulp_ph, ore_pulp_density,flotation_column_01_air_flow,flotation_column_02_air_flow, flotation_column_03_air_flow,flotation_column_04_air_flow, flotation_column_05_air_flow, flotation_column_06_air_flow,flotation_column_07_air_flow, flotation_column_01_level, flotation_column_02_level, flotation_column_03_level, flotation_column_04_level, flotation_column_05_level, flotation_column_06_level, flotation_column_07_level, iron_concentrate, silica_concentrate from process_
-quality FROM process_quality LIMIT 5000
+    SELECT iron_feed, silica_feed, starch_flow, amina_flow, ore_pulp_flow,
+           ore_pulp_ph, ore_pulp_density,flotation_column_01_air_flow,
+           flotation_column_02_air_flow, flotation_column_03_air_flow,
+           flotation_column_04_air_flow, flotation_column_05_air_flow,
+           flotation_column_06_air_flow,flotation_column_07_air_flow,
+           flotation_column_01_level, flotation_column_02_level,
+           flotation_column_03_level, flotation_column_04_level,
+           flotation_column_05_level, flotation_column_06_level, 
+           flotation_column_07_level, iron_concentrate, silica_concentrate from process_quality 
+    FROM process_quality LIMIT 5000
 ) PREDICT silica_concentrate as quality USING;
 ```
 

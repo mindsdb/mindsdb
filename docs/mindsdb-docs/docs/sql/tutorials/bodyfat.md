@@ -33,14 +33,16 @@ For this tutorial, we'll be using the Body Fat Prediction dataset available at [
 
 
 ## Connect to MindsDB SQL Sever
-1. `mysql -h127.0.0.1 -P47335 -umindsdb`
-2. `use mindsdb;`
-
-## Create a predictor
-
+1. 
+```sql
+mysql -h127.0.0.1 -P47335 -umindsdb
+```
+2. 
 ```sql
 USE mindsdb;
 ```
+
+## Create a predictor
 
 Now, we have to create a predictor based on the following syntax:
 

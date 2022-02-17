@@ -24,6 +24,27 @@ depends_on = None
 def upgrade():
     op.drop_table('ai_table')
 
+    conn = op.get_bind()
+
+    # views was created with unnamed fk. Therefore need recreate it
+    op.create_table(
+        'view_tmp',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('name', sa.String(), nullable=False),
+        sa.Column('company_id', sa.Integer(), nullable=True),
+        sa.Column('query', sa.String(), nullable=False),
+        sa.Column('integration_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(['integration_id'], ['integration.id'], name='fk_integration_id'),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('name', 'company_id', name='unique_name_company_id')
+    )
+    conn.execute(text("""
+        insert into view_tmp (id, name, company_id, query, integration_id)
+        select id, name, company_id, query, datasource_id from view;
+    """))
+    op.drop_table('view')
+    op.rename_table('view_tmp', 'view')
+
     op.create_table(
         'analysis',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -38,7 +59,6 @@ def upgrade():
         batch_op.create_foreign_key('fk_analysis_id', 'analysis', ['analysis_id'], ['id'])
         batch_op.add_column(sa.Column('ds_class', sa.String(), nullable=True))
 
-    conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
     dsatasources = conn.execute('select id, analysis from datasource').fetchall()
     for row in dsatasources:
@@ -83,11 +103,11 @@ def upgrade():
         sa.Column('updated_at', sa.DateTime(), nullable=True, server_default=sa.func.current_timestamp(), server_onupdate=sa.func.current_timestamp()),  # ????? erver_default=func.now()
         sa.Column('analysis_id', sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(['analysis_id'], ['analysis.id'], name='fk_analysis_id'),
-        sa.PrimaryKeyConstraint('id')
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('name', 'company_id', name='unique_name_company_id')
     )
 
     # delete ds where data is none
-
     dsatasources = conn.execute(text('select * from datasource')).fetchall()
     for ds in dsatasources:
         if ds['data'] is None:
@@ -139,33 +159,46 @@ def upgrade():
     session.commit()
 
     op.rename_table('datasource', 'dataset')
-    op.rename_table('integration', 'datasource')
 
     with op.batch_alter_table('dataset', schema=None) as batch_op:
-        batch_op.alter_column('integration_id', new_column_name='datasource_id')
-        batch_op.create_foreign_key('fk_datasource_id', 'datasource', ['datasource_id'], ['id'])
+        batch_op.create_foreign_key('fk_integration_id', 'integration', ['integration_id'], ['id'])
 
     # NOTE two different 'batch' is necessary, in other way FK is not creating
     with op.batch_alter_table('predictor', schema=None) as batch_op:
         batch_op.alter_column('datasource_id', new_column_name='dataset_id')
     with op.batch_alter_table('predictor', schema=None) as batch_op:
         batch_op.create_foreign_key('fk_dataset_id', 'dataset', ['dataset_id'], ['id'])
+    with op.batch_alter_table('predictor', schema=None) as batch_op:
+        batch_op.create_unique_constraint('unique_name_company_id', ['name', 'company_id'])
+
+    with op.batch_alter_table('integration', schema=None) as batch_op:
+        batch_op.create_unique_constraint('unique_name_company_id', ['name', 'company_id'])
+
+    with op.batch_alter_table('dataset', schema=None) as batch_op:
+        batch_op.create_unique_constraint('unique_name_company_id', ['name', 'company_id'])
 
 
 def downgrade():
+    with op.batch_alter_table('integration', schema=None) as batch_op:
+        batch_op.drop_constraint('unique_name_company_id', type_='unique')
+
+    with op.batch_alter_table('predictor', schema=None) as batch_op:
+        batch_op.drop_constraint('unique_name_company_id', type_='unique')
+
+    with op.batch_alter_table('dataset', schema=None) as batch_op:
+        batch_op.drop_constraint('unique_name_company_id', type_='unique')
+
     with op.batch_alter_table('predictor', schema=None) as batch_op:
         batch_op.drop_constraint('fk_dataset_id', type_='foreignkey')
         batch_op.alter_column('dataset_id', new_column_name='datasource_id')
 
     with op.batch_alter_table('dataset', schema=None) as batch_op:
-        batch_op.drop_constraint('fk_datasource_id', type_='foreignkey')
-        batch_op.alter_column('datasource_id', new_column_name='integration_id')
+        batch_op.drop_constraint('fk_integration_id', type_='foreignkey')
         batch_op.add_column(sa.Column('analysis', sa.VARCHAR(), nullable=True))
         batch_op.drop_constraint('fk_analysis_id', type_='foreignkey')
         batch_op.drop_column('ds_class')
 
     op.rename_table('dataset', 'datasource')
-    op.rename_table('datasource', 'integration')
 
     op.drop_table('file')
 
@@ -174,7 +207,7 @@ def downgrade():
         update datasource set analysis = (select analysis from analysis where id = analysis_id)
     """))
 
-    with op.batch_alter_table('dataset', schema=None) as batch_op:
+    with op.batch_alter_table('datasource', schema=None) as batch_op:
         batch_op.drop_column('analysis_id')
 
     op.drop_table('analysis')
@@ -193,3 +226,21 @@ def downgrade():
         sa.Column('company_id', sa.Integer(), nullable=True),
         sa.PrimaryKeyConstraint('id')
     )
+
+    op.create_table(
+        'view_tmp',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('name', sa.String(), nullable=False),
+        sa.Column('company_id', sa.Integer(), nullable=True),
+        sa.Column('query', sa.String(), nullable=False),
+        sa.Column('datasource_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(['datasource_id'], ['integration.id'], name='fk_datasource_id'),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('name', 'company_id', name='unique_name_company_id')
+    )
+    conn.execute(text("""
+        insert into view_tmp (id, name, company_id, query, datasource_id)
+        select id, name, company_id, query, integration_id from view;
+    """))
+    op.drop_table('view')
+    op.rename_table('view_tmp', 'view')

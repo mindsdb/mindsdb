@@ -41,7 +41,7 @@ class DatabaseWrapper():
             logger.warning('Failed to integrate with database ' + db_alias + f', error: {e}')
 
     def _get_integration(self, db_alias):
-        integration = self.datasource_interface.get_db_integration(db_alias)
+        integration = self.datasource_interface.get(db_alias)
         if integration:
             db_type = integration['type']
             if db_type in self.known_dbs:
@@ -51,14 +51,14 @@ class DatabaseWrapper():
         return True
 
     def _get_integrations(self, publish=False):
-        all_integrations = self.datasource_interface.get_db_integrations()
+        all_integrations = self.datasource_interface.get_all()
         if publish is True:
             all_integrations = [
-                x for x, y in self.datasource_interface.get_db_integrations().items()
+                x for x, y in self.datasource_interface.get_all().items()
                 if y.get('publish') is True
             ]
         else:
-            all_integrations = [x for x in self.datasource_interface.get_db_integrations()]
+            all_integrations = [x for x in self.datasource_interface.get_all()]
         integrations = [self._get_integration(x) for x in all_integrations]
         integrations = [x for x in integrations if x is not True and x is not False]
         return integrations

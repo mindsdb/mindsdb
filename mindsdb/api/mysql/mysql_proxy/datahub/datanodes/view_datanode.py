@@ -34,7 +34,7 @@ class ViewDataNode(DataNode):
         table = query.from_table.parts[-1]
         view_metadata = self.view_interface.get(name=table)
 
-        datasource = self.datasource_interface.get_db_integration_by_id(view_metadata['datasource_id'])
+        datasource = self.datasource_interface.get_by_id(view_metadata['datasource_id'])
         datasource_name = datasource['name']
 
         dataset_name = self.data_store.get_vacant_name(table)

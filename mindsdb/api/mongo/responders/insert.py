@@ -64,7 +64,7 @@ class Responce(Responder):
 
             kwargs = doc.get('training_options', {})
 
-            integrations = mindsdb_env['datasource_controller'].get_db_integrations().keys()
+            integrations = mindsdb_env['datasource_controller'].get_all().keys()
             connection = doc.get('connection')
             if connection is None:
                 if 'default_mongodb' in integrations:

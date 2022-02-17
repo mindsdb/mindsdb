@@ -305,7 +305,7 @@ class ModelController():
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
         assert predictor_record is not None
 
-        linked_db_ds = db.session.query(db.Datasource).filter_by(company_id=company_id, id=predictor_record.datasource_id).first()
+        linked_dataset = db.session.query(db.Datasource).get(predictor_record.dataset_id)
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -317,7 +317,7 @@ class ModelController():
         data['name'] = predictor_record.name
         data['code'] = predictor_record.code
         data['json_ai'] = predictor_record.json_ai
-        data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
+        data['data_source_name'] = linked_dataset.name if linked_dataset else None
         data['problem_definition'] = predictor_record.learn_args
 
         # assume older models are complete, only temporary

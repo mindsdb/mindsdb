@@ -49,7 +49,7 @@ class Responce(Responder):
 
             datasource = where_data
             if 'select_data_query' in where_data:
-                integrations = mindsdb_env['datasource_controller'].get_db_integrations().keys()
+                integrations = mindsdb_env['datasource_controller'].get_all().keys()
                 connection = where_data.get('connection')
                 if connection is None:
                     if 'default_mongodb' in integrations:

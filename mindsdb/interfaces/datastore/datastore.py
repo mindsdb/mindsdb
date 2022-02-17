@@ -59,7 +59,7 @@ class QueryDS:
             table = query.from_table.parts[-1]
             view_metadata = view_interface.get(name=table)
 
-            datasource = datasource_interface.get_db_integration_by_id(view_metadata['datasource_id'])
+            datasource = datasource_interface.get_by_id(view_metadata['datasource_id'])
             datasource_name = datasource['name']
 
             dataset_name = data_store.get_vacant_name(table)
@@ -223,8 +223,8 @@ class DataStore():
                 'kwargs': {}
             }
 
-        elif datasource_controller.get_db_integration(source_type, company_id) is not None:
-            integration = datasource_controller.get_db_integration(source_type, company_id)
+        elif datasource_controller.get(source_type, company_id) is not None:
+            integration = datasource_controller.get(source_type, company_id)
 
             ds_class_map = {
                 'clickhouse': ClickhouseDS,

@@ -67,10 +67,10 @@ class InformationSchema(DataNode):
         if name_lower in self.persis_datanodes:
             return self.persis_datanodes[name_lower]
 
-        datasource_names = self.datasource_interface.get_db_integrations().keys()
+        datasource_names = self.datasource_interface.get_all().keys()
         for datasource_name in datasource_names:
             if datasource_name.lower() == name_lower:
-                datasource = self.datasource_interface.get_db_integration(name=datasource_name)
+                datasource = self.datasource_interface.get(name=datasource_name)
                 return IntegrationDataNode(datasource_name, self.data_store, ds_type=datasource['type'])
 
         return None
@@ -88,7 +88,7 @@ class InformationSchema(DataNode):
         raise Exception(f'Table information_schema.{tableName} does not exists')
 
     def get_datasources_names(self):
-        datasource_names = self.datasource_interface.get_db_integrations().keys()
+        datasource_names = self.datasource_interface.get_all().keys()
         return [
             x.lower() for x in datasource_names
         ]
@@ -159,7 +159,7 @@ class InformationSchema(DataNode):
         for database_name in self.persis_datanodes:
             data.append(['def', database_name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
 
-        datasource_names = self.datasource_interface.get_db_integrations().keys()
+        datasource_names = self.datasource_interface.get_all().keys()
         for database_name in datasource_names:
             data.append(['def', database_name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
 

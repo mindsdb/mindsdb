@@ -30,7 +30,7 @@ WITH
         };
 ```
 
-Once a datasource has been correctly created, you will see it registered in `mindsdb.datasources`.
+Once a datasource has been correctly created, you will see it registered in `mindsdb.datasources`, ready for creating and querying predictors with it.
 
 ```sql
 select * from mindsdb.datasources;
@@ -38,13 +38,3 @@ select * from mindsdb.datasources;
 
 ![Once a datasource has been correctly created, you will see it registered in `mindsdb.datasources`](../../assets/sql/datasource_listing.png)
 
-
-After you have connected your data, you can train a predictor by selecting some data within the datasource.
-
-```sql
-CREATE PREDICTOR predictor
-FROM mysql_datasource (
-	SELECT * FROM test_data.home_rentals
-)
-PREDICT rental_price;
-```

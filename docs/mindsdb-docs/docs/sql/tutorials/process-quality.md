@@ -1,8 +1,8 @@
 # Pre-requisites
 
-Before you start make sure you've visited:
+Before you start make sure that you've:
 
-1. [Getting Started Guide](https://docs.mindsdb.com/info/)
+1. Visited [Getting Started Guide](https://docs.mindsdb.com/info/)
 2. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/edumagalhaes/quality-prediction-in-a-mining-process).
 
 # Manufacturing process quality

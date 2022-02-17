@@ -1,6 +1,8 @@
 # Pre-requisites
-- [Getting Started Guide](https://docs.mindsdb.com/info/)
-- The dataset being used for this tutorial.  Get it from [Kaggle](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset).
+Before you start make sure that you've:
+
+- Visited [Getting Started Guide](https://docs.mindsdb.com/info/)
+- Downloaded the dataset. The dataset being used for this tutorial. Get it from [Kaggle](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset).
 
 # Determining Body Fat Percentage
 

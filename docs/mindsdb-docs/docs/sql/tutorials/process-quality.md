@@ -1,6 +1,6 @@
 # Pre-requisites
 
-Before you start make sure you visited:
+Before you start make sure you've visited:
 
 1. [Getting Started Guide](https://docs.mindsdb.com/info/)
 2. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/edumagalhaes/quality-prediction-in-a-mining-process).
@@ -35,7 +35,8 @@ Use the following query to create a Predictor that will foretell the silica_conc
 ```sql
 CREATE PREDICTOR process_quality_predictor
 FROM files (
-    SELECT * FROM process_quality LIMIT 5000
+    SELECT iron_feed, silica_feed, starch_flow, amina_flow, ore_pulp_flow, ore_pulp_ph, ore_pulp_density,flotation_column_01_air_flow,flotation_column_02_air_flow, flotation_column_03_air_flow,flotation_column_04_air_flow, flotation_column_05_air_flow, flotation_column_06_air_flow,flotation_column_07_air_flow, flotation_column_01_level, flotation_column_02_level, flotation_column_03_level, flotation_column_04_level, flotation_column_05_level, flotation_column_06_level, flotation_column_07_level, iron_concentrate, silica_concentrate from process_
+quality FROM process_quality LIMIT 5000
 ) PREDICT silica_concentrate as quality USING;
 ```
 

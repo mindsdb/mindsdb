@@ -25,7 +25,7 @@ In this tutorial you will learn how to predict the quality of a mining process u
 ## Connect to MindsDB SQL Sever
 1. 
 ```sql
-mysql -h127.0.0.1 -P47335 -umindsdb
+mysql -h cloud.mindsdb.com --port 3306 -u username@email.com -p
 ```
 2. 
 ```sql

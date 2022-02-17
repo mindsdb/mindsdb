@@ -35,7 +35,7 @@ For this tutorial, we'll be using the Body Fat Prediction dataset available at [
 ## Connect to MindsDB SQL Sever
 1. 
 ```sql
-mysql -h127.0.0.1 -P47335 -umindsdb
+mysql -h cloud.mindsdb.com --port 3306 -u username@email.com -p
 ```
 2. 
 ```sql

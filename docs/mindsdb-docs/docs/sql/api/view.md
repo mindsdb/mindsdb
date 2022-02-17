@@ -2,6 +2,8 @@
 
 In MindsDB, an `AI Table` is a virtual table based on the result-set of the SQL Statement that `JOINS` table data with the predictions of a model. An `AI Table` can be created using the `CREATE AI table ai_table_name` statement.
 
+
+## Syntax
 ```sql
 CREATE VIEW ai_table_name as (
     SELECT
@@ -29,7 +31,7 @@ FROM integration_name (SELECT * FROM house_rentals_data) as rentals
 PREDICT rental_price as price;
 ```
 
-Once trained, we can `JOIN` any input data with the trained model and and store the results as an AI Table. 
+Once trained, we can `JOIN` any input data with the trained model and store the results as an AI Table. 
 
 Let's pass some of the expected input columns (in this case, `sqft`, `number_of_bathrooms`, `location`) to the model and join the predicted `rental_price` values:
 

@@ -3,7 +3,8 @@
 Before you start make sure that you've:
 
 1. Visited [Getting Started Guide](https://docs.mindsdb.com/info/)
-2. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/edumagalhaes/quality-prediction-in-a-mining-process).
+2. Visited [Getting Started with Cloud](https://docs.mindsdb.com/deployment/cloud/)
+3. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/edumagalhaes/quality-prediction-in-a-mining-process).
 
 # Manufacturing process quality
 

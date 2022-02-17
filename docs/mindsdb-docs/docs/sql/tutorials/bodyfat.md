@@ -2,6 +2,7 @@
 Before you start make sure that you've:
 
 - Visited [Getting Started Guide](https://docs.mindsdb.com/info/)
+- Visited [Getting Started with Cloud](https://docs.mindsdb.com/deployment/cloud/)
 - Downloaded the dataset. The dataset being used for this tutorial. Get it from [Kaggle](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset).
 
 # Determining Body Fat Percentage

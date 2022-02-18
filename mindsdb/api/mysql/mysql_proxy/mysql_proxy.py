@@ -1213,7 +1213,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if (
             isinstance(self.session.database, str)
             and len(self.session.database) > 0
-            and self.session.database.lower() != 'mindsdb'
+            and self.session.database.lower() not in ('mindsdb', 'files')
             and '@@' not in sql.lower()
             and (
                 (
@@ -1399,6 +1399,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
             elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
+                if statement.from_table is not None:
+                    schema = statement.from_table.parts[-1]
                 where = BinaryOperation('and', args=[
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
                     BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])

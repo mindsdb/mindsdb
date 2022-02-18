@@ -93,8 +93,8 @@ def start(verbose, no_studio):
             company_id=company_id
         )
 
-        request.datasource_interface = WithKWArgsWrapper(
-            current_app.original_datasource_interface,
+        request.integration_controller = WithKWArgsWrapper(
+            current_app.original_integration_controller,
             company_id=company_id
         )
 

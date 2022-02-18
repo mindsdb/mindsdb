@@ -39,11 +39,11 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, model_interface, data_store, datasource_interface):
+    def __init__(self, model_interface, data_store, integration_controller):
         self.config = Config()
         self.model_interface = model_interface
         self.data_store = data_store
-        self.datasource_interface = datasource_interface
+        self.integration_controller = integration_controller
 
     def get_tables(self):
         models = self.model_interface.get_models()
@@ -109,7 +109,7 @@ class MindsDBDataNode(DataNode):
         ] for x in models], columns=columns)
 
     def _select_datasources(self):
-        datasources = self.datasource_interface.get_all()
+        datasources = self.integration_controller.get_all()
         result = [
             [ds_name, ds_meta.get('type'), ds_meta.get('host'), ds_meta.get('port'), ds_meta.get('user')]
             for ds_name, ds_meta in datasources.items()
@@ -173,7 +173,7 @@ class MindsDBDataNode(DataNode):
             select_data_query = where_data['select_data_query']
             del where_data['select_data_query']
 
-            integration_data = self.datasource_interface.get(integration_name)
+            integration_data = self.integration_controller.get(integration_name)
             if integration_type == 'clickhouse':
                 ch = Clickhouse(self.config, integration_name, integration_data)
                 res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')

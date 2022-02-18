@@ -18,7 +18,7 @@ from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.storage.db import session, Dataset, Semaphor, Predictor, Analysis
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.interfaces.database.integrations import DatasourceController
+from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
@@ -40,8 +40,8 @@ class QueryDS:
             company_id=self.company_id
         )
 
-        datasource_interface = WithKWArgsWrapper(
-            DatasourceController(),
+        integration_controller = WithKWArgsWrapper(
+            IntegrationController(),
             company_id=self.company_id
         )
 
@@ -59,7 +59,7 @@ class QueryDS:
             table = query.from_table.parts[-1]
             view_metadata = view_interface.get(name=table)
 
-            integration = datasource_interface.get_by_id(view_metadata['integration_id'])
+            integration = integration_controller.get_by_id(view_metadata['integration_id'])
             integration_name = integration['name']
 
             dataset_name = data_store.get_vacant_name(table)
@@ -218,7 +218,7 @@ class DataStore():
         raise Exception(f"Can not find appropriate name for datasource '{base}'")
 
     def create_datasource(self, source_type, source, file_path=None, company_id=None, ds_meta_dir=None):
-        datasource_controller = DatasourceController()
+        datasource_controller = IntegrationController()
         if source_type == 'file_query' or source_type == 'view_query':
             dsClass = QueryDS
             creation_info = {

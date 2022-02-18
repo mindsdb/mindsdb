@@ -46,8 +46,8 @@ class SessionController():
             company_id=company_id
         )
 
-        self.datasource_interface = WithKWArgsWrapper(
-            server.original_datasource_controller,
+        self.integration_controller = WithKWArgsWrapper(
+            server.original_integration_controller,
             company_id=company_id
         )
 

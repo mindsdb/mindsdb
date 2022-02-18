@@ -118,7 +118,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
-from mindsdb.interfaces.database.integrations import DatasourceController
+from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
 
 connection_id = 0
@@ -145,12 +145,12 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         integration = None
         integration_type = None
         extracted_username = username
-        integrations_names = DatasourceController().get_all(company_id).keys()
+        integrations_names = IntegrationController().get_all(company_id).keys()
         for integration_name in integrations_names:
             if username == f'{hardcoded_user}_{integration_name}':
                 extracted_username = hardcoded_user
                 integration = integration_name
-                integration_type = DatasourceController().get(integration, company_id)['type']
+                integration_type = IntegrationController().get(integration, company_id)['type']
 
         if extracted_username != hardcoded_user:
             log.warning(f'Check auth, user={username}: user mismatch')
@@ -597,13 +597,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         connection_args = struct['connection_args']
         connection_args['type'] = database_type
 
-        self.session.datasource_interface.add(datasource_name, connection_args)
+        self.session.integration_controller.add(datasource_name, connection_args)
         self.packet(OkPacket).send()
 
     def answer_drop_datasource(self, ds_name):
         try:
-            ds = self.session.datasource_interface.get(ds_name)
-            self.session.datasource_interface.delete(ds['database_name'])
+            ds = self.session.integration_controller.get(ds_name)
+            self.session.integration_controller.delete(ds['database_name'])
         except Exception:
             raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
         self.packet(OkPacket).send()
@@ -651,7 +651,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ds = data_store.get_datasource_obj(ds_name, raw=True)
             ds_data = data_store.get_datasource(ds_name)
         else:
-            if self.session.datasource_interface.get(integration_name) is None and integration_name not in ('views', 'files'):
+            if self.session.integration_controller.get(integration_name) is None and integration_name not in ('views', 'files'):
                 raise ErBadDbError(f"Unknown datasource: {integration_name}")
 
             ds_name = struct.get('datasource_name')
@@ -2400,7 +2400,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         server.original_model_interface = ModelInterface()
         server.original_data_store = DataStore()
-        server.original_datasource_controller = DatasourceController()
+        server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
 
         atexit.register(MysqlProxy.server_close, srv=server)

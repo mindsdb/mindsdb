@@ -12,7 +12,7 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.fs import create_directory
 
 
-class DatasourceController:
+class IntegrationController:
     @staticmethod
     def _is_not_empty_str(s):
         return isinstance(s, str) and len(s) > 0

@@ -80,10 +80,10 @@ if __name__ == '__main__':
     print(f"Storage path:\n   {config['paths']['root']}")
 
     # @TODO Backwards compatibiltiy for tests, remove later
-    from mindsdb.interfaces.database.integrations import DatasourceController
+    from mindsdb.interfaces.database.integrations import IntegrationController
     dbw = DatabaseWrapper(COMPANY_ID)
     model_interface = WithKWArgsWrapper(ModelInterface(), company_id=COMPANY_ID)
-    datasource_interface = WithKWArgsWrapper(DatasourceController(), company_id=COMPANY_ID)
+    integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
     raw_model_data_arr = model_interface.get_models()
     model_data_arr = []
     for model in raw_model_data_arr:
@@ -117,20 +117,20 @@ if __name__ == '__main__':
             db.session.commit()
         # endregion
 
-        for integration_name in datasource_interface.get_all(sensitive_info=True):
+        for integration_name in integration_controller.get_all(sensitive_info=True):
             print(f"Setting up integration: {integration_name}")
-            if datasource_interface.get(integration_name).get('publish', False):
+            if integration_controller.get(integration_name).get('publish', False):
                 # do setup and register only if it is 'publish' integration
                 dbw.setup_integration(integration_name)
                 dbw.register_predictors(model_data_arr, integration_name=integration_name)
 
         for integration_name in config.get('integrations', {}):
             try:
-                it = datasource_interface.get(integration_name)
+                it = integration_controller.get(integration_name)
                 if it is not None:
-                    datasource_interface.delete(integration_name)
+                    integration_controller.delete(integration_name)
                 print(f'Adding: {integration_name}')
-                datasource_interface.add(integration_name, config['integrations'][integration_name])            # Setup for user `None`, since we don't need this for cloud
+                integration_controller.add(integration_name, config['integrations'][integration_name])            # Setup for user `None`, since we don't need this for cloud
                 if config['integrations'][integration_name].get('publish', False) and not is_cloud:
                     dbw.setup_integration(integration_name)
                     dbw.register_predictors(model_data_arr, integration_name=integration_name)

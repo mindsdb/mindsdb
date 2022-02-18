@@ -16,7 +16,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import log
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.interfaces.storage.db import session, Datasource, Semaphor, Predictor
+from mindsdb.interfaces.storage.db import session, Dataset, Semaphor, Predictor, Analysis
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.interfaces.database.integrations import DatasourceController
 from mindsdb.interfaces.database.views import ViewController
@@ -59,11 +59,11 @@ class QueryDS:
             table = query.from_table.parts[-1]
             view_metadata = view_interface.get(name=table)
 
-            datasource = datasource_interface.get_by_id(view_metadata['datasource_id'])
-            datasource_name = datasource['name']
+            integration = datasource_interface.get_by_id(view_metadata['integration_id'])
+            integration_name = integration['name']
 
             dataset_name = data_store.get_vacant_name(table)
-            data_store.save_datasource(dataset_name, datasource_name, {'query': view_metadata['query']})
+            data_store.save_datasource(dataset_name, integration_name, {'query': view_metadata['query']})
             try:
                 dataset_object = data_store.get_datasource_obj(dataset_name)
                 data_df = dataset_object.df
@@ -87,41 +87,62 @@ class DataStore():
         self.model_interface = ModelInterface()
 
     def get_analysis(self, name, company_id=None):
-        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
-        if datasource_record.analysis is None:
+        dataset_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
+        if dataset_record.analysis_id is None:
             return None
-        analysis = json.loads(datasource_record.analysis)
+        analysis_record = session.query(Analysis).get(dataset_record.analysis_id)
+        if analysis_record is None:
+            return None
+        analysis = json.loads(analysis_record.analysis)
         return analysis
 
     def start_analysis(self, name, company_id=None):
-        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
-        if datasource_record.analysis is not None:
+        dataset_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
+        if dataset_record.analysis_id is not None:
             return None
-        semaphor_record = session.query(Semaphor).filter_by(company_id=company_id, entity_id=datasource_record.id, entity_type='datasource').first()
+
+        semaphor_record = session.query(Semaphor).filter_by(
+            company_id=company_id,
+            entity_id=dataset_record.id,
+            entity_type='dataset'
+        ).first()
+
         if semaphor_record is None:
-            semaphor_record = Semaphor(company_id=company_id, entity_id=datasource_record.id, entity_type='datasource', action='write')
+            semaphor_record = Semaphor(
+                company_id=company_id,
+                entity_id=dataset_record.id,
+                entity_type='dataset',
+                action='write'
+            )
             session.add(semaphor_record)
             session.commit()
         else:
             return
+
         try:
-            analysis = self.model_interface.analyse_dataset(ds=self.get_datasource_obj(name, raw=True, company_id=company_id), company_id=company_id)
-            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
-            datasource_record.analysis = json.dumps(analysis, cls=CustomJSONEncoder)
+            analysis = self.model_interface.analyse_dataset(
+                ds=self.get_datasource_obj(name, raw=True, company_id=company_id),
+                company_id=company_id
+            )
+            dataset_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
+            analysis_record = Analysis(analysis=json.dumps(analysis, cls=CustomJSONEncoder))
+            session.add(analysis_record)
+            session.flush()
+            dataset_record.analysis_id = analysis_record.id
             session.commit()
         except Exception as e:
             log.error(e)
         finally:
-            semaphor_record = session.query(Semaphor).filter_by(company_id=company_id, entity_id=datasource_record.id, entity_type='datasource').first()
+            semaphor_record = session.query(Semaphor).filter_by(company_id=company_id, entity_id=dataset_record.id, entity_type='dataset').first()
             session.delete(semaphor_record)
             session.commit()
 
     def get_datasources(self, name=None, company_id=None):
         datasource_arr = []
         if name is not None:
-            datasource_record_arr = session.query(Datasource).filter_by(company_id=company_id, name=name)
+            datasource_record_arr = session.query(Dataset).filter_by(company_id=company_id, name=name)
         else:
-            datasource_record_arr = session.query(Datasource).filter_by(company_id=company_id)
+            datasource_record_arr = session.query(Dataset).filter_by(company_id=company_id)
         for datasource_record in datasource_record_arr:
             try:
                 if datasource_record.data is None:
@@ -165,9 +186,9 @@ class DataStore():
         return None
 
     def delete_datasource(self, name, company_id=None):
-        datasource_record = Datasource.query.filter_by(company_id=company_id, name=name).first()
+        datasource_record = Dataset.query.filter_by(company_id=company_id, name=name).first()
         if not Config()["force_datasource_removing"]:
-            linked_models = Predictor.query.filter_by(company_id=company_id, datasource_id=datasource_record.id).all()
+            linked_models = Predictor.query.filter_by(company_id=company_id, dataset_id=datasource_record.id).all()
             if linked_models:
                 raise Exception("Can't delete {} datasource because there are next models linked to it: {}".format(name, [model.name for model in linked_models]))
         session.query(Semaphor).filter_by(
@@ -186,7 +207,7 @@ class DataStore():
         '''
         if base is None:
             base = 'datasource'
-        datasources = session.query(Datasource.name).filter_by(company_id=company_id).all()
+        datasources = session.query(Dataset.name).filter_by(company_id=company_id).all()
         datasources_names = [x[0] for x in datasources]
         if base not in datasources_names:
             return base
@@ -394,7 +415,7 @@ class DataStore():
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
 
-        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+        datasource_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
         while datasource_record is not None:
             raise Exception(f'Datasource with name {name} already exists')
 
@@ -404,7 +425,7 @@ class DataStore():
             source_type = 'file_query'
 
         try:
-            datasource_record = Datasource(
+            datasource_record = Dataset(
                 company_id=company_id,
                 name=name,
                 datasources_version=mindsdb_datasources.__version__,
@@ -459,9 +480,9 @@ class DataStore():
     def get_datasource_obj(self, name=None, id=None, raw=False, company_id=None):
         try:
             if name is not None:
-                datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+                datasource_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
             else:
-                datasource_record = session.query(Datasource).filter_by(company_id=company_id, id=id).first()
+                datasource_record = session.query(Dataset).filter_by(company_id=company_id, id=id).first()
 
             self.fs_store.get(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{datasource_record.id}', self.dir)
             creation_info = json.loads(datasource_record.creation_info)

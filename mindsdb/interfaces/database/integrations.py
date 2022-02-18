@@ -6,8 +6,7 @@ from copy import deepcopy
 
 from sqlalchemy import func
 
-from mindsdb.interfaces.storage.db import session
-from mindsdb.interfaces.storage.db import Integration
+from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.fs import create_directory

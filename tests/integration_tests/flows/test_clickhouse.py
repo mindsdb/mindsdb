@@ -127,7 +127,7 @@ class ClickhouseTest(unittest.TestCase):
             (
                 '{TEST_PREDICTOR_NAME}',
                 '{','.join(to_predict_column_names)}',
-                'select * from test_data.{TEST_DATA_TABLE} limit 250',
+                'select * from test_data.{TEST_DATA_TABLE} limit 150',
                 '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
             );
         """)

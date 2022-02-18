@@ -134,7 +134,6 @@ class ModelController():
             if k in json_ai_keys:
                 json_ai_override[k] = kwargs[k]
 
-
         if (
             problem_definition.get('ignore_features') is not None and isinstance(problem_definition['ignore_features'], list) is False
         ):
@@ -145,7 +144,7 @@ class ModelController():
         return df, problem_definition, join_learn_process, json_ai_override
 
     @mark_process(name='learn')
-    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict,
+    def learn(self, name: str, from_data: dict, to_predict: str, dataset_id: int, kwargs: dict,
               company_id: int, delete_ds_on_fail: Optional[bool] = False) -> None:
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         if predictor_record is not None:
@@ -157,7 +156,7 @@ class ModelController():
         predictor_record = db.Predictor(
             company_id=company_id,
             name=name,
-            datasource_id=datasource_id,
+            dataset_id=dataset_id,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,
@@ -305,7 +304,7 @@ class ModelController():
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
         assert predictor_record is not None
 
-        linked_dataset = db.session.query(db.Datasource).get(predictor_record.dataset_id)
+        linked_dataset = db.session.query(db.Dataset).get(predictor_record.dataset_id)
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -393,9 +392,9 @@ class ModelController():
         if db_p is None:
             raise Exception(f"Predictor '{name}' does not exist")
         db.session.delete(db_p)
-        if db_p.datasource_id is not None:
+        if db_p.dataset_id is not None:
             try:
-                dataset_record = db.Datasource.query.get(db_p.datasource_id)
+                dataset_record = db.Datasource.query.get(db_p.dataset_id)
                 if (
                     isinstance(dataset_record.data, str)
                     and json.loads(dataset_record.data).get('source_type') != 'file'
@@ -433,7 +432,7 @@ class ModelController():
         return 'Updated in progress'
 
     @mark_process(name='learn')
-    def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict,
+    def generate_predictor(self, name: str, from_data: dict, dataset_id, problem_definition_dict: dict,
                            join_learn_process: bool, company_id: int):
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         if predictor_record is not None:
@@ -446,7 +445,7 @@ class ModelController():
         predictor_record = db.Predictor(
             company_id=company_id,
             name=name,
-            datasource_id=datasource_id,
+            dataset_id=dataset_id,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,

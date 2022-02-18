@@ -1,5 +1,5 @@
 from mindsdb.api.mongo.classes import Responder
-from mindsdb.interfaces.storage.db import session, Datasource
+from mindsdb.interfaces.storage.db import session, Dataset
 import mindsdb.api.mongo.functions as helpers
 
 
@@ -97,7 +97,7 @@ class Responce(Responder):
                     mindsdb_env['data_store'].delete_datasource(ds_name)
                     raise Exception(f"Column '{col}' not exists")
 
-            datasource_record = session.query(Datasource).filter_by(company_id=mindsdb_env['company_id'], name=ds_name).first()
+            datasource_record = session.query(Dataset).filter_by(company_id=mindsdb_env['company_id'], name=ds_name).first()
             mindsdb_env['mindsdb_native'].learn(
                 doc['name'],
                 ds,

@@ -34,11 +34,11 @@ class ViewDataNode(DataNode):
         table = query.from_table.parts[-1]
         view_metadata = self.view_interface.get(name=table)
 
-        datasource = self.datasource_interface.get_by_id(view_metadata['datasource_id'])
-        datasource_name = datasource['name']
+        integration = self.datasource_interface.get_by_id(view_metadata['integration_id'])
+        integration_name = integration['name']
 
         dataset_name = self.data_store.get_vacant_name(table)
-        self.data_store.save_datasource(dataset_name, datasource_name, {'query': view_metadata['query']})
+        self.data_store.save_datasource(dataset_name, integration_name, {'query': view_metadata['query']})
         try:
             dataset_object = self.data_store.get_datasource_obj(dataset_name)
             data_df = dataset_object.df

@@ -86,8 +86,9 @@ class Dataset(Base):
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     datasources_version = Column(String)
-    datasource_id = Column(ForeignKey('datasource.id'), nullable=True)
+    integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'), nullable=True)
     ds_class = Column(String)
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
 
 
 class Predictor(Base):
@@ -111,6 +112,7 @@ class Predictor(Base):
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
     dtype_dict = Column(Json, nullable=True)
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
 
 
 class Log(Base):
@@ -125,14 +127,15 @@ class Log(Base):
     created_at_index = Index("some_index", "created_at_index")
 
 
-class Datasource(Base):
-    __tablename__ = 'datasource'
+class Integration(Base):
+    __tablename__ = 'integration'
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
     data = Column(Json)
     company_id = Column(Integer)
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
 
 
 class Stream(Base):
@@ -173,7 +176,7 @@ class File(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     analysis_id = Column(ForeignKey('analysis.id', name='fk_analysis_id'), nullable=True)
-    uniq_const = UniqueConstraint('name', 'company_id')
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
 
 
 class View(Base):
@@ -182,8 +185,8 @@ class View(Base):
     name = Column(String, nullable=False)
     company_id = Column(Integer)
     query = Column(String, nullable=False)
-    datasource_id = Column(ForeignKey('datasource.id'), nullable=False)  # ex integration
-    uniq_const = UniqueConstraint('name', 'company_id')
+    integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'), nullable=False)
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
 
 
 # DDL is changing through migrations

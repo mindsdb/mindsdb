@@ -152,8 +152,7 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
     resp = requests.post(predictor_record.data['train_url'],
                          json={'df': serialized_df, 'target': predictor_record.to_predict[0]})
 
-    print(resp)
-    print(resp.text)
+
     if resp.status_code == 200:
         pass
     else:

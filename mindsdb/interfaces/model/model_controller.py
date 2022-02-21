@@ -161,7 +161,7 @@ class ModelController():
             train_url = problem_definition['url'].get('train', None)
             predict_url = problem_definition['url'].get('predict', None)
             com_format = problem_definition['format']
-            print(problem_definition['target'])
+            
             predictor_record = db.Predictor(
                 company_id=company_id,
                 name=name,
@@ -264,8 +264,6 @@ class ModelController():
             elif predictor_data['format'] == 'ray_server':
                 serialized_df = json.dumps(df.to_dict())
                 resp = requests.post(predictor_data['predict_url'], json={'df': serialized_df})
-                print(resp.text)
-                print(resp)
                 predictions = pd.DataFrame(resp.json())
 
         else:

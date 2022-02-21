@@ -182,6 +182,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     The Main Server controller class
     """
 
+    predictor_attrs = ("model", "features", "ensemble")
+
     @staticmethod
     def server_close(srv):
         srv.server_close()
@@ -511,6 +513,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data.append(c_data)
         return data
 
+    def _get_ensemble_type(self, data):
+        ai_info = data.get('json_ai', {})
+        if ai_info == {}:
+            raise ErBadTableError("predictor doesn't contain enough data to generate 'feature' attribute.")
+        return [[ai_info["model"]["module"]]]
+
     def answer_describe_predictor(self, predictor_value):
         predictor_attr = None
         if isinstance(predictor_value, (list, tuple)):
@@ -603,6 +611,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     }],
                     data=data
                 )
+            elif predictor_attr == "ensemble":
+                data = self._get_ensemble_type(data)
+                packages = self.get_tabel_packets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'ensemble',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=data
+                )
+
             else:
                 raise ErNotSupportedYet("DESCRIBE '%s' predictor attribute is not supported yet" % predictor_attr)
         packages.append(self.last_packet())
@@ -1320,7 +1339,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.answer_drop_datasource(ds_name)
             return
         elif type(statement) == Describe:
-            if statement.value.parts[-1] in ("model", "features"):
+            if statement.value.parts[-1] in self.predictor_attrs:
                 self.answer_describe_predictor(statement.value.parts[-2:])
             else:
                 self.answer_describe_predictor(statement.value.parts[-1])

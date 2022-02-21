@@ -3,8 +3,8 @@ import traceback
 import tempfile
 from pathlib import Path
 from typing import Optional
-from numpy import isin
 import json
+import requests
 
 import pandas as pd
 from pandas.core.frame import DataFrame
@@ -146,6 +146,23 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
 
 
 @mark_process(name='learn')
+def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
+    serialized_df = json.dumps(df.to_dict())
+    predictor_record = Predictor.query.with_for_update().get(predictor_id)
+    resp = requests.post(predictor_record.data['train_url'],
+                         json={'df': serialized_df, 'target': predictor_record.to_predict[0]})
+
+
+    if resp.status_code == 200:
+        pass
+    else:
+        predictor_record.data = {"error": str(resp.text)}
+
+    session.commit()
+
+
+
+@mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
               delete_ds_on_fail: Optional[bool] = False, json_ai_override: dict = None) -> None:
     if json_ai_override is None:
@@ -232,6 +249,15 @@ def run_update(name: str, company_id: int):
         session.commit()
         return str(e)
 
+
+class LearnRemoteProcess(ctx.Process):
+    deamon = True
+
+    def __init__(self, *args):
+        super(LearnRemoteProcess, self).__init__(args=args)
+
+    def run(self):
+        run_learn_remote(*self._args)
 
 class LearnProcess(ctx.Process):
     daemon = True

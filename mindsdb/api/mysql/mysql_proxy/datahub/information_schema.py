@@ -87,10 +87,10 @@ class InformationSchema(DataNode):
             return self.information_schema[tn]
         raise Exception(f'Table information_schema.{tableName} does not exists')
 
-    def get_datasources_names(self):
-        datasource_names = self.integration_controller.get_all().keys()
+    def get_integrations_names(self):
+        integration_names = self.integration_controller.get_all().keys()
         return [
-            x.lower() for x in datasource_names
+            x.lower() for x in integration_names
         ]
 
     def _get_tables(self):
@@ -105,7 +105,7 @@ class InformationSchema(DataNode):
             ds_tables = ds.get_tables()
             data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci'] for x in ds_tables]
 
-        for ds_name in self.get_datasources_names():
+        for ds_name in self.get_integrations_names():
             ds = self.get(ds_name)
             ds_tables = ds.get_tables()
             data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci'] for x in ds_tables]

@@ -108,11 +108,11 @@ class MindsDBDataNode(DataNode):
             ''   # TODO
         ] for x in models], columns=columns)
 
-    def _select_datasources(self):
-        datasources = self.integration_controller.get_all()
+    def _select_integrations(self):
+        integrations = self.integration_controller.get_all()
         result = [
             [ds_name, ds_meta.get('type'), ds_meta.get('host'), ds_meta.get('port'), ds_meta.get('user')]
-            for ds_name, ds_meta in datasources.items()
+            for ds_name, ds_meta in integrations.items()
         ]
         return pd.DataFrame(
             result,
@@ -137,8 +137,8 @@ class MindsDBDataNode(DataNode):
 
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
-    def get_datasources(self, mindsdb_sql_query):
-        datasources_df = self._select_datasources()
+    def get_integrations(self, mindsdb_sql_query):
+        datasources_df = self._select_integrations()
         try:
             result_df = query_df(datasources_df, mindsdb_sql_query)
         except Exception as e:

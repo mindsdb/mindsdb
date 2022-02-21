@@ -137,25 +137,25 @@ class DataStore():
             session.delete(semaphor_record)
             session.commit()
 
-    def get_datasources(self, name=None, company_id=None):
-        datasource_arr = []
+    def get_datasets(self, name=None, company_id=None):
+        dataset_arr = []
         if name is not None:
-            datasource_record_arr = session.query(Dataset).filter_by(company_id=company_id, name=name)
+            dataset_record_arr = session.query(Dataset).filter_by(company_id=company_id, name=name)
         else:
-            datasource_record_arr = session.query(Dataset).filter_by(company_id=company_id)
-        for datasource_record in datasource_record_arr:
+            dataset_record_arr = session.query(Dataset).filter_by(company_id=company_id)
+        for dataset_record in dataset_record_arr:
             try:
-                if datasource_record.data is None:
+                if dataset_record.data is None:
                     continue
-                datasource = json.loads(datasource_record.data)
-                datasource['created_at'] = datasource_record.created_at
-                datasource['updated_at'] = datasource_record.updated_at
-                datasource['name'] = datasource_record.name
-                datasource['id'] = datasource_record.id
-                datasource_arr.append(datasource)
+                dataset = json.loads(dataset_record.data)
+                dataset['created_at'] = dataset_record.created_at
+                dataset['updated_at'] = dataset_record.updated_at
+                dataset['name'] = dataset_record.name
+                dataset['id'] = dataset_record.id
+                dataset_arr.append(dataset)
             except Exception as e:
                 log.error(e)
-        return datasource_arr
+        return dataset_arr
 
     def get_data(self, name, where=None, limit=None, offset=None, company_id=None):
         offset = 0 if offset is None else offset
@@ -176,49 +176,49 @@ class DataStore():
         }
 
     def get_datasource(self, name, company_id=None):
-        datasource_arr = self.get_datasources(name, company_id=company_id)
-        if len(datasource_arr) == 1:
-            return datasource_arr[0]
+        dataset_arr = self.get_datasets(name, company_id=company_id)
+        if len(dataset_arr) == 1:
+            return dataset_arr[0]
         # @TODO: Remove when db swithc is more stable, this should never happen, but good santiy check while this is kinda buggy
-        elif len(datasource_arr) > 1:
-            log.error('Two or more datasource with the same name, (', len(datasource_arr), ') | Full list: ', datasource_arr)
-            raise Exception('Two or more datasource with the same name')
+        elif len(dataset_arr) > 1:
+            log.error('Two or more dataset with the same name, (', len(dataset_arr), ') | Full list: ', dataset_arr)
+            raise Exception('Two or more dataset with the same name')
         return None
 
     def delete_datasource(self, name, company_id=None):
-        datasource_record = Dataset.query.filter_by(company_id=company_id, name=name).first()
-        if not Config()["force_datasource_removing"]:
-            linked_models = Predictor.query.filter_by(company_id=company_id, dataset_id=datasource_record.id).all()
+        dataset_record = Dataset.query.filter_by(company_id=company_id, name=name).first()
+        if not Config()["force_dataset_removing"]:
+            linked_models = Predictor.query.filter_by(company_id=company_id, dataset_id=dataset_record.id).all()
             if linked_models:
-                raise Exception("Can't delete {} datasource because there are next models linked to it: {}".format(name, [model.name for model in linked_models]))
+                raise Exception("Can't delete {} dataset because there are next models linked to it: {}".format(name, [model.name for model in linked_models]))
         session.query(Semaphor).filter_by(
-            company_id=company_id, entity_id=datasource_record.id, entity_type='datasource'
+            company_id=company_id, entity_id=dataset_record.id, entity_type='dataset'
         ).delete()
-        session.delete(datasource_record)
+        session.delete(dataset_record)
         session.commit()
-        self.fs_store.delete(f'datasource_{company_id}_{datasource_record.id}')
+        self.fs_store.delete(f'datasource_{company_id}_{dataset_record.id}')
         try:
             shutil.rmtree(os.path.join(self.dir, f'{company_id}@@@@@{name}'))
         except Exception:
             pass
 
     def get_vacant_name(self, base=None, company_id=None):
-        ''' returns name of datasource, which starts from 'base' and ds with that name is not exists yet
+        ''' returns name of dataset, which starts from 'base' and ds with that name is not exists yet
         '''
         if base is None:
-            base = 'datasource'
-        datasources = session.query(Dataset.name).filter_by(company_id=company_id).all()
-        datasources_names = [x[0] for x in datasources]
-        if base not in datasources_names:
+            base = 'dataset'
+        datasets = session.query(Dataset.name).filter_by(company_id=company_id).all()
+        datasets_names = [x[0] for x in datasets]
+        if base not in datasets_names:
             return base
         for i in range(1, 1000):
             candidate = f'{base}_{i}'
-            if candidate not in datasources_names:
+            if candidate not in datasets_names:
                 return candidate
-        raise Exception(f"Can not find appropriate name for datasource '{base}'")
+        raise Exception(f"Can not find appropriate name for dataset '{base}'")
 
     def create_datasource(self, source_type, source, file_path=None, company_id=None, ds_meta_dir=None):
-        datasource_controller = IntegrationController()
+        integration_controller = IntegrationController()
         if source_type == 'file_query' or source_type == 'view_query':
             dsClass = QueryDS
             creation_info = {
@@ -244,8 +244,8 @@ class DataStore():
                 'kwargs': {}
             }
 
-        elif datasource_controller.get(source_type, company_id) is not None:
-            integration = datasource_controller.get(source_type, company_id)
+        elif integration_controller.get(source_type, company_id) is not None:
+            integration = integration_controller.get(source_type, company_id)
 
             ds_class_map = {
                 'clickhouse': ClickhouseDS,
@@ -269,7 +269,7 @@ class DataStore():
                 raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
 
             if dsClass is None:
-                raise Exception(f"Unsupported datasource: {source_type}, type is {integration['type']}, please install required dependencies!")
+                raise Exception(f"Unsupported dataset: {source_type}, type is {integration['type']}, please install required dependencies!")
 
             if integration['type'] in ['clickhouse']:
                 creation_info = {
@@ -415,9 +415,9 @@ class DataStore():
         if source_type == 'file' and (file_path is None):
             raise Exception('`file_path` argument required when source_type == "file"')
 
-        datasource_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
-        while datasource_record is not None:
-            raise Exception(f'Datasource with name {name} already exists')
+        dataset_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
+        while dataset_record is not None:
+            raise Exception(f'Dataset with name {name} already exists')
 
         if source_type == 'views':
             source_type = 'view_query'
@@ -425,13 +425,13 @@ class DataStore():
             source_type = 'file_query'
 
         try:
-            datasource_record = Dataset(
+            dataset_record = Dataset(
                 company_id=company_id,
                 name=name,
                 datasources_version=mindsdb_datasources.__version__,
                 mindsdb_version=mindsdb_version
             )
-            session.add(datasource_record)
+            session.add(dataset_record)
             session.commit()
 
             ds_meta_dir = os.path.join(self.dir, f'{company_id}@@@@@{name}')
@@ -454,21 +454,21 @@ class DataStore():
 
             if '' in column_names or len(column_names) != len(set(column_names)):
                 shutil.rmtree(ds_meta_dir)
-                raise Exception('Each column in datasource must have unique non-empty name')
+                raise Exception('Each column in dataset must have unique non-empty name')
 
-            datasource_record.creation_info = json.dumps(creation_info)
-            datasource_record.data = json.dumps({
+            dataset_record.creation_info = json.dumps(creation_info)
+            dataset_record.data = json.dumps({
                 'source_type': source_type,
                 'source': source,
                 'row_count': row_count,
                 'columns': [dict(name=x) for x in column_names]
             })
 
-            self.fs_store.put(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{datasource_record.id}', self.dir)
+            self.fs_store.put(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{dataset_record.id}', self.dir)
             session.commit()
 
         except Exception as e:
-            log.error(f'Error creating datasource {name}, exception: {e}')
+            log.error(f'Error creating dataset {name}, exception: {e}')
             try:
                 self.delete_datasource(name, company_id=company_id)
             except Exception:
@@ -480,16 +480,16 @@ class DataStore():
     def get_datasource_obj(self, name=None, id=None, raw=False, company_id=None):
         try:
             if name is not None:
-                datasource_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
+                dataset_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
             else:
-                datasource_record = session.query(Dataset).filter_by(company_id=company_id, id=id).first()
+                dataset_record = session.query(Dataset).filter_by(company_id=company_id, id=id).first()
 
-            self.fs_store.get(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{datasource_record.id}', self.dir)
-            creation_info = json.loads(datasource_record.creation_info)
+            self.fs_store.get(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{dataset_record.id}', self.dir)
+            creation_info = json.loads(dataset_record.creation_info)
             if raw:
                 return creation_info
             else:
                 return eval(creation_info['class'])(*creation_info['args'], **creation_info['kwargs'])
         except Exception as e:
-            log.error(f'Error getting datasource {name}, exception: {e}')
+            log.error(f'Error getting dataset {name}, exception: {e}')
             return None

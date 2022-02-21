@@ -45,8 +45,8 @@ def parse_filter(key, value):
 class DatasourcesList(Resource):
     @ns_conf.doc('get_datasources_list')
     def get(self):
-        '''List all datasources'''
-        return request.default_store.get_datasources()
+        '''List all datasets'''
+        return request.default_store.get_datasets()
 
 
 @ns_conf.route('/<name>')

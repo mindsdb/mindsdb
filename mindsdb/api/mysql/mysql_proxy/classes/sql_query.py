@@ -314,7 +314,7 @@ class SQLQuery():
     def _process_query(self, sql):
         # self.query = parse_sql(sql, dialect='mindsdb')
 
-        integrations_names = self.datahub.get_datasources_names()
+        integrations_names = self.datahub.get_integrations_names()
         integrations_names.append('information_schema')
         integrations_names.append('files')
         integrations_names.append('views')
@@ -422,7 +422,7 @@ class SQLQuery():
                 )
             ):
                 dn = self.datahub.get(self.mindsdb_database_name)
-                data, columns = dn.get_datasources(mindsdb_sql_struct)
+                data, columns = dn.get_integrations(mindsdb_sql_struct)
                 table_name = ('mindsdb', 'datasources', 'datasources')
                 data = [
                     {

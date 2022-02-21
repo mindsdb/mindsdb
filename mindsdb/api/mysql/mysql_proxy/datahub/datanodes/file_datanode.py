@@ -9,10 +9,10 @@ class FileDataNode(DataNode):
     type = 'file'
 
     def __init__(self, data_store):
-        self.datastore = data_store
+        self.data_store = data_store
 
     def get_tables(self):
-        dss = self.datastore.get_datasources()
+        dss = self.data_store.get_datasets()
         file_dss = [x for x in dss if x['source_type'] == 'file']
         return [x['name'] for x in file_dss]
 
@@ -20,7 +20,7 @@ class FileDataNode(DataNode):
         return table in self.get_tables()
 
     def get_table_columns(self, table):
-        ds = self.datastore.get_datasource(table)
+        ds = self.data_store.get_datasource(table)
         return [x['name'] for x in ds['columns']]
 
     def select(self, query):
@@ -29,7 +29,7 @@ class FileDataNode(DataNode):
         if len(query_tables) != 1:
             raise Exception(f'Only one table can be used in query to information_schema: {query}')
 
-        data = self.datastore.get_data(query_tables[0], where=None, limit=None, offset=None)
+        data = self.data_store.get_data(query_tables[0], where=None, limit=None, offset=None)
         data_df = DF(data['data'])
         result = query_df(data_df, query)
         return result.to_dict(orient='records'), result.columns.to_list()

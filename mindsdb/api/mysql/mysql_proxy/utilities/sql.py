@@ -1,5 +1,5 @@
 import duckdb
-import pandas as pd
+import numpy as np
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Select, Identifier, BinaryOperation, OrderBy
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -53,5 +53,5 @@ def query_df(df, query):
 
     res = duckdb.query_df(df, 'df_table', query_str)
     result_df = res.df()
-    result_df = result_df.where(pd.notnull(result_df), None)
+    result_df = result_df.replace({np.nan: None})
     return result_df

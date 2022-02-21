@@ -2,17 +2,17 @@
 
 The `DESCRIBE ...` statement is used to display the attributes of an existing model.
 
-# DESCRIBE FEATURES
+## DESCRIBE FEATURES
 
 
 The `DESCRIBE [...].features` statement is used to display the way that the model encoded the data prior to training.
 
-## Syntax:
+### Syntax:
 
 ```sql
 DESCRIBE [name_of_your_predictor].features;
 ```
-## Expected Output
+### Expected Output
 
 
 column: name of the feature 
@@ -20,17 +20,17 @@ type: binary integer...
 encoder: name of the encoder used for that column
 role: describes whether the column is a target or a feature
 
-# DESCRIBE MODEL  
+## DESCRIBE MODEL  
 
 `DESCRIBE [...].model` statement is used to display the performance of the candidate models.
 
-## Syntax:
+### Syntax:
 
 ```sql
 DESCRIBE [name_of_your _predictor].model;
 ```
 
-## Expected Output
+### Expected Output
 
 name: name of the model
 performance : obtained accuracy (from 0.0 to 1.0) for that candidate model

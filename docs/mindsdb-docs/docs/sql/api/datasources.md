@@ -4,7 +4,7 @@ MindsDB enables connections to your favorite databases, data warehouses, data la
 
 Our SQL API supports creating a datasource connection by passing any credentials needed by each type of system that you are connecting to. 
 
-# Syntax
+## Syntax
 
 ```sql
 CREATE DATASOURCE datasource_name
@@ -13,7 +13,7 @@ WITH
 	parameters={"key":"value", ...};
 ```
 
-# Example: MySQL
+## Example: MySQL
 
 Here is a concrete example to connect to a MySQL database.
 
@@ -37,4 +37,3 @@ select * from mindsdb.datasources;
 ```
 
 ![Once a datasource has been correctly created, you will see it registered in `mindsdb.datasources`](../../assets/sql/datasource_listing.png)
-

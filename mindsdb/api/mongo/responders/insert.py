@@ -36,7 +36,7 @@ class Responce(Responder):
             'connection'
         ]
 
-        models = mindsdb_env['mindsdb_native'].get_models()
+        models = mindsdb_env['model_interface'].get_models()
 
         if len(query['documents']) != 1:
             raise Exception("Must be inserted just one predictor at time")
@@ -98,7 +98,7 @@ class Responce(Responder):
                     raise Exception(f"Column '{col}' not exists")
 
             datasource_record = session.query(Dataset).filter_by(company_id=mindsdb_env['company_id'], name=ds_name).first()
-            mindsdb_env['mindsdb_native'].learn(
+            mindsdb_env['model_interface'].learn(
                 doc['name'],
                 ds,
                 predict,

@@ -295,7 +295,7 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             'origin_model_interface': ModelInterface(),
             'origin_datasource_controller': IntegrationController(),
         }
-        self.mindsdb_env['mindsdb_native'] = WithKWArgsWrapper(
+        self.mindsdb_env['model_interface'] = WithKWArgsWrapper(
             self.mindsdb_env['origin_model_interface'],
             company_id=None
         )

@@ -31,7 +31,7 @@ class Responce(Responder):
 
         res['ns'] = f"{db}.{collection}"
         if db == 'mindsdb' and collection == 'predictors':
-            res['count'] = len(mindsdb_env['mindsdb_native'].get_models())
+            res['count'] = len(mindsdb_env['model_interface'].get_models())
 
         return res
 

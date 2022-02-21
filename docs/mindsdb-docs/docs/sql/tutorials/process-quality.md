@@ -2,8 +2,8 @@
 
 Before you start make sure that you've:
 
-1. Visited [Getting Started Guide](https://docs.mindsdb.com/info/)
-2. Visited [Getting Started with Cloud](https://docs.mindsdb.com/deployment/cloud/)
+1. Visited [Getting Started Guide](/info)
+2. Visited [Getting Started with Cloud](/deployment/cloud)
 3. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/edumagalhaes/quality-prediction-in-a-mining-process).
 
 # Manufacturing process quality
@@ -16,9 +16,8 @@ In this tutorial you will learn how to predict the quality of a mining process u
 ## Upload a file
 
 1. Fix headers: 
-   - `sed -i 's/ /_/g' MiningProcess_Flotation_Plant_Database.csv`
-   - `sed -i 's/\(.*\)/\L\1/' MiningProcess_Flotation_Plant_Database.csv`
-   - `sed -i 's/%_//g' MiningProcess_Flotation_Plant_Database.csv`
+   - `sed -e 's/ /_/g' -e 's/\(.*\)/\L\1/' -e 's/%_//g' MiningProcess_Flotation_Plant_Database.csv > fixed_headers.csv` (for Linux/Unix)
+   - edit headers manually: change `space` to `underscore`, upper case to lower case, remove `%` from headers (for Windows)
 2. Click on **Files** icon to go to datasets page
 3. Click on **FILE UPLOAD** button to upload file into MindsDB
 

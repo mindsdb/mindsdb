@@ -665,14 +665,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.packet(OkPacket).send()
 
     def answer_create_predictor(self, statement):
+        integration_name = None
         struct = {
             'predictor_name': statement.name.parts[-1],
-            'integration_name': statement.integration_name.parts[-1],
             'select': statement.query_str,
             'predict': [x.parts[-1] for x in statement.targets]
         }
         if len(struct['predict']) > 1:
             raise SqlApiException("Only one field can be in 'PREDICT'")
+        if isinstance(statement.integration_name, Identifier):
+            struct['integration_name'] = statement.integration_name.parts[-1]
         if statement.using is not None:
             struct['using'] = statement.using
         if statement.datasource_name is not None:
@@ -692,26 +694,45 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         data_store = self.session.data_store
 
         predictor_name = struct['predictor_name']
-        integration_name = struct['integration_name']
+        integration_name = struct.get('integration_name')
 
-        if integration_name.lower().startswith('datasource.'):
-            ds_name = integration_name[integration_name.find('.') + 1:]
-            ds = data_store.get_datasource_obj(ds_name, raw=True)
-            ds_data = data_store.get_datasource(ds_name)
+        if integration_name is not None:
+            if integration_name.lower().startswith('datasource.'):
+                ds_name = integration_name[integration_name.find('.') + 1:]
+                ds = data_store.get_datasource_obj(ds_name, raw=True)
+                ds_data = data_store.get_datasource(ds_name)
+            else:
+                if (
+                    self.session.datasource_interface.get_db_integration(integration_name) is None
+                    and integration_name not in ('views', 'files')
+                ):
+                    raise ErBadDbError(f"Unknown datasource: {integration_name}")
+
+                ds_name = struct.get('datasource_name')
+                if ds_name is None:
+                    ds_name = data_store.get_vacant_name(predictor_name)
+
+                ds_kwargs = {'query': struct['select']}
+                if integration_name in ('views', 'files'):
+                    parsed = parse_sql(struct['select'])
+                    ds_kwargs['source'] = parsed.from_table.parts[-1]
+                ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)
+                ds_data = data_store.get_datasource(ds_name)
+                ds_id = ds_data['id']
+
+            ds_column_names = [x['name'] for x in ds_data['columns']]
+            try:
+                predict = self._check_predict_columns(struct['predict'], ds_column_names)
+            except Exception as e:
+                data_store.delete_datasource(ds_name)
+                raise e
+
+            for i, p in enumerate(predict):
+                predict[i] = get_column_in_case(ds_column_names, p)
         else:
-            if self.session.datasource_interface.get_db_integration(integration_name) is None and integration_name not in ('views', 'files'):
-                raise ErBadDbError(f"Unknown datasource: {integration_name}")
-
-            ds_name = struct.get('datasource_name')
-            if ds_name is None:
-                ds_name = data_store.get_vacant_name(predictor_name)
-
-            ds_kwargs = {'query': struct['select']}
-            if integration_name in ('views', 'files'):
-                parsed = parse_sql(struct['select'])
-                ds_kwargs['source'] = parsed.from_table.parts[-1]
-            ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)
-            ds_data = data_store.get_datasource(ds_name)
+            ds = None
+            ds_id = None
+            predict = struct['predict']
 
         timeseries_settings = {}
         for w in ['order_by', 'group_by', 'window', 'horizon']:
@@ -727,15 +748,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     kwargs['timeseries_settings'] = json.loads(kwargs['timeseries_settings'])
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
-        ds_column_names = [x['name'] for x in ds_data['columns']]
-        try:
-            predict = self._check_predict_columns(struct['predict'], ds_column_names)
-        except Exception as e:
-            data_store.delete_datasource(ds_name)
-            raise e
-
-        for i, p in enumerate(predict):
-            predict[i] = get_column_in_case(ds_column_names, p)
 
         # Cast all column names to same case
         if isinstance(kwargs.get('timeseries_settings'), dict):
@@ -758,7 +770,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                             f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
                         )
 
-        model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True)
+        model_interface.learn(predictor_name, ds, predict, ds_id, kwargs=kwargs, delete_ds_on_fail=True)
 
         self.packet(OkPacket).send()
 
@@ -818,7 +830,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             err_code=ERR.ER_SYNTAX_ERROR,
             msg="at this moment only 'delete predictor' command supported"
         ).send()
-
 
     def to_mysql_type(self, type_name):
         if type_name == 'str':
@@ -929,7 +940,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         #     num_columns = len(query.columns)
         #     parameters = []
         #     columns_def = query.columns
-        elif isinstance (statement, Show) and statement.category in (
+        elif isinstance(statement, Show) and statement.category in (
             'variables', 'session variables', 'show session status'
         ):
             prepared_stmt['type'] = 'show variables'

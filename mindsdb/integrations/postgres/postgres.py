@@ -58,9 +58,11 @@ class PostgreSQL(Integration, PostgreSQLConnectionChecker):
             dtype.audio: 'text',
             dtype.short_text: 'text',
             dtype.rich_text: 'text',
-            dtype.array: 'text',
             dtype.quantity: 'text',
-            dtype.tsarray: 'text',
+            dtype.num_array: 'text',
+            dtype.cat_array: 'text',
+            dtype.num_tsarray: 'text',
+            dtype.cat_tsarray: 'text',
             'default': 'text'
         }
 

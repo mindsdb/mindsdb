@@ -12,165 +12,71 @@ In this tutorial, you will learn how to predict the best crop type based on fiel
 
 Before you start make sure you have:
 
-1. Access to MindsDB. Check out the installation guide for [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPi](https://docs.mindsdb.com/deployment/pypi/). You can also use [MindsDB Cloud](https://docs.mindsdb.com/deployment/cloud/).
-2. Access to a database. In this example we will use MariaDB. You can install it [locally](https://mariadb.org/download/) or through [Docker](https://hub.docker.com/_/mariadb).
-3. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset).
-4. Access to mysql-client. You can probably get it from your system’s package manager. For Debian/Ubuntu check [here](https://packages.ubuntu.com/search?keywords=mysql-client).
-4. Optional: Access to ngrok. You can check the installation details at the [ngrok website](https://ngrok.com/).
+1. Access to MindsDB. In this tutorial, we will use [MindsDB Cloud](https://docs.mindsdb.com/deployment/cloud/). If you want you can also deploy mindsdb on your premises, Check out the installation guide for [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPi](https://docs.mindsdb.com/deployment/pypi/). 
 
-## Setup the database
+2. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset).
 
-In this section, you will create a MariaDB database and a table into which you will then load the dataset.
+3. Access to a mysql-client. [Docker](https://docs.mindsdb.com/faq/mysql-client/)
 
-First, connect to your MariaDB instance. You can use the CLI based `mysql` or any manager like [DBeaver](https://dbeaver.io/).
 
-If you have MariaDB running locally, you can use the following line to connect.
 
-> Remember to change the username if you have a different one set up in MariaDB.
+## Add your file to MindsDB
 
-```bash
-mysql -u root -p -h 127.0.0.1
-```
+MindsDB can integrates with many databases, in most scenarios your data will be stored in a database, if you decide to load this dataset into your database of choice, please follow instructions here as to how to [connect mindsdb to your database](https://docs.mindsdb.com/faq/plug_your_data).
 
-After connecting you can create a database for the project. You can skip this step if you already have a database you want to use.
+In this tutorial, you simply upload the kaggle file Crop_recommendation.csv to MindsDB via the MindsDB adming GUI, In this tutorial, we are using [cloud.mindsdb.com](https://cloud.mindsdb.com). Alternatively, remember that if you are using a local deployment you will have to point your browser to [127.0.0.1:47334](https://127.0.0.1:47334).
 
-```sql
-CREATE DATABASE agriculture;
-```
-You can check that the database was created with the following query.
 
-```sql
-SHOW DATABASES;
-```
-The output will be similar to the one below.
+In the main screen, select `FILES` > `FILE UPLOAD`. Then add your file and give it a name, in this tutorial we will name it `crops`.
 
-```console
-+--------------------+
-| Database           |
-+--------------------+
-| agriculture        |
-| information_schema |
-| mysql              |
-| performance_schema |
-| sys                |
-+--------------------+
-5 rows in set (0.01 sec)
-```
-Next, you need to create a table for the dataset. To do so, first switch to the database you want to use.
 
-```sql
-USE agriculture;
-```
+Click `Upload`, you should now see your file on the list of files. 🚀
 
-Now you can create the table with the following schema.
 
-```sql
-CREATE TABLE crops (
-    N INT,
-    P INT,
-    K INT,
-    temperature INT,
-    humidity DECIMAL(10, 2),
-    ph DECIMAL(10, 2),
-    rainfall DECIMAL(10, 2),
-    label VARCHAR(50)
-);
-```
+NOTE: Mindsdb SQL Server allows you to query your uploaded files using SQL, we will get to that right now.
 
-You can check if the table was created with the `SHOW TABLES;` query. You should see a similar output.
+## Connecting to your MindsDB SQL Server
 
-```console
-+-----------------------+
-| Tables_in_agriculture |
-+-----------------------+
-| crops                 |
-+-----------------------+
-1 row in set (0.00 sec)
-```
-
-When the table is created you can load the dataset into it.
-
-To load the CSV file into the table use the following query.
-> Remember to change the path to the dataset to match the file location on your system.
-
-```sql
-LOAD DATA INFILE '/Crop_recommendation.csv'
-INTO TABLE crops 
-FIELDS TERMINATED BY ','
-IGNORE 1 LINE;
-```
-
-To verify that the data has been loaded, you can make a simple `SELECT` query.
-
-```sql
-SELECT * FROM crops LIMIT 5;
-```
-
-You should see a similar output.
-
-```console
-+------+------+------+-------------+----------+------+----------+-------+
-| N    | P    | K    | temperature | humidity | ph   | rainfall | label |
-+------+------+------+-------------+----------+------+----------+-------+
-|   90 |   42 |   43 |          21 |    82.00 | 6.50 |   202.94 | rice
-|   85 |   58 |   41 |          22 |    80.32 | 7.04 |   226.66 | rice
-|   60 |   55 |   44 |          23 |    82.32 | 7.84 |   263.96 | rice
-|   74 |   35 |   40 |          26 |    80.16 | 6.98 |   242.86 | rice
-|   78 |   42 |   42 |          20 |    81.60 | 7.63 |   262.72 | rice
-+------+------+------+-------------+----------+------+----------+-------+
-5 rows in set (0.00 sec)
-```
-
-You have now finished setting up the MariaDB database!
-
-## Connect MindsDB to your database
-
-In this section, you will connect your database to MindsDB.
-
-The recommended way of connecting a database to MindsDB is through its GUI. In the open source version you need to launch MindsDB Studio, but in this tutorial we will use the GUI at MindsDB Cloud.
-
-Since our MariaDB instance is local we will use `ngrok` to make it available to MindsDB Cloud. If you are using a MariaDB instance that already has a public address or you have installed MindsDB locally you can skip this step.
-
-First you need to set up an ngrok tunnel with the following command.
-> If you have used a different port for your MariaDB installation, remember to change it here.
-
-```bash
-ngrok tcp 3306
-```
-
-You should see a similar output:
-
-```console
-Session Status                online
-Account                       myaccount (Plan: Free)
-Version                       2.3.40
-Region                        United States (us)
-Web Interface                 http://127.0.0.1:4040
-Forwarding                    tcp://x.tcp.ngrok.io:12345 -> localhost:5432
-```
-Now you can copy the forwarded address from the above output. You are interested in the `x.tcp.ngrok.io:12345` part.
-
-With the address copied, head over to MindsDB GUI.
-
-In the main screen, select `ADD DATABASE`. Then add your integration details.
-
-![MindsDB MariaDB integration details](/assets/sql/tutorials/crop-prediction/database-integration-mariadb.png)
-
-Click `Connect`, you should now see your MariaDB database connection in the main screen.
-
-You are now done with connecting MindsDB to your database! 🚀
-
-## Create a predictor
-
-In this section you will connect to MindsDB with the MySQL API and create a predictor with a single SQL command. Predictor is in fact a complete machine learning model, with datasource columns serving as features, and MindsDB takes care of the rest of ML workflow automatically. There is a way to get your hands into the insides of the model to fine tune it, but we will not cover it in this tutorial.
+In this section you will connect to MindsDB with the MySQL API and explore what is there for you.
 
 First you need to connect to MindsDB through the MySQL API. To do so, use the following command.
-> Remember to change the username for the connection
+
+> Remember to change the MindsDB Cloud username for the connection
 
 ```bash
 mysql -h cloud.mindsdb.com --port 3306 -u cloudusername@mail.com -p
 ```
-After that switch to the `mindsdb` database.
+
+
+Note: If you are using a local deployment, please review [Connect to your Local deployment](https://docs.mindsdb.com/faq/local_deployment/)
+
+
+After that you can list the provided databases.
+
+```sql
+SHOW databases;
+```
+
+You will notice that there is a database called `files`.
+
+```sql
+USE files;
+```
+
+You can explore your data
+
+```sql
+SELECT * from crops limit 4;
+```
+
+
+
+## Create a predictor
+
+Now we can create a machine learning model with `crops` columns serving as features, and MindsDB takes care of the rest of ML workflow automatically. There is a way to get your hands into the insides of the model to fine tune it, but we will not cover it in this tutorial.
+
+
+Switch to the `mindsdb` database.
 
 ```sql
 USE mindsdb;
@@ -180,7 +86,7 @@ Use the following query to create a predictor that will predict the `label` (*cr
 
 ```sql
 CREATE PREDICTOR crop_predictor
-FROM crops_integration (
+FROM files (
     SELECT * FROM crops
 ) PREDICT label as crop_type;
 ```
@@ -200,11 +106,11 @@ SELECT * FROM mindsdb.predictors WHERE name='crop_predictor';
 After the predictor has finished training, you will see a similar output. Note that MindsDB does model testing for you automatically, so you will immediately see if the predictor is accurate enough.
 
 ```console
-+-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+---------------------+------------------+
-| name            | status   | accuracy           | predict | update_status | mindsdb_version | error | select_data_query | external_datasource | training_options |
-+-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+---------------------+------------------+
-|  crop_predictor | complete | 0.9954545454545454 | label   | up_to_date    | 2.55.2          |       |                   |                     |                  |
-+-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+---------------------+------------------+
++-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+------------------+
+| name            | status   | accuracy           | predict | update_status | mindsdb_version | error | select_data_query | training_options |
++-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+------------------+
+|  crop_predictor | complete | 0.9954545454545454 | label   | up_to_date    | 2.55.2          |       |                   |                  |
++-----------------+----------+--------------------+---------+---------------+-----------------+-------+-------------------+------------------+
 1 row in set (0.29 sec)
 
 ```
@@ -220,7 +126,7 @@ To run a prediction against new or existing data, you can use the following quer
 ```sql
 SELECT label
 FROM mindsdb.crop_predictor
-WHERE when_data='{"N": 77, "P": 52, "K": 17, "temperature": 24, "humidity": 20.74, "ph": 5.71, "rainfall": 75.82}'\G
+WHERE N = 77 and P = 52 and K = 17 and temperature = 24 and humidity = 20.74 and ph = 5.71 and  rainfall = 75.82
 ```
 
 ```console

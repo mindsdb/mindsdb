@@ -1,7 +1,10 @@
 import duckdb
-import pandas as pd
+import numpy as np
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Select, Identifier, BinaryOperation, OrderBy
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+
+from mindsdb.utilities.log import log
 
 
 def _remove_table_name(root):
@@ -23,24 +26,32 @@ def query_df(df, query):
             pandas.DataFrame
     """
 
-    query = parse_sql(str(query), dialect='mysql')
-    if isinstance(query, Select) is False or isinstance(query.from_table, Identifier) is False:
+    if isinstance(query, str):
+        query_ast = parse_sql(query, dialect='mysql')
+    else:
+        query_ast = query
+
+    if isinstance(query_ast, Select) is False or isinstance(query_ast.from_table, Identifier) is False:
         raise Exception("Only 'SELECT from TABLE' statements supported for internal query")
 
-    query.from_table.parts = ['df_table']
-    for identifier in query.targets:
+    query_ast.from_table.parts = ['df_table']
+    for identifier in query_ast.targets:
         if isinstance(identifier, Identifier):
             identifier.parts = [identifier.parts[-1]]
-    if isinstance(query.order_by, list):
-        for orderby in query.order_by:
+    if isinstance(query_ast.order_by, list):
+        for orderby in query_ast.order_by:
             if isinstance(orderby, OrderBy) and isinstance(orderby.field, Identifier):
                 orderby.field.parts = [orderby.field.parts[-1]]
-    _remove_table_name(query.where)
+    _remove_table_name(query_ast.where)
 
-    # FIXME https://github.com/mindsdb/mindsdb_sql/issues/130
-    # we need way to dump suery in postgres dialect
-    sql_query = str(query).replace('`', '')
-    res = duckdb.query_df(df, 'df_table', sql_query)
+    render = SqlalchemyRender('postgres')
+    try:
+        query_str = render.get_string(query_ast, with_failback=False)
+    except Exception as e:
+        log.error(f"Exception during query casting to 'postgres' dialect. Query: {str(query)}. Error: {e}")
+        query_str = render.get_string(query_ast, with_failback=True)
+
+    res = duckdb.query_df(df, 'df_table', query_str)
     result_df = res.df()
-    result_df = result_df.where(pd.notnull(result_df), None)
+    result_df = result_df.replace({np.nan: None})
     return result_df

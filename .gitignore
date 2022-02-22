@@ -27,3 +27,4 @@ docker/dist/*
 .vscode
 .vscode/*
 .history
+doc/lib/

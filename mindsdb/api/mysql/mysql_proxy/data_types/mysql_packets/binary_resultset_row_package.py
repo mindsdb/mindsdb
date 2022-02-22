@@ -75,7 +75,7 @@ class BinaryResultsetRowPacket(Packet):
             if enc == 'string':
                 self.value.append(Datum('string<lenenc>', str(data[i])).toStringPacket())
             else:
-                self.value.append(struct.encode(enc, data[i]))[0]
+                self.value.append(struct.pack(enc, data[i]))
 
     @property
     def body(self):

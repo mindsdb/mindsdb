@@ -109,8 +109,10 @@ class Responce(Responder):
                     row[key + '_confidence'] = explanation[key]['confidence']
                     row[key + '_explain'] = explanation[key]
                 for key in min_max_keys:
-                    row[key + '_min'] = explanation[key]['confidence_lower_bound']
-                    row[key + '_max'] = explanation[key]['confidence_upper_bound']
+                    if 'confidence_lower_bound' in explanation[key]:
+                        row[key + '_min'] = explanation[key]['confidence_lower_bound']
+                    if 'confidence_upper_bound' in explanation[key]:
+                        row[key + '_max'] = explanation[key]['confidence_upper_bound']
                 data.append(row)
 
         else:

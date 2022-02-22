@@ -3,12 +3,14 @@ import traceback
 import tempfile
 from pathlib import Path
 from typing import Optional
+import json
+import requests
 
 import pandas as pd
 from pandas.core.frame import DataFrame
 import torch.multiprocessing as mp
 import lightwood
-from lightwood.api.types import ProblemDefinition
+from lightwood.api.types import ProblemDefinition, JsonAI
 from lightwood import __version__ as lightwood_version
 
 from mindsdb import __version__ as mindsdb_version
@@ -41,9 +43,60 @@ def delete_learn_mark():
             p.unlink()
 
 
+def rep_recur(org: dict, ovr: dict):
+    for k in ovr:
+        if k in org:
+            if isinstance(org[k], dict) and isinstance(ovr[k], dict):
+                rep_recur(org[k], ovr[k])
+            else:
+                org[k] = ovr[k]
+        else:
+            org[k] = ovr[k]
+
+
+def brack_to_mod(ovr):
+    if not isinstance(ovr, dict):
+        if isinstance(ovr, list):
+            for i in range(len(ovr)):
+                ovr[i] = brack_to_mod(ovr[i])
+        elif isinstance(ovr, str):
+            if '(' in ovr and ')' in ovr:
+                mod = ovr.split('(')[0]
+                args = {}
+                if '()' not in ovr:
+                    for str_pair in ovr.split('(')[1].split(')')[0].split(','):
+                        k = str_pair.split('=')[0].strip(' ')
+                        v = str_pair.split('=')[1].strip(' ')
+                        args[k] = v
+
+                ovr = {
+                    'module': mod,
+                    'args': args
+                }
+            elif '{' in ovr and '}' in ovr:
+                try:
+                    ovr = json.loads(ovr)
+                except Exception:
+                    pass
+        return ovr
+    else:
+        for k in ovr.keys():
+            ovr[k] = brack_to_mod(ovr[k])
+
+    return ovr
+
 @mark_process(name='learn')
-def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int) -> int:
+def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None) -> int:
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
+    if json_ai_override is None:
+        json_ai_override = {}
+
+    json_ai_override = brack_to_mod(json_ai_override)
+    json_ai = json_ai.to_dict()
+    rep_recur(json_ai, json_ai_override)
+
+    json_ai = JsonAI.from_dict(json_ai)
+
     code = lightwood.code_from_json_ai(json_ai)
 
     predictor_record = Predictor.query.with_for_update().get(predictor_id)
@@ -93,10 +146,29 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
 
 
 @mark_process(name='learn')
+def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
+    serialized_df = json.dumps(df.to_dict())
+    predictor_record = Predictor.query.with_for_update().get(predictor_id)
+    resp = requests.post(predictor_record.data['train_url'],
+                         json={'df': serialized_df, 'target': predictor_record.to_predict[0]})
+
+
+    if resp.status_code == 200:
+        pass
+    else:
+        predictor_record.data = {"error": str(resp.text)}
+
+    session.commit()
+
+
+
+@mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
-              delete_ds_on_fail: Optional[bool] = False) -> None:
+              delete_ds_on_fail: Optional[bool] = False, json_ai_override: dict = None) -> None:
+    if json_ai_override is None:
+        json_ai_override = {}
     try:
-        run_generate(df, problem_definition, predictor_id)
+        run_generate(df, problem_definition, predictor_id, json_ai_override)
         run_fit(predictor_id, df)
     except Exception as e:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
@@ -177,6 +249,15 @@ def run_update(name: str, company_id: int):
         session.commit()
         return str(e)
 
+
+class LearnRemoteProcess(ctx.Process):
+    deamon = True
+
+    def __init__(self, *args):
+        super(LearnRemoteProcess, self).__init__(args=args)
+
+    def run(self):
+        run_learn_remote(*self._args)
 
 class LearnProcess(ctx.Process):
     daemon = True

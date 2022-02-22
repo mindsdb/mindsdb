@@ -1,2 +1,0 @@
-!!! info "Work in progress"
-    This documentation is in progress. If you want to get access to the beta version, [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).

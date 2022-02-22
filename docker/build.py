@@ -1,6 +1,7 @@
 import os
 import sys
 import requests
+import subprocess
 
 installer_version_url = 'https://public.api.mindsdb.com/installer/@@beta_or_release/docker___success___None'
 
@@ -30,12 +31,11 @@ with open(dockerfile_template, 'r') as fp:
 with open('dist/Dockerfile', 'w') as fp:
     fp.write(content)
 
-print(f"""
-        Build, tag publish:
+print(installer_version)
+command = (f"""
         cd dist &&
-        sudo docker build -t {container_name} . &&
-        sudo docker tag {container_name} mindsdb/{container_name}:latest &&
-        sudo docker tag {container_name} mindsdb/{container_name}:{installer_version} &&
-        sudo docker push mindsdb/{container_name};
-        cd ..
+        docker build -t mindsdb/{container_name}:latest -t mindsdb/{container_name}:{installer_version} . &&
+        docker push mindsdb/{container_name} --all-tags
       """)
+
+subprocess.run(command, shell=True, check=True)

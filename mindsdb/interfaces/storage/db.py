@@ -166,6 +166,16 @@ class Stream(Base):
     learning_threshold = Column(Integer, default=0)
 
 
+class View(Base):
+    __tablename__ = 'view'
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    company_id = Column(Integer)
+    query = Column(String, nullable=False)
+    datasource_id = Column(ForeignKey('datasource.id'), nullable=False)  # ex integration
+    uniq_const = UniqueConstraint('name', 'company_id')
 
-Base.metadata.create_all(engine)
-orm.configure_mappers()
+
+# DDL is changing through migrations
+# Base.metadata.create_all(engine)
+# orm.configure_mappers()

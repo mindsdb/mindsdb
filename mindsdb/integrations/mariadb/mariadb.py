@@ -67,9 +67,11 @@ class Mariadb(Integration, MariadbConnectionChecker):
             dtype.audio: 'VARCHAR(500)',
             dtype.short_text: 'VARCHAR(500)',
             dtype.rich_text: 'VARCHAR(500)',
-            dtype.array: 'VARCHAR(500)',
             dtype.quantity: 'VARCHAR(500)',
-            dtype.tsarray: 'VARCHAR(500)',
+            dtype.num_array: 'VARCHAR(500)',
+            dtype.cat_array: 'VARCHAR(500)',
+            dtype.num_tsarray: 'VARCHAR(500)',
+            dtype.cat_tsarray: 'VARCHAR(500)',
             'default': 'VARCHAR(500)'
         }
 

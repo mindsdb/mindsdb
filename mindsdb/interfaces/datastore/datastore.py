@@ -3,6 +3,7 @@ import shutil
 import os
 
 import pandas as pd
+from mindsdb_sql import parse_sql
 
 import mindsdb_datasources
 from mindsdb.__about__ import __version__ as mindsdb_version
@@ -12,11 +13,70 @@ from mindsdb_datasources import (
     SnowflakeDS, AthenaDS, CassandraDS, ScyllaDS, TrinoDS
 )
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.log import log
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.storage.db import session, Datasource, Semaphor, Predictor
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.utilities.log import log
 from mindsdb.interfaces.database.integrations import DatasourceController
-from mindsdb.utilities.json_encoder import CustomJSONEncoder
+from mindsdb.interfaces.database.views import ViewController
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+
+
+class QueryDS:
+    def __init__(self, query, source, source_type, company_id):
+        self.query = query
+        self.source = source
+        self.source_type = source_type
+        self.company_id = company_id
+
+    def query(self, q):
+        pass
+
+    @property
+    def df(self):
+        view_interface = WithKWArgsWrapper(
+            ViewController(),
+            company_id=self.company_id
+        )
+
+        datasource_interface = WithKWArgsWrapper(
+            DatasourceController(),
+            company_id=self.company_id
+        )
+
+        data_store = WithKWArgsWrapper(
+            DataStore(),
+            company_id=self.company_id
+        )
+
+        query = self.query
+        if self.source_type == 'view_query':
+            if isinstance(query, str):
+                query = parse_sql(query, dialect='mysql')
+            query_str = str(query)
+
+            table = query.from_table.parts[-1]
+            view_metadata = view_interface.get(name=table)
+
+            datasource = datasource_interface.get_db_integration_by_id(view_metadata['datasource_id'])
+            datasource_name = datasource['name']
+
+            dataset_name = data_store.get_vacant_name(table)
+            data_store.save_datasource(dataset_name, datasource_name, {'query': view_metadata['query']})
+            try:
+                dataset_object = data_store.get_datasource_obj(dataset_name)
+                data_df = dataset_object.df
+            finally:
+                data_store.delete_datasource(dataset_name)
+        elif self.source_type == 'file_query':
+            if isinstance(query, str):
+                query = parse_sql(query, dialect='mysql')
+            table = query.from_table.parts[-1]
+            ds = data_store.get_datasource_obj(table, raw=False)
+            file_df = ds.df
+            data_df = query_df(file_df, query)
+        return data_df
 
 
 class DataStore():
@@ -138,7 +198,21 @@ class DataStore():
 
     def create_datasource(self, source_type, source, file_path=None, company_id=None, ds_meta_dir=None):
         datasource_controller = DatasourceController()
-        if source_type == 'file':
+        if source_type == 'file_query' or source_type == 'view_query':
+            dsClass = QueryDS
+            creation_info = {
+                'class': dsClass.__name__,
+                'args': [],
+                'kwargs': {
+                    'query': source['query'],
+                    'source': source['source'],   # view|file
+                    'source_type': source_type,
+                    'company_id': company_id
+                }
+            }
+
+            ds = dsClass(**creation_info['kwargs'])
+        elif source_type == 'file':
             source = os.path.join(ds_meta_dir, source)
             shutil.move(file_path, source)
             ds = FileDS(source)
@@ -189,7 +263,7 @@ class DataStore():
                     }
                 }
                 ds = dsClass(**creation_info['kwargs'])
-            
+
             elif integration['type'] in ['mssql', 'postgres', 'cockroachdb', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb']:
                 creation_info = {
                     'class': dsClass.__name__,
@@ -234,7 +308,7 @@ class DataStore():
 
                 if 'database' in source:
                     kwargs['database'] = source['database']
-                
+
                 ds = dsClass(**kwargs)
 
             elif integration['type'] == 'snowflake':
@@ -242,7 +316,7 @@ class DataStore():
                     'class': dsClass.__name__,
                     'args': [],
                     'kwargs': {
-                        'query': source['query'].replace('"', "'"),
+                        'query': source['query'],
                         'schema': source.get('schema', integration['schema']),
                         'warehouse': source.get('warehouse', integration['warehouse']),
                         'database': source.get('database', integration['database']),
@@ -289,7 +363,7 @@ class DataStore():
                 }
 
                 ds = dsClass(**creation_info['kwargs'])
-            
+
             elif integration['type'] == 'trinodb':
                 creation_info = {
                     'class': dsClass.__name__,
@@ -323,6 +397,11 @@ class DataStore():
         datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
         while datasource_record is not None:
             raise Exception(f'Datasource with name {name} already exists')
+
+        if source_type == 'views':
+            source_type = 'view_query'
+        elif source_type == 'files':
+            source_type = 'file_query'
 
         try:
             datasource_record = Datasource(

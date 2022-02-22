@@ -15,6 +15,7 @@ from common import (
 
 class Dlist(list):
     """Service class for convinient work with list of dicts(db response)"""
+
     def __contains__(self, item):
         if item in self.__getitem__(0):
             return True
@@ -35,6 +36,7 @@ def get_docker0_inet_ip():
 
 
 class MySqlApiTest(unittest.TestCase):
+    predictor_name = 'home_rentals'
     @classmethod
     def setUpClass(cls):
         override_config = {
@@ -122,29 +124,27 @@ class MySqlApiTest(unittest.TestCase):
                     self.validate_datasource_creation(ds_type)
 
     def test_2_create_predictor(self):
-        predictor_name = 'home_rentals'
-        _query = f"CREATE PREDICTOR {predictor_name} from MYSQL (select * from test_data.home_rentals) as hr_ds predict rental_price;"
+        _query = f"CREATE PREDICTOR {self.predictor_name} from MYSQL (select * from test_data.home_rentals) as hr_ds predict rental_price;"
         self.query(_query)
         timeout = 600
         threshold = time.time() + timeout
         res = ''
         while time.time() < threshold:
-            _query = "SELECT status FROM predictors WHERE name='{}';".format(predictor_name)
+            _query = "SELECT status FROM predictors WHERE name='{}';".format(self.predictor_name)
             res = self.query(_query)
             if 'status' in res and res.get_record('status', 'complete'):
                 break
             time.sleep(2)
         self.assertTrue('status' in res and res.get_record('status', 'complete'),
-                        f"predictor {predictor_name} is not complete after {timeout} seconds")
+                        f"predictor {self.predictor_name} is not complete after {timeout} seconds")
 
     def test_3_making_prediction(self):
-        predictor_name = 'home_rentals'
         _query = ('SELECT rental_price, rental_price_explain FROM ' +
-                  predictor_name +
+                  self.predictor_name +
                   ' WHERE when_data=\'{"number_of_rooms":"2","sqft":"400","location":"downtown","days_on_market":"2","initial_price":"2500"}\';')
         res = self.query(_query)
         self.assertTrue('rental_price' in res and 'rental_price_explain' in res,
-                        f"error getting prediction from {predictor_name} - {res}")
+                        f"error getting prediction from {self.predictor_name} - {res}")
 
     def test_4_service_requests(self):
         service_requests = [
@@ -160,10 +160,10 @@ class MySqlApiTest(unittest.TestCase):
             "show warnings;",
             "show charset;",
             "show collation;",
-            "show datasources",
-            "show predictors"
-            # "show function status where db = 'mindsdb';",
-            # "show procedure status where db = 'mindsdb';",
+            "show datasources;",
+            "show predictors;",
+            "show function status where db = 'mindsdb';",
+            "show procedure status where db = 'mindsdb';",
             # "show table status like commands;",
         ]
         for req in service_requests:
@@ -173,6 +173,13 @@ class MySqlApiTest(unittest.TestCase):
 
     def test_5_drop_datasource(self):
         self.query('drop datasource MYSQL;')
+
+    def test_6_describe_predictor_attrs(self):
+        attrs = ["model", "features", "ensemble"]
+        for attr in attrs:
+            with self.subTest(msg=attr):
+                print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{attr}]")
+                self.query(f"describe mindsdb.{self.predictor_name}.{attr};")
 
 
 if __name__ == "__main__":

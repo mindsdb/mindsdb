@@ -9,6 +9,7 @@ with open("mindsdb/__about__.py") as fp:
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+
 def install_deps():
     """Reads requirements.txt and preprocess it
     to be feed into setuptools.
@@ -41,6 +42,7 @@ def install_deps():
             new_pkgs.append(resource.strip())
     return new_pkgs, links
 
+
 pkgs, new_links = install_deps()
 
 setup(
@@ -57,6 +59,7 @@ setup(
     packages=find_packages(),
     install_requires=pkgs,
     dependency_links=new_links,
+    include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",

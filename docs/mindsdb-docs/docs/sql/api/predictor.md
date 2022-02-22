@@ -1,6 +1,6 @@
 # CREATE PREDICTOR Statement
 
-The `CREATE PREDICTOR` statement is used to train new model. The basic syntax for training the model is:
+The `CREATE PREDICTOR` statement is used to train a new model. The basic syntax for training a model is:
 
 ```sql
 CREATE PREDICTOR predictor_name
@@ -15,19 +15,31 @@ PREDICT column_name as column_alias;
 
 ### Example Data
 
-The below database table contains prices of properties from a metropolitan area in the US. This table will be used in all of the docs examples.
+The Home Rentals dataset contains prices of properties from a metropolitan area in the US. This table will be used in all of the documentation examples.
 
 {{ read_csv('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/home_rentals/dataset/train.csv', nrows=5) }}
 
-
 ### Create Predictor example
-This example shows how you can train the Machine Learning Model called `home_rentals_model` to predict the rentals price from the above data.
+This example shows how you can train a Machine Learning model called `home_rentals_model` to predict the rental prices for real estate properties inside the dataset.
 
 ```sql
 CREATE PREDICTOR home_rentals_model
 FROM db_integration (SELECT * FROM house_rentals_data) as rentals
 PREDICT rental_price as price;
 ```
+
+With this, we will use all columns from the dataset above to predict the value in `rental_price`. 
+
+
+### Create from a file datasource
+If you have uploaded a file from the GUI, you can specify `files` as the datasource:
+
+```sql
+CREATE PREDICTOR home_rentals_model
+FROM files (SELECT * FROM house_rentals_data) as rentals
+PREDICT rental_price as price;
+```
+
 ### SELECT Predictor status
 
 After you run the `CREATE Predictor` statement, you can check the status of the training model, by selecting from `mindsdb.predictors` table:
@@ -45,108 +57,121 @@ SELECT * FROM mindsdb.predictors WHERE name='home_rentals_model';
 ```
 
 
-## USING keyword
-
-The `USING` keyword accepts arguments as a JSON format where additional arguments can be provided to the `CREATE PREDICTOR` statement as:
-
-* `stop_train_in_x_seconds` - Stop model training after X seconds.
-* `use_gpu` - Switch between training on CPU or GPU (True|False).
-* `sample_margin_of_error` - The amount of random sampling error in results (0 - 1)
-* `ignore_columns` - Columns to be removed from the model training.
-* `is_timeseries` - Training from time series data (True|False).
-
-```sql
-CREATE PREDICTOR predictor_name
-FROM integration_name 
-(SELECT column_name, column_name2 FROM table_name) as ds_name
-PREDICT column_name as column_alias
-USING {"ignore_columns": "column_name3"};
-```
-
-## USING example
-
-The following example trains the new `home_rentals_model` model which predicts the `rental_price` and removes the number of bathrooms.
-
-```sql
-CREATE PREDICTOR home_rentals_model
-FROM db_integration 
-(SELECT * FROM house_rentals_data) as rentals
-PREDICT rental_price as price
-USING {"ignore_columns": "number_of_bathrooms"};
-```
-
 ## Time Series keywords
 
 To train a timeseries model, MindsDB provides additional keywords.
 
+* `ORDER BY` -  keyword is used as the column that defines the time series order by, these can be a date, or anything that defines the sequence of events to order the data by descending (DESC) or ascending (ASC) order. (The default order will always be `ASC`).
+
 * `WINDOW` - keyword specifies the number of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be used to specify something like "Always use the previous 10 rows". 
-* `HORIZON` - keyword specifies the number of future predictions. 
+
+* `HORIZON` - (OPTIONAL, default value is 1) keyword specifies the number of future predictions. 
+
+* `GROUP BY` - (OPTIONAL) keyword is used to group the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series. 
 
 ```sql
 CREATE PREDICTOR predictor_name
 FROM db_integration 
-(SELECT column_name, column_name2 FROM table_name) as ds_name
-PREDICT column_name as column_alias
-GROUP BY column_name
+(SELECT sequential_column, partition_column, other_column, target_column FROM table_name) as ds_name
+PREDICT target_column AS column_alias
+
+ORDER BY sequantial_column
+GROUP BY partition_column
+
 WINDOW 10
-HORIZON 7;
-USING {"is_timeseries": "Yes"};
+HORIZON 5;
 ```
 
-## ORDER BY keyword
+### Time Series example
 
-The `ORDER BY` keyword is used to order the data by descending (DESC) or ascending (ASC) order. The default order will always be `ASC`
+The following example trains the new `inventory_model` model which can predicts the `units_in_inventory` for the next 7 days, taking into account the historical inventory in the past 20 days for each 'procuct_id'
 
 ```sql
-CREATE PREDICTOR predictor_name
-FROM integration_name 
-(SELECT column_name, column_name2 FROM table_name) as ds_name
-PREDICT column_name as column_alias
-ORDER BY column_name column_name2 ASC OR DESC;
+CREATE PREDICTOR inventory_model
+FROM db_integration
+(SELECT * FROM inventory) as inventory
+PREDICT units_in_inventory as predicted_units_in_inventory
+
+ORDER BY date,
+GROUP BY product_id,
+
+WINDOW 20
+HORIZON 7
+
 ```
 
-### ORDER BY ASC example
+## USING statement
 
-The following example trains the new `home_rentals_model` model which predicts the `rental_price` and orders the data in ascending order by the number of days on the market.
+In MindsDB, the underlying AutoML models are based on Lightwood. This library generates models automatically based on the data and a declarative problem definition, but the default configuration can be overridden.
+
+The `USING ...` statement provides the option to configure a model to be trained with specific options.
+
+## Syntax
 
 ```sql
-CREATE PREDICTOR home_rentals_model
-FROM db_integration (SELECT * FROM house_rentals_data) as rentals
-PREDICT rental_price as price
-ORDER BY days_on_market ASC;
+CREATE PREDICTOR [name_of_your _predictor]
+FROM [name_of_your_integration]
+    (SELECT * FROM your_database.your_data_table)
+PREDICT [data_target_column]
+USING 
+[parameter] = ['parameter_value1']
+;
 ```
 
-### ORDER BY DESC example
+There are several high-level keys that can be specified with `USING`. Here, we explore a couple of them.
 
-The following example trains the new `home_rentals_model` model which predicts the `rental_price` and orders the data in descending order by the number of days on the market.
+## Encoder key (USING encoders)
+
+Grants access to configure how each column is encoded. By default, the AutoML engine will try to get the best match for the data.
+
 
 ```sql
-CREATE PREDICTOR home_rentals_model
-FROM db_integration (SELECT * FROM house_rentals_data) as rentals
-PREDICT rental_price as price
-ORDER BY days_on_market DESC;
+... 
+USING 
+encoders.[column_name].module='value'
+;
 ```
 
-## GROUP BY statement
+To learn more about how encoders work and their options, go [here](https://lightwood.io/encoder.html).
 
-The `GROUP BY` statement is used to group the rows that contain the same values into one row.
+## Model key (USING model)
+
+Allows you to specify what type of Machine Learning algorithm to learn from the encoder data.
 
 ```sql
-CREATE PREDICTOR predictor_name
-FROM integration_name 
-(SELECT column_name, column_name2 FROM table_name) as ds_name
-PREDICT column_name as column_alias
-GROUP BY column_name;
+... 
+USING 
+model.args='{"key": value}'
+;
 ```
 
-### GROUP BY example
+To learn more about all the model options, go [here](https://lightwood.io/mixer.html).
 
-The following example trains the new `home_rentals_model` model which predicts the `rental_price` and groups the data per location (good,great).
+## Other keys
+
+We support JSON-like syntax as well as a dot access notation for said JSON. In that sense, it is equivalent to write `USING a.b.c=5` or `USING a = {"b": {"c": 5}}`.
+
+You have a lot of options in terms of what you can configure with `USING`. Since lightwood model are fully-generated by a JSON configuration we call "JsonAI", and with the `USING` statement you can modify all bits of that. The most common usecases for configuring predictors will be listed and explained in the example below. To see all options available in detail, you should checkout the lightwood docs about [`JsonAI`](https://lightwood.io/api/types.html#api.types.JsonAI).
+
+## Example 
+
+We will use the home rentals dataset, specifying particular encoders for some of the columns and a LightGBM model.
 
 ```sql
-CREATE PREDICTOR home_rentals_model
-FROM db_integration 
-(SELECT * FROM house_rentals_data) as rentals
-PREDICT rental_price as price
-GROUP BY location;
+CREATE PREDICTOR home_rentals_predictor 
+FROM my_db_integration (
+    SELECT * FROM home_rentals
+) PREDICT rental_price
+USING 
+    /* Change the encoder for a column */
+    encoders.location.module='CategoricalAutoEncoder',
+    /* Change the encoder for another colum (the target) */
+    encoders.rental_price.module = 'NumericEncoder',
+    /* Change the arguments that will be passed to that encoder */
+    encoders.rental_price.args.positive_domain = 'True',
+    /* Set the list of models lightwood will try to use to a single one, a Light Gradient Boosting Machine.*/
+    model.args='{"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": true}}]}';
+;
 ```
+
+If you're unsure how to configure a model to solve your problem, feel free to ask us how to do it on the community [Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).

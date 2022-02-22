@@ -1,11 +1,13 @@
+from functools import partial
+
 import pandas as pd
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.file_datanode import FileDataNode
+from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.view_datanode import ViewDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.mindsdb_datanode import MindsDBDataNode
-from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datasource_datanode import DataSourceDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import IntegrationDataNode
 
 
@@ -20,28 +22,39 @@ class InformationSchema(DataNode):
         'ROUTINES': ['SPECIFIC_NAME', 'ROUTINE_CATALOG', 'ROUTINE_SCHEMA', 'ROUTINE_NAME', 'ROUTINE_TYPE', 'DATA_TYPE', 'CHARACTER_MAXIMUM_LENGTH', 'CHARACTER_OCTET_LENGTH', 'NUMERIC_PRECISION', 'NUMERIC_SCALE', 'DATETIME_PRECISION', 'CHARACTER_SET_NAME', 'COLLATION_NAME', 'DTD_IDENTIFIER', 'ROUTINE_BODY', 'ROUTINE_DEFINITION', 'EXTERNAL_NAME', 'EXTERNAL_LANGUAGE', 'PARAMETER_STYLE', 'IS_DETERMINISTIC', 'SQL_DATA_ACCESS', 'SQL_PATH', 'SECURITY_TYPE', 'CREATED', 'LAST_ALTERED', 'SQL_MODE', 'ROUTINE_COMMENT', 'DEFINER', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION'],
         'TRIGGERS': ['TRIGGER_CATALOG', 'TRIGGER_SCHEMA', 'TRIGGER_NAME', 'EVENT_MANIPULATION', 'EVENT_OBJECT_CATALOG', 'EVENT_OBJECT_SCHEMA', 'EVENT_OBJECT_TABLE', 'ACTION_ORDER', 'ACTION_CONDITION', 'ACTION_STATEMENT', 'ACTION_ORIENTATION', 'ACTION_TIMING', 'ACTION_REFERENCE_OLD_TABLE', 'ACTION_REFERENCE_NEW_TABLE', 'ACTION_REFERENCE_OLD_ROW', 'ACTION_REFERENCE_NEW_ROW', 'CREATED', 'SQL_MODE', 'DEFINER', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION'],
         'PLUGINS': ['PLUGIN_NAME', 'PLUGIN_VERSION', 'PLUGIN_STATUS', 'PLUGIN_TYPE', 'PLUGIN_TYPE_VERSION', 'PLUGIN_LIBRARY', 'PLUGIN_LIBRARY_VERSION', 'PLUGIN_AUTHOR', 'PLUGIN_DESCRIPTION', 'PLUGIN_LICENSE', 'LOAD_OPTION', 'PLUGIN_MATURITY', 'PLUGIN_AUTH_VERSION'],
-        'ENGINES': ['ENGINE', 'SUPPORT', 'COMMENT', 'TRANSACTIONS', 'XA', 'SAVEPOINTS']
+        'ENGINES': ['ENGINE', 'SUPPORT', 'COMMENT', 'TRANSACTIONS', 'XA', 'SAVEPOINTS'],
+        'KEY_COLUMN_USAGE': ['CONSTRAINT_CATALOG', 'CONSTRAINT_SCHEMA', 'CONSTRAINT_NAME', 'TABLE_CATALOG', 'TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME', 'ORDINAL_POSITION', 'POSITION_IN_UNIQUE_CONSTRAINT', 'REFERENCED_TABLE_SCHEMA', 'REFERENCED_TABLE_NAME', 'REFERENCED_COLUMN_NAME'],
+        'STATISTICS': ['TABLE_CATALOG', 'TABLE_SCHEMA', 'TABLE_NAME', 'NON_UNIQUE', 'INDEX_SCHEMA', 'INDEX_NAME', 'SEQ_IN_INDEX', 'COLUMN_NAME', 'COLLATION', 'CARDINALITY', 'SUB_PART', 'PACKED', 'NULLABLE', 'INDEX_TYPE', 'COMMENT', 'INDEX_COMMENT', 'IS_VISIBLE', 'EXPRESSION'],
+        'CHARACTER_SETS': ['CHARACTER_SET_NAME', 'DEFAULT_COLLATE_NAME', 'DESCRIPTION', 'MAXLEN'],
+        'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
     }
 
-    def __init__(self, model_interface, ai_table, data_store, datasource_interface):
-        self.datasource_interface = datasource_interface
-        self.data_store = data_store
+    def __init__(self, session):
+        self.datasource_interface = session.datasource_interface
+        self.data_store = session.data_store
+        self.view_interface = session.view_interface
         self.persis_datanodes = {
-            'mindsdb': MindsDBDataNode(model_interface, ai_table, data_store, datasource_interface),
-            'datasource': DataSourceDataNode(data_store),
-            'file': FileDataNode(data_store)
+            'mindsdb': MindsDBDataNode(
+                session.model_interface,
+                session.ai_table,
+                session.data_store,
+                session.datasource_interface
+            ),
+            'files': FileDataNode(session.data_store),
+            'views': ViewDataNode(session.view_interface, session.datasource_interface, session.data_store)
         }
 
         self.get_dataframe_funcs = {
             'TABLES': self._get_tables,
             'COLUMNS': self._get_columns,
             'SCHEMATA': self._get_schemata,
-            'EVENTS': self._get_empty_table,
-            'ROUTINES': self._get_empty_table,
-            'TRIGGERS': self._get_empty_table,
-            'PLUGINS': self._get_empty_table,
-            'ENGINES': self._get_engines
+            'ENGINES': self._get_engines,
+            'CHARACTER_SETS': self._get_charsets,
+            'COLLATIONS': self._get_collations,
         }
+        for table_name in self.information_schema:
+            if table_name not in self.get_dataframe_funcs:
+                self.get_dataframe_funcs[table_name] = partial(self._get_empty_table, table_name)
 
     def __getitem__(self, key):
         return self.get(key)
@@ -58,7 +71,8 @@ class InformationSchema(DataNode):
         datasource_names = self.datasource_interface.get_db_integrations().keys()
         for datasource_name in datasource_names:
             if datasource_name.lower() == name_lower:
-                return IntegrationDataNode(datasource_name, self.data_store)
+                datasource = self.datasource_interface.get_db_integration(name=datasource_name)
+                return IntegrationDataNode(datasource_name, self.data_store, ds_type=datasource['type'])
 
         return None
 
@@ -94,6 +108,7 @@ class InformationSchema(DataNode):
 
         for ds_name in self.get_datasources_names():
             ds = self.get(ds_name)
+            ds_tables = ds.get_tables()
             data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci'] for x in ds_tables]
 
         df = pd.DataFrame(data, columns=columns)
@@ -155,6 +170,27 @@ class InformationSchema(DataNode):
     def _get_engines(self):
         columns = self.information_schema['ENGINES']
         data = [['InnoDB', 'DEFAULT', 'Supports transactions, row-level locking, and foreign keys', 'YES', 'YES', 'YES']]
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_charsets(self):
+        columns = self.information_schema['CHARACTER_SETS']
+        data = [
+            ['utf8', 'UTF-8 Unicode', 'utf8_general_ci', 3],
+            ['latin1', 'cp1252 West European', 'latin1_swedish_ci', 1],
+            ['utf8mb4', 'UTF-8 Unicode', 'utf8mb4_general_ci', 4]
+        ]
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_collations(self):
+        columns = self.information_schema['COLLATIONS']
+        data = [
+            ['utf8_general_ci', 'utf8', 33, 'Yes', 'Yes', 1, 'PAD SPACE'],
+            ['latin1_swedish_ci', 'latin1', 8, 'Yes', 'Yes', 1, 'PAD SPACE']
+        ]
 
         df = pd.DataFrame(data, columns=columns)
         return df

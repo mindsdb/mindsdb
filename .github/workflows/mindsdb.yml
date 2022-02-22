@@ -94,8 +94,8 @@ jobs:
           python tests/integration_tests/flows/test_clickhouse.py
 
           # MsSQL
-          echo -e "\n===============\ntest MsSQL\n===============\n"
-          python tests/integration_tests/flows/test_mssql.py
+          # echo -e "\n===============\ntest MsSQL\n===============\n"
+          # python tests/integration_tests/flows/test_mssql.py
 
 
           # MongoDB
@@ -191,3 +191,4 @@ jobs:
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/ver/dist'
         DEST_DIR: 'mindsdb-installer/ver'
+

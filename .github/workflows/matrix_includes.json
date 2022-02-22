@@ -11,11 +11,6 @@
     },
 
     {
-      "runs_on": "windows-latest",
-      "python-version": 3.8,
-      "runOn": "refs/heads/stable"
-    },
-    {
       "runs_on": "macos-latest",
       "python-version": 3.8,
       "runOn": "refs/heads/stable"

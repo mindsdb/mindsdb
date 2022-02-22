@@ -157,10 +157,14 @@ class Datasource(Resource):
                 if not os.path.isfile(file_path):
                     os.rmdir(temp_dir_path)
                     return http_error(400, 'Wrong content.', 'Archive must contain data file in root.')
+            # TODO 
+            # request.default_store.save_datasource(ds_name, source_type, source, file_path)
+            file_id = request.default_store.save_file(ds_name, file_path, file_name=data['file'])
+            request.default_store.save_datasource(ds_name, source_type, source={'file': name})
         else:
             file_path = None
+            request.default_store.save_datasource(ds_name, source_type, source)
 
-        request.default_store.save_datasource(ds_name, source_type, source, file_path)
         os.rmdir(temp_dir_path)
 
         return request.default_store.get_datasource(ds_name)

@@ -141,6 +141,16 @@ def upgrade():
                 analysis_id=ds['analysis_id']
             )
             session.add(file)
+            session.flush()
+            ds_data['file_id'] = file.id
+            conn.execute(
+                text("""
+                    update datasource set data = :ds_data where id = :id;
+                """), {
+                    'id': ds['id'],
+                    'ds_data': json.dumps(ds_data)
+                }
+            )
 
         conn.execute(
             text("""

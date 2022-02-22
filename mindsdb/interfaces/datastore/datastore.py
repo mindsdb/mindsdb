@@ -1,6 +1,7 @@
 import json
 import shutil
 import os
+from pathlib import Path
 
 import pandas as pd
 from mindsdb_sql import parse_sql
@@ -16,7 +17,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import log
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.interfaces.storage.db import session, Dataset, Semaphor, Predictor, Analysis
+from mindsdb.interfaces.storage.db import session, Dataset, Semaphor, Predictor, Analysis, File
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
@@ -218,6 +219,14 @@ class DataStore():
         raise Exception(f"Can not find appropriate name for dataset '{base}'")
 
     def create_datasource(self, source_type, source, file_path=None, company_id=None, ds_meta_dir=None):
+        """
+            if query to db:
+                source_type = integration_name
+                source = {query: xxx}
+            if file:
+                source_type = file
+                source: 'filename.csv'
+        """
         integration_controller = IntegrationController()
         if source_type == 'file_query' or source_type == 'view_query':
             dsClass = QueryDS
@@ -411,9 +420,88 @@ class DataStore():
             }
         return ds, creation_info
 
-    def save_datasource(self, name, source_type, source, file_path=None, company_id=None):
-        if source_type == 'file' and (file_path is None):
-            raise Exception('`file_path` argument required when source_type == "file"')
+    # TODO 
+    def save_file(self, name, file_path, file_name=None, company_id=None):
+        """
+            Args:
+                name (str): with that name file will be available in sql api
+                file_name (str): file name
+                file_path (str): path to the file
+        """
+        if file_name is None:
+            file_name = Path(file_path).name
+
+        try:
+            ds_meta_dir = Path(self.dir).joinpath(f'{company_id}@@@@@{name}')
+            ds_meta_dir.mkdir()
+
+            source = ds_meta_dir.joinpath(file_name)
+            shutil.move(file_path, str(source))
+
+            ds = FileDS(str(source))
+            ds_meta = self._get_ds_meta(ds)
+
+            column_names = ds_meta['column_names']
+            if ds_meta['column_names'] is not None:
+                column_names = json.dumps([dict(name=x) for x in ds_meta['column_names']])
+            file_record = File(
+                name=name,
+                company_id=company_id,
+                source_file_path=file_name,
+                file_path=str(source),
+                row_count=ds_meta['row_count'],
+                columns=column_names
+            )
+            session.add(file_record)
+            session.commit()
+            self.fs_store.put(f'{company_id}@@@@@{name}', f'file_{company_id}_{file_record.id}', self.dir)
+        except Exception as e:
+            log.error(e)
+            shutil.rmtree(ds_meta_dir)
+            raise
+
+        return file_record.id
+
+    def delete_file(self, name, company_id):
+        file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
+        if file_record is None:
+            return None
+        file_id = file_record.id
+        session.delete(file_record)
+        session.commit()
+        self.fs_store.delete(f'file_{company_id}_{file_id}')
+        return True
+
+    def _get_ds_meta(self, ds):
+        if hasattr(ds, 'get_columns') and hasattr(ds, 'get_row_count'):
+            try:
+                column_names = ds.get_columns()
+                row_count = ds.get_row_count()
+            except Exception:
+                df = ds.df
+                column_names = list(df.keys())
+                row_count = len(df)
+        else:
+            df = ds.df
+            column_names = list(df.keys())
+            row_count = len(df)
+        return {
+            'column_names': column_names,
+            'row_count': row_count
+        }
+
+    # TODO del filepath, rename source->query
+    def save_datasource(self, name, source_type, source=None, file_path=None, company_id=None):
+        """
+            file upload: name=aaa,
+                name = aaa
+                source_type = file
+                source = 'PC_scores.csv'
+                file_path = /tmp/datasource_file_gardkja7/PC_scores.csv
+                company_id = None
+        """
+        # if source_type == 'file' and (file_path is None):
+        #     raise Exception('`file_path` argument required when source_type == "file"')
 
         dataset_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
         while dataset_record is not None:
@@ -439,22 +527,9 @@ class DataStore():
 
             ds, creation_info = self.create_datasource(source_type, source, file_path, company_id, ds_meta_dir)
 
-            if hasattr(ds, 'get_columns') and hasattr(ds, 'get_row_count'):
-                try:
-                    column_names = ds.get_columns()
-                    row_count = ds.get_row_count()
-                except Exception:
-                    df = ds.df
-                    column_names = list(df.keys())
-                    row_count = len(df)
-            else:
-                df = ds.df
-                column_names = list(df.keys())
-                row_count = len(df)
-
-            if '' in column_names or len(column_names) != len(set(column_names)):
-                shutil.rmtree(ds_meta_dir)
-                raise Exception('Each column in dataset must have unique non-empty name')
+            ds_meta = self._get_ds_meta(ds)
+            column_names = ds_meta['column_names']
+            row_count = ds_meta['row_count']
 
             dataset_record.creation_info = json.dumps(creation_info)
             dataset_record.data = json.dumps({

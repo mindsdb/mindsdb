@@ -719,7 +719,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     kwargs['timeseries_settings'] = json.loads(kwargs['timeseries_settings'])
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
-
         # Cast all column names to same case
         if isinstance(kwargs.get('timeseries_settings'), dict):
             order_by = kwargs['timeseries_settings'].get('order_by')

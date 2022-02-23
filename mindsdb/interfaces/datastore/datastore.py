@@ -197,7 +197,7 @@ class DataStore():
         ).delete()
         session.delete(dataset_record)
         session.commit()
-        self.fs_store.delete(f'datasource_{company_id}_{dataset_record.id}')
+        self.fs_store.delete(f'datasource_{company_id}_{dataset_record.id}')  # TODO del in future
         try:
             shutil.rmtree(os.path.join(self.dir, f'{company_id}@@@@@{name}'))
         except Exception:
@@ -218,7 +218,7 @@ class DataStore():
                 return candidate
         raise Exception(f"Can not find appropriate name for dataset '{base}'")
 
-    def create_datasource(self, source_type, source, file_path=None, company_id=None, ds_meta_dir=None):
+    def create_datasource(self, source_type, source, file_path=None, company_id=None):   # , ds_meta_dir=None):
         """
             if query to db:
                 source_type = integration_name
@@ -243,15 +243,28 @@ class DataStore():
 
             ds = dsClass(**creation_info['kwargs'])
         elif source_type == 'file':
-            source = os.path.join(ds_meta_dir, source)
-            shutil.move(file_path, source)
-            ds = FileDS(source)
+            # x = 1
+            # source = os.path.join(ds_meta_dir, source)
+            # shutil.move(file_path, source)
+            # ds = FileDS(source)
+
+            # получаем файл и скармливаем его в FileDS
+            file_name = source.get('file')
+            file_record = session.query(File).filter_by(company_id=company_id, name=file_name).first()
+            if file_record is None:
+                raise Exception(f"Cant find file '{file_name}'")
+            self.fs_store.get(f'{company_id}@@@@@{file_name}', f'file_{company_id}_{file_record.id}', self.dir)
+            # self.fs_store.get(f'{company_id}@@@@@{file_name}', f'datasource_{company_id}_{dataset_record.id}', self.dir)
+            #  filename, remote_name, local_path
+
+            path = Path(self.dir).joinpath(f'{company_id}@@@@@{file_name}').joinpath(file_record.source_file_path)
 
             creation_info = {
                 'class': 'FileDS',
-                'args': [source],
+                'args': [str(path)],
                 'kwargs': {}
             }
+            ds = FileDS(str(path))
 
         elif integration_controller.get(source_type, company_id) is not None:
             integration = integration_controller.get(source_type, company_id)
@@ -522,15 +535,16 @@ class DataStore():
             session.add(dataset_record)
             session.commit()
 
-            ds_meta_dir = os.path.join(self.dir, f'{company_id}@@@@@{name}')
-            os.mkdir(ds_meta_dir)
+            # ds_meta_dir = os.path.join(self.dir, f'{company_id}@@@@@{name}')
+            # os.mkdir(ds_meta_dir)
 
-            ds, creation_info = self.create_datasource(source_type, source, file_path, company_id, ds_meta_dir)
+            ds, creation_info = self.create_datasource(source_type, source, file_path, company_id)   # , ds_meta_dir)
 
             ds_meta = self._get_ds_meta(ds)
             column_names = ds_meta['column_names']
             row_count = ds_meta['row_count']
 
+            dataset_record.ds_class = creation_info['class']
             dataset_record.creation_info = json.dumps(creation_info)
             dataset_record.data = json.dumps({
                 'source_type': source_type,
@@ -539,7 +553,7 @@ class DataStore():
                 'columns': [dict(name=x) for x in column_names]
             })
 
-            self.fs_store.put(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{dataset_record.id}', self.dir)
+            # self.fs_store.put(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{dataset_record.id}', self.dir)
             session.commit()
 
         except Exception as e:
@@ -559,7 +573,7 @@ class DataStore():
             else:
                 dataset_record = session.query(Dataset).filter_by(company_id=company_id, id=id).first()
 
-            self.fs_store.get(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{dataset_record.id}', self.dir)
+            # self.fs_store.get(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{dataset_record.id}', self.dir)
             creation_info = json.loads(dataset_record.creation_info)
             if raw:
                 return creation_info

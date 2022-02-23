@@ -4,6 +4,13 @@
 
 *Communtiy Author: [Kinie K Kusuma](https://github.com/kinkusuma)*
 
+## Pre-requisites
+
+First, you need MindsDB installed. So please make sure you've visited [Getting Started Guide](/info) and [Getting Started with Cloud](/deployment/cloud).
+You may start to use MindsDB by installing it locally or you can use the [Cloud](https://cloud.mindsdb.com/signup) service. 
+Let’s use the cloud for this tutorial. 
+Second, you need a MySQL client to connect to the MindsDB MySQL API.
+
 ## Can you accurately predict insurance costs?  
 
 In this tutorial, you will learn how to predict insurance costs using MindsDB.
@@ -17,14 +24,6 @@ We will use the standard SQL Select statement to get predictions from AI Tables 
 MindsDB will execute a complete Machine Learning workflow behind the scenes, it will determine data types for each column, normalize and encode it, train and test ML model. All this happens automatically, so it is very cool! Those who want to get their hands dirty with manual hyperparameters optimization, you can also do that with MindsDB using a declarative syntax called JSON-AI.
 
 So let's look at how it works using a real use case. For the demo purpose we will use a public dataset from Kaggle, but you are free to follow this tutorial with your own data.
-
-## Pre-requisites
-
-First, you need MindsDB installed. If you want to use it locally, you can use
-[Docker](https://docs.mindsdb.com/deployment/docker/) or [PIP](https://docs.mindsdb.com/deployment/pypi/). 
-Alternatively, to use MindsDB without installing it locally, you can use the [Cloud](https://cloud.mindsdb.com/signup) service. 
-Let’s use the cloud for this tutorial. 
-Second, you need a MySQL client to connect to the MindsDB MySQL API.
 
 ## Connect your database
 

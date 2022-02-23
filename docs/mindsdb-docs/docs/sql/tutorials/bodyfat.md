@@ -1,15 +1,13 @@
+# Pre-requisites
+Before you start make sure that you've:
+
+- Visited [Getting Started Guide](/info)
+- Visited [Getting Started with Cloud](/deployment/cloud)
+- Downloaded the dataset. The dataset being used for this tutorial. Get it from [Kaggle](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset).
+
 # Determining Body Fat Percentage
 
 Machine Learning powered data analysis can be performed quickly and efficiently by MindsDB to enable individuals to make accurate predictions for certain metrics based on a variety of associated values. MindsDB enables you to make predictions automatically using just SQL commands, all the ML workflow is automated, and abstracted as virtual “AI tables” in your database so you may start getting insights from forecasts right away. In this tutorial, we'll be using MindsDB and a MySQL database to predict body fat percentage based on several body part measurement criteria.
-
-## Pre-requisites
-- A working copy of MindsDB.  Check out the [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPi](https://docs.mindsdb.com/deployment/pypi/) installation guides to install locally, or get up and running in seconds using [MindsDB Cloud](https://docs.mindsdb.com/deployment/cloud/).
-- Access to a MySQL Database.
-- The dataset being used for this tutorial.  Get it from [Kaggle](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset).
-- mysql-client, DBeaver, MySQL Workbench, etc. to connect to the database and also to use MindsDB's MySQL API.
-
-## Setting up the Database
-In this section you'll initialize your MySQL database and populate it with the Body Fat Prediction dataset.
 
 ### Data Overview
 For this tutorial, we'll be using the Body Fat Prediction dataset available at [Kaggle](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset).  Each row represents one person and we'll train an ML model to help us predict an individual's body fat percentage using MindsDB.  Below is a short description of each feature of the data:
@@ -29,136 +27,37 @@ For this tutorial, we'll be using the Body Fat Prediction dataset available at [
 - Forearm: Circumference of the individual's forearm in cm (float)
 - Wrist: Circumference of the individual's wrist in cm (float)
 
-First, connect to your MySQL instance.  Next, create the database:
+## Upload a file
+
+1. Click on **Files** icon to go to datasets page
+2. Click on **FILE UPLOAD** button to upload file into MindsDB
+
+
+## Connect to MindsDB SQL Sever
+1. 
 ```sql
-CREATE DATABASE bodyfat;
-```
-
-Now switch to the newly created database:
-```sql
-USE bodyfat;
-```
-
-Now create the table into which the dataset will be imported with the following schema:
-```sql
-CREATE TABLE bodyfat (
-    Density FLOAT,
-    BodyFat FLOAT,
-    Age INT,
-    Weight FLOAT,
-    Height FLOAT,
-    Neck FLOAT,
-    Chest FLOAT,
-    Abdomen FLOAT,
-    Hip FLOAT,
-    Thigh FLOAT,
-    Knee FLOAT,
-    Ankle FLOAT,
-    Biceps FLOAT,
-    Forearm FLOAT,
-    Wrist FLOAT
-);
-```
-
-Now import the Body Fat Prediction dataset into the newly created table with:
-```sql
-LOAD DATA LOCAL INFILE '/path/to/file/bodyfat.csv'
-INTO TABLE bodyfat
-FIELDS TERMINATED BY ','
-LINES TERMINATED BY '\n'
-IGNORE 1 ROWS;
-```
-
-If successful, you should see output similar to:
-```console
-Query OK, 252 rows affected (0.028 sec)
-Records: 252  Deleted: 0  Skipped: 0  Warnings: 0
-```
-
-To test that the dataset was correctly imported, you can execute:
-```sql
-SELECT Age, BodyFat FROM bodyfat LIMIT 10;
-```
-
-Which should return output similar to:
-```console
-+------+---------+
-| Age  | BodyFat |
-+------+---------+
-|   23 |    12.3 |
-|   22 |     6.1 |
-|   22 |    25.3 |
-|   26 |    10.4 |
-|   24 |    28.7 |
-|   24 |    20.9 |
-|   26 |    19.2 |
-|   25 |    12.4 |
-|   25 |     4.1 |
-|   23 |    11.7 |
-+------+---------+
-10 rows in set (0.001 sec)
-```
-
-At this point, you have completed setting up the MySQL Database and loading the Body Fat Prediction dataset!
-
-## Connect MindsDB to the Database
-In this section, you'll connect MindsDB to the database you've just set up.
-
-Start by heading to the MindsDB GUI. If you use an open-source version, launch MindsDB Studio, but for this tutorial, we'll be using MindsDB Cloud to connect to our database.
-
-Click on Databases in the upper left, then on Add Database in the lower right.  In the popup screen, fill in the details for your MySQL database, and specify a name for the integration (here, we chose bodyfat_integration).  You can test if the database is connectable by clicking `Click Here to Test Connection`, and if all is well, click on the Connect button:
-
-![MindsDB Database Connection](/docs/mindsdb-docs/docs/assets/sql/tutorials/bodyfat/connect-database.png)
-
-You should now see your new database integration appear in the MindsDB GUI:
-![MindsDB Database Connection Established](/docs/mindsdb-docs/docs/assets/sql/tutorials/bodyfat/database-connected.png)
-
-At this point, you have successfully connected MindsDB to the database!
-
-## Connect to the MindsDB MySQL API
-Now, you'll connect to the MindsDB MySQL API to enable the use of SQL commands to train ML models and make predictions.  For this tutorial, we'll be connecting to MindsDB Cloud using a commandline mysql client:
-
-```bash
 mysql -h cloud.mindsdb.com --port 3306 -u username@email.com -p
 ```
-
-Execute the above command substituting the email address you used to sign up for MindsDB Cloud, followed by entering your password, and you should see output similar to:
-
-```console
-Enter password: 
-Welcome to the MariaDB monitor.  Commands end with ; or \g.
-Your MySQL connection id is 1
-Server version: 5.7.1-MindsDB-1.0 (MindsDB)
-
-Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
-
-Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
-
-MySQL [(none)]> 
-```
-
-You have now connected to the MindsDB MySQL API successfully!
-
-## Using SQL Commands to Train ML Models
-We will now train a new machine learning model for the dataset we've created. In MindsDB terms it is called a Predictor. We will show how to create it automatically, but there is also a way to fine tune it, if you know what you are doing (check the [MindsDB docs](https://docs.mindsdb.com)).  Go to your mysql-client and run the following command:
-
+2. 
 ```sql
 USE mindsdb;
 ```
+
+## Create a predictor
 
 Now, we have to create a predictor based on the following syntax:
 
 ```sql
 CREATE PREDICTOR predictor_name
-FROM integration_name 
-(SELECT column_name, column_name2 FROM table_name) as ds_name
+FROM files 
+(SELECT column_name, column_name2 FROM file_name) as ds_name
 PREDICT column_name as column_alias;
 ```
 
 For our case, we'll enter the following command:
 ```sql
 CREATE PREDICTOR bodyfat_predictor
-FROM bodyfat_integration (
+FROM files (
         SELECT * FROM bodyfat
 ) PREDICT Bodyfat;
 ```

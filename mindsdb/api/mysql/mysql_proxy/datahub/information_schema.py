@@ -24,7 +24,9 @@ class InformationSchema(DataNode):
         'PLUGINS': ['PLUGIN_NAME', 'PLUGIN_VERSION', 'PLUGIN_STATUS', 'PLUGIN_TYPE', 'PLUGIN_TYPE_VERSION', 'PLUGIN_LIBRARY', 'PLUGIN_LIBRARY_VERSION', 'PLUGIN_AUTHOR', 'PLUGIN_DESCRIPTION', 'PLUGIN_LICENSE', 'LOAD_OPTION', 'PLUGIN_MATURITY', 'PLUGIN_AUTH_VERSION'],
         'ENGINES': ['ENGINE', 'SUPPORT', 'COMMENT', 'TRANSACTIONS', 'XA', 'SAVEPOINTS'],
         'KEY_COLUMN_USAGE': ['CONSTRAINT_CATALOG', 'CONSTRAINT_SCHEMA', 'CONSTRAINT_NAME', 'TABLE_CATALOG', 'TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME', 'ORDINAL_POSITION', 'POSITION_IN_UNIQUE_CONSTRAINT', 'REFERENCED_TABLE_SCHEMA', 'REFERENCED_TABLE_NAME', 'REFERENCED_COLUMN_NAME'],
-        'STATISTICS': ['TABLE_CATALOG', 'TABLE_SCHEMA', 'TABLE_NAME', 'NON_UNIQUE', 'INDEX_SCHEMA', 'INDEX_NAME', 'SEQ_IN_INDEX', 'COLUMN_NAME', 'COLLATION', 'CARDINALITY', 'SUB_PART', 'PACKED', 'NULLABLE', 'INDEX_TYPE', 'COMMENT', 'INDEX_COMMENT', 'IS_VISIBLE', 'EXPRESSION']
+        'STATISTICS': ['TABLE_CATALOG', 'TABLE_SCHEMA', 'TABLE_NAME', 'NON_UNIQUE', 'INDEX_SCHEMA', 'INDEX_NAME', 'SEQ_IN_INDEX', 'COLUMN_NAME', 'COLLATION', 'CARDINALITY', 'SUB_PART', 'PACKED', 'NULLABLE', 'INDEX_TYPE', 'COMMENT', 'INDEX_COMMENT', 'IS_VISIBLE', 'EXPRESSION'],
+        'CHARACTER_SETS': ['CHARACTER_SET_NAME', 'DEFAULT_COLLATE_NAME', 'DESCRIPTION', 'MAXLEN'],
+        'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
     }
 
     def __init__(self, session):
@@ -46,7 +48,9 @@ class InformationSchema(DataNode):
             'TABLES': self._get_tables,
             'COLUMNS': self._get_columns,
             'SCHEMATA': self._get_schemata,
-            'ENGINES': self._get_engines
+            'ENGINES': self._get_engines,
+            'CHARACTER_SETS': self._get_charsets,
+            'COLLATIONS': self._get_collations,
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -166,6 +170,27 @@ class InformationSchema(DataNode):
     def _get_engines(self):
         columns = self.information_schema['ENGINES']
         data = [['InnoDB', 'DEFAULT', 'Supports transactions, row-level locking, and foreign keys', 'YES', 'YES', 'YES']]
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_charsets(self):
+        columns = self.information_schema['CHARACTER_SETS']
+        data = [
+            ['utf8', 'UTF-8 Unicode', 'utf8_general_ci', 3],
+            ['latin1', 'cp1252 West European', 'latin1_swedish_ci', 1],
+            ['utf8mb4', 'UTF-8 Unicode', 'utf8mb4_general_ci', 4]
+        ]
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_collations(self):
+        columns = self.information_schema['COLLATIONS']
+        data = [
+            ['utf8_general_ci', 'utf8', 33, 'Yes', 'Yes', 1, 'PAD SPACE'],
+            ['latin1_swedish_ci', 'latin1', 8, 'Yes', 'Yes', 1, 'PAD SPACE']
+        ]
 
         df = pd.DataFrame(data, columns=columns)
         return df

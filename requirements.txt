@@ -1,4 +1,4 @@
-lightwood >= 22.2.1.1, < 22.2.2.0
+lightwood >= 22.2.3.0, < 22.2.4.0
 markupsafe == 2.0.1
 flask-restx >= 0.2.0
 flask >= 1.0, < 2.0
@@ -19,7 +19,8 @@ mindsdb_datasources == 1.6.3
 flask-compress >= 1.0.0
 kafka-python >= 2.0.0
 appdirs >= 1.0.0
-mindsdb-sql == 0.0.50
+mindsdb-sql >= 0.1.0, < 0.2.0
 checksumdir >= 1.2.0
 mindsdb-streams == 0.0.5
 duckdb == 0.3.1
+requests >= 2.0.0

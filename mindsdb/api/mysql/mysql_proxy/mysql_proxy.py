@@ -182,6 +182,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     The Main Server controller class
     """
 
+    predictor_attrs = ("model", "features", "ensemble")
+
     @staticmethod
     def server_close(srv):
         srv.server_close()
@@ -511,6 +513,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data.append(c_data)
         return data
 
+    def _get_ensemble_type(self, data):
+        ai_info = data.get('json_ai', {})
+        if ai_info == {}:
+            raise ErBadTableError("predictor doesn't contain enough data to generate 'feature' attribute.")
+        return [[ai_info["model"]["module"]]]
+
     def answer_describe_predictor(self, predictor_value):
         predictor_attr = None
         if isinstance(predictor_value, (list, tuple)):
@@ -603,6 +611,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     }],
                     data=data
                 )
+            elif predictor_attr == "ensemble":
+                data = self._get_ensemble_type(data)
+                packages = self.get_tabel_packets(
+                    columns=[{
+                        'table_name': '',
+                        'name': 'ensemble',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }],
+                    data=data
+                )
+
             else:
                 raise ErNotSupportedYet("DESCRIBE '%s' predictor attribute is not supported yet" % predictor_attr)
         packages.append(self.last_packet())
@@ -646,14 +665,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.packet(OkPacket).send()
 
     def answer_create_predictor(self, statement):
+        integration_name = None
         struct = {
             'predictor_name': statement.name.parts[-1],
-            'integration_name': statement.integration_name.parts[-1],
             'select': statement.query_str,
             'predict': [x.parts[-1] for x in statement.targets]
         }
         if len(struct['predict']) > 1:
             raise SqlApiException("Only one field can be in 'PREDICT'")
+        if isinstance(statement.integration_name, Identifier):
+            struct['integration_name'] = statement.integration_name.parts[-1]
         if statement.using is not None:
             struct['using'] = statement.using
         if statement.datasource_name is not None:
@@ -673,26 +694,45 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         data_store = self.session.data_store
 
         predictor_name = struct['predictor_name']
-        integration_name = struct['integration_name']
+        integration_name = struct.get('integration_name')
 
-        if integration_name.lower().startswith('datasource.'):
-            ds_name = integration_name[integration_name.find('.') + 1:]
-            ds = data_store.get_datasource_obj(ds_name, raw=True)
-            ds_data = data_store.get_datasource(ds_name)
+        if integration_name is not None:
+            if integration_name.lower().startswith('datasource.'):
+                ds_name = integration_name[integration_name.find('.') + 1:]
+                ds = data_store.get_datasource_obj(ds_name, raw=True)
+                ds_data = data_store.get_datasource(ds_name)
+            else:
+                if (
+                    self.session.datasource_interface.get_db_integration(integration_name) is None
+                    and integration_name not in ('views', 'files')
+                ):
+                    raise ErBadDbError(f"Unknown datasource: {integration_name}")
+
+                ds_name = struct.get('datasource_name')
+                if ds_name is None:
+                    ds_name = data_store.get_vacant_name(predictor_name)
+
+                ds_kwargs = {'query': struct['select']}
+                if integration_name in ('views', 'files'):
+                    parsed = parse_sql(struct['select'])
+                    ds_kwargs['source'] = parsed.from_table.parts[-1]
+                ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)
+                ds_data = data_store.get_datasource(ds_name)
+                ds_id = ds_data['id']
+
+            ds_column_names = [x['name'] for x in ds_data['columns']]
+            try:
+                predict = self._check_predict_columns(struct['predict'], ds_column_names)
+            except Exception as e:
+                data_store.delete_datasource(ds_name)
+                raise e
+
+            for i, p in enumerate(predict):
+                predict[i] = get_column_in_case(ds_column_names, p)
         else:
-            if self.session.datasource_interface.get_db_integration(integration_name) is None and integration_name not in ('views', 'files'):
-                raise ErBadDbError(f"Unknown datasource: {integration_name}")
-
-            ds_name = struct.get('datasource_name')
-            if ds_name is None:
-                ds_name = data_store.get_vacant_name(predictor_name)
-
-            ds_kwargs = {'query': struct['select']}
-            if integration_name in ('views', 'files'):
-                parsed = parse_sql(struct['select'])
-                ds_kwargs['source'] = parsed.from_table.parts[-1]
-            ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)
-            ds_data = data_store.get_datasource(ds_name)
+            ds = None
+            ds_id = None
+            predict = struct['predict']
 
         timeseries_settings = {}
         for w in ['order_by', 'group_by', 'window', 'horizon']:
@@ -708,15 +748,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     kwargs['timeseries_settings'] = json.loads(kwargs['timeseries_settings'])
                 kwargs['timeseries_settings'].update(timeseries_settings)
 
-        ds_column_names = [x['name'] for x in ds_data['columns']]
-        try:
-            predict = self._check_predict_columns(struct['predict'], ds_column_names)
-        except Exception as e:
-            data_store.delete_datasource(ds_name)
-            raise e
-
-        for i, p in enumerate(predict):
-            predict[i] = get_column_in_case(ds_column_names, p)
 
         # Cast all column names to same case
         if isinstance(kwargs.get('timeseries_settings'), dict):
@@ -739,19 +770,23 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                             f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
                         )
 
-        model_interface.learn(predictor_name, ds, predict, ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True)
+        model_interface.learn(predictor_name, ds, predict, ds_id, kwargs=kwargs, delete_ds_on_fail=True)
 
         self.packet(OkPacket).send()
 
-    def delete_predictor_sql(self, sql):
-        fake_sql = sql.strip(' ')
-        fake_sql = 'select name ' + fake_sql[len('delete '):]
-        query = SQLQuery(
-            fake_sql,
+    def delete_predictor_query(self, query):
+
+        query2 = Select(targets=[Identifier('name')],
+                        from_table=query.table,
+                        where=query.where)
+        # fake_sql = sql.strip(' ')
+        # fake_sql = 'select name ' + fake_sql[len('delete '):]
+        sqlquery = SQLQuery(
+            query2.to_string(),
             session=self.session
         )
 
-        result = query.fetch(
+        result = sqlquery.fetch(
             self.session.datahub
         )
 
@@ -783,7 +818,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ).send()
                 return
             predictor_name = command[2]
-            self.delete_predictor_sql(f"delete from mindsdb.predictors where name = '{predictor_name}'")
+            self.delete_predictor_query(parse_sql(
+                f"delete from mindsdb.predictors where name = '{predictor_name}'",
+                'mindsdb'
+            ))
             self.packet(OkPacket).send()
             return
 
@@ -793,16 +831,32 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             msg="at this moment only 'delete predictor' command supported"
         ).send()
 
-    def answer_stmt_prepare(self, statement):
-        sql = statement.sql
-        sql_lower = sql.lower()
-        stmt_id = self.session.register_stmt(statement)
+    def to_mysql_type(self, type_name):
+        if type_name == 'str':
+            return TYPES.MYSQL_TYPE_VAR_STRING
+
+        # unknown
+        return TYPES.MYSQL_TYPE_VAR_STRING
+
+    def answer_stmt_prepare(self, sql):
+        sqlquery = SQLQuery(
+            sql,
+            session=self.session,
+            execute=False
+        )
+
+        stmt_id = self.session.register_stmt(sqlquery)
         prepared_stmt = self.session.prepared_stmts[stmt_id]
 
-        if statement.keyword == 'insert':
+        sqlquery.prepare_query()
+        parameters = sqlquery.parameters
+        columns_def = sqlquery.columns
+
+        statement = sqlquery.query
+        if isinstance(statement, Insert):
             prepared_stmt['type'] = 'insert'
 
-            statement = parse_sql(sql, dialect='mindsdb')
+            # ???
             if (
                 len(statement.table.parts) > 1 and statement.table.parts[0].lower() != 'mindsdb'
                 or len(statement.table.parts) == 1 and self.session.database != 'mindsdb'
@@ -812,97 +866,86 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if table_name not in ['predictors', 'commands']:
                 raise ErNonInsertableTable("Only parametrized insert into 'predictors' or 'commands' supported at this moment")
 
-            new_statement = Select(
-                targets=statement.columns,
-                from_table=Identifier(parts=['mindsdb', table_name]),
-                limit=Constant(0)
-            )
+            # new_statement = Select(
+            #     targets=statement.columns,
+            #     from_table=Identifier(parts=['mindsdb', table_name]),
+            #     limit=Constant(0)
+            # )
 
-            query = SQLQuery(
-                str(new_statement),
-                session=self.session
-            )
+            # parameters = []
+            # for row in statement.values:
+            #     for item in row:
+            #         if type(item) == Parameter:
+            #             num_params = num_params + 1
+            # num_columns = len(query.columns) - num_params
 
-            num_params = 0
-            for row in statement.values:
-                for item in row:
-                    if type(item) == Parameter:
-                        num_params = num_params + 1
-            num_columns = len(query.columns) - num_params
-
-            if num_columns != 0:
-                raise ErNonInsertableTable("At this moment supported only insert where all values is parameters.")
+            # ???
+            # if len(sqlquery.columns) != len(sqlquery.parameters):
+            #     raise ErNonInsertableTable("At this moment supported only insert where all values is parameters.")
 
             columns_def = []
-            for col in query.columns:
-                columns_def.append(dict(
-                    database='',
-                    table_alias='',
-                    table_name='',
-                    alias='',
-                    name='?',
-                    type=TYPES.MYSQL_TYPE_VAR_STRING,
-                    charset=CHARSET_NUMBERS['binary']
-                ))
-        elif statement.keyword == 'select' and statement.ends_with('for update'):
+            for col in sqlquery.columns:
+                col = col.copy()
+                col['charset'] = CHARSET_NUMBERS['binary']
+                columns_def.append(col)
+
+        elif isinstance(statement, Select) and statement.mode == 'FOR UPDATE':
             # postgres when execute "delete from mindsdb.predictors where name = 'x'" sends for it prepare statement:
             # 'select name from mindsdb.predictors where name = 'x' FOR UPDATE;'
             # and after it send prepare for delete query.
             prepared_stmt['type'] = 'lock'
-            statement.cut_from_tail('for update')
-            query = SQLQuery(statement.sql, session=self.session)
-            num_columns = len(query.columns)
-            num_params = 0
-            columns_def = query.columns
+
+            # statement.cut_from_tail('for update')
+            # query = SQLQuery(statement.sql, session=self.session)
+            # num_columns = len(query.columns)
+            # parameters = []
             for col in columns_def:
                 col['charset'] = CHARSET_NUMBERS['utf8_general_ci']
 
-        elif statement.keyword == 'delete':
+        elif isinstance(statement, Delete):
             prepared_stmt['type'] = 'delete'
-
-            fake_sql = sql.replace('?', '"?"')
-            fake_sql = 'select name ' + fake_sql[len('delete '):]
-            query = SQLQuery(fake_sql, session=self.session)
-            num_columns = 0
-            num_params = sql.count('?')
+            #
+            # fake_sql = sql.replace('?', '"?"')
+            # fake_sql = 'select name ' + fake_sql[len('delete '):]
+            # query = SQLQuery(fake_sql, session=self.session)
+            # num_columns = 0
+            # num_params = sql.count('?')
             columns_def = []
-            for i in range(num_params):
+            for col in sqlquery.parameters:
                 columns_def.append(dict(
                     database='',
                     table_alias='',
                     table_name='',
-                    alias='?',
+                    alias=col.name,
                     name='',
                     type=TYPES.MYSQL_TYPE_VAR_STRING,
                     charset=CHARSET_NUMBERS['utf8_general_ci'],
                     flags=sum([FIELD_FLAG.BINARY_COLLATION])
                 ))
-        elif statement.keyword == 'select' and 'connection_id()' in sql.lower():
+        # elif statement.keyword == 'select' and 'connection_id()' in sql.lower():
+        #     prepared_stmt['type'] = 'select'
+        #     num_columns = 1
+        #     parameters = []
+        #     columns_def = [{
+        #         'database': '',
+        #         'table_name': '',
+        #         'name': 'conn_id',
+        #         'alias': 'conn_id',
+        #         'type': TYPES.MYSQL_TYPE_LONG,
+        #         'charset': CHARSET_NUMBERS['binary']
+        #     }]
+        elif isinstance(statement, Select):
             prepared_stmt['type'] = 'select'
-            num_columns = 1
-            num_params = 0
-            columns_def = [{
-                'database': '',
-                'table_name': '',
-                'name': 'conn_id',
-                'alias': 'conn_id',
-                'type': TYPES.MYSQL_TYPE_LONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }]
-        elif statement.keyword == 'select':
-            prepared_stmt['type'] = 'select'
-            query = SQLQuery(sql, session=self.session)
-            num_columns = len(query.columns)
-            num_params = 0
-            columns_def = query.columns
-        elif (
-            'show variables' in sql_lower
-            or 'show session variables' in sql_lower
-            or 'show session status' in sql_lower
+        #     query = SQLQuery(sql, session=self.session)
+        #     num_columns = len(query.columns)
+        #     parameters = []
+        #     columns_def = query.columns
+        elif isinstance(statement, Show) and statement.category in (
+            'variables', 'session variables', 'show session status'
         ):
             prepared_stmt['type'] = 'show variables'
             num_columns = 2
-            num_params = 0
+            parameters = []
             columns_def = [{
                 'table_name': '',
                 'name': 'Variable_name',
@@ -919,80 +962,94 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(
                 STMTPrepareHeaderPacket,
                 stmt_id=stmt_id,
-                num_columns=num_columns,
-                num_params=num_params
+                num_columns=len(columns_def),
+                num_params=len(parameters)
             )
         ]
 
-        packages.extend(
-            self._get_column_defenition_packets(columns_def)
-        )
+        parameters_def = sqlquery.to_mysql_columns(parameters)
+        if len(parameters_def) > 0:
+            packages.extend(
+                self._get_column_defenition_packets(parameters_def)
+            )
+            if self.client_capabilities.DEPRECATE_EOF is False:
+                status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
+                packages.append(self.packet(EofPacket, status=status))
 
-        if self.client_capabilities.DEPRECATE_EOF is False:
-            status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
-            packages.append(self.packet(EofPacket, status=status))
+        if len(columns_def) > 0:
+            packages.extend(
+                self._get_column_defenition_packets(columns_def)
+            )
+
+            if self.client_capabilities.DEPRECATE_EOF is False:
+                status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
+                packages.append(self.packet(EofPacket, status=status))
 
         self.send_package_group(packages)
 
     def answer_stmt_execute(self, stmt_id, parameters):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
+
+        sqlquery = prepared_stmt['statement']
+        sqlquery.execute_query(parameters)
+        query = sqlquery.query
         if prepared_stmt['type'] == 'select':
-            sql = prepared_stmt['statement'].sql
+            # sql = prepared_stmt['statement'].sql
 
             # +++
-            if sql.lower() == 'select connection_id()':
-                self.answer_connection_id(sql)
+
+            if query == Select(targets=[Function(op='connection_id', args=())]):
+                self.answer_connection_id()
                 return
             # ---
 
             # +++
-            if "SELECT `table_name`, `column_name`" in sql:
-                # TABLEAU
-                # SELECT `table_name`, `column_name`
-                # FROM `information_schema`.`columns`
-                # WHERE `data_type`='enum' AND `table_schema`='mindsdb'
-                packages = self.get_tabel_packets(
-                    columns=[{
-                        'table_name': '',
-                        'name': 'TABLE_NAME',
-                        'type': TYPES.MYSQL_TYPE_VAR_STRING
-                    }, {
-                        'table_name': '',
-                        'name': 'COLUMN_NAME',
-                        'type': TYPES.MYSQL_TYPE_VAR_STRING
-                    }],
-                    data=[]
-                )
-                if self.client_capabilities.DEPRECATE_EOF is True:
-                    packages.append(self.packet(OkPacket, eof=True))
-                else:
-                    packages.append(self.packet(EofPacket))
-                self.send_package_group(packages)
-                return
-            # ---
+            # if "SELECT `table_name`, `column_name`" in sql:
+            #     # TABLEAU
+            #     # SELECT `table_name`, `column_name`
+            #     # FROM `information_schema`.`columns`
+            #     # WHERE `data_type`='enum' AND `table_schema`='mindsdb'
+            #     packages = self.get_tabel_packets(
+            #         columns=[{
+            #             'table_name': '',
+            #             'name': 'TABLE_NAME',
+            #             'type': TYPES.MYSQL_TYPE_VAR_STRING
+            #         }, {
+            #             'table_name': '',
+            #             'name': 'COLUMN_NAME',
+            #             'type': TYPES.MYSQL_TYPE_VAR_STRING
+            #         }],
+            #         data=[]
+            #     )
+            #     if self.client_capabilities.DEPRECATE_EOF is True:
+            #         packages.append(self.packet(OkPacket, eof=True))
+            #     else:
+            #         packages.append(self.packet(EofPacket))
+            #     self.send_package_group(packages)
+            #     return
+            # # ---
 
-            query = SQLQuery(sql, session=self.session)
-
-            columns = query.columns
+            columns = sqlquery.columns
             packages = [self.packet(ColumnCountPacket, count=len(columns))]
             packages.extend(self._get_column_defenition_packets(columns))
 
             packages.append(self.last_packet(status=0x0062))
             self.send_package_group(packages)
         elif prepared_stmt['type'] == 'insert':
-            statement = parse_sql(prepared_stmt['statement'].sql, dialect='mindsdb')
-            parameter_index = 0
-            for row in statement.values:
-                for item_index, item in enumerate(row):
-                    if type(item) == Parameter:
-                        row[item_index] = Constant(parameters[parameter_index])
-                        parameter_index += 1
-            self.process_insert(statement)
-        elif prepared_stmt['type'] == 'lock':
-            sql = prepared_stmt['statement'].sql
-            query = SQLQuery(sql, session=self.session)
+            # statement = parse_sql(prepared_stmt['statement'].sql, dialect='mindsdb')
+            # parameter_index = 0
+            # for row in query.values:
+            #     for item_index, item in enumerate(row):
+            #         if type(item) == Parameter:
+            #             row[item_index] = Constant(parameters[parameter_index])
+            #             parameter_index += 1
+            self.process_insert(query)
 
-            columns = query.columns
+        elif prepared_stmt['type'] == 'lock':
+            # sql = prepared_stmt['statement'].sql
+            # query = SQLQuery(sql, session=self.session)
+
+            columns = sqlquery.columns
             packages = [self.packet(ColumnCountPacket, count=len(columns))]
             packages.extend(self._get_column_defenition_packets(columns))
 
@@ -1006,12 +1063,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif prepared_stmt['type'] == 'delete':
             if len(parameters) == 0:
                 raise SqlApiException("Delete statement must content 'where' filter")
-            sql = prepared_stmt['statement'].sql
-            sql = sql[:sql.find('?')] + f"'{parameters[0]}'"
-            self.delete_predictor_sql(sql)
+            # sql = prepared_stmt['statement'].sql
+            # sql = sql[:sql.find('?')] + f"'{parameters[0]}'"
+            self.delete_predictor_query(query)
             self.packet(OkPacket, affected_rows=1).send()
         elif prepared_stmt['type'] == 'show variables':
-            sql = prepared_stmt['statement'].sql
+            # sql = prepared_stmt['statement'].sql
 
             packages = []
             packages += self.get_tabel_packets(
@@ -1035,11 +1092,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def answer_stmt_fetch(self, stmt_id, limit=100000):
         prepared_stmt = self.session.prepared_stmts[stmt_id]
-        sql = prepared_stmt['statement'].sql
+        # sql = prepared_stmt['statement'].sql
         fetched = prepared_stmt['fetched']
-        query = SQLQuery(sql, session=self.session)
+        # query = SQLQuery(sql, session=self.session)
+        sqlquery = prepared_stmt['statement']
 
-        result = query.fetch(
+        result = sqlquery.fetch(
             self.session.datahub
         )
 
@@ -1052,15 +1110,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
 
         packages = []
-        columns = query.columns
-        for row in query.result[fetched:limit]:
+        columns = sqlquery.columns
+        for row in sqlquery.result[fetched:limit]:
             packages.append(
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
             )
 
-        prepared_stmt['fetched'] += len(query.result[fetched:limit])
+        prepared_stmt['fetched'] += len(sqlquery.result[fetched:limit])
 
-        if len(query.result) <= limit:
+        if len(sqlquery.result) <= limit:
             status = sum([
                 SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
                 SERVER_STATUS.SERVER_STATUS_LAST_ROW_SENT,
@@ -1214,7 +1272,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if (
             isinstance(self.session.database, str)
             and len(self.session.database) > 0
-            and self.session.database.lower() != 'mindsdb'
+            and self.session.database.lower() not in ('mindsdb', 'files')
             and '@@' not in sql.lower()
             and (
                 (
@@ -1292,7 +1350,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.answer_drop_datasource(ds_name)
             return
         elif type(statement) == Describe:
-            if statement.value.parts[-1] in ("model", "features"):
+            if statement.value.parts[-1] in self.predictor_attrs:
                 self.answer_describe_predictor(statement.value.parts[-2:])
             else:
                 self.answer_describe_predictor(statement.value.parts[-1])
@@ -1300,113 +1358,147 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif type(statement) == RetrainPredictor:
             self.answer_retrain_predictor(statement.name.parts[-1])
             return
-        elif type(statement) == Show or keyword == 'show':
+        elif type(statement) == Show:
             sql_category = statement.category.lower()
-            condition = statement.condition.lower() if isinstance(statement.condition, str) else statement.condition
-            expression = statement.expression
             if sql_category == 'predictors':
-                if expression is not None:
-                    raise SqlApiException("'SHOW PREDICTORS' query should be used without filters")
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
                 new_statement = Select(
                     targets=[Star()],
-                    from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors'])
+                    from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors']),
+                    where=where
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
             elif sql_category == 'views':
-                schema = 'views'
+                where = BinaryOperation('and', args=[
+                    BinaryOperation('=', args=[Identifier('table_schema'), Constant('views')]),
+                    BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
+                ])
+                if statement.where is not None:
+                    where = BinaryOperation('and', args=[where, statement.where])
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('View'), Constant(statement.like)])
+                    where = BinaryOperation('and', args=[where, like])
+
                 new_statement = Select(
                     targets=[Identifier(parts=['table_name'], alias=Identifier('View'))],
                     from_table=Identifier(parts=['information_schema', 'TABLES']),
-                    where=BinaryOperation('and', args=[
-                        BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
-                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
-                    ])
+                    where=where
                 )
 
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
                 return
             elif sql_category == 'plugins':
-                if expression is not None:
+                if statement.where is not None or statement.like:
                     raise SqlApiException("'SHOW PLUGINS' query should be used without filters")
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=['information_schema', 'PLUGINS'])
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
                 return
             elif sql_category in ('databases', 'schemas'):
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('Database'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
+
                 new_statement = Select(
                     targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
-                    from_table=Identifier(parts=['information_schema', 'SCHEMATA'])
+                    from_table=Identifier(parts=['information_schema', 'SCHEMATA']),
+                    where=where
                 )
-                if condition == 'like':
-                    new_statement.where = BinaryOperation('like', args=[Identifier('schema_name'), expression])
-                elif condition is not None:
-                    raise ErNotSupportedYet(f'Not implemented: {sql}')
+                if statement.where is not None:
+                    new_statement.where = statement.where
 
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
                 return
             elif sql_category == 'datasources':
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
                 new_statement = Select(
                     targets=[Star()],
-                    from_table=Identifier(parts=['mindsdb', 'datasources'])
+                    from_table=Identifier(parts=['mindsdb', 'datasources']),
+                    where=where
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
                 return
             elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
-                if condition == 'from':
-                    schema = expression.parts[0]
-                elif condition is not None:
-                    raise SqlApiException(f'Unknown condition in query: {statement}')
+                if statement.from_table is not None:
+                    schema = statement.from_table.parts[-1]
+                where = BinaryOperation('and', args=[
+                    BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
+                    BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
+                ])
+                if statement.where is not None:
+                    where = BinaryOperation('and', args=[statement.where, where])
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier(f'Tables_in_{schema}'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
 
                 new_statement = Select(
                     targets=[Identifier(parts=['table_name'], alias=Identifier(f'Tables_in_{schema}'))],
                     from_table=Identifier(parts=['information_schema', 'TABLES']),
-                    where=BinaryOperation('and', args=[
-                        BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
-                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
-                    ])
+                    where=where
                 )
 
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
                 return
             elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
+
                 new_statement = Select(
                     targets=[Identifier(parts=['Variable_name']), Identifier(parts=['Value'])],
                     from_table=Identifier(parts=['dataframe']),
+                    where=where
                 )
-
-                if condition == 'like':
-                    new_statement.where = BinaryOperation('like', args=[Identifier('Variable_name'), expression])
-                elif condition == 'where':
-                    new_statement.where = expression
-                elif condition is not None:
-                    raise SqlApiException(f'Unknown condition in query: {statement}')
 
                 data = {}
                 is_session = 'session' in sql_category
@@ -1465,9 +1557,33 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB' AND Name LIKE '%';
                 self.answer_function_status()
                 return
-            elif 'show index from' in sql_lower:
-                # SHOW INDEX FROM `ny_output` FROM `data`;
-                self.answer_show_index()
+            elif sql_category == 'index':
+                new_statement = Select(
+                    targets=[
+                        Identifier('TABLE_NAME', alias=Identifier('Table')),
+                        Identifier('NON_UNIQUE', alias=Identifier('Non_unique')),
+                        Identifier('INDEX_NAME', alias=Identifier('Key_name')),
+                        Identifier('SEQ_IN_INDEX', alias=Identifier('Seq_in_index')),
+                        Identifier('COLUMN_NAME', alias=Identifier('Column_name')),
+                        Identifier('COLLATION', alias=Identifier('Collation')),
+                        Identifier('CARDINALITY', alias=Identifier('Cardinality')),
+                        Identifier('SUB_PART', alias=Identifier('Sub_part')),
+                        Identifier('PACKED', alias=Identifier('Packed')),
+                        Identifier('NULLABLE', alias=Identifier('Null')),
+                        Identifier('INDEX_TYPE', alias=Identifier('Index_type')),
+                        Identifier('COMMENT', alias=Identifier('Comment')),
+                        Identifier('INDEX_COMMENT', alias=Identifier('Index_comment')),
+                        Identifier('IS_VISIBLE', alias=Identifier('Visible')),
+                        Identifier('EXPRESSION', alias=Identifier('Expression'))
+                    ],
+                    from_table=Identifier(parts=['information_schema', 'STATISTICS']),
+                    where=statement.where
+                )
+                query = SQLQuery(
+                    new_statement,
+                    session=self.session
+                )
+                self.answer_select(query)
                 return
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif 'show create table' in sql_lower:
@@ -1476,39 +1592,23 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 self.answer_show_create_table(table)
                 return
             elif sql_category in ('character set', 'charset'):
-                charset = None
-                if condition == 'where':
-                    if type(expression) == BinaryOperation:
-                        if expression.op == '=':
-                            if type(expression.args[0]) == Identifier:
-                                if expression.args[0].parts[0].lower() == 'charset':
-                                    charset = expression.args[1].value
-                                else:
-                                    raise SqlApiException(
-                                        f'Error during processing query: {sql}\n'
-                                        f"Only filter by 'charset' supported 'WHERE', but '{expression.args[0].parts[0]}' found"
-                                    )
-                            else:
-                                raise SqlApiException(
-                                    f'Error during processing query: {sql}\n'
-                                    f"Expected identifier in 'WHERE', but '{expression.args[0]}' found"
-                                )
-                        else:
-                            raise SqlApiException(
-                                f'Error during processing query: {sql}\n'
-                                f"Expected '=' comparison in 'WHERE', but '{expression.op}' found"
-                            )
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('CHARACTER_SET_NAME'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
                     else:
-                        raise SqlApiException(
-                            f'Error during processing query: {sql}\n'
-                            f"Expected binary operation in 'WHERE', but '{expression}' found"
-                        )
-                elif condition is not None:
-                    raise SqlApiException(
-                        f'Error during processing query: {sql}\n'
-                        f"Only 'WHERE' filter supported, but '{condition}' found"
-                    )
-                self.answer_show_charset(charset)
+                        where = like
+                new_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(parts=['INFORMATION_SCHEMA', 'CHARACTER_SETS']),
+                    where=where
+                )
+                query = SQLQuery(
+                    new_statement,
+                    session=self.session
+                )
+                self.answer_select(query)
                 return
             elif sql_category == 'warnings':
                 self.answer_show_warnings()
@@ -1519,21 +1619,46 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     from_table=Identifier(parts=['information_schema', 'ENGINES'])
                 )
                 query = SQLQuery(
-                    str(new_statement),
+                    new_statement,
                     session=self.session
                 )
                 self.answer_select(query)
                 return
             elif sql_category == 'collation':
-                self.answer_show_collation()
+                where = statement.where
+                if statement.like is not None:
+                    like = BinaryOperation('like', args=[Identifier('Collation'), Constant(statement.like)])
+                    if where is not None:
+                        where = BinaryOperation('and', args=[where, like])
+                    else:
+                        where = like
+                new_statement = Select(
+                    targets=[
+                        Identifier('COLLATION_NAME', alias=Identifier('Collation')),
+                        Identifier('CHARACTER_SET_NAME', alias=Identifier('Charset')),
+                        Identifier('ID', alias=Identifier('Id')),
+                        Identifier('IS_DEFAULT', alias=Identifier('Default')),
+                        Identifier('IS_COMPILED', alias=Identifier('Compiled')),
+                        Identifier('SORTLEN', alias=Identifier('Sortlen')),
+                        Identifier('PAD_ATTRIBUTE', alias=Identifier('Pad_attribute'))
+                    ],
+                    from_table=Identifier(parts=['INFORMATION_SCHEMA', 'COLLATIONS']),
+                    where=where
+                )
+                query = SQLQuery(
+                    new_statement,
+                    session=self.session
+                )
+                self.answer_select(query)
                 return
             elif sql_category == 'table status':
+                # TODO improve it
                 # SHOW TABLE STATUS LIKE 'table'
                 table_name = None
-                if condition == 'like' and type(expression) == Constant:
-                    table_name = expression.value
-                elif condition == 'from' and type(expression) == Identifier:
-                    table_name = expression.parts[-1]
+                if statement.like is not None:
+                    table_name = statement.like
+                # elif condition == 'from' and type(expression) == Identifier:
+                #     table_name = expression.parts[-1]
                 if table_name is None:
                     err_str = f"Can't determine table name in query: {sql}"
                     log.warning(err_str)
@@ -1590,7 +1715,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
             if statement.table.parts[-1] != 'predictors':
                 raise ErBadTableError("Only 'DELETE' from table 'mindsdb.predictors' is possible at this moment")
-            self.delete_predictor_sql(str(sql))
+            self.delete_predictor_query(statement)
             self.packet(OkPacket).send()
         elif type(statement) == Insert:
             self.process_insert(statement)
@@ -1721,136 +1846,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'type': TYPES.MYSQL_TYPE_VAR_STRING
             }],
             data=[[table, f'create table {table} ()']]
-        )
-
-        packages.append(self.last_packet())
-        self.send_package_group(packages)
-
-    def answer_show_index(self):
-        packages = []
-        packages += self.get_tabel_packets(
-            columns=[{
-                'database': 'mysql',
-                'table_name': 'tables',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Table',
-                'alias': 'Table',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': CHARSET_NUMBERS['utf8_bin']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Non_unique',
-                'alias': 'Non_unique',
-                'type': TYPES.MYSQL_TYPE_LONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Key_name',
-                'alias': 'Key_name',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'mysql',
-                'table_name': 'index_column_usage',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Seq_in_index',
-                'alias': 'Seq_in_index',
-                'type': TYPES.MYSQL_TYPE_LONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Column_name',
-                'alias': 'Column_name',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Collation',
-                'alias': 'Collation',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Cardinality',
-                'alias': 'Cardinality',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Sub_part',
-                'alias': 'Sub_part',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': '',
-                'name': '',
-                'alias': 'Packed',
-                'type': TYPES.MYSQL_TYPE_NULL,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Null',
-                'alias': 'Null',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Index_type',
-                'alias': 'Index_type',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': CHARSET_NUMBERS['utf8_bin']
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Comment',
-                'alias': 'Comment',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'mysql',
-                'table_name': 'indexes',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Index_comment',
-                'alias': 'Index_comment',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': CHARSET_NUMBERS['utf8_bin']
-            }, {
-                'database': 'mysql',
-                'table_name': 'indexes',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Visible',
-                'alias': 'Visible',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': '',
-                'table_name': '',
-                'table_alias': 'SHOW_STATISTICS',
-                'name': 'Expression',
-                'alias': 'Expression',
-                'type': TYPES.MYSQL_TYPE_BLOB,
-                'charset': CHARSET_NUMBERS['utf8_bin']
-            }],
-            data=[]
         )
 
         packages.append(self.last_packet())
@@ -2139,113 +2134,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packages.append(self.last_packet())
         self.send_package_group(packages)
 
-    def answer_show_collation(self):
-        packages = []
-        packages += self.get_tabel_packets(
-            columns=[{
-                'database': 'information_schema',
-                'table_name': 'COLLATIONS',
-                'name': 'COLLATION_NAME',
-                'alias': 'Collation',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'COLLATIONS',
-                'name': 'CHARACTER_SET_NAME',
-                'alias': 'Charset',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'COLLATIONS',
-                'name': 'ID',
-                'alias': 'Id',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }, {
-                'database': 'information_schema',
-                'table_name': 'COLLATIONS',
-                'name': 'IS_DEFAULT',
-                'alias': 'Default',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'COLLATIONS',
-                'name': 'IS_COMPILED',
-                'alias': 'Compiled',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'COLLATIONS',
-                'name': 'SORTLEN',
-                'alias': 'Sortlen',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }],
-            data=[
-                ['utf8_general_ci', 'utf8', 33, 'Yes', 'Yes', 1],
-                ['latin1_swedish_ci', 'latin1', 8, 'Yes', 'Yes', 1]
-            ]
-        )
-        packages.append(self.last_packet())
-        self.send_package_group(packages)
-
-    def answer_show_charset(self, charset=None):
-        charsets = {
-            'utf8': ['utf8', 'UTF-8 Unicode', 'utf8_general_ci', 3],
-            'latin1': ['latin1', 'cp1252 West European', 'latin1_swedish_ci', 1],
-            'utf8mb4': ['utf8mb4', 'UTF-8 Unicode', 'utf8mb4_general_ci', 4]
-        }
-        if charset is None:
-            data = list(charsets.values())
-        elif charset not in charsets:
-            err_str = f'Unknown charset: {charset}'
-            log.warning(err_str)
-            raise SqlApiException(err_str)
-        else:
-            data = [charsets.get(charset)]
-
-        packages = []
-        packages += self.get_tabel_packets(
-            columns=[{
-                'database': 'information_schema',
-                'table_name': 'CHARACTER_SETS',
-                'name': 'CHARACTER_SET_NAME',
-                'alias': 'Charset',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'CHARACTER_SETS',
-                'name': 'DESCRIPTION',
-                'alias': 'Description',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'CHARACTER_SETS',
-                'name': 'DEFAULT_COLLATE_NAME',
-                'alias': 'Default collation',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING,
-                'charset': self.charset_text_type
-            }, {
-                'database': 'information_schema',
-                'table_name': 'CHARACTER_SETS',
-                'name': 'MAXLEN',
-                'alias': 'Maxlen',
-                'type': TYPES.MYSQL_TYPE_LONGLONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }],
-            data=data
-        )
-
-        packages.append(self.last_packet())
-        self.send_package_group(packages)
-
-    def answer_connection_id(self, sql):
+    def answer_connection_id(self):
         packages = self.get_tabel_packets(
             columns=[{
                 'database': '',
@@ -2278,7 +2167,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             columns=query.columns,
             data=query.result
         )
-        packages.append(self.packet(OkPacket, eof=True))
+        # there was hang of mysql client
+        # packages.append(self.packet(OkPacket, eof=True))
+        packages.append(self.last_packet())
         self.send_package_group(packages)
 
     def _get_column_defenition_packets(self, columns, data=[]):
@@ -2396,7 +2287,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             where=BinaryOperation('=', args=[Identifier('schema_name'), Constant(db_name)])
         )
         query = SQLQuery(
-            str(sql_statement),
+            sql_statement,
             session=self.session
         )
         result = query.fetch(
@@ -2463,9 +2354,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
                     # https://dev.mysql.com/doc/internals/en/com-stmt-prepare.html
                     sql = self.decode_utf(p.sql.value)
-                    statement = SqlStatementParser(sql)
-                    log.debug(f'COM_STMT_PREPARE: {statement.sql}')
-                    self.answer_stmt_prepare(statement)
+                    # statement = SqlStatementParser(sql)
+                    # log.debug(f'COM_STMT_PREPARE: {statement.sql}')
+                    self.answer_stmt_prepare(sql)
                 elif p.type.value == COMMANDS.COM_STMT_EXECUTE:
                     self.answer_stmt_execute(p.stmt_id.value, p.parameters)
                 elif p.type.value == COMMANDS.COM_STMT_FETCH:

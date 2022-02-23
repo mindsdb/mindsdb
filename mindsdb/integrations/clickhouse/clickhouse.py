@@ -45,9 +45,11 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
             dtype.audio: 'Nullable(String)',
             dtype.short_text: 'Nullable(String)',
             dtype.rich_text: 'Nullable(String)',
-            dtype.array: 'Nullable(String)',
             dtype.quantity: 'Nullable(String)',
-            dtype.tsarray: 'Nullable(String)',
+            dtype.num_array: 'Nullable(String)',
+            dtype.cat_array: 'Nullable(String)',
+            dtype.num_tsarray: 'Nullable(String)',
+            dtype.cat_tsarray: 'Nullable(String)',
             'default': 'Nullable(String)'
         }
 

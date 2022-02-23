@@ -1458,7 +1458,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
                 where = statement.where
                 if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
+                    like = BinaryOperation('like', args=[Identifier('Variable_name'), Constant(statement.like)])
                     if where is not None:
                         where = BinaryOperation('and', args=[where, like])
                     else:
@@ -1570,7 +1570,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     else:
                         where = like
                 new_statement = Select(
-                    targets=[Star()],
+                    targets=[
+                        Identifier('CHARACTER_SET_NAME', alias=Identifier('Charset')),
+                        Identifier('DEFAULT_COLLATE_NAME', alias=Identifier('Description')),
+                        Identifier('DESCRIPTION', alias=Identifier('Default collation')),
+                        Identifier('MAXLEN', alias=Identifier('Maxlen'))
+                    ],
                     from_table=Identifier(parts=['INFORMATION_SCHEMA', 'CHARACTER_SETS']),
                     where=where
                 )

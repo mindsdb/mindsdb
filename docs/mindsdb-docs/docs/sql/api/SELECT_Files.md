@@ -1,77 +1,10 @@
 # **SELECT from Files**
 
-The SELECT from File statement is to select a file as a datasource. This allows the user to create a predictor from a file that has been uploaded to MindsDB's Cloud/Database.
+The SELECT from Files statement is to select a file as a datasource. This allows the user to create a predictor from a file that has been uploaded to MindsDB's Cloud/Database.
 
 ## Example
 
-This example will show how to upload a file to the database via MindsDB Cloud and select data from a file to create a predictor. We will be using docker to help create a database connection.
-
-### Docker-compose file
-
-For this tutorial Visual studio will be used to execute our docker-compose file and sql code.
-
-The first step will be to create a docker-compose file to establish a database connection with the following details:
-
-File name: docker-compose.yml
-
-```bash
-version: '3.5'
-
-services:
-  postgres:
-    container_name: mindsdb_postgres_diabetic_data
-    image: postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: changeme
-      POSTGRES_DB: diabetic_data
-      PGDATA: /data/postgres
-    volumes:
-    # persist data storage in a docker container
-      - mindsdb_postgres_diabetic_data:/data/postgres
-    ports:
-      - "5433:5432"
-    network_mode: bridge
-    # restart: none
-
-
-volumes:
-    mindsdb_postgres_diabetic_data:
-```
-
-Open a terminal and run the command:
-
-```bash
-docker-compose up
-```
-
-### Running Ngrok Tunnel
-
-To establish a database connection to MindsDB we will use a tunneling program Ngrok to allow the remote database connection without exposing your public IP.
-
-Run the following command and copy the forwarding address:
-
-```bash
-ngrok tcp 5433
-```
-Results:
-```bash
-Session Status                online
-Account                       myaccount (Plan: Free)
-Version                       2.3.40
-Region                        United States (us)
-Web Interface                 http://127.0.0.1:4040
-Forwarding                    tcp://2.tcp.ngrok.io:12320 -> localhost:5433
-```
-We will copy the address `tcp://2.tcp.ngrok.io:12320` to use to connect our database.
-
-### Establishing Database Connection via MindsDB Cloud
-
-You can easily [create a database connection](https://docs.mindsdb.com/connect/)
-
-1. Login to MindsDB Cloud.
-2. Select Add Database and enter required details.
-3. Connect your database.
+This example will show how to upload a file to the database via MindsDB Cloud and select data from a file to create a predictor.
 
 ### Upload file to MindsDB Cloud
 

@@ -249,13 +249,13 @@ class DataStore():
             # ds = FileDS(source)
 
             # получаем файл и скармливаем его в FileDS
-            file_name = source.get('file')
+            file_name = source.get('mindsdb_file_name')
             file_record = session.query(File).filter_by(company_id=company_id, name=file_name).first()
             if file_record is None:
                 raise Exception(f"Cant find file '{file_name}'")
             self.fs_store.get(f'{company_id}@@@@@{file_name}', f'file_{company_id}_{file_record.id}', self.dir)
             # self.fs_store.get(f'{company_id}@@@@@{file_name}', f'datasource_{company_id}_{dataset_record.id}', self.dir)
-            #  filename, remote_name, local_path
+            # filename, remote_name, local_path
 
             path = Path(self.dir).joinpath(f'{company_id}@@@@@{file_name}').joinpath(file_record.source_file_path)
 

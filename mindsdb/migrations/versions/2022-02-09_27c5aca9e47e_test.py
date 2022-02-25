@@ -142,7 +142,11 @@ def upgrade():
             )
             session.add(file)
             session.flush()
-            ds_data['file_id'] = file.id
+            # ds_data['file_id'] = file.id
+            ds_data['source'] = {
+                'mindsdb_file_name': ds['name']
+                # 'source': ds_data['source']
+            }
             conn.execute(
                 text("""
                     update datasource set data = :ds_data where id = :id;

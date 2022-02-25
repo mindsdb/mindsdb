@@ -160,7 +160,7 @@ class Datasource(Resource):
             # TODO 
             # request.default_store.save_datasource(ds_name, source_type, source, file_path)
             file_id = request.default_store.save_file(ds_name, file_path, file_name=data['file'])
-            request.default_store.save_datasource(ds_name, source_type, source={'file': name})
+            request.default_store.save_datasource(ds_name, source_type, source={'mindsdb_file_name': name})
         else:
             file_path = None
             request.default_store.save_datasource(ds_name, source_type, source)

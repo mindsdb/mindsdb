@@ -32,8 +32,8 @@
       
         
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
-        <style>:root{--md-text-font-family:"Roboto";--md-code-font-family:"Roboto Mono"}</style>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,400i,700%7C&display=fallback">
+        <style>:root{--md-text-font-family:"Inter";--md-code-font-family:""}</style>
       
     
     
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#what-is-mindsdb" class="md-skip">
+        <a href="#quick-start-guide" class="md-skip">
           Skip to content
         </a>
       
@@ -155,7 +155,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              What is MindsDB
+              Quickstart
             
           </span>
         </div>
@@ -353,53 +353,9 @@
         
       
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          What is MindsDB
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
       <a href="." class="md-nav__link md-nav__link--active">
-        What is MindsDB
+        Quickstart
       </a>
-      
-        
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-vision" class="md-nav__link">
-    The Vision:
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#from-database-tables-to-machine-learning-models" class="md-nav__link">
-    From Database Tables to Machine Learning Models
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    Getting Started
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
       
     </li>
   
@@ -419,13 +375,13 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Getting Started Guide
+        Start MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Getting Started Guide" data-md-level="1">
+      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Getting Started Guide
+          Start MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -433,13 +389,22 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="info/" class="md-nav__link">
-        Getting Started
-      </a>
-    </li>
-  
-
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+      
+      <label class="md-nav__link" for="__nav_2_1">
+        Setup
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Setup" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_1">
+          <span class="md-nav__icon md-icon"></span>
+          Setup
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
           
             
   
@@ -482,26 +447,8 @@
     </li>
   
 
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="connect/" class="md-nav__link">
-        Plug your data
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
+          
+            
   
   
   
@@ -509,16 +456,16 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_4">
-        Connect to MindsDB SQL Server
+      <label class="md-nav__link" for="__nav_2_2">
+        Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Connect to MindsDB SQL Server" data-md-level="1">
-        <label class="md-nav__title" for="__nav_4">
+      <nav class="md-nav" aria-label="Connect" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
-          Connect to MindsDB SQL Server
+          Connect
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -527,8 +474,8 @@
   
   
     <li class="md-nav__item">
-      <a href="sql/connect/local/" class="md-nav__link">
-        Local Deployment
+      <a href="sql/connect/dbeaver/" class="md-nav__link">
+        DBeaver
       </a>
     </li>
   
@@ -539,9 +486,15 @@
   
   
     <li class="md-nav__item">
-      <a href="sql/connect/cloud/" class="md-nav__link">
-        MindsDB Cloud
+      <a href="sql/connect/mysql-client/" class="md-nav__link">
+        MySQL Client
       </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -563,167 +516,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
       
-      <label class="md-nav__link" for="__nav_5">
-        SQL
-        <span class="md-nav__icon md-icon"></span>
-      </label>
-      <nav class="md-nav" aria-label="SQL" data-md-level="1">
-        <label class="md-nav__title" for="__nav_5">
-          <span class="md-nav__icon md-icon"></span>
-          SQL
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="sql/api/use/" class="md-nav__link">
-        USE
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-      
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5_2" type="checkbox" id="__nav_5_2" >
-      
-      <label class="md-nav__link" for="__nav_5_2">
-        CREATE
-        <span class="md-nav__icon md-icon"></span>
-      </label>
-      <nav class="md-nav" aria-label="CREATE" data-md-level="2">
-        <label class="md-nav__title" for="__nav_5_2">
-          <span class="md-nav__icon md-icon"></span>
-          CREATE
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="sql/api/predictor/" class="md-nav__link">
-        Predictor
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="sql/api/view/" class="md-nav__link">
-        View
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="sql/api/using/" class="md-nav__link">
-        USING
-      </a>
-    </li>
-  
-
-          
-        </ul>
-      </nav>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="sql/api/retrain/" class="md-nav__link">
-        RETRAIN
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="sql/api/drop/" class="md-nav__link">
-        DROP
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="sql/api/select/" class="md-nav__link">
-        SELECT
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="sql/api/join/" class="md-nav__link">
-        JOIN
-      </a>
-    </li>
-  
-
-          
-        </ul>
-      </nav>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-      
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
-      
-      <label class="md-nav__link" for="__nav_6">
+      <label class="md-nav__link" for="__nav_3">
         Tutorials
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Tutorials" data-md-level="1">
-        <label class="md-nav__title" for="__nav_6">
+        <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
           Tutorials
         </label>
@@ -733,30 +533,18 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="sql/tutorials/ai-tables/" class="md-nav__link">
-        AI Tables Intro
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
     
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_2" type="checkbox" id="__nav_6_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_1" type="checkbox" id="__nav_3_1" >
       
-      <label class="md-nav__link" for="__nav_6_2">
+      <label class="md-nav__link" for="__nav_3_1">
         Regression
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Regression" data-md-level="2">
-        <label class="md-nav__title" for="__nav_6_2">
+        <label class="md-nav__title" for="__nav_3_1">
           <span class="md-nav__icon md-icon"></span>
           Regression
         </label>
@@ -812,14 +600,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_3" type="checkbox" id="__nav_6_3" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_2" type="checkbox" id="__nav_3_2" >
       
-      <label class="md-nav__link" for="__nav_6_3">
+      <label class="md-nav__link" for="__nav_3_2">
         Classification
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Classification" data-md-level="2">
-        <label class="md-nav__title" for="__nav_6_3">
+        <label class="md-nav__title" for="__nav_3_2">
           <span class="md-nav__icon md-icon"></span>
           Classification
         </label>
@@ -879,7 +667,7 @@
   
     <li class="md-nav__item">
       <a href="sql/tutorials/mushrooms/" class="md-nav__link">
-        Mushrooms
+        Mushrooms Hunting
       </a>
     </li>
   
@@ -899,16 +687,16 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_4" type="checkbox" id="__nav_6_4" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_3" type="checkbox" id="__nav_3_3" >
       
-      <label class="md-nav__link" for="__nav_6_4">
-        Time series
+      <label class="md-nav__link" for="__nav_3_3">
+        Time Series
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Time series" data-md-level="2">
-        <label class="md-nav__title" for="__nav_6_4">
+      <nav class="md-nav" aria-label="Time Series" data-md-level="2">
+        <label class="md-nav__title" for="__nav_3_3">
           <span class="md-nav__icon md-icon"></span>
-          Time series
+          Time Series
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -947,14 +735,179 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_7" type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
       
-      <label class="md-nav__link" for="__nav_7">
+      <label class="md-nav__link" for="__nav_4">
+        SQL API
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="SQL API" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          SQL API
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sql/api/use/" class="md-nav__link">
+        USE
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_2" type="checkbox" id="__nav_4_2" >
+      
+      <label class="md-nav__link" for="__nav_4_2">
+        CREATE
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="CREATE" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_2">
+          <span class="md-nav__icon md-icon"></span>
+          CREATE
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sql/api/datasources/" class="md-nav__link">
+        Datasource
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sql/api/predictor/" class="md-nav__link">
+        Predictor
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sql/api/view/" class="md-nav__link">
+        View
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sql/api/retrain/" class="md-nav__link">
+        RETRAIN
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sql/api/drop/" class="md-nav__link">
+        DROP
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sql/api/select/" class="md-nav__link">
+        SELECT
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sql/api/SELECT_Files/" class="md-nav__link">
+        SELECT from FILES
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="sql/api/join/" class="md-nav__link">
+        JOIN
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+      
+      <label class="md-nav__link" for="__nav_5">
         Contribution and Community
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Contribution and Community" data-md-level="1">
-        <label class="md-nav__title" for="__nav_7">
+        <label class="md-nav__title" for="__nav_5">
           <span class="md-nav__icon md-icon"></span>
           Contribution and Community
         </label>
@@ -984,7 +937,16 @@
   
 
           
-            
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
   
   
   
@@ -992,12 +954,6 @@
       <a href="faq/" class="md-nav__link">
         FAQ
       </a>
-    </li>
-  
-
-          
-        </ul>
-      </nav>
     </li>
   
 
@@ -1021,35 +977,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-vision" class="md-nav__link">
-    The Vision:
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#from-database-tables-to-machine-learning-models" class="md-nav__link">
-    From Database Tables to Machine Learning Models
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    Getting Started
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -1065,47 +992,151 @@
                   </a>
                 
                 
-                <h1 id="what-is-mindsdb">What is MindsDB?</h1>
-<p>MindsDB enables advanced predictive capabilities directly in your Database. This puts sophisticated machine learning techniques into the hands of anyone who knows SQL (data analysts, developers and business intelligence users) without the need for a new tool or significant training. </p>
-<p>Data is the single most important ingredient in machine learning, and your data lives in a database. So why do machine learning anywhere else? </p>
-<p><img alt="Machine Learning in Database using SQL" src="/assets/mdb_image.png" /></p>
-<h2 id="the-vision">The Vision:</h2>
-<p><strong><em>A world where people use intelligent databases to make better data-driven decisions.</em></strong></p>
-<p>...and we believe the best way to make these decisions is to enable this capability within existing databases without the effort of creating a new one.</p>
-<p>(Despite the name we are not actually a database!)</p>
-<h2 id="from-database-tables-to-machine-learning-models">From Database Tables to Machine Learning Models</h2>
-<div class="admonition info">
-<p class="admonition-title">As a quick example, let's consider a database that stores the SqFt and Price of Home Rentals:</p>
-<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">sqft</span><span class="p">,</span> <span class="n">price</span> <span class="k">FROM</span> <span class="n">home_rentals_table</span><span class="p">;</span>
+                <h1 id="quick-start-guide">Quick Start Guide</h1>
+<p>Follow these instructions to start predicting with MindsDB straight away.</p>
+<ol>
+<li>
+<p>Create your <a href="https://cloud.mindsdb.com/signup">free MindsDB Cloud account</a>.</p>
+<p><sup><sub>To proceed with a local installation, follow our <a href="/deployment/docker">Docker instructions</a>.</sub></sup></p>
+</li>
+<li>
+<p>Open your SQL client and connect to MindsDB using the email and password you used to sign up for MindsDB Cloud.</p>
+<p><sup><sub>If you do not already have a preferred SQL client, we recommend <a href="https://dbeaver.io/download/">DBeaver Community Edition</a></sub></sup></p>
+</li>
+<li>
+<p>We have already prepared some example data for you.  To add it to your account, use the <code>CREATE DATASOURCE</code> syntax by copy and pasting this command into your SQL client:</li></p>
+<p><div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">DATASOURCE</span> <span class="n">exampleData</span>
+<span class="k">WITH</span> <span class="n">ENGINE</span> <span class="o">=</span> <span class="ss">&quot;postgres&quot;</span><span class="p">,</span>
+<span class="k">PARAMETERS</span> <span class="o">=</span> <span class="err">{</span> 
+    <span class="ss">&quot;user&quot;</span><span class="p">:</span> <span class="ss">&quot;demo_user&quot;</span><span class="p">,</span>
+    <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;demo_password&quot;</span><span class="p">,</span>
+    <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;3.220.66.106&quot;</span><span class="p">,</span>
+    <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="ss">&quot;5432&quot;</span><span class="p">,</span>
+    <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;demo&quot;</span>
+    <span class="err">}</span>
 </code></pre></div>
-<p><img alt="SQFT vs Price" src="/assets/info/sqft-price.png" /></p>
-</div>
-<div class="admonition note">
-<p class="admonition-title">You query the database for information in this table and if your search criteria generates a match: you get results:</p>
-<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">sqft</span><span class="p">,</span> <span class="n">price</span> <span class="k">FROM</span> <span class="n">home_rentals_table</span> <span class="k">WHERE</span> <span class="n">sqft</span> <span class="o">=</span> <span class="mi">900</span><span class="p">;</span>
+<div id="create-datasource">
+  <style>
+    #create-datasource code { background-color: #353535; color: #f5f5f5 }
+  </style>
+<div class="highlight"><pre><span></span><code>mysql&gt; CREATE DATASOURCE exampleData
+    -&gt; WITH ENGINE = &quot;postgres&quot;,
+    -&gt; PARAMETERS = {
+    -&gt; &quot;user&quot;: &quot;demo_user&quot;,
+    -&gt; &quot;password&quot;: &quot;demo_password&quot;,
+    -&gt; &quot;host&quot;: &quot;3.220.66.106&quot;,
+    -&gt; &quot;port&quot;: &quot;5432&quot;,
+    -&gt; &quot;database&quot;: &quot;demo&quot;
+    -&gt; }
+Query OK, 0 rows affected (3.22 sec)
 </code></pre></div>
-<p><img alt="SELECT FROM Table" src="/assets/info/select.png" /></p>
-</div>
-<div class="admonition note">
-<p class="admonition-title">If your search criteria do not generate a match - your results will be empty:</p>
-<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">sqft</span><span class="p">,</span> <span class="n">price</span> <span class="k">FROM</span> <span class="n">home_rentals_table</span> <span class="k">WHERE</span> <span class="n">sqft</span> <span class="o">=</span> <span class="mi">800</span><span class="p">;</span>
+</div></p>
+</li>
+<li>
+<p>You can now preview the available data with a standard <code>SELECT</code>.  To preview the Home Rentals dataset, copy and paste this command into your SQL client:</p>
+<p><div class="highlight"><pre><span></span><code>SELECT * 
+FROM exampleData.demo_data.home_rentals
+LIMIT 10;
 </code></pre></div>
-<p><img alt="SELECT FROM Table No Results" src="/assets/info/selectm.png" /></p>
-</div>
-<div class="admonition tip">
-<p class="admonition-title">An ML model can be fitted to the data in the home rentals table.</p>
-<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span>  <span class="n">home_rentals_model</span> <span class="k">FROM</span> <span class="n">home_rentals_table</span> <span class="n">PREDICT</span> <span class="n">price</span><span class="p">;</span>   
+<div id="preview-data">
+<style>
+    #preview-data code { background-color: #353535; color: #f5f5f5 }
+</style>
+<div class="highlight"><pre><span></span><code>mysql&gt; SELECT * 
+    -&gt; FROM exampleData.demo_data.home_rentals
+    -&gt; LIMIT 10;
++-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
+| number_of_rooms | number_of_bathrooms | sqft | location | days_on_market | initial_price | neighborhood | rental_price |
++-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
+| 0.0             | 1.0                 | 484  | great    | 10             | 2271          | south_side   | 2271         |
+| 1.0             | 1.0                 | 674  | good     | 1              | 2167          | downtown     | 2167         |
+| 1.0             | 1.0                 | 554  | poor     | 19             | 1883          | westbrae     | 1883         |
+| 0.0             | 1.0                 | 529  | great    | 3              | 2431          | south_side   | 2431         |
+| 3.0             | 2.0                 | 1219 | great    | 3              | 5510          | south_side   | 5510         |
+| 1.0             | 1.0                 | 398  | great    | 11             | 2272          | south_side   | 2272         |
+| 3.0             | 2.0                 | 1190 | poor     | 58             | 4463          | westbrae     | 4124         |
+| 1.0             | 1.0                 | 730  | good     | 0              | 2224          | downtown     | 2224         |
+| 0.0             | 1.0                 | 298  | great    | 9              | 2104          | south_side   | 2104         |
+| 2.0             | 1.0                 | 878  | great    | 8              | 3861          | south_side   | 3861         |
++-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
+10 rows in set (0.36 sec)
 </code></pre></div>
-<p><img alt="Model" src="/assets/info/model.png" /></p>
-</div>
-<div class="admonition success">
-<p class="admonition-title">An ML model can provide approximate answers for searches where there is no exact match in the income table:</p>
-<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">sqft</span><span class="p">,</span> <span class="n">price</span> <span class="k">FROM</span> <span class="n">home_rentals_model</span> <span class="k">WHERE</span> <span class="n">sqft</span> <span class="o">=</span> <span class="mi">800</span><span class="p">;</span>
+</div></p>
+</li>
+<li>
+<p>Now you are ready to create your first predictor.  Use the <code>CREATE PREDICTOR</code> syntax by copy and pasting this command into your SQL client:</p>
+<p><div class="highlight"><pre><span></span><code>CREATE PREDICTOR homeRentalsPredictor
+FROM exampleData
+    (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price;
 </code></pre></div>
-<p><img alt="Query model" src="/assets/info/query.png" /></p>
-</div>
-<h2 id="getting-started">Getting Started</h2>
-<p>To start using MindsDB, check out our <a href="/info">Getting Started Guide</a></p>
+<div id="create-predictor">
+  <style>
+    #create-predictor code { background-color: #353535; color: #f5f5f5 }
+  </style>
+<div class="highlight"><pre><span></span><code>mysql&gt; CREATE PREDICTOR homeRentalsPredictor
+    -&gt; FROM exampleData
+    -&gt; (SELECT * FROM demo_data.home_rentals)
+    -&gt; PREDICT rental_price;
+Query OK, 0 rows affected (9.79 sec)
+</code></pre></div>
+</div></p>
+</li>
+<li>
+<p>It may take a couple of minutes for training to complete.  You can monitor the status of your predictor by copy and pasting this command into your SQL client:</p>
+<p><div class="highlight"><pre><span></span><code>SELECT status
+FROM predictors
+WHERE name=&#39;homeRentalsPredictor&#39;;
+</code></pre></div>
+<div id="predictor-status">
+  <style>
+    #predictor-status code { background-color: #353535; color: #f5f5f5 }
+  </style>
+<div class="highlight"><pre><span></span><code>mysql&gt; SELECT status
+    -&gt; FROM predictors
+    -&gt; WHERE name=&#39;homeRentalsPredictor&#39;;
++----------+
+| status   |
++----------+
+| training |
++----------+
+1 row in set (0.19 sec)
+...
+mysql&gt; SELECT status
+    -&gt; FROM predictors
+    -&gt; WHERE name=&#39;homeRentalsPredictor&#39;;
++----------+
+| status   |
++----------+
+| complete |
++----------+
+1 row in set (0.31 sec)
+</code></pre></div>
+</div></p>
+</li>
+<li>
+<p>You should see a status of <code>generating</code>, then <code>training</code> initially, followed by <code>complete</code> once it is done.  The <code>SELECT</code> syntax will allow you to make a prediction based on features.  Make your first prediction by copy and pasting this command into your SQL client:</p>
+<p><div class="highlight"><pre><span></span><code>SELECT rental_price
+FROM homeRentalsPredictor
+WHERE number_of_bathrooms=2 AND sqft=1000;
+</code></pre></div>
+<div id="make-prediction">
+  <style>
+    #make-prediction code { background-color: #353535; color: #f5f5f5 }
+  </style>
+<div class="highlight"><pre><span></span><code>mysql&gt; SELECT rental_price
+    -&gt; FROM homeRentalsPredictor
+    -&gt; WHERE number_of_bathrooms=2 AND sqft=1000;
++--------------+
+| rental_price |
++--------------+
+| 1130         |
++--------------+
+1 row in set (0.38 sec)
+</code></pre></div>
+</div></p>
+</li>
+</ol>
                 
               
               

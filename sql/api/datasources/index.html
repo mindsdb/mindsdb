@@ -9,14 +9,14 @@
       
       
       
-        <link rel="canonical" href="https://docs.mindsdb.com/sql/api/use/">
+        <link rel="canonical" href="https://docs.mindsdb.com/sql/api/datasources/">
       
       <link rel="icon" href="../../../assets/mdb_logo.png">
       <meta name="generator" content="mkdocs-1.2.2, mkdocs-material-7.2.8">
     
     
       
-        <title>USE - MindsDB Documentation</title>
+        <title>Datasource - MindsDB Documentation</title>
       
     
     
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#use-statement" class="md-skip">
+        <a href="#create-datasource" class="md-skip">
           Skip to content
         </a>
       
@@ -155,7 +155,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              USE
+              Datasource
             
           </span>
         </div>
@@ -743,6 +743,41 @@
             
   
   
+  
+    <li class="md-nav__item">
+      <a href="../use/" class="md-nav__link">
+        USE
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_2" type="checkbox" id="__nav_4_2" checked>
+      
+      <label class="md-nav__link" for="__nav_4_2">
+        CREATE
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="CREATE" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_2">
+          <span class="md-nav__icon md-icon"></span>
+          CREATE
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
     
   
   
@@ -755,12 +790,12 @@
       
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
-          USE
+          Datasource
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
-        USE
+        Datasource
       </a>
       
         
@@ -778,8 +813,8 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#preview-the-data" class="md-nav__link">
-    Preview the data
+  <a href="#syntax" class="md-nav__link">
+    Syntax
   </a>
   
 </li>
@@ -788,39 +823,6 @@
   
 </nav>
       
-    </li>
-  
-
-          
-            
-  
-  
-  
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-      
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_2" type="checkbox" id="__nav_4_2" >
-      
-      <label class="md-nav__link" for="__nav_4_2">
-        CREATE
-        <span class="md-nav__icon md-icon"></span>
-      </label>
-      <nav class="md-nav" aria-label="CREATE" data-md-level="2">
-        <label class="md-nav__title" for="__nav_4_2">
-          <span class="md-nav__icon md-icon"></span>
-          CREATE
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../datasources/" class="md-nav__link">
-        Datasource
-      </a>
     </li>
   
 
@@ -1016,8 +1018,8 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#preview-the-data" class="md-nav__link">
-    Preview the data
+  <a href="#syntax" class="md-nav__link">
+    Syntax
   </a>
   
 </li>
@@ -1034,22 +1036,41 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/sql/api/use.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/sql/api/datasources.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
                 
-                <h1 id="use-statement">USE statement</h1>
-<p>The <code>use integration_name</code> statement provides an option to use the connected datasources and <code>SELECT</code> from the database tables. Even if you are connecting to MindsDB as MySQL database, you will still be able to preview or <code>SELECT</code> from your database. 
-If you haven't created a datasource after connecting to your database check out the simple steps explained <a href="/connect/#create-new-datasource">here</a>.</p>
-<h2 id="preview-the-data">Preview the data</h2>
-<p>To connect to your database <code>use</code> the created datasource: </p>
-<div class="highlight"><pre><span></span><code><span class="n">use</span> <span class="n">integration_name</span>
+                <h1 id="create-datasource">Create Datasource</h1>
+<p>MindsDB enables connections to your favorite databases, data warehouses, data lakes, etc in a simple way.</p>
+<p>Our SQL API supports creating a datasource connection by passing any credentials needed by each type of system that you are connecting to. </p>
+<h2 id="syntax">Syntax</h2>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">DATASOURCE</span> <span class="n">datasource_name</span>
+<span class="k">WITH</span>
+    <span class="n">engine</span><span class="o">=</span><span class="n">engine_string</span><span class="p">,</span> 
+    <span class="k">parameters</span><span class="o">=</span><span class="err">{</span><span class="ss">&quot;key&quot;</span><span class="p">:</span><span class="ss">&quot;value&quot;</span><span class="p">,</span> <span class="p">...</span><span class="err">}</span><span class="p">;</span>
 </code></pre></div>
-<p>Then, simply <code>SELECT</code> from the tables:</p>
-<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="k">table_name</span><span class="p">;</span>
+<h1 id="example-mariadb">Example: MariaDB</h1>
+<p>Here is a concrete example to connect to a MySQL database.</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">DATASOURCE</span> <span class="n">mysql_datasource</span> 
+<span class="k">WITH</span> 
+    <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;mariadb&#39;</span><span class="p">,</span> 
+    <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
+        <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;root&quot;</span><span class="p">,</span>
+        <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">3307</span><span class="p">,</span> 
+        <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;password&quot;</span><span class="p">,</span> 
+        <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
+        <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;mariadb&quot;</span>
+        <span class="err">}</span><span class="p">;</span>
 </code></pre></div>
-<p><img alt="Use datasource" src="/assets/sql/use.png" /></p>
+<p>Once a datasource has been correctly created, you will see it registered in <code>mindsdb.datasources</code>, ready for creating and querying predictors with it.</p>
+<div class="highlight"><pre><span></span><code><span class="k">select</span> <span class="o">*</span> <span class="k">from</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">datasources</span><span class="p">;</span>
+</code></pre></div>
+<p><img alt="Once a datasource has been correctly created, you will see it registered in mindsdb.datasources" src="../../../assets/sql/datasource_listing.png" /></p>
+<div class="admonition info">
+<p class="admonition-title">Work in progress</p>
+<p>Note this feature is in beta version. If you have additional questions about other supported datasources or you expirience some issues <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ">reach out to us on Slack</a> or open GitHub issue.</p>
+</div>
                 
               
               

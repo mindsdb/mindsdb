@@ -9,14 +9,14 @@
       
       
       
-        <link rel="canonical" href="https://docs.mindsdb.com/sql/api/use/">
+        <link rel="canonical" href="https://docs.mindsdb.com/sql/connect/mysql-client/">
       
       <link rel="icon" href="../../../assets/mdb_logo.png">
       <meta name="generator" content="mkdocs-1.2.2, mkdocs-material-7.2.8">
     
     
       
-        <title>USE - MindsDB Documentation</title>
+        <title>MySQL Client - MindsDB Documentation</title>
       
     
     
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#use-statement" class="md-skip">
+        <a href="#mindsdb-as-a-sql-database" class="md-skip">
           Skip to content
         </a>
       
@@ -155,7 +155,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              USE
+              MySQL Client
             
           </span>
         </div>
@@ -357,12 +357,14 @@
 
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" checked>
       
       <label class="md-nav__link" for="__nav_2">
         Start MindsDB
@@ -441,12 +443,14 @@
             
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" checked>
       
       <label class="md-nav__link" for="__nav_2_2">
         Connect
@@ -464,7 +468,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../connect/dbeaver/" class="md-nav__link">
+      <a href="../dbeaver/" class="md-nav__link">
         DBeaver
       </a>
     </li>
@@ -474,11 +478,58 @@
             
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../../connect/mysql-client/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          MySQL Client
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         MySQL Client
       </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#connect" class="md-nav__link">
+    Connect
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mindsdb-database" class="md-nav__link">
+    MindsDB Database
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -720,14 +771,12 @@
 
   
   
-    
-  
   
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
       
       <label class="md-nav__link" for="__nav_4">
         SQL API
@@ -743,51 +792,11 @@
             
   
   
-    
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          USE
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../api/use/" class="md-nav__link">
         USE
       </a>
-      
-        
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#preview-the-data" class="md-nav__link">
-    Preview the data
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -818,7 +827,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../datasources/" class="md-nav__link">
+      <a href="../../api/datasources/" class="md-nav__link">
         Datasource
       </a>
     </li>
@@ -830,7 +839,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../predictor/" class="md-nav__link">
+      <a href="../../api/predictor/" class="md-nav__link">
         Predictor
       </a>
     </li>
@@ -842,7 +851,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../view/" class="md-nav__link">
+      <a href="../../api/view/" class="md-nav__link">
         View
       </a>
     </li>
@@ -860,7 +869,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../retrain/" class="md-nav__link">
+      <a href="../../api/retrain/" class="md-nav__link">
         RETRAIN
       </a>
     </li>
@@ -872,7 +881,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../drop/" class="md-nav__link">
+      <a href="../../api/drop/" class="md-nav__link">
         DROP
       </a>
     </li>
@@ -884,7 +893,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../select/" class="md-nav__link">
+      <a href="../../api/select/" class="md-nav__link">
         SELECT
       </a>
     </li>
@@ -896,7 +905,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../SELECT_Files/" class="md-nav__link">
+      <a href="../../api/SELECT_Files/" class="md-nav__link">
         SELECT from FILES
       </a>
     </li>
@@ -908,7 +917,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../join/" class="md-nav__link">
+      <a href="../../api/join/" class="md-nav__link">
         JOIN
       </a>
     </li>
@@ -1016,8 +1025,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#preview-the-data" class="md-nav__link">
-    Preview the data
+  <a href="#connect" class="md-nav__link">
+    Connect
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mindsdb-database" class="md-nav__link">
+    MindsDB Database
   </a>
   
 </li>
@@ -1034,22 +1050,75 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/sql/api/use.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/sql/connect/mysql-client.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
                 
-                <h1 id="use-statement">USE statement</h1>
-<p>The <code>use integration_name</code> statement provides an option to use the connected datasources and <code>SELECT</code> from the database tables. Even if you are connecting to MindsDB as MySQL database, you will still be able to preview or <code>SELECT</code> from your database. 
-If you haven't created a datasource after connecting to your database check out the simple steps explained <a href="/connect/#create-new-datasource">here</a>.</p>
-<h2 id="preview-the-data">Preview the data</h2>
-<p>To connect to your database <code>use</code> the created datasource: </p>
-<div class="highlight"><pre><span></span><code><span class="n">use</span> <span class="n">integration_name</span>
+                <h1 id="mindsdb-as-a-sql-database">MindsDB as a SQL Database</h1>
+<p>MindsDB provides a powerful MySQL API that allows users to connect to it using the <a href="https://dev.mysql.com/doc/refman/8.0/en/mysql.html">MySQL Command-Line Client</a>.</p>
+<h2 id="connect">Connect</h2>
+<div class="admonition tip">
+<p class="admonition-title">Connecting to the localhost</p>
+<p>Make sure you always use 127.0.0.1 locally instead of localhost as a hostname.</p>
+</div>
+<p>Connecting to MySQL API is the same as connecting to a MySQL database. Open mysql client and run:</p>
+<div class="highlight"><pre><span></span><code>mysql -h 127.0.0.1 --port 47335 -u mindsdb -p 
 </code></pre></div>
-<p>Then, simply <code>SELECT</code> from the tables:</p>
-<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="k">table_name</span><span class="p">;</span>
+<p>The required parameters are:</p>
+<ul>
+<li>-h: Host name of MindsDB SQL Server<ul>
+<li>cloud.mindsdb.com - for MindsDB cloud</li>
+<li>127.0.0.1 - for local deployment</li>
+</ul>
+</li>
+<li>--port: TCP/IP port number for connection<ul>
+<li>3307 - for MindsDB cloud</li>
+<li>47335 - for local deployment</li>
+</ul>
+</li>
+<li>-u: user name to use when connecting<ul>
+<li>your MindsDB cloud name</li>
+<li>mindsdb - for local deployment</li>
+</ul>
+</li>
+<li>-p:  Password to use when connecting<ul>
+<li>your MindsDB cloud password</li>
+<li>no password for local deployment</li>
+</ul>
+</li>
+</ul>
+<p><img alt="Connect" src="/assets/sql/mysql-client.gif" /></p>
+<h2 id="mindsdb-database">MindsDB Database</h2>
+<p>On startup the mindsdb database will contain 3 tables as  <code>predictors</code>, <code>commands</code> and <code>datasources</code>. 
+    <div id="create-datasource">
+      <style>
+        #create-datasource code { background-color: #353535; color: #f5f5f5 }
+      </style>
+    <div class="highlight"><pre><span></span><code>MySQL [(none)]&gt; use mindsdb;
+Database changed
+MySQL [mindsdb]&gt; show tables;
++---------------------------+
+| Tables_in_mindsdb         |
++---------------------------+
+| predictors                |
+| commands                  |
+| datasources               |
++---------------------------+
+3 rows in set (0.14 sec)
+
+MySQL [mindsdb]&gt; 
 </code></pre></div>
-<p><img alt="Use datasource" src="/assets/sql/use.png" /></p>
+    </div></p>
+<p>All of the newly trained machine learning models will be visible as a new record inside the <code>predictors</code> table. The <code>predictors</code> columns contains information about each model as:</p>
+<ul>
+<li>name - The name of the model.</li>
+<li>status - Training status(training, complete, error).</li>
+<li>accuracy - The model accuracy.</li>
+<li>predict - The name of the target variable.</li>
+<li>select_data_query - SQL select query to create the datasource.</li>
+<li>training options - Additional training parameters.</li>
+</ul>
                 
               
               

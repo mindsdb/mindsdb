@@ -32,8 +32,8 @@
       
         
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
-        <style>:root{--md-text-font-family:"Roboto";--md-code-font-family:"Roboto Mono"}</style>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,400i,700%7C&display=fallback">
+        <style>:root{--md-text-font-family:"Inter";--md-code-font-family:""}</style>
       
     
     
@@ -345,7 +345,7 @@
   
     <li class="md-nav__item">
       <a href="../.." class="md-nav__link">
-        What is MindsDB
+        Quickstart
       </a>
     </li>
   
@@ -367,27 +367,38 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" checked>
       
       <label class="md-nav__link" for="__nav_2">
-        Getting Started Guide
+        Start MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Getting Started Guide" data-md-level="1">
+      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Getting Started Guide
+          Start MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
             
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../../info/" class="md-nav__link">
-        Getting Started
-      </a>
-    </li>
   
-
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" checked>
+      
+      <label class="md-nav__link" for="__nav_2_1">
+        Setup
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Setup" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_1">
+          <span class="md-nav__icon md-icon"></span>
+          Setup
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
           
             
   
@@ -435,22 +446,8 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#for-docker-for-mac-users" class="md-nav__link">
-    For "Docker for Mac" Users
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#pull-image" class="md-nav__link">
     Pull image
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#publish-ports" class="md-nav__link">
-    Publish ports
   </a>
   
 </li>
@@ -462,15 +459,22 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#extend-configjson" class="md-nav__link">
-    Extend config.json
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    Troubleshooting
+  </a>
   
 </li>
       
@@ -511,26 +515,8 @@
     </li>
   
 
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../connect/" class="md-nav__link">
-        Plug your data
-      </a>
-    </li>
-  
-
-    
-      
-      
-      
-
+          
+            
   
   
   
@@ -538,16 +524,16 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_4">
-        Connect to MindsDB SQL Server
+      <label class="md-nav__link" for="__nav_2_2">
+        Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Connect to MindsDB SQL Server" data-md-level="1">
-        <label class="md-nav__title" for="__nav_4">
+      <nav class="md-nav" aria-label="Connect" data-md-level="2">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
-          Connect to MindsDB SQL Server
+          Connect
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -556,8 +542,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/connect/local/" class="md-nav__link">
-        Local Deployment
+      <a href="../../sql/connect/dbeaver/" class="md-nav__link">
+        DBeaver
       </a>
     </li>
   
@@ -568,9 +554,15 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sql/connect/cloud/" class="md-nav__link">
-        MindsDB Cloud
+      <a href="../../sql/connect/mysql-client/" class="md-nav__link">
+        MySQL Client
       </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -592,167 +584,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
       
-      <label class="md-nav__link" for="__nav_5">
-        SQL
-        <span class="md-nav__icon md-icon"></span>
-      </label>
-      <nav class="md-nav" aria-label="SQL" data-md-level="1">
-        <label class="md-nav__title" for="__nav_5">
-          <span class="md-nav__icon md-icon"></span>
-          SQL
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../sql/api/use/" class="md-nav__link">
-        USE
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-      
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5_2" type="checkbox" id="__nav_5_2" >
-      
-      <label class="md-nav__link" for="__nav_5_2">
-        CREATE
-        <span class="md-nav__icon md-icon"></span>
-      </label>
-      <nav class="md-nav" aria-label="CREATE" data-md-level="2">
-        <label class="md-nav__title" for="__nav_5_2">
-          <span class="md-nav__icon md-icon"></span>
-          CREATE
-        </label>
-        <ul class="md-nav__list" data-md-scrollfix>
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../sql/api/predictor/" class="md-nav__link">
-        Predictor
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../sql/api/view/" class="md-nav__link">
-        View
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../sql/api/using/" class="md-nav__link">
-        USING
-      </a>
-    </li>
-  
-
-          
-        </ul>
-      </nav>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../sql/api/retrain/" class="md-nav__link">
-        RETRAIN
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../sql/api/drop/" class="md-nav__link">
-        DROP
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../sql/api/select/" class="md-nav__link">
-        SELECT
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../sql/api/join/" class="md-nav__link">
-        JOIN
-      </a>
-    </li>
-  
-
-          
-        </ul>
-      </nav>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-      
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
-      
-      <label class="md-nav__link" for="__nav_6">
+      <label class="md-nav__link" for="__nav_3">
         Tutorials
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Tutorials" data-md-level="1">
-        <label class="md-nav__title" for="__nav_6">
+        <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
           Tutorials
         </label>
@@ -762,30 +601,18 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../sql/tutorials/ai-tables/" class="md-nav__link">
-        AI Tables Intro
-      </a>
-    </li>
-  
-
-          
-            
-  
-  
-  
     
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_2" type="checkbox" id="__nav_6_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_1" type="checkbox" id="__nav_3_1" >
       
-      <label class="md-nav__link" for="__nav_6_2">
+      <label class="md-nav__link" for="__nav_3_1">
         Regression
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Regression" data-md-level="2">
-        <label class="md-nav__title" for="__nav_6_2">
+        <label class="md-nav__title" for="__nav_3_1">
           <span class="md-nav__icon md-icon"></span>
           Regression
         </label>
@@ -841,14 +668,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_3" type="checkbox" id="__nav_6_3" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_2" type="checkbox" id="__nav_3_2" >
       
-      <label class="md-nav__link" for="__nav_6_3">
+      <label class="md-nav__link" for="__nav_3_2">
         Classification
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Classification" data-md-level="2">
-        <label class="md-nav__title" for="__nav_6_3">
+        <label class="md-nav__title" for="__nav_3_2">
           <span class="md-nav__icon md-icon"></span>
           Classification
         </label>
@@ -908,7 +735,7 @@
   
     <li class="md-nav__item">
       <a href="../../sql/tutorials/mushrooms/" class="md-nav__link">
-        Mushrooms
+        Mushrooms Hunting
       </a>
     </li>
   
@@ -928,16 +755,16 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6_4" type="checkbox" id="__nav_6_4" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_3" type="checkbox" id="__nav_3_3" >
       
-      <label class="md-nav__link" for="__nav_6_4">
-        Time series
+      <label class="md-nav__link" for="__nav_3_3">
+        Time Series
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Time series" data-md-level="2">
-        <label class="md-nav__title" for="__nav_6_4">
+      <nav class="md-nav" aria-label="Time Series" data-md-level="2">
+        <label class="md-nav__title" for="__nav_3_3">
           <span class="md-nav__icon md-icon"></span>
-          Time series
+          Time Series
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
           
@@ -976,14 +803,179 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_7" type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
       
-      <label class="md-nav__link" for="__nav_7">
+      <label class="md-nav__link" for="__nav_4">
+        SQL API
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="SQL API" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          SQL API
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/api/use/" class="md-nav__link">
+        USE
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_2" type="checkbox" id="__nav_4_2" >
+      
+      <label class="md-nav__link" for="__nav_4_2">
+        CREATE
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="CREATE" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_2">
+          <span class="md-nav__icon md-icon"></span>
+          CREATE
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/api/datasources/" class="md-nav__link">
+        Datasource
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/api/predictor/" class="md-nav__link">
+        Predictor
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/api/view/" class="md-nav__link">
+        View
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/api/retrain/" class="md-nav__link">
+        RETRAIN
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/api/drop/" class="md-nav__link">
+        DROP
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/api/select/" class="md-nav__link">
+        SELECT
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/api/SELECT_Files/" class="md-nav__link">
+        SELECT from FILES
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/api/join/" class="md-nav__link">
+        JOIN
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+      
+      <label class="md-nav__link" for="__nav_5">
         Contribution and Community
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Contribution and Community" data-md-level="1">
-        <label class="md-nav__title" for="__nav_7">
+        <label class="md-nav__title" for="__nav_5">
           <span class="md-nav__icon md-icon"></span>
           Contribution and Community
         </label>
@@ -1013,7 +1005,16 @@
   
 
           
-            
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
   
   
   
@@ -1021,12 +1022,6 @@
       <a href="../../faq/" class="md-nav__link">
         FAQ
       </a>
-    </li>
-  
-
-          
-        </ul>
-      </nav>
     </li>
   
 
@@ -1065,22 +1060,8 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#for-docker-for-mac-users" class="md-nav__link">
-    For "Docker for Mac" Users
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#pull-image" class="md-nav__link">
     Pull image
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#publish-ports" class="md-nav__link">
-    Publish ports
   </a>
   
 </li>
@@ -1092,15 +1073,22 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#extend-configjson" class="md-nav__link">
-    Extend config.json
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    Troubleshooting
+  </a>
   
 </li>
       
@@ -1128,9 +1116,6 @@
 <p>You should see the <code>Hello from Docker!</code> message displayed. If not, check the <a href="https://www.docker.com/get-started" target="_blank">Get Started</a> documentation.</p>
 <h3 id="mindsdb-container">MindsDB container</h3>
 <p>MindsDB images are uploaded to the <a href="https://hub.docker.com/u/mindsdb" target="_blank">MindsDB repo on docker hub</a> after each release.</p>
-<h4 id="for-docker-for-mac-users">For "Docker for Mac" Users</h4>
-<p>By default, Docker for Mac allocates <strong>2.00GB of memory</strong>. This is insufficient for deploying to docker. We recommend increasing the default memory limit to <strong>4.00GB</strong>. </p>
-<p>Please refer to <a href="https://docs.docker.com/desktop/mac/#resources">https://docs.docker.com/desktop/mac/#resources</a> for more information on how to increase the allocated memory.</p>
 <h4 id="pull-image">Pull image</h4>
 <p>First, run the below command to pull our latest production image:</p>
 <div class="highlight"><pre><span></span><code>docker pull mindsdb/mindsdb
@@ -1138,31 +1123,31 @@
 <p>Or, to try out the latest beta version, pull the beta image:</p>
 <div class="highlight"><pre><span></span><code>docker pull mindsdb/mindsdb_beta
 </code></pre></div>
-<h4 id="publish-ports">Publish ports</h4>
-<p>By default, when you run the MindsDB container, it does not publish any of its ports. To make the ports available you must run the container by providing <code>-p</code> flag as:</p>
-<ul>
-<li><code>-p 47334:47334</code> - Map 47334 port which is used by the MindsDB GUI and the HTTP API. </li>
-<li><code>-p 47335:47335</code> - Map 47335 to use MindsDB MySQL API.</li>
-<li><code>-p 47336:47336</code> - Map  47336 port to use MindsDB MongoDB API.</li>
-</ul>
 <h4 id="start-container">Start container</h4>
 <p>Next, run the below command to start the container:</p>
-<p><div class="highlight"><pre><span></span><code>docker run -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+<div class="highlight"><pre><span></span><code>docker run -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 </code></pre></div>
-Note. the above command only have ports for GUI and MYSQL. Please add your desired db port before you run the command. </p>
-<p><img alt="Docker run" src="/assets/docker-install.gif" /></p>
-<p>That's it. MindsDB should automatically start the Studio on your default browser.</p>
+<p>That's it. MindsDB GUI should be avaiable on <a href="http://127.0.0.1:47334/">http://127.0.0.1:47334/</a> on your default browser.</p>
+<h3 id="_1"></h3>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<div class="admonition info">
+<p class="admonition-title">Extend config.json</p>
+<p>If you want to extend the default configuration, you will be able to send the config.json value as JSON string argument to the MDB_CONFIG_CONTENT as:
+<div class="highlight"><pre><span></span><code>docker run -e MDB_CONFIG_CONTENT=&#39;{&quot;api&quot;:{&quot;http&quot;: {&quot;host&quot;: &quot;0.0.0.0&quot;,&quot;port&quot;: &quot;47334&quot;}}}&#39; mindsdb/mindsdb
+</code></pre></div>
+Or, you can pipe <code>&lt;</code>  the content of the file to the MDB_CONFIG_CONTENT.</p>
+</div>
 <div class="admonition warning">
 <p class="admonition-title">MKL Issues</p>
 <p>Note. If you experience any issue related to MKL or if your training process does not complete, please add env var or starter Docker with this command:
 <div class="highlight"><pre><span></span><code>docker run --env MKL_SERVICE_FORCE_INTEL=1 -it -p 47334:47334 mindsdb/mindsdb
 </code></pre></div></p>
 </div>
-<h4 id="extend-configjson">Extend config.json</h4>
-<p>If you want to extend the default configuration, you will be able to send the config.json value as JSON string argument to the MDB_CONFIG_CONTENT as:</p>
-<div class="highlight"><pre><span></span><code>docker run -e MDB_CONFIG_CONTENT=&#39;{&quot;api&quot;:{&quot;http&quot;: {&quot;host&quot;: &quot;0.0.0.0&quot;,&quot;port&quot;: &quot;47334&quot;}}}&#39; mindsdb/mindsdb
-</code></pre></div>
-<p>Or, you can pipe <code>&lt;</code>  the content of the file to the MDB_CONFIG_CONTENT.</p>
+<div class="admonition warning">
+<p class="admonition-title">Docker for Mac users</p>
+<p>By default, Docker for Mac allocates <strong>2.00GB of memory</strong>. This is insufficient for deploying to docker. We recommend increasing the default memory limit to <strong>4.00GB</strong>. </p>
+<p>Please refer to <a href="https://docs.docker.com/desktop/mac/#resources">https://docs.docker.com/desktop/mac/#resources</a> for more information on how to increase the allocated memory.</p>
+</div>
                 
               
               

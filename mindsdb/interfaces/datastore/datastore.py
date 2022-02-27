@@ -90,8 +90,7 @@ class DataStore():
         datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
         if datasource_record.analysis is None:
             return None
-        analysis = json.loads(datasource_record.analysis)
-        return analysis
+        return json.loads(datasource_record.analysis)
 
     def start_analysis(self, name, company_id=None):
         datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
@@ -137,10 +136,10 @@ class DataStore():
         return datasource_arr
 
     def get_data(self, name, where=None, limit=None, offset=None, company_id=None):
-        offset = 0 if offset is None else offset
         ds = self.get_datasource_obj(name, company_id=company_id)
 
         if limit is not None:
+            offset = 0 if offset is None else offset
             # @TODO Add `offset` to the `filter` method of the datasource and get rid of `offset`
             filtered_ds = ds.filter(where=where, limit=limit + offset).iloc[offset:]
         else:

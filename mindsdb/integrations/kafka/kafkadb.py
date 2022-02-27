@@ -34,9 +34,11 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
         self.control_connection_info = deepcopy(self.connection_info)
         # don't need to read all records from the beginning of 'control stream'
         # since all active streams are saved in db. Use 'latest' auto_offset_reset for control stream
-        if 'advanced' in self.control_connection_info:
-            if 'consumer' in self.control_connection_info['advanced']:
-                self.control_connection_info['advanced']['consumer']['auto_offset_reset'] = 'latest'
+        if (
+            'advanced' in self.control_connection_info
+            and 'consumer' in self.control_connection_info['advanced']
+        ):
+            self.control_connection_info['advanced']['consumer']['auto_offset_reset'] = 'latest'
 
         StreamIntegration.__init__(
             self,

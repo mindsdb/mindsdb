@@ -13,14 +13,19 @@ class AITableStore():
     def get_ai_table(self, name):
         ''' get particular ai table
         '''
-        aitable_record = session.query(AITable).filter_by(company_id=self.company_id, name=name.lower()).first()
-        return aitable_record
+        return (
+            session.query(AITable)
+            .filter_by(company_id=self.company_id, name=name.lower())
+            .first()
+        )
 
     def get_ai_tables(self):
         ''' get list of ai tables
         '''
-        aitable_records = [x.__dict__ for x in session.query(AITable).filter_by(company_id=self.company_id)]
-        return aitable_records
+        return [
+            x.__dict__
+            for x in session.query(AITable).filter_by(company_id=self.company_id)
+        ]
 
     def add(self, name, integration_name, integration_query, query_fields, predictor_name, predictor_fields):
         ai_table_record = AITable(

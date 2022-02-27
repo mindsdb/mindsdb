@@ -58,7 +58,7 @@ class DatabaseWrapper():
                 if y.get('publish') is True
             ]
         else:
-            all_integrations = [x for x in self.datasource_interface.get_db_integrations()]
+            all_integrations = list(self.datasource_interface.get_db_integrations())
         integrations = [self._get_integration(x) for x in all_integrations]
         integrations = [x for x in integrations if x is not True and x is not False]
         return integrations
@@ -93,8 +93,7 @@ class DatabaseWrapper():
                 logger.warning(f"There is no connection to {integration.name}. predictor wouldn't be unregistred")
 
     def check_connections(self):
-        connections = {}
-        for integration in self._get_integrations():
-            connections[integration.name] = integration.check_connection()
-
-        return connections
+        return {
+            integration.name: integration.check_connection()
+            for integration in self._get_integrations()
+        }

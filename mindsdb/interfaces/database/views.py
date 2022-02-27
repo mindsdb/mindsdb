@@ -38,7 +38,7 @@ class ViewController:
 
     def get_all(self, company_id=None):
         view_records = session.query(View).filter_by(company_id=company_id).all()
-        views_dict = {}
-        for record in view_records:
-            views_dict[record.name] = self._get_view_record_data(record)
-        return views_dict
+        return {
+            record.name: self._get_view_record_data(record)
+            for record in view_records
+        }

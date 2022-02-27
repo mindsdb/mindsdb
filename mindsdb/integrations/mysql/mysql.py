@@ -116,11 +116,9 @@ class MySQL(Integration, MySQLConnectionChecker):
         port = self.config['api']['mysql']['port']
 
         if password is None or password == '':
-            connect = f'mysql://{user}@{host}:{port}/mindsdb/{table}'
+            return f'mysql://{user}@{host}:{port}/mindsdb/{table}'
         else:
-            connect = f'mysql://{user}:{password}@{host}:{port}/mindsdb/{table}'
-
-        return connect
+            return f'mysql://{user}:{password}@{host}:{port}/mindsdb/{table}'
 
     def setup(self):
         self._query(f'DROP DATABASE IF EXISTS {self.mindsdb_database}')
@@ -204,12 +202,10 @@ class MySQL(Integration, MySQLConnectionChecker):
         q = f"SELECT * from ({query}) LIMIT 1;"
         query_response = self._query(q)
         if len(query_response) > 0:
-            columns = list(query_response[0].keys())
-            return columns
+            return list(query_response[0].keys())
         else:
             return []
 
     def get_tables_list(self):
         q = "SHOW TABLES;"
-        result = self._query(q)
-        return result
+        return self._query(q)

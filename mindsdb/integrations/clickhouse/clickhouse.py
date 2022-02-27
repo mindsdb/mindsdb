@@ -167,12 +167,10 @@ class Clickhouse(Integration, ClickhouseConnectionChecker):
             ORDER BY database, table;
         """
         tables_list = self._query(q)
-        tables = [f"{table[0]}.{table[1]}" for table in tables_list]
-        return tables
+        return [f"{table[0]}.{table[1]}" for table in tables_list]
 
     def get_columns(self, query):
         q = f"SELECT * FROM ({query}) LIMIT 1 FORMAT JSON"
         query_result = self._query(q).json()
         columns_info = query_result['meta']
-        columns = [column['name'] for column in columns_info]
-        return columns
+        return [column['name'] for column in columns_info]

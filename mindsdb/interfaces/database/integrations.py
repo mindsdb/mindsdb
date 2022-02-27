@@ -74,7 +74,7 @@ class DatasourceController:
             session.commit()
             integration_id = integration_record.id
 
-            if len(files) > 0:
+            if files:
                 integrations_dir = Config()['paths']['integrations']
                 folder_name = f'integration_files_{company_id}_{integration_id}'
                 integration_dir = os.path.join(integrations_dir, folder_name)
@@ -179,9 +179,8 @@ class DatasourceController:
 
     def get_db_integrations(self, company_id=None, sensitive_info=True):
         integration_records = session.query(Integration).filter_by(company_id=company_id).all()
-        integration_dict = {}
-        for record in integration_records:
-            if record is None or record.data is None:
-                continue
-            integration_dict[record.name] = self._get_integration_record_data(record, sensitive_info)
-        return integration_dict
+        return {
+            record.name: self._get_integration_record_data(record, sensitive_info)
+            for record in integration_records
+            if record is not None and record.data is not None
+        }

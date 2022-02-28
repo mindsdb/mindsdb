@@ -16,7 +16,7 @@
     
     
       
-        <title>DESCRIBE statement - MindsDB Documentation</title>
+        <title>DESCRIBE - MindsDB Documentation</title>
       
     
     
@@ -155,7 +155,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              DESCRIBE statement
+              DESCRIBE
             
           </span>
         </div>
@@ -720,12 +720,14 @@
 
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" checked>
       
       <label class="md-nav__link" for="__nav_4">
         SQL API
@@ -809,6 +811,105 @@
           
         </ul>
       </nav>
+    </li>
+  
+
+          
+            
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          DESCRIBE
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        DESCRIBE
+      </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#describe-features" class="md-nav__link">
+    DESCRIBE FEATURES
+  </a>
+  
+    <nav class="md-nav" aria-label="DESCRIBE FEATURES">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#syntax" class="md-nav__link">
+    Syntax:
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#expected-output" class="md-nav__link">
+    Expected Output
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#describe-model" class="md-nav__link">
+    DESCRIBE MODEL
+  </a>
+  
+    <nav class="md-nav" aria-label="DESCRIBE MODEL">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#syntax_1" class="md-nav__link">
+    Syntax:
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#expected-output_1" class="md-nav__link">
+    Expected Output
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1052,19 +1153,23 @@
 <div class="highlight"><pre><span></span><code><span class="k">DESCRIBE</span> <span class="p">[</span><span class="n">name_of_your_predictor</span><span class="p">].</span><span class="n">features</span><span class="p">;</span>
 </code></pre></div>
 <h3 id="expected-output">Expected Output</h3>
-<p>column: name of the feature 
-type: binary integer... 
-encoder: name of the encoder used for that column
-role: describes whether the column is a target or a feature</p>
+<ul>
+<li>column: name of the feature </li>
+<li>type: binary integer... </li>
+<li>encoder: name of the encoder used for that column</li>
+<li>role: describes whether the column is a target or a feature</li>
+</ul>
 <h2 id="describe-model">DESCRIBE MODEL</h2>
 <p><code>DESCRIBE [...].model</code> statement is used to display the performance of the candidate models.</p>
 <h3 id="syntax_1">Syntax:</h3>
 <div class="highlight"><pre><span></span><code><span class="k">DESCRIBE</span> <span class="p">[</span><span class="n">name_of_your</span> <span class="n">_predictor</span><span class="p">].</span><span class="n">model</span><span class="p">;</span>
 </code></pre></div>
 <h3 id="expected-output_1">Expected Output</h3>
-<p>name: name of the model
-performance : obtained accuracy (from 0.0 to 1.0) for that candidate model
-selected: the Auto ML pick the best performed cadidate (1)</p>
+<ul>
+<li>name: name of the model</li>
+<li>performance : obtained accuracy (from 0.0 to 1.0) for that candidate model</li>
+<li>selected: the Auto ML pick the best performed cadidate (1)</li>
+</ul>
 <p>If you're unsure on how to DESCRIBE your model or understand the results feel free to ask us how to do it on the community <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ">Slack workspace</a>.</p>
                 
               

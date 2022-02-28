@@ -79,6 +79,7 @@ The `train` endpoint accept two parameters in the json sent via POST:
 The `predict` endpoint needs only one parameter:
 - `df` -- a serialized dictionary that can be converted into a pandas dataframe
 
+
 The training endpoints must return a json that contains the keys `status` set to `ok`. The predict endpoint must return a dictionayr containing the `prediction` key, storing the predictions. Additional keys can be returned for confidence and confidence intervals.
 
 Once you start this ray serve wrapped model you can train it via the query:
@@ -107,6 +108,8 @@ or by JOINING
 ```
 SELECT tb.number_of_rooms, t.rental_price FROM mydb.test_data.home_rentals AS t JOIN mindsdb.byom AS tb WHERE t.rental_price > 5300;
 ```
+
+*Please note that, if your model is behind a reverse proxy (e.g. nginx) you might have to increase the maximum limit for POST requests in order to receive the training data. Mindsdb itself can send as much that as you'd like and has been stress-tested with over a billion rows.*
 
 ## MLFlow
 

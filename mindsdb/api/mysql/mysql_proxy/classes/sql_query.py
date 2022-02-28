@@ -669,6 +669,16 @@ class SQLQuery():
                     raise Exception(f'Unknown step type: {step.step}')
             except Exception as e:
                 raise SqlApiException(f'error in map reduce step: {e}') from e
+        elif type(step) == MultipleSteps:
+            if step.reduce != 'union':
+                raise Exception(f"Only MultipleSteps with type = 'union' is supported. Got '{step.type}'")
+            data = None
+            for substep in step.steps:
+                subdata = self.execute_step(substep, steps_data)
+                if data is None:
+                    data = subdata
+                else:
+                    data['values'].extend(subdata['values'])
         elif type(step) == ApplyPredictorRowStep:
             try:
                 predictor = '.'.join(step.predictor.parts)

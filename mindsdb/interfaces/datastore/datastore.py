@@ -158,6 +158,21 @@ class DataStore():
                 log.error(e)
         return dataset_arr
 
+    def get_files_names(self, company_id=None):
+        """ return list of files names
+        """
+        return [x[0] for x in session.query(File.name).filter_by(company_id=company_id)]
+
+    def get_file_meta(self, name, company_id=None):
+        file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
+        if file_record is None:
+            return None
+        return {
+            'name': file_record.name,
+            'columns': file_record.columns,
+            'row_count': file_record.row_count
+        }
+
     def get_data(self, name, where=None, limit=None, offset=None, company_id=None):
         offset = 0 if offset is None else offset
         ds = self.get_datasource_obj(name, company_id=company_id)

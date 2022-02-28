@@ -12,16 +12,14 @@ class FileDataNode(DataNode):
         self.data_store = data_store
 
     def get_tables(self):
-        dss = self.data_store.get_datasets()
-        file_dss = [x for x in dss if x['source_type'] == 'file']
-        return [x['name'] for x in file_dss]
+        return self.data_store.get_files_names()
 
     def has_table(self, table):
         return table in self.get_tables()
 
     def get_table_columns(self, table):
-        ds = self.data_store.get_datasource(table)
-        return [x['name'] for x in ds['columns']]
+        file_meta = self.data_store.get_file_meta(table)
+        return [x['name'] for x in file_meta['columns']]
 
     def select(self, query):
         query_tables = get_all_tables(query)

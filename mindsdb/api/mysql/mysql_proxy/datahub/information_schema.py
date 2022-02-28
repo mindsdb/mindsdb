@@ -147,6 +147,17 @@ class InformationSchema(DataNode):
                 result_row[4] = i
                 result.append(result_row)
 
+        mindsb_dn = self.get('FILES')
+        for table_name in mindsb_dn.get_tables():
+            table_columns = mindsb_dn.get_table_columns(table_name)
+            for i, column_name in enumerate(table_columns):
+                result_row = row_templates['text'].copy()
+                result_row[1] = 'files'
+                result_row[2] = table_name
+                result_row[3] = column_name
+                result_row[4] = i
+                result.append(result_row)
+
         df = pd.DataFrame(result, columns=columns)
         return df
 

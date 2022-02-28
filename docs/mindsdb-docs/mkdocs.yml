@@ -45,6 +45,11 @@ plugins:
             'installation/macos/': '/deployment/macos.md'
             'installation/linux/': '/deployment/linux.md'
     - table-reader
+    - i18n:
+        default_language: en
+        languages:
+          en: English
+          zh: Chinese
 
 markdown_extensions:
   - codehilite

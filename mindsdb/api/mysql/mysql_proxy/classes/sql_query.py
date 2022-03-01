@@ -143,8 +143,9 @@ def unmarkQueryVar(where):
     elif isinstance(where, UnaryOperation):
         unmarkQueryVar(where.args[0])
     elif isinstance(where, Constant):
-        if where.is_var is True:
+        if hasattr(where, 'is_var') and where.is_var is True:
             where.value = where.var_name
+
 
 def replaceQueryVar(where, var_value, var_name):
     if isinstance(where, BinaryOperation):

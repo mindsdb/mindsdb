@@ -14,11 +14,10 @@ DESCRIBE [name_of_your_predictor].features;
 ```
 ### Expected Output
 
-
-column: name of the feature 
-type: binary integer... 
-encoder: name of the encoder used for that column
-role: describes whether the column is a target or a feature
+* column: name of the feature 
+* type: binary integer... 
+* encoder: name of the encoder used for that column
+* role: describes whether the column is a target or a feature
 
 ## DESCRIBE MODEL  
 
@@ -32,10 +31,11 @@ DESCRIBE [name_of_your _predictor].model;
 
 ### Expected Output
 
-name: name of the model
-performance : obtained accuracy (from 0.0 to 1.0) for that candidate model
-training_time: training time for that condidate model
-selected: the Auto ML pick the best performed cadidate (1)
+
+* name: name of the model
+* performance : obtained accuracy (from 0.0 to 1.0) for that candidate model
+* selected: the Auto ML pick the best performed cadidate (1)
+* training_time: training time for that condidate model
 
 ```sql
 DESCRIBE [name_of_your _predictor].ensemble;

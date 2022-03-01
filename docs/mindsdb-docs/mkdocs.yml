@@ -7,6 +7,8 @@ theme:
   custom_dir: overrides
   logo: assets/mdb_logo_w.svg
   favicon: assets/mdb_logo.png
+  font:
+      text: Inter
   icon:
     repo: fontawesome/brands/github
   features:
@@ -45,7 +47,6 @@ plugins:
             'installation/macos/': '/deployment/macos.md'
             'installation/linux/': '/deployment/linux.md'
     - table-reader
-
 markdown_extensions:
   - codehilite
   - admonition
@@ -56,30 +57,16 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
 nav:
-  - What is MindsDB: index.md
-  - Getting Started Guide:
-    - Getting Started: info.md
-    - Docker: deployment/docker.md
-    - Pip: deployment/pypi.md
-    - MindsDB Cloud: deployment/cloud.md
-  - Plug your data: connect.md
-  - Connect to MindsDB SQL Server:
-      - Local Deployment: sql/connect/local.md
-      - MindsDB Cloud: sql/connect/cloud.md
-  - SQL:
-    - USE: sql/api/use.md
-    - CREATE:
-      - Predictor: sql/api/predictor.md
-      - View: sql/api/view.md
-      - USING: sql/api/using.md
-    - RETRAIN: sql/api/retrain.md
-    - DROP: sql/api/drop.md
-    - SELECT: sql/api/select.md
-    - SELECT from FILES: sql/api/SELECT_Files.md
-    - JOIN: sql/api/join.md
+  - Quickstart: index.md
+  - Start MindsDB:
+    - Setup:
+        - Docker: deployment/docker.md
+        - Pip: deployment/pypi.md
+        - MindsDB Cloud: deployment/cloud.md
+    - Connect: 
+        - DBeaver: sql/connect/dbeaver.md
+        - MySQL Client: sql/connect/mysql-client.md
   - Tutorials:
-    - Bring Your Own Model: sql/tutorials/byom.md
-    - AI Tables Intro: sql/tutorials/ai-tables.md
     - Regression:
       - Process Quality: sql/tutorials/process-quality.md
       - Body Fat Prediction: sql/tutorials/bodyfat.md
@@ -89,12 +76,24 @@ nav:
       - Customer Churn: sql/tutorials/customer-churn.md
       - Diabetes: sql/tutorials/diabetes.md
       - Heart Disease: sql/tutorials/heart-disease.md
-      - Mushrooms: sql/tutorials/mushrooms.md
-    - Time series:
+      - Mushrooms Hunting: sql/tutorials/mushrooms.md
+    - Time Series:
       - AI powered forecasts with MindsDB: sql/tutorials/mindsdb-superset-snowflake.md
+  - SQL API:
+    - USE: sql/api/use.md
+    - CREATE:
+      - Datasource: sql/api/datasources.md
+      - Predictor: sql/api/predictor.md
+      - View: sql/api/view.md
+    - DESCRIBE: sql/api/describe.md
+    - RETRAIN: sql/api/retrain.md
+    - DROP: sql/api/drop.md
+    - SELECT: sql/api/select.md
+    - SELECT from FILES: sql/api/SELECT_Files.md
+    - JOIN: sql/api/join.md
   - Contribution and Community:
       - How to contribute: contribute.md
       - Join our community: community.md
-      - FAQ: faq.md
+  - FAQ: faq.md
 extra_css:
   - stylesheets/extra.css

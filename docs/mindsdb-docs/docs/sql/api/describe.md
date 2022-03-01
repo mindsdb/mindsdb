@@ -31,9 +31,18 @@ DESCRIBE [name_of_your _predictor].model;
 
 ### Expected Output
 
+
 * name: name of the model
 * performance : obtained accuracy (from 0.0 to 1.0) for that candidate model
 * selected: the Auto ML pick the best performed cadidate (1)
+* training_time: training time for that condidate model
 
+```sql
+DESCRIBE [name_of_your _predictor].ensemble;
+```
+
+### Expected Output
+
+ensemble: ensemble type used to select best model candidate
 
 If you're unsure on how to DESCRIBE your model or understand the results feel free to ask us how to do it on the community [Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).

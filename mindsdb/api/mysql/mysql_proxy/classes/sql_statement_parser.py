@@ -86,6 +86,7 @@ class SqlStatementParser():
             drop
             retrain
             describe
+            begin
 
             create_predictor
             create_table
@@ -93,9 +94,9 @@ class SqlStatementParser():
             create_datasource
             create_database
         '''
-        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW, DATASOURCE, DROP, RETRAIN, DESCRIBE, DATABASE = map(
+        START, SET, USE, SHOW, DELETE, INSERT, UPDATE, ALTER, SELECT, ROLLBACK, COMMIT, EXPLAIN, CREATE, AI, TABLE, PREDICTOR, VIEW, DATASOURCE, DROP, RETRAIN, DESCRIBE, DATABASE, BEGIN = map(
             CaselessKeyword,
-            "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DATASOURCE DROP RETRAIN DESCRIBE DATABASE".split()
+            "START SET USE SHOW DELETE INSERT UPDATE ALTER SELECT ROLLBACK COMMIT EXPLAIN CREATE AI TABLE PREDICTOR VIEW DATASOURCE DROP RETRAIN DESCRIBE DATABASE BEGIN".split()
         )
         CREATE_PREDICTOR = CREATE + PREDICTOR
         CREATE_AI_TABLE = CREATE + AI + TABLE
@@ -112,7 +113,7 @@ class SqlStatementParser():
             | CREATE_PREDICTOR | CREATE_AI_TABLE
             | CREATE_VIEW | DROP | RETRAIN
             | CREATE_DATASOURCE | DESCRIBE
-            | CREATE_DATABASE | CREATE_TABLE
+            | CREATE_DATABASE | CREATE_TABLE | BEGIN
         )('keyword')
 
         r = expr.parseString(sql)

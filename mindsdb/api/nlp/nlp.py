@@ -13,25 +13,24 @@ class PredictorList(Resource):
     def get(self, query):
         '''Turn a natural language query into a sql query and deliver the response'''
         # For more info on ITG see https://github.com/mindsdb/ITG/tree/staging/itg
-        from itg import itg
-        # @TODO here and/or when this ns is started register all the user db schemas + mindsdb's db schema
-        # itg.register((dataframe, 'db_name'))
-
-        sql = itg(query)
-        print(f'The NLP API got the natural language query "{query}" and will execute the sql query: {sql}')
-
-        con = mysql.connector.connect(
-            host='localhost',
-            port='47335',
-            user='mindsdb',
-            password='',
-            database='mindsdb'
-        )
-
-        cur = con.cursor(dictionary=True, buffered=True)
-        cur.execute(query)
-        res = True
         try:
+            from itg import itg
+            # @TODO here and/or when this ns is started register all the user db schemas + mindsdb's db schema
+            # itg.register((dataframe, 'db_name'))
+
+            sql = itg(query).query
+            print(f'The NLP API got the natural language query "{query}" and will execute the sql query: {sql}')
+
+            con = mysql.connector.connect(
+                host='localhost',
+                port='47335',
+                user='mindsdb',
+                password='',
+                database='mindsdb'
+            )
+
+            cur = con.cursor(dictionary=True, buffered=True)
+            cur.execute(query)
             res = cur.fetchall()
             status = 200
         except Exception as e:

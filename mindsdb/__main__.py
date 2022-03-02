@@ -147,10 +147,10 @@ if __name__ == '__main__':
         api_arr = args.api.split(',')
 
     with_nlp = False
-    if 'nlp' in args.api:
+    if 'nlp' in api_arr:
         with_nlp = True
-        args.api.remove('nlp')
-        
+        api_arr.remove('nlp')
+
     apis = {
         api: {
             'port': config['api'][api]['port'],

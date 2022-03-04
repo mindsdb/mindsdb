@@ -95,12 +95,8 @@ def upgrade():
         sa.Column('file_path', sa.String(), nullable=False),
         sa.Column('row_count', sa.Integer(), nullable=False),
         sa.Column('columns', mindsdb.interfaces.storage.db.Json(), nullable=False),
-        # sa.Column('created_at', sa.DateTime(), nullable=True, server_default=sa.func.current_timestamp()),  # ?????
-        # sa.Column('updated_at', sa.DateTime(), nullable=True, server_default=sa.func.current_timestamp(), server_onupdate=sa.func.current_timestamp()),  # ????? erver_default=func.now()
-        # sa.Column('created_at', sa.DateTime(), nullable=True, server_default=datetime.datetime.now),  # ?????
-        # sa.Column('updated_at', sa.DateTime(), nullable=True, server_default=datetime.datetime.now, server_onupdate=datetime.datetime.now),  # ????? erver_default=func.now()
-        sa.Column('created_at', sa.DateTime(), nullable=True, server_default=sa.func.current_timestamp()),  # ?????
-        sa.Column('updated_at', sa.DateTime(), nullable=True, server_default=sa.func.current_timestamp(), server_onupdate=sa.func.current_timestamp()),  # ????? erver_default=func.now()
+        sa.Column('created_at', sa.DateTime(), nullable=True, server_default=sa.func.current_timestamp()),
+        sa.Column('updated_at', sa.DateTime(), nullable=True, server_default=sa.func.current_timestamp(), server_onupdate=sa.func.current_timestamp()),
         sa.Column('analysis_id', sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(['analysis_id'], ['analysis.id'], name='fk_analysis_id'),
         sa.PrimaryKeyConstraint('id'),
@@ -181,29 +177,29 @@ def upgrade():
     with op.batch_alter_table('predictor', schema=None) as batch_op:
         batch_op.alter_column('datasource_id', new_column_name='dataset_id')
     with op.batch_alter_table('predictor', schema=None) as batch_op:
-        batch_op.create_foreign_key('fk_dataset_id', 'dataset', ['dataset_id'], ['id'])
+        batch_op.create_foreign_key('fk_predictor_dataset_id', 'dataset', ['dataset_id'], ['id'])
     with op.batch_alter_table('predictor', schema=None) as batch_op:
-        batch_op.create_unique_constraint('unique_name_company_id', ['name', 'company_id'])
+        batch_op.create_unique_constraint('unique_predictor_name_company_id', ['name', 'company_id'])
 
     with op.batch_alter_table('integration', schema=None) as batch_op:
-        batch_op.create_unique_constraint('unique_name_company_id', ['name', 'company_id'])
+        batch_op.create_unique_constraint('unique_integration_name_company_id', ['name', 'company_id'])
 
     with op.batch_alter_table('dataset', schema=None) as batch_op:
-        batch_op.create_unique_constraint('unique_name_company_id', ['name', 'company_id'])
+        batch_op.create_unique_constraint('unique_dataset_name_company_id', ['name', 'company_id'])
 
 
 def downgrade():
     with op.batch_alter_table('integration', schema=None) as batch_op:
-        batch_op.drop_constraint('unique_name_company_id', type_='unique')
+        batch_op.drop_constraint('unique_integration_name_company_id', type_='unique')
 
     with op.batch_alter_table('predictor', schema=None) as batch_op:
-        batch_op.drop_constraint('unique_name_company_id', type_='unique')
+        batch_op.drop_constraint('unique_predictor_name_company_id', type_='unique')
 
     with op.batch_alter_table('dataset', schema=None) as batch_op:
-        batch_op.drop_constraint('unique_name_company_id', type_='unique')
+        batch_op.drop_constraint('unique_dataset_name_company_id', type_='unique')
 
     with op.batch_alter_table('predictor', schema=None) as batch_op:
-        batch_op.drop_constraint('fk_dataset_id', type_='foreignkey')
+        batch_op.drop_constraint('fk_predictor_dataset_id', type_='foreignkey')
         batch_op.alter_column('dataset_id', new_column_name='datasource_id')
 
     with op.batch_alter_table('dataset', schema=None) as batch_op:

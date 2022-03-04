@@ -249,20 +249,15 @@ class ModelController():
 
         if predictor_record.is_custom:
             if predictor_data['format'] == 'mlflow':
-                columns = list(df.columns)
-                data = []
-                for col in columns:
-                    data.append([x for x in df[col]])
-                
-                resp = requests.post(predictor_data['predict_url'], json={
-                    'columns': columns,
-                    'data': data
-                })
+                resp = requests.post(predictor_data['predict_url'],
+                                     data=df.to_json(orient='records'),
+                                     headers={'content-type': 'application/json; format=pandas-records'})
                 answer: List[object] = resp.json()
 
                 predictions = pd.DataFrame({
                     'prediction': answer
                 })
+
             elif predictor_data['format'] == 'ray_server':
                 serialized_df = json.dumps(df.to_dict())
                 resp = requests.post(predictor_data['predict_url'], json={'df': serialized_df})

@@ -36,7 +36,7 @@ def upgrade():
         sa.Column('integration_id', sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(['integration_id'], ['integration.id'], name='fk_integration_id'),
         sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('name', 'company_id', name='unique_name_company_id')
+        sa.UniqueConstraint('name', 'company_id', name='unique_view_name_company_id')
     )
     conn.execute(text("""
         insert into view_tmp (id, name, company_id, query, integration_id)
@@ -104,7 +104,7 @@ def upgrade():
         sa.Column('analysis_id', sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(['analysis_id'], ['analysis.id'], name='fk_analysis_id'),
         sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('name', 'company_id', name='unique_name_company_id')
+        sa.UniqueConstraint('name', 'company_id', name='unique_file_name_company_id')
     )
 
     # delete ds where data is none

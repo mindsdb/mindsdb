@@ -14,7 +14,9 @@ In order to use custom models there are three mandatory arguments one must past 
 There's an additional optional argument if you want to train the model via mindsdb:
 - `url.train`, which is the endpoint we'll call when training your model
 
-## Ray Server
+## 1. Ray Server
+
+### 1.1 Train and predict with an external Sklearn model
 
 Ray serve is a simple high-thoroughput service that can wrap over your own ml models.
 
@@ -110,6 +112,228 @@ SELECT tb.number_of_rooms, t.rental_price FROM mydb.test_data.home_rentals AS t 
 ```
 
 *Please note that, if your model is behind a reverse proxy (e.g. nginx) you might have to increase the maximum limit for POST requests in order to receive the training data. Mindsdb itself can send as much that as you'd like and has been stress-tested with over a billion rows.*
+
+### 1.2 Train and predict with an external Kaggle NLP model
+
+The coe here is a bit more complex, but the same rules apply, we create a ray server based service that wraps around a kaggle nlp model which can be trained and then used for predictions:
+```
+import re
+import time
+import json
+import string
+import requests
+from collections import Counter, defaultdict
+​
+import ray
+from ray import serve
+​
+import gensim
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+from nltk.util import ngrams
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from fastapi import Request, FastAPI
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+​
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, Dense, SpatialDropout1D
+from tensorflow.keras.initializers import Constant
+from tensorflow.keras.optimizers import Adam
+​
+app = FastAPI()
+stop = set(stopwords.words('english'))
+​
+​
+# @TODO: add this to mindsdb as a utility and add typehints!
+async def parse_req(request: Request):
+    data = await request.json()
+    target = data.get('target', None)
+    di = json.loads(data['df'])
+    df = pd.DataFrame(di)
+    return df, target
+​
+​
+@serve.deployment(route_prefix="/nlp_kaggle_model")
+@serve.ingress(app)
+class Model:
+    MAX_LEN = 100
+    GLOVE_DIM = 50
+    EPOCHS = 5
+​
+    def __init__(self):
+        self.model = None
+​
+    @app.post("/train")
+    async def train(self, request: Request):
+        df, target = await parse_req(request)
+​
+        target_arr = df.pop(target).values
+        df = self.preprocess_df(df)
+        train_corpus = self.create_corpus(df)
+​
+        self.embedding_dict = {}
+        with open('./glove.6B.50d.txt', 'r') as f:
+            for line in f:
+                values = line.split()
+                word = values[0]
+                vectors = np.asarray(values[1:], 'float32')
+                self.embedding_dict[word] = vectors
+        f.close()
+​
+        self.tokenizer_obj = Tokenizer()
+        self.tokenizer_obj.fit_on_texts(train_corpus)
+​
+        sequences = self.tokenizer_obj.texts_to_sequences(train_corpus)
+        tweet_pad = pad_sequences(sequences, maxlen=self.__class__.MAX_LEN, truncating='post', padding='post')
+        df = tweet_pad[:df.shape[0]]
+​
+        word_index = self.tokenizer_obj.word_index
+        num_words = len(word_index) + 1
+        embedding_matrix = np.zeros((num_words, self.__class__.GLOVE_DIM))
+​
+        for word, i in tqdm(word_index.items()):
+            if i > num_words:
+                continue
+​
+            emb_vec = self.embedding_dict.get(word)
+            if emb_vec is not None:
+                embedding_matrix[i] = emb_vec
+​
+        self.model = Sequential()
+        embedding = Embedding(num_words,
+                              self.__class__.GLOVE_DIM,
+                              embeddings_initializer=Constant(embedding_matrix),
+                              input_length=self.__class__.MAX_LEN,
+                              trainable=False)
+        self.model.add(embedding)
+        self.model.add(SpatialDropout1D(0.2))
+        self.model.add(LSTM(64, dropout=0.2, recurrent_dropout=0.2))
+        self.model.add(Dense(1, activation='sigmoid'))
+​
+        optimzer = Adam(learning_rate=1e-5)
+        self.model.compile(loss='binary_crossentropy', optimizer=optimzer, metrics=['accuracy'])
+​
+        X_train, X_test, y_train, y_test = train_test_split(df, target_arr, test_size=0.15)
+        self.model.fit(X_train, y_train, batch_size=4, epochs=self.__class__.EPOCHS, validation_data=(X_test, y_test), verbose=2)
+​
+        # @TODO: save model to file then reload inside predict if self.model = None
+        return {'status': 'ok'}
+​
+    @app.post("/predict")
+    async def predict(self, request: Request):
+        df, _ = await parse_req(request)
+​
+        df = self.preprocess_df(df)
+        test_corpus = self.create_corpus(df)
+​
+        sequences = self.tokenizer_obj.texts_to_sequences(test_corpus)
+        tweet_pad = pad_sequences(sequences, maxlen=self.__class__.MAX_LEN, truncating='post', padding='post')
+        df = tweet_pad[:df.shape[0]]
+​
+        y_pre = self.model.predict(df)
+        y_pre = np.round(y_pre).astype(int).flatten().tolist()
+        sub = pd.DataFrame({'target': y_pre})
+​
+        pred_dict = {'prediction': [float(x) for x in sub['target'].values]}
+        return pred_dict
+​
+    def preprocess_df(self, df):
+        df = df[['text']]
+        df['text'] = df['text'].apply(lambda x: self.remove_URL(x))
+        df['text'] = df['text'].apply(lambda x: self.remove_html(x))
+        df['text'] = df['text'].apply(lambda x: self.remove_emoji(x))
+        df['text'] = df['text'].apply(lambda x: self.remove_punct(x))
+        return df
+​
+    def remove_URL(self, text):
+        url = re.compile(r'https?://\S+|www\.\S+')
+        return url.sub(r'', text)
+​
+    def remove_html(self, text):
+        html = re.compile(r'<.*?>')
+        return html.sub(r'', text)
+​
+    def remove_punct(self, text):
+        table = str.maketrans('', '', string.punctuation)
+        return text.translate(table)
+​
+    def remove_emoji(self, text):
+        emoji_pattern = re.compile("["
+                                   u"\U0001F600-\U0001F64F"  # emoticons
+                                   u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                                   u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                                   u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                                   u"\U00002702-\U000027B0"
+                                   u"\U000024C2-\U0001F251"
+                                   "]+", flags=re.UNICODE)
+        return emoji_pattern.sub(r'', text)
+​
+    def create_corpus(self, df):
+        corpus = []
+        for tweet in tqdm(df['text']):
+            words = [word.lower() for word in word_tokenize(tweet) if ((word.isalpha() == 1) & (word not in stop))]
+            corpus.append(words)
+        return corpus
+​
+​
+if __name__ == '__main__':
+​
+    ray.init()
+    serve.start(detached=True)
+​
+    Model.deploy()
+​
+    while True:
+        time.sleep(1)
+```
+
+We need some training data, so we'll create a table called `nlp_kaggle_train` using [this data](https://www.kaggle.com/c/nlp-getting-started)
+
+And ingest it into a table with the following schema:
+```
+id INT,
+keyword VARCHAR(255),
+location VARCHAR(255),
+text VARCHAR(5000),
+target INT
+```
+
+*Specifics of the schema and how to ingest the csv will vary depending on your database*
+
+Next we can register and train the above custom model using the query:
+
+```
+CREATE PREDICTOR nlp_kaggle
+FROM maria (
+    SELECT text, target
+    FROM test.nlp_kaggle_train
+) PREDICT target
+USING
+url.train = 'http://127.0.0.1:8000/nlp_kaggle_model/train',
+url.predict = 'http://127.0.0.1:8000/nlp_kaggle_model/predict',
+dtype_dict={"text": "rich_text", "target": "integer"},
+format='ray_server';
+```
+
+Training will take a while, you can check the status with the query: `SELECT * FROM mindsdb.predictors WHERE name = 'nlp_kaggle';`, much like you'd do with a "normal" mindsdb Predictor.
+
+Once the Predictor's status becomes `trained` we can query it for predictions as usual:
+
+```
+SELECT * FROM mindsdb.nlp_kaggle WHERE text='The tsunami is coming, seek high ground';
+```
+
+Or
+
+```
+SELECT * FROM mindsdb.nlp_kaggle WHERE text='This is lovely dear friend';
+```
+
 
 ## MLFlow
 

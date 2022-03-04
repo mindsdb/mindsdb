@@ -491,6 +491,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             m_data = []
             m_data.append(model["name"])
             m_data.append(model["accuracy"])
+            m_data.append(model.get("training_time", "unknown"))
             m_data.append(1 if model["is_best"] else 0)
             data.append(m_data)
         return data
@@ -603,6 +604,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     }, {
                         'table_name': '',
                         'name': 'performance',
+                        'type': TYPES.MYSQL_TYPE_VAR_STRING
+                    }, {
+                        'table_name': '',
+                        'name': 'training_time',
                         'type': TYPES.MYSQL_TYPE_VAR_STRING
                     }, {
                         'table_name': '',

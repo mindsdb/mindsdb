@@ -36,8 +36,6 @@ Next, run the below command to start the container:
 docker run -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
 
-![Docker run](/assets/docker-install.gif)
-
 That's it. MindsDB GUI should be avaiable on [http://127.0.0.1:47334/](http://127.0.0.1:47334/) on your default browser.
 
 

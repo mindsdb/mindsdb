@@ -94,7 +94,7 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
     json_ai_override = brack_to_mod(json_ai_override)
     json_ai = json_ai.to_dict()
     rep_recur(json_ai, json_ai_override)
-
+    print(json_ai)
     json_ai = JsonAI.from_dict(json_ai)
 
     code = lightwood.code_from_json_ai(json_ai)
@@ -128,6 +128,18 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         fs_store.put(fs_name, fs_name, config['paths']['predictors'])
 
         predictor_record.data = predictor.model_analysis.to_dict()
+
+        # getting training time for each tried model. it is possible to do
+        # after training only
+        fit_mixers = list(predictor.runtime_log[x] for x in predictor.runtime_log
+                            if isinstance(x, tuple) and x[0] == "fit_mixer")
+        submodel_data = predictor_record.data.get("submodel_data", [])
+        # add training time to other mixers info
+        if submodel_data and fit_mixers and len(submodel_data) == len(fit_mixers):
+            for i, tr_time in enumerate(fit_mixers):
+                submodel_data[i]["training_time"] = tr_time
+        predictor_record.data["submodel_data"] = submodel_data
+
         predictor_record.dtype_dict = predictor.dtype_dict
         session.commit()
 

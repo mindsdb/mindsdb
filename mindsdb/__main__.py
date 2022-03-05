@@ -6,6 +6,8 @@ import time
 import asyncio
 import signal
 import psutil
+import json
+import shutil
 
 import torch.multiprocessing as mp
 from packaging import version
@@ -80,10 +82,10 @@ if __name__ == '__main__':
     print(f"Storage path:\n   {config['paths']['root']}")
 
     # @TODO Backwards compatibiltiy for tests, remove later
-    from mindsdb.interfaces.database.integrations import DatasourceController
+    from mindsdb.interfaces.database.integrations import IntegrationController
     dbw = DatabaseWrapper(COMPANY_ID)
     model_interface = WithKWArgsWrapper(ModelInterface(), company_id=COMPANY_ID)
-    datasource_interface = WithKWArgsWrapper(DatasourceController(), company_id=COMPANY_ID)
+    integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
     raw_model_data_arr = model_interface.get_models()
     model_data_arr = []
     for model in raw_model_data_arr:
@@ -95,6 +97,32 @@ if __name__ == '__main__':
                 pass
 
     if not is_cloud:
+        # region migrate files from datsources
+        datasets_records = db.session.query(db.Dataset).filter(db.Dataset.ds_class == 'FileDS').all()
+        file_records = db.session.query(db.File).all()
+        storage_dir = config['paths']['storage']
+        for ds_record in datasets_records:
+            ds_path = os.path.join(storage_dir, f'datasource_{ds_record.company_id}_{ds_record.id}')
+            if os.path.exists(ds_path):
+                try:
+                    ds_data = json.loads(ds_record.data)
+                    mindsdb_file_name = ds_data.get('source', {}).get('mindsdb_file_name')
+                    if mindsdb_file_name is not None:
+                        file_record = db.session.query(db.File).filter(
+                            db.File.company_id == ds_record.company_id,
+                            db.File.name == mindsdb_file_name
+                        ).first()
+                        if file_record is None:
+                            continue
+                        file_path = os.path.join(storage_dir, f'file_{file_record.company_id}_{file_record.id}')
+                        if not os.path.exists(file_path):
+                            shutil.move(ds_path, file_path)
+                        else:
+                            shutil.rmtree(ds_path)
+                except Exception:
+                    pass
+        # endregion
+
         # region Mark old predictors as outdated
         is_modified = False
         predictor_records = db.session.query(db.Predictor).all()
@@ -117,20 +145,20 @@ if __name__ == '__main__':
             db.session.commit()
         # endregion
 
-        for integration_name in datasource_interface.get_db_integrations(sensitive_info=True):
+        for integration_name in integration_controller.get_all(sensitive_info=True):
             print(f"Setting up integration: {integration_name}")
-            if datasource_interface.get_db_integration(integration_name).get('publish', False):
+            if integration_controller.get(integration_name).get('publish', False):
                 # do setup and register only if it is 'publish' integration
                 dbw.setup_integration(integration_name)
                 dbw.register_predictors(model_data_arr, integration_name=integration_name)
 
         for integration_name in config.get('integrations', {}):
             try:
-                it = datasource_interface.get_db_integration(integration_name)
+                it = integration_controller.get(integration_name)
                 if it is not None:
-                    datasource_interface.remove_db_integration(integration_name)
+                    integration_controller.delete(integration_name)
                 print(f'Adding: {integration_name}')
-                datasource_interface.add_db_integration(integration_name, config['integrations'][integration_name])            # Setup for user `None`, since we don't need this for cloud
+                integration_controller.add(integration_name, config['integrations'][integration_name])            # Setup for user `None`, since we don't need this for cloud
                 if config['integrations'][integration_name].get('publish', False) and not is_cloud:
                     dbw.setup_integration(integration_name)
                     dbw.register_predictors(model_data_arr, integration_name=integration_name)

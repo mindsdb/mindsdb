@@ -9,9 +9,9 @@ from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 class ViewDataNode(DataNode):
     type = 'view'
 
-    def __init__(self, view_interface, datasource_interface, data_store):
+    def __init__(self, view_interface, integration_controller, data_store):
         self.view_interface = view_interface
-        self.datasource_interface = datasource_interface
+        self.integration_controller = integration_controller
         self.data_store = data_store
 
     def get_tables(self):
@@ -34,11 +34,11 @@ class ViewDataNode(DataNode):
         table = query.from_table.parts[-1]
         view_metadata = self.view_interface.get(name=table)
 
-        datasource = self.datasource_interface.get_db_integration_by_id(view_metadata['datasource_id'])
-        datasource_name = datasource['name']
+        integration = self.integration_controller.get_by_id(view_metadata['integration_id'])
+        integration_name = integration['name']
 
         dataset_name = self.data_store.get_vacant_name(table)
-        self.data_store.save_datasource(dataset_name, datasource_name, {'query': view_metadata['query']})
+        self.data_store.save_datasource(dataset_name, integration_name, {'query': view_metadata['query']})
         try:
             dataset_object = self.data_store.get_datasource_obj(dataset_name)
             data_df = dataset_object.df

@@ -118,7 +118,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
-from mindsdb.interfaces.database.integrations import DatasourceController
+from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
 
 connection_id = 0
@@ -145,12 +145,12 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         integration = None
         integration_type = None
         extracted_username = username
-        integrations_names = DatasourceController().get_db_integrations(company_id).keys()
+        integrations_names = IntegrationController().get_all(company_id).keys()
         for integration_name in integrations_names:
             if username == f'{hardcoded_user}_{integration_name}':
                 extracted_username = hardcoded_user
                 integration = integration_name
-                integration_type = DatasourceController().get_db_integration(integration, company_id)['type']
+                integration_type = IntegrationController().get(integration, company_id)['type']
 
         if extracted_username != hardcoded_user:
             log.warning(f'Check auth, user={username}: user mismatch')
@@ -424,35 +424,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.packet(OkPacket).send()
 
-    def answer_create_ai_table(self, struct):
-        ai_table = self.session.ai_table
-        model_interface = self.session.model_interface
-
-        table = ai_table.get_ai_table(struct['ai_table_name'])
-        if table is not None:
-            raise ErTableExistError(f"AT Table with name {struct['ai_table_name']} already exists")
-
-        # check predictor exists
-        models = model_interface.get_models()
-        models_names = [x['name'] for x in models]
-        if struct['predictor_name'] not in models_names:
-            raise ErBadTableError(f"Predictor with name {struct['predictor_name']} not exists")
-
-        # check integration exists
-        if self.session.datasource_interface.get_db_integration(struct['integration_name']) is None:
-            raise ErBadDbError(f"Datasource with name {struct['integration_name']} not exists")
-
-        ai_table.add(
-            name=struct['ai_table_name'],
-            integration_name=struct['integration_name'],
-            integration_query=struct['integration_query'],
-            query_fields=struct['query_fields'],
-            predictor_name=struct['predictor_name'],
-            predictor_fields=struct['predictor_fields']
-        )
-
-        self.packet(OkPacket).send()
-
     def _check_predict_columns(self, predict_column_names, ds_column_names):
         ''' validate 'predict' column names
 
@@ -650,13 +621,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         connection_args = struct['connection_args']
         connection_args['type'] = database_type
 
-        self.session.datasource_interface.add_db_integration(datasource_name, connection_args)
+        self.session.integration_controller.add(datasource_name, connection_args)
         self.packet(OkPacket).send()
 
     def answer_drop_datasource(self, ds_name):
         try:
-            ds = self.session.datasource_interface.get_db_integration(ds_name)
-            self.session.datasource_interface.remove_db_integration(ds['database_name'])
+            ds = self.session.integration_controller.get(ds_name)
+            self.session.integration_controller.delete(ds['database_name'])
         except Exception:
             raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
         self.packet(OkPacket).send()
@@ -708,7 +679,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ds_data = data_store.get_datasource(ds_name)
             else:
                 if (
-                    self.session.datasource_interface.get_db_integration(integration_name) is None
+                    self.session.integration_controller.get(integration_name) is None
                     and integration_name not in ('views', 'files')
                 ):
                     raise ErBadDbError(f"Unknown datasource: {integration_name}")
@@ -720,7 +691,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ds_kwargs = {'query': struct['select']}
                 if integration_name in ('views', 'files'):
                     parsed = parse_sql(struct['select'])
-                    ds_kwargs['source'] = parsed.from_table.parts[-1]
+                    query_table = parsed.from_table.parts[-1]
+                    if integration_name == 'files':
+                        ds_kwargs['mindsdb_file_name'] = query_table
+                    else:
+                        ds_kwargs['source'] = query_table
                 ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)
                 ds_data = data_store.get_datasource(ds_name)
                 ds_id = ds_data['id']
@@ -752,7 +727,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 if isinstance(kwargs.get('timeseries_settings'), str):
                     kwargs['timeseries_settings'] = json.loads(kwargs['timeseries_settings'])
                 kwargs['timeseries_settings'].update(timeseries_settings)
-
 
         # Cast all column names to same case
         if isinstance(kwargs.get('timeseries_settings'), dict):
@@ -1718,8 +1692,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'set':
             log.warning(f'Unknown SET query, return OK package: {sql}')
             self.packet(OkPacket).send()
-        elif keyword == 'create_ai_table':
-            self.answer_create_ai_table(struct)
         elif type(statement) == Delete:
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
@@ -2471,7 +2443,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         server.original_model_interface = ModelInterface()
         server.original_data_store = DataStore()
-        server.original_datasource_controller = DatasourceController()
+        server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
 
         atexit.register(MysqlProxy.server_close, srv=server)

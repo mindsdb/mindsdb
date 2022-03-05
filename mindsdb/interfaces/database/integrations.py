@@ -6,19 +6,18 @@ from copy import deepcopy
 
 from sqlalchemy import func
 
-from mindsdb.interfaces.storage.db import session
-from mindsdb.interfaces.storage.db import Integration
+from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.fs import create_directory
 
 
-class DatasourceController:
+class IntegrationController:
     @staticmethod
     def _is_not_empty_str(s):
         return isinstance(s, str) and len(s) > 0
 
-    def add_db_integration(self, name, data, company_id=None):
+    def add(self, name, data, company_id=None):
         if 'database_name' not in data:
             data['database_name'] = name
         if 'publish' not in data:
@@ -92,7 +91,7 @@ class DatasourceController:
             session.add(integration_record)
             session.commit()
 
-    def modify_db_integration(self, name, data, company_id):
+    def modify(self, name, data, company_id):
         integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
         old_data = deepcopy(integration_record.data)
         for k in old_data:
@@ -102,7 +101,7 @@ class DatasourceController:
         integration_record.data = data
         session.commit()
 
-    def remove_db_integration(self, name, company_id=None):
+    def delete(self, name, company_id=None):
         integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
         integrations_dir = Config()['paths']['integrations']
         folder_name = f'integration_files_{company_id}_{integration_record.id}'
@@ -163,11 +162,11 @@ class DatasourceController:
 
         return data
 
-    def get_db_integration_by_id(self, id, company_id=None, sensitive_info=True):
+    def get_by_id(self, id, company_id=None, sensitive_info=True):
         integration_record = session.query(Integration).filter_by(company_id=company_id, id=id).first()
         return self._get_integration_record_data(integration_record, sensitive_info)
 
-    def get_db_integration(self, name, company_id=None, sensitive_info=True, case_sensitive=False):
+    def get(self, name, company_id=None, sensitive_info=True, case_sensitive=False):
         if case_sensitive:
             integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
         else:
@@ -177,7 +176,7 @@ class DatasourceController:
             ).first()
         return self._get_integration_record_data(integration_record, sensitive_info)
 
-    def get_db_integrations(self, company_id=None, sensitive_info=True):
+    def get_all(self, company_id=None, sensitive_info=True):
         integration_records = session.query(Integration).filter_by(company_id=company_id).all()
         integration_dict = {}
         for record in integration_records:

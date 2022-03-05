@@ -45,8 +45,8 @@ def parse_filter(key, value):
 class DatasourcesList(Resource):
     @ns_conf.doc('get_datasources_list')
     def get(self):
-        '''List all datasources'''
-        return request.default_store.get_datasources()
+        '''List all datasets'''
+        return request.default_store.get_datasets()
 
 
 @ns_conf.route('/<name>')
@@ -122,7 +122,7 @@ class Datasource(Resource):
 
         if 'query' in data:
             integration_id = request.json['integration_id']
-            integration = request.datasource_interface.get_db_integration(integration_id)
+            integration = request.integration_controller.get(integration_id)
             if integration is None:
                 abort(400, f"{integration_id} integration doesn't exist")
 
@@ -157,10 +157,14 @@ class Datasource(Resource):
                 if not os.path.isfile(file_path):
                     os.rmdir(temp_dir_path)
                     return http_error(400, 'Wrong content.', 'Archive must contain data file in root.')
+            # TODO 
+            # request.default_store.save_datasource(ds_name, source_type, source, file_path)
+            file_id = request.default_store.save_file(ds_name, file_path, file_name=data['file'])
+            request.default_store.save_datasource(ds_name, source_type, source={'mindsdb_file_name': name})
         else:
             file_path = None
+            request.default_store.save_datasource(ds_name, source_type, source)
 
-        request.default_store.save_datasource(ds_name, source_type, source, file_path)
         os.rmdir(temp_dir_path)
 
         return request.default_store.get_datasource(ds_name)

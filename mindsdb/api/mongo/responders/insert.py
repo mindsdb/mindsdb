@@ -1,5 +1,5 @@
 from mindsdb.api.mongo.classes import Responder
-from mindsdb.interfaces.storage.db import session, Datasource
+from mindsdb.interfaces.storage.db import session, Dataset
 import mindsdb.api.mongo.functions as helpers
 
 
@@ -36,7 +36,7 @@ class Responce(Responder):
             'connection'
         ]
 
-        models = mindsdb_env['mindsdb_native'].get_models()
+        models = mindsdb_env['model_interface'].get_models()
 
         if len(query['documents']) != 1:
             raise Exception("Must be inserted just one predictor at time")
@@ -64,7 +64,7 @@ class Responce(Responder):
 
             kwargs = doc.get('training_options', {})
 
-            integrations = mindsdb_env['datasource_controller'].get_db_integrations().keys()
+            integrations = mindsdb_env['datasource_controller'].get_all().keys()
             connection = doc.get('connection')
             if connection is None:
                 if 'default_mongodb' in integrations:
@@ -97,8 +97,8 @@ class Responce(Responder):
                     mindsdb_env['data_store'].delete_datasource(ds_name)
                     raise Exception(f"Column '{col}' not exists")
 
-            datasource_record = session.query(Datasource).filter_by(company_id=mindsdb_env['company_id'], name=ds_name).first()
-            mindsdb_env['mindsdb_native'].learn(
+            datasource_record = session.query(Dataset).filter_by(company_id=mindsdb_env['company_id'], name=ds_name).first()
+            mindsdb_env['model_interface'].learn(
                 doc['name'],
                 ds,
                 predict,

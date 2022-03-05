@@ -73,8 +73,8 @@ class Semaphor(Base):
     uniq_const = UniqueConstraint('entity_type', 'entity_id')
 
 
-class Datasource(Base):
-    __tablename__ = 'datasource'
+class Dataset(Base):
+    __tablename__ = 'dataset'
 
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
@@ -82,11 +82,13 @@ class Datasource(Base):
     name = Column(String)
     data = Column(String)  # Including, e.g. the query used to create it and even the connection info when there's no integration associated with it -- A JSON
     creation_info = Column(String)
-    analysis = Column(String)  # A JSON
+    analysis_id = Column(ForeignKey('analysis.id'), nullable=True)
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     datasources_version = Column(String)
-    integration_id = Column(Integer)
+    integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'), nullable=True)
+    ds_class = Column(String)
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
 
 
 class Predictor(Base):
@@ -101,8 +103,8 @@ class Predictor(Base):
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     native_version = Column(String)
-    datasource_id = Column(Integer)
-    is_custom = Column(Boolean)     # to del
+    dataset_id = Column(ForeignKey('dataset.id', name='fk_dataset_id'), nullable=True)
+    is_custom = Column(Boolean)
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')
 
@@ -110,20 +112,7 @@ class Predictor(Base):
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
     dtype_dict = Column(Json, nullable=True)
-
-
-class AITable(Base):
-    __tablename__ = 'ai_table'
-    id = Column(Integer, primary_key=True)
-    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    name = Column(String)
-    integration_name = Column(String)
-    integration_query = Column(String)
-    query_fields = Column(Json)
-    predictor_name = Column(String)
-    predictor_columns = Column(Json)
-    company_id = Column(Integer)
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
 
 
 class Log(Base):
@@ -146,6 +135,7 @@ class Integration(Base):
     name = Column(String, nullable=False)
     data = Column(Json)
     company_id = Column(Integer)
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
 
 
 class Stream(Base):
@@ -166,14 +156,37 @@ class Stream(Base):
     learning_threshold = Column(Integer, default=0)
 
 
+class Analysis(Base):
+    __tablename__ = 'analysis'
+    id = Column(Integer, primary_key=True)
+    analysis = Column(Json, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+
+
+class File(Base):
+    __tablename__ = 'file'
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    company_id = Column(Integer)
+    source_file_path = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    row_count = Column(Integer, nullable=False)
+    columns = Column(Json, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    analysis_id = Column(ForeignKey('analysis.id', name='fk_analysis_id'), nullable=True)
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
+
+
 class View(Base):
     __tablename__ = 'view'
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     company_id = Column(Integer)
     query = Column(String, nullable=False)
-    datasource_id = Column(ForeignKey('datasource.id'), nullable=False)  # ex integration
-    uniq_const = UniqueConstraint('name', 'company_id')
+    integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'), nullable=False)
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
 
 
 # DDL is changing through migrations

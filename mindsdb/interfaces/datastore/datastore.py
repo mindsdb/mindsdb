@@ -563,6 +563,10 @@ class DataStore():
             if raw:
                 return creation_info
             else:
+                if dataset_record.ds_class == 'FileDS':
+                    file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
+                    if file_record is not None:
+                        self.fs_store.get(f'{company_id}@@@@@{dataset_record.name}', f'file_{company_id}_{file_record.id}', self.dir)
                 return eval(creation_info['class'])(*creation_info['args'], **creation_info['kwargs'])
         except Exception as e:
             log.error(f'Error getting dataset {name}, exception: {e}')

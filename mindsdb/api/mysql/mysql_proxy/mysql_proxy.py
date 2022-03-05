@@ -691,7 +691,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ds_kwargs = {'query': struct['select']}
                 if integration_name in ('views', 'files'):
                     parsed = parse_sql(struct['select'])
-                    ds_kwargs['source'] = parsed.from_table.parts[-1]
+                    query_table = parsed.from_table.parts[-1]
+                    if integration_name == 'files':
+                        ds_kwargs['mindsdb_file_name'] = query_table
+                    else:
+                        ds_kwargs['source'] = query_table
                 ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)
                 ds_data = data_store.get_datasource(ds_name)
                 ds_id = ds_data['id']

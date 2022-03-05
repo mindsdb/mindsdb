@@ -70,13 +70,8 @@ class QueryDS:
                 data_df = dataset_object.df
             finally:
                 data_store.delete_datasource(dataset_name)
-        elif self.source_type == 'file_query':
-            if isinstance(query, str):
-                query = parse_sql(query, dialect='mysql')
-            table = query.from_table.parts[-1]
-            ds = data_store.get_datasource_obj(table, raw=False)
-            file_df = ds.df
-            data_df = query_df(file_df, query)
+        else:
+            raise Exception(f'Unknown source_type: {self.source_type}')
         return data_df
 
 
@@ -233,24 +228,16 @@ class DataStore():
                 return candidate
         raise Exception(f"Can not find appropriate name for dataset '{base}'")
 
-    def create_datasource(self, source_type, source, file_path=None, company_id=None):   # , ds_meta_dir=None):
-        """
-            if query to db:
-                source_type = integration_name
-                source = {query: xxx}
-            if file:
-                source_type = file
-                source: 'filename.csv'
-        """
+    def create_datasource(self, source_type, source, file_path=None, company_id=None):
         integration_controller = IntegrationController()
-        if source_type == 'file_query' or source_type == 'view_query':
+        if source_type == 'view_query':
             dsClass = QueryDS
             creation_info = {
                 'class': dsClass.__name__,
                 'args': [],
                 'kwargs': {
                     'query': source['query'],
-                    'source': source['source'],   # view|file
+                    'source': source['source'],   # view
                     'source_type': source_type,
                     'company_id': company_id
                 }
@@ -258,28 +245,24 @@ class DataStore():
 
             ds = dsClass(**creation_info['kwargs'])
         elif source_type == 'file':
-            # x = 1
-            # source = os.path.join(ds_meta_dir, source)
-            # shutil.move(file_path, source)
-            # ds = FileDS(source)
-
-            # получаем файл и скармливаем его в FileDS
             file_name = source.get('mindsdb_file_name')
             file_record = session.query(File).filter_by(company_id=company_id, name=file_name).first()
             if file_record is None:
                 raise Exception(f"Cant find file '{file_name}'")
             self.fs_store.get(f'{company_id}@@@@@{file_name}', f'file_{company_id}_{file_record.id}', self.dir)
-            # self.fs_store.get(f'{company_id}@@@@@{file_name}', f'datasource_{company_id}_{dataset_record.id}', self.dir)
-            # filename, remote_name, local_path
+            kwargs = {}
+            query = source.get('query')
+            if query is not None:
+                kwargs['query'] = query
 
             path = Path(self.dir).joinpath(f'{company_id}@@@@@{file_name}').joinpath(file_record.source_file_path)
 
             creation_info = {
                 'class': 'FileDS',
                 'args': [str(path)],
-                'kwargs': {}
+                'kwargs': kwargs
             }
-            ds = FileDS(str(path))
+            ds = FileDS(str(path), **kwargs)
 
         elif integration_controller.get(source_type, company_id) is not None:
             integration = integration_controller.get(source_type, company_id)
@@ -448,13 +431,17 @@ class DataStore():
             }
         return ds, creation_info
 
-    # TODO 
     def save_file(self, name, file_path, file_name=None, company_id=None):
-        """
+        """ Save the file to our store
+
             Args:
                 name (str): with that name file will be available in sql api
                 file_name (str): file name
                 file_path (str): path to the file
+                company_id (int): company id
+
+            Returns:
+                int: id of 'file' record in db
         """
         if file_name is None:
             file_name = Path(file_path).name
@@ -518,19 +505,7 @@ class DataStore():
             'row_count': row_count
         }
 
-    # TODO del filepath, rename source->query
     def save_datasource(self, name, source_type, source=None, file_path=None, company_id=None):
-        """
-            file upload: name=aaa,
-                name = aaa
-                source_type = file
-                source = 'PC_scores.csv'
-                file_path = /tmp/datasource_file_gardkja7/PC_scores.csv
-                company_id = None
-        """
-        # if source_type == 'file' and (file_path is None):
-        #     raise Exception('`file_path` argument required when source_type == "file"')
-
         dataset_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
         while dataset_record is not None:
             raise Exception(f'Dataset with name {name} already exists')
@@ -538,7 +513,7 @@ class DataStore():
         if source_type == 'views':
             source_type = 'view_query'
         elif source_type == 'files':
-            source_type = 'file_query'
+            source_type = 'file'
 
         try:
             dataset_record = Dataset(
@@ -550,10 +525,7 @@ class DataStore():
             session.add(dataset_record)
             session.commit()
 
-            # ds_meta_dir = os.path.join(self.dir, f'{company_id}@@@@@{name}')
-            # os.mkdir(ds_meta_dir)
-
-            ds, creation_info = self.create_datasource(source_type, source, file_path, company_id)   # , ds_meta_dir)
+            ds, creation_info = self.create_datasource(source_type, source, file_path, company_id)
 
             ds_meta = self._get_ds_meta(ds)
             column_names = ds_meta['column_names']
@@ -568,7 +540,6 @@ class DataStore():
                 'columns': [dict(name=x) for x in column_names]
             })
 
-            # self.fs_store.put(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{dataset_record.id}', self.dir)
             session.commit()
 
         except Exception as e:
@@ -588,7 +559,6 @@ class DataStore():
             else:
                 dataset_record = session.query(Dataset).filter_by(company_id=company_id, id=id).first()
 
-            # self.fs_store.get(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{dataset_record.id}', self.dir)
             creation_info = json.loads(dataset_record.creation_info)
             if raw:
                 return creation_info

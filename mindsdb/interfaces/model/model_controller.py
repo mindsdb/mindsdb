@@ -167,7 +167,7 @@ class ModelController():
             predictor_record = db.Predictor(
                 company_id=company_id,
                 name=name,
-                datasource_id=datasource_id,
+                dataset_id=dataset_id,
                 mindsdb_version=mindsdb_version,
                 lightwood_version=lightwood_version,
                 to_predict=problem_definition['target'],

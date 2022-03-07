@@ -567,6 +567,66 @@ class ModelController():
             if not IS_PY36:
                 p.close()
 
+    def export_predictor(self, name: str, company_id: int) -> json:
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        assert predictor_record is not None
+
+        fs_name = f'predictor_{company_id}_{predictor_record.id}'
+        self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
+        local_predictor_savefile = os.path.join(self.config['paths']['predictors'], fs_name)
+        predictor_binary = open(local_predictor_savefile, 'rb').read()
+
+        # Serialize a predictor record into a dictionary 
+        # move into the Predictor db class itself if we use it again somewhere
+        predictor_record_serialized = {
+            'name': predictor_record.name,
+            'data': predictor_record.data,
+            'to_predict': predictor_record.to_predict,
+            'company_id': predictor_record.company_id,
+            'mindsdb_version': predictor_record.mindsdb_version,
+            'native_version': predictor_record.native_version,
+            'datasource_id': predictor_record.datasource_id,
+            'is_custom': predictor_record.is_custom,
+            'learn_args': predictor_record.learn_args,
+            'update_status': predictor_record.update_status,
+            'json_ai': predictor_record.json_ai,
+            'code': predictor_record.code,
+            'lightwood_version': predictor_record.lightwood_version,
+            'dtype_dict': predictor_record.dtype_dict,
+            'predictor_binary': predictor_binary
+        }
+
+        return json.dumps(predictor_record_serialized)
+
+
+    def import_predictor(self, name: str, company_id: int, payload: json) -> None:
+        prs = json.loads(payload)
+
+        predictor_record = db.Predictor(
+            name=prs.name,
+            data=prs.data,
+            to_predict=prs.to_predict,
+            company_id=prs.company_id,
+            mindsdb_version=prs.mindsdb_version,
+            native_version=prs.native_version,
+            datasource_id=prs.datasource_id,
+            is_custom=prs.is_custom,
+            learn_args=prs.learn_args,
+            update_status=prs.update_status,
+            json_ai=prs.json_ai,
+            code=prs.code,
+            lightwood_version=prs.lightwood_version,
+            dtype_dict=prs.dtype_dict
+        )
+
+        db.session.add(predictor_record)
+        db.session.commit()
+
+        predictor_binary = prs['predictor_binary']
+        with open(os.path.join(self.config['paths']['predictors'], fs_name), 'wb') as fp:
+            fp.write(predictor_binary)
+        fs_name = f'predictor_{company_id}_{predictor_record.id}'
+        self.fs_store.put(fs_name, fs_name, self.config['paths']['predictors'])
 
 '''
 Notes: Remove ray from actors are getting stuck

@@ -298,6 +298,33 @@ class HTTPTest(unittest.TestCase):
         pvs = res.json()
         assert pvs[0]['rental_price']['predicted_value'] == 5555555
 
+    def test_99_export_and_import_predictor(self):
+        # Create and train a new predictor
+        res = requests.put(
+            f'{root}/predictors/test_99_{pred_name}/train',
+            json={'data_source_name': ds_name, 'join_learn_process': True}
+        )
+        assert res.status_code == 200
+
+        # Export the predictor as a binary
+        res = requests.get(f'{root}/predictors/test_99_{pred_name}/export')
+        assert res.status_code == 200
+        exported_predictor = res.text
+
+        # Delete the predictor
+        res = requests.delete(f'{root}/predictor/test_99_{pred_name}')
+        assert res.status_code == 200
+
+        # Import the predictor from the previous export
+        res = requests.put(f'{root}/predictors/test_99_{pred_name}/import', json={'serialized_predictor': exported_predictor})
+        assert res.status_code == 200
+
+        # Test that it still exists and that it can make predictions
+        url = f'{root}/predictors/test_99_{pred_name}/predict'
+        res = requests.post(url, json={'when': {'sqft': 500}})
+        assert res.status_code == 200
+        pvs = res.json()
+        assert 'predicted_value' in pvs[0]['rental_price']['predicted_value']
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

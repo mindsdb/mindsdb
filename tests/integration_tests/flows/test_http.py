@@ -301,8 +301,8 @@ class HTTPTest(unittest.TestCase):
     def test_99_export_and_import_predictor(self):
         # Create and train a new predictor
         res = requests.put(
-            f'{root}/predictors/test_99_{pred_name}/train',
-            json={'data_source_name': ds_name, 'join_learn_process': True}
+            f'{root}/predictors/test_99_{pred_name}',
+            json={'data_source_name': ds_name, 'join_learn_process': True, 'problem_definition': {'target': 'rental_price'}}
         )
         assert res.status_code == 200
 

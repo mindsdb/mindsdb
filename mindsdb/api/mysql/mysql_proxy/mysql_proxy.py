@@ -1290,13 +1290,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return
         # ---
 
-        statement = SqlStatementParser(sql)
-        sql = statement.sql
         sql_lower = sql.lower()
         sql_lower = sql_lower.replace('`', '')
-
-        keyword = statement.keyword
-        struct = statement.struct
 
         try:
             try:
@@ -1320,10 +1315,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             predictor_name = statement.name.parts[-1]
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
             self.packet(OkPacket).send()
-        elif keyword == 'create_datasource':
-            # fallback for statement
-            self.answer_create_datasource(struct)
-            return
         elif type(statement) == DropDatasource:
             ds_name = statement.name.parts[-1]
             self.answer_drop_datasource(ds_name)
@@ -1689,9 +1680,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.answer_create_predictor(statement)
         elif type(statement) == CreateView:
             self.answer_create_view(statement)
-        elif keyword == 'set':
-            log.warning(f'Unknown SET query, return OK package: {sql}')
-            self.packet(OkPacket).send()
         elif type(statement) == Delete:
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
@@ -1701,10 +1689,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.packet(OkPacket).send()
         elif type(statement) == Insert:
             self.process_insert(statement)
-        elif keyword in ('update', 'insert'):
-            raise ErNotSupportedYet('Update and Insert are not implemented')
-        elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
-            self.packet(OkPacket).send()
         elif type(statement) == Select:
             if statement.from_table is None:
                 self.answer_single_row_select(statement)

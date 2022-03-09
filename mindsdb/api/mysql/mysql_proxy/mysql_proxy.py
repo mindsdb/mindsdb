@@ -54,6 +54,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
     CreatePredictor,
     DropDatasource,
+    CreatePredictor as ApplyPredictor,  # TODO rename
     DropPredictor,
     CreateView
 )
@@ -1736,6 +1737,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.answer_select(query)
         elif type(statement) == Explain:
             self.answer_explain_table(statement.target.parts)
+        elif type(statement) == ApplyPredictor:
+            self.answer_apply_predictor(statement)
         else:
             log.warning(f'Unknown SQL statement: {sql}')
             raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
@@ -2114,6 +2117,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         )
         packages.append(self.last_packet())
         self.send_package_group(packages)
+
+    def answer_apply_predictor(self, statement):
+        SQLQuery(
+            statement,
+            session=self.session,
+            execute=False
+        )
+        self.packet(OkPacket).send()
 
     def answer_select(self, query):
         result = query.fetch(

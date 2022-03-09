@@ -19,6 +19,7 @@ from lightwood.api import dtype
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import plan_query
 from mindsdb_sql.parser.dialects.mindsdb.latest import Latest
+from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor as ApplyPredictor   # TODO rename
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     UnaryOperation,
@@ -195,6 +196,7 @@ class Column:
     def __repr__(self):
         return f'{self.__class__.__name__}({self.__dict__})'
 
+
 class SQLQuery():
     def __init__(self, sql, session, execute=True):
         self.session = session
@@ -229,7 +231,7 @@ class SQLQuery():
         self.parameters = []
         self.fetched_data = None
         self.model_types = {}
-        self._process_query(sql)
+        self._process_query()
         if execute:
             self.prepare_query(prepare=False)
             self.execute_query()
@@ -312,7 +314,7 @@ class SQLQuery():
 
         return data
 
-    def _process_query(self, sql):
+    def _process_query(self):
         # self.query = parse_sql(sql, dialect='mindsdb')
 
         integrations_names = self.datahub.get_integrations_names()
@@ -320,7 +322,10 @@ class SQLQuery():
         integrations_names.append('files')
         integrations_names.append('views')
 
-        all_tables = get_all_tables(self.query)
+        if isinstance(self.query, Select):
+            all_tables = get_all_tables(self.query)
+        elif isinstance(self.query, ApplyPredictor):
+            all_tables = [self.query.predictor]
 
         predictor_metadata = {}
         predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)

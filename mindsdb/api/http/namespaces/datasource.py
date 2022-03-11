@@ -5,10 +5,12 @@ import re
 import multipart
 import zipfile
 import tarfile
+import mysql.connector
 
 from flask import request, send_file
 from flask_restx import Resource, abort     # 'abort' using to return errors as json: {'message': 'error text'}
 
+from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.datasources import ns_conf
@@ -45,8 +47,8 @@ def parse_filter(key, value):
 class DatasourcesList(Resource):
     @ns_conf.doc('get_datasources_list')
     def get(self):
-        '''List all datasets'''
-        return request.default_store.get_datasets()
+        '''List all datasources'''
+        return request.default_store.get_datasources()
 
 
 @ns_conf.route('/<name>')
@@ -122,7 +124,7 @@ class Datasource(Resource):
 
         if 'query' in data:
             integration_id = request.json['integration_id']
-            integration = request.integration_controller.get(integration_id)
+            integration = request.datasource_interface.get_db_integration(integration_id)
             if integration is None:
                 abort(400, f"{integration_id} integration doesn't exist")
 
@@ -157,14 +159,10 @@ class Datasource(Resource):
                 if not os.path.isfile(file_path):
                     os.rmdir(temp_dir_path)
                     return http_error(400, 'Wrong content.', 'Archive must contain data file in root.')
-            # TODO 
-            # request.default_store.save_datasource(ds_name, source_type, source, file_path)
-            file_id = request.default_store.save_file(ds_name, file_path, file_name=data['file'])
-            request.default_store.save_datasource(ds_name, source_type, source={'mindsdb_file_name': name})
         else:
             file_path = None
-            request.default_store.save_datasource(ds_name, source_type, source)
 
+        request.default_store.save_datasource(ds_name, source_type, source, file_path)
         os.rmdir(temp_dir_path)
 
         return request.default_store.get_datasource(ds_name)
@@ -247,6 +245,36 @@ class DatasourceData(Resource):
 
         return data_dict, 200
 
+
+@ns_conf.route('/query/')
+@ns_conf.param('query')
+class Query(Resource):
+    def post(self):
+        query = request.json['query']
+
+        config = Config()
+        cnx = mysql.connector.connect(
+            user=config['api']['mysql']['user'],
+            password=config['api']['mysql']['password'],
+            host=config['api']['mysql']['host'],
+            port=config['api']['mysql']['port'],
+            database=config['api']['mysql']['database'],
+            connect_timeout=120  
+        )
+        
+        cur = cnx.cursor()
+        cur.execute(query)
+        rez = cur.fetchall()
+
+        #### transformar la respuesta en JSON entible para el front i.e Column and row. 
+        cur.close()
+        cnx.close()
+        
+        query_response= {
+            'data': rez
+        } 
+
+        return query_response, 200
 
 @ns_conf.route('/<name>/download')
 @ns_conf.param('name', 'Datasource name')

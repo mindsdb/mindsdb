@@ -1,5 +1,6 @@
 import pandas as pd
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql.parser.ast import Insert, Identifier, Constant
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.utilities.log import log
@@ -24,6 +25,32 @@ class IntegrationDataNode(DataNode):
 
     def get_table_columns(self, tableName):
         return []
+
+    def create_table(self, table_name, columns, data):
+        dso, _creation_info = self.data_store.create_datasource(self.integration_name, {'query': 'select 1'})
+        if hasattr(dso, 'execute') is False:
+            raise Exception(f"Cant create table in {self.integration_name}")
+        if self.ds_type not in ('postgres', 'mysql', 'mariadb'):
+            raise Exception(f'At this moment is no possible to create table in "{self.ds_type}"')
+
+        if self.ds_type in ('mysql', 'mariadb'):
+            dialect = 'mysql'
+        elif self.ds_type == 'postgres':
+            dialect = 'postgres'
+        renderer = SqlalchemyRender(dialect)
+        query_str = renderer.get_string(query, with_failback=False)
+        dso.execute(query_str)
+
+        values = []
+        for row in data:
+            values.append([Constant(x) for x in row])
+        expected_ast = Insert(
+            table=Identifier(table_name),
+            columns=[Identifier(x) for x in columns],
+            values=values
+        )
+        query_str = renderer.get_string(expected_ast, with_failback=False)
+        dso.execute(query_str)
 
     def select(self, query):
         if isinstance(query, str):

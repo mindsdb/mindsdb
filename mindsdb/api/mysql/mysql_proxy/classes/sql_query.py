@@ -19,10 +19,10 @@ from lightwood.api import dtype
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import plan_query
 from mindsdb_sql.parser.dialects.mindsdb.latest import Latest
-from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor as ApplyPredictor   # TODO rename
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     UnaryOperation,
+    CreateTable,
     Identifier,
     Operation,
     Constant,
@@ -38,13 +38,14 @@ from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
     GetPredictorColumns,
-    GetTableColumns,
     FetchDataframeStep,
     ApplyPredictorStep,
+    GetTableColumns,
     LimitOffsetStep,
     MapReduceStep,
     MultipleSteps,
     ProjectStep,
+    SaveToTable,
     FilterStep,
     UnionStep,
     JoinStep
@@ -223,7 +224,10 @@ class SQLQuery():
         else:
             self.query = sql
             renderer = SqlalchemyRender('mysql')
-            self.query_str = renderer.get_string(self.query, with_failback=True)
+            try:
+                self.query_str = renderer.get_string(self.query, with_failback=True)
+            except Exception:
+                self.query_str = str(self.query)
 
         # self.raw = sql
         # self.query = None
@@ -235,7 +239,6 @@ class SQLQuery():
         if execute:
             self.prepare_query(prepare=False)
             self.execute_query()
-
 
     def fetch(self, datahub, view='list'):
         data = self.fetched_data
@@ -324,8 +327,8 @@ class SQLQuery():
 
         if isinstance(self.query, Select):
             all_tables = get_all_tables(self.query)
-        elif isinstance(self.query, ApplyPredictor):
-            all_tables = [self.query.predictor]
+        elif isinstance(self.query, CreateTable):
+            all_tables = [self.query.from_select.from_table.right.parts[-1]]
 
         predictor_metadata = {}
         predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
@@ -1061,6 +1064,16 @@ class SQLQuery():
                 data = step_data
             except Exception as e:
                 raise SqlApiException(f'error on project step:{e} ') from e
+        elif type(step) == SaveToTable:
+            step_data = steps_data[step.dataframe.step_num]
+            integration_name = step.integration_name
+            table_name = step.table_name
+
+            dn = self.datahub.get(integration_name)
+
+            if hasattr(dn, 'create_table') is False:
+                raise Exception(f"Creating table in '{integration_name}' is not supporting")
+            dn.create_table(name=table_name, columns=step_data['columns'], data=step_data['values'])
         else:
             raise SqlApiException(F'Unknown planner step: {step}')
         return data

@@ -34,6 +34,7 @@ from mindsdb_sql.parser.ast import (
     StartTransaction,
     BinaryOperation,
     NullConstant,
+    CreateTable,
     Identifier,
     Parameter,
     Describe,
@@ -54,7 +55,6 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
     CreatePredictor,
     DropDatasource,
-    CreatePredictor as ApplyPredictor,  # TODO rename
     DropPredictor,
     CreateView
 )
@@ -1294,6 +1294,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         sql_lower = sql.lower()
         sql_lower = sql_lower.replace('`', '')
 
+        # TODO
+        if sql_lower == "set names 'utf8mb4' collate 'utf8mb4_general_ci'":
+            self.packet(OkPacket).send()
+            return
+
         try:
             try:
                 statement = parse_sql(sql, dialect='mindsdb')
@@ -1737,7 +1742,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.answer_select(query)
         elif type(statement) == Explain:
             self.answer_explain_table(statement.target.parts)
-        elif type(statement) == ApplyPredictor:
+        elif type(statement) == CreateTable:
             self.answer_apply_predictor(statement)
         else:
             log.warning(f'Unknown SQL statement: {sql}')
@@ -2122,7 +2127,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         SQLQuery(
             statement,
             session=self.session,
-            execute=False
+            execute=True
         )
         self.packet(OkPacket).send()
 

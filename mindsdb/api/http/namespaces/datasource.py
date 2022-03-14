@@ -48,7 +48,7 @@ class DatasourcesList(Resource):
     @ns_conf.doc('get_datasources_list')
     def get(self):
         '''List all datasources'''
-        return request.default_store.get_datasources()
+        return request.default_store.get_datasets()
 
 
 @ns_conf.route('/<name>')
@@ -246,9 +246,10 @@ class DatasourceData(Resource):
         return data_dict, 200
 
 
-@ns_conf.route('/query/')
-@ns_conf.param('query')
+@ns_conf.route('/query')
+@ns_conf.param('query', 'Execute query')
 class Query(Resource):
+    @ns_conf.doc('query_datasource')
     def post(self):
         query = request.json['query']
 
@@ -261,17 +262,16 @@ class Query(Resource):
             database=config['api']['mysql']['database'],
             connect_timeout=120  
         )
-        
+
         cur = cnx.cursor()
         cur.execute(query)
         rez = cur.fetchall()
 
-        #### transformar la respuesta en JSON entible para el front i.e Column and row. 
         cur.close()
         cnx.close()
-        
+
         query_response= {
-            'data': rez
+            'output': rez
         } 
 
         return query_response, 200

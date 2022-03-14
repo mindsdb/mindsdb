@@ -265,13 +265,20 @@ class Query(Resource):
 
         cur = cnx.cursor()
         cur.execute(query)
+        print('cur res:{}'.format(cur))
         rez = cur.fetchall()
+        # num_fields = len(cur.description)
+        field_names = [i[0] for i in cur.description]
+        print(field_names)
+        print('field_names :{}'.format(field_names))
+        # print(num_fields)
 
         cur.close()
         cnx.close()
 
         query_response= {
-            'output': rez
+            'output': rez,
+            'field_names': field_names
         } 
 
         return query_response, 200

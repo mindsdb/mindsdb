@@ -262,13 +262,15 @@ class Query(Resource):
             database=config['api']['mysql']['database'],
             connect_timeout=120  
         )
-
+        field_names = []
         cur = cnx.cursor()
         cur.execute(query)
         print('cur res:{}'.format(cur))
         rez = cur.fetchall()
         # num_fields = len(cur.description)
-        field_names = [i[0] for i in cur.description]
+        print('field_names :{}'.format(cur.description))
+        if cur.description != None:
+            field_names = [i[0] for i in cur.description]
         print(field_names)
         print('field_names :{}'.format(field_names))
         # print(num_fields)

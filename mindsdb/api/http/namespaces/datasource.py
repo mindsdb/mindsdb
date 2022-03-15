@@ -5,10 +5,12 @@ import re
 import multipart
 import zipfile
 import tarfile
+import mysql.connector
 
 from flask import request, send_file
 from flask_restx import Resource, abort     # 'abort' using to return errors as json: {'message': 'error text'}
 
+from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.datasources import ns_conf
@@ -157,7 +159,7 @@ class Datasource(Resource):
                 if not os.path.isfile(file_path):
                     os.rmdir(temp_dir_path)
                     return http_error(400, 'Wrong content.', 'Archive must contain data file in root.')
-            # TODO 
+            # TODO
             # request.default_store.save_datasource(ds_name, source_type, source, file_path)
             file_id = request.default_store.save_file(ds_name, file_path, file_name=data['file'])
             request.default_store.save_datasource(ds_name, source_type, source={'mindsdb_file_name': name})
@@ -247,6 +249,39 @@ class DatasourceData(Resource):
 
         return data_dict, 200
 
+
+@ns_conf.route('/query')
+@ns_conf.param('query', 'Execute query')
+class Query(Resource):
+    @ns_conf.doc('query_datasource')
+    def post(self):
+        query = request.json['query']
+
+        config = Config()
+        cnx = mysql.connector.connect(
+            user=config['api']['mysql']['user'],
+            password=config['api']['mysql']['password'],
+            host=config['api']['mysql']['host'],
+            port=config['api']['mysql']['port'],
+            database=config['api']['mysql']['database'],
+            connect_timeout=120
+        )
+        field_names = []
+        cur = cnx.cursor()
+        cur.execute(query)
+        rez = cur.fetchall()
+        if cur.description != None:
+            field_names = [i[0] for i in cur.description]
+
+        cur.close()
+        cnx.close()
+
+        query_response = {
+            'output': rez,
+            'field_names': field_names
+        }
+
+        return query_response, 200
 
 @ns_conf.route('/<name>/download')
 @ns_conf.param('name', 'Datasource name')

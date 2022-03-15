@@ -1,6 +1,9 @@
 import pandas as pd
+from sqlalchemy.types import (
+    Integer, Float, Text
+)
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast import Insert, Identifier, Constant
+from mindsdb_sql.parser.ast import Insert, Identifier, Constant, CreateTable, TableColumn, DropTables
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.utilities.log import log
@@ -38,16 +41,85 @@ class IntegrationDataNode(DataNode):
         elif self.ds_type == 'postgres':
             dialect = 'postgres'
         renderer = SqlalchemyRender(dialect)
-        query_str = renderer.get_string(query, with_failback=False)
-        dso.execute(query_str)
+
+        table_columns_meta = []
+        table_columns = []
+        for table in columns:
+            for column in columns[table]:
+                column_type = None
+                for row in data:
+                    column_value = row[table][column]
+                    if isinstance(column_value, int):
+                        column_type = Integer
+                    elif isinstance(column_value, float):
+                        column_type = Float
+                    elif isinstance(column_value, str):
+                        column_type = Text
+                column_type = column_type or Text
+                table_columns.append(
+                    TableColumn(
+                        name=column[-1],
+                        type=column_type
+                    )
+                )
+                table_columns_meta.append({
+                    'table': table,
+                    'name': column,
+                    'type': column_type
+                })
+        create_table_ast = CreateTable(
+            # name=Identifier(table_name),
+            name=table_name,
+            columns=table_columns,
+            is_replace=True
+        )
+
+        query_str = renderer.get_string(create_table_ast, with_failback=False)
+
+        drop_ast = DropTables(
+            tables=[Identifier(table_name)],
+            if_exists=True
+        )
+        # drop_query_str = renderer.get_string(drop_ast, with_failback=False)
+        # TEMP
+        # dso.execute(drop_query_str)
+        # dso.execute(query_str)
 
         values = []
+        insert_columns = []
+        insert_values = []
+        # for row in data:
+        #     for table in row:
+        #         for column in row[table]:
+
+        #         table_columns_meta
+        #     values.append([Constant(x) for x in row])
+
+        insert_columns = [Identifier(x['name'][-1]) for x in table_columns_meta]
+        # for column_meta in table_columns_meta:
+        new_data = []
         for row in data:
-            values.append([Constant(x) for x in row])
+            new_row = []
+            for column_meta in table_columns_meta:
+                value = row[column_meta['table']][column_meta['name']]
+                python_type = str
+                if column_meta['type'] == Integer:
+                    python_type = int
+                elif column_meta['type'] == Float:
+                    python_type = float
+
+                try:
+                    value = python_type(value)
+                except Exception:
+                    pass
+                new_row.append(value)
+            new_data.append(new_row)
+
+
         expected_ast = Insert(
             table=Identifier(table_name),
-            columns=[Identifier(x) for x in columns],
-            values=values
+            columns=insert_columns,   # [Identifier(x) for x in columns],
+            values=new_data  #values
         )
         query_str = renderer.get_string(expected_ast, with_failback=False)
         dso.execute(query_str)

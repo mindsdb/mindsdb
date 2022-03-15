@@ -798,7 +798,20 @@ class SQLQuery():
                 #             data = data[window_size:]
                 #             if len(data) > horizon and horizon > 1:
                 #                 data = data[:-horizon + 1]
-                data = [{(key, key): value for key, value in row.items()} for row in data]
+                if isinstance(self.query, CreateTable):
+                    new_data = []
+                    for row in data:
+                        new_row = {}
+                        for key, value in row.items():
+                            if key not in ('__mindsdb_row_id', '__mdb_make_predictions'):
+                                new_key = f'predictor.{key}'
+                            else:
+                                new_key = key
+                            new_row[(new_key, new_key)] = value
+                        new_data.append(new_row)
+                    data = new_data
+                else:
+                    data = [{(key, key): value for key, value in row.items()} for row in data]
 
                 table_name = get_preditor_alias(step, self.database)
                 values = [{table_name: x} for x in data]
@@ -1065,15 +1078,15 @@ class SQLQuery():
             except Exception as e:
                 raise SqlApiException(f'error on project step:{e} ') from e
         elif type(step) == SaveToTable:
-            step_data = steps_data[step.dataframe.step_num]
-            integration_name = step.integration_name
-            table_name = step.table_name
+            step_data = step.dataframe.result_data
+            integration_name = step.table.parts[0]
+            table_name = step.table.parts[1]
 
             dn = self.datahub.get(integration_name)
 
             if hasattr(dn, 'create_table') is False:
                 raise Exception(f"Creating table in '{integration_name}' is not supporting")
-            dn.create_table(name=table_name, columns=step_data['columns'], data=step_data['values'])
+            dn.create_table(table_name=table_name, columns=step_data['columns'], data=step_data['values'])
         else:
             raise SqlApiException(F'Unknown planner step: {step}')
         return data

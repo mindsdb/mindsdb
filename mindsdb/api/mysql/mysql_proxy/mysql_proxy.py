@@ -2332,6 +2332,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser.clear_sql(sql)
                     log.debug(f'COM_QUERY: {sql}')
+                    print(f'GOT: {sql}')
                     self.query_answer(sql)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
                     # https://dev.mysql.com/doc/internals/en/com-stmt-prepare.html

@@ -121,8 +121,6 @@ from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
 
-connection_id = 0
-
 
 def empty_fn():
     pass
@@ -196,7 +194,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         super().__init__(request, client_address, server)
 
     def init_session(self, company_id=None):
-        global connection_id
         log.debug('New connection [{ip}:{port}]'.format(
             ip=self.client_address[0], port=self.client_address[1]))
         log.debug(self.__dict__)
@@ -2452,3 +2449,26 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # interrupt the program with Ctrl-C
         log.info('Waiting for incoming connections...')
         server.serve_forever()
+
+
+class Dummy:
+    pass
+
+class FakeMysqlProxy(MysqlProxy):
+    def __init__(self):
+        request = Dummy()
+        client_address = ['', '']
+        server = Dummy()
+        server.connection_id = 0
+        server.hook_before_handle = empty_fn
+        server.original_model_interface = ModelInterface()
+        server.original_data_store = DataStore()
+        server.original_integration_controller = IntegrationController()
+        server.original_view_controller = ViewController()
+
+        super().__init__(request, client_address, server)
+
+    def is_cloud_connection(self):
+        return {
+            'is_cloud': False
+        }

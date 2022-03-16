@@ -97,7 +97,7 @@ class IntegrationDataNode(DataNode):
                     python_type = float
 
                 try:
-                    value = python_type(value)
+                    value = python_type(value) if value is not None else value
                 except Exception:
                     pass
                 new_row.append(value)
@@ -109,10 +109,7 @@ class IntegrationDataNode(DataNode):
             values=formatted_data
         )
 
-        # FIXME
-        # query_str = renderer.get_string(insert_ast, with_failback=False)
-        query_str = str(insert_ast)
-
+        query_str = renderer.get_string(insert_ast, with_failback=False)
         dso.execute(query_str)
 
     def select(self, query):

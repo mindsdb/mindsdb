@@ -29,7 +29,7 @@ class IntegrationDataNode(DataNode):
     def get_table_columns(self, tableName):
         return []
 
-    def create_table(self, table_name, columns, data):
+    def create_table(self, table_name_parts, columns, data):
         dso, _creation_info = self.data_store.create_datasource(self.integration_name, {'query': 'select 1'})
         if hasattr(dso, 'execute') is False:
             raise Exception(f"Cant create table in {self.integration_name}")
@@ -68,36 +68,24 @@ class IntegrationDataNode(DataNode):
                     'type': column_type
                 })
         create_table_ast = CreateTable(
-            # name=Identifier(table_name),
-            name=table_name,
+            name=Identifier(parts=table_name_parts),
             columns=table_columns,
             is_replace=True
         )
 
-        query_str = renderer.get_string(create_table_ast, with_failback=False)
+        create_query_str = renderer.get_string(create_table_ast, with_failback=False)
 
         drop_ast = DropTables(
-            tables=[Identifier(table_name)],
+            tables=[Identifier(parts=table_name_parts)],
             if_exists=True
         )
-        # drop_query_str = renderer.get_string(drop_ast, with_failback=False)
-        # TEMP
-        # dso.execute(drop_query_str)
-        # dso.execute(query_str)
 
-        values = []
-        insert_columns = []
-        insert_values = []
-        # for row in data:
-        #     for table in row:
-        #         for column in row[table]:
+        drop_query_str = renderer.get_string(drop_ast, with_failback=False)
+        dso.execute(drop_query_str)
+        dso.execute(create_query_str)
 
-        #         table_columns_meta
-        #     values.append([Constant(x) for x in row])
-
-        insert_columns = [Identifier(x['name'][-1]) for x in table_columns_meta]
-        # for column_meta in table_columns_meta:
-        new_data = []
+        insert_columns = [Identifier(parts=[x['name'][-1]]) for x in table_columns_meta]
+        formatted_data = []
         for row in data:
             new_row = []
             for column_meta in table_columns_meta:
@@ -113,15 +101,18 @@ class IntegrationDataNode(DataNode):
                 except Exception:
                     pass
                 new_row.append(value)
-            new_data.append(new_row)
+            formatted_data.append(new_row)
 
-
-        expected_ast = Insert(
-            table=Identifier(table_name),
-            columns=insert_columns,   # [Identifier(x) for x in columns],
-            values=new_data  #values
+        insert_ast = Insert(
+            table=Identifier(parts=table_name_parts),
+            columns=insert_columns,
+            values=formatted_data
         )
-        query_str = renderer.get_string(expected_ast, with_failback=False)
+
+        # FIXME
+        # query_str = renderer.get_string(insert_ast, with_failback=False)
+        query_str = str(insert_ast)
+
         dso.execute(query_str)
 
     def select(self, query):

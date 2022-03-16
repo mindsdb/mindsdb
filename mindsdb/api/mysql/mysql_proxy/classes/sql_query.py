@@ -1080,13 +1080,13 @@ class SQLQuery():
         elif type(step) == SaveToTable:
             step_data = step.dataframe.result_data
             integration_name = step.table.parts[0]
-            table_name = step.table.parts[1]
+            table_name_parts = step.table.parts[1:]
 
             dn = self.datahub.get(integration_name)
 
             if hasattr(dn, 'create_table') is False:
                 raise Exception(f"Creating table in '{integration_name}' is not supporting")
-            dn.create_table(table_name=table_name, columns=step_data['columns'], data=step_data['values'])
+            dn.create_table(table_name_parts=table_name_parts, columns=step_data['columns'], data=step_data['values'])
         else:
             raise SqlApiException(F'Unknown planner step: {step}')
         return data

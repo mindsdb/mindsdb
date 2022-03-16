@@ -1241,7 +1241,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif table_name == 'predictors':
             self.insert_predictor_answer(insert_dict)
 
-    def query_answer(self, sql):
+    def process_query_answer(self, sql):
+    # def query_answer(self, sql):
         # +++
         # if query not for mindsdb then process that query in integration db
         # TODO redirect only select data queries
@@ -2329,7 +2330,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser.clear_sql(sql)
                     log.debug(f'COM_QUERY: {sql}')
-                    self.query_answer(sql)
+                    result = self.process_query_answer(sql)
+                    self.send_query_answer(result)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
                     # https://dev.mysql.com/doc/internals/en/com-stmt-prepare.html
                     sql = self.decode_utf(p.sql.value)
@@ -2466,7 +2468,15 @@ class FakeMysqlProxy(MysqlProxy):
         server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
 
-        super().__init__(request, client_address, server)
+        self.request = request
+        self.client_address = client_address
+        self.server = server
+
+        self.session = SessionController(
+            server=self.server,
+            company_id=None
+        )
+        # super().__init__(request, client_address, server)
 
     def is_cloud_connection(self):
         return {

@@ -1087,6 +1087,7 @@ class SQLQuery():
             if hasattr(dn, 'create_table') is False:
                 raise Exception(f"Creating table in '{integration_name}' is not supporting")
             dn.create_table(table_name_parts=table_name_parts, columns=step_data['columns'], data=step_data['values'])
+            data = None
         else:
             raise SqlApiException(F'Unknown planner step: {step}')
         return data

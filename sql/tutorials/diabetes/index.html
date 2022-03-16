@@ -365,15 +365,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -383,14 +395,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -446,14 +458,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -1159,7 +1171,7 @@
 <li>Setup a MindsDB connection to your local instance.</li>
 <li>Create a predictor using SQL.</li>
 </ol>
-<h2 id="pre-requisites">Pre-requisites</h2>
+<h2 id="pre-requisites">Pre-requisites<a class="headerlink" href="#pre-requisites" title="Permanent link">&para;</a></h2>
 <p>For this tutorial, Docker is highly recommended. A <code>docker-compose.yml</code> file will be provided to get you started quickly.</p>
 <p>To ensure you can complete all the steps, make sure you have access to the following tools:</p>
 <ol>
@@ -1169,7 +1181,7 @@
 <li>Access to PGAdmin4 (provided with the docker-compose file).</li>
 <li>Optional: Access to ngrok. You can check the installation details at the <a href="https://ngrok.com/">ngrok website</a>.</li>
 </ol>
-<h2 id="docker">Docker</h2>
+<h2 id="docker">Docker<a class="headerlink" href="#docker" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Create a new project directory named e.g. <code>mindsdb-tutorial</code></li>
 <li>
@@ -1224,7 +1236,7 @@ For the database to connect to MindsDB we will use a tunneling program Ngrok to 
 <a href="https://docs.docker.com/storage/volumes/">Docker Volumes</a> are used for persistent storage of data.</p>
 <p>To run, open a terminal in the project folder and run <code>docker-compose up -d</code> .
 If you do not have the Docker images locally, it will first download them from docker hub and might take.</p>
-<h2 id="setup-the-database">Setup the database</h2>
+<h2 id="setup-the-database">Setup the database<a class="headerlink" href="#setup-the-database" title="Permanent link">&para;</a></h2>
 <p>After docker has started all the services
 In this section, you will create a Postgres database and a table into which you will then load the dataset.</p>
 <p>First, connect to your Postgres instance. There are cli options like <a href="https://www.pgcli.com/">pgcli</a>.</p>
@@ -1295,7 +1307,7 @@ In this section, you will create a Postgres database and a table into which you 
 <img alt="Select tables" src="/assets/tutorials/diabetes/pg4admin/select_pgtable.gif" />
 All the rows imported will be retrieved.</p>
 <p>Congratulations! You have completed setting up a Postgres database.</p>
-<h2 id="connect-your-database-to-mindsdb-gui">Connect your database to MindsDB GUI</h2>
+<h2 id="connect-your-database-to-mindsdb-gui">Connect your database to MindsDB GUI<a class="headerlink" href="#connect-your-database-to-mindsdb-gui" title="Permanent link">&para;</a></h2>
 <p>Now we are ready to connect your database to MindsDB's GUI. For this exercise, we will be connecting to MindsDB Cloud as it is much more convenient for most users to use.</p>
 <p>To make our database available to MindsDB, we will run <code>ngrok</code> as our database instance is local.</p>
 <p>The following command can be run in docker or a terminal on your device to set up a ngrok tunnel.</p>
@@ -1312,13 +1324,13 @@ For this example the port number used is 5432.</p>
 </code></pre></div>
 <p>The information required is by the forwarded address, next to 'Forwarding' select and copy <code>x.tcp.ngrok.io:15076</code>  Once you have copied the information, you can add it to the information requested by the MindsDB GUI which we will get to in a moment.</p>
 <p>For the next steps we will log into the MindsDB cloud interface. MindsDB Cloud is perfect if you are unable to install MindsDB on your device. If you are not registered yet, feel free to follow the below guide. If you have already registered, skip the next steps to connect your database.</p>
-<h3 id="mindsdb-studio-cloud-set-up">MindsDB Studio Cloud Set Up</h3>
+<h3 id="mindsdb-studio-cloud-set-up">MindsDB Studio Cloud Set Up<a class="headerlink" href="#mindsdb-studio-cloud-set-up" title="Permanent link">&para;</a></h3>
 <p>You can visit this <a href="https://docs.mindsdb.com/deployment/cloud/">link</a> and follow the steps in registering a MindsDB Cloud account.</p>
 <p>On the landing page, navigate to the left corner of the screen and select <code>ADD DATABASE</code>. Enter the required details. Example is below</p>
 <p><img alt="MindsDB integration details" src="/assets/tutorials/diabetes/Connecting_database_to_MindsdbCloud.gif" /></p>
 <p>Click <code>Connect</code>, you should now see your Postgres database connection in the main screen.</p>
 <p>You are now done with connecting MindsDB to your database! 🚀</p>
-<h2 id="create-a-predictor">Create a predictor</h2>
+<h2 id="create-a-predictor">Create a predictor<a class="headerlink" href="#create-a-predictor" title="Permanent link">&para;</a></h2>
 <p>Now we are ready to create our own predictor! We will start by using the MySQL API to connect to MindsDB and with a single SQL command create a predictor.</p>
 <p>The predictor we will create will be trained to determine negative and positive cases for diabetes. Predictors are great machine learning models when working with large datasets and optimal for determining classifications.</p>
 <p>Using the following command, you will connect through the MySQL API to MindsDB.</p>
@@ -1355,7 +1367,7 @@ For this example the port number used is 5432.</p>
 <p>The predictor has completed its training, indicated by the status column, and shows the accuracy of the model.
 You can revisit training new predictors to increase accuracy by changing the query to better suit the dataset i.e. omitting certain columns etc.</p>
 <p>Good job! We have successfully created and trained a predictive model ✨</p>
-<h2 id="make-predictions">Make predictions</h2>
+<h2 id="make-predictions">Make predictions<a class="headerlink" href="#make-predictions" title="Permanent link">&para;</a></h2>
 <p>In this section you will learn how to make predictions using your trained model.
 Now we will use the trained model to make predictions using a SQL query</p>
 <p>Use the following query using mock data with the predictor.</p>

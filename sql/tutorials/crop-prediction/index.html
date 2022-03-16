@@ -365,15 +365,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -383,14 +395,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -446,14 +458,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -1109,12 +1121,12 @@
                   </a>
                 
                 
-                <h1 id="crop-recomendation">Crop Recomendation</h1>
+                <h1 id="crop-recomendation">Crop Recomendation<a class="headerlink" href="#crop-recomendation" title="Permanent link">&para;</a></h1>
 <p><em>Dataset: <a href="https://www.kaggle.com/atharvaingle/crop-recommendation-dataset">Crop recomendation Data</a></em></p>
 <p><em>Communtiy Author: <a href="https://github.com/pixpack">pixpack</a></em></p>
 <p>Modern agriculture is becoming very dependent on technology. From advanced machinery to specially selected crops. All the technology produces a lot of data that can be used for better adjustment of the farming process. One use case of machine learning in agriculture could be the selection of the best crop for a specific field to maximize the potential yield. Such problems are often called <em>Classification Problems</em> in machine learning. With <strong>MindsDB</strong> you can easily make automated machine learning predictions straight from your existing database. Even without advanced ML engineering skills, you can start leveraging predictive models that help you make better business decisions.</p>
 <p>In this tutorial, you will learn how to predict the best crop type based on field parameters using <strong>MindsDB</strong> and <strong>MariaDB</strong>.</p>
-<h2 id="pre-requisites">Pre-requisites</h2>
+<h2 id="pre-requisites">Pre-requisites<a class="headerlink" href="#pre-requisites" title="Permanent link">&para;</a></h2>
 <p>Before you start make sure you have:</p>
 <ol>
 <li>
@@ -1127,13 +1139,13 @@
 <p>Access to a mysql-client. <a href="https://docs.mindsdb.com/faq/mysql-client/">Docker</a></p>
 </li>
 </ol>
-<h2 id="add-your-file-to-mindsdb">Add your file to MindsDB</h2>
+<h2 id="add-your-file-to-mindsdb">Add your file to MindsDB<a class="headerlink" href="#add-your-file-to-mindsdb" title="Permanent link">&para;</a></h2>
 <p>MindsDB can integrates with many databases, in most scenarios your data will be stored in a database, if you decide to load this dataset into your database of choice, please follow instructions here as to how to <a href="https://docs.mindsdb.com/faq/plug_your_data">connect mindsdb to your database</a>.</p>
 <p>In this tutorial, you simply upload the kaggle file Crop_recommendation.csv to MindsDB via the MindsDB adming GUI, In this tutorial, we are using <a href="https://cloud.mindsdb.com">cloud.mindsdb.com</a>. Alternatively, remember that if you are using a local deployment you will have to point your browser to <a href="https://127.0.0.1:47334">127.0.0.1:47334</a>.</p>
 <p>In the main screen, select <code>FILES</code> &gt; <code>FILE UPLOAD</code>. Then add your file and give it a name, in this tutorial we will name it <code>crops</code>.</p>
 <p>Click <code>Upload</code>, you should now see your file on the list of files. 🚀</p>
 <p>NOTE: Mindsdb SQL Server allows you to query your uploaded files using SQL, we will get to that right now.</p>
-<h2 id="connecting-to-your-mindsdb-sql-server">Connecting to your MindsDB SQL Server</h2>
+<h2 id="connecting-to-your-mindsdb-sql-server">Connecting to your MindsDB SQL Server<a class="headerlink" href="#connecting-to-your-mindsdb-sql-server" title="Permanent link">&para;</a></h2>
 <p>In this section you will connect to MindsDB with the MySQL API and explore what is there for you.</p>
 <p>First you need to connect to MindsDB through the MySQL API. To do so, use the following command.</p>
 <blockquote>
@@ -1151,7 +1163,7 @@
 <p>You can explore your data</p>
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">from</span> <span class="n">crops</span> <span class="k">limit</span> <span class="mi">4</span><span class="p">;</span>
 </code></pre></div>
-<h2 id="create-a-predictor">Create a predictor</h2>
+<h2 id="create-a-predictor">Create a predictor<a class="headerlink" href="#create-a-predictor" title="Permanent link">&para;</a></h2>
 <p>Now we can create a machine learning model with <code>crops</code> columns serving as features, and MindsDB takes care of the rest of ML workflow automatically. There is a way to get your hands into the insides of the model to fine tune it, but we will not cover it in this tutorial.</p>
 <p>Switch to the <code>mindsdb</code> database.</p>
 <div class="highlight"><pre><span></span><code><span class="n">USE</span> <span class="n">mindsdb</span><span class="p">;</span>
@@ -1177,7 +1189,7 @@
 <span class="go">1 row in set (0.29 sec)</span>
 </code></pre></div>
 <p>You are now done with creating the predictor! ✨</p>
-<h2 id="make-predictions">Make predictions</h2>
+<h2 id="make-predictions">Make predictions<a class="headerlink" href="#make-predictions" title="Permanent link">&para;</a></h2>
 <p>In this section you will learn how to make predictions using your trained model.</p>
 <p>To run a prediction against new or existing data, you can use the following query.</p>
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">label</span>

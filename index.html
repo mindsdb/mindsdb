@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#quick-start-guide" class="md-skip">
+        <a href="#quickstart-guide" class="md-skip">
           Skip to content
         </a>
       
@@ -375,15 +375,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -393,14 +405,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -456,14 +468,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -1004,8 +1016,9 @@
                   </a>
                 
                 
-                <h1 id="quick-start-guide">Quick Start Guide</h1>
-<p>Follow these instructions to start predicting with MindsDB straight away.</p>
+                <h1 id="quickstart-guide">Quickstart Guide<a class="headerlink" href="#quickstart-guide" title="Permanent link">&para;</a></h1>
+<p>Follow these steps to start predicting in SQL straight away.</p>
+<p><sup><sub>To try MindsDB with your own data or model, check out our <a href="/getting-started/">Getting Started Guide</a>.</sub></sup></p>
 <ol>
 <li>
 <p>Create your <a href="https://cloud.mindsdb.com/signup">free MindsDB Cloud account</a>.</p>
@@ -1016,8 +1029,8 @@
 <p><sup><sub>If you do not already have a preferred SQL client, we recommend <a href="https://dbeaver.io/download/">DBeaver Community Edition</a></sub></sup></p>
 </li>
 <li>
-<p>We have already prepared some example data for you.  To add it to your account, use the <code>CREATE DATASOURCE</code> syntax by copy and pasting this command into your SQL client:</li></p>
-<p><div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">DATASOURCE</span> <span class="n">exampleData</span>
+<p>We have already prepared some example data for you.  To add it to your account, use the <code>CREATE DATASOURCE</code> syntax by copy and pasting this command into your SQL client:</p>
+<p><div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">DATASOURCE</span> <span class="n">example_data</span>
 <span class="k">WITH</span> <span class="n">ENGINE</span> <span class="o">=</span> <span class="ss">&quot;postgres&quot;</span><span class="p">,</span>
 <span class="k">PARAMETERS</span> <span class="o">=</span> <span class="err">{</span> 
     <span class="ss">&quot;user&quot;</span><span class="p">:</span> <span class="ss">&quot;demo_user&quot;</span><span class="p">,</span>
@@ -1025,13 +1038,13 @@
     <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;3.220.66.106&quot;</span><span class="p">,</span>
     <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="ss">&quot;5432&quot;</span><span class="p">,</span>
     <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;demo&quot;</span>
-    <span class="err">}</span>
+<span class="err">}</span>
 </code></pre></div>
 <div id="create-datasource">
   <style>
     #create-datasource code { background-color: #353535; color: #f5f5f5 }
   </style>
-<div class="highlight"><pre><span></span><code>mysql&gt; CREATE DATASOURCE exampleData
+<div class="highlight"><pre><span></span><code>mysql&gt; CREATE DATASOURCE example_data
     -&gt; WITH ENGINE = &quot;postgres&quot;,
     -&gt; PARAMETERS = {
     -&gt; &quot;user&quot;: &quot;demo_user&quot;,
@@ -1047,7 +1060,7 @@ Query OK, 0 rows affected (3.22 sec)
 <li>
 <p>You can now preview the available data with a standard <code>SELECT</code>.  To preview the Home Rentals dataset, copy and paste this command into your SQL client:</p>
 <p><div class="highlight"><pre><span></span><code>SELECT * 
-FROM exampleData.demo_data.home_rentals
+FROM example_data.demo_data.home_rentals
 LIMIT 10;
 </code></pre></div>
 <div id="preview-data">
@@ -1055,7 +1068,7 @@ LIMIT 10;
     #preview-data code { background-color: #353535; color: #f5f5f5 }
 </style>
 <div class="highlight"><pre><span></span><code>mysql&gt; SELECT * 
-    -&gt; FROM exampleData.demo_data.home_rentals
+    -&gt; FROM example_data.demo_data.home_rentals
     -&gt; LIMIT 10;
 +-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
 | number_of_rooms | number_of_bathrooms | sqft | location | days_on_market | initial_price | neighborhood | rental_price |
@@ -1077,8 +1090,8 @@ LIMIT 10;
 </li>
 <li>
 <p>Now you are ready to create your first predictor.  Use the <code>CREATE PREDICTOR</code> syntax by copy and pasting this command into your SQL client:</p>
-<p><div class="highlight"><pre><span></span><code>CREATE PREDICTOR homeRentalsPredictor
-FROM exampleData
+<p><div class="highlight"><pre><span></span><code>CREATE PREDICTOR home_rentals_predictor
+FROM example_data
     (SELECT * FROM demo_data.home_rentals)
 PREDICT rental_price;
 </code></pre></div>
@@ -1086,8 +1099,8 @@ PREDICT rental_price;
   <style>
     #create-predictor code { background-color: #353535; color: #f5f5f5 }
   </style>
-<div class="highlight"><pre><span></span><code>mysql&gt; CREATE PREDICTOR homeRentalsPredictor
-    -&gt; FROM exampleData
+<div class="highlight"><pre><span></span><code>mysql&gt; CREATE PREDICTOR home_rentals_predictor
+    -&gt; FROM example_data
     -&gt; (SELECT * FROM demo_data.home_rentals)
     -&gt; PREDICT rental_price;
 Query OK, 0 rows affected (9.79 sec)
@@ -1098,7 +1111,7 @@ Query OK, 0 rows affected (9.79 sec)
 <p>It may take a couple of minutes for training to complete.  You can monitor the status of your predictor by copy and pasting this command into your SQL client:</p>
 <p><div class="highlight"><pre><span></span><code>SELECT status
 FROM predictors
-WHERE name=&#39;homeRentalsPredictor&#39;;
+WHERE name=&#39;home_rentals_predictor&#39;;
 </code></pre></div>
 <div id="predictor-status">
   <style>
@@ -1106,7 +1119,7 @@ WHERE name=&#39;homeRentalsPredictor&#39;;
   </style>
 <div class="highlight"><pre><span></span><code>mysql&gt; SELECT status
     -&gt; FROM predictors
-    -&gt; WHERE name=&#39;homeRentalsPredictor&#39;;
+    -&gt; WHERE name=&#39;home_rentals_predictor&#39;;
 +----------+
 | status   |
 +----------+
@@ -1116,7 +1129,7 @@ WHERE name=&#39;homeRentalsPredictor&#39;;
 ...
 mysql&gt; SELECT status
     -&gt; FROM predictors
-    -&gt; WHERE name=&#39;homeRentalsPredictor&#39;;
+    -&gt; WHERE name=&#39;home_rentals_predictor&#39;;
 +----------+
 | status   |
 +----------+
@@ -1127,9 +1140,9 @@ mysql&gt; SELECT status
 </div></p>
 </li>
 <li>
-<p>You should see a status of <code>generating</code>, then <code>training</code> initially, followed by <code>complete</code> once it is done.  The <code>SELECT</code> syntax will allow you to make a prediction based on features.  Make your first prediction by copy and pasting this command into your SQL client:</p>
+<p>You should see a status of <code>generating</code>, then <code>training</code> initially, followed by <code>complete</code> once it is done.  The <a href="/sql/api/select"><code>SELECT</code> syntax</a> will allow you to make a prediction based on features.  Make your first prediction by copy and pasting this command into your SQL client:</p>
 <p><div class="highlight"><pre><span></span><code>SELECT rental_price
-FROM homeRentalsPredictor
+FROM home_rentals_predictor
 WHERE number_of_bathrooms=2 AND sqft=1000;
 </code></pre></div>
 <div id="make-prediction">
@@ -1137,7 +1150,7 @@ WHERE number_of_bathrooms=2 AND sqft=1000;
     #make-prediction code { background-color: #353535; color: #f5f5f5 }
   </style>
 <div class="highlight"><pre><span></span><code>mysql&gt; SELECT rental_price
-    -&gt; FROM homeRentalsPredictor
+    -&gt; FROM home_rentals_predictor
     -&gt; WHERE number_of_bathrooms=2 AND sqft=1000;
 +--------------+
 | rental_price |

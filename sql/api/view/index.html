@@ -365,15 +365,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -383,14 +395,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -446,14 +458,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -1067,9 +1079,9 @@
                   </a>
                 
                 
-                <h1 id="create-view-statement">CREATE VIEW statement</h1>
+                <h1 id="create-view-statement">CREATE VIEW statement<a class="headerlink" href="#create-view-statement" title="Permanent link">&para;</a></h1>
 <p>In MindsDB, an <code>AI Table</code> is a virtual table based on the result-set of the SQL Statement that <code>JOINS</code> table data with the predictions of a model. An <code>AI Table</code> can be created using the <code>CREATE AI table ai_table_name</code> statement.</p>
-<h2 id="syntax">Syntax</h2>
+<h2 id="syntax">Syntax<a class="headerlink" href="#syntax" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="k">VIEW</span> <span class="n">ai_table_name</span> <span class="k">as</span> <span class="p">(</span>
     <span class="k">SELECT</span>
         <span class="n">a</span><span class="p">.</span><span class="k">column_name</span><span class="p">,</span>
@@ -1080,7 +1092,7 @@
     <span class="k">JOIN</span> <span class="n">predictor_name</span> <span class="k">as</span> <span class="n">p</span>
 <span class="p">);</span>
 </code></pre></div>
-<h2 id="example">Example</h2>
+<h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
 <p>We will use the Home Rentals dataset to create an AI Table.</p>
 <table>
 <thead>

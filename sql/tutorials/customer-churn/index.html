@@ -365,15 +365,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -383,14 +395,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -446,14 +458,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -1128,9 +1140,9 @@
 <blockquote>
 <p>Note: You can follow up this tutorial by connecting to your own database and using different data - the same workflow applies to most machine learning use cases.</p>
 </blockquote>
-<h2 id="pre-requisites">Pre-requisites</h2>
+<h2 id="pre-requisites">Pre-requisites<a class="headerlink" href="#pre-requisites" title="Permanent link">&para;</a></h2>
 <p>First, make sure you have successfully installed MindsDB. Check out the installation guide for <a href="/deployment/docker/">Docker</a> or <a href="/deployment/source/">PyPi</a> install. Second, you will need to have mysql-client or DBeaver, MySQL WOrkbench etc installed locally to connect to MySQL API.</p>
-<h2 id="database-connection">Database Connection</h2>
+<h2 id="database-connection">Database Connection<a class="headerlink" href="#database-connection" title="Permanent link">&para;</a></h2>
 <p>First, we need to connect MindsDB to the database where the Customer Churn data is stored. In the left navigation click on Database. Next, click on the ADD DATABASE. Here, we need to provide all of the required parameters for connecting to the database.</p>
 <ul>
 <li>Supported Database - select the database that you want to connect to</li>
@@ -1143,14 +1155,14 @@
 </ul>
 <p><img alt="Connect to DB" src="/assets/sql/tutorials/connect.gif" /></p>
 <p>Then, click on CONNECT. The next step is to use the MySQL client to connect to MindsDB’s MySQL API and train a new model that shall predict customer churn.</p>
-<h2 id="connect-to-mindsdbs-mysql-api">Connect to MindsDB’s MySQL API</h2>
+<h2 id="connect-to-mindsdbs-mysql-api">Connect to MindsDB’s MySQL API<a class="headerlink" href="#connect-to-mindsdbs-mysql-api" title="Permanent link">&para;</a></h2>
 <p>I will use a mysql command line client in the next part of the tutorial but you can follow up with the one that works the best for you, like Dbeaver. The first step is to use the MindsDB Cloud user to connect to the MySQL API:</p>
 <div class="highlight"><pre><span></span><code>mysql -h cloud.mindsdb.com --port 3306 -u theusername@mail.com -p
 </code></pre></div>
 <p>In the above command, we specify the hostname and user name explicitly, as well as a password for connecting.</p>
 <p><img alt="Connect mysql-client" src="/assets/sql/tutorials/connect.png" /></p>
 <p>If you got the above screen that means you have successfully connected. If you have an authentication error, please make sure you are providing the email address you have used to create an account on MindsDB Cloud.</p>
-<h3 id="data-overview">Data Overview</h3>
+<h3 id="data-overview">Data Overview<a class="headerlink" href="#data-overview" title="Permanent link">&para;</a></h3>
 <p>In this tutorial, we will use the <a href="https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/customer_churn/raw_data/WA_Fn-UseC_-Telco-Customer-Churn.csv">customer churn data-set</a> . Each row represents a customer and we will train a machine learning model to help us predict if the customer is going to stop using the company products. Below is a short description of each feature inside the data.</p>
 <ul>
 <li>CustomerId - Customer ID</li>
@@ -1175,7 +1187,7 @@
 <li>TotalCharges - The total amount charged to the customer</li>
 <li>Churn - Whether the customer churned or not (Yes or No). This is what we want to predict.</li>
 </ul>
-<h2 id="using-sql-statements-to-trainquery-models">Using SQL Statements to train/query models</h2>
+<h2 id="using-sql-statements-to-trainquery-models">Using SQL Statements to train/query models<a class="headerlink" href="#using-sql-statements-to-trainquery-models" title="Permanent link">&para;</a></h2>
 <p>Now, we will train a new machine learning model from the datasource we have created using MindsDB Studio. 
 Switch back to mysql-client and run:</p>
 <div class="highlight"><pre><span></span><code>use mindsdb;

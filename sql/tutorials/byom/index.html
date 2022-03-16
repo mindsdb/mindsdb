@@ -365,15 +365,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -383,14 +395,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -446,14 +458,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -1016,7 +1028,7 @@
                   </a>
                 
                 
-                <h1 id="bring-your-own-model">Bring Your Own Model</h1>
+                <h1 id="bring-your-own-model">Bring Your Own Model<a class="headerlink" href="#bring-your-own-model" title="Permanent link">&para;</a></h1>
 <p>Mindsdb allows you to integrate your own machine learning models into it.</p>
 <p>In order to do this your model will require some sort of API wrapper, for now we have 2x API specifications we support, mlflow and ray serve.</p>
 <p>The former supports importing already trained models and predicting with them from mindsdb. The later supports both training and predicting with external models.</p>
@@ -1026,7 +1038,7 @@
 - <code>dtype_dict</code>, this is a json specifying all columns expected by their models and their types</p>
 <p>There's an additional optional argument if you want to train the model via mindsdb:
 - <code>url.train</code>, which is the endpoint we'll call when training your model</p>
-<h2 id="ray-server">Ray Server</h2>
+<h2 id="ray-server">Ray Server<a class="headerlink" href="#ray-server" title="Permanent link">&para;</a></h2>
 <p>Ray serve is a simple high-thoroughput service that can wrap over your own ml models.</p>
 <div class="highlight"><pre><span></span><code>import ray
 from fastapi import Request, FastAPI
@@ -1104,7 +1116,7 @@ format=&#39;ray_server&#39;;
 <div class="highlight"><pre><span></span><code>SELECT tb.number_of_rooms, t.rental_price FROM mydb.test_data.home_rentals AS t JOIN mindsdb.byom AS tb WHERE t.rental_price &gt; 5300;
 </code></pre></div>
 <p><em>Please note that, if your model is behind a reverse proxy (e.g. nginx) you might have to increase the maximum limit for POST requests in order to receive the training data. Mindsdb itself can send as much that as you'd like and has been stress-tested with over a billion rows.</em></p>
-<h2 id="mlflow">MLFlow</h2>
+<h2 id="mlflow">MLFlow<a class="headerlink" href="#mlflow" title="Permanent link">&para;</a></h2>
 <p>MLFlow is a tool that you can use to train and serve models.</p>
 <p>As training is done through code rather than the API, that bit you will have to do from outside of mindsdb by pulling your data manually.</p>
 <p>The first step would be to install mlflow and get a model going, you can use the one in this very simple tutorial: https://github.com/mlflow/mlflow#saving-and-serving-models</p>

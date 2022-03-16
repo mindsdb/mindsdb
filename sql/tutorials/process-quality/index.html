@@ -365,15 +365,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -383,14 +395,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -446,14 +458,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -1008,18 +1020,18 @@
                   </a>
                 
                 
-                <h1 id="pre-requisites">Pre-requisites</h1>
+                <h1 id="pre-requisites">Pre-requisites<a class="headerlink" href="#pre-requisites" title="Permanent link">&para;</a></h1>
 <p>Before you start make sure that you've:</p>
 <ol>
 <li>Visited <a href="/info">Getting Started Guide</a></li>
 <li>Visited <a href="/deployment/cloud">Getting Started with Cloud</a></li>
 <li>Downloaded the dataset. You can get it from <a href="https://www.kaggle.com/edumagalhaes/quality-prediction-in-a-mining-process">Kaggle</a>.</li>
 </ol>
-<h1 id="manufacturing-process-quality">Manufacturing process quality</h1>
+<h1 id="manufacturing-process-quality">Manufacturing process quality<a class="headerlink" href="#manufacturing-process-quality" title="Permanent link">&para;</a></h1>
 <p>Predicting process result quality is a common task in manufacturing analytics. Manufacturing plants commonly use quality predictions to gain a competitive edge over their competitors, improve their products or increase their customers satisfaction. <strong>MindsDB</strong> is a tool that can help you solve quality prediction tasks <strong>easily</strong> and <strong>effectively</strong> using machine learning. 
 MindsDB abstracts ML models as virtual “AI Tables” in databases and you can make predictions just using normal SQL commands.</p>
 <p>In this tutorial you will learn how to predict the quality of a mining process using <strong>MindsDB</strong>.</p>
-<h2 id="upload-a-file">Upload a file</h2>
+<h2 id="upload-a-file">Upload a file<a class="headerlink" href="#upload-a-file" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Fix headers: </li>
 <li><code>sed -e 's/ /_/g' -e 's/\(.*\)/\L\1/' -e 's/%_//g' MiningProcess_Flotation_Plant_Database.csv &gt; fixed_headers.csv</code> (for Linux/Unix)</li>
@@ -1027,14 +1039,14 @@ MindsDB abstracts ML models as virtual “AI Tables” in databases and you can 
 <li>Click on <strong>Files</strong> icon to go to datasets page</li>
 <li>Click on <strong>FILE UPLOAD</strong> button to upload file into MindsDB</li>
 </ol>
-<h2 id="connect-to-mindsdb-sql-sever">Connect to MindsDB SQL Sever</h2>
+<h2 id="connect-to-mindsdb-sql-sever">Connect to MindsDB SQL Sever<a class="headerlink" href="#connect-to-mindsdb-sql-sever" title="Permanent link">&para;</a></h2>
 <ol>
 <li><div class="highlight"><pre><span></span><code><span class="n">mysql</span> <span class="o">-</span><span class="n">h</span> <span class="n">cloud</span><span class="p">.</span><span class="n">mindsdb</span><span class="p">.</span><span class="n">com</span> <span class="c1">--port 3306 -u username@email.com -p</span>
 </code></pre></div></li>
 <li><div class="highlight"><pre><span></span><code><span class="n">USE</span> <span class="n">mindsdb</span><span class="p">;</span>
 </code></pre></div></li>
 </ol>
-<h2 id="create-a-predictor">Create a predictor</h2>
+<h2 id="create-a-predictor">Create a predictor<a class="headerlink" href="#create-a-predictor" title="Permanent link">&para;</a></h2>
 <p>In this section you will connect to MindsDB with the MySql API and create a Predictor. It is in MindsDB terms a machine learning model, but all its complexity is automated and abstracted as a virtual “AI Table”. If you are an ML expert and want to tweak the model, MindsDB also allows you that (please refer to documentation).</p>
 <p>Use the following query to create a Predictor that will foretell the silica_concentrate at the end of our mining process.</p>
 <blockquote>
@@ -1070,7 +1082,7 @@ MindsDB abstracts ML models as virtual “AI Tables” in databases and you can 
 </code></pre></div>
 <p>As you can see the accuracy of the model is 1 (i.e. 100%). This is the result of using a limited dataset of 5000 rows. In reality when using the whole dataset, you will probably see a more reasonable accuracy.</p>
 <p>You are now done with creating the predictor! ✨</p>
-<h2 id="make-predictions">Make predictions</h2>
+<h2 id="make-predictions">Make predictions<a class="headerlink" href="#make-predictions" title="Permanent link">&para;</a></h2>
 <p>In this section you will learn how to make predictions using your trained model.</p>
 <p>To run a prediction against new or existing data, you can use the following query.</p>
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">silica_concentrate</span><span class="p">,</span> <span class="n">silica_concentrate_confidence</span><span class="p">,</span> <span class="n">silica_concentrate_explain</span> <span class="k">as</span> <span class="n">Info</span>

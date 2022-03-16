@@ -365,15 +365,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -383,14 +395,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -446,14 +458,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -1065,12 +1077,12 @@
                   </a>
                 
                 
-                <h1 id="select-statement">SELECT statement</h1>
+                <h1 id="select-statement">SELECT statement<a class="headerlink" href="#select-statement" title="Permanent link">&para;</a></h1>
 <p>The <code>SELECT</code> statement is used to get a predictions from the model table. The data is not persistent and is returned on the fly as a result-set. The basic syntax for selecting from the model is:</p>
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">target_variable</span><span class="p">,</span> <span class="n">target_variable_explain</span> <span class="k">FROM</span> <span class="n">model_table</span> 
                                                 <span class="k">WHERE</span> <span class="n">column3</span><span class="o">=</span> <span class="ss">&quot;value&quot;</span> <span class="k">AND</span>  <span class="n">column2</span><span class="o">=</span> <span class="ss">&quot;value&quot;</span><span class="p">;</span>
 </code></pre></div>
-<h2 id="model-table-columns">Model table columns</h2>
+<h2 id="model-table-columns">Model table columns<a class="headerlink" href="#model-table-columns" title="Permanent link">&para;</a></h2>
 <p>The below list contains the column names of the model table. Note that <code>target_variable_</code> will be the name of the target variable column.</p>
 <ul>
 <li>target_variable_original - The original value of the target variable.</li>
@@ -1122,7 +1134,7 @@
 </tr>
 </tbody>
 </table>
-<h2 id="select-example">SELECT example</h2>
+<h2 id="select-example">SELECT example<a class="headerlink" href="#select-example" title="Permanent link">&para;</a></h2>
 <p>The following SQL statement selects all information from the <code>home_rentals_model</code> for the property that has "sqft": 800, "number_of_rooms": 4, "number_of_bathrooms": 2,
 "location": "good", "days_on_market" : 12, "neighborhood": "downtown", "initial_price": "2222".</p>
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">home_rentals_model</span> 

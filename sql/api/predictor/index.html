@@ -365,15 +365,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -383,14 +395,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -446,14 +458,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -1233,7 +1245,7 @@
                   </a>
                 
                 
-                <h1 id="create-predictor-statement">CREATE PREDICTOR Statement</h1>
+                <h1 id="create-predictor-statement">CREATE PREDICTOR Statement<a class="headerlink" href="#create-predictor-statement" title="Permanent link">&para;</a></h1>
 <p>The <code>CREATE PREDICTOR</code> statement is used to train a new model. The basic syntax for training a model is:</p>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">predictor_name</span>
 <span class="k">FROM</span> <span class="n">integration_name</span> 
@@ -1245,7 +1257,7 @@
 <li><code>FROM integration_name (select column_name, column_name2 FROM table_name)</code> - where <code>integration_name</code> is the name of the <a href="/connect/#create-new-datasource">datasource</a>, where <code>(select column_name, column_name2 FROM table_name)</code> is the SELECT statement for selecting the data. If you want to change the default name of the datasource you can use the alias <code>as ds_name</code>.</li>
 <li><code>PREDICT column_name</code> - where <code>column_name</code> is the column name of the target variable. If you want to change the name of the target variable you can use the <code>as column_alias</code>.</li>
 </ul>
-<h3 id="example-data">Example Data</h3>
+<h3 id="example-data">Example Data<a class="headerlink" href="#example-data" title="Permanent link">&para;</a></h3>
 <p>The Home Rentals dataset contains prices of properties from a metropolitan area in the US. This table will be used in all of the documentation examples.</p>
 <table>
 <thead>
@@ -1313,28 +1325,28 @@
 </tr>
 </tbody>
 </table>
-<h3 id="create-predictor-example">Create Predictor example</h3>
+<h3 id="create-predictor-example">Create Predictor example<a class="headerlink" href="#create-predictor-example" title="Permanent link">&para;</a></h3>
 <p>This example shows how you can train a Machine Learning model called <code>home_rentals_model</code> to predict the rental prices for real estate properties inside the dataset.</p>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">home_rentals_model</span>
 <span class="k">FROM</span> <span class="n">db_integration</span> <span class="p">(</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">house_rentals_data</span><span class="p">)</span> <span class="k">as</span> <span class="n">rentals</span>
 <span class="n">PREDICT</span> <span class="n">rental_price</span> <span class="k">as</span> <span class="n">price</span><span class="p">;</span>
 </code></pre></div>
 <p>With this, we will use all columns from the dataset above to predict the value in <code>rental_price</code>. </p>
-<h3 id="create-from-a-file-datasource">Create from a file datasource</h3>
+<h3 id="create-from-a-file-datasource">Create from a file datasource<a class="headerlink" href="#create-from-a-file-datasource" title="Permanent link">&para;</a></h3>
 <p>If you have uploaded a file from the GUI, you can specify <code>files</code> as the datasource:</p>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">home_rentals_model</span>
 <span class="k">FROM</span> <span class="n">files</span> <span class="p">(</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">house_rentals_data</span><span class="p">)</span> <span class="k">as</span> <span class="n">rentals</span>
 <span class="n">PREDICT</span> <span class="n">rental_price</span> <span class="k">as</span> <span class="n">price</span><span class="p">;</span>
 </code></pre></div>
-<h3 id="select-predictor-status">SELECT Predictor status</h3>
+<h3 id="select-predictor-status">SELECT Predictor status<a class="headerlink" href="#select-predictor-status" title="Permanent link">&para;</a></h3>
 <p>After you run the <code>CREATE Predictor</code> statement, you can check the status of the training model, by selecting from <code>mindsdb.predictors</code> table:</p>
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">predictors</span> <span class="k">WHERE</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;predictor_name&#39;</span><span class="p">;</span>
 </code></pre></div>
-<h3 id="select-predictor-example">SELECT Predictor example</h3>
+<h3 id="select-predictor-example">SELECT Predictor example<a class="headerlink" href="#select-predictor-example" title="Permanent link">&para;</a></h3>
 <p>To check the training status for the <code>home_rentals_model</code> run:</p>
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">predictors</span> <span class="k">WHERE</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;home_rentals_model&#39;</span><span class="p">;</span>
 </code></pre></div>
-<h2 id="time-series-keywords">Time Series keywords</h2>
+<h2 id="time-series-keywords">Time Series keywords<a class="headerlink" href="#time-series-keywords" title="Permanent link">&para;</a></h2>
 <p>To train a timeseries model, MindsDB provides additional keywords.</p>
 <ul>
 <li>
@@ -1361,7 +1373,7 @@
 <span class="n">WINDOW</span> <span class="mi">10</span>
 <span class="n">HORIZON</span> <span class="mi">5</span><span class="p">;</span>
 </code></pre></div>
-<h3 id="time-series-example">Time Series example</h3>
+<h3 id="time-series-example">Time Series example<a class="headerlink" href="#time-series-example" title="Permanent link">&para;</a></h3>
 <p>The following example trains the new <code>inventory_model</code> model which can predicts the <code>units_in_inventory</code> for the next 7 days, taking into account the historical inventory in the past 20 days for each 'procuct_id'</p>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">inventory_model</span>
 <span class="k">FROM</span> <span class="n">db_integration</span>
@@ -1374,10 +1386,10 @@
 <span class="n">WINDOW</span> <span class="mi">20</span>
 <span class="n">HORIZON</span> <span class="mi">7</span>
 </code></pre></div>
-<h2 id="using-statement">USING statement</h2>
+<h2 id="using-statement">USING statement<a class="headerlink" href="#using-statement" title="Permanent link">&para;</a></h2>
 <p>In MindsDB, the underlying AutoML models are based on Lightwood. This library generates models automatically based on the data and a declarative problem definition, but the default configuration can be overridden.</p>
 <p>The <code>USING ...</code> statement provides the option to configure a model to be trained with specific options.</p>
-<h2 id="syntax">Syntax</h2>
+<h2 id="syntax">Syntax<a class="headerlink" href="#syntax" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="p">[</span><span class="n">name_of_your</span> <span class="n">_predictor</span><span class="p">]</span>
 <span class="k">FROM</span> <span class="p">[</span><span class="n">name_of_your_integration</span><span class="p">]</span>
     <span class="p">(</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">your_database</span><span class="p">.</span><span class="n">your_data_table</span><span class="p">)</span>
@@ -1387,7 +1399,7 @@
 <span class="p">;</span>
 </code></pre></div>
 <p>There are several high-level keys that can be specified with <code>USING</code>. Here, we explore a couple of them.</p>
-<h2 id="encoder-key-using-encoders">Encoder key (USING encoders)</h2>
+<h2 id="encoder-key-using-encoders">Encoder key (USING encoders)<a class="headerlink" href="#encoder-key-using-encoders" title="Permanent link">&para;</a></h2>
 <p>Grants access to configure how each column is encoded. By default, the AutoML engine will try to get the best match for the data.</p>
 <div class="highlight"><pre><span></span><code><span class="p">...</span> 
 <span class="k">USING</span> 
@@ -1395,7 +1407,7 @@
 <span class="p">;</span>
 </code></pre></div>
 <p>To learn more about how encoders work and their options, go <a href="https://lightwood.io/encoder.html">here</a>.</p>
-<h2 id="model-key-using-model">Model key (USING model)</h2>
+<h2 id="model-key-using-model">Model key (USING model)<a class="headerlink" href="#model-key-using-model" title="Permanent link">&para;</a></h2>
 <p>Allows you to specify what type of Machine Learning algorithm to learn from the encoder data.</p>
 <div class="highlight"><pre><span></span><code><span class="p">...</span> 
 <span class="k">USING</span> 
@@ -1403,10 +1415,10 @@
 <span class="p">;</span>
 </code></pre></div>
 <p>To learn more about all the model options, go <a href="https://lightwood.io/mixer.html">here</a>.</p>
-<h2 id="other-keys">Other keys</h2>
+<h2 id="other-keys">Other keys<a class="headerlink" href="#other-keys" title="Permanent link">&para;</a></h2>
 <p>We support JSON-like syntax as well as a dot access notation for said JSON. In that sense, it is equivalent to write <code>USING a.b.c=5</code> or <code>USING a = {"b": {"c": 5}}</code>.</p>
 <p>You have a lot of options in terms of what you can configure with <code>USING</code>. Since lightwood model are fully-generated by a JSON configuration we call "JsonAI", and with the <code>USING</code> statement you can modify all bits of that. The most common usecases for configuring predictors will be listed and explained in the example below. To see all options available in detail, you should checkout the lightwood docs about <a href="https://lightwood.io/api/types.html#api.types.JsonAI"><code>JsonAI</code></a>.</p>
-<h2 id="example">Example</h2>
+<h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
 <p>We will use the home rentals dataset, specifying particular encoders for some of the columns and a LightGBM model.</p>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">home_rentals_predictor</span> 
 <span class="k">FROM</span> <span class="n">my_db_integration</span> <span class="p">(</span>

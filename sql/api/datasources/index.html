@@ -365,15 +365,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -383,14 +395,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -446,14 +458,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -1053,16 +1065,16 @@
                   </a>
                 
                 
-                <h1 id="create-datasource">Create Datasource</h1>
+                <h1 id="create-datasource">Create Datasource<a class="headerlink" href="#create-datasource" title="Permanent link">&para;</a></h1>
 <p>MindsDB enables connections to your favorite databases, data warehouses, data lakes, etc in a simple way.</p>
 <p>Our SQL API supports creating a datasource connection by passing any credentials needed by each type of system that you are connecting to. </p>
-<h2 id="syntax">Syntax</h2>
+<h2 id="syntax">Syntax<a class="headerlink" href="#syntax" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">DATASOURCE</span> <span class="n">datasource_name</span>
 <span class="k">WITH</span>
     <span class="n">engine</span><span class="o">=</span><span class="n">engine_string</span><span class="p">,</span> 
     <span class="k">parameters</span><span class="o">=</span><span class="err">{</span><span class="ss">&quot;key&quot;</span><span class="p">:</span><span class="ss">&quot;value&quot;</span><span class="p">,</span> <span class="p">...</span><span class="err">}</span><span class="p">;</span>
 </code></pre></div>
-<h1 id="example-mariadb">Example: MariaDB</h1>
+<h1 id="example-mariadb">Example: MariaDB<a class="headerlink" href="#example-mariadb" title="Permanent link">&para;</a></h1>
 <p>Here is a concrete example to connect to a MySQL database.</p>
 <div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">DATASOURCE</span> <span class="n">mysql_datasource</span> 
 <span class="k">WITH</span> 

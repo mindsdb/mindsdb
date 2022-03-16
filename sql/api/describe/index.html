@@ -365,15 +365,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -383,14 +395,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -446,14 +458,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -901,6 +913,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#expected-output_2" class="md-nav__link">
+    Expected Output
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1123,6 +1142,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#expected-output_2" class="md-nav__link">
+    Expected Output
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1145,31 +1171,36 @@
                   </a>
                 
                 
-                <h1 id="describe-statement">DESCRIBE statement</h1>
+                <h1 id="describe-statement">DESCRIBE statement<a class="headerlink" href="#describe-statement" title="Permanent link">&para;</a></h1>
 <p>The <code>DESCRIBE ...</code> statement is used to display the attributes of an existing model.</p>
-<h2 id="describe-features">DESCRIBE FEATURES</h2>
+<h2 id="describe-features">DESCRIBE FEATURES<a class="headerlink" href="#describe-features" title="Permanent link">&para;</a></h2>
 <p>The <code>DESCRIBE [...].features</code> statement is used to display the way that the model encoded the data prior to training.</p>
-<h3 id="syntax">Syntax:</h3>
+<h3 id="syntax">Syntax:<a class="headerlink" href="#syntax" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="k">DESCRIBE</span> <span class="p">[</span><span class="n">name_of_your_predictor</span><span class="p">].</span><span class="n">features</span><span class="p">;</span>
 </code></pre></div>
-<h3 id="expected-output">Expected Output</h3>
+<h3 id="expected-output">Expected Output<a class="headerlink" href="#expected-output" title="Permanent link">&para;</a></h3>
 <ul>
 <li>column: name of the feature </li>
 <li>type: binary integer... </li>
 <li>encoder: name of the encoder used for that column</li>
 <li>role: describes whether the column is a target or a feature</li>
 </ul>
-<h2 id="describe-model">DESCRIBE MODEL</h2>
+<h2 id="describe-model">DESCRIBE MODEL<a class="headerlink" href="#describe-model" title="Permanent link">&para;</a></h2>
 <p><code>DESCRIBE [...].model</code> statement is used to display the performance of the candidate models.</p>
-<h3 id="syntax_1">Syntax:</h3>
+<h3 id="syntax_1">Syntax:<a class="headerlink" href="#syntax_1" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="k">DESCRIBE</span> <span class="p">[</span><span class="n">name_of_your</span> <span class="n">_predictor</span><span class="p">].</span><span class="n">model</span><span class="p">;</span>
 </code></pre></div>
-<h3 id="expected-output_1">Expected Output</h3>
+<h3 id="expected-output_1">Expected Output<a class="headerlink" href="#expected-output_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>name: name of the model</li>
 <li>performance : obtained accuracy (from 0.0 to 1.0) for that candidate model</li>
 <li>selected: the Auto ML pick the best performed cadidate (1)</li>
+<li>training_time: training time for that condidate model</li>
 </ul>
+<div class="highlight"><pre><span></span><code><span class="k">DESCRIBE</span> <span class="p">[</span><span class="n">name_of_your</span> <span class="n">_predictor</span><span class="p">].</span><span class="n">ensemble</span><span class="p">;</span>
+</code></pre></div>
+<h3 id="expected-output_2">Expected Output<a class="headerlink" href="#expected-output_2" title="Permanent link">&para;</a></h3>
+<p>ensemble: ensemble type used to select best model candidate</p>
 <p>If you're unsure on how to DESCRIBE your model or understand the results feel free to ask us how to do it on the community <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ">Slack workspace</a>.</p>
                 
               

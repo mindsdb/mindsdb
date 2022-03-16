@@ -365,15 +365,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -383,14 +395,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -446,14 +458,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -1189,12 +1201,12 @@
                   </a>
                 
                 
-                <h1 id="mushrooms"><strong>Mushrooms</strong></h1>
+                <h1 id="mushrooms"><strong>Mushrooms</strong><a class="headerlink" href="#mushrooms" title="Permanent link">&para;</a></h1>
 <p><em>Dataset: <a href="https://www.kaggle.com/uciml/mushroom-classification">Mushrooms</a></em></p>
 <p>Community Author: <a href="https://github.com/chandrevdw31">Chandre Tosca Van Der Westhuizen</a></p>
 <p>Mushrooms are a fleshy sporocarp of fungi which can either be edible or poisonous. It's usage dates back centuries with ancient Greek, Chinese and African cultures. They can have high nutritional value and medicinal properties which provides great health benefits. On the other side,some of these fungi can be toxic and consuming the wrong mushroom can have deadly consequences. It is important for industries across the world, like the food and health sector, to identify which type of mushrooms are edible and which are poisonous.</p>
 <p>We will explore how MindsDB's machine learning predictive model can make it easier classifying mushrooms and predicting which is safe to consume and which can make you ill.</p>
-<h2 id="pre-requisites">Pre-requisites</h2>
+<h2 id="pre-requisites">Pre-requisites<a class="headerlink" href="#pre-requisites" title="Permanent link">&para;</a></h2>
 <p>For this tutorial, ensure you have access to docker Docker. A <code>docker-compose.yml</code> file will be provided to get you started quickly.</p>
 <p>To ensure you can complete all the steps, make sure you have access to the following tools:</p>
 <ol>
@@ -1203,7 +1215,7 @@
 <li>Optional: Access to ngrok. You can check the installation details at the <a href="https://ngrok.com/">ngrok website</a>.</li>
 <li>Optional- Recommended : <a href="https://visualstudio.microsoft.com/downloads/">Visual Studio Code</a></li>
 </ol>
-<h2 id="docker">Docker</h2>
+<h2 id="docker">Docker<a class="headerlink" href="#docker" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Create a new project directory named e.g. <code>mindsdb-tutorial</code></li>
 <li>Inside your project directory:</li>
@@ -1239,7 +1251,7 @@ For the database to connect to MindsDB we will use a tunneling program Ngrok to 
 <a href="https://docs.docker.com/storage/volumes/">Docker Volumes</a> are used for persistent storage of data.</p>
 <p>To run, open a terminal in the project folder and run <code>docker-compose up -d</code> .
 If you do not have the Docker images locally, it will first download them from docker hub and might take a while.</p>
-<h2 id="creating-a-database">Creating a database</h2>
+<h2 id="creating-a-database">Creating a database<a class="headerlink" href="#creating-a-database" title="Permanent link">&para;</a></h2>
 <p>The goal of creating a database in Visual Studio is to simplify the method used. We have two options- to create a python file with the relevant code in it or create a Jupyter Notebook. For the purpose of this exercise we are going to use Jupyter Notebook which will help execute the code.</p>
 <p>We will use the libraries <code>sqlalchemy</code> and <code>pandas</code> to create the database and load data into tables.</p>
 <p>To install the required Python libraries In a terminal, run</p>
@@ -1298,13 +1310,13 @@ If you do not have the Docker images locally, it will first download them from d
 *habitat: grasses=g,leaves=l,meadows=m,paths=p,urban=u,waste=w,woods=d
 </code></pre></div>
 
-<h2 id="accessing-the-postgres-database">Accessing the Postgres Database</h2>
+<h2 id="accessing-the-postgres-database">Accessing the Postgres Database<a class="headerlink" href="#accessing-the-postgres-database" title="Permanent link">&para;</a></h2>
 <p>To access the postgres database, add the extension <em>Postgres Management Tool</em> by Chris Kolkman v1.1.19 in Visual studio.</p>
 <blockquote>
 <p><em>A shortcut is to select Ctrl+Shift+X and search for the management tool.</em></p>
 </blockquote>
 <p><img alt="Postgres Management Tool" src="/assets/sql/tutorials/Mushrooms/Selection_004.png" /></p>
-<h3 id="connecting-to-the-database">Connecting to the database</h3>
+<h3 id="connecting-to-the-database">Connecting to the database<a class="headerlink" href="#connecting-to-the-database" title="Permanent link">&para;</a></h3>
 <ol>
 <li>On the sidebar of visual studio, select the icon for the Postgress explorer.</li>
 <li>Select the + button by the option POSTGRESQL EXPLORER:POSTGRESQL to add a database connection.</li>
@@ -1332,7 +1344,7 @@ If you do not have the Docker images locally, it will first download them from d
 <li>Add the connection name.</li>
 </ol>
 <p>You can test the database by navigating to the Postgres Management Tool, selecting the hostname and database dropdowns , then right click on the table name  and choose between the select options to return the values.</p>
-<h2 id="connecting-to-mindsdb-cloud">Connecting to MindsDB Cloud</h2>
+<h2 id="connecting-to-mindsdb-cloud">Connecting to MindsDB Cloud<a class="headerlink" href="#connecting-to-mindsdb-cloud" title="Permanent link">&para;</a></h2>
 <p>We will now connect our database to MindsDB Cloud.</p>
 <p>First, we will run the <code>ngrok</code> command to establish a connection. Open a terminal and run the following command.</p>
 <div class="highlight"><pre><span></span><code>ngrok tcp <span class="o">[</span>db-port<span class="o">]</span>
@@ -1348,13 +1360,13 @@ If you do not have the Docker images locally, it will first download them from d
 </code></pre></div>
 <p>The forwarded address information will be required when connecting to MindsDB's GUI. Select and copy the 'Forwarding' information, in this case it is <code>6.tcp.ngrok.io:14789</code>, and keep this information for later.</p>
 <p>For the next steps we will log into the MindsDB cloud interface. MindsDB Cloud is perfect if you are unable to install MindsDB on your device. If you are not registered yet, feel free to follow the below guide. If you have already registered, skip the next steps to connect your database.</p>
-<h3 id="mindsdb-studio-cloud-set-up">MindsDB Studio Cloud Set Up</h3>
+<h3 id="mindsdb-studio-cloud-set-up">MindsDB Studio Cloud Set Up<a class="headerlink" href="#mindsdb-studio-cloud-set-up" title="Permanent link">&para;</a></h3>
 <p>You can visit this <a href="https://docs.mindsdb.com/deployment/cloud/">link</a> and follow the steps in registering a MindsDB Cloud account.</p>
 <p>On the landing page, navigate to the left corner of the screen and select <code>ADD DATABASE</code>. Enter the required details. </p>
 <p>Too see an example, click <a href="https://docs.mindsdb.com/connect/">here</a>.</p>
 <p>Click <code>Connect</code>, you should now see your Postgres database connection in the main screen.</p>
 <p>You are now done with connecting MindsDB to your database!</p>
-<h2 id="create-a-predictor">Create a predictor</h2>
+<h2 id="create-a-predictor">Create a predictor<a class="headerlink" href="#create-a-predictor" title="Permanent link">&para;</a></h2>
 <p>Now we are ready to create our own predictor. We will start by using the MySQL API to connect to MindsDB and with a single SQL command create a predictor.</p>
 <p>The predictor we will create will be trained to determine if a mushroom is edible or poisonous.</p>
 <p>Using the following command, you will connect through the MySQL API to MindsDB.</p>
@@ -1391,7 +1403,7 @@ If you do not have the Docker images locally, it will first download them from d
 <p>The predictor has completed its training, indicated by the status column, and shows the accuracy of the model.
 You can revisit training new predictors to increase accuracy by changing the query to better suit the dataset i.e. omitting certain columns etc.</p>
 <p>Good job! We have successfully created and trained a predictive model ✨</p>
-<h2 id="make-predictions">Make predictions</h2>
+<h2 id="make-predictions">Make predictions<a class="headerlink" href="#make-predictions" title="Permanent link">&para;</a></h2>
 <p>In this section you will learn how to make predictions using your trained model.
 Now we will use the trained model to make predictions using a SQL query</p>
 <p>Use the following query using mock data with the predictor.</p>

@@ -365,15 +365,27 @@
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
       <label class="md-nav__link" for="__nav_2">
-        Start MindsDB
+        Using MindsDB
         <span class="md-nav__icon md-icon"></span>
       </label>
-      <nav class="md-nav" aria-label="Start MindsDB" data-md-level="1">
+      <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
-          Start MindsDB
+          Using MindsDB
         </label>
         <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        Getting Started
+      </a>
+    </li>
+  
+
           
             
   
@@ -383,14 +395,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_1">
+      <label class="md-nav__link" for="__nav_2_2">
         Setup
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_1">
+        <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
           Setup
         </label>
@@ -446,14 +458,14 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_3" type="checkbox" id="__nav_2_3" >
       
-      <label class="md-nav__link" for="__nav_2_2">
+      <label class="md-nav__link" for="__nav_2_3">
         Connect
         <span class="md-nav__icon md-icon"></span>
       </label>
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
-        <label class="md-nav__title" for="__nav_2_2">
+        <label class="md-nav__title" for="__nav_2_3">
           <span class="md-nav__icon md-icon"></span>
           Connect
         </label>
@@ -1127,22 +1139,22 @@
                 
                   <h1>FAQ</h1>
                 
-                <h2 id="what-is-mindsdb">What is MindsDB?</h2>
+                <h2 id="what-is-mindsdb">What is MindsDB?<a class="headerlink" href="#what-is-mindsdb" title="Permanent link">&para;</a></h2>
 <p>Data is your single most important asset and your data lives in a database. By bringing machine learning to the database, MindsDB accelerates the speed of machine learning development.</p>
 <p>With MindsDB, you will easily build, train, optimize and deploy your models. Your predictions will be available via the queries you already use.</p>
 <p><img alt="Machine Learning in Database using SQL" src="/assets/what_is_mindsdb.png" /></p>
-<h2 id="what-are-ai-tables">What are AI Tables?</h2>
+<h2 id="what-are-ai-tables">What are AI Tables?<a class="headerlink" href="#what-are-ai-tables" title="Permanent link">&para;</a></h2>
 <p>There is an ongoing transformational shift within the modern business world from the “what happened and why” based on historical data analysis to the “what will we predict can happen and how can we make it happen” based on machine learning predictive modeling.</p>
 <p><img alt="Analytics" src="/assets/sql/tutorials/snowflake-superset/1-ML_audience.png" /></p>
 <p>The success of your predictions depends both on the data you have available and the models you train this data on. Data Scientists and Data Engineers need best-in-class tools to prepare the data for feature engineering, the best training models, and the best way of deploying, monitoring, and managing these implementations for optimal prediction confidence.</p>
-<h3 id="machine-learning-ml-lifecycle">Machine Learning (ML) Lifecycle</h3>
+<h3 id="machine-learning-ml-lifecycle">Machine Learning (ML) Lifecycle<a class="headerlink" href="#machine-learning-ml-lifecycle" title="Permanent link">&para;</a></h3>
 <p>The ML lifecycle can be represented as a process that consists of the data preparation phase, modeling phase, and deployment phase. The diagram below presents all the steps included in each of the stages.</p>
 <p><img alt="ML Workflow" src="/assets/sql/tutorials/snowflake-superset/2-ML_workflow.png" /></p>
 <p>Companies looking to implement machine learning have found their current solutions require substantial amounts of data preparation, cleaning, and labeling, plus hard to find machine learning/AI data scientists to conduct feature engineering; build, train, and optimize models; assemble, verify, and deploy into production; and then monitor in real-time, improve, and refine. Machine learning models require multiple iterations with existing data to train. Additionally, extracting, transforming, and loading (ETL) data from one system to another is complicated, leads to multiple copies of information, and is a compliance and tracking nightmare.</p>
 <p>A recent study has shown it takes 64% of companies a month, to over a year, to deploy a machine learning model into production¹. Leveraging existing databases and automating the feature engineering, building, training, and optimization of models, assembling them, and deploying them into production is called AutoML and has been gaining traction within enterprises for enabling non-experts to use machine learning models for practical applications.</p>
 <p><img alt="Classical ML" src="/assets/sql/tutorials/snowflake-superset/3-AI_Tables-income-debt.jpg" /></p>
 <p>MindsDB brings machine learning to existing SQL databases with a concept called AI Tables. AI Tables integrate the machine learning models as virtual tables inside a database, create predictions, and can be queried with simple SQL statements. Almost instantly, time series, regression, and classification predictions can be done directly in your database.</p>
-<h3 id="deep-dive-into-the-ai-tables">Deep Dive into the AI Tables</h3>
+<h3 id="deep-dive-into-the-ai-tables">Deep Dive into the AI Tables<a class="headerlink" href="#deep-dive-into-the-ai-tables" title="Permanent link">&para;</a></h3>
 <p>Let’s consider the following income table that stores the income and debt values.</p>
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">income</span><span class="p">,</span> <span class="n">debt</span> <span class="k">FROM</span> <span class="n">income_table</span><span class="p">;</span>
 </code></pre></div>
@@ -1170,7 +1182,7 @@
 <div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">income</span><span class="p">,</span> <span class="n">debt</span> <span class="k">FROM</span> <span class="n">debt_model</span> <span class="k">WHERE</span> <span class="n">income</span> <span class="o">=</span> <span class="mi">90120</span><span class="p">;</span>
 </code></pre></div>
 <p><img alt="Income vs Debt model" src="/assets/sql/tutorials/snowflake-superset/7-debt-income-query-ml-table.jpg" /></p>
-<h2 id="how-can-i-help">How can I help?</h2>
+<h2 id="how-can-i-help">How can I help?<a class="headerlink" href="#how-can-i-help" title="Permanent link">&para;</a></h2>
 <p>You can help in the following ways:</p>
 <ul>
 <li>Trying MindsDB and <a href="https://github.com/mindsdb/mindsdb/issues/new/choose">reporting issues</a>.</li>
@@ -1179,7 +1191,7 @@
 <li>Tell your friends, write a blog post about MindsDB.</li>
 <li>Join our team, we are growing fast so <a href="https://career.mindsdb.com/">we should have a few open positions</a>.</li>
 </ul>
-<h2 id="why-is-it-called-mindsdb">Why is it called MindsDB?</h2>
+<h2 id="why-is-it-called-mindsdb">Why is it called MindsDB?<a class="headerlink" href="#why-is-it-called-mindsdb" title="Permanent link">&para;</a></h2>
 <p>Well, as most names, we needed one, we like science fiction and the <a href="https://en.wikipedia.org/wiki/The_Culture_(series)">culture series</a>, where there are these AI super smart entities called Minds.</p>
 <p>How about the DB part? Although in the future we will support all kinds of data, currently our objective is to add intelligence to existing data stores/databases, hence the term DB.
 As to becoming a <strong>Mind</strong> to your <strong>DB</strong>.</p>

@@ -95,7 +95,7 @@ class RedisTest(unittest.TestCase):
             'data_source_name': ds_name,
             'to_predict': 'y',
             'kwargs': {
-                'stop_training_in_x_seconds': 20,
+                'time_aim': 20,
                 'join_learn_process': True
             }
         }
@@ -233,7 +233,7 @@ class RedisTest(unittest.TestCase):
             'predictor': PREDICTOR_NAME,
             'learning_params': {"to_predict": "y",
                                 'kwargs': {
-                                    'stop_training_in_x_seconds': 3}
+                                    'time_aim': 3}
                                 },
             'learning_threshold': 10,
             'stream_in': STREAM_IN_OL,

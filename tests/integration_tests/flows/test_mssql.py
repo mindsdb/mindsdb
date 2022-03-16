@@ -104,7 +104,7 @@ class MSSQLTest(unittest.TestCase):
                     ''{TEST_PREDICTOR_NAME}'',
                     ''{','.join(to_predict_column_names)}'',
                     ''select * from test_data.{TEST_DATA_TABLE} order by sqft offset 0 rows fetch next 100 rows only'',
-                    ''{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}''
+                    ''{{"join_learn_process": true, "time_aim": 3}}''
                 )') AT {MINDSDB_DATABASE};
         """)
 

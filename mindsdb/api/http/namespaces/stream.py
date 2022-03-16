@@ -53,7 +53,7 @@ class Stream(Resource):
             return abort(400, "'integration' in case of local installation and 'connection' in case of cloud are required.")
 
         if 'integration' in params_keys:
-            integration = request.datasource_interface.get_db_integration(params['integration'])
+            integration = request.integration_controller.get(params['integration'])
             if integration is None:
                 return abort(404, 'Integration "{}" doesn\'t exist'.format(params['integration']))
 

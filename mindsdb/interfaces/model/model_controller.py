@@ -151,7 +151,7 @@ class ModelController():
         return df, problem_definition, join_learn_process, json_ai_override
 
     @mark_process(name='learn')
-    def learn(self, name: str, from_data: dict, to_predict: str, datasource_id: int, kwargs: dict,
+    def learn(self, name: str, from_data: dict, to_predict: str, dataset_id: int, kwargs: dict,
               company_id: int, delete_ds_on_fail: Optional[bool] = False) -> None:
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         if predictor_record is not None:
@@ -167,7 +167,7 @@ class ModelController():
             predictor_record = db.Predictor(
                 company_id=company_id,
                 name=name,
-                datasource_id=datasource_id,
+                dataset_id=dataset_id,
                 mindsdb_version=mindsdb_version,
                 lightwood_version=lightwood_version,
                 to_predict=problem_definition['target'],
@@ -196,7 +196,7 @@ class ModelController():
         predictor_record = db.Predictor(
             company_id=company_id,
             name=name,
-            datasource_id=datasource_id,
+            dataset_id=dataset_id,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,
@@ -216,19 +216,6 @@ class ModelController():
                 p.close()
         db.session.refresh(predictor_record)
 
-        data = {}
-        if predictor_record.update_status == 'available':
-            data['status'] = 'complete'
-        elif predictor_record.json_ai is None and predictor_record.code is None:
-            data['status'] = 'generating'
-        elif predictor_record.data is None:
-            data['status'] = 'editable'
-        elif 'training_log' in predictor_record.data:
-            data['status'] = 'training'
-        elif 'error' not in predictor_record.data:
-            data['status'] = 'complete'
-        else:
-            data['status'] = 'error'
 
     @mark_process(name='predict')
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
@@ -249,20 +236,15 @@ class ModelController():
 
         if predictor_record.is_custom:
             if predictor_data['format'] == 'mlflow':
-                columns = list(df.columns)
-                data = []
-                for col in columns:
-                    data.append([x for x in df[col]])
-                
-                resp = requests.post(predictor_data['predict_url'], json={
-                    'columns': columns,
-                    'data': data
-                })
+                resp = requests.post(predictor_data['predict_url'],
+                                     data=df.to_json(orient='records'),
+                                     headers={'content-type': 'application/json; format=pandas-records'})
                 answer: List[object] = resp.json()
 
                 predictions = pd.DataFrame({
                     'prediction': answer
                 })
+
             elif predictor_data['format'] == 'ray_server':
                 serialized_df = json.dumps(df.to_dict())
                 resp = requests.post(predictor_data['predict_url'], json={'df': serialized_df})
@@ -366,7 +348,7 @@ class ModelController():
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
         assert predictor_record is not None
 
-        linked_db_ds = db.session.query(db.Datasource).filter_by(company_id=company_id, id=predictor_record.datasource_id).first()
+        linked_dataset = db.session.query(db.Dataset).get(predictor_record.dataset_id)
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -378,11 +360,13 @@ class ModelController():
         data['name'] = predictor_record.name
         data['code'] = predictor_record.code
         data['json_ai'] = predictor_record.json_ai
-        data['data_source_name'] = linked_db_ds.name if linked_db_ds else None
+        data['data_source_name'] = linked_dataset.name if linked_dataset else None
         data['problem_definition'] = predictor_record.learn_args
 
         # assume older models are complete, only temporary
-        if 'error' in predictor_record.data:
+        if 'status' in predictor_record.data:
+            data['status'] = predictor_record.data['status']
+        elif 'error' in predictor_record.data:
             data['status'] = 'error'
         elif predictor_record.update_status == 'available':
             data['status'] = 'complete'
@@ -454,9 +438,9 @@ class ModelController():
         if db_p is None:
             raise Exception(f"Predictor '{name}' does not exist")
         db.session.delete(db_p)
-        if db_p.datasource_id is not None:
+        if db_p.dataset_id is not None:
             try:
-                dataset_record = db.Datasource.query.get(db_p.datasource_id)
+                dataset_record = db.Datasource.query.get(db_p.dataset_id)
                 if (
                     isinstance(dataset_record.data, str)
                     and json.loads(dataset_record.data).get('source_type') != 'file'
@@ -494,7 +478,7 @@ class ModelController():
         return 'Updated in progress'
 
     @mark_process(name='learn')
-    def generate_predictor(self, name: str, from_data: dict, datasource_id, problem_definition_dict: dict,
+    def generate_predictor(self, name: str, from_data: dict, dataset_id, problem_definition_dict: dict,
                            join_learn_process: bool, company_id: int):
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         if predictor_record is not None:
@@ -507,7 +491,7 @@ class ModelController():
         predictor_record = db.Predictor(
             company_id=company_id,
             name=name,
-            datasource_id=datasource_id,
+            dataset_id=dataset_id,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,

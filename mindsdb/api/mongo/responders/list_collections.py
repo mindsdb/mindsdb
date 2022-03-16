@@ -10,7 +10,7 @@ class Responce(Responder):
     when = {'listCollections': helpers.is_true}
 
     def result(self, query, request_env, mindsdb_env, session):
-        models = mindsdb_env['mindsdb_native'].get_models()
+        models = mindsdb_env['model_interface'].get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
         models += ['predictors', 'commands']
         cursor = {

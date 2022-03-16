@@ -42,7 +42,7 @@ class GetLogs(Resource):
 class ListIntegration(Resource):
     def get(self):
         return {
-            'integrations': [k for k in request.datasource_interface.get_db_integrations(sensitive_info=False)]
+            'integrations': [k for k in request.integration_controller.get_all(sensitive_info=False)]
         }
 
 
@@ -51,7 +51,7 @@ class ListIntegration(Resource):
 class AllIntegration(Resource):
     @ns_conf.doc('get_all_integrations')
     def get(self):
-        integrations = request.datasource_interface.get_db_integrations(sensitive_info=False)
+        integrations = request.integration_controller.get_all(sensitive_info=False)
         return integrations
 
 
@@ -60,7 +60,7 @@ class AllIntegration(Resource):
 class Integration(Resource):
     @ns_conf.doc('get_integration')
     def get(self, name):
-        integration = request.datasource_interface.get_db_integration(name, sensitive_info=False)
+        integration = request.integration_controller.get(name, sensitive_info=False)
         if integration is None:
             abort(404, f'Can\'t find database integration: {name}')
         integration = copy.deepcopy(integration)
@@ -108,7 +108,7 @@ class Integration(Resource):
                 shutil.rmtree(temp_dir)
             return {'success': checker.check_connection()}, 200
 
-        integration = request.datasource_interface.get_db_integration(name, sensitive_info=False)
+        integration = request.integration_controller.get(name, sensitive_info=False)
         if integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
 
@@ -116,7 +116,7 @@ class Integration(Resource):
             if 'enabled' in params:
                 params['publish'] = params['enabled']
                 del params['enabled']
-            request.datasource_interface.add_db_integration(name, params)
+            request.integration_controller.add(name, params)
 
             model_data_arr = []
             for model in request.model_interface.get_models():
@@ -148,11 +148,11 @@ class Integration(Resource):
 
     @ns_conf.doc('delete_integration')
     def delete(self, name):
-        integration = request.datasource_interface.get_db_integration(name)
+        integration = request.integration_controller.get(name)
         if integration is None:
             abort(400, f"Nothing to delete. '{name}' not exists.")
         try:
-            request.datasource_interface.remove_db_integration(name)
+            request.integration_controller.delete(name)
         except Exception as e:
             log.error(str(e))
             abort(500, f'Error during integration delete: {str(e)}')
@@ -166,14 +166,14 @@ class Integration(Resource):
 
         if not isinstance(params, dict):
             abort(400, "type of 'params' must be dict")
-        integration = request.datasource_interface.get_db_integration(name)
+        integration = request.integration_controller.get(name)
         if integration is None:
             abort(400, f"Nothin to modify. '{name}' not exists.")
         try:
             if 'enabled' in params:
                 params['publish'] = params['enabled']
                 del params['enabled']
-            request.datasource_interface.modify_db_integration(name, params)
+            request.integration_controller.modify(name, params)
             DatabaseWrapper(request.company_id).setup_integration(name)
         except Exception as e:
             log.error(str(e))
@@ -187,7 +187,7 @@ class Check(Resource):
     @ns_conf.doc('check')
     def get(self, name):
         company_id = request.company_id
-        if request.datasource_interface.get_db_integration(name) is None:
+        if request.integration_controller.get(name) is None:
             abort(404, f'Can\'t find database integration: {name}')
         connections = DatabaseWrapper(company_id).check_connections()
         return connections.get(name, False), 200

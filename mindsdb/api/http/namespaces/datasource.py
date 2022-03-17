@@ -259,11 +259,11 @@ class Query(Resource):
 
         config = Config()
         cnx = mysql.connector.connect(
-            user=config['api']['mysql']['user'],
-            password=config['api']['mysql']['password'],
-            host=config['api']['mysql']['host'],
-            port=config['api']['mysql']['port'],
-            database=config['api']['mysql']['database'],
+            user="jorge@mindsdb.com",
+            password="mdb123",
+            host="alpha.mindsdb.com",
+            port="3306",
+            database="mindsdb",
             connect_timeout=120
         )
         field_names = []

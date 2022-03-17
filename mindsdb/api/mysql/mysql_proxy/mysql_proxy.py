@@ -579,7 +579,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     'table_name': '',
                     'name': 'role',
                     'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }],
+                }]
             elif predictor_attr == "model":
                 data = self._get_model_info(data)
                 columns = [{

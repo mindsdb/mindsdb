@@ -3,7 +3,7 @@
 The `CREATE PREDICTOR` statement is used to train a new model. The basic syntax for training a model is:
 
 ```sql
-CREATE PREDICTOR predictor_name
+CREATE PREDICTOR db_name.predictor_name
 FROM integration_name 
 (SELECT column_name, column_name2 FROM table_name) as ds_name
 PREDICT column_name as column_alias;

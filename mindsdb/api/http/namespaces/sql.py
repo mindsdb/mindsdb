@@ -11,6 +11,7 @@ class Query(Resource):
     @ns_conf.doc('query')
     def post(self):
         query = request.json['query']
+        context = request.json['context']
 
         mysql_proxy = FakeMysqlProxy(company_id=request.company_id)
         try:
@@ -19,23 +20,27 @@ class Query(Resource):
                 query_response = {
                     'type': 'error',
                     'error_code': result.error_code,
-                    'error_message': result.error_message
+                    'error_message': result.error_message,
+                    'context': context
                 }
             elif result.type == SQL_ANSWER_TYPE.OK:
                 query_response = {
-                    'type': 'ok'
+                    'type': 'ok',
+                    'context': context
                 }
             elif result.type == SQL_ANSWER_TYPE.TABLE:
                 query_response = {
                     'type': 'table',
                     'data': result.data,
-                    'column_names': [x['alias'] or x['name'] if 'alias' in x else x['name'] for x in result.columns]
+                    'column_names': [x['alias'] or x['name'] if 'alias' in x else x['name'] for x in result.columns],
+                    'context': context
                 }
         except Exception as e:
             query_response = {
                 'type': 'error',
                 'error_code': 0,
-                'error_message': str(e)
+                'error_message': str(e),
+                'context': context
             }
 
         return query_response, 200

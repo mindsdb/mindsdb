@@ -988,7 +988,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             # +++
 
             if query == Select(targets=[Function(op='connection_id', args=())]):
-                self.answer_connection_id()
+                result = self.answer_connection_id()
+                self.send_query_answer(result)
                 return
             # ---
 
@@ -1032,8 +1033,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             #         if type(item) == Parameter:
             #             row[item_index] = Constant(parameters[parameter_index])
             #             parameter_index += 1
-            self.process_insert(query)
-
+            result = self.process_insert(query)
+            self.send_query_answer(result)
+            return
         elif prepared_stmt['type'] == 'lock':
             # sql = prepared_stmt['statement'].sql
             # query = SQLQuery(sql, session=self.session)
@@ -2110,19 +2112,20 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         )
 
     def answer_connection_id(self):
-        packages = self.get_tabel_packets(
-            columns=[{
-                'database': '',
-                'table_name': '',
-                'name': 'conn_id',
-                'alias': 'conn_id',
-                'type': TYPES.MYSQL_TYPE_LONG,
-                'charset': CHARSET_NUMBERS['binary']
-            }],
-            data=[[self.connection_id]]
+        columns = [{
+            'database': '',
+            'table_name': '',
+            'name': 'conn_id',
+            'alias': 'conn_id',
+            'type': TYPES.MYSQL_TYPE_LONG,
+            'charset': CHARSET_NUMBERS['binary']
+        }]
+        data = [[self.connection_id]]
+        return SQLAnswer(
+            answer_type=ANSWER_TYPE.TABLE,
+            columns=columns,
+            data=data
         )
-        packages.append(self.last_packet())
-        self.send_package_group(packages)
 
     def answer_select(self, query):
         result = query.fetch(

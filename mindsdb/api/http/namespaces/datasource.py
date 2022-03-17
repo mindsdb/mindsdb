@@ -5,8 +5,8 @@ import re
 import multipart
 import zipfile
 import tarfile
-import mysql.connector
 
+import mysql.connector
 from flask import request, send_file
 from flask_restx import Resource, abort     # 'abort' using to return errors as json: {'message': 'error text'}
 
@@ -282,6 +282,7 @@ class Query(Resource):
         }
 
         return query_response, 200
+
 
 @ns_conf.route('/<name>/download')
 @ns_conf.param('name', 'Datasource name')

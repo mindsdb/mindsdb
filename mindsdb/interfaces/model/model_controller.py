@@ -216,19 +216,6 @@ class ModelController():
                 p.close()
         db.session.refresh(predictor_record)
 
-        data = {}
-        if predictor_record.update_status == 'available':
-            data['status'] = 'complete'
-        elif predictor_record.json_ai is None and predictor_record.code is None:
-            data['status'] = 'generating'
-        elif predictor_record.data is None:
-            data['status'] = 'editable'
-        elif 'training_log' in predictor_record.data:
-            data['status'] = 'training'
-        elif 'error' not in predictor_record.data:
-            data['status'] = 'complete'
-        else:
-            data['status'] = 'error'
 
     @mark_process(name='predict')
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
@@ -377,7 +364,9 @@ class ModelController():
         data['problem_definition'] = predictor_record.learn_args
 
         # assume older models are complete, only temporary
-        if 'error' in predictor_record.data:
+        if 'status' in predictor_record.data:
+            data['status'] = predictor_record.data['status']
+        elif 'error' in predictor_record.data:
             data['status'] = 'error'
         elif predictor_record.update_status == 'available':
             data['status'] = 'complete'

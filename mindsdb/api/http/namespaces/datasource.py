@@ -47,7 +47,7 @@ def parse_filter(key, value):
 class DatasourcesList(Resource):
     @ns_conf.doc('get_datasources_list')
     def get(self):
-        '''List all datasources'''
+        '''List all datasets'''
         return request.default_store.get_datasets()
 
 
@@ -124,7 +124,7 @@ class Datasource(Resource):
 
         if 'query' in data:
             integration_id = request.json['integration_id']
-            integration = request.datasource_interface.get_db_integration(integration_id)
+            integration = request.integration_controller.get(integration_id)
             if integration is None:
                 abort(400, f"{integration_id} integration doesn't exist")
 
@@ -159,10 +159,14 @@ class Datasource(Resource):
                 if not os.path.isfile(file_path):
                     os.rmdir(temp_dir_path)
                     return http_error(400, 'Wrong content.', 'Archive must contain data file in root.')
+            # TODO
+            # request.default_store.save_datasource(ds_name, source_type, source, file_path)
+            file_id = request.default_store.save_file(ds_name, file_path, file_name=data['file'])
+            request.default_store.save_datasource(ds_name, source_type, source={'mindsdb_file_name': name})
         else:
             file_path = None
+            request.default_store.save_datasource(ds_name, source_type, source)
 
-        request.default_store.save_datasource(ds_name, source_type, source, file_path)
         os.rmdir(temp_dir_path)
 
         return request.default_store.get_datasource(ds_name)
@@ -255,33 +259,27 @@ class Query(Resource):
 
         config = Config()
         cnx = mysql.connector.connect(
-            user=config['api']['mysql']['user'],
-            password=config['api']['mysql']['password'],
-            host=config['api']['mysql']['host'],
-            port=config['api']['mysql']['port'],
-            database=config['api']['mysql']['database'],
-            connect_timeout=120  
+            user="jorge@mindsdb.com",
+            password="mdb123",
+            host="alpha.mindsdb.com",
+            port="3306",
+            database="mindsdb",
+            connect_timeout=120
         )
         field_names = []
         cur = cnx.cursor()
         cur.execute(query)
-        print('cur res:{}'.format(cur))
         rez = cur.fetchall()
-        # num_fields = len(cur.description)
-        print('field_names :{}'.format(cur.description))
         if cur.description != None:
             field_names = [i[0] for i in cur.description]
-        print(field_names)
-        print('field_names :{}'.format(field_names))
-        # print(num_fields)
 
         cur.close()
         cnx.close()
 
-        query_response= {
+        query_response = {
             'output': rez,
             'field_names': field_names
-        } 
+        }
 
         return query_response, 200
 

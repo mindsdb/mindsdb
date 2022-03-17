@@ -15,7 +15,7 @@ class Responce(Responder):
             mindsdb_env['origin_data_store'],
             company_id=company_id
         )
-        mindsdb_env['mindsdb_native'] = WithKWArgsWrapper(
+        mindsdb_env['model_interface'] = WithKWArgsWrapper(
             mindsdb_env['origin_model_interface'],
             company_id=company_id
         )

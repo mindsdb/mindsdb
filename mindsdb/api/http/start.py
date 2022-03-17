@@ -9,11 +9,13 @@ from waitress import serve
 from flask import send_from_directory, request, current_app
 from flask_compress import Compress
 
-from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
-from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
-from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
+from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
+from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
+from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
+from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
+from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.log import initialize_log, get_log
@@ -21,7 +23,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.db import session
 
 
-def start(verbose, no_studio):
+def start(verbose, no_studio, with_nlp):
     config = Config()
 
     initialize_log(config, 'http', wrap_print=True)
@@ -56,6 +58,9 @@ def start(verbose, no_studio):
     api.add_namespace(utils_ns)
     api.add_namespace(conf_ns)
     api.add_namespace(stream_ns)
+    api.add_namespace(sql_ns)
+    if with_nlp:
+        api.add_namespace(nlp_ns)
 
     @api.errorhandler(Exception)
     def handle_exception(e):
@@ -93,8 +98,8 @@ def start(verbose, no_studio):
             company_id=company_id
         )
 
-        request.datasource_interface = WithKWArgsWrapper(
-            current_app.original_datasource_interface,
+        request.integration_controller = WithKWArgsWrapper(
+            current_app.original_integration_controller,
             company_id=company_id
         )
 

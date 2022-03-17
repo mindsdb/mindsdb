@@ -49,14 +49,14 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
         if s.learning_params and s.learning_threshold:
             learning_params = json.loads(s.learning_params) if isinstance(s.learning_params, str) else s.learning_params
             return StreamLearningController(
-                    s.name,
-                    s.predictor,
-                    learning_params,
-                    s.learning_threshold,
-                    stream_in=KafkaStream(s.stream_in, self.connection_info),
-                    stream_out=KafkaStream(s.stream_out, self.connection_info),
-                    in_thread=True
-                )
+                s.name,
+                s.predictor,
+                learning_params,
+                s.learning_threshold,
+                stream_in=KafkaStream(s.stream_in, self.connection_info),
+                stream_out=KafkaStream(s.stream_out, self.connection_info),
+                in_thread=True
+            )
         return StreamController(
             s.name,
             s.predictor,

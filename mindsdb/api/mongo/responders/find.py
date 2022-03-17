@@ -9,7 +9,7 @@ class Responce(Responder):
     when = {'find': helpers.is_true}
 
     def result(self, query, request_env, mindsdb_env, session):
-        models = mindsdb_env['mindsdb_native'].get_models()
+        models = mindsdb_env['model_interface'].get_models()
         model_names = [x['name'] for x in models]
         table = query['find']
         where_data = query.get('filter', {})
@@ -24,7 +24,7 @@ class Responce(Responder):
             } for x in models]
         elif table in model_names:
             # prediction
-            model = mindsdb_env['mindsdb_native'].get_model_data(name=query['find'])
+            model = mindsdb_env['model_interface'].get_model_data(name=query['find'])
 
             columns = []
             columns += list(model['dtype_dict'].keys())
@@ -49,7 +49,7 @@ class Responce(Responder):
 
             datasource = where_data
             if 'select_data_query' in where_data:
-                integrations = mindsdb_env['datasource_controller'].get_db_integrations().keys()
+                integrations = mindsdb_env['datasource_controller'].get_all().keys()
                 connection = where_data.get('connection')
                 if connection is None:
                     if 'default_mongodb' in integrations:
@@ -75,7 +75,7 @@ class Responce(Responder):
             if isinstance(datasource, OrderedDict):
                 datasource = dict(datasource)
 
-            pred_dict_arr, explanations = mindsdb_env['mindsdb_native'].predict(table, datasource, 'dict&explain')
+            pred_dict_arr, explanations = mindsdb_env['model_interface'].predict(table, datasource, 'dict&explain')
 
             if 'select_data_query' in where_data:
                 mindsdb_env['data_store'].delete_datasource(ds_name)

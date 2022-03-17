@@ -56,9 +56,12 @@ markdown_extensions:
       emoji_index: !!python/name:materialx.emoji.twemoji
   - pymdownx.tasklist:
       custom_checkbox: true
+  - toc:
+      permalink: true
 nav:
   - Quickstart: index.md
-  - Start MindsDB:
+  - Using MindsDB:
+    - Getting Started: getting-started.md
     - Setup:
         - Docker: deployment/docker.md
         - Pip: deployment/pypi.md

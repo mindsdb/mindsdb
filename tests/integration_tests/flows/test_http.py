@@ -140,7 +140,7 @@ class HTTPTest(unittest.TestCase):
             'data_source_name': ds_name,
             'to_predict': 'rental_price',
             'kwargs': {
-                'stop_training_in_x_seconds': 20,
+                'time_aim': 20,
                 'join_learn_process': True
             }
         }
@@ -243,7 +243,6 @@ class HTTPTest(unittest.TestCase):
         mixers = json_ai['model']['args']['submodels']
         keep_only = [x for x in mixers if x['module'] != 'Regression']
         json_ai['model']['args']['submodels'] = keep_only
-
 
         # Upload it
         r = requests.put(

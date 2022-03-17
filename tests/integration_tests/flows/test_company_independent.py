@@ -106,7 +106,7 @@ class CompanyIndependentTest(unittest.TestCase):
             },
             'to_predict': 'rental_price',
             'kwargs': {
-                'stop_training_in_x_seconds': 5,
+                'time_aim': 5,
                 'join_learn_process': True
             }
         }
@@ -131,7 +131,7 @@ class CompanyIndependentTest(unittest.TestCase):
             },
             'to_predict': 'rental_price',
             'kwargs': {
-                'stop_training_in_x_seconds': 5,
+                'time_aim': 5,
                 'join_learn_process': True
             }
         }
@@ -157,7 +157,7 @@ class CompanyIndependentTest(unittest.TestCase):
             },
             'to_predict': 'rental_price',
             'kwargs': {
-                'stop_training_in_x_seconds': 5,
+                'time_aim': 5,
                 'join_learn_process': True
             }
         }
@@ -186,7 +186,7 @@ class CompanyIndependentTest(unittest.TestCase):
             'select_data_query': 'select * from test_data.home_rentals limit 50',
             'training_options': {
                 'join_learn_process': True,
-                'stop_training_in_x_seconds': 3
+                'time_aim': 3
             }
         })
 

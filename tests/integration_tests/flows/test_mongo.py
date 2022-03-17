@@ -98,7 +98,7 @@ class MongoTest(unittest.TestCase):
             },
             'training_options': {
                 'join_learn_process': True,
-                'stop_training_in_x_seconds': 3
+                'time_aim': 3
             }
         })
 

@@ -116,7 +116,7 @@ class UserFlowTest_2(unittest.TestCase):
                 '{TEST_PREDICTOR}',
                 '{','.join(to_predict_column_names)}',
                 'select * from test_data.{TEST_DATASET} limit 50',
-                '{{"join_learn_process": true, "stop_training_in_x_seconds": 3}}'
+                '{{"join_learn_process": true, "time_aim": 3}}'
             );
         """)
 

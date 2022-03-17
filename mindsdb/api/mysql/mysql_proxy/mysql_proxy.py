@@ -1746,7 +1746,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 columns=answer.columns,
                 data=answer.data
             )
-            packages.append(self.last_packet(status=answer.status))
+            if answer.status is not None:
+                packages.append(self.last_packet(status=answer.status))
+            else:
+                packages.append(self.last_packet())
             self.send_package_group(packages)
         elif answer.type == ANSWER_TYPE.OK:
             self.packet(OkPacket, state_track=answer.state_track).send()

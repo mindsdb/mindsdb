@@ -1257,7 +1257,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif table_name == 'predictors':
             return self.insert_predictor_answer(insert_dict)
 
-    def process_query_answer(self, sql):
+    def process_query(self, sql):
     # def query_answer(self, sql):
         # +++
         # if query not for mindsdb then process that query in integration db
@@ -2139,16 +2139,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 error_message=result['msg']
             )
 
-        packages = []
-        packages += self.get_tabel_packets(
-            columns=query.columns,
-            data=query.result
-        )
-        # there was hang of mysql client
-        # packages.append(self.packet(OkPacket, eof=True))
-        packages.append(self.last_packet())
-        self.send_package_group(packages)
-
         return SQLAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=query.columns,
@@ -2333,7 +2323,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser.clear_sql(sql)
                     log.debug(f'COM_QUERY: {sql}')
-                    result = self.process_query_answer(sql)
+                    result = self.process_query(sql)
                     self.send_query_answer(result)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
                     # https://dev.mysql.com/doc/internals/en/com-stmt-prepare.html
@@ -2461,7 +2451,7 @@ class Dummy:
 
 
 class FakeMysqlProxy(MysqlProxy):
-    def __init__(self):
+    def __init__(self, company_id):
         request = Dummy()
         client_address = ['', '']
         server = Dummy()
@@ -2478,8 +2468,9 @@ class FakeMysqlProxy(MysqlProxy):
 
         self.session = SessionController(
             server=self.server,
-            company_id=None
+            company_id=company_id
         )
+        self.session.database = 'mindsdb'
 
     def is_cloud_connection(self):
         return {

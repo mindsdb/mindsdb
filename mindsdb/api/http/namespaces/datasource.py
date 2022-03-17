@@ -5,8 +5,8 @@ import re
 import multipart
 import zipfile
 import tarfile
-import mysql.connector
 
+import mysql.connector
 from flask import request, send_file
 from flask_restx import Resource, abort     # 'abort' using to return errors as json: {'message': 'error text'}
 
@@ -20,6 +20,7 @@ from mindsdb.api.http.namespaces.entitites.datasources.datasource import (
 from mindsdb.api.http.namespaces.entitites.datasources.datasource_data import (
     get_datasource_rows_params
 )
+from mindsdb.api.mysql.mysql_proxy.mysql_proxy import FakeMysqlProxy, ANSWER_TYPE as SQL_ANSWER_TYPE
 
 
 def parse_filter(key, value):
@@ -257,31 +258,34 @@ class Query(Resource):
     def post(self):
         query = request.json['query']
 
-        config = Config()
-        cnx = mysql.connector.connect(
-            user="jorge@mindsdb.com",
-            password="mdb123",
-            host="alpha.mindsdb.com",
-            port="3306",
-            database="mindsdb",
-            connect_timeout=120
-        )
-        field_names = []
-        cur = cnx.cursor()
-        cur.execute(query)
-        rez = cur.fetchall()
-        if cur.description != None:
-            field_names = [i[0] for i in cur.description]
-
-        cur.close()
-        cnx.close()
-
-        query_response = {
-            'output': rez,
-            'field_names': field_names
-        }
+        mysql_proxy = FakeMysqlProxy(company_id=request.company_id)
+        try:
+            result = mysql_proxy.process_query(query)
+            if result.type == SQL_ANSWER_TYPE.ERROR:
+                query_response = {
+                    'type': 'error',
+                    'error_code': result.error_code,
+                    'error_message': result.error_message
+                }
+            elif result.type == SQL_ANSWER_TYPE.OK:
+                query_response = {
+                    'type': 'ok'
+                }
+            elif result.type == SQL_ANSWER_TYPE.TABLE:
+                query_response = {
+                    'type': 'table',
+                    'data': result.data,
+                    'column_names': [x['alias'] or x['name'] if 'alias' in x else x['name'] for x in result.columns]
+                }
+        except Exception as e:
+            query_response = {
+                'type': 'error',
+                'error_code': 0,
+                'error_message': str(e)
+            }
 
         return query_response, 200
+
 
 @ns_conf.route('/<name>/download')
 @ns_conf.param('name', 'Datasource name')

@@ -35,6 +35,7 @@ from mindsdb_sql.parser.ast import (
     BinaryOperation,
     NullConstant,
     CreateTable,
+    TableColumn,
     Identifier,
     Parameter,
     Describe,
@@ -1229,10 +1230,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise ErNonInsertableTable("At this moment only insert to 'mindsdb.predictors' or 'mindsdb.commands' is possible")
         column_names = []
         for column_identifier in statement.columns:
-            if isinstance(column_identifier, Identifier) is False or len(column_identifier.parts) != 1:
+            if isinstance(column_identifier, Identifier):
+                if len(column_identifier.parts) != 1:
+                    raise ErKeyColumnDoesNotExist(f'Incorrect column name: {column_identifier}')
+                column_name = column_identifier.parts[0].lower()
+                column_names.append(column_name)
+            elif isinstance(column_identifier, TableColumn):
+                column_names.append(column_identifier.name)
+            else:
                 raise ErKeyColumnDoesNotExist(f'Incorrect column name: {column_identifier}')
-            column_name = column_identifier.parts[0].lower()
-            column_names.append(column_name)
         if len(statement.values) > 1:
             raise SqlApiException('At this moment only 1 row can be inserted.')
         for row in statement.values:

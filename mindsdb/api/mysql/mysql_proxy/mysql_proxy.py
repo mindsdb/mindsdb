@@ -34,8 +34,8 @@ from mindsdb_sql.parser.ast import (
     CommitTransaction,
     StartTransaction,
     BinaryOperation,
-    NullConstant,
     DropDatabase,
+    NullConstant,
     CreateTable,
     TableColumn,
     Identifier,
@@ -1199,7 +1199,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
         ])
 
-        columns = self._get_explain_columns(),
+        columns = self._get_explain_columns()
         data = [
             # [Field, Type, Null, Key, Default, Extra]
             ['name', 'varchar(255)', 'NO', 'PRI', None, ''],
@@ -1223,7 +1223,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
         ])
 
-        columns = self._get_explain_columns(),
+        columns = self._get_explain_columns()
         data = [
             # [Field, Type, Null, Key, Default, Extra]
             ['command', 'varchar(255)', 'NO', 'PRI', None, '']
@@ -2412,6 +2412,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.packet(OkPacket, eof=True, status=status)
         else:
             return self.packet(EofPacket, status=status)
+
+    def set_context(self, context):
+        if 'db' in context:
+            self.session.database = context['db']
+
+    def get_context(self, context):
+        context = {}
+        if self.session.database is not None:
+            context['db'] = self.session.database
+
+        return context
 
     @staticmethod
     def startProxy():

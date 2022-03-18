@@ -9,14 +9,14 @@
       
       
       
-        <link rel="canonical" href="https://docs.mindsdb.com/sql/api/datasources/">
+        <link rel="canonical" href="https://docs.mindsdb.com/sql/api/databases/">
       
       <link rel="icon" href="../../../assets/mdb_logo.png">
       <meta name="generator" content="mkdocs-1.2.2, mkdocs-material-7.2.8">
     
     
       
-        <title>Datasource - MindsDB Documentation</title>
+        <title>Database - MindsDB Documentation</title>
       
     
     
@@ -84,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#create-datasource" class="md-skip">
+        <a href="#create-database" class="md-skip">
           Skip to content
         </a>
       
@@ -155,7 +155,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Datasource
+              Database
             
           </span>
         </div>
@@ -802,12 +802,12 @@
       
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
-          Datasource
+          Database
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
-        Datasource
+        Database
       </a>
       
         
@@ -827,6 +827,26 @@
         <li class="md-nav__item">
   <a href="#syntax" class="md-nav__link">
     Syntax
+  </a>
+  
+    <nav class="md-nav" aria-label="Syntax">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-mariadb" class="md-nav__link">
+    Example: MariaDB
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#listing-linked-databases" class="md-nav__link">
+    Listing linked DATABASES
   </a>
   
 </li>
@@ -1046,6 +1066,26 @@
     Syntax
   </a>
   
+    <nav class="md-nav" aria-label="Syntax">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-mariadb" class="md-nav__link">
+    Example: MariaDB
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#listing-linked-databases" class="md-nav__link">
+    Listing linked DATABASES
+  </a>
+  
 </li>
       
     </ul>
@@ -1060,23 +1100,23 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/sql/api/datasources.md" title="Edit this page" class="md-content__button md-icon">
+                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/sql/api/databases.md" title="Edit this page" class="md-content__button md-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
                   </a>
                 
                 
-                <h1 id="create-datasource">Create Datasource<a class="headerlink" href="#create-datasource" title="Permanent link">&para;</a></h1>
+                <h1 id="create-database">Create Database<a class="headerlink" href="#create-database" title="Permanent link">&para;</a></h1>
 <p>MindsDB enables connections to your favorite databases, data warehouses, data lakes, etc in a simple way.</p>
-<p>Our SQL API supports creating a datasource connection by passing any credentials needed by each type of system that you are connecting to. </p>
+<p>Our SQL API supports creating a database connection by passing any credentials needed by each type of system that you are connecting to. </p>
 <h2 id="syntax">Syntax<a class="headerlink" href="#syntax" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">DATASOURCE</span> <span class="n">datasource_name</span>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">datasource_name</span>
 <span class="k">WITH</span>
     <span class="n">engine</span><span class="o">=</span><span class="n">engine_string</span><span class="p">,</span> 
     <span class="k">parameters</span><span class="o">=</span><span class="err">{</span><span class="ss">&quot;key&quot;</span><span class="p">:</span><span class="ss">&quot;value&quot;</span><span class="p">,</span> <span class="p">...</span><span class="err">}</span><span class="p">;</span>
 </code></pre></div>
-<h1 id="example-mariadb">Example: MariaDB<a class="headerlink" href="#example-mariadb" title="Permanent link">&para;</a></h1>
+<h3 id="example-mariadb">Example: MariaDB<a class="headerlink" href="#example-mariadb" title="Permanent link">&para;</a></h3>
 <p>Here is a concrete example to connect to a MySQL database.</p>
-<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">DATASOURCE</span> <span class="n">mysql_datasource</span> 
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">mysql_datasource</span> 
 <span class="k">WITH</span> 
     <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;mariadb&#39;</span><span class="p">,</span> 
     <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
@@ -1087,7 +1127,11 @@
         <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;mariadb&quot;</span>
         <span class="err">}</span><span class="p">;</span>
 </code></pre></div>
-<p>Once a datasource has been correctly created, you will see it registered in <code>mindsdb.datasources</code>, ready for creating and querying predictors with it.</p>
+<h2 id="listing-linked-databases">Listing linked DATABASES<a class="headerlink" href="#listing-linked-databases" title="Permanent link">&para;</a></h2>
+<p>You can list linked databases as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SHOW</span> <span class="n">DATABASES</span><span class="p">;</span>
+</code></pre></div>
+<p>You can also get metadata about the linked databases in  in <code>mindsdb.datasources</code>:.</p>
 <div class="highlight"><pre><span></span><code><span class="k">select</span> <span class="o">*</span> <span class="k">from</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">datasources</span><span class="p">;</span>
 </code></pre></div>
 <p><img alt="Once a datasource has been correctly created, you will see it registered in mindsdb.datasources" src="../../../assets/sql/datasource_listing.png" /></p>

@@ -83,7 +83,7 @@ All the configurations can be done in the [values.yaml](./mindsdb/values.yaml) f
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------- |
 | `service.mongodb.enabled`                  | Enable MongoDB service                                                                                           | `true`      |
 | `service.mongodb.type`                     | Kubernetes service type for MongoDB traffic                                                                      | `ClusterIP` |
-| `service.mongodb.port`                     | Port for MongoDB traffic                                                                                         | `47335`     |
+| `service.mongodb.port`                     | Port for MongoDB traffic                                                                                         | `47336`     |
 | `service.mongodb.clusterIP`                | ClusterIP setting for MongoDB autosetup for statefulset is None                                                 | `None`      |
 | `service.mongodb.loadBalancerIP`           | LoadBalancer Ip setting                                                                                      |             |
 | `service.mongodb.nodePort`                 | NodePort for http service                                                                                    |             |

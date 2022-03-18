@@ -250,40 +250,6 @@ class DatasourceData(Resource):
         return data_dict, 200
 
 
-@ns_conf.route('/query')
-@ns_conf.param('query', 'Execute query')
-class Query(Resource):
-    @ns_conf.doc('query_datasource')
-    def post(self):
-        query = request.json['query']
-
-        config = Config()
-        cnx = mysql.connector.connect(
-            user="jorge@mindsdb.com",
-            password="mdb123",
-            host="alpha.mindsdb.com",
-            port="3306",
-            database="mindsdb",
-            connect_timeout=120
-        )
-        field_names = []
-        cur = cnx.cursor()
-        cur.execute(query)
-        rez = cur.fetchall()
-        if cur.description != None:
-            field_names = [i[0] for i in cur.description]
-
-        cur.close()
-        cnx.close()
-
-        query_response = {
-            'output': rez,
-            'field_names': field_names
-        }
-
-        return query_response, 200
-
-
 @ns_conf.route('/<name>/download')
 @ns_conf.param('name', 'Datasource name')
 class DatasourceMissedFilesDownload(Resource):

@@ -11,8 +11,10 @@ class Query(Resource):
     @ns_conf.doc('query')
     def post(self):
         query = request.json['query']
+        context = request.json['context']
 
         mysql_proxy = FakeMysqlProxy(company_id=request.company_id)
+        mysql_proxy.set_context(context)
         try:
             result = mysql_proxy.process_query(query)
             if result.type == SQL_ANSWER_TYPE.ERROR:
@@ -37,5 +39,9 @@ class Query(Resource):
                 'error_code': 0,
                 'error_message': str(e)
             }
+
+        context = mysql_proxy.get_context(context)
+
+        query_response['context'] = context
 
         return query_response, 200

@@ -118,7 +118,8 @@ class MySqlApiTest(unittest.TestCase):
 
     def test_1_create_datasources(self):
         for ds_type in self.db_creds:
-            if ds_type not in ['kafka', 'redis', 'mongodb_atlas']:
+            # TODO del clickhouse from list
+            if ds_type not in ['kafka', 'redis', 'mongodb_atlas', 'clickhouse']:
                 with self.subTest(msg=ds_type):
                     print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{ds_type}]")
                     self.validate_datasource_creation(ds_type)

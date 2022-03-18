@@ -34,8 +34,9 @@ from mindsdb_sql.parser.ast import (
     CommitTransaction,
     StartTransaction,
     BinaryOperation,
-    NullConstant,
     DropDatabase,
+    NullConstant,
+    TableColumn,
     Identifier,
     Parameter,
     Describe,
@@ -1197,7 +1198,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
         ])
 
-        columns = self._get_explain_columns(),
+        columns = self._get_explain_columns()
         data = [
             # [Field, Type, Null, Key, Default, Extra]
             ['name', 'varchar(255)', 'NO', 'PRI', None, ''],
@@ -1221,7 +1222,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
         ])
 
-        columns = self._get_explain_columns(),
+        columns = self._get_explain_columns()
         data = [
             # [Field, Type, Null, Key, Default, Extra]
             ['command', 'varchar(255)', 'NO', 'PRI', None, '']
@@ -1242,10 +1243,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise ErNonInsertableTable("At this moment only insert to 'mindsdb.predictors' or 'mindsdb.commands' is possible")
         column_names = []
         for column_identifier in statement.columns:
-            if isinstance(column_identifier, Identifier) is False or len(column_identifier.parts) != 1:
+            if isinstance(column_identifier, Identifier):
+                if len(column_identifier.parts) != 1:
+                    raise ErKeyColumnDoesNotExist(f'Incorrect column name: {column_identifier}')
+                column_name = column_identifier.parts[0].lower()
+                column_names.append(column_name)
+            elif isinstance(column_identifier, TableColumn):
+                column_names.append(column_identifier.name)
+            else:
                 raise ErKeyColumnDoesNotExist(f'Incorrect column name: {column_identifier}')
-            column_name = column_identifier.parts[0].lower()
-            column_names.append(column_name)
         if len(statement.values) > 1:
             raise SqlApiException('At this moment only 1 row can be inserted.')
         for row in statement.values:
@@ -2404,6 +2410,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.packet(OkPacket, eof=True, status=status)
         else:
             return self.packet(EofPacket, status=status)
+
+    def set_context(self, context):
+        if 'db' in context:
+            self.session.database = context['db']
+
+    def get_context(self, context):
+        context = {}
+        if self.session.database is not None:
+            context['db'] = self.session.database
+
+        return context
 
     @staticmethod
     def startProxy():

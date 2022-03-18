@@ -46,7 +46,7 @@ class HTTPTest(unittest.TestCase):
         res = res.json()
         assert isinstance(res['integrations'], list)
 
-        test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse', 'port': 8123, 'user': 'default', 'password': '123'}
+        test_integration_data = {'publish': False, 'host': 'test', 'type': 'clickhouse', 'port': 9000, 'user': 'default', 'password': '123'}
         res = requests.put(f'{root}/config/integrations/test_integration', json={'params': test_integration_data})
         assert res.status_code == 200
 

@@ -90,8 +90,8 @@ jobs:
           python tests/integration_tests/flows/test_http.py
 
           # ClickHouse
-          # echo -e "\n===============\ntest ClickHouse\n===============\n"
-          # python tests/integration_tests/flows/test_clickhouse.py
+          echo -e "\n===============\ntest ClickHouse\n===============\n"
+          python tests/integration_tests/flows/test_clickhouse.py
 
           # MsSQL
           # echo -e "\n===============\ntest MsSQL\n===============\n"
@@ -104,8 +104,8 @@ jobs:
 
 
           # PostgreSQL
-          echo -e "\n===============\ntest PostgreSQL\n===============\n"
-          python tests/integration_tests/flows/test_postgres.py
+          # echo -e "\n===============\ntest PostgreSQL\n===============\n"
+          # python tests/integration_tests/flows/test_postgres.py
 
 
           # MySQL

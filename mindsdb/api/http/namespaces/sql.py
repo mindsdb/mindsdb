@@ -20,27 +20,25 @@ class Query(Resource):
                 query_response = {
                     'type': 'error',
                     'error_code': result.error_code,
-                    'error_message': result.error_message,
-                    'context': context
+                    'error_message': result.error_message
                 }
             elif result.type == SQL_ANSWER_TYPE.OK:
                 query_response = {
-                    'type': 'ok',
-                    'context': context
+                    'type': 'ok'
                 }
             elif result.type == SQL_ANSWER_TYPE.TABLE:
                 query_response = {
                     'type': 'table',
                     'data': result.data,
-                    'column_names': [x['alias'] or x['name'] if 'alias' in x else x['name'] for x in result.columns],
-                    'context': context
+                    'column_names': [x['alias'] or x['name'] if 'alias' in x else x['name'] for x in result.columns]
                 }
         except Exception as e:
             query_response = {
                 'type': 'error',
                 'error_code': 0,
-                'error_message': str(e),
-                'context': context
+                'error_message': str(e)
             }
+
+        query_response['context'] = context
 
         return query_response, 200

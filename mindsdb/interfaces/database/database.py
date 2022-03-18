@@ -1,7 +1,5 @@
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
 from mindsdb.integrations.postgres.postgres import PostgreSQL
-from mindsdb.integrations.mariadb.mariadb import Mariadb
-from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.integrations.mongodb.mongodb import MongoDB
 from mindsdb.integrations.redis.redisdb import Redis
@@ -14,8 +12,6 @@ from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 
 class DatabaseWrapper():
     known_dbs = {'clickhouse': Clickhouse,
-                 'mariadb': Mariadb,
-                 'mysql': MySQL,
                  'postgres': PostgreSQL,
                  'mssql': MSSQL,
                  'mongodb': MongoDB,

@@ -1,8 +1,8 @@
 from .clickhouse.clickhouse import ClickhouseConnectionChecker
-from .mariadb.mariadb import MariadbConnectionChecker
+from .mariadb.mariadb import MariaDS
 from .mongodb.mongodb import MongoConnectionChecker
 from .mssql.mssql import MSSQLConnectionChecker
-from .mysql.mysql import MySQLConnectionChecker
+from .mysql.mysql import MySqlDS
 from .postgres.postgres import PostgreSQLConnectionChecker
 from .redis.redisdb import RedisConnectionChecker
 from .kafka.kafkadb import KafkaConnectionChecker
@@ -21,11 +21,11 @@ except ImportError:
 
 CHECKERS = {
     "clickhouse": ClickhouseConnectionChecker,
-    "mariadb": MariadbConnectionChecker,
+    "mariadb": MariaDS,
     "mongodb": MongoConnectionChecker,
     "mssql": MSSQLConnectionChecker,
-    "mysql": MySQLConnectionChecker,
-    "singlestore": MySQLConnectionChecker,
+    "mysql": MySqlDS,
+    "singlestore": MySqlDS,
     "postgres": PostgreSQLConnectionChecker,
     "cockroachdb": PostgreSQLConnectionChecker,
     "redis": RedisConnectionChecker,

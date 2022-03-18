@@ -9,8 +9,9 @@ from mindsdb_sql import parse_sql
 import mindsdb_datasources
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.integrations.mariadb.mariadb import MariaDS
 from mindsdb_datasources import (
-    FileDS, ClickhouseDS, MariaDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS,
+    FileDS, ClickhouseDS, MySqlDS, PostgresDS, MSSQLDS, MongoDS,
     SnowflakeDS, AthenaDS, CassandraDS, ScyllaDS, TrinoDS
 )
 from mindsdb.utilities.config import Config

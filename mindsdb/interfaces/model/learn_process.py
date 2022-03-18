@@ -94,7 +94,6 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
     json_ai_override = brack_to_mod(json_ai_override)
     json_ai = json_ai.to_dict()
     rep_recur(json_ai, json_ai_override)
-    print(json_ai)
     json_ai = JsonAI.from_dict(json_ai)
 
     code = lightwood.code_from_json_ai(json_ai)
@@ -159,16 +158,17 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
 
 @mark_process(name='learn')
 def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
-    serialized_df = json.dumps(df.to_dict())
-    predictor_record = Predictor.query.with_for_update().get(predictor_id)
-    resp = requests.post(predictor_record.data['train_url'],
-                         json={'df': serialized_df, 'target': predictor_record.to_predict[0]})
+    try:
+        serialized_df = json.dumps(df.to_dict())
+        predictor_record = Predictor.query.with_for_update().get(predictor_id)
+        resp = requests.post(predictor_record.data['train_url'],
+                            json={'df': serialized_df, 'target': predictor_record.to_predict[0]})
 
-
-    if resp.status_code == 200:
-        pass
-    else:
-        predictor_record.data = {"error": str(resp.text)}
+        assert resp.status_code == 200
+        predictor_record.data['status'] = 'complete'
+    except Exception as e:
+        predictor_record.data['status'] = 'error'
+        predictor_record.data['error'] = str(resp.text)
 
     session.commit()
 

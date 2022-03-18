@@ -147,8 +147,13 @@ If you need commercial support, please [contact](https://mindsdb.com/contact/?ut
 
 ## Contributing
 
-Being part of the core team is accessible to anyone who is motivated and wants to be part of that journey!
+A great place to start contributing to MindsDB will be our GitHub projects for :checkered_flag:
+* Community writers [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/7).
+* Community code contributors [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/8).
 
+Also, we are always open to suggestions so feel free to open new issues with your ideas and we can give you guidance!
+
+Being part of the core team is accessible to anyone who is motivated and wants to be part of that journey!
 If you'd like to contribute to the project, refer to the [contributing documentation](https://docs.mindsdb.com/contribute/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
 Please note that this project is released with a [Contributor Code of Conduct](https://github.com/mindsdb/mindsdb/blob/stable/CODE_OF_CONDUCT.md). By participating in this project, you agree to abide by its terms.

@@ -35,6 +35,7 @@ from mindsdb_sql.parser.ast import (
     StartTransaction,
     BinaryOperation,
     NullConstant,
+    DropDatabase,
     Identifier,
     Parameter,
     Describe,
@@ -1333,7 +1334,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif keyword == 'create_datasource':
             # fallback for statement
             return self.answer_create_datasource(struct)
-        elif type(statement) == DropDatasource:
+        elif type(statement) == DropDatasource or type(statement) == DropDatabase:
             ds_name = statement.name.parts[-1]
             return self.answer_drop_datasource(ds_name)
         elif type(statement) == Describe:

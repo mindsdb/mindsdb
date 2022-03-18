@@ -1197,7 +1197,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
         ])
 
-        columns = self._get_explain_columns(),
+        columns = self._get_explain_columns()
         data = [
             # [Field, Type, Null, Key, Default, Extra]
             ['name', 'varchar(255)', 'NO', 'PRI', None, ''],
@@ -1221,7 +1221,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
         ])
 
-        columns = self._get_explain_columns(),
+        columns = self._get_explain_columns()
         data = [
             # [Field, Type, Null, Key, Default, Extra]
             ['command', 'varchar(255)', 'NO', 'PRI', None, '']

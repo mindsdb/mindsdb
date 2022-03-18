@@ -2404,6 +2404,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         else:
             return self.packet(EofPacket, status=status)
 
+    def set_context(self, context):
+        if 'db' in context:
+            self.session.database = context['db']
+
+    def get_context(self, context):
+        context = {}
+        if self.session.database is not None:
+            context['db'] = self.session.database
+
+        return context
+
     @staticmethod
     def startProxy():
         """

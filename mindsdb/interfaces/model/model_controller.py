@@ -436,7 +436,7 @@ class ModelController():
 
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
         if db_p is None:
-            raise Exception(f"Predictor '{name}' does not exist")
+            raise Exception(f"Predictor '{original_name}' does not exist")
         db.session.delete(db_p)
         if db_p.dataset_id is not None:
             try:

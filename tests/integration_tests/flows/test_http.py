@@ -300,10 +300,16 @@ class HTTPTest(unittest.TestCase):
 
     def test_99_export_and_import_predictor(self):
         # Create and train a new predictor
-        res = requests.put(
-            f'{root}/predictors/test_99_{pred_name}',
-            json={'data_source_name': ds_name, 'join_learn_process': True, 'problem_definition': {'target': 'rental_price'}}
-        )
+        params = {
+            'data_source_name': ds_name,
+            'to_predict': 'rental_price',
+            'kwargs': {
+                'stop_training_in_x_seconds': 20,
+                'join_learn_process': True
+            }
+        }
+        url = f'{root}/predictors/test_99_{pred_name}'
+        res = requests.put(url, json=params)
         assert res.status_code == 200
 
         # Export the predictor as a binary

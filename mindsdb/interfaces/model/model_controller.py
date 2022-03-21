@@ -593,36 +593,41 @@ class ModelController():
             'code': predictor_record.code,
             'lightwood_version': predictor_record.lightwood_version,
             'dtype_dict': predictor_record.dtype_dict,
-            'predictor_binary': predictor_binary
         }
 
-        return json.dumps(predictor_record_serialized)
+        serialized_json = json.dumps(predictor_record_serialized)
 
+        exported_model = {
+            'metadata': serialized_json,
+            'binary': predictor_binary
+        }
+
+        return exported_model  # return json.dumps(predictor_record_serialized)
 
     def import_predictor(self, name: str, company_id: int, payload: json) -> None:
         prs = json.loads(payload)
 
         predictor_record = db.Predictor(
-            name=prs.name,
-            data=prs.data,
-            to_predict=prs.to_predict,
-            company_id=prs.company_id,
-            mindsdb_version=prs.mindsdb_version,
-            native_version=prs.native_version,
-            datasource_id=prs.datasource_id,
-            is_custom=prs.is_custom,
-            learn_args=prs.learn_args,
-            update_status=prs.update_status,
-            json_ai=prs.json_ai,
-            code=prs.code,
-            lightwood_version=prs.lightwood_version,
-            dtype_dict=prs.dtype_dict
+            name=prs['metadata'].name,
+            data=prs['metadata'].data,
+            to_predict=prs['metadata'].to_predict,
+            company_id=prs['metadata'].company_id,
+            mindsdb_version=prs['metadata'].mindsdb_version,
+            native_version=prs['metadata'].native_version,
+            datasource_id=prs['metadata'].datasource_id,
+            is_custom=prs['metadata'].is_custom,
+            learn_args=prs['metadata'].learn_args,
+            update_status=prs['metadata'].update_status,
+            json_ai=prs['metadata'].json_ai,
+            code=prs['metadata'].code,
+            lightwood_version=prs['metadata'].lightwood_version,
+            dtype_dict=prs['metadata'].dtype_dict
         )
 
         db.session.add(predictor_record)
         db.session.commit()
 
-        predictor_binary = prs['predictor_binary']
+        predictor_binary = prs['binary']
         with open(os.path.join(self.config['paths']['predictors'], fs_name), 'wb') as fp:
             fp.write(predictor_binary)
         fs_name = f'predictor_{company_id}_{predictor_record.id}'

@@ -1,0 +1,38 @@
+{{- if .Values.service.mongodb.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mindsdb.fullname" . }}-mongodb
+  labels:
+    {{- include "mindsdb.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.mongodb.type }}
+  {{- if and .Values.service.mongodb.loadBalancerIP (eq .Values.service.mongodb.type "LoadBalancer") }}
+  loadBalancerIP: {{ .Values.service.mongodb.loadBalancerIP  }}
+  {{- end }}
+  {{- if .Values.service.mongodb.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+  {{- range .Values.service.mongodb.loadBalancerSourceRanges }}
+    - {{ . }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.service.mongodb.externalIPs }}
+  externalIPs:
+    {{- toYaml .Values.service.mongodb.externalIPs | nindent 4 }}
+  {{- end }}
+  {{- if .Values.service.mongodb.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .Values.service.mongodb.externalTrafficPolicy }}
+  {{- end }}
+  {{- if and .Values.service.mongodb.clusterIP (eq .Values.service.mongodb.type "ClusterIP") }}
+  clusterIP: {{ .Values.service.mongodb.clusterIP }}
+  {{- end }}
+  ports:
+  - name: http
+    port: {{ .Values.service.mongodb.port }}
+    {{- if  .Values.service.mongodb.nodePort }}
+    nodePort: {{ .Values.service.mongodb.nodePort }}
+    {{- end }}
+    targetPort: {{ .Values.service.mongodb.port }}
+  selector:
+    {{- include "mindsdb.selectorLabels" . | nindent 4 }}
+{{- end }}

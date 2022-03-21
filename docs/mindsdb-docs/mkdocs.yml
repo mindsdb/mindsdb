@@ -85,7 +85,7 @@ nav:
   - SQL API:
     - USE: sql/api/use.md
     - CREATE:
-      - Datasource: sql/api/datasources.md
+      - Database: sql/api/databases.md
       - Predictor: sql/api/predictor.md
       - View: sql/api/view.md
     - DESCRIBE: sql/api/describe.md

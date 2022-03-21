@@ -1,0 +1,38 @@
+{{- if .Values.service.mysql.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mindsdb.fullname" . }}-mysql
+  labels:
+    {{- include "mindsdb.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.mysql.type }}
+  {{- if and .Values.service.mysql.loadBalancerIP (eq .Values.service.mysql.type "LoadBalancer") }}
+  loadBalancerIP: {{ .Values.service.mysql.loadBalancerIP  }}
+  {{- end }}
+  {{- if .Values.service.mysql.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+  {{- range .Values.service.mysql.loadBalancerSourceRanges }}
+    - {{ . }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.service.mysql.externalIPs }}
+  externalIPs:
+    {{- toYaml .Values.service.mysql.externalIPs | nindent 4 }}
+  {{- end }}
+  {{- if .Values.service.mysql.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .Values.service.mysql.externalTrafficPolicy }}
+  {{- end }}
+  {{- if and .Values.service.mysql.clusterIP (eq .Values.service.mysql.type "ClusterIP") }}
+  clusterIP: {{ .Values.service.mysql.clusterIP }}
+  {{- end }}
+  ports:
+  - name: http
+    port: {{ .Values.service.mysql.port }}
+    {{- if  .Values.service.mysql.nodePort }}
+    nodePort: {{ .Values.service.mysql.nodePort }}
+    {{- end }}
+    targetPort: {{ .Values.service.mysql.port }}
+  selector:
+    {{- include "mindsdb.selectorLabels" . | nindent 4 }}
+{{- end }}

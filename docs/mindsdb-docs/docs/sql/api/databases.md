@@ -1,24 +1,24 @@
-# Create Datasource
+# Create Database
 
 MindsDB enables connections to your favorite databases, data warehouses, data lakes, etc in a simple way.
 
-Our SQL API supports creating a datasource connection by passing any credentials needed by each type of system that you are connecting to. 
+Our SQL API supports creating a database connection by passing any credentials needed by each type of system that you are connecting to. 
 
 ## Syntax
 
 ```sql
-CREATE DATASOURCE datasource_name
+CREATE DATABASE datasource_name
 WITH
 	engine=engine_string, 
 	parameters={"key":"value", ...};
 ```
 
-# Example: MariaDB
+### Example: MariaDB
 
 Here is a concrete example to connect to a MySQL database.
 
 ```sql
-CREATE DATASOURCE mysql_datasource 
+CREATE DATABASE mysql_datasource 
 WITH 
 	engine='mariadb', 
 	parameters={
@@ -30,7 +30,15 @@ WITH
         };
 ```
 
-Once a datasource has been correctly created, you will see it registered in `mindsdb.datasources`, ready for creating and querying predictors with it.
+## Listing linked DATABASES 
+
+You can list linked databases as follows:
+
+```sql
+SHOW DATABASES;
+```
+
+You can also get metadata about the linked databases in  in `mindsdb.datasources`:.
 
 ```sql
 select * from mindsdb.datasources;

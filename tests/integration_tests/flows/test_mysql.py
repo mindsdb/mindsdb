@@ -16,10 +16,8 @@ from common import (
 # +++ define test data
 TEST_DATASET = 'hdi'
 
-TO_PREDICT = {
-    'GDP_per_capita_USD': int
-    # 'Development_Index': str
-}
+TO_PREDICT = 'GDP_per_capita_USD'
+
 CONDITION = {
     'Population': 2044147,
     'Pop_Density': 13.9
@@ -32,8 +30,6 @@ TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
 INTEGRATION_NAME = 'default_mysql'
 
 config = {}
-
-to_predict_column_names = list(TO_PREDICT.keys())
 
 
 def query(q, as_dict=False, fetch=False):
@@ -97,16 +93,10 @@ class MySQLDBTest(unittest.TestCase):
         data = fetch(f'select * from {MINDSDB_DATABASE}.predictors;')
         self.assertTrue(len(data) == 0)
 
-    def test_2_insert_predictor(self):
+    def test_2_create_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
-            insert into {MINDSDB_DATABASE}.predictors (name, predict, select_data_query, training_options) values
-            (
-                '{TEST_PREDICTOR_NAME}',
-                '{','.join(to_predict_column_names)}',
-                'select * from test_data.{TEST_DATA_TABLE} limit 50',
-                '{{"join_learn_process": true, "time_aim": 3}}'
-            );
+            CREATE PREDICTOR {TEST_PREDICTOR_NAME} FROM {INTEGRATION_NAME} (SELECT * FROM test_data.{TEST_DATA_TABLE} LIMIT 50) PREDICT {to_predict_column_names}
         """)
 
         print('predictor record in mindsdb.predictors')

@@ -96,7 +96,7 @@ class MySQLDBTest(unittest.TestCase):
     def test_2_create_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
-            CREATE PREDICTOR {TEST_PREDICTOR_NAME} FROM {INTEGRATION_NAME} (SELECT * FROM test_data.{TEST_DATA_TABLE} LIMIT 50) PREDICT {to_predict_column_names}
+            CREATE PREDICTOR {TEST_PREDICTOR_NAME} FROM {INTEGRATION_NAME} (SELECT * FROM test_data.{TEST_DATA_TABLE} LIMIT 50) PREDICT {TO_PREDICT}
         """)
 
         print('predictor record in mindsdb.predictors')
@@ -150,17 +150,6 @@ class MySQLDBTest(unittest.TestCase):
         """)
 
         self.assertTrue(TEST_PREDICTOR_NAME not in self.get_tables_in(MINDSDB_DATABASE))
-
-    # def test_9_delete_predictor_by_delete_statement(self):
-    #     print(f'\nExecuting {inspect.stack()[0].function}')
-
-    #     name = f'{TEST_PREDICTOR_NAME}_external'
-
-    #     query(f"""
-    #         delete from {MINDSDB_DATABASE}.predictors where name='{name}';
-    #     """)
-
-    #     self.assertTrue(name not in self.get_tables_in(MINDSDB_DATABASE))
 
 
 if __name__ == "__main__":

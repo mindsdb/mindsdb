@@ -22,7 +22,7 @@
         "default_clickhouse": {
             "host": "localhost",
             "password": "",
-            "port": 8123,
+            "port": 9000,
             "publish": true,
             "type": "clickhouse",
             "user": "default"

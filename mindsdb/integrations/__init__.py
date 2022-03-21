@@ -3,7 +3,7 @@ from .mariadb.mariadb import MariaDS
 from .mongodb.mongodb import MongoConnectionChecker
 from .mssql.mssql import MSSQLConnectionChecker
 from .mysql.mysql import MySqlDS
-from .postgres.postgres import PostgreSQLConnectionChecker
+from .postgres.postgres import PostgresDS
 from .redis.redisdb import RedisConnectionChecker
 from .kafka.kafkadb import KafkaConnectionChecker
 from .snowflake.snowflake import SnowflakeConnectionChecker
@@ -26,8 +26,8 @@ CHECKERS = {
     "mssql": MSSQLConnectionChecker,
     "mysql": MySqlDS,
     "singlestore": MySqlDS,
-    "postgres": PostgreSQLConnectionChecker,
-    "cockroachdb": PostgreSQLConnectionChecker,
+    "postgres": PostgresDS,
+    "cockroachdb": PostgresDS,
     "redis": RedisConnectionChecker,
     "kafka": KafkaConnectionChecker,
     "snowflake": SnowflakeConnectionChecker,

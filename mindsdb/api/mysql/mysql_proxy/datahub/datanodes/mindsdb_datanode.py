@@ -10,7 +10,6 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
-from mindsdb.integrations.postgres.postgres import PostgreSQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
@@ -176,9 +175,6 @@ class MindsDBDataNode(DataNode):
                 ch = Clickhouse(self.config, integration_name, integration_data)
                 res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')
                 data = res.json()['data']
-            elif integration_type == 'postgres':
-                mysql = PostgreSQL(self.config, integration_name, integration_data)
-                data = mysql._query(select_data_query)
             elif integration_type == 'mssql':
                 mssql = MSSQL(self.config, integration_name, integration_data)
                 data = mssql._query(select_data_query, fetch=True)

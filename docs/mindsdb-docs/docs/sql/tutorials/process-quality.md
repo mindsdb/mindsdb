@@ -88,9 +88,9 @@ In this section you will learn how to make predictions using your trained model.
 To run a prediction against new or existing data, you can use the following query.
 
 ```sql
-SELECT silica_concentrate, silica_concentrate_confidence, silica_concentrate_explain as Info
+SELECT silica_concentrate, silica_concentrate_confidence, silica_concentrate_explain
 FROM mindsdb.process_quality_predictor
-WHERE when_data='{"iron_feed": 48.81, "silica_feed": 25.31, "starch_flow": 2504.94, "amina_flow": 309.448, "ore_pulp_flow": 377.6511682692, "ore_pulp_ph": 10.0607, "ore_pulp_density": 1.68676}';
+WHERE iron_feed=48.81 AND silica_feed=25.31 AND starch_flow=2504.94 AND amina_flow=309.448 AND ore_pulp_flow=377.6511682692 AND ore_pulp_ph=10.0607 AND ore_pulp_density=1.68676;
 ```
 
 The output should look similar to this.

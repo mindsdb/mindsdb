@@ -1736,7 +1736,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.answer_explain_table(statement.target.parts)
         elif type(statement) == CreateTable:
             # TODO
-            self.answer_apply_predictor(statement)
+            return self.answer_apply_predictor(statement)
         else:
             log.warning(f'Unknown SQL statement: {sql}')
             raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
@@ -2138,7 +2138,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             session=self.session,
             execute=True
         )
-        self.packet(OkPacket).send()
+        return SQLAnswer(ANSWER_TYPE.OK)
 
     def answer_select(self, query):
         result = query.fetch(

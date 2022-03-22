@@ -11,7 +11,7 @@ class Query(Resource):
     @ns_conf.doc('query')
     def post(self):
         query = request.json['query']
-        context = request.json['context']
+        context = request.json.get('context', {})
 
         mysql_proxy = FakeMysqlProxy(company_id=request.company_id)
         mysql_proxy.set_context(context)

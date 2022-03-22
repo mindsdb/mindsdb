@@ -1315,8 +1315,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         # TODO
         if sql_lower == "set names 'utf8mb4' collate 'utf8mb4_general_ci'":
-            self.packet(OkPacket).send()
-            return
+            return SQLAnswer(ANSWER_TYPE.OK)
 
         try:
             try:

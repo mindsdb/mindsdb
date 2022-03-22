@@ -34,8 +34,8 @@ DESCRIBE [mindsdb.name_of_your_predictor].model;
 
 * name: name of the model
 * performance : obtained accuracy (from 0.0 to 1.0) for that candidate model
-* selected: the Auto ML pick the best performed cadidate (1)
-* training_time: training time for that condidate model
+* selected: the Auto ML pick the best performed candidate (1)
+* training_time: training time for that candidate model
 
 ```sql
 DESCRIBE [mindsdb.name_of_your_predictor].ensemble;

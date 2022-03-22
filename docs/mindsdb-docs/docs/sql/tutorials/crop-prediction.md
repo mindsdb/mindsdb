@@ -85,7 +85,7 @@ USE mindsdb;
 Use the following query to create a predictor that will predict the `label` (*crop type*) for the specific field parameters.
 
 ```sql
-CREATE PREDICTOR crop_predictor
+CREATE PREDICTOR mindsdb.crop_predictor
 FROM files (
     SELECT * FROM crops
 ) PREDICT label as crop_type;

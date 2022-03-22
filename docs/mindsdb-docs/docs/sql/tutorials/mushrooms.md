@@ -230,7 +230,7 @@ USE mindsdb;
 Use the following query to create a predictor that will predict the `target_class` for the specific field parameters.
 
 ```sql
-mysql>CREATE PREDICTOR mushroom_predictor
+mysql>CREATE PREDICTOR mindsdb.mushroom_predictor
 FROM Mushrooms (
     SELECT * FROM "mushrooms"
 ) as mushrooms_data

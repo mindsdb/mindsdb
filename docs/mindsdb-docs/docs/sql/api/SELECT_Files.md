@@ -82,11 +82,11 @@ mysql> select * from files.diabetes LIMIT 10;
 Query:
 
 ```sql
-CREATE PREDICTOR predictor_name from files (SELECT * from file_name) predict target_variable;
+CREATE PREDICTOR mindsdb.predictor_name from files (SELECT * from file_name) predict target_variable;
 ```
 Example
 ```sql
-CREATE PREDICTOR diabetic_data from files (SELECT * from diabetes) predict class;
+CREATE PREDICTOR mindsdb.diabetic_data from files (SELECT * from diabetes) predict class;
 ```
 >Parameters:
 
@@ -98,7 +98,7 @@ CREATE PREDICTOR diabetic_data from files (SELECT * from diabetes) predict class
 
 Results:
 ```bash
-mysql> CREATE PREDICTOR diabetic_data from files (SELECT * from diabetes) predict class;
+mysql> CREATE PREDICTOR mindsdb.diabetic_data from files (SELECT * from diabetes) predict class;
 Query OK, 0 rows affected (5.16 sec)
 ```
 

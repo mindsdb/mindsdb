@@ -39,7 +39,7 @@ In this section you will connect to MindsDB with the MySql API and create a Pred
 Use the following query to create a Predictor that will foretell the silica_concentrate at the end of our mining process.
 > The row number is limited to 5000 to speed up training but you can keep the whole dataset.
 ```sql
-CREATE PREDICTOR process_quality_predictor
+CREATE PREDICTOR mindsdb.process_quality_predictor
 FROM files (
     SELECT iron_feed, silica_feed, starch_flow, amina_flow, ore_pulp_flow,
            ore_pulp_ph, ore_pulp_density,flotation_column_01_air_flow,

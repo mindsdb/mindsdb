@@ -88,7 +88,7 @@ MindsDB integrates with the DBT and MLflow workflow you already have.
                 #create-predictor code { background-color: #353535; color: #f5f5f5 }
               </style>
             ```
-            mysql> CREATE PREDICTOR home_rentals_predictor
+            mysql> CREATE PREDICTOR mindsdb.home_rentals_predictor
                 -> FROM example_data (select * from demo_data.home_rentals)
                 -> PREDICT rental_price
                 -> USING url.predict='http://host.docker.internal:1234/invocations',

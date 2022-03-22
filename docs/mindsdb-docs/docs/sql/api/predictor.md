@@ -3,13 +3,13 @@
 The `CREATE PREDICTOR` statement is used to train a new model. The basic syntax for training a model is:
 
 ```sql
-CREATE PREDICTOR predictor_name
+CREATE PREDICTOR mindsdb.predictor_name
 FROM integration_name 
 (SELECT column_name, column_name2 FROM table_name) as ds_name
 PREDICT column_name as column_alias;
 ```
 
-* `CREATE PREDICTOR predictor_name` - where `predictor_name` is the name of the model.
+* `CREATE PREDICTOR mindsdb.predictor_name` - where `predictor_name` is the name of the model.
 * `FROM integration_name (select column_name, column_name2 FROM table_name)` - where `integration_name` is the name of the [datasource](/connect/#create-new-datasource), where `(select column_name, column_name2 FROM table_name)` is the SELECT statement for selecting the data. If you want to change the default name of the datasource you can use the alias `as ds_name`.
 * `PREDICT column_name` - where `column_name` is the column name of the target variable. If you want to change the name of the target variable you can use the `as column_alias`.
 
@@ -23,7 +23,7 @@ The Home Rentals dataset contains prices of properties from a metropolitan area 
 This example shows how you can train a Machine Learning model called `home_rentals_model` to predict the rental prices for real estate properties inside the dataset.
 
 ```sql
-CREATE PREDICTOR home_rentals_model
+CREATE PREDICTOR mindsdb.home_rentals_model
 FROM db_integration (SELECT * FROM house_rentals_data) as rentals
 PREDICT rental_price as price;
 ```
@@ -35,14 +35,14 @@ With this, we will use all columns from the dataset above to predict the value i
 If you have uploaded a file from the GUI, you can specify `files` as the datasource:
 
 ```sql
-CREATE PREDICTOR home_rentals_model
+CREATE PREDICTOR mindsdb.home_rentals_model
 FROM files (SELECT * FROM house_rentals_data) as rentals
 PREDICT rental_price as price;
 ```
 
 ### SELECT Predictor status
 
-After you run the `CREATE Predictor` statement, you can check the status of the training model, by selecting from `mindsdb.predictors` table:
+After you run the `CREATE PREDICTOR` statement, you can check the status of the training model, by selecting from `mindsdb.predictors` table:
 
 ```sql
 SELECT * FROM mindsdb.predictors WHERE name='predictor_name';
@@ -70,7 +70,7 @@ To train a timeseries model, MindsDB provides additional keywords.
 * `GROUP BY` - (OPTIONAL) keyword is used to group the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series. 
 
 ```sql
-CREATE PREDICTOR predictor_name
+CREATE PREDICTOR mindsdb.predictor_name
 FROM db_integration 
 (SELECT sequential_column, partition_column, other_column, target_column FROM table_name) as ds_name
 PREDICT target_column AS column_alias
@@ -87,7 +87,7 @@ HORIZON 5;
 The following example trains the new `inventory_model` model which can predicts the `units_in_inventory` for the next 7 days, taking into account the historical inventory in the past 20 days for each 'procuct_id'
 
 ```sql
-CREATE PREDICTOR inventory_model
+CREATE PREDICTOR mindsdb.inventory_model
 FROM db_integration
 (SELECT * FROM inventory) as inventory
 PREDICT units_in_inventory as predicted_units_in_inventory
@@ -109,7 +109,7 @@ The `USING ...` statement provides the option to configure a model to be trained
 ## Syntax
 
 ```sql
-CREATE PREDICTOR [name_of_your _predictor]
+CREATE PREDICTOR [mindsdb.name_of_your_predictor]
 FROM [name_of_your_integration]
     (SELECT * FROM your_database.your_data_table)
 PREDICT [data_target_column]
@@ -158,7 +158,7 @@ You have a lot of options in terms of what you can configure with `USING`. Since
 We will use the home rentals dataset, specifying particular encoders for some of the columns and a LightGBM model.
 
 ```sql
-CREATE PREDICTOR home_rentals_predictor 
+CREATE PREDICTOR mindsdb.home_rentals_predictor 
 FROM my_db_integration (
     SELECT * FROM home_rentals
 ) PREDICT rental_price

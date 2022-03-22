@@ -92,10 +92,10 @@ Now, to create the model, let's move to the MindsDB database, and see what's ins
 ![Show mindsdb](/assets/sql/tutorials/insurance-cost/show-tables-sql-2.png)
 
 There are 2 tables, predictors, and commands. Predictors contain your predictors record, and commands contain your last commands used.  
-To train a new machine learning model we will need to CREATE Predictor as a new record inside the predictors table, and using this command:
+To train a new machine learning model we will need to CREATE PREDICTOR as a new record inside the predictors table, and using this command:
 
 ```sql
-CREATE PREDICTOR predictor_name
+CREATE PREDICTOR mindsdb.predictor_name
 FROM integration_name
 (SELECT column_name, column_name2 FROM table_name) as ds_name
 PREDICT column_name as column_alias;

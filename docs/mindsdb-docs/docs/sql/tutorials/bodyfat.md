@@ -48,7 +48,7 @@ USE mindsdb;
 Now, we have to create a predictor based on the following syntax:
 
 ```sql
-CREATE PREDICTOR predictor_name
+CREATE PREDICTOR mindsdb.predictor_name
 FROM files 
 (SELECT column_name, column_name2 FROM file_name) as ds_name
 PREDICT column_name as column_alias;
@@ -56,7 +56,7 @@ PREDICT column_name as column_alias;
 
 For our case, we'll enter the following command:
 ```sql
-CREATE PREDICTOR bodyfat_predictor
+CREATE PREDICTOR mindsdb.bodyfat_predictor
 FROM files (
         SELECT * FROM bodyfat
 ) PREDICT Bodyfat;

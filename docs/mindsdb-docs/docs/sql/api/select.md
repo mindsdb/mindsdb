@@ -3,7 +3,7 @@
 The `SELECT` statement is used to get a predictions from the model table. The data is not persistent and is returned on the fly as a result-set. The basic syntax for selecting from the model is:
 
 ```sql
-SELECT target_variable, target_variable_explain FROM model_table 
+SELECT target_variable, target_variable_explain FROM mindsdb.model_table 
                                                 WHERE column3= "value" AND  column2= "value";
 ```
 

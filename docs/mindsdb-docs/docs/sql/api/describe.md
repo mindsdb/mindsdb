@@ -10,7 +10,7 @@ The `DESCRIBE [...].features` statement is used to display the way that the mode
 ### Syntax:
 
 ```sql
-DESCRIBE [name_of_your_predictor].features;
+DESCRIBE [mindsdb.name_of_your_predictor].features;
 ```
 ### Expected Output
 
@@ -26,7 +26,7 @@ DESCRIBE [name_of_your_predictor].features;
 ### Syntax:
 
 ```sql
-DESCRIBE [name_of_your _predictor].model;
+DESCRIBE [mindsdb.name_of_your_predictor].model;
 ```
 
 ### Expected Output
@@ -38,7 +38,7 @@ DESCRIBE [name_of_your _predictor].model;
 * training_time: training time for that condidate model
 
 ```sql
-DESCRIBE [name_of_your _predictor].ensemble;
+DESCRIBE [mindsdb.name_of_your_predictor].ensemble;
 ```
 
 ### Expected Output

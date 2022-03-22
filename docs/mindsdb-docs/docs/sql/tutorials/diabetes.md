@@ -235,7 +235,7 @@ USE mindsdb;
 Use the following query to create a predictor that will predict the `class` (*positive or negative*) for the specific field parameters.
 
 ```sql
-CREATE PREDICTOR diabetes_predictor
+CREATE PREDICTOR mindsdb.diabetes_predictor
 FROM Diabetes (
     SELECT * FROM "DIABETES_DATA".diabetes
 ) PREDICT class;

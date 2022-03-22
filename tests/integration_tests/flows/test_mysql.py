@@ -13,8 +13,6 @@ from common import (
     check_prediction_values
 )
 
-# +++ define test data
-TEST_DATASET = 'hdi'
 
 TO_PREDICT = 'GDP_per_capita_USD'
 
@@ -22,10 +20,9 @@ CONDITION = {
     'Population': 2044147,
     'Pop_Density': 13.9
 }
-# ---
 
-TEST_DATA_TABLE = TEST_DATASET
-TEST_PREDICTOR_NAME = f'{TEST_DATASET}_predictor'
+TEST_DATA_TABLE = 'hdi'
+TEST_PREDICTOR_NAME = f'{TEST_DATA_TABLE}_predictor'
 
 INTEGRATION_NAME = 'default_mysql'
 
@@ -96,7 +93,7 @@ class MySQLDBTest(unittest.TestCase):
     def test_2_create_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         query(f"""
-            CREATE PREDICTOR {TEST_PREDICTOR_NAME} FROM {INTEGRATION_NAME} (SELECT * FROM test_data.{TEST_DATA_TABLE} LIMIT 50) PREDICT {TO_PREDICT}
+            CREATE PREDICTOR {TEST_PREDICTOR_NAME} FROM {INTEGRATION_NAME} ('SELECT * FROM test_data.{TEST_DATA_TABLE} LIMIT 50') PREDICT {TO_PREDICT}
         """)
 
         print('predictor record in mindsdb.predictors')

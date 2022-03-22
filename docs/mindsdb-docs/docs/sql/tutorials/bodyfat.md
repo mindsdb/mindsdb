@@ -92,9 +92,9 @@ Now, we can query the model and make predictions based on our input data by usin
 Let's imagine an individual aged 25, with a body density of 1.08, a weight of 170lb, a height of 70in, a neck circumference of 38.1cm, a chest circumference of 103.5cm, an abdomen circumference of 85.4cm, a hip circumference of 102.2cm, a thigh circumference of 63.0cm, a knee circumference of 39.4cm, an ankle circumference of 22.8cm, a biceps circumference of 33.3cm, a forearm circumference of 28.7cm, and a wrist circumference of 18.3cm.  We can predict this person's body fat percentage by issuing the following command:
 
 ```sql
-SELECT BodyFat, BodyFat_confidence, BodyFat_explain AS Info
+SELECT BodyFat, BodyFat_confidence, BodyFat_explain 
 FROM mindsdb.bodyfat_predictor 
-WHERE when_data='{"Density": 1.08, "Age": 25, "Weight": 170, "Height": 70, "Neck": 38.1, "Chest": 103.5, "Abdomen": 85.4, "Hip": 102.2, "Thigh": 63.0, "Knee": 39.4, "Ankle": 22.8, "Biceps": 33.3, "Forearm": 28.7, "Wrist": 18.3}';
+WHERE Density=1.08 AND Age=25 AND Weight=170 AND Height=70 AND Neck=38.1 AND Chest=103.5 AND Abdomen=85.4 AND Hip=102.2 AND Thigh=63.0 AND Knee=39.4 AND Ankle=22.8 AND Biceps=33.3 AND Forearm=28.7 AND Wrist=18.3;
 ```
 
 This should return output similar to:

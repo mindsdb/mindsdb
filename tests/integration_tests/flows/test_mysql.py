@@ -92,9 +92,8 @@ class MySQLDBTest(unittest.TestCase):
 
     def test_2_create_predictor(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
-        query(f"""
-            CREATE PREDICTOR {TEST_PREDICTOR_NAME} FROM {INTEGRATION_NAME} (SELECT * FROM test_data.{TEST_DATA_TABLE} LIMIT 50) PREDICT `{TO_PREDICT}`
-        """)
+        print(f"CREATE PREDICTOR {TEST_PREDICTOR_NAME} FROM {INTEGRATION_NAME} (SELECT * FROM test_data.{TEST_DATA_TABLE} LIMIT 50) PREDICT `{TO_PREDICT}`;")
+        query(f"CREATE PREDICTOR {TEST_PREDICTOR_NAME} FROM {INTEGRATION_NAME} (SELECT * FROM test_data.{TEST_DATA_TABLE} LIMIT 50) PREDICT `{TO_PREDICT}`;")
 
         print('predictor record in mindsdb.predictors')
         res = fetch(f"select status from {MINDSDB_DATABASE}.predictors where name = '{TEST_PREDICTOR_NAME}'", as_dict=True)

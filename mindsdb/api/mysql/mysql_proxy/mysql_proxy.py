@@ -507,11 +507,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data.append(c_data)
         return data
 
-    def _get_ensemble_type(self, data):
+    def _get_ensemble_data(self, data):
         ai_info = data.get('json_ai', {})
         if ai_info == {}:
-            raise ErBadTableError("predictor doesn't contain enough data to generate 'feature' attribute.")
-        return [[ai_info["model"]["module"]]]
+            raise ErBadTableError("predictor doesn't contain enough data to generate 'ensamble' attribute. Please wait until predictor is complete.")
+        ai_info_str = json.dumps(ai_info, indent=2)
+        return [[ai_info_str]]
 
     def answer_describe_predictor(self, predictor_value):
         predictor_attr = None
@@ -602,7 +603,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     'type': TYPES.MYSQL_TYPE_VAR_STRING
                 }]
             elif predictor_attr == "ensemble":
-                data = self._get_ensemble_type(data)
+                data = self._get_ensemble_data(data)
                 columns = [{
                     'table_name': '',
                     'name': 'ensemble',

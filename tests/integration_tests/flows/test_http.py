@@ -318,7 +318,7 @@ class HTTPTest(unittest.TestCase):
         exported_predictor = res.text
 
         # Delete the predictor
-        res = requests.delete(f'{root}/predictor/test_99_{pred_name}')
+        res = requests.delete(f'{root}/predictors/test_99_{pred_name}')
         assert res.status_code == 200
 
         # Import the predictor from the previous export

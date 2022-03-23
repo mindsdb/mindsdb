@@ -30,7 +30,7 @@ So let's look at how it works using a real use case. For the demo purpose we wil
 First, you need to connect MindsDB to the database where the data is stored. Open MindsDB GUI and in the left navigation click on Database, then click on the ADD DATABASE.
 Here, you need to provide all of the required parameters for connecting to the database.
 
-![Connect](/assets/sql/tutorials/insurance-cost/add-database-cloud-mindsdb-sql.png)
+![Connect](/assets/sql/tutorials/insurance-cost/create_db.png)
 
 * Supported Database - select the database that you want to connect to
 * Integrations Name - add a name to the integration, here I'm using 'mysql' but you can name it differently
@@ -111,7 +111,14 @@ The values that we need to provide are:
 
 So, use this command to create the models:
 
-![Create model](/assets/sql/tutorials/insurance-cost/create-predictor-insurance-sql.png)
+```sql
+CREATE PREDICTOR insurance_cost_predictor
+FROM insurance_costs
+(SELECT * from insurance)
+PREDICT charges;
+```
+
+![Create model](/assets/sql/tutorials/insurance-cost/insurance_predictor.png)
 
 If there's no error, that means your model is created and training has started. To see if your model is finished, use this command:
 
@@ -123,7 +130,11 @@ And values that we need to provide are:
 
 * predictor_name (string) - The name of the model.
 
-![Show model](/assets/sql/tutorials/insurance-cost/show-predictor-isurance-sql.png)
+```sql
+SELECT * FROM mindsdb.predictors WHERE name='insurance_cost_predictor';
+```
+
+![Show model](/assets/sql/tutorials/insurance-cost/select_insurance.png)
 
 If the predictor is ready, it will look like this. The model has been created and trained! The reported accuracy is 75%. If you want to have more control over the model, head to lightwood.io to see how that can be customized.
 
@@ -133,7 +144,7 @@ Now you are in the last step of this tutorial, making the prediction. To make a 
 
 ```sql
 SELECT target_variable, target_variable_explain FROM model_table 
-WHERE when_data='{"column3": "value", "column2": "value"}';
+WHERE column3="value" AND column2=value;
 ```
 
 You need to set these values:
@@ -143,7 +154,13 @@ You need to set these values:
 - target_variable_explain - JSON object that contains additional information as confidence_lower_bound, confidence_upper_bound, anomaly, truth.
 - when_data - The data to make the predictions from(WHERE clause params).
 
-![Query model](/assets/sql/tutorials/insurance-cost/create-prediction-isurance-sql.png)
+```sql
+SELECT charges, charges_confidence, charges_explain as info
+FROM insurance_cost_predictor
+WHERE age=20 AND sex='male' AND bmi=33.20 AND children=0 AND smoker='no' AND region='southeast';
+```
+
+![Query model](/assets/sql/tutorials/insurance-cost/prediction_insurance.png)
 
 Finally, we have trained an insurance model using SQL and MindsDB.
 

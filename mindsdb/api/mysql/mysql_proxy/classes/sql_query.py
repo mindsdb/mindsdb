@@ -414,7 +414,7 @@ class SQLQuery():
             # is it query to 'datasources'?
             if (
                 isinstance(mindsdb_sql_struct.from_table, Identifier)
-                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'
+                and mindsdb_sql_struct.from_table.parts[-1].lower() in ('datasources', 'databases')
                 and (
                     self.database == 'mindsdb'
                     or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'

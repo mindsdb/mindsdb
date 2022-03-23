@@ -16,6 +16,7 @@ from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
+from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -212,6 +213,12 @@ class MindsDBDataNode(DataNode):
             where_data = [where_data]
 
         model = self.model_interface.get_model_data(name=table)
+        if model.get('status') != 'complete':
+            raise SqlApiException(
+                f"Trying to use predictor '{table}', but the predictor has status '{model.get('status')}'. " +
+                "The predictor must has status 'complete' in order to use it."
+            )
+
         columns = list(model['dtype_dict'].keys())
 
         # cast where_data column to case of original predicto column

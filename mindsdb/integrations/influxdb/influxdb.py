@@ -7,7 +7,7 @@ from mindsdb.utilities.log import log
 
 class InfluxDBDS(DataSource):
     """
-    SQL Datasource class used for connections to InfluxDB
+    Datasource class used for connections to InfluxDB
     """
     def __init__(self, **kwargs):
         self.protocol = kwargs.get('protocol')

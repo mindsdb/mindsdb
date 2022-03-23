@@ -636,6 +636,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         connection_args = struct['connection_args']
         connection_args['type'] = database_type
 
+        integration = self.session.integration_controller.get(datasource_name)
+        if integration is not None:
+            raise SqlApiException(f"Database '{datasource_name}' already exists.")
         self.session.integration_controller.add(datasource_name, connection_args)
         return SQLAnswer(ANSWER_TYPE.OK)
 

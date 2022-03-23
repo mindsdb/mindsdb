@@ -1,0 +1,38 @@
+{{- if .Values.service.http.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mindsdb.fullname" . }}-http
+  labels:
+    {{- include "mindsdb.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.http.type }}
+  {{- if and .Values.service.http.loadBalancerIP (eq .Values.service.http.type "LoadBalancer") }}
+  loadBalancerIP: {{ .Values.service.http.loadBalancerIP  }}
+  {{- end }}
+  {{- if .Values.service.http.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+  {{- range .Values.service.http.loadBalancerSourceRanges }}
+    - {{ . }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.service.http.externalIPs }}
+  externalIPs:
+    {{- toYaml .Values.service.http.externalIPs | nindent 4 }}
+  {{- end }}
+  {{- if .Values.service.http.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .Values.service.http.externalTrafficPolicy }}
+  {{- end }}
+  {{- if and .Values.service.http.clusterIP (eq .Values.service.http.type "ClusterIP") }}
+  clusterIP: {{ .Values.service.http.clusterIP }}
+  {{- end }}
+  ports:
+  - name: http
+    port: {{ .Values.service.http.port }}
+    {{- if  .Values.service.http.nodePort }}
+    nodePort: {{ .Values.service.http.nodePort }}
+    {{- end }}
+    targetPort: {{ .Values.service.http.port }}
+  selector:
+    {{- include "mindsdb.selectorLabels" . | nindent 4 }}
+{{- end }}

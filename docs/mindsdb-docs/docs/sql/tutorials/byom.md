@@ -91,7 +91,7 @@ The training endpoints must return a JSON that contains the keys `status` set to
 Once you start this RayServe-wrapped model you can train it using a query like this one:
 
 ```sql
-CREATE PREDICTOR byom_ray_serve
+CREATE PREDICTOR mindsdb.byom_ray_serve
 FROM mydb (
     SELECT number_of_rooms, initial_price, rental_price 
     FROM test_data.home_rentals
@@ -315,7 +315,7 @@ target INT
 Next, we can register and train the above custom model using the following query:
 
 ```sql
-CREATE PREDICTOR byom_ray_serve_nlp
+CREATE PREDICTOR mindsdb.byom_ray_serve_nlp
 FROM maria (
     SELECT text, target
     FROM test.nlp_kaggle_train
@@ -366,7 +366,7 @@ With `<run-id>` given in the output of the command `python train.py` used for ac
 Next, we're going to bring this model into MindsDB:
 
 ```sql
-CREATE PREDICTOR byom_mlflow 
+CREATE PREDICTOR mindsdb.byom_mlflow 
 PREDICT `1`  -- `1` is the target column name
 USING 
 url.predict='http://localhost:5000/invocations', 

@@ -160,10 +160,12 @@ class ModelController():
         df, problem_definition, join_learn_process, json_ai_override = self._unpack_old_args(from_data, kwargs, to_predict)
 
         if 'url' in problem_definition:
+            
             train_url = problem_definition['url'].get('train', None)
             predict_url = problem_definition['url'].get('predict', None)
             com_format = problem_definition['format']
-
+            api_token = ('API_TOKEN' in problem_definition)? problem_definition['API_TOKEN']: None
+            input_column = ('input_column' in problem_definition)? problem_definition['input_column']: None
             predictor_record = db.Predictor(
                 company_id=company_id,
                 name=name,
@@ -173,7 +175,7 @@ class ModelController():
                 to_predict=problem_definition['target'],
                 learn_args=ProblemDefinition.from_dict(problem_definition).to_dict(),
                 data={'name': name, 'train_url': train_url, 'predict_url': predict_url, 'format': com_format,
-                      'status': 'complete' if train_url is None else 'training'},
+                      'status': 'complete' if train_url is None else 'training', 'API_TOKEN': api_token, 'input_column': input_column},
                 is_custom=True,
                 # @TODO: For testing purposes, remove afterwards!
                 dtype_dict=json_ai_override['dtype_dict'],

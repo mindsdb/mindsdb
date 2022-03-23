@@ -1,12 +1,11 @@
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.exceptions import InfluxDBError
 
-# FIXME: Where is this?
 from mindsdb.integrations.data_source import SQLDataSource
 from mindsdb.utilities.log import log
 
 
-class InfluxDS():
+class InfluxDBDS(SQLDataSource):
     """
     SQL Datasource class used for connections to InfluxDB
     """

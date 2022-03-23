@@ -1049,6 +1049,13 @@ class SQLQuery():
                             )
                         else:
                             raise Exception('Undefined column name')
+
+                        # if column not exists in result - copy value to it
+                        if (column_name, column_alias) not in step_data['columns'][appropriate_table]:
+                            step_data['columns'][appropriate_table].append((column_name, column_alias))
+                            for row in step_data['values']:
+                                if (column_name, column_alias) not in row[appropriate_table]:
+                                    row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][(column_name, column_name)]
                     else:
                         raise Exception(f'Unexpected column name type: {column_identifier}')
 

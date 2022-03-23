@@ -244,7 +244,15 @@ class ModelController():
                 predictions = pd.DataFrame({
                     'prediction': answer
                 })
-
+                
+            elif predictor_data['format'] == 'huggingface':
+                headers = {"Authorization": "Bearer {API_TOKEN}".format(API_TOKEN=predictor_data['API_TOKEN'])}
+                col_data = df[predictor_data['input_column']]
+                col_data.rename({predictor_data['input_column']:'inputs'}, axis='columns')
+                serialized_df = json.dumps(col_data.to_dict())
+                resp = requests.post(predictor_data['predict_url'], headers=headers, data=serialized_df)
+                predictions = pd.DataFrame(resp.json())
+                
             elif predictor_data['format'] == 'ray_server':
                 serialized_df = json.dumps(df.to_dict())
                 resp = requests.post(predictor_data['predict_url'], json={'df': serialized_df})

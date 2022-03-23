@@ -636,6 +636,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         connection_args = struct['connection_args']
         connection_args['type'] = database_type
 
+        integration = self.session.integration_controller.get(datasource_name)
+        if integration is not None:
+            raise SqlApiException(f"Database '{datasource_name}' already exists.")
         self.session.integration_controller.add(datasource_name, connection_args)
         return SQLAnswer(ANSWER_TYPE.OK)
 
@@ -662,6 +665,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'select': statement.query_str,
             'predict': [x.parts[-1] for x in statement.targets]
         }
+
         if len(struct['predict']) > 1:
             raise SqlApiException("Only one field can be in 'PREDICT'")
         if isinstance(statement.integration_name, Identifier):
@@ -683,6 +687,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         model_interface = self.session.model_interface
         data_store = self.session.data_store
+
+        models = model_interface.get_models()
+        model_names = [x['name'] for x in models]
+        if struct['predictor_name'] in model_names:
+            raise SqlApiException(f"Predictor with name '{struct['predictor_name']}' already exists. Each predictor must have unique name.")
 
         predictor_name = struct['predictor_name']
         integration_name = struct.get('integration_name')

@@ -195,6 +195,7 @@ class Column:
     def __repr__(self):
         return f'{self.__class__.__name__}({self.__dict__})'
 
+
 class SQLQuery():
     def __init__(self, sql, session, execute=True):
         self.session = session
@@ -223,8 +224,6 @@ class SQLQuery():
             renderer = SqlalchemyRender('mysql')
             self.query_str = renderer.get_string(self.query, with_failback=True)
 
-        # self.raw = sql
-        # self.query = None
         self.planner = None
         self.parameters = []
         self.fetched_data = None
@@ -233,7 +232,6 @@ class SQLQuery():
         if execute:
             self.prepare_query(prepare=False)
             self.execute_query()
-
 
     def fetch(self, datahub, view='list'):
         data = self.fetched_data
@@ -710,7 +708,10 @@ class SQLQuery():
                     'tables': [table_name]
                 }
             except Exception as e:
-                raise SqlApiException(f'error in apply predictor row step: {e}') from e
+                if type(e) == SqlApiException:
+                    raise e
+                else:
+                    raise SqlApiException(f'error in apply predictor row step: {e}') from e
         elif type(step) in (ApplyPredictorStep, ApplyTimeseriesPredictorStep):
             try:
                 dn = self.datahub.get(self.mindsdb_database_name)
@@ -1049,6 +1050,13 @@ class SQLQuery():
                             )
                         else:
                             raise Exception('Undefined column name')
+
+                        # if column not exists in result - copy value to it
+                        if (column_name, column_alias) not in step_data['columns'][appropriate_table]:
+                            step_data['columns'][appropriate_table].append((column_name, column_alias))
+                            for row in step_data['values']:
+                                if (column_name, column_alias) not in row[appropriate_table]:
+                                    row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][(column_name, column_name)]
                     else:
                         raise Exception(f'Unexpected column name type: {column_identifier}')
 

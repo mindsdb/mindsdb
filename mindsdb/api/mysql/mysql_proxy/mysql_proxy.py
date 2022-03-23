@@ -507,11 +507,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data.append(c_data)
         return data
 
-    def _get_ensemble_type(self, data):
+    def _get_ensemble_data(self, data):
         ai_info = data.get('json_ai', {})
         if ai_info == {}:
-            raise ErBadTableError("predictor doesn't contain enough data to generate 'feature' attribute.")
-        return [[ai_info["model"]["module"]]]
+            raise ErBadTableError("predictor doesn't contain enough data to generate 'ensamble' attribute. Please wait until predictor is complete.")
+        ai_info_str = json.dumps(ai_info, indent=2)
+        return [[ai_info_str]]
 
     def answer_describe_predictor(self, predictor_value):
         predictor_attr = None
@@ -602,7 +603,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     'type': TYPES.MYSQL_TYPE_VAR_STRING
                 }]
             elif predictor_attr == "ensemble":
-                data = self._get_ensemble_type(data)
+                data = self._get_ensemble_data(data)
                 columns = [{
                     'table_name': '',
                     'name': 'ensemble',
@@ -635,6 +636,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         connection_args = struct['connection_args']
         connection_args['type'] = database_type
 
+        integration = self.session.integration_controller.get(datasource_name)
+        if integration is not None:
+            raise SqlApiException(f"Database '{datasource_name}' already exists.")
         self.session.integration_controller.add(datasource_name, connection_args)
         return SQLAnswer(ANSWER_TYPE.OK)
 
@@ -661,6 +665,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'select': statement.query_str,
             'predict': [x.parts[-1] for x in statement.targets]
         }
+
         if len(struct['predict']) > 1:
             raise SqlApiException("Only one field can be in 'PREDICT'")
         if isinstance(statement.integration_name, Identifier):
@@ -682,6 +687,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         model_interface = self.session.model_interface
         data_store = self.session.data_store
+
+        models = model_interface.get_models()
+        model_names = [x['name'] for x in models]
+        if struct['predictor_name'] in model_names:
+            raise SqlApiException(f"Predictor with name '{struct['predictor_name']}' already exists. Each predictor must have unique name.")
 
         predictor_name = struct['predictor_name']
         integration_name = struct.get('integration_name')

@@ -79,7 +79,7 @@ Follow these steps to start predicting in SQL straight away.
 1. Now you are ready to create your first predictor.  Use the `CREATE PREDICTOR` syntax by copy and pasting this command into your SQL client:
 
     ```
-    CREATE PREDICTOR home_rentals_predictor
+    CREATE PREDICTOR mindsdb.home_rentals_predictor
     FROM example_data
     	(SELECT * FROM demo_data.home_rentals)
     PREDICT rental_price;
@@ -89,7 +89,7 @@ Follow these steps to start predicting in SQL straight away.
         #create-predictor code { background-color: #353535; color: #f5f5f5 }
       </style>
     ```
-    mysql> CREATE PREDICTOR home_rentals_predictor
+    mysql> CREATE PREDICTOR mindsdb.home_rentals_predictor
         -> FROM example_data
         -> (SELECT * FROM demo_data.home_rentals)
         -> PREDICT rental_price;
@@ -101,7 +101,7 @@ Follow these steps to start predicting in SQL straight away.
 
     ```
     SELECT status
-    FROM predictors
+    FROM mindsdb.predictors
     WHERE name='home_rentals_predictor';
     ```
     <div id="predictor-status">
@@ -110,7 +110,7 @@ Follow these steps to start predicting in SQL straight away.
       </style>
     ```
     mysql> SELECT status
-        -> FROM predictors
+        -> FROM mindsdb.predictors
         -> WHERE name='home_rentals_predictor';
     +----------+
     | status   |
@@ -120,7 +120,7 @@ Follow these steps to start predicting in SQL straight away.
     1 row in set (0.19 sec)
     ...
     mysql> SELECT status
-        -> FROM predictors
+        -> FROM mindsdb.predictors
         -> WHERE name='home_rentals_predictor';
     +----------+
     | status   |
@@ -135,7 +135,7 @@ Follow these steps to start predicting in SQL straight away.
 
     ```
     SELECT rental_price
-    FROM home_rentals_predictor
+    FROM mindsdb.home_rentals_predictor
     WHERE number_of_bathrooms=2 AND sqft=1000;
     ```
     <div id="make-prediction">
@@ -144,7 +144,7 @@ Follow these steps to start predicting in SQL straight away.
       </style>
     ```
     mysql> SELECT rental_price
-        -> FROM home_rentals_predictor
+        -> FROM mindsdb.home_rentals_predictor
         -> WHERE number_of_bathrooms=2 AND sqft=1000;
     +--------------+
     | rental_price |

@@ -235,7 +235,7 @@ USE mindsdb;
 Use the following query to create a predictor that will predict the `class` (*positive or negative*) for the specific field parameters.
 
 ```sql
-CREATE PREDICTOR diabetes_predictor
+CREATE PREDICTOR mindsdb.diabetes_predictor
 FROM Diabetes (
     SELECT * FROM "DIABETES_DATA".diabetes
 ) PREDICT class;
@@ -283,7 +283,7 @@ Use the following query using mock data with the predictor.
 ```sql
 SELECT class
 FROM mindsdb.diabetes_predictor
-WHERE when_data='{"number_of_times_pregnant": 0, "plasma_glucose_concentration": 135.0, "diastolic_blood_pressure": 65.0, "triceps_skin_fold_thickness": 30, "two_Hour_serum_insulin": 0, "body_mass_index": 23.5, "diabetes_pedigree_function": 0.366, "age": 31}'\G
+WHERE number_of_times_pregnant=0 AND plasma_glucose_concentration=135.0 AND diastolic_blood_pressure=65.0 AND triceps_skin_fold_thickness=30 AND two_Hour_serum_insulin=0 AND body_mass_index=23.5 AND diabetes_pedigree_function=0.366 AND age=31;
 ```
 The result:
 ```console

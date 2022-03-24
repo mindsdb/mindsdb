@@ -160,12 +160,11 @@ class ModelController():
         df, problem_definition, join_learn_process, json_ai_override = self._unpack_old_args(from_data, kwargs, to_predict)
 
         if 'url' in problem_definition:
-            
             train_url = problem_definition['url'].get('train', None)
             predict_url = problem_definition['url'].get('predict', None)
             com_format = problem_definition['format']
-            api_token = ('API_TOKEN' in problem_definition)? problem_definition['API_TOKEN']: None
-            input_column = ('input_column' in problem_definition)? problem_definition['input_column']: None
+            api_token = problem_definition['API_TOKEN'] if ('API_TOKEN' in problem_definition) else None
+            input_column = problem_definition['input_column'] if ('input_column' in problem_definition) else None
             predictor_record = db.Predictor(
                 company_id=company_id,
                 name=name,

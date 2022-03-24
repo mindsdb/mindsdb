@@ -163,7 +163,8 @@ class ModelController():
             train_url = problem_definition['url'].get('train', None)
             predict_url = problem_definition['url'].get('predict', None)
             com_format = problem_definition['format']
-
+            api_token = problem_definition['API_TOKEN'] if ('API_TOKEN' in problem_definition) else None
+            input_column = problem_definition['input_column'] if ('input_column' in problem_definition) else None
             predictor_record = db.Predictor(
                 company_id=company_id,
                 name=name,
@@ -173,7 +174,7 @@ class ModelController():
                 to_predict=problem_definition['target'],
                 learn_args=ProblemDefinition.from_dict(problem_definition).to_dict(),
                 data={'name': name, 'train_url': train_url, 'predict_url': predict_url, 'format': com_format,
-                      'status': 'complete' if train_url is None else 'training'},
+                      'status': 'complete' if train_url is None else 'training', 'API_TOKEN': api_token, 'input_column': input_column},
                 is_custom=True,
                 # @TODO: For testing purposes, remove afterwards!
                 dtype_dict=json_ai_override['dtype_dict'],
@@ -244,7 +245,15 @@ class ModelController():
                 predictions = pd.DataFrame({
                     'prediction': answer
                 })
-
+                
+            elif predictor_data['format'] == 'huggingface':
+                headers = {"Authorization": "Bearer {API_TOKEN}".format(API_TOKEN=predictor_data['API_TOKEN'])}
+                col_data = df[predictor_data['input_column']]
+                col_data.rename({predictor_data['input_column']:'inputs'}, axis='columns')
+                serialized_df = json.dumps(col_data.to_dict())
+                resp = requests.post(predictor_data['predict_url'], headers=headers, data=serialized_df)
+                predictions = pd.DataFrame(resp.json())
+                
             elif predictor_data['format'] == 'ray_server':
                 serialized_df = json.dumps(df.to_dict())
                 resp = requests.post(predictor_data['predict_url'], json={'df': serialized_df})

@@ -29,7 +29,7 @@ from mlflow.tracking import MlflowClient
 import pandas as pd
 
 
-class MLflowIntegration(PredictiveHandler):
+class MLflowHandler(PredictiveHandler):
     def __init__(self, name):
         """
         An MLflow integration needs to have a working connection to work. For this:
@@ -231,7 +231,7 @@ if __name__ == '__main__':
 
     if True:
         registered_model_name = 'nlp_kaggle3'  # already saved to mlflow local instance
-        cls = MLflowIntegration('test_mlflow')
+        cls = MLflowHandler('test_mlflow')
         config = Config()
         print(cls.connect(
             mlflow_server_url='http://127.0.0.1:5001',  # for this test, serve at 5001 and served model at 5000

@@ -329,8 +329,7 @@ class HTTPTest(unittest.TestCase):
         url = f'{root}/predictors/test_99_{pred_name}/predict'
         res = requests.post(url, json={'when': {'sqft': 500}})
         assert res.status_code == 200
-        pvs = res.json()
-        assert 'predicted_value' in pvs[0]['rental_price']['predicted_value']
+        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

@@ -26,7 +26,9 @@ from mindsdb.interfaces.storage.db import session, engine as db_engine
 def start(verbose, no_studio, with_nlp):
     config = Config()
 
-    initialize_log(config, 'http', wrap_print=True)
+    server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
+
+    initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
 
     # start static initialization in a separate thread
     init_static_thread = None
@@ -105,8 +107,6 @@ def start(verbose, no_studio, with_nlp):
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']
-
-    server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
 
     # waiting static initialization
     if not no_studio:

@@ -229,45 +229,44 @@ class MLflowHandler(PredictiveHandler):
 if __name__ == '__main__':
     # TODO: turn this into tests
 
-    if True:
-        registered_model_name = 'nlp_kaggle3'  # already saved to mlflow local instance
-        cls = MLflowHandler('test_mlflow')
-        config = Config()
-        print(cls.connect(
-            mlflow_server_url='http://127.0.0.1:5001',  # for this test, serve at 5001 and served model at 5000
-            model_registry_path='sqlite:///../../../../../temp/experiments/BYOM/mlflow.db',
-            config={'path': config['paths']['root']})
-        )
-        try:
-            print('dropping predictor...')
-            cls.run_native_query(f"DROP PREDICTOR {registered_model_name}")
-        except:
-            print('failed to drop')
-            pass
-        query = f"CREATE PREDICTOR {registered_model_name} PREDICT target USING url.predict='http://localhost:5000/invocations'"
-        cls.run_native_query(query)
-        print(cls.get_tables())
-        print(cls.describe_table(f'{registered_model_name}'))
+    registered_model_name = 'nlp_kaggle3'  # already saved to mlflow local instance
+    cls = MLflowHandler('test_mlflow')
+    config = Config()
+    print(cls.connect(
+        mlflow_server_url='http://127.0.0.1:5001',  # for this test, serve at 5001 and served model at 5000
+        model_registry_path='sqlite:///../../../../../temp/experiments/BYOM/mlflow.db',
+        config={'path': config['paths']['root']})
+    )
+    try:
+        print('dropping predictor...')
+        cls.run_native_query(f"DROP PREDICTOR {registered_model_name}")
+    except:
+        print('failed to drop')
+        pass
+    query = f"CREATE PREDICTOR {registered_model_name} PREDICT target USING url.predict='http://localhost:5000/invocations'"
+    cls.run_native_query(query)
+    print(cls.get_tables())
+    print(cls.describe_table(f'{registered_model_name}'))
 
-        # Tests with MySQL handler: JOIN
-        from mindsdb.integrations.mysql_handler.mysql_handler.mysql_handler import MySQLHandler  # expose through parent init
-        kwargs = {
-            "host": "localhost",
-            "port": "3306",
-            "user": "root",
-            "password": "root",
-            "database": "test",
-            "ssl": False
-        }
-        sql_handler_name = 'test_handler'
-        data_table_name = 'train_escaped_csv' # 'tweet_sentiment_train'
-        handler = MySQLHandler(sql_handler_name, **kwargs)
-        assert handler.check_status()
+    # Tests with MySQL handler: JOIN
+    from mindsdb.integrations.mysql_handler.mysql_handler.mysql_handler import MySQLHandler  # expose through parent init
+    kwargs = {
+        "host": "localhost",
+        "port": "3306",
+        "user": "root",
+        "password": "root",
+        "database": "test",
+        "ssl": False
+    }
+    sql_handler_name = 'test_handler'
+    data_table_name = 'train_escaped_csv' # 'tweet_sentiment_train'
+    handler = MySQLHandler(sql_handler_name, **kwargs)
+    assert handler.check_status()
 
-        query = f"SELECT target from {registered_model_name} WHERE text='This is nice.'"
-        parsed = cls.parser(query, dialect=cls.dialect)
-        predicted = cls.select_query(parsed)
+    query = f"SELECT target from {registered_model_name} WHERE text='This is nice.'"
+    parsed = cls.parser(query, dialect=cls.dialect)
+    predicted = cls.select_query(parsed)
 
-        query = f"SELECT tb.target as predicted, ta.target as real, tb.text from {sql_handler_name}.{data_table_name} AS ta JOIN {registered_model_name} AS tb LIMIT 10"
-        parsed = cls.parser(query, dialect=cls.dialect)
-        predicted = cls.join(parsed, handler)
+    query = f"SELECT tb.target as predicted, ta.target as real, tb.text from {sql_handler_name}.{data_table_name} AS ta JOIN {registered_model_name} AS tb LIMIT 10"
+    parsed = cls.parser(query, dialect=cls.dialect)
+    predicted = cls.join(parsed, handler)

@@ -3,7 +3,8 @@ import pickle
 from typing import Dict
 from hashlib import md5
 
-import redis
+import redis  # todo dynamic loading depending on whether user has redis installed
+import sqlite3
 
 
 class StorageHandler:
@@ -24,7 +25,7 @@ class StorageHandler:
         if serialized_value:
             return pickle.loads(serialized_value)
         else:
-            raise Exception("Key has no value stored in it!")
+            return None
 
     def set(self, key: str, value: object):
         serialized_value = pickle.dumps(value)
@@ -49,16 +50,17 @@ class SqliteStorageHandler(StorageHandler):
         """ Checks that a key-value table exists, otherwise creates it. """  # noqa
         cur = self.connection.cursor()
         if ('store',) not in list(cur.execute("SELECT name FROM sqlite_master WHERE type='table';")):
-            cur.execute(
-                """create table store (key text, value text)""")
-            self.internal_registry.commit()
+            cur.execute("""create table store (key text PRIMARY KEY, value text)""")
+            self.connection.commit()
 
     def _get(self, serialized_key):
-        return self.connection(f"""select value from store where key={serialized_key}""")
+        cur = self.connection.cursor()
+        # should always be a single match, hence the [0]
+        return list(cur.execute(f"""select value from store where key='{serialized_key}'"""))[0][0]
 
     def _set(self, serialized_key, serialized_value):
         cur = self.connection.cursor()
-        cur.execute("insert into store values (?, ?)", (serialized_key, serialized_value))
+        cur.execute("insert or replace into store values (?, ?)", (serialized_key, serialized_value))
         self.connection.commit()
 
 
@@ -80,11 +82,11 @@ class RedisStorageHandler(StorageHandler):
 
 if __name__ == '__main__':
     # todo convert to unit tests
-    cls = StorageHandler({'test_context_key': 'value'}, config={'host': 'localhost', 'port': '6379'})
+    cls = RedisStorageHandler({'test_context_key': 'value'}, config={'host': 'localhost', 'port': '6379'})
     cls.set('test_key', 42)
     assert cls.get('test_key') == 42
 
-    cls2 = StorageHandler({'test_context_key': 'value2'}, config={'host': 'localhost', 'port': '6379'})
+    cls2 = RedisStorageHandler({'test_context_key': 'value2'}, config={'host': 'localhost', 'port': '6379'})
     try:
         cls2.get('test_key')  # todo turn into assertRaises once in a unit test
     except Exception:

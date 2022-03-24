@@ -1,6 +1,10 @@
 from typing import Dict, List, Optional
+import pandas as pd
 
 class BaseHandler:
+    """
+    Base class for handlers that associate a source of information with the broader MindsDB ecosystem via SQL commands.
+    """  # noqa
     def __init__(self, name):
         self.name = name
 
@@ -34,15 +38,15 @@ class BaseHandler:
         """  # noqa
         raise NotImplementedError()
 
-    def select_query(self, stmt) -> pd.DataFrame:
+    def select_query(self, targets, from_stmt, where_stmt) -> pd.DataFrame:
         """
         Select data from some entity in the handler and return in dataframe format.
         
-        This method assumes the raw_query has been parsed with mindsdb_sql using some dialect compatible with the handler, and so the statement object `stmt` has all information we need.
+        This method assumes a raw query has been parsed beforehand with mindsdb_sql using some dialect compatible with the handler, and only targets, from, and where clauses are fed into it.
         """  # noqa
         raise NotImplementedError()
 
-    def join(self, stmt, data_handler: BaseHandler) -> pd.DataFrame:
+    def join(self, stmt, data_handler) -> pd.DataFrame:
         """
         Join the output of some entity in the handler with output from some other handler.
         
@@ -52,17 +56,24 @@ class BaseHandler:
 
 
 class DatabaseHandler(BaseHandler):
+    """
+    Base class for handlers associated to data storage systems (e.g. databases, data warehouses, streaming services, etc.)
+    """  # noqa
     def __init__(self, name):
         super().__init__(name)
 
-    def get_views(self):
+    def get_views(self) -> List:
         raise NotImplementedError()
 
     def select_into(self, integration_instance, stmt):
+        # todo: signature may be subject to change
         raise NotImplementedError()
 
 
 class PredictiveHandler(BaseHandler):
+    """
+    Base class for handlers associated to predictive systems.
+    """  # noqa
     def __init__(self, name):
         super().__init__(name)
 

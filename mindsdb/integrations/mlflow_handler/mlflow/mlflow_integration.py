@@ -1,12 +1,11 @@
 import os
-import sqlite3
 import requests
 
 from ast import literal_eval
 from typing import Dict, List, Union, Optional
 from datetime import datetime
 
-from mindsdb.integrations.libs.base_handler import PredictiveHandler
+from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.utilities.config import Config
 from mindsdb import __version__ as mindsdb_version
@@ -48,17 +47,17 @@ class MLflowIntegration(PredictiveHandler):
         self.mlflow_server_url = None
         self.mlflow_server_path = None
         self.connection = None
+        self.storage = None
         self.parser = parse_sql
         self.dialect = 'mindsdb'
-        mdb_config = Config()
-        db_path = mdb_config['paths']['root']
-        self.storage = SqliteStorageHandler(context=name, config={'path': db_path})
 
     def connect(self, **kwargs) -> Dict[str, int]:
         """ Connect to the mlflow process using MlflowClient class. """  # noqa
+        print(kwargs)
         self.mlflow_server_url = kwargs['mlflow_server_url']
         self.mlflow_server_path = kwargs['model_registry_path']
         self.connection = MlflowClient(self.mlflow_server_url, self.mlflow_server_path)
+        self.storage = SqliteStorageHandler(context=self.name, config=kwargs['config'])
         return self.check_status()
 
     def check_status(self) -> Dict[str, int]:
@@ -72,12 +71,15 @@ class MLflowIntegration(PredictiveHandler):
 
     def get_tables(self) -> List:
         """ Returns list of model names (that have been succesfully linked with CREATE PREDICTOR) """  # noqa
-        return [row[0] for row in self.storage.get('model_list')]
+        models = self.storage.get('models')
+        return list(models.keys()) if models else []
+
 
     def describe_table(self, table_name: str) -> Dict:
         """ For getting standard info about a table. e.g. data types """  # noqa
         if table_name not in self.get_tables():
-            raise Exception("Table not found.")
+            print("Table not found.")
+            return {}
 
         models = {model.name: model for model in self.connection.list_registered_models()}
         model = models[table_name]
@@ -113,13 +115,14 @@ class MLflowIntegration(PredictiveHandler):
             else:
                 target = statement.targets[0].parts[-1]  # TODO: multiple target support?
                 params = {
-                    'format': statement.using['format'],
-                    'dtype_dict': statement.using['dtype_dict'],
                     'target': target,
                     'url': statement.using['url.predict']
                 }
-                all_models = self.storage.get('models', {})
-                all_models['model_name'] = {'params': params}
+                all_models = self.storage.get('models')
+                if all_models is not None:
+                    all_models[model_name] = params
+                else:
+                    all_models = {model_name: params}
                 self.storage.set('models', all_models)
 
         elif type(statement) == DropPredictor:
@@ -167,7 +170,12 @@ class MLflowIntegration(PredictiveHandler):
             data_query += f" LIMIT {stmt.limit.value}"
 
         parsed_query = self.parser(data_query, dialect=self.dialect)
-        model_input = pd.DataFrame.from_records(data_handler.select_query(parsed_query))
+        model_input = pd.DataFrame.from_records(
+            data_handler.select_query(
+                parsed_query.targets,
+                parsed_query.from_table,
+                parsed_query.where
+            ))
 
         # rename columns
         aliased_columns = list(model_input.columns)
@@ -205,7 +213,7 @@ class MLflowIntegration(PredictiveHandler):
 
         model = self.connection.get_registered_model(model_name)
         model_info = self.storage.get('models')[model_name]
-        return model_name, model, model_info['target'], model_info['model_url']
+        return model_name, model, model_info['target'], model_info['url']
 
     def _call_model(self, df, model_url):
         resp = requests.post(model_url,
@@ -224,14 +232,19 @@ if __name__ == '__main__':
     if True:
         registered_model_name = 'nlp_kaggle3'  # already saved to mlflow local instance
         cls = MLflowIntegration('test_mlflow')
+        config = Config()
         print(cls.connect(
             mlflow_server_url='http://127.0.0.1:5001',  # for this test, serve at 5001 and served model at 5000
-            model_registry_path='sqlite:////Users/Pato/Work/MindsDB/temp/experiments/BYOM/mlflow.db'))
+            model_registry_path='sqlite:///../../../../../temp/experiments/BYOM/mlflow.db',
+            config={'path': config['paths']['root']})
+        )
         try:
+            print('dropping predictor...')
             cls.run_native_query(f"DROP PREDICTOR {registered_model_name}")
         except:
+            print('failed to drop')
             pass
-        query = f"CREATE PREDICTOR {registered_model_name} PREDICT target USING url.predict='http://localhost:5000/invocations', format='mlflow', dtype_dict={{'text': 'rich_text', 'target': 'binary'}}"
+        query = f"CREATE PREDICTOR {registered_model_name} PREDICT target USING url.predict='http://localhost:5000/invocations'"
         cls.run_native_query(query)
         print(cls.get_tables())
         print(cls.describe_table(f'{registered_model_name}'))

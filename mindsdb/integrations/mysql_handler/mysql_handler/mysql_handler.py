@@ -86,14 +86,7 @@ class MySQLHandler(DatabaseHandler):
         result = self.run_native_query(q)
         return result
 
-    def select_query(
-            self,
-            targets,
-            from_stmt,
-            where_stmt
-    ):
-        # TODO: discuss: having only these clauses instead of entire parsed object may be limiting for queries with more parts (e.g. limit)
-
+    def select_query(self, targets, from_stmt, where_stmt):
         query = f"SELECT {','.join([t.__str__() for t in targets])} FROM {from_stmt.parts[0]}"
         if where_stmt:
             query += f" WHERE {str(where_stmt)}"
@@ -102,7 +95,6 @@ class MySQLHandler(DatabaseHandler):
         return result
 
     def select_into(self, table_name, select_query):
-        # todo: discuss whether select_query should be parsed by this point?
         query = f"CREATE TABLE {self.database}.{table_name} AS ({select_query})"
         result = self.run_native_query(query)
 
@@ -112,6 +104,7 @@ class MySQLHandler(DatabaseHandler):
             - left_integration to be a table in the same DB, but should get to a point where it can be a different handler
             - single column to join on
         """
+        # todo: adapt to base signature
         if not on:
             on = '*'
         query = f"SELECT * FROM {self.database}.{table} JOIN {self.database}.{left_integration} ON {table}.{on}"

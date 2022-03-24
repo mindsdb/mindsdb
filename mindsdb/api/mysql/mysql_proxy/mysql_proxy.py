@@ -1346,7 +1346,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if type(statement) == DropPredictor:
             predictor_name = statement.name.parts[-1]
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
-            self.packet(OkPacket).send()
+            return SQLAnswer(ANSWER_TYPE.OK)
         elif keyword == 'create_datasource':
             # fallback for statement
             return self.answer_create_datasource(struct)

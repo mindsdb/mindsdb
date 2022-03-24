@@ -600,32 +600,33 @@ class ModelController():
         return json.dumps(predictor_record_serialized, default=json_serialiser)
 
     def import_predictor(self, name: str, payload: json, company_id: int) -> None:
-        prs = json.loads(payload)
+        prs = json.loads(json.loads(payload))
 
         predictor_record = db.Predictor(
-            name=prs.name,
-            data=prs.data,
-            to_predict=prs.to_predict,
+            name=prs['name'],
+            data=prs['data'],
+            to_predict=prs['to_predict'],
             company_id=company_id,
-            mindsdb_version=prs.mindsdb_version,
-            native_version=prs.native_version,
-            datasource_id=prs.datasource_id,
-            is_custom=prs.is_custom,
-            learn_args=prs.learn_args,
-            update_status=prs.update_status,
-            json_ai=prs.json_ai,
-            code=prs.code,
-            lightwood_version=prs.lightwood_version,
-            dtype_dict=prs.dtype_dict
+            mindsdb_version=prs['mindsdb_version'],
+            native_version=prs['native_version'],
+            datasource_id=prs['datasource_id'],
+            is_custom=prs['is_custom'],
+            learn_args=prs['learn_args'],
+            update_status=prs['update_status'],
+            json_ai=prs['json_ai'],
+            code=prs['code'],
+            lightwood_version=prs['lightwood_version'],
+            dtype_dict=prs['dtype_dict']
         )
 
         db.session.add(predictor_record)
         db.session.commit()
 
         predictor_binary = base64.b64decode(prs['predictor_binary'])
+        fs_name = f'predictor_{company_id}_{predictor_record.id}'
         with open(os.path.join(self.config['paths']['predictors'], fs_name), 'wb') as fp:
             fp.write(predictor_binary)
-        fs_name = f'predictor_{company_id}_{predictor_record.id}'
+
         self.fs_store.put(fs_name, fs_name, self.config['paths']['predictors'])
 
 '''

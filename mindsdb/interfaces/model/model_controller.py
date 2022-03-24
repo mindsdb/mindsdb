@@ -584,7 +584,6 @@ class ModelController():
             'name': predictor_record.name,
             'data': predictor_record.data,
             'to_predict': predictor_record.to_predict,
-            '_company_id': predictor_record.company_id,
             'mindsdb_version': predictor_record.mindsdb_version,
             'native_version': predictor_record.native_version,
             'datasource_id': predictor_record.datasource_id,
@@ -600,7 +599,7 @@ class ModelController():
 
         return json.dumps(predictor_record_serialized, default=json_serialiser)
 
-    def import_predictor(self, name: str, company_id: int, payload: json) -> None:
+    def import_predictor(self, name: str, payload: json, company_id: int) -> None:
         prs = json.loads(payload)
 
         predictor_record = db.Predictor(

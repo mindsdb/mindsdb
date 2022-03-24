@@ -2,217 +2,217 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://docs.mindsdb.com/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/community/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/connect/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/contribute/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/faq/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/getting-started/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/info/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/Getting%20Started%20with%20MindsDB%20on%20Digital%20Ocean/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/cloud/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/docker/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/linux/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/macos/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/pypi/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/source/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/deployment/windows/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://docs.mindsdb.com/mongo/tutorials/Forecast-Metro-Traffic/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <loc>https://docs.mindsdb.com/mongo/mongo/</loc>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/SELECT_Files/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/databases/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/describe/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/drop/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/join/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/predictor/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/publish/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/retrain/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/select/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/stream/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/use/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/api/view/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/connect/cloud/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/connect/dbeaver/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/connect/mysql-client/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/ai-tables/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/bitcoin-forecasting/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/bodyfat/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/byom/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/crop-prediction/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/customer-churn/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/diabetes/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/heart-disease/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/insurance-cost-prediction/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/mindsdb-superset-snowflake/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/mushrooms/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.mindsdb.com/sql/tutorials/process-quality/</loc>
-         <lastmod>2022-03-22</lastmod>
+         <lastmod>2022-03-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>

@@ -1,6 +1,9 @@
-from typing import Union, List
-import mysql.connector
+from typing import Union, List, Optional
 from contextlib import closing
+
+import mysql.connector
+import pandas as pd
+from sqlalchemy import create_engine
 
 from mindsdb_sql import parse_sql
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
@@ -94,32 +97,31 @@ class MySQLHandler(DatabaseHandler):
         result = self.run_native_query(query)
         return result
 
-    def select_into(self, table_name, select_query):
-        # todo: implement new signature
-        query = f"CREATE TABLE {self.database}.{table_name} AS ({select_query})"
-        result = self.run_native_query(query)
+    def select_into(self, table, dataframe: pd.DataFrame):
+        try:
+            con = create_engine(f'mysql://{self.host}:{self.port}/{self.database}', echo=False)
+            dataframe.to_sql(table, con=con, if_exists='append', index=False)
+            return True
+        except Exception as e:
+            print(e)
+            raise Exception(f"Could not select into table {table}, aborting.")
 
-    # def join(self, stmt, data_handler, into: Optional[str]) -> pd.DataFrame:  # todo: adapt to base signature
-    def join(self, table, left_integration: str, on: str, left_where: Union[None, str] = None, into: Optional[str] = None):
-        """
-        for now assumes
-            - left_integration to be a table in the same DB, but should get to a point where it can be a different handler
-            - single column to join on
-        """
-        if not on:
-            on = '*'
-        query = f"SELECT * FROM {self.database}.{table} JOIN {self.database}.{left_integration} ON {table}.{on}"
-        if left_where is not None:
-            query += f'WHERE {left_where}'
-        result = self.run_native_query(query)
+    def join(self, stmt, data_handler, into: Optional[str] = None) -> pd.DataFrame:
+        local_result = self.select_query(stmt.targets, stmt.from_table.left, stmt.where)  # should check it's actually on the left
+        external_result = data_handler.select_query(stmt.targets, stmt.from_table.right, stmt.where)  # should check it's actually on the right
+
+        local_df = pd.DataFrame.from_records(local_result)
+        external_df = pd.DataFrame.from_records(external_result)
+        df = local_df.join(external_df, on=[str(t) for t in stmt.targets], lsuffix='_left', rsuffix='_right')
 
         if into:
-            self.select_into(table, pd.DataFrame(list(result)))
-
-        return result
+            self.select_into(into, df)
+        return df
 
 
 if __name__ == '__main__':
+    # TODO: turn this into tests
+
     kwargs = {
         "host": "localhost",
         "port": "3306",
@@ -163,17 +165,25 @@ if __name__ == '__main__':
         result = handler.run_native_query("DROP TABLE test_mdb2")
     except:
         pass
-    result = handler.select_into('test_mdb2', "SELECT * FROM test_mdb")
+    try:
+        handler.run_native_query("CREATE TABLE test_mdb2 (test_col INT)")
+    except Exception:
+        pass
+
+    result = handler.select_into('test_mdb2', pd.DataFrame.from_dict({'test_col': [1]}))
 
     tbls = handler.get_tables()
     assert 'test_mdb2' in [item['Tables_in_test'] for item in tbls]
 
     handler.run_native_query("INSERT INTO test_mdb(test_col) VALUES (1)")
     handler.run_native_query("INSERT INTO test_mdb2(test_col) VALUES (1)")
-    result = handler.join('test_mdb', 'test_mdb2', 'test_col', left_where=None)
 
-    # to build a DF with results
-    import pandas as pd
-    result_df = pd.DataFrame.from_records(handler.run_native_query(query))
+    into_table = 'test_join_into_mysql'
+    query = f"SELECT test_col FROM test_mdb JOIN test_mdb2"
+    parsed = handler.parser(query, dialect=handler.dialect)
+    result = handler.join(parsed, handler, into=into_table)
+    assert len(result) > 0
 
-    # todo: test `select_into` and `join` with `into`
+    q = f"SELECT * FROM {into_table}"
+    qp = cls.parser(q, dialect='mysql')
+    assert len(handler.select_query(qp.targets, qp.from_table, qp.where)) > 0

@@ -144,7 +144,7 @@ class MLflowHandler(PredictiveHandler):
         return self._call_model(df, model_url)
 
 
-    def join(self, stmt, data_handler: BaseHandler, into: Optional[str]) -> pd.DataFrame:
+    def join(self, stmt, data_handler: BaseHandler, into: Optional[str] = None) -> pd.DataFrame:
         """
         Batch prediction using the output of a query passed to a data handler as input for the model.
         """  # noqa
@@ -273,6 +273,17 @@ if __name__ == '__main__':
     parsed = cls.parser(query, dialect=cls.dialect)
     predicted = cls.select_query(parsed)
 
+    into_table = 'test_join_into_mlflow'
     query = f"SELECT tb.target as predicted, ta.target as real, tb.text from {sql_handler_name}.{data_table_name} AS ta JOIN {registered_model_name} AS tb LIMIT 10"
     parsed = cls.parser(query, dialect=cls.dialect)
-    predicted = cls.join(parsed, handler)
+    predicted = cls.join(parsed, handler, into=into_table)
+
+    # checks whether `into` kwarg does insert into the table or not
+    q = f"SELECT * FROM {into_table}"
+    qp = cls.parser(q, dialect='mysql')
+    assert len(handler.select_query(qp.targets, qp.from_table, qp.where)) > 0
+
+    try:
+        handler.run_native_query(f"DROP TABLE test.{into_table}")
+    except:
+        pass

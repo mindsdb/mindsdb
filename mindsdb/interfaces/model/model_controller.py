@@ -355,7 +355,8 @@ class ModelController():
         name = f'{company_id}@@@@@{name}'
 
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
-        assert predictor_record is not None
+        if predictor_record is None:
+            raise Exception(f"Model does not exists: {original_name}")
 
         linked_dataset = db.session.query(db.Dataset).get(predictor_record.dataset_id)
 

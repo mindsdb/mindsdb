@@ -144,7 +144,7 @@ class MLflowHandler(PredictiveHandler):
         return self._call_model(df, model_url)
 
 
-    def join(self, stmt, data_handler: BaseHandler) -> pd.DataFrame:
+    def join(self, stmt, data_handler: BaseHandler, into: Optional[str]) -> pd.DataFrame:
         """
         Batch prediction using the output of a query passed to a data handler as input for the model.
         """  # noqa
@@ -195,6 +195,12 @@ class MLflowHandler(PredictiveHandler):
             if col.parts[0] == model_alias and col.alias is not None:
                 aliased_columns[aliased_columns.index('prediction')] = str(col.alias)
         predictions.columns = aliased_columns
+
+        if into:
+            try:
+                data_handler.select_into(into, predictions)
+            except Exception as e:
+                print("Error when trying to store the JOIN output in data handler.")
 
         return predictions
 

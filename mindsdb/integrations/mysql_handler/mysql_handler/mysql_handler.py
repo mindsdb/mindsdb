@@ -95,22 +95,27 @@ class MySQLHandler(DatabaseHandler):
         return result
 
     def select_into(self, table_name, select_query):
+        # todo: implement new signature
         query = f"CREATE TABLE {self.database}.{table_name} AS ({select_query})"
         result = self.run_native_query(query)
 
-    def join(self, table, left_integration: str, on: str, left_where: Union[None, str] = None):
+    # def join(self, stmt, data_handler, into: Optional[str]) -> pd.DataFrame:  # todo: adapt to base signature
+    def join(self, table, left_integration: str, on: str, left_where: Union[None, str] = None, into: Optional[str] = None):
         """
         for now assumes
             - left_integration to be a table in the same DB, but should get to a point where it can be a different handler
             - single column to join on
         """
-        # todo: adapt to base signature
         if not on:
             on = '*'
         query = f"SELECT * FROM {self.database}.{table} JOIN {self.database}.{left_integration} ON {table}.{on}"
         if left_where is not None:
             query += f'WHERE {left_where}'
         result = self.run_native_query(query)
+
+        if into:
+            self.select_into(table, pd.DataFrame(list(result)))
+
         return result
 
 
@@ -170,3 +175,5 @@ if __name__ == '__main__':
     # to build a DF with results
     import pandas as pd
     result_df = pd.DataFrame.from_records(handler.run_native_query(query))
+
+    # todo: test `select_into` and `join` with `into`

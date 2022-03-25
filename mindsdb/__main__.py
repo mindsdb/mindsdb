@@ -51,6 +51,7 @@ def close_api_gracefully(apis):
 
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn')
     mp.freeze_support()
     args = args_parse()
     config = Config()

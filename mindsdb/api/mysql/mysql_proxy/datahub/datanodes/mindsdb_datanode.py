@@ -212,6 +212,10 @@ class MindsDBDataNode(DataNode):
         if isinstance(where_data, dict):
             where_data = [where_data]
 
+        model_names = self.get_tables()
+        if table not in model_names:
+            raise SqlApiException(f"Predictror '{table}' does not exists'")
+
         model = self.model_interface.get_model_data(name=table)
         if model.get('status') != 'complete':
             raise SqlApiException(

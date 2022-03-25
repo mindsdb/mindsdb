@@ -137,6 +137,7 @@ def start(verbose, no_studio, with_nlp):
             'workers': max(mp.cpu_count(), 2),
             'timeout': 600,
             'reuse_port': True,
+            'preload_app': True,
             'post_fork': post_fork,
             'threads': 4
         }

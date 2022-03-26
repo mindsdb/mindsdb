@@ -1,7 +1,10 @@
 import os
 import logging
 import torch.multiprocessing as mp
-mp.set_start_method('spawn')
+try:
+    mp.set_start_method('spawn')
+except Exception:
+    pass
 import threading
 from pathlib import Path
 

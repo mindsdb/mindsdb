@@ -10,6 +10,7 @@ import json
 import shutil
 
 import torch.multiprocessing as mp
+mp.set_start_method('spawn')
 from packaging import version
 
 from mindsdb.api.http.start import start as start_http
@@ -51,7 +52,6 @@ def close_api_gracefully(apis):
 
 
 if __name__ == '__main__':
-    mp.set_start_method('spawn')
     mp.freeze_support()
     args = args_parse()
     config = Config()

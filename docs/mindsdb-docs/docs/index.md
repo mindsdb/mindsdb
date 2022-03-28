@@ -8,9 +8,11 @@ Follow these steps to start predicting in SQL straight away.
 
     <sup><sub>To proceed with a local installation, follow our [Docker instructions](/deployment/docker).</sub></sup>
 
-1. Open your SQL client and connect to MindsDB using the email and password you used to sign up for MindsDB Cloud.
+1. Use MindsDB SQL Editor or open your preferred MySQL client and connect to MindsDB. 
 
-    <sup><sub>If you do not already have a preferred SQL client, we recommend [DBeaver Community Edition](https://dbeaver.io/download/)</sub></sup>
+    <sup><sub>To connect to MindsDB from another SQL client use `cloud.mindsdb.com` as a host, `3306` port and your MindsDB Cloud credentials for username/password.</sub></sup>
+
+    <sup><sub>If you do not already have a preferred SQL client, we recommend [DBeaver Community Edition](https://dbeaver.io/download/).</sub></sup>
 
 1. We have already prepared some example data for you.  To add it to your account, use the `CREATE DATASOURCE` syntax by copy and pasting this command into your SQL client:
 

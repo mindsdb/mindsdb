@@ -4,7 +4,7 @@ The `SELECT` statement is used to get a predictions from the model table. The da
 
 ```sql
 SELECT target_variable, target_variable_explain FROM mindsdb.model_table 
-                                                WHERE column3=value AND  column2='value';
+                                                WHERE column3=value AND  column2=value;
 ```
 
 >*Side Note:*
@@ -26,48 +26,29 @@ The below list contains the column names of the model table. Note that `target_v
 
 ## SELECT example
 
-The following SQL statement selects all information from the `home_rentals` for the property that has the following attributes:
-- sqft: 800
-- number_of_rooms: 4
-- number_of_bathrooms: 2
+The following SQL statement selects all information from the `home_rentals_model` for the property that has the following attributes:
+
+- sqft: 823
 - location: good
-- days_on_market: 12
+- days_on_market: 10
 - neighborhood: downtown
-- initial_price: 2222
 
 
 ```sql
-SELECT * FROM home_rentals WHERE sqft=800 AND number_of_rooms=4 AND number_of_bathrooms=2 AND location='good' AND days_on_market=12 AND neighborhood='downtown' AND initial_price=2222;
-
+SELECT rental_price, rental_price_explain FROM mindsdb.home_rentals_model
+WHERE sqft = 823 AND location='good' AND neighborhood='downtown' AND days_on_market=10;
 ```
 
-Results:
+![SELECT from model](/assets/sql/select.png)
 
-```bash
-+------+-----------------+---------------------+----------+----------------+--------------+---------------+--------------------+-------------------+-----------+-----------------------+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------+-------------------+--------------------+
-| sqft | number_of_rooms | number_of_bathrooms | location | days_on_market | neighborhood | initial_price | rental_price       | select_data_query | when_data | rental_price_original | rental_price_confidence | rental_price_explain                                                                                                                                                                   | rental_price_anomaly | rental_price_min  | rental_price_max   |
-+------+-----------------+---------------------+----------+----------------+--------------+---------------+--------------------+-------------------+-----------+-----------------------+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------+-------------------+--------------------+
-|  800 | 4               | 2                   | good     |             12 | downtown     |          2222 | 2263.4233195080546 | NULL              | NULL      | NULL                  | 0.99                    | {"predicted_value": 2263.4233195080546, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 2167.415674883504, "confidence_upper_bound": 2359.4309641326054} | NULL                 | 2167.415674883504 | 2359.4309641326054 |
-+------+-----------------+---------------------+----------+----------------+--------------+---------------+--------------------+-------------------+-----------+-----------------------+-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------+-------------------+--------------------+
-1 row in set (0.71 sec)
-```
-
-
-The following SQL statement selects only the target variable `rental_price` and the `home_rentals` confidence:
-
+You can also make bulk predictions by joining a table with your model:
 
 ```sql
-SELECT rental_price, rental_price_confidence FROM home_rentals WHERE sqft=800 AND number_of_rooms=4 AND number_of_bathrooms=2 AND location='good' AND days_on_market=12 AND neighborhood='downtown' AND initial_price=2222;
+SELECT t.rental_price as real_price, 
+       m.rental_price as predicted_price,
+       t.sqft, t.location, t.days_on_market 
+FROM example_db.demo_data.home_rentals as t 
+JOIN mindsdb.home_rentals_model as m limit 100
 ```
 
-Results:
-
-```bash
-mysql> SELECT rental_price, rental_price_confidence FROM home_rentals WHERE sqft=800 AND number_of_rooms=4 AND number_of_bathrooms=2 AND location='good' AND days_on_market=12 AND neighborhood='downtown' AND initial_price=2222;
-+--------------------+-------------------------+
-| rental_price       | rental_price_confidence |
-+--------------------+-------------------------+
-| 2263.4233195080546 | 0.99                    |
-+--------------------+-------------------------+
-1 row in set (0.69 sec)
-```
+![SELECT from model bulk](/assets/sql/select_bulk.png)

@@ -12,10 +12,10 @@ Follow these steps to start predicting in SQL straight away.
 
     <sup><sub>If you do not already have a preferred SQL client, we recommend [DBeaver Community Edition](https://dbeaver.io/download/)</sub></sup>
 
-1. We have already prepared some example data for you.  To add it to your account, use the `CREATE DATASOURCE` syntax by copy and pasting this command into your SQL client:
+1. We have already prepared some example data for you.  To add it to your account, use the `CREATE DATABASE` syntax by copy and pasting this command into your SQL client:
 
     ``` sql
-    CREATE DATASOURCE example_data
+    CREATE DATABASE example_data
     WITH ENGINE = "postgres",
     PARAMETERS = { 
     	"user": "demo_user",
@@ -25,12 +25,12 @@ Follow these steps to start predicting in SQL straight away.
     	"database": "demo"
     }
     ```
-    <div id="create-datasource">
+    <div id="create-database">
       <style>
-        #create-datasource code { background-color: #353535; color: #f5f5f5 }
+        #create-database code { background-color: #353535; color: #f5f5f5 }
       </style>
     ```
-    mysql> CREATE DATASOURCE example_data
+    mysql> CREATE DATABASE example_data
         -> WITH ENGINE = "postgres",
         -> PARAMETERS = {
         -> "user": "demo_user",

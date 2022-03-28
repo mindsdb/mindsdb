@@ -57,11 +57,11 @@ MindsDB integrates with the DBT and MLflow workflow you already have.
 
                 ![DBeaver Configure Connection](/assets/dbeaver-configure-docker-connection.png)
 
-1. Connect your data to MindsDB using the [`CREATE DATASOURCE` syntax](/sql/api/datasources).
+1. Connect your data to MindsDB using the [`CREATE DATABASE` syntax](/sql/api/databases).
 
     <sup><sub>Example taken from our [Quick Start Guide](/quickstart/#connect-your-data).</sub></sup>
 
-    ![DBeaver Create Datasource](/assets/dbeaver-create-datasource.png)
+    ![DBeaver Create Database](/assets/dbeaver-create-database.png)
 
 1. You can now preview the available data with a standard `SELECT`.
 

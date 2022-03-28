@@ -1,10 +1,6 @@
 import os
 import logging
 import torch.multiprocessing as mp
-try:
-    mp.set_start_method('forkserver')
-except Exception:
-    pass
 import threading
 from pathlib import Path
 
@@ -138,7 +134,7 @@ def start(verbose, no_studio, with_nlp):
 
         options = {
             'bind': f'{host}:{port}',
-            'workers':  2, #max(mp.cpu_count(), 2),
+            'workers': mp.cpu_count(),
             'timeout': 600,
             'reuse_port': True,
             'preload_app': True,

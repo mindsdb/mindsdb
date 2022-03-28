@@ -81,6 +81,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://docs.mindsdb.com/sql/api/SELECT_Files/</loc>
+         <lastmod>2022-03-28</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://docs.mindsdb.com/sql/api/databases/</loc>
          <lastmod>2022-03-28</lastmod>
          <changefreq>daily</changefreq>
@@ -121,11 +126,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://docs.mindsdb.com/sql/api/select_files/</loc>
-         <lastmod>2022-03-28</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://docs.mindsdb.com/sql/api/stream/</loc>
          <lastmod>2022-03-28</lastmod>
          <changefreq>daily</changefreq>
@@ -141,12 +141,12 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://docs.mindsdb.com/sql/connect/dbeaver/</loc>
+         <loc>https://docs.mindsdb.com/sql/connect/cloud/</loc>
          <lastmod>2022-03-28</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://docs.mindsdb.com/sql/connect/mindsdb_editor/</loc>
+         <loc>https://docs.mindsdb.com/sql/connect/dbeaver/</loc>
          <lastmod>2022-03-28</lastmod>
          <changefreq>daily</changefreq>
     </url>

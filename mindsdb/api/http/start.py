@@ -2,7 +2,7 @@ import os
 import logging
 import torch.multiprocessing as mp
 try:
-    mp.set_start_method('spawn')
+    mp.set_start_method('forkserver')
 except Exception:
     pass
 import threading

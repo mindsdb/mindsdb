@@ -480,6 +480,18 @@
   
   
     <li class="md-nav__item">
+      <a href="../mindsdb_editor/" class="md-nav__link">
+        MindsDB Editor
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../dbeaver/" class="md-nav__link">
         DBeaver
       </a>
@@ -929,8 +941,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/SELECT_Files/" class="md-nav__link">
-        SELECT from FILES
+      <a href="../../api/select_files/" class="md-nav__link">
+        SELECT from files
       </a>
     </li>
   
@@ -1112,7 +1124,21 @@
 </ul>
 </li>
 </ul>
-<p><img alt="Connect" src="/assets/sql/mysql-client.gif" /></p>
+<div id="create-datasource">
+      <style>
+        #create-datasource code { background-color: #353535; color: #f5f5f5 }
+      </style>
+    <div class="highlight"><pre><span></span><code>~$ mysql -h cloud.mindsdb.com --port 3306 -u zoran@mindsdb.com -p
+Enter password: 
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Server version: 5.7.1-MindsDB-1.0 (MindsDB)
+
+Type &#39;help;&#39; or &#39;\h&#39; for help. Type &#39;\c&#39; to clear the current input statement.
+
+MySQL [(none)]&gt; 
+</code></pre></div>
+    </div>
+
 <h2 id="mindsdb-database">MindsDB Database<a class="headerlink" href="#mindsdb-database" title="Permanent link">&para;</a></h2>
 <p>On startup the mindsdb database will contain 3 tables as  <code>predictors</code>, <code>commands</code> and <code>datasources</code>. 
     <div id="create-datasource">
@@ -1138,8 +1164,11 @@ MySQL [mindsdb]&gt;
 <ul>
 <li>name - The name of the model.</li>
 <li>status - Training status(training, complete, error).</li>
+<li>predict - The name of the target variable column.</li>
 <li>accuracy - The model accuracy.</li>
-<li>predict - The name of the target variable.</li>
+<li>update_status - Trainig update status(up_to_date, updating).</li>
+<li>mindsdb_version - The mindsdb version used.</li>
+<li>error - Error message info in case of an errror.</li>
 <li>select_data_query - SQL select query to create the datasource.</li>
 <li>training options - Additional training parameters.</li>
 </ul>

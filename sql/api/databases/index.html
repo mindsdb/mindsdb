@@ -476,6 +476,18 @@
   
   
     <li class="md-nav__item">
+      <a href="../../connect/mindsdb_editor/" class="md-nav__link">
+        MindsDB Editor
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../connect/dbeaver/" class="md-nav__link">
         DBeaver
       </a>
@@ -839,6 +851,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#create-database-configurations" class="md-nav__link">
+    Create Database configurations
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -942,8 +961,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../SELECT_Files/" class="md-nav__link">
-        SELECT from FILES
+      <a href="../select_files/" class="md-nav__link">
+        SELECT from files
       </a>
     </li>
   
@@ -1076,6 +1095,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#create-database-configurations" class="md-nav__link">
+    Create Database configurations
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1120,13 +1146,172 @@
 <span class="k">WITH</span> 
     <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;mariadb&#39;</span><span class="p">,</span> 
     <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
-        <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;root&quot;</span><span class="p">,</span>
-        <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">3307</span><span class="p">,</span> 
-        <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;password&quot;</span><span class="p">,</span> 
-        <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
-        <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;mariadb&quot;</span>
+                <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;root&quot;</span><span class="p">,</span>
+                <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">3307</span><span class="p">,</span> 
+                <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;password&quot;</span><span class="p">,</span> 
+                <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
+                <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;mariadb&quot;</span>
         <span class="err">}</span><span class="p">;</span>
 </code></pre></div>
+<h3 id="create-database-configurations">Create Database configurations<a class="headerlink" href="#create-database-configurations" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>Click on each section to expand the example query for connection.</p>
+</blockquote>
+<details class="success">
+   <summary>Connect to Snowflake</summary> 
+     <div class="highlight"><pre><span></span><code>   <span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">snowflake_datasource</span> 
+   <span class="k">WITH</span> 
+           <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;snowflake&#39;</span><span class="p">,</span> 
+           <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
+                   <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;user&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">443</span><span class="p">,</span> 
+                   <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;password&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;snowflake&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;account&quot;</span><span class="p">:</span> <span class="ss">&quot;account&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;schema&quot;</span><span class="p">:</span> <span class="ss">&quot;public&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;protocol&quot;</span><span class="p">:</span> <span class="ss">&quot;https&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;warehouse&quot;</span><span class="p">:</span> <span class="ss">&quot;warehouse&quot;</span>
+           <span class="err">}</span><span class="p">;</span>
+</code></pre></div>
+</details>
+
+<details class="success">
+   <summary>Connect to Singlestore</summary> 
+     <div class="highlight"><pre><span></span><code>   <span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">singlestore_datasource</span> 
+   <span class="k">WITH</span> 
+           <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;singlestore&#39;</span><span class="p">,</span> 
+           <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
+                   <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;root&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">3306</span><span class="p">,</span> 
+                   <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;password&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;singlestore&quot;</span>
+           <span class="err">}</span><span class="p">;</span>
+</code></pre></div>
+</details>
+
+<details class="success">
+   <summary>Connect to MySQL</summary> 
+     <div class="highlight"><pre><span></span><code>   <span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">mysql_datasource</span> 
+   <span class="k">WITH</span> 
+           <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;mysql&#39;</span><span class="p">,</span> 
+           <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
+                   <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;root&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">3306</span><span class="p">,</span> 
+                   <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;password&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;mysql&quot;</span>
+           <span class="err">}</span><span class="p">;</span>
+</code></pre></div>
+</details>
+
+<details class="success">
+   <summary>Connect to ClickHouse</summary> 
+     <div class="highlight"><pre><span></span><code>   <span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">clickhouse_datasource</span> 
+   <span class="k">WITH</span> 
+           <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;clickhouse&#39;</span><span class="p">,</span> 
+           <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
+                   <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;default&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">9000</span><span class="p">,</span> 
+                   <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;password&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;default&quot;</span>
+           <span class="err">}</span><span class="p">;</span>
+</code></pre></div>
+</details>
+
+<details class="success">
+   <summary> Connect to PostgreSQL</summary> 
+     <div class="highlight"><pre><span></span><code>   <span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">psql_datasource</span> 
+   <span class="k">WITH</span> 
+           <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;postgres&#39;</span><span class="p">,</span> 
+           <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
+                   <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;postgres&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">5432</span><span class="p">,</span> 
+                   <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;password&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;postgres&quot;</span>
+           <span class="err">}</span><span class="p">;</span>
+</code></pre></div>
+</details>
+
+<details class="success">
+   <summary> Connect to Cassandra</summary> 
+     <div class="highlight"><pre><span></span><code>   <span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">psql_datasource</span> 
+   <span class="k">WITH</span> 
+           <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;cassandra&#39;</span><span class="p">,</span> 
+           <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
+                   <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;cassandra&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">9042</span><span class="p">,</span> 
+                   <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;cassandra&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;keyspace&quot;</span>
+           <span class="err">}</span><span class="p">;</span>
+</code></pre></div>
+</details>
+
+<details class="success">
+   <summary> Connect to MariaDB example</summary> 
+     <div class="highlight"><pre><span></span><code>   <span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">maria_datasource</span> 
+   <span class="k">WITH</span> 
+           <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;mariadb&#39;</span><span class="p">,</span> 
+           <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
+                   <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;root&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">3306</span><span class="p">,</span> 
+                   <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;password&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;mariadb&quot;</span>
+           <span class="err">}</span><span class="p">;</span>
+</code></pre></div>
+</details>
+
+<details class="success">
+   <summary> Connect to Microsoft SQL Server</summary> 
+     <div class="highlight"><pre><span></span><code>   <span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">mssql_datasource</span> 
+   <span class="k">WITH</span> 
+           <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;mssql&#39;</span><span class="p">,</span> 
+           <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
+                   <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;sa&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">1433</span><span class="p">,</span> 
+                   <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;password&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;master&quot;</span>
+           <span class="err">}</span><span class="p">;</span>
+</code></pre></div>
+</details>
+
+<details class="success">
+   <summary>Connect to Scylladb</summary> 
+     <div class="highlight"><pre><span></span><code>   <span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">scylladb_datasource</span> 
+   <span class="k">WITH</span> 
+           <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;scylladb&#39;</span><span class="p">,</span> 
+           <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
+                   <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;scylladb&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">9042</span><span class="p">,</span> 
+                   <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;password&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;database&quot;</span><span class="p">:</span> <span class="ss">&quot;scylladb&quot;</span>
+           <span class="err">}</span><span class="p">;</span>
+</code></pre></div>
+</details>
+
+<details class="success">
+   <summary>Connect to Trino</summary> 
+     <div class="highlight"><pre><span></span><code>   <span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">schema_datasource</span> 
+   <span class="k">WITH</span> 
+           <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;trinodb&#39;</span><span class="p">,</span> 
+           <span class="k">parameters</span><span class="o">=</span><span class="err">{</span>
+                   <span class="ss">&quot;user&quot;</span><span class="p">:</span><span class="ss">&quot;trino&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;port&quot;</span><span class="p">:</span> <span class="mi">8080</span><span class="p">,</span> 
+                   <span class="ss">&quot;password&quot;</span><span class="p">:</span> <span class="ss">&quot;password&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;host&quot;</span><span class="p">:</span> <span class="ss">&quot;127.0.0.1&quot;</span><span class="p">,</span> 
+                   <span class="ss">&quot;catalog&quot;</span><span class="p">:</span> <span class="ss">&quot;default&quot;</span><span class="p">,</span>
+                   <span class="ss">&quot;schema&quot;</span><span class="p">:</span> <span class="ss">&quot;test&quot;</span>
+           <span class="err">}</span><span class="p">;</span>
+</code></pre></div>
+</details>
+
 <h2 id="listing-linked-databases">Listing linked DATABASES<a class="headerlink" href="#listing-linked-databases" title="Permanent link">&para;</a></h2>
 <p>You can list linked databases as follows:</p>
 <div class="highlight"><pre><span></span><code><span class="k">SHOW</span> <span class="n">DATABASES</span><span class="p">;</span>
@@ -1134,7 +1319,7 @@
 <p>You can also get metadata about the linked databases in  in <code>mindsdb.datasources</code>:.</p>
 <div class="highlight"><pre><span></span><code><span class="k">select</span> <span class="o">*</span> <span class="k">from</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">datasources</span><span class="p">;</span>
 </code></pre></div>
-<p><img alt="Once a datasource has been correctly created, you will see it registered in mindsdb.datasources" src="../../../assets/sql/datasource_listing.png" /></p>
+<p><img alt="Once a datasource has been correctly created, you will see it registered in mindsdb.datasources" src="/assets/sql/datasource_listing.png" /></p>
 <div class="admonition info">
 <p class="admonition-title">Work in progress</p>
 <p>Note this feature is in beta version. If you have additional questions about other supported datasources or you expirience some issues <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ">reach out to us on Slack</a> or open GitHub issue.</p>

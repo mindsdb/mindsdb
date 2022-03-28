@@ -476,6 +476,18 @@
   
   
     <li class="md-nav__item">
+      <a href="../../connect/mindsdb_editor/" class="md-nav__link">
+        MindsDB Editor
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../connect/dbeaver/" class="md-nav__link">
         DBeaver
       </a>
@@ -889,16 +901,16 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#drop-table-statement" class="md-nav__link">
-    DROP TABLE statement
+  <a href="#drop-predictor-statement" class="md-nav__link">
+    DROP PREDICTOR statement
   </a>
   
-    <nav class="md-nav" aria-label="DROP TABLE statement">
+    <nav class="md-nav" aria-label="DROP PREDICTOR statement">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#drop-table-example" class="md-nav__link">
-    DROP TABLE example
+  <a href="#drop-predictor-example" class="md-nav__link">
+    DROP PREDICTOR example
   </a>
   
 </li>
@@ -933,8 +945,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../SELECT_Files/" class="md-nav__link">
-        SELECT from FILES
+      <a href="../select_files/" class="md-nav__link">
+        SELECT from files
       </a>
     </li>
   
@@ -1053,16 +1065,16 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#drop-table-statement" class="md-nav__link">
-    DROP TABLE statement
+  <a href="#drop-predictor-statement" class="md-nav__link">
+    DROP PREDICTOR statement
   </a>
   
-    <nav class="md-nav" aria-label="DROP TABLE statement">
+    <nav class="md-nav" aria-label="DROP PREDICTOR statement">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#drop-table-example" class="md-nav__link">
-    DROP TABLE example
+  <a href="#drop-predictor-example" class="md-nav__link">
+    DROP PREDICTOR example
   </a>
   
 </li>
@@ -1090,19 +1102,16 @@
                 
                 
                 <h1 id="drop-statement">DROP statement<a class="headerlink" href="#drop-statement" title="Permanent link">&para;</a></h1>
-<div class="admonition info">
-<p class="admonition-title">Work in progress</p>
-<p>Note this feature is in beta version. If you have additional questions or issues <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ">reach out to us on Slack</a>.</p>
-</div>
-<p>The <code>DROP</code> statement is used to delete an existing model table.</p>
-<h2 id="drop-table-statement">DROP TABLE statement<a class="headerlink" href="#drop-table-statement" title="Permanent link">&para;</a></h2>
+<p>The <code>DROP</code> statement is used to delete an existing table.</p>
+<h2 id="drop-predictor-statement">DROP PREDICTOR statement<a class="headerlink" href="#drop-predictor-statement" title="Permanent link">&para;</a></h2>
 <p>The <code>DROP PREDICTOR</code> statement is used to delete the model table:</p>
 <div class="highlight"><pre><span></span><code><span class="k">DROP</span> <span class="n">PREDICTOR</span> <span class="k">table_name</span><span class="p">;</span>
 </code></pre></div>
-<h3 id="drop-table-example">DROP TABLE example<a class="headerlink" href="#drop-table-example" title="Permanent link">&para;</a></h3>
+<h3 id="drop-predictor-example">DROP PREDICTOR example<a class="headerlink" href="#drop-predictor-example" title="Permanent link">&para;</a></h3>
 <p>The following SQL statement drops the model table called <code>home_rentals_model</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="k">DROP</span> <span class="n">PREDICTOR</span> <span class="n">home_rentals_model</span><span class="p">;</span>
 </code></pre></div>
+<p><img alt="Model Sttus" src="/assets/sql/drop.png" /></p>
                 
               
               

@@ -478,6 +478,18 @@
             
   
   
+  
+    <li class="md-nav__item">
+      <a href="../mindsdb_editor/" class="md-nav__link">
+        MindsDB Editor
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
     
   
   
@@ -922,8 +934,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/SELECT_Files/" class="md-nav__link">
-        SELECT from FILES
+      <a href="../../api/select_files/" class="md-nav__link">
+        SELECT from files
       </a>
     </li>
   
@@ -1103,14 +1115,17 @@
 </li>
 </ol>
 <h2 id="mindsdb-database">MindsDB Database<a class="headerlink" href="#mindsdb-database" title="Permanent link">&para;</a></h2>
-<p>At startup mindsdb database will contain 2 tables <code>predictors</code> and <code>commands</code>. </p>
+<p>At startup mindsdb database will contain 3 tables <code>predictors</code>, <code>commands</code> and <code>databases</code>. </p>
 <p><img alt="Connect" src="/assets/sql/show.png" /></p>
 <p>All of the newly trained machine learning models will be visible as a new record inside the <code>predictors</code> table. The <code>predictors</code> columns contains information about each model as:</p>
 <ul>
 <li>name - The name of the model.</li>
 <li>status - Training status(training, complete, error).</li>
+<li>predict - The name of the target variable column.</li>
 <li>accuracy - The model accuracy.</li>
-<li>predict - The name of the target variable.</li>
+<li>update_status - Trainig update status(up_to_date, updating).</li>
+<li>mindsdb_version - The mindsdb version used.</li>
+<li>error - Error message info in case of an errror.</li>
 <li>select_data_query - SQL select query to create the datasource.</li>
 <li>training options - Additional training parameters.</li>
 </ul>

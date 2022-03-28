@@ -11,8 +11,6 @@ from typing import Optional, Tuple, Union, Dict, Any
 import requests
 from typing import List
 
-from torch import dtype
-
 import lightwood
 from lightwood.api.types import ProblemDefinition
 from lightwood import __version__ as lightwood_version
@@ -159,6 +157,24 @@ class ModelController():
 
         df, problem_definition, join_learn_process, json_ai_override = self._unpack_old_args(from_data, kwargs, to_predict)
 
+        is_cloud = self.config.get('cloud', False)
+        if is_cloud is True:
+            models = self.get_models(company_id)
+            count = 0
+            for model in models:
+                if model.get('status') in ['generating', 'training']:
+                    created_at = model.get('created_at')
+                    if isinstance(created_at, str):
+                        created_at = parse_datetime(created_at)
+                    if isinstance(model.get('created_at'), datetime.datetime) is False:
+                        continue
+                    if (datetime.datetime.now() - created_at) < datetime.timedelta(hours=1):
+                        count += 1
+                if count == 2:
+                    raise Exception('You can train no more than 2 models at the same time')
+            if len(df) > 10000:
+                raise Exception('Datasets are limited to 10,000 rows on free accounts')
+
         if 'url' in problem_definition:
             train_url = problem_definition['url'].get('train', None)
             predict_url = problem_definition['url'].get('predict', None)
@@ -217,7 +233,6 @@ class ModelController():
                 p.close()
         db.session.refresh(predictor_record)
 
-
     @mark_process(name='predict')
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
         original_name = name
@@ -245,15 +260,15 @@ class ModelController():
                 predictions = pd.DataFrame({
                     'prediction': answer
                 })
-                
+
             elif predictor_data['format'] == 'huggingface':
                 headers = {"Authorization": "Bearer {API_TOKEN}".format(API_TOKEN=predictor_data['API_TOKEN'])}
                 col_data = df[predictor_data['input_column']]
-                col_data.rename({predictor_data['input_column']:'inputs'}, axis='columns')
+                col_data.rename({predictor_data['input_column']: 'inputs'}, axis='columns')
                 serialized_df = json.dumps(col_data.to_dict())
                 resp = requests.post(predictor_data['predict_url'], headers=headers, data=serialized_df)
                 predictions = pd.DataFrame(resp.json())
-                
+
             elif predictor_data['format'] == 'ray_server':
                 serialized_df = json.dumps(df.to_dict())
                 resp = requests.post(predictor_data['predict_url'], json={'df': serialized_df})
@@ -447,6 +462,17 @@ class ModelController():
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
         if db_p is None:
             raise Exception(f"Predictor '{original_name}' does not exist")
+
+        is_cloud = self.config.get('cloud', False)
+        model = self.get_model_data(db_p.name, company_id=company_id)
+        if (
+            is_cloud is True
+            and model.get('status') in ['generating', 'training']
+            and isinstance(model.get('created_at'), str) is True
+            and (datetime.datetime.now() - parse_datetime(model.get('created_at'))) < datetime.timedelta(hours=1)
+        ):
+            raise Exception('You are unable to delete models currently in progress, please wait before trying again')
+
         db.session.delete(db_p)
         if db_p.dataset_id is not None:
             try:

@@ -134,9 +134,10 @@ def start(verbose, no_studio, with_nlp):
 
         options = {
             'bind': f'{host}:{port}',
-            'workers': max(mp.cpu_count(), 2),
+            'workers': mp.cpu_count(),
             'timeout': 600,
             'reuse_port': True,
+            'preload_app': True,
             'post_fork': post_fork,
             'threads': 4
         }

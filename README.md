@@ -13,6 +13,8 @@
     <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ" target="_blank"><img src="https://img.shields.io/badge/slack-@mindsdbcommunity-brightgreen.svg?logo=slack " alt="MindsDB Community"></a>
 	</br>
 	<a href="https://deepnote.com/project/Machine-Learning-With-SQL-8GDF7bc7SzKlhBLorqoIcw/%2Fmindsdb_demo.ipynb" target="_blank"><img src="https://deepnote.com/buttons/launch-in-deepnote-white.svg" alt="Launch in Deepnote"></a>
+	</br>
+	<a href="https://www.producthunt.com/posts/mindsdb?utm_source=badge-featured&utm_medium=badge&utm_souce=badge-mindsdb" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=337606&theme=light" alt="MindsDB - In&#0045;Database&#0032;Machine&#0032;Learning" style="width: 250px; height: 54px;"/></a> 
 	
   <h3 align="center">
     <a href="https://www.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Website</a>

@@ -1,6 +1,6 @@
 # Getting Started
 
-MindsDB integrates with the DBT and MLflow workflow you already have.
+MindsDB integrates with the most popular databases and also with the DBT and MLflow workflow you already have.
 
 <sup><sub>To try MindsDB right away, without bringing your own data or model, check out our [Quick Start Guide](/).</sub></sup>
 

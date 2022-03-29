@@ -14,7 +14,7 @@ Follow these steps to start predicting in SQL straight away.
 
     <sup><sub>If you do not already have a preferred SQL client, we recommend [DBeaver Community Edition](https://dbeaver.io/download/).</sub></sup>
 
-1. We have already prepared some example data for you.  To add it to your account, use the `CREATE DATABASE` syntax by copy and pasting this command into your SQL client:
+1. We have already prepared some example data for you.  To add it to your account, use the [`CREATE DATABASE`](/sql/api/databases/) syntax by copy and pasting this command into your SQL client:
 
     ``` sql
     CREATE DATABASE example_data
@@ -78,7 +78,7 @@ Follow these steps to start predicting in SQL straight away.
     ```
     </div>
 
-1. Now you are ready to create your first predictor.  Use the `CREATE PREDICTOR` syntax by copy and pasting this command into your SQL client:
+1. Now you are ready to create your first predictor.  Use the [`CREATE PREDICTOR`](/sql/api/predictor/) syntax by copy and pasting this command into your SQL client:
 
     ```
     CREATE PREDICTOR mindsdb.home_rentals_predictor
@@ -133,7 +133,7 @@ Follow these steps to start predicting in SQL straight away.
     ```
     </div>
 
-1. You should see a status of `generating`, then `training` initially, followed by `complete` once it is done.  The [`SELECT` syntax](/sql/api/select) will allow you to make a prediction based on features.  Make your first prediction by copy and pasting this command into your SQL client:
+1. You should see a status of `generating`, then `training` initially, followed by `complete` once it is done.  The [`SELECT` syntax](/sql/api/select/) will allow you to make a prediction based on features.  Make your first prediction by copy and pasting this command into your SQL client:
 
     ```
     SELECT rental_price

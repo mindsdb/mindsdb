@@ -1,27 +1,17 @@
-import os
 import requests
 
-from ast import literal_eval
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Optional
 from datetime import datetime
 
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.utilities.config import Config
-from mindsdb import __version__ as mindsdb_version
-from mindsdb.utilities.functions import mark_process
-from lightwood.api.types import ProblemDefinition
-import mindsdb.interfaces.storage.db as db
-from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Join
 from mindsdb_sql.parser.dialects.mindsdb import (
-    CreateDatasource,
-    RetrainPredictor,
+    # RetrainPredictor,
     CreatePredictor,
-    DropDatasource,
     DropPredictor,
-    CreateView
 )
 
 import mlflow
@@ -230,60 +220,3 @@ class MLflowHandler(PredictiveHandler):
         predictions = pd.DataFrame({'prediction': answer})
         out = df.join(predictions)
         return out
-
-
-if __name__ == '__main__':
-    # TODO: turn this into tests
-
-    registered_model_name = 'nlp_kaggle3'  # already saved to mlflow local instance
-    cls = MLflowHandler('test_mlflow')
-    config = Config()
-    print(cls.connect(
-        mlflow_server_url='http://127.0.0.1:5001',  # for this test, serve at 5001 and served model at 5000
-        model_registry_path='sqlite:///../../../../../temp/experiments/BYOM/mlflow.db',
-        config={'path': config['paths']['root']})
-    )
-    try:
-        print('dropping predictor...')
-        cls.run_native_query(f"DROP PREDICTOR {registered_model_name}")
-    except:
-        print('failed to drop')
-        pass
-    query = f"CREATE PREDICTOR {registered_model_name} PREDICT target USING url.predict='http://localhost:5000/invocations'"
-    cls.run_native_query(query)
-    print(cls.get_tables())
-    print(cls.describe_table(f'{registered_model_name}'))
-
-    # Tests with MySQL handler: JOIN
-    from mindsdb.integrations.mysql_handler.mysql_handler.mysql_handler import MySQLHandler  # expose through parent init
-    kwargs = {
-        "host": "localhost",
-        "port": "3306",
-        "user": "root",
-        "password": "root",
-        "database": "test",
-        "ssl": False
-    }
-    sql_handler_name = 'test_handler'
-    data_table_name = 'train_escaped_csv' # 'tweet_sentiment_train'
-    handler = MySQLHandler(sql_handler_name, **kwargs)
-    assert handler.check_status()
-
-    query = f"SELECT target from {registered_model_name} WHERE text='This is nice.'"
-    parsed = cls.parser(query, dialect=cls.dialect)
-    predicted = cls.select_query(parsed)
-
-    into_table = 'test_join_into_mlflow'
-    query = f"SELECT tb.target as predicted, ta.target as real, tb.text from {sql_handler_name}.{data_table_name} AS ta JOIN {registered_model_name} AS tb LIMIT 10"
-    parsed = cls.parser(query, dialect=cls.dialect)
-    predicted = cls.join(parsed, handler, into=into_table)
-
-    # checks whether `into` kwarg does insert into the table or not
-    q = f"SELECT * FROM {into_table}"
-    qp = cls.parser(q, dialect='mysql')
-    assert len(handler.select_query(qp.targets, qp.from_table, qp.where)) > 0
-
-    try:
-        handler.run_native_query(f"DROP TABLE test.{into_table}")
-    except:
-        pass

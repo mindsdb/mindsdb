@@ -1,8 +1,8 @@
-from typing import Union, List, Optional
+from typing import List, Optional
 from contextlib import closing
 
-import mysql.connector
 import pandas as pd
+import mysql.connector
 from sqlalchemy import create_engine
 
 from mindsdb_sql import parse_sql
@@ -49,12 +49,9 @@ class MySQLHandler(DatabaseHandler):
 
     def check_status(self):
         try:
-            con = self.connection
-            with closing(con) as con:
-                connected = con.is_connected()
+            return self.connection.is_connected()
         except Exception:
-            connected = False
-        return connected
+            return False
 
     def run_native_query(self, query_str):
         if not self.check_status():
@@ -117,73 +114,3 @@ class MySQLHandler(DatabaseHandler):
         if into:
             self.select_into(into, df)
         return df
-
-
-if __name__ == '__main__':
-    # TODO: turn this into tests
-
-    kwargs = {
-        "host": "localhost",
-        "port": "3306",
-        "user": "root",
-        "password": "root",
-        "database": "test",
-        "ssl": False
-    }
-    handler = MySQLHandler('test_handler', **kwargs)
-    assert handler.check_status()
-
-    dbs = handler.run_native_query("SHOW DATABASES;")
-    assert isinstance(dbs, list)
-
-    tbls = handler.get_tables()
-    assert isinstance(tbls, list)
-
-    views = handler.get_views()
-    assert isinstance(views, list)
-
-    try:
-        result = handler.run_native_query("DROP TABLE test_mdb")
-    except:
-        pass
-    try:
-        handler.run_native_query("CREATE TABLE test_mdb (test_col INT)")
-    except Exception:
-        pass
-
-    described = handler.describe_table("test_mdb")
-    assert isinstance(described, list)
-
-    query = "SELECT * FROM test_mdb WHERE 'id'='a'"
-    parsed = handler.parser(query, dialect=handler.dialect)
-    targets = parsed.targets
-    from_stmt = parsed.from_table
-    where_stmt = parsed.where
-    result = handler.select_query(targets, from_stmt, where_stmt)
-
-    try:
-        result = handler.run_native_query("DROP TABLE test_mdb2")
-    except:
-        pass
-    try:
-        handler.run_native_query("CREATE TABLE test_mdb2 (test_col INT)")
-    except Exception:
-        pass
-
-    result = handler.select_into('test_mdb2', pd.DataFrame.from_dict({'test_col': [1]}))
-
-    tbls = handler.get_tables()
-    assert 'test_mdb2' in [item['Tables_in_test'] for item in tbls]
-
-    handler.run_native_query("INSERT INTO test_mdb(test_col) VALUES (1)")
-    handler.run_native_query("INSERT INTO test_mdb2(test_col) VALUES (1)")
-
-    into_table = 'test_join_into_mysql'
-    query = f"SELECT test_col FROM test_mdb JOIN test_mdb2"
-    parsed = handler.parser(query, dialect=handler.dialect)
-    result = handler.join(parsed, handler, into=into_table)
-    assert len(result) > 0
-
-    q = f"SELECT * FROM {into_table}"
-    qp = handler.parser(q, dialect='mysql')
-    assert len(handler.select_query(qp.targets, qp.from_table, qp.where)) > 0

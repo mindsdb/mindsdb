@@ -1,4 +1,5 @@
 import os
+import dill
 import pickle
 from typing import Dict
 from hashlib import md5
@@ -14,21 +15,22 @@ class StorageHandler:
     """  # noqa
     def __init__(self, context: Dict, config=None):
         self.config = config if config else os.getenv('MDB_STORAGE_HANDLER_CONFIG')
-        self.context = pickle.dumps(context)  # store serialized
+        self.serializer = pickle if config.get('serializer', '') == 'pickle' else dill
+        self.context = self.serializer.dumps(context)  # store serialized
 
     def _get_context_key(self, key: str):
-        serialized_key = pickle.dumps(key)
+        serialized_key = self.serializer.dumps(key)
         return md5(serialized_key).hexdigest() + md5(self.context).hexdigest()
 
     def get(self, key):
         serialized_value = self._get(self._get_context_key(key))
         if serialized_value:
-            return pickle.loads(serialized_value)
+            return self.serializer.loads(serialized_value)
         else:
             return None
 
     def set(self, key: str, value: object):
-        serialized_value = pickle.dumps(value)
+        serialized_value = self.serializer.dumps(value)
         self._set(self._get_context_key(key), serialized_value)
 
     def _get(self, serialized_key):
@@ -42,7 +44,8 @@ class SqliteStorageHandler(StorageHandler):
     """ StorageHandler that uses SQLite as backend. """  # noqa
     def __init__(self, context: Dict, config=None):
         super().__init__(context, config)
-        path = os.path.join(self.config.get("path", "./"), self.config.get("name", 'mlflow_integration_registry.db'))
+        name = self.config["name"] if self.config["name"][-3:] == '.db' else self.config["name"] + '.db'
+        path = os.path.join(self.config.get("path", "./"), name)
         self.connection = sqlite3.connect(path)
         self._setup_connection()
 
@@ -55,8 +58,11 @@ class SqliteStorageHandler(StorageHandler):
 
     def _get(self, serialized_key):
         cur = self.connection.cursor()
-        # should always be a single match, hence the [0]
-        return list(cur.execute(f"""select value from store where key='{serialized_key}'"""))[0][0]
+        results = list(cur.execute(f"""select value from store where key='{serialized_key}'"""))
+        if results:
+            return results[0][0]  # should always be a single match, hence the [0]s
+        else:
+            return []
 
     def _set(self, serialized_key, serialized_value):
         cur = self.connection.cursor()

@@ -90,7 +90,7 @@ class MySQLHandler(DatabaseHandler):
         return result
 
     def select_query(self, targets, from_stmt, where_stmt):
-        query = f"SELECT {','.join([t.__str__() for t in targets])} FROM {from_stmt.parts[0]}"
+        query = f"SELECT {','.join([t.__str__() for t in targets])} FROM {from_stmt.parts[-1]}"
         if where_stmt:
             query += f" WHERE {str(where_stmt)}"
 
@@ -185,5 +185,5 @@ if __name__ == '__main__':
     assert len(result) > 0
 
     q = f"SELECT * FROM {into_table}"
-    qp = cls.parser(q, dialect='mysql')
+    qp = handler.parser(q, dialect='mysql')
     assert len(handler.select_query(qp.targets, qp.from_table, qp.where)) > 0

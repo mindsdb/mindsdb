@@ -10,7 +10,7 @@ class Responce(Responder):
 
         count = 0
         if collection == 'predictors':
-            count = len(mindsdb_env['mindsdb_native'].get_models())
+            count = len(mindsdb_env['model_interface'].get_models())
 
         return {
             'n': count,

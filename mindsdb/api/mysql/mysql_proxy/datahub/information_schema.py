@@ -30,18 +30,17 @@ class InformationSchema(DataNode):
     }
 
     def __init__(self, session):
-        self.datasource_interface = session.datasource_interface
+        self.integration_controller = session.integration_controller
         self.data_store = session.data_store
         self.view_interface = session.view_interface
         self.persis_datanodes = {
             'mindsdb': MindsDBDataNode(
                 session.model_interface,
-                session.ai_table,
                 session.data_store,
-                session.datasource_interface
+                session.integration_controller
             ),
             'files': FileDataNode(session.data_store),
-            'views': ViewDataNode(session.view_interface, session.datasource_interface, session.data_store)
+            'views': ViewDataNode(session.view_interface, session.integration_controller, session.data_store)
         }
 
         self.get_dataframe_funcs = {
@@ -68,10 +67,10 @@ class InformationSchema(DataNode):
         if name_lower in self.persis_datanodes:
             return self.persis_datanodes[name_lower]
 
-        datasource_names = self.datasource_interface.get_db_integrations().keys()
+        datasource_names = self.integration_controller.get_all().keys()
         for datasource_name in datasource_names:
             if datasource_name.lower() == name_lower:
-                datasource = self.datasource_interface.get_db_integration(name=datasource_name)
+                datasource = self.integration_controller.get(name=datasource_name)
                 return IntegrationDataNode(datasource_name, self.data_store, ds_type=datasource['type'])
 
         return None
@@ -88,10 +87,10 @@ class InformationSchema(DataNode):
             return self.information_schema[tn]
         raise Exception(f'Table information_schema.{tableName} does not exists')
 
-    def get_datasources_names(self):
-        datasource_names = self.datasource_interface.get_db_integrations().keys()
+    def get_integrations_names(self):
+        integration_names = self.integration_controller.get_all().keys()
         return [
-            x.lower() for x in datasource_names
+            x.lower() for x in integration_names
         ]
 
     def _get_tables(self):
@@ -106,7 +105,7 @@ class InformationSchema(DataNode):
             ds_tables = ds.get_tables()
             data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci'] for x in ds_tables]
 
-        for ds_name in self.get_datasources_names():
+        for ds_name in self.get_integrations_names():
             ds = self.get(ds_name)
             ds_tables = ds.get_tables()
             data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci'] for x in ds_tables]
@@ -148,6 +147,17 @@ class InformationSchema(DataNode):
                 result_row[4] = i
                 result.append(result_row)
 
+        mindsb_dn = self.get('FILES')
+        for table_name in mindsb_dn.get_tables():
+            table_columns = mindsb_dn.get_table_columns(table_name)
+            for i, column_name in enumerate(table_columns):
+                result_row = row_templates['text'].copy()
+                result_row[1] = 'files'
+                result_row[2] = table_name
+                result_row[3] = column_name
+                result_row[4] = i
+                result.append(result_row)
+
         df = pd.DataFrame(result, columns=columns)
         return df
 
@@ -160,8 +170,8 @@ class InformationSchema(DataNode):
         for database_name in self.persis_datanodes:
             data.append(['def', database_name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
 
-        datasource_names = self.datasource_interface.get_db_integrations().keys()
-        for database_name in datasource_names:
+        integration_names = self.integration_controller.get_all().keys()
+        for database_name in integration_names:
             data.append(['def', database_name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
 
         df = pd.DataFrame(data, columns=columns)

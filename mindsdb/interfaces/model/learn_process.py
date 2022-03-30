@@ -15,9 +15,9 @@ from lightwood import __version__ as lightwood_version
 
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
+from mindsdb.interfaces.storage.db import session, Predictor, Dataset
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.interfaces.model.model_interface import ModelInterface
-from mindsdb.interfaces.storage.db import session, Predictor, Datasource
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
@@ -94,7 +94,6 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
     json_ai_override = brack_to_mod(json_ai_override)
     json_ai = json_ai.to_dict()
     rep_recur(json_ai, json_ai_override)
-    print(json_ai)
     json_ai = JsonAI.from_dict(json_ai)
 
     code = lightwood.code_from_json_ai(json_ai)
@@ -159,16 +158,17 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
 
 @mark_process(name='learn')
 def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
-    serialized_df = json.dumps(df.to_dict())
-    predictor_record = Predictor.query.with_for_update().get(predictor_id)
-    resp = requests.post(predictor_record.data['train_url'],
-                         json={'df': serialized_df, 'target': predictor_record.to_predict[0]})
+    try:
+        serialized_df = json.dumps(df.to_dict())
+        predictor_record = Predictor.query.with_for_update().get(predictor_id)
+        resp = requests.post(predictor_record.data['train_url'],
+                            json={'df': serialized_df, 'target': predictor_record.to_predict[0]})
 
-
-    if resp.status_code == 200:
-        pass
-    else:
-        predictor_record.data = {"error": str(resp.text)}
+        assert resp.status_code == 200
+        predictor_record.data['status'] = 'complete'
+    except Exception as e:
+        predictor_record.data['status'] = 'error'
+        predictor_record.data['error'] = str(resp.text)
 
     session.commit()
 
@@ -185,14 +185,14 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
     except Exception as e:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
         if delete_ds_on_fail is True:
-            linked_db_ds = Datasource.query.filter_by(id=predictor_record.datasource_id).first()
+            linked_db_ds = Dataset.query.filter_by(id=predictor_record.dataset_id).first()
             if linked_db_ds is not None:
                 predictors_with_ds = Predictor.query.filter(
-                    (Predictor.id != predictor_id) & (Predictor.datasource_id == linked_db_ds.id)
+                    (Predictor.id != predictor_id) & (Predictor.dataset_id == linked_db_ds.id)
                 ).all()
                 if len(predictors_with_ds) == 0:
                     session.delete(linked_db_ds)
-                    predictor_record.datasource_id = None
+                    predictor_record.dataset_id = None
         predictor_record.data = {"error": str(e)}
         session.commit()
 
@@ -218,7 +218,7 @@ def run_update(name: str, company_id: int):
         predictor_record.update_status = 'updating'
 
         session.commit()
-        ds = data_store.get_datasource_obj(None, raw=False, id=predictor_record.datasource_id)
+        ds = data_store.get_datasource_obj(None, raw=False, id=predictor_record.dataset_id)
         df = ds.df
 
         problem_definition = predictor_record.learn_args

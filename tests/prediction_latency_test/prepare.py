@@ -92,7 +92,7 @@ class Predictor():
             res = requests.put(self.url, json={
                 'data_source_name': datasource_name,
                 'to_predict': to_predict,
-                'stop_training_in_x_seconds': 10,
+                'time_aim': 10,
             })
             res.raise_for_status()
 

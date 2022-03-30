@@ -34,7 +34,7 @@ class Responder():
 
         query (dict): document(s) from request
         args (dict): all other significant information from request: flags, collection name, rows to return, etc
-        env (dict): config, mindsdb_native instance, and other mindsdb related stuff
+        env (dict): config, model_interface instance, and other mindsdb related stuff
         session (object): current session
 
         returns documents as dict or list of dicts

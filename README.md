@@ -13,29 +13,32 @@
     <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ" target="_blank"><img src="https://img.shields.io/badge/slack-@mindsdbcommunity-brightgreen.svg?logo=slack " alt="MindsDB Community"></a>
 	</br>
 	<a href="https://deepnote.com/project/Machine-Learning-With-SQL-8GDF7bc7SzKlhBLorqoIcw/%2Fmindsdb_demo.ipynb" target="_blank"><img src="https://deepnote.com/buttons/launch-in-deepnote-white.svg" alt="Launch in Deepnote"></a>
+	</br>
+	</br>
+	<a href="https://www.producthunt.com/posts/mindsdb?utm_source=badge-review&utm_medium=badge&utm_souce=badge-mindsdb#discussion-body" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/review.svg?post_id=337606&theme=light" alt="MindsDB - In&#0045;database&#0032;machine&#0032;learning | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 	
   <h3 align="center">
     <a href="https://www.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Website</a>
     <span> | </span>
     <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
     <span> | </span>
-    <a href="https://apidocs.mindsdb.com/">API Docs</a>
-    <span> | </span>
     <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ">Community Slack</a>
+    <span> | </span>
+    <a href="https://github.com/mindsdb/mindsdb/projects">Contribute</a>
   </h3>
   
 </div>
 
 ----------------------------------------
 
-[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) enables you to use ML predictions in your database using SQL.
+[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) enables you to use ML predictions in your database using SQL. [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20inside%20Databases%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks,databases,sql)
 * Developers can quickly add AI capabilities to your applications.
 * Data Scientists can streamline MLOps by deploying ML models as AI Tables.
 * Data Analysts can easily make forecasts on complex data (like multivariate time-series with high cardinality) and visualize them in BI tools like Tableau.
 
 If you like our project then we would really appreciate **a Star ⭐!**
 
-Also, check-out the [rewards and community programs.](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20inside%20Databases%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks,databases,sql)
+Also, check-out the [rewards and community programs.](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)
 
 ----------------------------------------
 
@@ -147,8 +150,13 @@ If you need commercial support, please [contact](https://mindsdb.com/contact/?ut
 
 ## Contributing
 
-Being part of the core team is accessible to anyone who is motivated and wants to be part of that journey!
+A great place to start contributing to MindsDB will be our GitHub projects for :checkered_flag:
+* Community writers [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/7).
+* Community code contributors [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/8).
 
+Also, we are always open to suggestions so feel free to open new issues with your ideas and we can give you guidance!
+
+Being part of the core team is accessible to anyone who is motivated and wants to be part of that journey!
 If you'd like to contribute to the project, refer to the [contributing documentation](https://docs.mindsdb.com/contribute/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
 Please note that this project is released with a [Contributor Code of Conduct](https://github.com/mindsdb/mindsdb/blob/stable/CODE_OF_CONDUCT.md). By participating in this project, you agree to abide by its terms.

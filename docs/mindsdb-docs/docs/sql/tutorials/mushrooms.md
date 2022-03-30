@@ -230,7 +230,7 @@ USE mindsdb;
 Use the following query to create a predictor that will predict the `target_class` for the specific field parameters.
 
 ```sql
-mysql>CREATE PREDICTOR mushroom_predictor
+mysql>CREATE PREDICTOR mindsdb.mushroom_predictor
 FROM Mushrooms (
     SELECT * FROM "mushrooms"
 ) as mushrooms_data
@@ -275,7 +275,7 @@ Use the following query using mock data with the predictor.
 ```sql
 SELECT class
 FROM mindsdb.mushroom_predictor
-WHERE when_data='{"cap-shape": "x","cap-surface": "s","cap-color": "n","bruises": "t","odor": "p","gill-attachment": "f","gill-spacing": "c","gill-size": "n","gill-color": "k","stalk-shape": "e","stalk-root": "e","stalk-surface-above-ring": "s","stalk-surface-below-ring": "s","stalk-color-above-ring": "w","stalk-color-below-ring": "w","veil-type": "p","veil-color": "w","ring-number": "o","ring-type": "p","spore-print-color": "k","population": "s","habitat": "u"}'\G
+WHERE cap-shape='x' AND cap-surface='s' AND cap-color='n' AND bruises='t' AND odor='p' AND gill-attachment='f' AND gill-spacing='c' AND gill-size='n' AND gill-color='k' AND stalk-shape='e' AND stalk-root='e' AND stalk-surface-above-ring='s' AND stalk-surface-below-ring='s' AND stalk-color-above-ring='w' AND stalk-color-below-ring='w' AND veil-type='p' AND veil-color='w' AND ring-number='o' AND ring-type='p' AND spore-print-color='k' AND population='s' AND habitat='u';
 ```
 
 The result:

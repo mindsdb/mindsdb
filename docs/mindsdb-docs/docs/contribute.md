@@ -2,21 +2,17 @@
 
 Thank you for your interest in contributing to MindsDB. MindsDB is free, open source software, and all types of contributions are welcome, whether they’re documentation changes, bug reports, bug fixes or new source code changes.
 
-## Report issue :loudspeaker:
+## Contribution issues :wrench:
 
-We use [GitHub issues](https://github.com/mindsdb/mindsdb/issues) to track bugs and features. Report them by opening a new issue and complete out all of the required inputs: `Your Python version`, `MindsDB version`, `Describe the bug` and `Steps to reproduce`.
+Most of the issues that are open for contributions will be tagged with `good-first-issue` or `help-wanted`. A great place to start looking will be our GitHub projects for:
 
-![Github Issue](/assets/report-issue.gif)
+* Community writers [dashboard](https://github.com/mindsdb/mindsdb/projects/7).
+* Community code contributors [dashboard](https://github.com/mindsdb/mindsdb/projects/8).
 
-## Documentation :book:
+Also, we are always open to suggestions so feel free to open new issues with your ideas and we can give you guidance!
 
-We are always trying to improve our documentation. All Pull Requests that improve our grammar or docs structure or fix typos are welcomed.
 
-* Check the [MindsDB Docs](https://github.com/mindsdb/mindsdb-docs) repository and help us.
-
-## Easy contribution to issues :wrench:
-
-Most of the issues that are open for contributions will be tagged with `good-first-issue` or `help-wanted`. After you find the issue that you want to contribute to, follow the `fork-and-pull` workflow:
+After you find the issue that you want to contribute to, follow the `fork-and-pull` workflow:
 
 1. Fork the MindsDB repository
 2. Clone the repository locally
@@ -28,6 +24,18 @@ Most of the issues that are open for contributions will be tagged with `good-fir
 >NOTE: Be sure to merge the latest from "upstream" before making a Pull Request!
 
 Pull Request reviews are done on a regular basis. Please make sure you respond to our feedback/questions and sign our CLA.
+
+## Report issue :loudspeaker:
+
+We use [GitHub issues](https://github.com/mindsdb/mindsdb/issues) to track bugs and features. Report them by opening a new issue and complete out all of the required inputs: `Your Python version`, `MindsDB version`, `Describe the bug` and `Steps to reproduce`.
+
+![Github Issue](/assets/report-issue.gif)
+
+## Documentation :book:
+
+We are always trying to improve our documentation. All Pull Requests that improve our grammar or docs structure or fix typos are welcomed.
+
+* Check the [documentation tagged issues](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation) and help us.
 
 ## Write for us :pencil:
 

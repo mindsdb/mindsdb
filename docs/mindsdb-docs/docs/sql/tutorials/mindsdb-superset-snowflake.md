@@ -75,7 +75,7 @@ SELECT name, status FROM MINDSDB.PREDICTORS;
 The process of training a predictive model using MindsDB is as simple as creating a view or a table.
 
 ```sql
-CREATE PREDICTOR rides_forecaster_demo FROM snf (
+CREATE PREDICTOR mindsdb.rides_forecaster_demo FROM snf (
 SELECT ROUTE, RIDES, DATE
 FROM CHICAGO_TRANSIT_AUTHORITY.PUBLIC.CTA_BUS_RIDES_LATEST WHERE DATE > '2020-01-01') 
 PREDICT RIDES ORDER BY DATE GROUP BY ROUTE

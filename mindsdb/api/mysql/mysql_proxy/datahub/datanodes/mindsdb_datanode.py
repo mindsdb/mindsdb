@@ -16,6 +16,7 @@ from mindsdb.integrations.mysql.mysql import MySQL
 from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
+from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -39,33 +40,21 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, model_interface, ai_table, data_store, datasource_interface):
+    def __init__(self, model_interface, data_store, integration_controller):
         self.config = Config()
         self.model_interface = model_interface
-        self.ai_table = ai_table
         self.data_store = data_store
-        self.datasource_interface = datasource_interface
+        self.integration_controller = integration_controller
 
     def get_tables(self):
         models = self.model_interface.get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
-        models += ['predictors', 'commands', 'datasources']
+        models += ['predictors', 'commands', 'databases']
 
-        ai_tables = self.ai_table.get_ai_tables()
-        models += [x['name'] for x in ai_tables]
         return models
 
     def has_table(self, table):
         return table in self.get_tables()
-
-    def _get_ai_table_columns(self, table_name):
-        aitable_record = self.ai_table.get_ai_table(table_name)
-        columns = []
-        if isinstance(aitable_record.query_fields, list) and isinstance(aitable_record.predictor_columns, list):
-            columns = (
-                [x['name'] for x in aitable_record.query_fields] + [x['name'] for x in aitable_record.predictor_columns]
-            )
-        return columns
 
     def _get_model_columns(self, table_name):
         model = self.model_interface.get_model_data(name=table_name)
@@ -92,15 +81,12 @@ class MindsDBDataNode(DataNode):
                     'training_options']
         if table == 'commands':
             return ['command']
-        if table == 'datasources':
+        if table in ('datasources', 'databases'):
             return ['name', 'database_type', 'host', 'port', 'user']
 
         columns = []
 
-        ai_tables = self.ai_table.get_ai_table(table)
-        if ai_tables is not None:
-            columns = self._get_ai_table_columns(table)
-        elif table in [x['name'] for x in self.model_interface.get_models()]:
+        if table in [x['name'] for x in self.model_interface.get_models()]:
             columns = self._get_model_columns(table)
             columns += ['when_data', 'select_data_query']
 
@@ -123,11 +109,11 @@ class MindsDBDataNode(DataNode):
             ''   # TODO
         ] for x in models], columns=columns)
 
-    def _select_datasources(self):
-        datasources = self.datasource_interface.get_db_integrations()
+    def _select_integrations(self):
+        integrations = self.integration_controller.get_all()
         result = [
             [ds_name, ds_meta.get('type'), ds_meta.get('host'), ds_meta.get('port'), ds_meta.get('user')]
-            for ds_name, ds_meta in datasources.items()
+            for ds_name, ds_meta in integrations.items()
         ]
         return pd.DataFrame(
             result,
@@ -136,31 +122,6 @@ class MindsDBDataNode(DataNode):
 
     def delete_predictor(self, name):
         self.model_interface.delete_model(name)
-
-    def _select_from_ai_table(self, table, columns, where):
-        aitable_record = self.ai_table.get_ai_table(table)
-        integration = aitable_record.integration_name
-        query = aitable_record.integration_query
-        predictor_name = aitable_record.predictor_name
-
-        ds_name = self.data_store.get_vacant_name('temp')
-        self.data_store.save_datasource(ds_name, integration, {'query': query})
-        dso = self.data_store.get_datasource_obj(ds_name, raw=True)
-        res = self.model_interface.predict(predictor_name, dso, 'dict')
-        self.data_store.delete_datasource(ds_name)
-
-        keys_map = {}
-        for f in aitable_record.predictor_columns:
-            keys_map[f['value']] = f['name']
-        for f in aitable_record.query_fields:
-            keys_map[f['name']] = f['name']
-        keys = list(keys_map.keys())
-
-        data = []
-        for i, el in enumerate(res):
-            data.append({keys_map[key]: el[key] for key in keys})
-
-        return data
 
     def get_predictors(self, mindsdb_sql_query):
         predictors_df = self._select_predictors()
@@ -177,8 +138,8 @@ class MindsDBDataNode(DataNode):
 
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
-    def get_datasources(self, mindsdb_sql_query):
-        datasources_df = self._select_datasources()
+    def get_integrations(self, mindsdb_sql_query):
+        datasources_df = self._select_integrations()
         try:
             result_df = query_df(datasources_df, mindsdb_sql_query)
         except Exception as e:
@@ -195,8 +156,6 @@ class MindsDBDataNode(DataNode):
             return []
         if table == 'datasources':
             return self._select_datasources()
-        if self.ai_table.get_ai_table(table):
-            return self._select_from_ai_table(table, columns, where)
 
         original_when_data = None
         if 'when_data' in where_data:
@@ -215,7 +174,7 @@ class MindsDBDataNode(DataNode):
             select_data_query = where_data['select_data_query']
             del where_data['select_data_query']
 
-            integration_data = self.datasource_interface.get_db_integration(integration_name)
+            integration_data = self.integration_controller.get(integration_name)
             if integration_type == 'clickhouse':
                 ch = Clickhouse(self.config, integration_name, integration_data)
                 res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')
@@ -253,7 +212,17 @@ class MindsDBDataNode(DataNode):
         if isinstance(where_data, dict):
             where_data = [where_data]
 
+        model_names = self.get_tables()
+        if table not in model_names:
+            raise SqlApiException(f"Predictror '{table}' does not exists'")
+
         model = self.model_interface.get_model_data(name=table)
+        if model.get('status') != 'complete':
+            raise SqlApiException(
+                f"Trying to use predictor '{table}', but the predictor has status '{model.get('status')}'. " +
+                "The predictor must has status 'complete' in order to use it."
+            )
+
         columns = list(model['dtype_dict'].keys())
 
         # cast where_data column to case of original predicto column

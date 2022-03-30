@@ -54,7 +54,6 @@ from mindsdb_sql.planner import query_planner, utils as planner_utils
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, ERR
 from mindsdb.api.mysql.mysql_proxy.utilities import log
-from mindsdb.interfaces.ai_table.ai_table import AITableStore
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
@@ -196,13 +195,13 @@ class Column:
     def __repr__(self):
         return f'{self.__class__.__name__}({self.__dict__})'
 
+
 class SQLQuery():
     def __init__(self, sql, session, execute=True):
         self.session = session
         self.integration = session.integration
         self.database = None if session.database == '' else session.database.lower()
         self.datahub = session.datahub
-        self.ai_table = None
         self.outer_query = None
         self.row_id = 0
         self.columns_list = None
@@ -225,8 +224,6 @@ class SQLQuery():
             renderer = SqlalchemyRender('mysql')
             self.query_str = renderer.get_string(self.query, with_failback=True)
 
-        # self.raw = sql
-        # self.query = None
         self.planner = None
         self.parameters = []
         self.fetched_data = None
@@ -235,7 +232,6 @@ class SQLQuery():
         if execute:
             self.prepare_query(prepare=False)
             self.execute_query()
-
 
     def fetch(self, datahub, view='list'):
         data = self.fetched_data
@@ -317,7 +313,7 @@ class SQLQuery():
     def _process_query(self, sql):
         # self.query = parse_sql(sql, dialect='mindsdb')
 
-        integrations_names = self.datahub.get_datasources_names()
+        integrations_names = self.datahub.get_integrations_names()
         integrations_names.append('information_schema')
         integrations_names.append('files')
         integrations_names.append('views')
@@ -418,14 +414,14 @@ class SQLQuery():
             # is it query to 'datasources'?
             if (
                 isinstance(mindsdb_sql_struct.from_table, Identifier)
-                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'
+                and mindsdb_sql_struct.from_table.parts[-1].lower() in ('datasources', 'databases')
                 and (
                     self.database == 'mindsdb'
                     or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
                 )
             ):
                 dn = self.datahub.get(self.mindsdb_database_name)
-                data, columns = dn.get_datasources(mindsdb_sql_struct)
+                data, columns = dn.get_integrations(mindsdb_sql_struct)
                 table_name = ('mindsdb', 'datasources', 'datasources')
                 data = [
                     {
@@ -712,7 +708,10 @@ class SQLQuery():
                     'tables': [table_name]
                 }
             except Exception as e:
-                raise SqlApiException(f'error in apply predictor row step: {e}') from e
+                if type(e) == SqlApiException:
+                    raise e
+                else:
+                    raise SqlApiException(f'error in apply predictor row step: {e}') from e
         elif type(step) in (ApplyPredictorStep, ApplyTimeseriesPredictorStep):
             try:
                 dn = self.datahub.get(self.mindsdb_database_name)
@@ -1051,6 +1050,13 @@ class SQLQuery():
                             )
                         else:
                             raise Exception('Undefined column name')
+
+                        # if column not exists in result - copy value to it
+                        if (column_name, column_alias) not in step_data['columns'][appropriate_table]:
+                            step_data['columns'][appropriate_table].append((column_name, column_alias))
+                            for row in step_data['values']:
+                                if (column_name, column_alias) not in row[appropriate_table]:
+                                    row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][(column_name, column_name)]
                     else:
                         raise Exception(f'Unexpected column name type: {column_identifier}')
 

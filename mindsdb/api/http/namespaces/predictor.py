@@ -95,7 +95,7 @@ class Predictor(Resource):
             delete_ds_on_fail = True
             ds_name = request.default_store.get_vacant_name(name)
 
-            if request.datasource_interface.get_db_integration(from_ds['datasource']) is None:
+            if request.integration_controller.get(from_ds['datasource']) is None:
                 return http_error(
                     400,
                     'Datasource not exist',

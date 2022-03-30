@@ -1,19 +1,18 @@
-from mindsdb.interfaces.storage.db import session
-from mindsdb.interfaces.storage.db import Integration, View
+from mindsdb.interfaces.storage.db import session, Integration, View
 
 
 class ViewController:
-    def add(self, name, query, datasource_name, company_id=None):
-        datasource_records = session.query(Integration).filter_by(company_id=company_id).all()
-        datasource_id = None
-        for record in datasource_records:
-            if record.name == datasource_name:
-                datasource_id = record.id
+    def add(self, name, query, integration_name, company_id=None):
+        integration_records = session.query(Integration).filter_by(company_id=company_id).all()
+        integration_id = None
+        for record in integration_records:
+            if record.name == integration_name:
+                integration_id = record.id
                 break
         else:
-            raise Exception(f"Can't find datasource with name: {datasource_name}")
+            raise Exception(f"Can't find integration with name: {integration_name}")
 
-        view_record = View(name=name, company_id=company_id, query=query, datasource_id=datasource_id)
+        view_record = View(name=name, company_id=company_id, query=query, integration_id=integration_id)
         session.add(view_record)
         session.commit()
 
@@ -21,7 +20,7 @@ class ViewController:
         return {
             'name': record.name,
             'query': record.query,
-            'datasource_id': record.datasource_id
+            'integration_id': record.integration_id
         }
 
     def get(self, id=None, name=None, company_id=None):

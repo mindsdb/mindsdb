@@ -1,6 +1,7 @@
 import json
 import shutil
 import os
+from pathlib import Path
 
 import pandas as pd
 from mindsdb_sql import parse_sql
@@ -16,9 +17,9 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import log
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.interfaces.storage.db import session, Datasource, Semaphor, Predictor
+from mindsdb.interfaces.storage.db import session, Dataset, Semaphor, Predictor, Analysis, File
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.interfaces.database.integrations import DatasourceController
+from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
@@ -40,8 +41,8 @@ class QueryDS:
             company_id=self.company_id
         )
 
-        datasource_interface = WithKWArgsWrapper(
-            DatasourceController(),
+        integration_controller = WithKWArgsWrapper(
+            IntegrationController(),
             company_id=self.company_id
         )
 
@@ -59,23 +60,18 @@ class QueryDS:
             table = query.from_table.parts[-1]
             view_metadata = view_interface.get(name=table)
 
-            datasource = datasource_interface.get_db_integration_by_id(view_metadata['datasource_id'])
-            datasource_name = datasource['name']
+            integration = integration_controller.get_by_id(view_metadata['integration_id'])
+            integration_name = integration['name']
 
             dataset_name = data_store.get_vacant_name(table)
-            data_store.save_datasource(dataset_name, datasource_name, {'query': view_metadata['query']})
+            data_store.save_datasource(dataset_name, integration_name, {'query': view_metadata['query']})
             try:
                 dataset_object = data_store.get_datasource_obj(dataset_name)
                 data_df = dataset_object.df
             finally:
                 data_store.delete_datasource(dataset_name)
-        elif self.source_type == 'file_query':
-            if isinstance(query, str):
-                query = parse_sql(query, dialect='mysql')
-            table = query.from_table.parts[-1]
-            ds = data_store.get_datasource_obj(table, raw=False)
-            file_df = ds.df
-            data_df = query_df(file_df, query)
+        else:
+            raise Exception(f'Unknown source_type: {self.source_type}')
         return data_df
 
 
@@ -87,54 +83,90 @@ class DataStore():
         self.model_interface = ModelInterface()
 
     def get_analysis(self, name, company_id=None):
-        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
-        if datasource_record.analysis is None:
+        dataset_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
+        if dataset_record.analysis_id is None:
             return None
-        analysis = json.loads(datasource_record.analysis)
+        analysis_record = session.query(Analysis).get(dataset_record.analysis_id)
+        if analysis_record is None:
+            return None
+        analysis = json.loads(analysis_record.analysis)
         return analysis
 
     def start_analysis(self, name, company_id=None):
-        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
-        if datasource_record.analysis is not None:
+        dataset_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
+        if dataset_record.analysis_id is not None:
             return None
-        semaphor_record = session.query(Semaphor).filter_by(company_id=company_id, entity_id=datasource_record.id, entity_type='datasource').first()
+
+        semaphor_record = session.query(Semaphor).filter_by(
+            company_id=company_id,
+            entity_id=dataset_record.id,
+            entity_type='dataset'
+        ).first()
+
         if semaphor_record is None:
-            semaphor_record = Semaphor(company_id=company_id, entity_id=datasource_record.id, entity_type='datasource', action='write')
+            semaphor_record = Semaphor(
+                company_id=company_id,
+                entity_id=dataset_record.id,
+                entity_type='dataset',
+                action='write'
+            )
             session.add(semaphor_record)
             session.commit()
         else:
             return
+
         try:
-            analysis = self.model_interface.analyse_dataset(ds=self.get_datasource_obj(name, raw=True, company_id=company_id), company_id=company_id)
-            datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
-            datasource_record.analysis = json.dumps(analysis, cls=CustomJSONEncoder)
+            analysis = self.model_interface.analyse_dataset(
+                ds=self.get_datasource_obj(name, raw=True, company_id=company_id),
+                company_id=company_id
+            )
+            dataset_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
+            analysis_record = Analysis(analysis=json.dumps(analysis, cls=CustomJSONEncoder))
+            session.add(analysis_record)
+            session.flush()
+            dataset_record.analysis_id = analysis_record.id
             session.commit()
         except Exception as e:
             log.error(e)
         finally:
-            semaphor_record = session.query(Semaphor).filter_by(company_id=company_id, entity_id=datasource_record.id, entity_type='datasource').first()
+            semaphor_record = session.query(Semaphor).filter_by(company_id=company_id, entity_id=dataset_record.id, entity_type='dataset').first()
             session.delete(semaphor_record)
             session.commit()
 
-    def get_datasources(self, name=None, company_id=None):
-        datasource_arr = []
+    def get_datasets(self, name=None, company_id=None):
+        dataset_arr = []
         if name is not None:
-            datasource_record_arr = session.query(Datasource).filter_by(company_id=company_id, name=name)
+            dataset_record_arr = session.query(Dataset).filter_by(company_id=company_id, name=name)
         else:
-            datasource_record_arr = session.query(Datasource).filter_by(company_id=company_id)
-        for datasource_record in datasource_record_arr:
+            dataset_record_arr = session.query(Dataset).filter_by(company_id=company_id)
+        for dataset_record in dataset_record_arr:
             try:
-                if datasource_record.data is None:
+                if dataset_record.data is None:
                     continue
-                datasource = json.loads(datasource_record.data)
-                datasource['created_at'] = datasource_record.created_at
-                datasource['updated_at'] = datasource_record.updated_at
-                datasource['name'] = datasource_record.name
-                datasource['id'] = datasource_record.id
-                datasource_arr.append(datasource)
+                dataset = json.loads(dataset_record.data)
+                dataset['created_at'] = dataset_record.created_at
+                dataset['updated_at'] = dataset_record.updated_at
+                dataset['name'] = dataset_record.name
+                dataset['id'] = dataset_record.id
+                dataset_arr.append(dataset)
             except Exception as e:
                 log.error(e)
-        return datasource_arr
+        return dataset_arr
+
+    def get_files_names(self, company_id=None):
+        """ return list of files names
+        """
+        return [x[0] for x in session.query(File.name).filter_by(company_id=company_id)]
+
+    def get_file_meta(self, name, company_id=None):
+        file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
+        if file_record is None:
+            return None
+        return {
+            'name': file_record.name,
+            'columns': file_record.columns,
+            'row_count': file_record.row_count
+        }
 
     def get_data(self, name, where=None, limit=None, offset=None, company_id=None):
         offset = 0 if offset is None else offset
@@ -155,57 +187,57 @@ class DataStore():
         }
 
     def get_datasource(self, name, company_id=None):
-        datasource_arr = self.get_datasources(name, company_id=company_id)
-        if len(datasource_arr) == 1:
-            return datasource_arr[0]
+        dataset_arr = self.get_datasets(name, company_id=company_id)
+        if len(dataset_arr) == 1:
+            return dataset_arr[0]
         # @TODO: Remove when db swithc is more stable, this should never happen, but good santiy check while this is kinda buggy
-        elif len(datasource_arr) > 1:
-            log.error('Two or more datasource with the same name, (', len(datasource_arr), ') | Full list: ', datasource_arr)
-            raise Exception('Two or more datasource with the same name')
+        elif len(dataset_arr) > 1:
+            log.error('Two or more dataset with the same name, (', len(dataset_arr), ') | Full list: ', dataset_arr)
+            raise Exception('Two or more dataset with the same name')
         return None
 
     def delete_datasource(self, name, company_id=None):
-        datasource_record = Datasource.query.filter_by(company_id=company_id, name=name).first()
-        if not Config()["force_datasource_removing"]:
-            linked_models = Predictor.query.filter_by(company_id=company_id, datasource_id=datasource_record.id).all()
+        dataset_record = Dataset.query.filter_by(company_id=company_id, name=name).first()
+        if not Config()["force_dataset_removing"]:
+            linked_models = Predictor.query.filter_by(company_id=company_id, dataset_id=dataset_record.id).all()
             if linked_models:
-                raise Exception("Can't delete {} datasource because there are next models linked to it: {}".format(name, [model.name for model in linked_models]))
+                raise Exception("Can't delete {} dataset because there are next models linked to it: {}".format(name, [model.name for model in linked_models]))
         session.query(Semaphor).filter_by(
-            company_id=company_id, entity_id=datasource_record.id, entity_type='datasource'
+            company_id=company_id, entity_id=dataset_record.id, entity_type='dataset'
         ).delete()
-        session.delete(datasource_record)
+        session.delete(dataset_record)
         session.commit()
-        self.fs_store.delete(f'datasource_{company_id}_{datasource_record.id}')
+        self.fs_store.delete(f'datasource_{company_id}_{dataset_record.id}')  # TODO del in future
         try:
             shutil.rmtree(os.path.join(self.dir, f'{company_id}@@@@@{name}'))
         except Exception:
             pass
 
     def get_vacant_name(self, base=None, company_id=None):
-        ''' returns name of datasource, which starts from 'base' and ds with that name is not exists yet
+        ''' returns name of dataset, which starts from 'base' and ds with that name is not exists yet
         '''
         if base is None:
-            base = 'datasource'
-        datasources = session.query(Datasource.name).filter_by(company_id=company_id).all()
-        datasources_names = [x[0] for x in datasources]
-        if base not in datasources_names:
+            base = 'dataset'
+        datasets = session.query(Dataset.name).filter_by(company_id=company_id).all()
+        datasets_names = [x[0] for x in datasets]
+        if base not in datasets_names:
             return base
         for i in range(1, 1000):
             candidate = f'{base}_{i}'
-            if candidate not in datasources_names:
+            if candidate not in datasets_names:
                 return candidate
-        raise Exception(f"Can not find appropriate name for datasource '{base}'")
+        raise Exception(f"Can not find appropriate name for dataset '{base}'")
 
-    def create_datasource(self, source_type, source, file_path=None, company_id=None, ds_meta_dir=None):
-        datasource_controller = DatasourceController()
-        if source_type == 'file_query' or source_type == 'view_query':
+    def create_datasource(self, source_type, source, file_path=None, company_id=None):
+        integration_controller = IntegrationController()
+        if source_type == 'view_query':
             dsClass = QueryDS
             creation_info = {
                 'class': dsClass.__name__,
                 'args': [],
                 'kwargs': {
                     'query': source['query'],
-                    'source': source['source'],   # view|file
+                    'source': source['source'],   # view
                     'source_type': source_type,
                     'company_id': company_id
                 }
@@ -213,18 +245,27 @@ class DataStore():
 
             ds = dsClass(**creation_info['kwargs'])
         elif source_type == 'file':
-            source = os.path.join(ds_meta_dir, source)
-            shutil.move(file_path, source)
-            ds = FileDS(source)
+            file_name = source.get('mindsdb_file_name')
+            file_record = session.query(File).filter_by(company_id=company_id, name=file_name).first()
+            if file_record is None:
+                raise Exception(f"Cant find file '{file_name}'")
+            self.fs_store.get(f'{company_id}@@@@@{file_name}', f'file_{company_id}_{file_record.id}', self.dir)
+            kwargs = {}
+            query = source.get('query')
+            if query is not None:
+                kwargs['query'] = query
+
+            path = Path(self.dir).joinpath(f'{company_id}@@@@@{file_name}').joinpath(file_record.source_file_path)
 
             creation_info = {
                 'class': 'FileDS',
-                'args': [source],
-                'kwargs': {}
+                'args': [str(path)],
+                'kwargs': kwargs
             }
+            ds = FileDS(str(path), **kwargs)
 
-        elif datasource_controller.get_db_integration(source_type, company_id) is not None:
-            integration = datasource_controller.get_db_integration(source_type, company_id)
+        elif integration_controller.get(source_type, company_id) is not None:
+            integration = integration_controller.get(source_type, company_id)
 
             ds_class_map = {
                 'clickhouse': ClickhouseDS,
@@ -248,7 +289,7 @@ class DataStore():
                 raise KeyError(f"Unknown DS type: {source_type}, type is {integration['type']}")
 
             if dsClass is None:
-                raise Exception(f"Unsupported datasource: {source_type}, type is {integration['type']}, please install required dependencies!")
+                raise Exception(f"Unsupported dataset: {source_type}, type is {integration['type']}, please install required dependencies!")
 
             if integration['type'] in ['clickhouse']:
                 creation_info = {
@@ -390,64 +431,137 @@ class DataStore():
             }
         return ds, creation_info
 
-    def save_datasource(self, name, source_type, source, file_path=None, company_id=None):
-        if source_type == 'file' and (file_path is None):
-            raise Exception('`file_path` argument required when source_type == "file"')
+    def get_files(self, company_id=None):
+        """ Get list of files
 
-        datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
-        while datasource_record is not None:
-            raise Exception(f'Datasource with name {name} already exists')
+            Returns:
+                list[dict]: files metadata
+        """
+        file_records = session.query(File).filter_by(company_id=company_id).all()
+        files_metadata = [{
+            'name': record.name,
+            'row_count': record.row_count,
+            'columns': record.columns,
+        } for record in file_records]
+        return files_metadata
+
+    def save_file(self, name, file_path, file_name=None, company_id=None):
+        """ Save the file to our store
+
+            Args:
+                name (str): with that name file will be available in sql api
+                file_name (str): file name
+                file_path (str): path to the file
+                company_id (int): company id
+
+            Returns:
+                int: id of 'file' record in db
+        """
+        files_metadata = self.get_files()
+        if name in [x['name'] for x in files_metadata]:
+            raise Exception(f'File already exists: {name}')
+
+        if file_name is None:
+            file_name = Path(file_path).name
+
+        try:
+            ds_meta_dir = Path(self.dir).joinpath(f'{company_id}@@@@@{name}')
+            ds_meta_dir.mkdir()
+
+            source = ds_meta_dir.joinpath(file_name)
+            shutil.move(file_path, str(source))
+
+            ds = FileDS(str(source))
+            ds_meta = self._get_ds_meta(ds)
+
+            column_names = ds_meta['column_names']
+            if ds_meta['column_names'] is not None:
+                column_names = json.dumps([dict(name=x) for x in ds_meta['column_names']])
+            file_record = File(
+                name=name,
+                company_id=company_id,
+                source_file_path=file_name,
+                file_path=str(source),
+                row_count=ds_meta['row_count'],
+                columns=column_names
+            )
+            session.add(file_record)
+            session.commit()
+            self.fs_store.put(f'{company_id}@@@@@{name}', f'file_{company_id}_{file_record.id}', self.dir)
+        except Exception as e:
+            log.error(e)
+            shutil.rmtree(ds_meta_dir)
+            raise
+
+        return file_record.id
+
+    def delete_file(self, name, company_id):
+        file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
+        if file_record is None:
+            return None
+        file_id = file_record.id
+        session.delete(file_record)
+        session.commit()
+        self.fs_store.delete(f'file_{company_id}_{file_id}')
+        return True
+
+    def _get_ds_meta(self, ds):
+        if hasattr(ds, 'get_columns') and hasattr(ds, 'get_row_count'):
+            try:
+                column_names = ds.get_columns()
+                row_count = ds.get_row_count()
+            except Exception:
+                df = ds.df
+                column_names = list(df.keys())
+                row_count = len(df)
+        else:
+            df = ds.df
+            column_names = list(df.keys())
+            row_count = len(df)
+        return {
+            'column_names': column_names,
+            'row_count': row_count
+        }
+
+    def save_datasource(self, name, source_type, source=None, file_path=None, company_id=None):
+        dataset_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
+        while dataset_record is not None:
+            raise Exception(f'Dataset with name {name} already exists')
 
         if source_type == 'views':
             source_type = 'view_query'
         elif source_type == 'files':
-            source_type = 'file_query'
+            source_type = 'file'
 
         try:
-            datasource_record = Datasource(
+            dataset_record = Dataset(
                 company_id=company_id,
                 name=name,
                 datasources_version=mindsdb_datasources.__version__,
                 mindsdb_version=mindsdb_version
             )
-            session.add(datasource_record)
+            session.add(dataset_record)
             session.commit()
 
-            ds_meta_dir = os.path.join(self.dir, f'{company_id}@@@@@{name}')
-            os.mkdir(ds_meta_dir)
+            ds, creation_info = self.create_datasource(source_type, source, file_path, company_id)
 
-            ds, creation_info = self.create_datasource(source_type, source, file_path, company_id, ds_meta_dir)
+            ds_meta = self._get_ds_meta(ds)
+            column_names = ds_meta['column_names']
+            row_count = ds_meta['row_count']
 
-            if hasattr(ds, 'get_columns') and hasattr(ds, 'get_row_count'):
-                try:
-                    column_names = ds.get_columns()
-                    row_count = ds.get_row_count()
-                except Exception:
-                    df = ds.df
-                    column_names = list(df.keys())
-                    row_count = len(df)
-            else:
-                df = ds.df
-                column_names = list(df.keys())
-                row_count = len(df)
-
-            if '' in column_names or len(column_names) != len(set(column_names)):
-                shutil.rmtree(ds_meta_dir)
-                raise Exception('Each column in datasource must have unique non-empty name')
-
-            datasource_record.creation_info = json.dumps(creation_info)
-            datasource_record.data = json.dumps({
+            dataset_record.ds_class = creation_info['class']
+            dataset_record.creation_info = json.dumps(creation_info)
+            dataset_record.data = json.dumps({
                 'source_type': source_type,
                 'source': source,
                 'row_count': row_count,
                 'columns': [dict(name=x) for x in column_names]
             })
 
-            self.fs_store.put(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{datasource_record.id}', self.dir)
             session.commit()
 
         except Exception as e:
-            log.error(f'Error creating datasource {name}, exception: {e}')
+            log.error(f'Error creating dataset {name}, exception: {e}')
             try:
                 self.delete_datasource(name, company_id=company_id)
             except Exception:
@@ -459,16 +573,19 @@ class DataStore():
     def get_datasource_obj(self, name=None, id=None, raw=False, company_id=None):
         try:
             if name is not None:
-                datasource_record = session.query(Datasource).filter_by(company_id=company_id, name=name).first()
+                dataset_record = session.query(Dataset).filter_by(company_id=company_id, name=name).first()
             else:
-                datasource_record = session.query(Datasource).filter_by(company_id=company_id, id=id).first()
+                dataset_record = session.query(Dataset).filter_by(company_id=company_id, id=id).first()
 
-            self.fs_store.get(f'{company_id}@@@@@{name}', f'datasource_{company_id}_{datasource_record.id}', self.dir)
-            creation_info = json.loads(datasource_record.creation_info)
+            creation_info = json.loads(dataset_record.creation_info)
             if raw:
                 return creation_info
             else:
+                if dataset_record.ds_class == 'FileDS':
+                    file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
+                    if file_record is not None:
+                        self.fs_store.get(f'{company_id}@@@@@{dataset_record.name}', f'file_{company_id}_{file_record.id}', self.dir)
                 return eval(creation_info['class'])(*creation_info['args'], **creation_info['kwargs'])
         except Exception as e:
-            log.error(f'Error getting datasource {name}, exception: {e}')
+            log.error(f'Error getting dataset {name}, exception: {e}')
             return None

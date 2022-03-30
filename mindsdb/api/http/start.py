@@ -9,22 +9,26 @@ from waitress import serve
 from flask import send_from_directory, request, current_app
 from flask_compress import Compress
 
-from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
-from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
-from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
+from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
+from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
+from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
+from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
+from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.log import initialize_log, get_log
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.db import session
+from mindsdb.interfaces.storage.db import session, engine as db_engine
 
 
-def start(verbose, no_studio):
+def start(verbose, no_studio, with_nlp):
     config = Config()
 
-    initialize_log(config, 'http', wrap_print=True)
+    server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
+
+    initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
 
     # start static initialization in a separate thread
     init_static_thread = None
@@ -56,6 +60,9 @@ def start(verbose, no_studio):
     api.add_namespace(utils_ns)
     api.add_namespace(conf_ns)
     api.add_namespace(stream_ns)
+    api.add_namespace(sql_ns)
+    if with_nlp:
+        api.add_namespace(nlp_ns)
 
     @api.errorhandler(Exception)
     def handle_exception(e):
@@ -93,15 +100,13 @@ def start(verbose, no_studio):
             company_id=company_id
         )
 
-        request.datasource_interface = WithKWArgsWrapper(
-            current_app.original_datasource_interface,
+        request.integration_controller = WithKWArgsWrapper(
+            current_app.original_integration_controller,
             company_id=company_id
         )
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']
-
-    server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
 
     # waiting static initialization
     if not no_studio:
@@ -124,11 +129,16 @@ def start(verbose, no_studio):
             print("Gunicorn server is not available by default. If you wish to use it, please install 'gunicorn'")
             return
 
+        def post_fork(arbiter, worker):
+            db_engine.dispose()
+
         options = {
             'bind': f'{host}:{port}',
-            'workers': min(max(mp.cpu_count(), 2), 3),
+            'workers': mp.cpu_count(),
             'timeout': 600,
             'reuse_port': True,
+            'preload_app': True,
+            'post_fork': post_fork,
             'threads': 4
         }
         StandaloneApplication(app, options).run()

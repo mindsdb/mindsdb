@@ -5,10 +5,13 @@ import re
 import multipart
 import zipfile
 import tarfile
+import shutil
 
+import mysql.connector
 from flask import request, send_file
 from flask_restx import Resource, abort     # 'abort' using to return errors as json: {'message': 'error text'}
 
+from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.datasources import ns_conf
@@ -45,8 +48,8 @@ def parse_filter(key, value):
 class DatasourcesList(Resource):
     @ns_conf.doc('get_datasources_list')
     def get(self):
-        '''List all datasources'''
-        return request.default_store.get_datasources()
+        '''List all datasets'''
+        return request.default_store.get_datasets()
 
 
 @ns_conf.route('/<name>')
@@ -122,7 +125,7 @@ class Datasource(Resource):
 
         if 'query' in data:
             integration_id = request.json['integration_id']
-            integration = request.datasource_interface.get_db_integration(integration_id)
+            integration = request.integration_controller.get(integration_id)
             if integration is None:
                 abort(400, f"{integration_id} integration doesn't exist")
 
@@ -137,31 +140,38 @@ class Datasource(Resource):
         source = data['source'] if 'source' in data else name
         source_type = data['source_type']
 
-        if source_type == 'file':
-            file_path = os.path.join(temp_dir_path, data['file'])
-            lp = file_path.lower()
-            if lp.endswith(('.zip', '.tar.gz')):
-                if lp.endswith('.zip'):
-                    with zipfile.ZipFile(file_path) as f:
-                        f.extractall(temp_dir_path)
-                elif lp.endswith('.tar.gz'):
-                    with tarfile.open(file_path) as f:
-                        f.extractall(temp_dir_path)
-                os.remove(file_path)
-                files = os.listdir(temp_dir_path)
-                if len(files) != 1:
-                    os.rmdir(temp_dir_path)
-                    return http_error(400, 'Wrong content.', 'Archive must contain only one data file.')
-                file_path = os.path.join(temp_dir_path, files[0])
-                source = files[0]
-                if not os.path.isfile(file_path):
-                    os.rmdir(temp_dir_path)
-                    return http_error(400, 'Wrong content.', 'Archive must contain data file in root.')
-        else:
-            file_path = None
-
-        request.default_store.save_datasource(ds_name, source_type, source, file_path)
-        os.rmdir(temp_dir_path)
+        try:
+            if source_type == 'file':
+                file_path = os.path.join(temp_dir_path, data['file'])
+                lp = file_path.lower()
+                if lp.endswith(('.zip', '.tar.gz')):
+                    if lp.endswith('.zip'):
+                        with zipfile.ZipFile(file_path) as f:
+                            f.extractall(temp_dir_path)
+                    elif lp.endswith('.tar.gz'):
+                        with tarfile.open(file_path) as f:
+                            f.extractall(temp_dir_path)
+                    os.remove(file_path)
+                    files = os.listdir(temp_dir_path)
+                    if len(files) != 1:
+                        os.rmdir(temp_dir_path)
+                        return http_error(400, 'Wrong content.', 'Archive must contain only one data file.')
+                    file_path = os.path.join(temp_dir_path, files[0])
+                    source = files[0]
+                    if not os.path.isfile(file_path):
+                        os.rmdir(temp_dir_path)
+                        return http_error(400, 'Wrong content.', 'Archive must contain data file in root.')
+                # TODO
+                # request.default_store.save_datasource(ds_name, source_type, source, file_path)
+                file_id = request.default_store.save_file(ds_name, file_path, file_name=data['file'])
+                request.default_store.save_datasource(ds_name, source_type, source={'mindsdb_file_name': name})
+            else:
+                file_path = None
+                request.default_store.save_datasource(ds_name, source_type, source)
+        except Exception as e:
+            return http_error(400, 'Error', str(e))
+        finally:
+            shutil.rmtree(temp_dir_path)
 
         return request.default_store.get_datasource(ds_name)
 

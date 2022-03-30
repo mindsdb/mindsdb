@@ -4,7 +4,7 @@ import pickle
 from typing import Dict
 from hashlib import md5
 
-import redis  # todo dynamic loading depending on whether user has redis installed
+import redis
 import sqlite3
 
 
@@ -84,16 +84,3 @@ class RedisStorageHandler(StorageHandler):
 
     def _set(self, serialized_key, serialized_value):
         self.connection.set(serialized_key, serialized_value)
-
-
-if __name__ == '__main__':
-    # todo convert to unit tests
-    cls = RedisStorageHandler({'test_context_key': 'value'}, config={'host': 'localhost', 'port': '6379'})
-    cls.set('test_key', 42)
-    assert cls.get('test_key') == 42
-
-    cls2 = RedisStorageHandler({'test_context_key': 'value2'}, config={'host': 'localhost', 'port': '6379'})
-    try:
-        cls2.get('test_key')  # todo turn into assertRaises once in a unit test
-    except Exception:
-        print("Key has no value stored in it, aborting...")

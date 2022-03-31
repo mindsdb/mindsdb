@@ -26,7 +26,6 @@ class MySQLHandler(DatabaseHandler):
         self.ssl_ca = kwargs.get('ssl_ca')
         self.ssl_cert = kwargs.get('ssl_cert')
         self.ssl_key = kwargs.get('ssl_key')
-        self.connect()
 
     def connect(self):
         config = {
@@ -48,16 +47,18 @@ class MySQLHandler(DatabaseHandler):
         return self.connection
 
     def check_status(self):
+        connected = False
         try:
-            return self.connection.is_connected()
+            con = self.connect()
+            with closing(con) as con:
+                connected = con.is_connected()
         except Exception:
-            return False
+            pass
+        return connected
 
     def run_native_query(self, query_str):
-        if not self.check_status():
-            self.connect()
         try:
-            with closing(self.connection) as con:
+            with closing(self.connect()) as con:
                 cur = con.cursor(dictionary=True, buffered=True)
                 cur.execute(f"USE {self.database};")
                 cur.execute(query_str)

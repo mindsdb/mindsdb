@@ -43,7 +43,6 @@ class MLflowHandler(PredictiveHandler):
 
     def connect(self, **kwargs) -> Dict[str, int]:
         """ Connect to the mlflow process using MlflowClient class. """  # noqa
-        print(kwargs)
         self.mlflow_server_url = kwargs['mlflow_server_url']
         self.mlflow_server_path = kwargs['model_registry_path']
         self.connection = MlflowClient(self.mlflow_server_url, self.mlflow_server_path)

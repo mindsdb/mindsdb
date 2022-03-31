@@ -25,13 +25,15 @@
     <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ">Community Slack</a>
     <span> | </span>
     <a href="https://github.com/mindsdb/mindsdb/projects">Contribute</a>
+    <span> | </span>
+    <a href="https://cloud.mindsdb.com">Demo</a>
   </h3>
   
 </div>
 
 ----------------------------------------
 
-[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) enables you to use ML predictions in your database using SQL. [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20inside%20Databases%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks,databases,sql)
+[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)  ML-SQL Server enables machine learning workflows for the most powerful databases and datawarehouses using SQL.  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20inside%20Databases%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks,databases,sql)
 * Developers can quickly add AI capabilities to your applications.
 * Data Scientists can streamline MLOps by deploying ML models as AI Tables.
 * Data Analysts can easily make forecasts on complex data (like multivariate time-series with high cardinality) and visualize them in BI tools like Tableau.
@@ -54,6 +56,10 @@ Also, check-out the [rewards and community programs.](https://mindsdb.com/commun
 
 </h2>
 
+## Demo
+
+You can try Mindsdb ML SQL server here [(demo)](https://cloud.mindsdb.com).
+
 ## Installation
 
 To install the latest version of MindsDB please pull the following Docker image:
@@ -67,6 +73,7 @@ Or, use PyPI:
 ```
 pip install mindsdb
 ```
+
 ## Overview
 
 MindsDB automates and abstracts machine learning models through virtual AI Tables:

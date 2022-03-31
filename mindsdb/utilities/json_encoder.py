@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime, date, timedelta
 
 import numpy as np
@@ -20,3 +21,14 @@ class CustomJSONEncoder(JSONEncoder):
             return float(obj)
 
         return JSONEncoder.default(self, obj)
+
+
+def json_serialiser(byte_obj):
+    """
+    Used to export/import predictors inside the model controller.
+    Reference: https://stackoverflow.com/q/53942948.
+    """
+    if isinstance(byte_obj, (bytes, bytearray)):
+        # File Bytes to Base64 Bytes then to String
+        return base64.b64encode(byte_obj).decode('utf-8')
+    raise ValueError('No encoding handler for data type ' + type(byte_obj))

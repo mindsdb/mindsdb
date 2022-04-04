@@ -3,13 +3,13 @@ import zipfile
 import tarfile
 
 from flask import request
-from flask_restx import Resource, abort
+from flask_restx import Resource
 import tempfile
 import multipart
 
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
-from mindsdb.api.http.namespaces.configs.file import ns_conf
+from mindsdb.api.http.namespaces.configs.files import ns_conf
 
 
 @ns_conf.route('/')
@@ -23,10 +23,16 @@ class FilesList(Resource):
 @ns_conf.route('/<name>')
 @ns_conf.param('name', "MindsDB's name for file")
 class File(Resource):
+    @ns_conf.doc('put_file')
     def put(self, name: str):
-        '''add new file'''
+        ''' add new file
+            params in FormData:
+                - file
+                - original_file_name [optional]
+        '''
 
         data = {}
+        mindsdb_file_name = name
 
         def on_field(field):
             name = field.field_name.decode()
@@ -68,7 +74,7 @@ class File(Resource):
         else:
             data = request.json
 
-        mindsdb_file_name = data['name'] if 'name' in data else name
+        # mindsdb_file_name = data['name'] if 'name' in data else name # !!!!
         original_file_name = data.get('original_file_name')
 
         file_path = os.path.join(temp_dir_path, data['file'])
@@ -97,6 +103,7 @@ class File(Resource):
 
         return '', 200
 
+    @ns_conf.doc('delete_file')
     def delete(self, name: str):
         '''delete file'''
 

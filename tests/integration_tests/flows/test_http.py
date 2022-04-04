@@ -152,7 +152,22 @@ class HTTPTest(unittest.TestCase):
         files_list = self.get_files_list()
         self.assertTrue(files_list[0]['name'] == 'test_file')
 
-    def test_7_utils(self):
+    def test_3_sql(self):
+        resp = requests.post(
+            f'{root}/sql/query',
+            json={
+                'query': 'select 1;',
+                'context': {}
+            }
+        )
+        self.assertTrue(resp)
+        resp = resp.json()
+        self.assertTrue(resp.get('type') == 'table')
+        self.assertTrue(resp.get('context').get('db') == 'mindsdb')
+        self.assertTrue(resp.get('column_names')[0] == '1')
+        self.assertTrue(resp.get('data')[0][0] == 1)
+
+    def test_4_utils(self):
         """
         Call utilities ping endpoint
         THEN check the response is success
@@ -167,7 +182,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/config/vars')
         assert response.status_code == 200
 
-    def test_8_predictors(self):
+    def test_5_predictors(self):
         """
         Call list predictors endpoint
         THEN check the response is success
@@ -175,7 +190,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/predictors/')
         assert response.status_code == 200
 
-    def test_90_predictor_not_found(self):
+    def test_6_predictor_not_found(self):
         """
         Call unexisting predictor
         then check the response is NOT FOUND
@@ -183,7 +198,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/predictors/dummy_predictor')
         assert response.status_code != 200
 
-    def test_91_gui_is_served(self):
+    def test_7_gui_is_served(self):
         """
         GUI downloaded and available
         """
@@ -267,38 +282,39 @@ class HTTPTest(unittest.TestCase):
     #     pvs = res.json()
     #     assert pvs[0]['rental_price']['predicted_value'] == 5555555
 
-    def test_99_export_and_import_predictor(self):
-        # Create and train a new predictor
-        params = {
-            'data_source_name': ds_name,
-            'to_predict': 'rental_price',
-            'kwargs': {
-                'stop_training_in_x_seconds': 20,
-                'join_learn_process': True
-            }
-        }
-        url = f'{root}/predictors/test_99_{pred_name}'
-        res = requests.put(url, json=params)
-        assert res.status_code == 200
+    # def test_99_export_and_import_predictor(self):
+    #     # Create and train a new predictor
+    #     params = {
+    #         'data_source_name': ds_name,
+    #         'to_predict': 'rental_price',
+    #         'kwargs': {
+    #             'stop_training_in_x_seconds': 20,
+    #             'join_learn_process': True
+    #         }
+    #     }
+    #     url = f'{root}/predictors/test_99_{pred_name}'
+    #     res = requests.put(url, json=params)
+    #     assert res.status_code == 200
 
-        # Export the predictor as a binary
-        res = requests.get(f'{root}/predictors/test_99_{pred_name}/export')
-        assert res.status_code == 200
-        exported_predictor = res.text
+    #     # Export the predictor as a binary
+    #     res = requests.get(f'{root}/predictors/test_99_{pred_name}/export')
+    #     assert res.status_code == 200
+    #     exported_predictor = res.text
 
-        # Delete the predictor
-        res = requests.delete(f'{root}/predictors/test_99_{pred_name}')
-        assert res.status_code == 200
+    #     # Delete the predictor
+    #     res = requests.delete(f'{root}/predictors/test_99_{pred_name}')
+    #     assert res.status_code == 200
 
-        # Import the predictor from the previous export
-        res = requests.put(f'{root}/predictors/test_99_{pred_name}/import', json={'serialized_predictor': exported_predictor})
-        assert res.status_code == 200
+    #     # Import the predictor from the previous export
+    #     res = requests.put(f'{root}/predictors/test_99_{pred_name}/import', json={'serialized_predictor': exported_predictor})
+    #     assert res.status_code == 200
 
-        # Test that it still exists and that it can make predictions
-        url = f'{root}/predictors/test_99_{pred_name}/predict'
-        res = requests.post(url, json={'when': {'sqft': 500}})
-        assert res.status_code == 200
-        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
+    #     # Test that it still exists and that it can make predictions
+    #     url = f'{root}/predictors/test_99_{pred_name}/predict'
+    #     res = requests.post(url, json={'when': {'sqft': 500}})
+    #     assert res.status_code == 200
+    #     assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
+
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

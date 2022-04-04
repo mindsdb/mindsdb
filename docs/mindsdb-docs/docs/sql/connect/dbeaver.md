@@ -27,7 +27,7 @@
 
 ## MindsDB Database
 
-At startup mindsdb database will contain 2 tables `predictors` and `commands`. 
+At startup mindsdb database will contain 3 tables `predictors`, `commands` and `databases`. 
 
 ![Connect](/assets/sql/show.png)
 
@@ -35,8 +35,11 @@ All of the newly trained machine learning models will be visible as a new record
 
 * name - The name of the model.
 * status - Training status(training, complete, error).
+* predict - The name of the target variable column.
 * accuracy - The model accuracy.
-* predict - The name of the target variable.
+* update_status - Trainig update status(up_to_date, updating).
+* mindsdb_version - The mindsdb version used.
+* error - Error message info in case of an errror.
 * select_data_query - SQL select query to create the datasource.
 * training options - Additional training parameters.
 

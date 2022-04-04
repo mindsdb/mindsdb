@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import json
+import base64
 import psutil
 import datetime
 from copy import deepcopy
@@ -10,8 +11,6 @@ from dateutil.parser import parse as parse_datetime
 from typing import Optional, Tuple, Union, Dict, Any
 import requests
 from typing import List
-
-from torch import dtype
 
 import lightwood
 from lightwood.api.types import ProblemDefinition
@@ -24,6 +23,7 @@ import mindsdb_datasources
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.functions import mark_process
+from mindsdb.utilities.json_encoder import json_serialiser
 from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
@@ -159,11 +159,30 @@ class ModelController():
 
         df, problem_definition, join_learn_process, json_ai_override = self._unpack_old_args(from_data, kwargs, to_predict)
 
+        is_cloud = self.config.get('cloud', False)
+        if is_cloud is True:
+            models = self.get_models(company_id)
+            count = 0
+            for model in models:
+                if model.get('status') in ['generating', 'training']:
+                    created_at = model.get('created_at')
+                    if isinstance(created_at, str):
+                        created_at = parse_datetime(created_at)
+                    if isinstance(model.get('created_at'), datetime.datetime) is False:
+                        continue
+                    if (datetime.datetime.now() - created_at) < datetime.timedelta(hours=1):
+                        count += 1
+                if count == 2:
+                    raise Exception('You can train no more than 2 models at the same time')
+            if len(df) > 10000:
+                raise Exception('Datasets are limited to 10,000 rows on free accounts')
+
         if 'url' in problem_definition:
             train_url = problem_definition['url'].get('train', None)
             predict_url = problem_definition['url'].get('predict', None)
             com_format = problem_definition['format']
-
+            api_token = problem_definition['API_TOKEN'] if ('API_TOKEN' in problem_definition) else None
+            input_column = problem_definition['input_column'] if ('input_column' in problem_definition) else None
             predictor_record = db.Predictor(
                 company_id=company_id,
                 name=name,
@@ -173,7 +192,7 @@ class ModelController():
                 to_predict=problem_definition['target'],
                 learn_args=ProblemDefinition.from_dict(problem_definition).to_dict(),
                 data={'name': name, 'train_url': train_url, 'predict_url': predict_url, 'format': com_format,
-                      'status': 'complete' if train_url is None else 'training'},
+                      'status': 'complete' if train_url is None else 'training', 'API_TOKEN': api_token, 'input_column': input_column},
                 is_custom=True,
                 # @TODO: For testing purposes, remove afterwards!
                 dtype_dict=json_ai_override['dtype_dict'],
@@ -216,7 +235,6 @@ class ModelController():
                 p.close()
         db.session.refresh(predictor_record)
 
-
     @mark_process(name='predict')
     def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
         original_name = name
@@ -244,6 +262,14 @@ class ModelController():
                 predictions = pd.DataFrame({
                     'prediction': answer
                 })
+
+            elif predictor_data['format'] == 'huggingface':
+                headers = {"Authorization": "Bearer {API_TOKEN}".format(API_TOKEN=predictor_data['API_TOKEN'])}
+                col_data = df[predictor_data['input_column']]
+                col_data.rename({predictor_data['input_column']: 'inputs'}, axis='columns')
+                serialized_df = json.dumps(col_data.to_dict())
+                resp = requests.post(predictor_data['predict_url'], headers=headers, data=serialized_df)
+                predictions = pd.DataFrame(resp.json())
 
             elif predictor_data['format'] == 'ray_server':
                 serialized_df = json.dumps(df.to_dict())
@@ -346,7 +372,8 @@ class ModelController():
         name = f'{company_id}@@@@@{name}'
 
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
-        assert predictor_record is not None
+        if predictor_record is None:
+            raise Exception(f"Model does not exists: {original_name}")
 
         linked_dataset = db.session.query(db.Dataset).get(predictor_record.dataset_id)
 
@@ -437,6 +464,17 @@ class ModelController():
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
         if db_p is None:
             raise Exception(f"Predictor '{original_name}' does not exist")
+
+        is_cloud = self.config.get('cloud', False)
+        model = self.get_model_data(db_p.name, company_id=company_id)
+        if (
+            is_cloud is True
+            and model.get('status') in ['generating', 'training']
+            and isinstance(model.get('created_at'), str) is True
+            and (datetime.datetime.now() - parse_datetime(model.get('created_at'))) < datetime.timedelta(hours=1)
+        ):
+            raise Exception('You are unable to delete models currently in progress, please wait before trying again')
+
         db.session.delete(db_p)
         if db_p.dataset_id is not None:
             try:
@@ -551,6 +589,63 @@ class ModelController():
             if not IS_PY36:
                 p.close()
 
+    def export_predictor(self, name: str, company_id: int) -> json:
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        assert predictor_record is not None
+
+        fs_name = f'predictor_{company_id}_{predictor_record.id}'
+        self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
+        local_predictor_savefile = os.path.join(self.config['paths']['predictors'], fs_name)
+        predictor_binary = open(local_predictor_savefile, 'rb').read()
+
+        # Serialize a predictor record into a dictionary 
+        # move into the Predictor db class itself if we use it again somewhere
+        predictor_record_serialized = {
+            'name': predictor_record.name,
+            'data': predictor_record.data,
+            'to_predict': predictor_record.to_predict,
+            'mindsdb_version': predictor_record.mindsdb_version,
+            'native_version': predictor_record.native_version,
+            'is_custom': predictor_record.is_custom,
+            'learn_args': predictor_record.learn_args,
+            'update_status': predictor_record.update_status,
+            'json_ai': predictor_record.json_ai,
+            'code': predictor_record.code,
+            'lightwood_version': predictor_record.lightwood_version,
+            'dtype_dict': predictor_record.dtype_dict,
+            'predictor_binary': predictor_binary
+        }
+
+        return json.dumps(predictor_record_serialized, default=json_serialiser)
+
+    def import_predictor(self, name: str, payload: json, company_id: int) -> None:
+        prs = json.loads(json.loads(payload))
+
+        predictor_record = db.Predictor(
+            name=prs['name'],
+            data=prs['data'],
+            to_predict=prs['to_predict'],
+            company_id=company_id,
+            mindsdb_version=prs['mindsdb_version'],
+            native_version=prs['native_version'],
+            is_custom=prs['is_custom'],
+            learn_args=prs['learn_args'],
+            update_status=prs['update_status'],
+            json_ai=prs['json_ai'],
+            code=prs['code'],
+            lightwood_version=prs['lightwood_version'],
+            dtype_dict=prs['dtype_dict']
+        )
+
+        db.session.add(predictor_record)
+        db.session.commit()
+
+        predictor_binary = base64.b64decode(prs['predictor_binary'])
+        fs_name = f'predictor_{company_id}_{predictor_record.id}'
+        with open(os.path.join(self.config['paths']['predictors'], fs_name), 'wb') as fp:
+            fp.write(predictor_binary)
+
+        self.fs_store.put(fs_name, fs_name, self.config['paths']['predictors'])
 
 '''
 Notes: Remove ray from actors are getting stuck

@@ -431,6 +431,20 @@ class DataStore():
             }
         return ds, creation_info
 
+    def get_files(self, company_id=None):
+        """ Get list of files
+
+            Returns:
+                list[dict]: files metadata
+        """
+        file_records = session.query(File).filter_by(company_id=company_id).all()
+        files_metadata = [{
+            'name': record.name,
+            'row_count': record.row_count,
+            'columns': record.columns,
+        } for record in file_records]
+        return files_metadata
+
     def save_file(self, name, file_path, file_name=None, company_id=None):
         """ Save the file to our store
 
@@ -443,6 +457,10 @@ class DataStore():
             Returns:
                 int: id of 'file' record in db
         """
+        files_metadata = self.get_files()
+        if name in [x['name'] for x in files_metadata]:
+            raise Exception(f'File already exists: {name}')
+
         if file_name is None:
             file_name = Path(file_path).name
 

@@ -20,13 +20,15 @@ from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces,
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.log import initialize_log, get_log
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.db import session
+from mindsdb.interfaces.storage.db import session, engine as db_engine
 
 
 def start(verbose, no_studio, with_nlp):
     config = Config()
 
-    initialize_log(config, 'http', wrap_print=True)
+    server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
+
+    initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
 
     # start static initialization in a separate thread
     init_static_thread = None
@@ -106,8 +108,6 @@ def start(verbose, no_studio, with_nlp):
     port = config['api']['http']['port']
     host = config['api']['http']['host']
 
-    server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
-
     # waiting static initialization
     if not no_studio:
         init_static_thread.join()
@@ -129,11 +129,16 @@ def start(verbose, no_studio, with_nlp):
             print("Gunicorn server is not available by default. If you wish to use it, please install 'gunicorn'")
             return
 
+        def post_fork(arbiter, worker):
+            db_engine.dispose()
+
         options = {
             'bind': f'{host}:{port}',
-            'workers': min(max(mp.cpu_count(), 2), 3),
+            'workers': mp.cpu_count(),
             'timeout': 600,
             'reuse_port': True,
+            'preload_app': True,
+            'post_fork': post_fork,
             'threads': 4
         }
         StandaloneApplication(app, options).run()

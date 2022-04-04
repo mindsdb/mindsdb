@@ -8,14 +8,16 @@ Follow these steps to start predicting in SQL straight away.
 
     <sup><sub>To proceed with a local installation, follow our [Docker instructions](/deployment/docker).</sub></sup>
 
-1. Open your SQL client and connect to MindsDB using the email and password you used to sign up for MindsDB Cloud.
+1. Use MindsDB SQL Editor or open your preferred MySQL client and connect to MindsDB. 
 
-    <sup><sub>If you do not already have a preferred SQL client, we recommend [DBeaver Community Edition](https://dbeaver.io/download/)</sub></sup>
+    <sup><sub>To connect to MindsDB from another SQL client use `cloud.mindsdb.com` as a host, `3306` port and your MindsDB Cloud credentials for username/password.</sub></sup>
 
-1. We have already prepared some example data for you.  To add it to your account, use the `CREATE DATASOURCE` syntax by copy and pasting this command into your SQL client:
+    <sup><sub>If you do not already have a preferred SQL client, we recommend [DBeaver Community Edition](https://dbeaver.io/download/).</sub></sup>
+
+1. We have already prepared some example data for you.  To add it to your account, use the [`CREATE DATABASE`](/sql/api/databases/) syntax by copy and pasting this command into your SQL client:
 
     ``` sql
-    CREATE DATASOURCE example_data
+    CREATE DATABASE example_data
     WITH ENGINE = "postgres",
     PARAMETERS = { 
     	"user": "demo_user",
@@ -25,12 +27,12 @@ Follow these steps to start predicting in SQL straight away.
     	"database": "demo"
     }
     ```
-    <div id="create-datasource">
+    <div id="create-database">
       <style>
-        #create-datasource code { background-color: #353535; color: #f5f5f5 }
+        #create-database code { background-color: #353535; color: #f5f5f5 }
       </style>
     ```
-    mysql> CREATE DATASOURCE example_data
+    mysql> CREATE DATABASE example_data
         -> WITH ENGINE = "postgres",
         -> PARAMETERS = {
         -> "user": "demo_user",
@@ -76,10 +78,10 @@ Follow these steps to start predicting in SQL straight away.
     ```
     </div>
 
-1. Now you are ready to create your first predictor.  Use the `CREATE PREDICTOR` syntax by copy and pasting this command into your SQL client:
+1. Now you are ready to create your first predictor.  Use the [`CREATE PREDICTOR`](/sql/api/predictor/) syntax by copy and pasting this command into your SQL client:
 
     ```
-    CREATE PREDICTOR home_rentals_predictor
+    CREATE PREDICTOR mindsdb.home_rentals_predictor
     FROM example_data
     	(SELECT * FROM demo_data.home_rentals)
     PREDICT rental_price;
@@ -89,7 +91,7 @@ Follow these steps to start predicting in SQL straight away.
         #create-predictor code { background-color: #353535; color: #f5f5f5 }
       </style>
     ```
-    mysql> CREATE PREDICTOR home_rentals_predictor
+    mysql> CREATE PREDICTOR mindsdb.home_rentals_predictor
         -> FROM example_data
         -> (SELECT * FROM demo_data.home_rentals)
         -> PREDICT rental_price;
@@ -101,7 +103,7 @@ Follow these steps to start predicting in SQL straight away.
 
     ```
     SELECT status
-    FROM predictors
+    FROM mindsdb.predictors
     WHERE name='home_rentals_predictor';
     ```
     <div id="predictor-status">
@@ -110,7 +112,7 @@ Follow these steps to start predicting in SQL straight away.
       </style>
     ```
     mysql> SELECT status
-        -> FROM predictors
+        -> FROM mindsdb.predictors
         -> WHERE name='home_rentals_predictor';
     +----------+
     | status   |
@@ -120,7 +122,7 @@ Follow these steps to start predicting in SQL straight away.
     1 row in set (0.19 sec)
     ...
     mysql> SELECT status
-        -> FROM predictors
+        -> FROM mindsdb.predictors
         -> WHERE name='home_rentals_predictor';
     +----------+
     | status   |
@@ -131,11 +133,11 @@ Follow these steps to start predicting in SQL straight away.
     ```
     </div>
 
-1. You should see a status of `generating`, then `training` initially, followed by `complete` once it is done.  The [`SELECT` syntax](/sql/api/select) will allow you to make a prediction based on features.  Make your first prediction by copy and pasting this command into your SQL client:
+1. You should see a status of `generating`, then `training` initially, followed by `complete` once it is done.  The [`SELECT` syntax](/sql/api/select/) will allow you to make a prediction based on features.  Make your first prediction by copy and pasting this command into your SQL client:
 
     ```
     SELECT rental_price
-    FROM home_rentals_predictor
+    FROM mindsdb.home_rentals_predictor
     WHERE number_of_bathrooms=2 AND sqft=1000;
     ```
     <div id="make-prediction">
@@ -144,7 +146,7 @@ Follow these steps to start predicting in SQL straight away.
       </style>
     ```
     mysql> SELECT rental_price
-        -> FROM home_rentals_predictor
+        -> FROM mindsdb.home_rentals_predictor
         -> WHERE number_of_bathrooms=2 AND sqft=1000;
     +--------------+
     | rental_price |

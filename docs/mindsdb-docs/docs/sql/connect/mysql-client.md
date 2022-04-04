@@ -28,7 +28,22 @@ The required parameters are:
     * your MindsDB cloud password
     * no password for local deployment
 
-![Connect](/assets/sql/mysql-client.gif)
+ <div id="create-datasource">
+      <style>
+        #create-datasource code { background-color: #353535; color: #f5f5f5 }
+      </style>
+    ```
+    ~$ mysql -h cloud.mindsdb.com --port 3306 -u zoran@mindsdb.com -p
+    Enter password: 
+    Welcome to the MariaDB monitor.  Commands end with ; or \g.
+    Server version: 5.7.1-MindsDB-1.0 (MindsDB)
+
+    Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+    MySQL [(none)]> 
+    ```
+    </div>
+
 
 
 ## MindsDB Database
@@ -60,7 +75,10 @@ All of the newly trained machine learning models will be visible as a new record
 
 * name - The name of the model.
 * status - Training status(training, complete, error).
+* predict - The name of the target variable column.
 * accuracy - The model accuracy.
-* predict - The name of the target variable.
+* update_status - Trainig update status(up_to_date, updating).
+* mindsdb_version - The mindsdb version used.
+* error - Error message info in case of an errror.
 * select_data_query - SQL select query to create the datasource.
 * training options - Additional training parameters.

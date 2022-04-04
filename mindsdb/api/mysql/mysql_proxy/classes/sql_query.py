@@ -229,8 +229,6 @@ class SQLQuery():
             except Exception:
                 self.query_str = str(self.query)
 
-        # self.raw = sql
-        # self.query = None
         self.planner = None
         self.parameters = []
         self.fetched_data = None
@@ -424,7 +422,7 @@ class SQLQuery():
             # is it query to 'datasources'?
             if (
                 isinstance(mindsdb_sql_struct.from_table, Identifier)
-                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'datasources'
+                and mindsdb_sql_struct.from_table.parts[-1].lower() in ('datasources', 'databases')
                 and (
                     self.database == 'mindsdb'
                     or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
@@ -718,7 +716,10 @@ class SQLQuery():
                     'tables': [table_name]
                 }
             except Exception as e:
-                raise SqlApiException(f'error in apply predictor row step: {e}') from e
+                if type(e) == SqlApiException:
+                    raise e
+                else:
+                    raise SqlApiException(f'error in apply predictor row step: {e}') from e
         elif type(step) in (ApplyPredictorStep, ApplyTimeseriesPredictorStep):
             try:
                 dn = self.datahub.get(self.mindsdb_database_name)
@@ -1070,6 +1071,13 @@ class SQLQuery():
                             )
                         else:
                             raise Exception('Undefined column name')
+
+                        # if column not exists in result - copy value to it
+                        if (column_name, column_alias) not in step_data['columns'][appropriate_table]:
+                            step_data['columns'][appropriate_table].append((column_name, column_alias))
+                            for row in step_data['values']:
+                                if (column_name, column_alias) not in row[appropriate_table]:
+                                    row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][(column_name, column_name)]
                     else:
                         raise Exception(f'Unexpected column name type: {column_identifier}')
 

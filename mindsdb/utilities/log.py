@@ -155,10 +155,10 @@ def initialize_log(config=global_config, logger_name='main', wrap_print=False):
     console_handler.setFormatter(formatter)
     log.addHandler(console_handler)
 
-    db_handler = DbHandler()
-    db_handler.setLevel(config['log']['level'].get('db', logging.WARNING))
-    db_handler.setFormatter(formatter)
-    log.addHandler(db_handler)
+    # db_handler = DbHandler()
+    # db_handler.setLevel(config['log']['level'].get('db', logging.WARNING))
+    # db_handler.setFormatter(formatter)
+    # log.addHandler(db_handler)
 
     if wrap_print:
         sys.stdout = LoggerWrapper([log.debug, log.info, log.warning, log.error], 1)

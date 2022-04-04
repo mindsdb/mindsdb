@@ -84,10 +84,10 @@ show tables;
 
 ![use  mindsdb](/assets/sql/tutorials/use.png)
 
-You will notice there are 2 tables available inside the MindsDB database. To train a new machine learning model we will need to CREATE Predictor as a new record inside the predictors table as:
+You will notice there are 2 tables available inside the MindsDB database. To train a new machine learning model we will need to CREATE PREDICTOR as a new record inside the predictors table as:
 
 ```sql
-CREATE PREDICTOR predictor_name
+CREATE PREDICTOR mindsdb.predictor_name
 FROM integration_name 
 (SELECT column_name, column_name2 FROM table_name)
 PREDICT column_name as column_alias;
@@ -102,7 +102,7 @@ The required values that we need to provide are:
 To train the model that will predict customer churn run:
 
 ```sql
-CREATE PREDICTOR churn_model FROM demo (SELECT * FROM CustomerChurnData)
+CREATE PREDICTOR mindsdb.churn_model FROM demo (SELECT * FROM CustomerChurnData)
 PREDICT Churn as customer_churn USING {"ignore_columns": ["gender"]};
 ```
 

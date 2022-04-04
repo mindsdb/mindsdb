@@ -80,10 +80,10 @@ show tables;
 ​
 ![use  mindsdb](/assets/sql/tutorials/heart-disease/use_mindsdb.png)
 
-You will notice there are 2 tables available inside the MindsDB database. To train a new machine learning model we will need to CREATE Predictor as a new record inside the predictors table as:
+You will notice there are 2 tables available inside the MindsDB database. To train a new machine learning model we will need to CREATE PREDICTOR as a new record inside the predictors table as:
 ​
 ```sql
-CREATE PREDICTOR predictor_name
+CREATE PREDICTOR mindsdb.predictor_name
 FROM integration_name
 (SELECT column_name, column_name2 FROM table_name)
 PREDICT column_name as column_alias;
@@ -98,11 +98,11 @@ The required values that we need to provide are:
 To train the model that will predict the risk of heart disease as target run:
 ​
 ```sql
-CREATE PREDICTOR patients_target FROM db_integration (SELECT * FROM HeartDiseaseData)
+CREATE PREDICTOR mindsdb.patients_target FROM db_integration (SELECT * FROM HeartDiseaseData)
 PREDICT target USING {"ignore_columns": ["sex"]};
 ```
 ​
-![CREATE predictor](/assets/sql/tutorials/heart-disease/create_predictor.png)
+![CREATE PREDICTOR](/assets/sql/tutorials/heart-disease/create_predictor.png)
 ​
 What we did here was to create a predictor called `patients_target `to predict the presence of heart disease as `target` and also ignore the `sex` column as an irrelevant column for the model. The model has started training. To check if the training has finished you can SELECT the model name from the predictors table:
 ​

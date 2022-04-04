@@ -22,13 +22,183 @@ CREATE DATABASE mysql_datasource
 WITH 
 	engine='mariadb', 
 	parameters={
-        "user":"root",
-        "port": 3307, 
-        "password": "password", 
-        "host": "127.0.0.1", 
-        "database": "mariadb"
+                "user":"root",
+                "port": 3307, 
+                "password": "password", 
+                "host": "127.0.0.1", 
+                "database": "mariadb"
         };
 ```
+
+
+### Create Database configurations
+
+> Click on each section to expand the example query for connection.
+
+<details class="success">
+   <summary>Connect to Snowflake</summary> 
+     ```sql
+        CREATE DATABASE snowflake_datasource 
+        WITH 
+                engine='snowflake', 
+                parameters={
+                        "user":"user",
+                        "port": 443, 
+                        "password": "password", 
+                        "host": "127.0.0.1", 
+                        "database": "snowflake",
+                        "account": "account",
+                        "schema": "public",
+                        "protocol": "https",
+                        "warehouse": "warehouse"
+                };
+     ```
+</details>
+
+<details class="success">
+   <summary>Connect to Singlestore</summary> 
+     ```sql
+        CREATE DATABASE singlestore_datasource 
+        WITH 
+                engine='singlestore', 
+                parameters={
+                        "user":"root",
+                        "port": 3306, 
+                        "password": "password", 
+                        "host": "127.0.0.1", 
+                        "database": "singlestore"
+                };
+     ```
+</details>
+
+<details class="success">
+   <summary>Connect to MySQL</summary> 
+     ```sql
+        CREATE DATABASE mysql_datasource 
+        WITH 
+                engine='mysql', 
+                parameters={
+                        "user":"root",
+                        "port": 3306, 
+                        "password": "password", 
+                        "host": "127.0.0.1", 
+                        "database": "mysql"
+                };
+     ```
+</details>
+
+<details class="success">
+   <summary>Connect to ClickHouse</summary> 
+     ```sql
+        CREATE DATABASE clickhouse_datasource 
+        WITH 
+                engine='clickhouse', 
+                parameters={
+                        "user":"default",
+                        "port": 9000, 
+                        "password": "password", 
+                        "host": "127.0.0.1", 
+                        "database": "default"
+                };
+     ```
+</details>
+
+<details class="success">
+   <summary> Connect to PostgreSQL</summary> 
+     ```sql
+        CREATE DATABASE psql_datasource 
+        WITH 
+                engine='postgres', 
+                parameters={
+                        "user":"postgres",
+                        "port": 5432, 
+                        "password": "password", 
+                        "host": "127.0.0.1", 
+                        "database": "postgres"
+                };
+     ```
+</details>
+
+<details class="success">
+   <summary> Connect to Cassandra</summary> 
+     ```sql
+        CREATE DATABASE psql_datasource 
+        WITH 
+                engine='cassandra', 
+                parameters={
+                        "user":"cassandra",
+                        "port": 9042, 
+                        "password": "cassandra", 
+                        "host": "127.0.0.1", 
+                        "database": "keyspace"
+                };
+     ```
+</details>
+
+<details class="success">
+   <summary> Connect to MariaDB example</summary> 
+     ```sql
+        CREATE DATABASE maria_datasource 
+        WITH 
+                engine='mariadb', 
+                parameters={
+                        "user":"root",
+                        "port": 3306, 
+                        "password": "password", 
+                        "host": "127.0.0.1", 
+                        "database": "mariadb"
+                };
+     ```
+</details>
+
+<details class="success">
+   <summary> Connect to Microsoft SQL Server</summary> 
+     ```sql
+        CREATE DATABASE mssql_datasource 
+        WITH 
+                engine='mssql', 
+                parameters={
+                        "user":"sa",
+                        "port": 1433, 
+                        "password": "password", 
+                        "host": "127.0.0.1", 
+                        "database": "master"
+                };
+     ```
+</details>
+
+<details class="success">
+   <summary>Connect to Scylladb</summary> 
+     ```sql
+        CREATE DATABASE scylladb_datasource 
+        WITH 
+                engine='scylladb', 
+                parameters={
+                        "user":"scylladb",
+                        "port": 9042, 
+                        "password": "password", 
+                        "host": "127.0.0.1", 
+                        "database": "scylladb"
+                };
+     ```
+</details>
+
+<details class="success">
+   <summary>Connect to Trino</summary> 
+     ```sql
+        CREATE DATABASE schema_datasource 
+        WITH 
+                engine='trinodb', 
+                parameters={
+                        "user":"trino",
+                        "port": 8080, 
+                        "password": "password", 
+                        "host": "127.0.0.1", 
+                        "catalog": "default",
+                        "schema": "test"
+                };
+     ```
+</details>
 
 ## Listing linked DATABASES 
 
@@ -44,7 +214,7 @@ You can also get metadata about the linked databases in  in `mindsdb.datasources
 select * from mindsdb.datasources;
 ```
 
-![Once a datasource has been correctly created, you will see it registered in `mindsdb.datasources`](../../assets/sql/datasource_listing.png)
+![Once a datasource has been correctly created, you will see it registered in `mindsdb.datasources`](/assets/sql/datasource_listing.png)
 
 !!! info "Work in progress"
     Note this feature is in beta version. If you have additional questions about other supported datasources or you expirience some issues [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or open GitHub issue.

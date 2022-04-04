@@ -13,31 +13,34 @@
     <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ" target="_blank"><img src="https://img.shields.io/badge/slack-@mindsdbcommunity-brightgreen.svg?logo=slack " alt="MindsDB Community"></a>
 	</br>
 	<a href="https://deepnote.com/project/Machine-Learning-With-SQL-8GDF7bc7SzKlhBLorqoIcw/%2Fmindsdb_demo.ipynb" target="_blank"><img src="https://deepnote.com/buttons/launch-in-deepnote-white.svg" alt="Launch in Deepnote"></a>
+	</br>
+	</br>
+	<a href="https://www.producthunt.com/posts/mindsdb?utm_source=badge-review&utm_medium=badge&utm_souce=badge-mindsdb#discussion-body" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/review.svg?post_id=337606&theme=light" alt="MindsDB - In&#0045;database&#0032;machine&#0032;learning | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 	
   <h3 align="center">
     <a href="https://www.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Website</a>
     <span> | </span>
     <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
     <span> | </span>
-    <a href="https://apidocs.mindsdb.com/">API Docs</a>
-    <span> | </span>
     <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ">Community Slack</a>
     <span> | </span>
     <a href="https://github.com/mindsdb/mindsdb/projects">Contribute</a>
+    <span> | </span>
+    <a href="https://cloud.mindsdb.com">Demo</a>
   </h3>
   
 </div>
 
 ----------------------------------------
 
-[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) enables you to use ML predictions in your database using SQL.
+[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)  ML-SQL Server enables machine learning workflows for the most powerful databases and datawarehouses using SQL.  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20inside%20Databases%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks,databases,sql)
 * Developers can quickly add AI capabilities to your applications.
 * Data Scientists can streamline MLOps by deploying ML models as AI Tables.
 * Data Analysts can easily make forecasts on complex data (like multivariate time-series with high cardinality) and visualize them in BI tools like Tableau.
 
 If you like our project then we would really appreciate **a Star ⭐!**
 
-Also, check-out the [rewards and community programs.](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20inside%20Databases%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks,databases,sql)
+Also, check-out the [rewards and community programs.](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)
 
 ----------------------------------------
 
@@ -53,6 +56,10 @@ Also, check-out the [rewards and community programs.](https://mindsdb.com/commun
 
 </h2>
 
+## Demo
+
+You can try Mindsdb ML SQL server here [(demo)](https://cloud.mindsdb.com).
+
 ## Installation
 
 To install the latest version of MindsDB please pull the following Docker image:
@@ -66,6 +73,7 @@ Or, use PyPI:
 ```
 pip install mindsdb
 ```
+
 ## Overview
 
 MindsDB automates and abstracts machine learning models through virtual AI Tables:

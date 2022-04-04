@@ -1086,6 +1086,16 @@ class SQLQuery():
 
             if hasattr(dn, 'create_table') is False:
                 raise Exception(f"Creating table in '{integration_name}' is not supporting")
+
+            # region del 'service' columns
+            for table in step_data['columns']:
+                new_table_columns = []
+                for column in step_data['columns'][table]:
+                    if column[-1] not in ('__mindsdb_row_id', '__mdb_make_predictions'):
+                        new_table_columns.append(column)
+                step_data['columns'][table] = new_table_columns
+            # endregion
+
             dn.create_table(table_name_parts=table_name_parts, columns=step_data['columns'], data=step_data['values'])
             data = None
         else:

@@ -5,19 +5,30 @@ from pathlib import Path
 from uuid import uuid1
 import json
 
+import pandas as pd
 
 from common import (
     CONFIG_PATH,
+    DATASETS_PATH,
+    make_test_csv,
     run_environment
 )
 
 rand = randint(0, pow(10, 12))
 ds_name = f'hr_ds_{rand}'
 pred_name = f'hr_predictor_{rand}'
-root = 'http://localhost:47334/api'
+root = 'http://127.0.0.1:47334/api'
 
 
 class HTTPTest(unittest.TestCase):
+    @staticmethod
+    def get_files_list():
+        response = requests.request('GET', f'{root}/files/')
+        assert response.status_code == 200
+        response_data = response.json()
+        assert isinstance(response_data, list)
+        return response_data
+
     @classmethod
     def setUpClass(cls):
         run_environment(
@@ -103,77 +114,64 @@ class HTTPTest(unittest.TestCase):
         res = requests.get(f'{root}/config/integrations/test_integration')
         assert res.status_code != 200
 
-    def test_2_put_ds(self):
-        # PUT datasource
-        params = {
-            'name': ds_name,
-            'source_type': 'url',
-            'source': 'https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/home_rentals/dataset/train.csv'
-        }
-        url = f'{root}/datasources/{ds_name}'
-        res = requests.put(url, json=params)
-        assert res.status_code == 200
+    def test_2_put_del_file(self):
+        files_list = self.get_files_list()
+        self.assertTrue(len(files_list) == 0)
 
-        db_ds_name = ds_name + '_db'
-        params = {
-            'name': db_ds_name,
-            'query': 'SELECT arrayJoin([1,2,3]) as a, arrayJoin([1,2,3,4,5,6,7,8]) as b',
-            'integration_id': 'default_clickhouse'
-        }
+        if Path('train.csv').is_file() is False:
+            resp = requests.get('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/home_rentals/dataset/train.csv')
+            open('tests/train.csv', 'wb').write(resp.content)
 
-        url = f'{root}/datasources/{db_ds_name}'
-        res = requests.put(url, json=params)
-        assert res.status_code == 200
-        ds_data = res.json()
+        file_path = Path('tests/train.csv')
+        df = pd.read_csv(file_path)
+        test_csv_path = make_test_csv('test_home_rentals.csv', df.head(50))
 
-        assert ds_data['source_type'] == 'default_clickhouse'
-        assert ds_data['row_count'] == 3 * 8
-
-    def test_3_analyze(self):
-        response = requests.get(f'{root}/datasources/{ds_name}/analyze')
-        print(response)
-        assert response.status_code == 200
-
-    def test_4_put_predictor(self):
-        # PUT predictor
-        params = {
-            'data_source_name': ds_name,
-            'to_predict': 'rental_price',
-            'kwargs': {
-                'time_aim': 20,
-                'join_learn_process': True
+        with open(test_csv_path) as td:
+            files = {
+                'file': ('test_data.csv', td, 'text/csv'),
+                'original_file_name': (None, 'super_test_data.csv')  # optional
             }
-        }
-        url = f'{root}/predictors/{pred_name}'
-        res = requests.put(url, json=params)
-        assert res.status_code == 200
 
-        # POST predictions
-        params = {
-            'when': {'sqft': 500}
-        }
-        url = f'{root}/predictors/{pred_name}/predict'
-        res = requests.post(url, json=params)
-        assert res.status_code == 200
-        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
+            response = requests.request('PUT', f'{root}/files/test_file', files=files, json=None, params=None, data=None)
+            self.assertTrue(response.status_code == 200)
 
-    def test_5_datasources(self):
-        """
-        Call list datasources endpoint
-        THEN check the response is success
-        """
-        response = requests.get(f'{root}/datasources/')
-        assert response.status_code == 200
+        files_list = self.get_files_list()
+        self.assertTrue(files_list[0]['name'] == 'test_file')
 
-    def test_6_datasource_not_found(self):
-        """
-        Call unexisting datasource
-        then check the response is NOT FOUND
-        """
-        response = requests.get(f'{root}/datasources/dummy_source')
-        assert response.status_code == 404
+        response = requests.delete(f'{root}/files/test_file')
+        self.assertTrue(response.status_code == 200)
 
-    def test_7_utils(self):
+        files_list = self.get_files_list()
+        self.assertTrue(len(files_list) == 0)
+
+        with open(test_csv_path) as td:
+            files = {
+                'file': ('test_data.csv', td, 'text/csv'),
+                'original_file_name': (None, 'super_test_data.csv')  # optional
+            }
+
+            response = requests.request('PUT', f'{root}/files/test_file', files=files, json=None, params=None, data=None)
+            self.assertTrue(response.status_code == 200)
+
+        files_list = self.get_files_list()
+        self.assertTrue(files_list[0]['name'] == 'test_file')
+
+    def test_3_sql(self):
+        resp = requests.post(
+            f'{root}/sql/query',
+            json={
+                'query': 'select 1;',
+                'context': {}
+            }
+        )
+        self.assertTrue(resp)
+        resp = resp.json()
+        self.assertTrue(resp.get('type') == 'table')
+        self.assertTrue(resp.get('context').get('db') == 'mindsdb')
+        self.assertTrue(resp.get('column_names')[0] == '1')
+        self.assertTrue(resp.get('data')[0][0] == 1)
+
+    def test_4_utils(self):
         """
         Call utilities ping endpoint
         THEN check the response is success
@@ -182,10 +180,13 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/util/ping')
         assert response.status_code == 200
 
+        response = requests.get(f'{root}/util/ping_native')
+        assert response.status_code == 200
+
         response = requests.get(f'{root}/config/vars')
         assert response.status_code == 200
 
-    def test_8_predictors(self):
+    def test_5_predictors(self):
         """
         Call list predictors endpoint
         THEN check the response is success
@@ -193,7 +194,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/predictors/')
         assert response.status_code == 200
 
-    def test_90_predictor_not_found(self):
+    def test_6_predictor_not_found(self):
         """
         Call unexisting predictor
         then check the response is NOT FOUND
@@ -201,7 +202,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/predictors/dummy_predictor')
         assert response.status_code != 200
 
-    def test_91_gui_is_served(self):
+    def test_7_gui_is_served(self):
         """
         GUI downloaded and available
         """
@@ -209,126 +210,115 @@ class HTTPTest(unittest.TestCase):
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0
 
-    def test__92_ds_from_unexist_integration(self):
-        """
-        Call telemetry enabled
-        then check the response is status 200
-        """
-        ds_name = f"ds_{uuid1()}"
-        data = {"integration_id": f'unexists_integration_{uuid1()}',
-                "name": ds_name,
-                "query": "select * from test_data.any_data limit 100;"}
-        response = requests.put(f'{root}/datasources/{ds_name}', json=data)
-        assert response.status_code == 400, f"expected 400 but got {response.status_code}, {response.text}"
+    # def test_93_generate_predictor(self):
+    #     r = requests.put(
+    #         f'{root}/predictors/generate/lwr_{pred_name}',
+    #         json={
+    #             'problem_definition': {'target': 'rental_price'},
+    #             'data_source_name': ds_name,
+    #             'join_learn_process': True
+    #         }
+    #     )
+    #     r.raise_for_status()
 
-    def test_93_generate_predictor(self):
-        r = requests.put(
-            f'{root}/predictors/generate/lwr_{pred_name}',
-            json={
-                'problem_definition': {'target': 'rental_price'},
-                'data_source_name': ds_name,
-                'join_learn_process': True
-            }
-        )
-        r.raise_for_status()
+    # def test_94_edit_json_ai(self):
+    #     # Get the json ai
+    #     resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
+    #     predictor_data = resp.json()
 
-    def test_94_edit_json_ai(self):
-        # Get the json ai
-        resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
-        predictor_data = resp.json()
+    #     # Edit it
+    #     json_ai = predictor_data['json_ai']
+    #     json_ai['problem_definition']
+    #     mixers = json_ai['model']['args']['submodels']
+    #     keep_only = [x for x in mixers if x['module'] != 'Regression']
+    #     json_ai['model']['args']['submodels'] = keep_only
 
-        # Edit it
-        json_ai = predictor_data['json_ai']
-        json_ai['problem_definition']
-        mixers = json_ai['model']['args']['submodels']
-        keep_only = [x for x in mixers if x['module'] != 'Regression']
-        json_ai['model']['args']['submodels'] = keep_only
+    #     # Upload it
+    #     r = requests.put(
+    #         f'{root}/predictors/lwr_{pred_name}/edit/json_ai',
+    #         json={'json_ai': json_ai}
+    #     )
+    #     r.raise_for_status()
 
-        # Upload it
-        r = requests.put(
-            f'{root}/predictors/lwr_{pred_name}/edit/json_ai',
-            json={'json_ai': json_ai}
-        )
-        r.raise_for_status()
+    # def test_95_validate_json_ai(self):
+    #     # Get the json ai
+    #     resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
+    #     predictor_data = resp.json()
 
-    def test_95_validate_json_ai(self):
-        # Get the json ai
-        resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
-        predictor_data = resp.json()
+    #     # Check it
+    #     r = requests.post(
+    #         f'{root}/util/validate_json_ai',
+    #         json={'json_ai': predictor_data['json_ai']}
+    #     )
+    #     r.raise_for_status()
 
-        # Check it
-        r = requests.post(
-            f'{root}/util/validate_json_ai',
-            json={'json_ai': predictor_data['json_ai']}
-        )
-        r.raise_for_status()
+    # def test_96_edit_code(self):
+    #     # Make sure json ai edits went through
+    #     resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
+    #     predictor_data = resp.json()
+    #     assert 'Regression(' not in predictor_data['code']
 
-    def test_96_edit_code(self):
-        # Make sure json ai edits went through
-        resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
-        predictor_data = resp.json()
-        assert 'Regression(' not in predictor_data['code']
+    #     # Change the code
+    #     new_code = predictor_data['code']
+    #     new_code = new_code.split('''self.mode = "predict"''')[0]
+    #     new_code += """\n        return pd.DataFrame({'prediction': [int(5555555)]}).astype(int)"""
 
-        # Change the code
-        new_code = predictor_data['code']
-        new_code = new_code.split('''self.mode = "predict"''')[0]
-        new_code += """\n        return pd.DataFrame({'prediction': [int(5555555)]}).astype(int)"""
+    #     r = requests.put(
+    #         f'{root}/predictors/lwr_{pred_name}/edit/code',
+    #         json={'code': new_code}
+    #     )
+    #     r.raise_for_status()
 
-        r = requests.put(
-            f'{root}/predictors/lwr_{pred_name}/edit/code',
-            json={'code': new_code}
-        )
-        r.raise_for_status()
+    # def test_97_train_predictor(self):
+    #     r = requests.put(
+    #         f'{root}/predictors/lwr_{pred_name}/train',
+    #         json={'data_source_name': ds_name, 'join_learn_process': True}
+    #     )
+    #     r.raise_for_status()
 
-    def test_97_train_predictor(self):
-        r = requests.put(
-            f'{root}/predictors/lwr_{pred_name}/train',
-            json={'data_source_name': ds_name, 'join_learn_process': True}
-        )
-        r.raise_for_status()
+    # def test_98_predict_modified_predictor(self):
+    #     params = {
+    #         'when': {'sqft': 500}
+    #     }
+    #     url = f'{root}/predictors/lwr_{pred_name}/predict'
+    #     res = requests.post(url, json=params)
+    #     assert res.status_code == 200
+    #     pvs = res.json()
+    #     assert pvs[0]['rental_price']['predicted_value'] == 5555555
 
-    def test_98_predict_modified_predictor(self):
-        params = {
-            'when': {'sqft': 500}
-        }
-        url = f'{root}/predictors/lwr_{pred_name}/predict'
-        res = requests.post(url, json=params)
-        assert res.status_code == 200
-        pvs = res.json()
-        assert pvs[0]['rental_price']['predicted_value'] == 5555555
+    # def test_99_export_and_import_predictor(self):
+    #     # Create and train a new predictor
+    #     params = {
+    #         'data_source_name': ds_name,
+    #         'to_predict': 'rental_price',
+    #         'kwargs': {
+    #             'stop_training_in_x_seconds': 20,
+    #             'join_learn_process': True
+    #         }
+    #     }
+    #     url = f'{root}/predictors/test_99_{pred_name}'
+    #     res = requests.put(url, json=params)
+    #     assert res.status_code == 200
 
-    def test_99_export_and_import_predictor(self):
-        # Create and train a new predictor
-        params = {
-            'data_source_name': ds_name,
-            'to_predict': 'rental_price',
-            'kwargs': {
-                'stop_training_in_x_seconds': 20,
-                'join_learn_process': True
-            }
-        }
-        url = f'{root}/predictors/test_99_{pred_name}'
-        res = requests.put(url, json=params)
-        assert res.status_code == 200
+    #     # Export the predictor as a binary
+    #     res = requests.get(f'{root}/predictors/test_99_{pred_name}/export')
+    #     assert res.status_code == 200
+    #     exported_predictor = res.text
 
-        # Export the predictor as a binary
-        res = requests.get(f'{root}/predictors/test_99_{pred_name}/export')
-        assert res.status_code == 200
-        exported_predictor = res.text
+    #     # Delete the predictor
+    #     res = requests.delete(f'{root}/predictors/test_99_{pred_name}')
+    #     assert res.status_code == 200
 
-        # Delete the predictor
-        res = requests.delete(f'{root}/predictors/test_99_{pred_name}')
-        assert res.status_code == 200
+    #     # Import the predictor from the previous export
+    #     res = requests.put(f'{root}/predictors/test_99_{pred_name}/import', json={'serialized_predictor': exported_predictor})
+    #     assert res.status_code == 200
 
-        # Import the predictor from the previous export
-        res = requests.put(f'{root}/predictors/test_99_{pred_name}/import', json={'serialized_predictor': exported_predictor})
-        assert res.status_code == 200
+    #     # Test that it still exists and that it can make predictions
+    #     url = f'{root}/predictors/test_99_{pred_name}/predict'
+    #     res = requests.post(url, json={'when': {'sqft': 500}})
+    #     assert res.status_code == 200
+    #     assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
 
-        # Test that it still exists and that it can make predictions
-        url = f'{root}/predictors/test_99_{pred_name}/predict'
-        res = requests.post(url, json={'when': {'sqft': 500}})
-        assert res.status_code == 200
-        assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

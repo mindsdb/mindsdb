@@ -490,8 +490,9 @@ class DataStore():
             self.fs_store.put(f'{company_id}@@@@@{name}', f'file_{company_id}_{file_record.id}', self.dir)
         except Exception as e:
             log.error(e)
-            shutil.rmtree(ds_meta_dir)
             raise
+        finally:
+            shutil.rmtree(ds_meta_dir)
 
         return file_record.id
 

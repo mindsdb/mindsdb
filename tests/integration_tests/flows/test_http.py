@@ -118,7 +118,11 @@ class HTTPTest(unittest.TestCase):
         files_list = self.get_files_list()
         self.assertTrue(len(files_list) == 0)
 
-        file_path = Path(DATASETS_PATH).joinpath('home_rentals/data.csv')
+        if Path('train.csv').is_file() is False:
+            resp = requests.get('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/home_rentals/dataset/train.csv')
+            open('tests/train.csv', 'wb').write(resp.content)
+
+        file_path = Path('tests/train.csv')
         df = pd.read_csv(file_path)
         test_csv_path = make_test_csv('test_home_rentals.csv', df.head(50))
 

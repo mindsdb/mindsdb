@@ -51,6 +51,11 @@ class ModelInterface():
     def code_from_json_ai(self, *args, **kwargs):
         return self.controller.code_from_json_ai(*args, **kwargs)
 
+    def export_predictor(self, *args, **kwargs):
+        return self.controller.export_predictor(*args, **kwargs)
+
+    def import_predictor(self, *args, **kwargs):
+        return self.controller.import_predictor(*args, **kwargs)
 
 ray_based = False
 

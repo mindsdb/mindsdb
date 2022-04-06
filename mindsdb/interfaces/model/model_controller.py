@@ -152,8 +152,6 @@ class ModelController():
 
     def _check_model_url(self, url):
         # try to post without data and check status code not in (not_found, method_not_allowed)
-        # let url and connection exceptions raise
-
         try:
             resp = requests.post(url)
             if resp.status_code in (404, 405):

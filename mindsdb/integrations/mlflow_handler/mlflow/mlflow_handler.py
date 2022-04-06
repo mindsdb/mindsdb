@@ -41,6 +41,15 @@ class MLflowHandler(PredictiveHandler):
         self.parser = parse_sql
         self.dialect = 'mindsdb'
 
+    def _check_model_url(self, url):
+        # try to post without data and check status code not in (not_found, method_not_allowed)
+        try:
+            resp = requests.post(url)
+            if resp.status_code in (404, 405):
+                raise Exception(f'Model url is incorrect, status_code: {resp.status_code}')
+        except requests.RequestException as e:
+            raise Exception(f'Model url is incorrect: {str(e)}')
+
     def connect(self, **kwargs) -> Dict[str, int]:
         """ Connect to the mlflow process using MlflowClient class. """  # noqa
         self.mlflow_server_url = kwargs['mlflow_server_url']
@@ -103,6 +112,9 @@ class MLflowHandler(PredictiveHandler):
                 print("Error: this model is already registered!")
             else:
                 target = statement.targets[0].parts[-1]  # TODO: multiple target support?
+                url = statement.using['url.predict']
+                if url is not None:
+                    self._check_model_url(url)
                 params = {
                     'target': target,
                     'url': statement.using['url.predict']

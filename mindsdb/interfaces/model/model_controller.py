@@ -150,6 +150,17 @@ class ModelController():
 
         return df, problem_definition, join_learn_process, json_ai_override
 
+    def _check_model_url(self, url):
+        # try to post without data and check status code not in (not_found, method_not_allowed)
+        # let url and connection exceptions raise
+
+        try:
+            resp = requests.post(url)
+            if resp.status_code in (404, 405):
+                raise Exception(f'Model url is incorrect, status_code: {resp.status_code}')
+        except requests.RequestException as e:
+            raise Exception(f'Model url is incorrect: {str(e)}')
+
     @mark_process(name='learn')
     def learn(self, name: str, from_data: dict, to_predict: str, dataset_id: int, kwargs: dict,
               company_id: int, delete_ds_on_fail: Optional[bool] = False) -> None:
@@ -179,7 +190,11 @@ class ModelController():
 
         if 'url' in problem_definition:
             train_url = problem_definition['url'].get('train', None)
+            if train_url is not None:
+                self._check_model_url(train_url)
             predict_url = problem_definition['url'].get('predict', None)
+            if predict_url is not None:
+                self._check_model_url(predict_url)
             com_format = problem_definition['format']
             api_token = problem_definition['API_TOKEN'] if ('API_TOKEN' in problem_definition) else None
             input_column = problem_definition['input_column'] if ('input_column' in problem_definition) else None

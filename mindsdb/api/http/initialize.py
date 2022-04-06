@@ -134,18 +134,21 @@ def download_gui(destignation, version):
         if response.status_code != requests.status_codes.codes.ok:
             raise Exception(f"Error {response.status_code} GET {resource['url']}")
         open(resource['path'], 'wb').write(response.content)
-
     try:
         for r in resources:
             get_resources(r)
     except Exception as e:
         log.error(f'Error during downloading files from s3: {e}')
         return False
-
-    static_folder = Path(destignation).joinpath('static')
+    
+    static_folder = destignation
     static_folder.mkdir(mode=0o777, exist_ok=True, parents=True)
     ZipFile(dist_zip_path).extractall(static_folder)
-    shutil.move(destignation.joinpath('dist'), static_folder)
+    
+    if static_folder.joinpath('dist').is_dir():
+        shutil.move(str(destignation.joinpath('dist').joinpath('index.html')), static_folder)
+        shutil.move(str(destignation.joinpath('dist').joinpath('assets')), static_folder)
+        shutil.rmtree(destignation.joinpath('dist'))
 
     os.remove(dist_zip_path)
 

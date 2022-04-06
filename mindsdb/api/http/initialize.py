@@ -45,7 +45,7 @@ def get_last_compatible_gui_version() -> LooseVersion:
     log = get_log('http')
 
     try:
-        res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config-test.json', timeout=5)
+        res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json', timeout=5)
     except (ConnectionError, requests.exceptions.ConnectionError) as e:
         print(f'Is no connection. {e}')
         return False

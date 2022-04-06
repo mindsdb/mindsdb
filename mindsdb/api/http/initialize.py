@@ -142,20 +142,10 @@ def download_gui(destignation, version):
         log.error(f'Error during downloading files from s3: {e}')
         return False
 
-    for zip_path, dir_name in [[dist_zip_path, 'dist']]:
-        temp_dir = destignation.joinpath(f'temp_{dir_name}')
-        temp_dir.mkdir(mode=0o777, exist_ok=True, parents=True)
-        ZipFile(zip_path).extractall(temp_dir)
-
-        files_path = destignation.joinpath('static')
-        if temp_dir.joinpath('dist', 'static', dir_name).is_dir():
-            shutil.move(temp_dir.joinpath('dist', 'static', dir_name), files_path)
-            shutil.rmtree(temp_dir)
-        else:
-            shutil.move(temp_dir, files_path)
-
     static_folder = Path(destignation).joinpath('static')
-    static_folder.mkdir(parents=True, exist_ok=True)
+    static_folder.mkdir(mode=0o777, exist_ok=True, parents=True)
+    ZipFile(dist_zip_path).extractall(static_folder)
+    shutil.move(destignation.joinpath('dist'), static_folder)
 
     os.remove(dist_zip_path)
 

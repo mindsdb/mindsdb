@@ -5,11 +5,13 @@ import pandas as pd
 from typing import Dict, List, Optional
 
 import lightwood
+from lightwood.api.types import JsonAI
 from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition, _module_from_code
 
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.mysql_handler.mysql_handler.mysql_handler import MySQLHandler
+from mindsdb.interfaces.model.learn_process import brack_to_mod, rep_recur
 from mindsdb.utilities.config import Config
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Join
@@ -72,14 +74,21 @@ class LightwoodHandler(PredictiveHandler):
             else:
                 target = statement.targets[0].parts[-1]
                 params = { 'target': target }
-                json_ai_override = {}
-                json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
-                # todo find a way to unnest dot notation and do override in correct way
-                for k in statement.using:
-                    if '.' in k:
-                        k = k.split('.')[0]
-                    if k in json_ai_keys:
-                        json_ai_override[k] = statement.using[k]
+
+                json_ai_override = statement.using if statement.using else {}
+
+                # this is copied and adapted from ModelController._unpack_old_args, should be a helper function
+                while '.' in str(list(json_ai_override.keys())):
+                    for k in list(json_ai_override.keys()):
+                        if '.' in k:
+                            nks = k.split('.')
+                            obj = json_ai_override
+                            for nk in nks[:-1]:
+                                if nk not in obj:
+                                    obj[nk] = {}
+                                obj = obj[nk]
+                            obj[nks[-1]] = json_ai_override[k]
+                            del json_ai_override[k]
 
                 # get training data from other integration
                 # todo: MDB needs to expose all available handlers through some sort of global state
@@ -89,17 +98,19 @@ class LightwoodHandler(PredictiveHandler):
                 records = handler.select_query(targets=handler_query.targets, from_stmt=handler_query.from_table, where_stmt=handler_query.where)
                 df = pd.DataFrame.from_records(records)[:10]  # todo remove forced cap
 
-                jsonai = json_ai_from_problem(df, ProblemDefinition.from_dict(params))
-                for key in json_ai_override:
-                    setattr(jsonai, key, json_ai_override[key])
+                json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
+                json_ai = json_ai_from_problem(df, ProblemDefinition.from_dict(params)).to_dict()
+                json_ai_override = brack_to_mod(json_ai_override)
+                rep_recur(json_ai, json_ai_override)
+                json_ai = JsonAI.from_dict(json_ai)
 
-                code = code_from_json_ai(jsonai)
+                code = code_from_json_ai(json_ai)
                 predictor = predictor_from_code(code)
                 predictor.learn(df)
                 serialized_predictor = dill.dumps(predictor)
 
                 all_models = self.storage.get('models')
-                payload = {'jsonai': jsonai, 'predictor': serialized_predictor, 'code': code}
+                payload = {'jsonai': json_ai, 'predictor': serialized_predictor, 'code': code}
                 if all_models is not None:
                     all_models[model_name] = payload
                 else:
@@ -246,12 +257,12 @@ if __name__ == '__main__':
     config = Config()
     print(cls.connect(config={'path': config['paths']['root'], 'name': 'lightwood_handler.db'}))
 
-    # try:
-    #     print('dropping predictor...')
-    #     cls.run_native_query(f"DROP PREDICTOR {registered_model_name}")
-    # except:
-    #     print('failed to drop')
-    #     pass
+    try:
+        print('dropping predictor...')
+        cls.run_native_query(f"DROP PREDICTOR {registered_model_name}")
+    except:
+        print('failed to drop')
+        pass
 
     print(cls.get_tables())
 
@@ -283,10 +294,10 @@ if __name__ == '__main__':
     except:
         pass
 
-    # try:
-    #     cls.run_native_query(f"DROP PREDICTOR {model_name}")
-    # except:
-    #     pass
+    try:
+        cls.run_native_query(f"DROP PREDICTOR {model_name}")
+    except:
+        pass
 
     # Test 2: add custom JsonAi
     model_name = 'lw_test_predictor2'

@@ -4,6 +4,7 @@ import dill
 import pandas as pd
 from typing import Dict, List, Optional
 
+import lightwood
 from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition, _module_from_code
 
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
@@ -70,11 +71,15 @@ class LightwoodHandler(PredictiveHandler):
                 print("Error: this model already exists!")
             else:
                 target = statement.targets[0].parts[-1]
-                params = {
-                    'target': target,
-                }
-                # TODO: insert all USING specs here
-                using_params = {}
+                params = { 'target': target }
+                json_ai_override = {}
+                json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
+                # todo find a way to unnest dot notation and do override in correct way
+                for k in statement.using:
+                    if '.' in k:
+                        k = k.split('.')[0]
+                    if k in json_ai_keys:
+                        json_ai_override[k] = statement.using[k]
 
                 # get training data from other integration
                 # todo: MDB needs to expose all available handlers through some sort of global state
@@ -83,9 +88,11 @@ class LightwoodHandler(PredictiveHandler):
                 handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
                 records = handler.select_query(targets=handler_query.targets, from_stmt=handler_query.from_table, where_stmt=handler_query.where)
                 df = pd.DataFrame.from_records(records)[:10]  # todo remove forced cap
-                jsonai = json_ai_from_problem(df, ProblemDefinition.from_dict(params))
 
-                # todo inject with all params in using clause here
+                jsonai = json_ai_from_problem(df, ProblemDefinition.from_dict(params))
+                for key in json_ai_override:
+                    setattr(jsonai, key, json_ai_override[key])
+
                 code = code_from_json_ai(jsonai)
                 predictor = predictor_from_code(code)
                 predictor.learn(df)
@@ -239,12 +246,12 @@ if __name__ == '__main__':
     config = Config()
     print(cls.connect(config={'path': config['paths']['root'], 'name': 'lightwood_handler.db'}))
 
-    try:
-        print('dropping predictor...')
-        cls.run_native_query(f"DROP PREDICTOR {registered_model_name}")
-    except:
-        print('failed to drop')
-        pass
+    # try:
+    #     print('dropping predictor...')
+    #     cls.run_native_query(f"DROP PREDICTOR {registered_model_name}")
+    # except:
+    #     print('failed to drop')
+    #     pass
 
     print(cls.get_tables())
 
@@ -276,7 +283,23 @@ if __name__ == '__main__':
     except:
         pass
 
+    # try:
+    #     cls.run_native_query(f"DROP PREDICTOR {model_name}")
+    # except:
+    #     pass
+
+    # Test 2: add custom JsonAi
+    model_name = 'lw_test_predictor2'
     try:
         cls.run_native_query(f"DROP PREDICTOR {model_name}")
     except:
         pass
+
+
+    if model_name not in cls.get_tables():
+        # 'CREATE PREDICTOR lw_test_predictor2 FROM mysql_handler (SELECT * FROM test.home_rentals_subset) PREDICT rental_price USING model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
+        using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
+        query = f'CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target} USING {using_str}'
+        cls.run_native_query(query)
+
+    p = cls.storage.get('models')

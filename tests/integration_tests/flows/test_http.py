@@ -314,14 +314,14 @@ class HTTPTest(unittest.TestCase):
         # Export the predictor as a binary
         res = requests.get(f'{root}/predictors/test_99_{pred_name}/export')
         assert res.status_code == 200
-        exported_predictor = res.text
+        exported_predictor = json.loads(res.text)  # undo the extra wrapping done by requests
 
         # Delete the predictor
         res = requests.delete(f'{root}/predictors/test_99_{pred_name}')
         assert res.status_code == 200
 
         # Import the predictor from the previous export
-        res = requests.put(f'{root}/predictors/test_99_{pred_name}/import', json={'serialized_predictor': exported_predictor})
+        res = requests.put(f'{root}/predictors/test_99_{pred_name}/import', json=exported_predictor)
         assert res.status_code == 200
 
         # Test that it still exists and that it can make predictions

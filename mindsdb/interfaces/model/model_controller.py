@@ -619,10 +619,10 @@ class ModelController():
         return json.dumps(predictor_record_serialized, default=json_serialiser)
 
     def import_predictor(self, name: str, payload: json, company_id: int) -> None:
-        prs = json.loads(json.loads(payload))
+        prs = json.loads(payload)
 
         predictor_record = db.Predictor(
-            name=prs['name'],
+            name=name,
             data=prs['data'],
             to_predict=prs['to_predict'],
             company_id=company_id,

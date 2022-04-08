@@ -18,23 +18,23 @@ class Query(Resource):
         try:
             result = mysql_proxy.process_query(query)
             if result.type == SQL_ANSWER_TYPE.ERROR:
-                query_response = {
+                listing_query_response = {
                     'type': 'error',
                     'error_code': result.error_code,
                     'error_message': result.error_message
                 }
             elif result.type == SQL_ANSWER_TYPE.OK:
-                query_response = {
+                listing_query_response = {
                     'type': 'ok'
                 }
             elif result.type == SQL_ANSWER_TYPE.TABLE:
-                query_response = {
+                listing_query_response = {
                     'type': 'table',
                     'data': result.data,
                     'column_names': [x['alias'] or x['name'] if 'alias' in x else x['name'] for x in result.columns]
                 }
         except Exception as e:
-            query_response = {
+            listing_query_response = {
                 'type': 'error',
                 'error_code': 0,
                 'error_message': str(e)
@@ -42,6 +42,39 @@ class Query(Resource):
 
         context = mysql_proxy.get_context(context)
 
-        query_response['context'] = context
+        listing_query_response['context'] = context
 
-        return query_response, 200
+        return listing_query_response, 200
+
+
+@ns_conf.route('/list_databases')
+@ns_conf.param('list_databases', 'lists databases of mindsdb')
+class ListDatabases(Resource):
+    @ns_conf.doc('list_databases')
+    def get(self):
+        listing_query = 'SHOW DATABASES'
+        mysql_proxy = FakeMysqlProxy(company_id=request.company_id)
+        try:
+            result = mysql_proxy.process_query(listing_query)
+            if result.type == SQL_ANSWER_TYPE.ERROR:
+                listing_query_response = {
+                    'type': 'error',
+                    'error_code': result.error_code,
+                    'error_message': result.error_message
+                }
+            elif result.type == SQL_ANSWER_TYPE.OK:
+                listing_query_response = {
+                    'type': 'ok'
+                }
+            elif result.type == SQL_ANSWER_TYPE.TABLE:
+                listing_query_response = {
+                    'data': result.data,
+                }
+        except Exception as e:
+            listing_query_response = {
+                'type': 'error',
+                'error_code': 0,
+                'error_message': str(e)
+            }
+        
+        return listing_query_response, 200

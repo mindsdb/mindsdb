@@ -38,6 +38,7 @@ from mindsdb_sql.parser.ast import (
     NullConstant,
     TableColumn,
     Identifier,
+    DropTables,
     Parameter,
     Describe,
     Constant,
@@ -1343,9 +1344,22 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'connection_args': statement.parameters
             }
             return self.answer_create_datasource(struct)
-        if type(statement) == DropPredictor:
+        elif type(statement) == DropPredictor:
             predictor_name = statement.name.parts[-1]
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
+            return SQLAnswer(ANSWER_TYPE.OK)
+        elif type(statement) == DropTables:
+            table_name = statement.name.parts[-1]
+            if len(statement.name.parts) > 0:
+                db_name = statement.name.parts[0]
+            else:
+                db_name = self.session.database
+            if db_name not in ['files', 'mindsdb']:
+                raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
+            if db_name.lower() == 'mindsdb':
+                self.session.datahub['mindsdb'].delete_predictor(predictor_name)
+            elif db_name.lower() == 'files':
+                raise Exception('TODO')
             return SQLAnswer(ANSWER_TYPE.OK)
         elif keyword == 'create_datasource':
             # fallback for statement

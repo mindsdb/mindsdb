@@ -56,6 +56,10 @@ class ListDatabases(Resource):
         mysql_proxy = FakeMysqlProxy(company_id=request.company_id)
         try:
             result = mysql_proxy.process_query(listing_query)
+
+            # iterate over result.data and perform a query on each item to get the name of the tables
+           
+
             if result.type == SQL_ANSWER_TYPE.ERROR:
                 listing_query_response = {
                     'type': 'error',
@@ -68,8 +72,8 @@ class ListDatabases(Resource):
                 }
             elif result.type == SQL_ANSWER_TYPE.TABLE:
                 listing_query_response = {
-                    'data': result.data,
-                }
+                'data': [{'name': x[0], 'tables': mysql_proxy.process_query('SHOW TABLES FROM `{}`'.format(x[0])).data} for x in result.data]
+            }
         except Exception as e:
             listing_query_response = {
                 'type': 'error',

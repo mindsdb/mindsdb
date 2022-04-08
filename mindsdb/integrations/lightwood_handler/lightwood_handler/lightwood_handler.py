@@ -74,6 +74,14 @@ class LightwoodHandler(PredictiveHandler):
             else:
                 target = statement.targets[0].parts[-1]
                 params = { 'target': target }
+                if statement.order_by:
+                    params['timeseries_settings'] = {
+                        'is_timeseries': True,
+                        'order_by': [str(col) for col in statement.order_by],
+                        'group_by': [str(col) for col in statement.group_by],
+                        'window': int(statement.window),
+                        'horizon': int(statement.horizon),
+                    }
 
                 json_ai_override = statement.using if statement.using else {}
 
@@ -95,8 +103,7 @@ class LightwoodHandler(PredictiveHandler):
                 # todo: change data gathering logic if task is TS, use self._data_gather or similar
                 handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]
                 handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
-                records = handler.select_query(targets=handler_query.targets, from_stmt=handler_query.from_table, where_stmt=handler_query.where)
-                df = pd.DataFrame.from_records(records)[:10]  # todo remove forced cap
+                df = self._data_gather(handler, handler_query)
 
                 json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
                 json_ai = json_ai_from_problem(df, ProblemDefinition.from_dict(params)).to_dict()
@@ -133,11 +140,43 @@ class LightwoodHandler(PredictiveHandler):
         df = pd.DataFrame.from_dict({stmt.where.args[0].parts[0]: [stmt.where.args[1].value]})
         return self._call_predictor(df, model)
 
-    def _data_gather(self):
-        # todo: this would be the pipeline for specialized tasks
-        # e.g. check whether it's a TS task, then we gather data with the relevant query plan
-        # e.g. if it's an image task, we go and fetch all images
-        pass
+    def _data_gather(self, handler, query):
+        """
+        Dispatcher to task-specialized data gathering methods.
+        e.g. for time series tasks, gather data per partition and fuse into a single dataframe
+        """  # noqa
+        if query.order_by is not None:
+            return self._ts_data_gather(handler, query)
+        else:
+            # trigger default gather
+            return self._default_data_gather(handler, query)
+
+    def _default_data_gather(self, handler, query):
+        records = handler.select_query(targets=query.targets, from_stmt=query.from_table, where_stmt=query.where)
+        df = pd.DataFrame.from_records(records)  #[:10]  # todo remove forced cap, testing purposes only
+        return df
+
+    def _ts_data_gather(self, handler, query):
+        def _gather_partition(handler, query):
+            # todo apply limit and date here (LATEST vs other cutoffs)
+            # if 'date' == 'LATEST':
+            #     pass
+            # else:
+            #     pass
+            records = handler.select_query(targets=query.targets, from_stmt=query.from_table, where_stmt=query.where)
+            return pd.DataFrame.from_records(records)  # [:10]  # todo remove forced cap, testing purposes only
+
+        if True:  # todo  # query.group_by is None:
+            df = _gather_partition(handler, query)
+        else:
+            groups = handler.select_query(targets=query.group_by, from_stmt=query.from_table, where_stmt=query.where)
+            dfs = []
+            for group in groups:
+                # query.where_stmt =  # todo turn BinaryOperation and other types into an AND with the respective group filter
+                dfs.append(_gather_partition(handler, query))
+            df = pd.concat(*dfs)
+
+        return df
 
     def join(self, stmt, data_handler: BaseHandler, into: Optional[str] = None) -> pd.DataFrame:
         """
@@ -308,9 +347,29 @@ if __name__ == '__main__':
 
 
     if model_name not in cls.get_tables():
-        # 'CREATE PREDICTOR lw_test_predictor2 FROM mysql_handler (SELECT * FROM test.home_rentals_subset) PREDICT rental_price USING model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
         using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
         query = f'CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target} USING {using_str}'
         cls.run_native_query(query)
+        # todo write assertion to check new predictor only uses LightGBM model (it does happen, but assert is missing)
 
+    # Timeseries predictor
+    model_name = 'lw_test_predictor3'
+    target = 'Traffic'
+    data_table_name = 'arrival'
+    oby = 'T'
+    gby = 'Country'
+    window = 8
+    horizon = 4
+
+    model_name = 'lw_test_predictor3'
+    try:
+        cls.run_native_query(f"DROP PREDICTOR {model_name}")
+    except:
+        pass
+
+    query = f'CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
+    cls.run_native_query(query)
+
+    # todo missing assert that predictor is a TS one
     p = cls.storage.get('models')
+    _ = cls._load_predictor(p[model_name], model_name)

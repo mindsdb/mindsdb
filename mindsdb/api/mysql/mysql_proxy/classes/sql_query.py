@@ -297,14 +297,14 @@ class SQLQuery():
             'tables': []
         }
 
-        for substep in step.steps:
-            if isinstance(substep, FetchDataframeStep) is False:
-                raise Exception(f'Wrong step type for MultipleSteps: {step}')
-            markQueryVar(substep.query.where)
-
-        for name, value in vars.items():
+        for var_group in vars:
             for substep in step.steps:
-                replaceQueryVar(substep.query.where, value, name)
+                if isinstance(substep, FetchDataframeStep) is False:
+                    raise Exception(f'Wrong step type for MultipleSteps: {step}')
+                markQueryVar(substep.query.where)
+            for name, value in var_group.items():
+                for substep in step.steps:
+                    replaceQueryVar(substep.query.where, value, name)
             sub_data = self._multiple_steps(step)
             join_query_data(data, sub_data)
 

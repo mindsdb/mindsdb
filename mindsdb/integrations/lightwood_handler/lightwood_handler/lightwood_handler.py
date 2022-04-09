@@ -14,7 +14,7 @@ from mindsdb.integrations.mysql_handler.mysql_handler.mysql_handler import MySQL
 from mindsdb.interfaces.model.learn_process import brack_to_mod, rep_recur
 from mindsdb.utilities.config import Config
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Join
+from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant
 from mindsdb_sql.parser.dialects.mindsdb import (
     # RetrainPredictor,  # todo
     CreatePredictor,
@@ -134,11 +134,19 @@ class LightwoodHandler(PredictiveHandler):
             raise Exception(f"Query type {type(statement)} not supported")
 
     def select_query(self, stmt) -> pd.DataFrame:
-        # todo: expand to arbitrary amount of values
         model = self._get_model(stmt)
-
-        df = pd.DataFrame.from_dict({stmt.where.args[0].parts[0]: [stmt.where.args[1].value]})
+        values = self._recur_get_conditionals(stmt.where.args, {})
+        df = pd.DataFrame.from_dict(values)
         return self._call_predictor(df, model)
+
+    def _recur_get_conditionals(self, args: list, values):
+        """ Gets all the specified data from an arbitrary amount of AND clauses inside the WHERE statement """  # noqa
+        if isinstance(args[0], Identifier) and isinstance(args[1], Constant):
+            values[args[0].parts[0]] = [args[1].value]
+        else:
+            for op in args:
+                values = {**values, **self._recur_get_conditionals([*op.args], {})}
+        return values
 
     def _data_gather(self, handler, query):
         """
@@ -314,7 +322,13 @@ if __name__ == '__main__':
 
     print(cls.describe_table(f'{model_name}'))
 
+    # try single WHERE condition
     query = f"SELECT target from {model_name} WHERE sqft=100"
+    parsed = cls.parser(query, dialect=cls.dialect)
+    predicted = cls.select_query(parsed)
+
+    # try multiple
+    query = f"SELECT target from {model_name} WHERE sqft=100 AND number_of_rooms=2 AND number_of_bathrooms=1"
     parsed = cls.parser(query, dialect=cls.dialect)
     predicted = cls.select_query(parsed)
 
@@ -345,7 +359,6 @@ if __name__ == '__main__':
     except:
         pass
 
-
     if model_name not in cls.get_tables():
         using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
         query = f'CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target} USING {using_str}'
@@ -367,9 +380,21 @@ if __name__ == '__main__':
     except:
         pass
 
-    query = f'CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
-    cls.run_native_query(query)
+    if model_name not in cls.get_tables():
+        query = f'CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
+        cls.run_native_query(query)
 
-    # todo missing assert that predictor is a TS one
-    p = cls.storage.get('models')
-    _ = cls._load_predictor(p[model_name], model_name)
+        # todo missing assert that predictor is a TS one
+        p = cls.storage.get('models')
+        _ = cls._load_predictor(p[model_name], model_name)
+
+    # get predictions from a time series model
+    query = f"SELECT target from {model_name} WHERE {oby} > LATEST"
+    parsed = cls.parser(query, dialect=cls.dialect)
+    predicted = cls.select_query(parsed)
+
+    into_table = 'test_join_tsmodel_into_lw'
+    query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {data_handler_name}.{data_table_name} AS ta JOIN {model_name} AS tb WHERE ta.{oby} > LATEST LIMIT 10"
+    parsed = cls.parser(query, dialect=cls.dialect)
+    predicted = cls.join(parsed, data_handler, into=into_table)
+

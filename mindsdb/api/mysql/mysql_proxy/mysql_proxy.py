@@ -643,6 +643,40 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.session.integration_controller.add(datasource_name, connection_args)
         return SQLAnswer(ANSWER_TYPE.OK)
 
+    def answer_drop_tables(self, statement):
+        """ answer on 'drop table [if exists] {name}'
+            Args:
+                statement: ast
+        """
+        if statement.if_exists is False:
+            for table in statement.tables:
+                if len(table.parts) > 1:
+                    db_name = table.parts[0]
+                else:
+                    db_name = self.session.database
+                if db_name not in ['files', 'mindsdb']:
+                    raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
+                table_name = table.parts[-1]
+                dn = self.session.datahub[db_name]
+                if dn.has_table(table_name) is False:
+                    raise SqlApiException(f"Cannot delete a table from database '{db_name}': table does not exists")
+
+        for table in statement.tables:
+            if len(table.parts) > 1:
+                db_name = table.parts[0]
+            else:
+                db_name = self.session.database
+            if db_name not in ['files', 'mindsdb']:
+                raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
+            table_name = table.parts[-1]
+            dn = self.session.datahub[db_name]
+            if dn.has_table(table_name):
+                if db_name == 'mindsdb':
+                    self.session.datahub['mindsdb'].delete_predictor(table_name)
+                elif db_name == 'files':
+                    self.session.data_store.delete_file(table_name)
+        return SQLAnswer(ANSWER_TYPE.OK)
+
     def answer_drop_datasource(self, ds_name):
         try:
             ds = self.session.integration_controller.get(ds_name)
@@ -1349,18 +1383,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
             return SQLAnswer(ANSWER_TYPE.OK)
         elif type(statement) == DropTables:
-            table_name = statement.name.parts[-1]
-            if len(statement.name.parts) > 0:
-                db_name = statement.name.parts[0]
-            else:
-                db_name = self.session.database
-            if db_name not in ['files', 'mindsdb']:
-                raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
-            if db_name.lower() == 'mindsdb':
-                self.session.datahub['mindsdb'].delete_predictor(predictor_name)
-            elif db_name.lower() == 'files':
-                raise Exception('TODO')
-            return SQLAnswer(ANSWER_TYPE.OK)
+            return self.answer_drop_tables(statement)
         elif keyword == 'create_datasource':
             # fallback for statement
             return self.answer_create_datasource(struct)

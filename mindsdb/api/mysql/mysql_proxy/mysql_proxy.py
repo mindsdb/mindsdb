@@ -1317,7 +1317,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if (
             isinstance(self.session.database, str)
             and len(self.session.database) > 0
-            and self.session.database.lower() not in ('mindsdb', 'files')
+            and self.session.database.lower() not in ('mindsdb', 'files', 'information_schema')
             and '@@' not in sql.lower()
             and (
                 (
@@ -1497,7 +1497,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     schema = statement.from_table.parts[-1]
                 where = BinaryOperation('and', args=[
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
-                    BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
+                    BinaryOperation('or', args=[
+                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')]),
+                        BinaryOperation('like', args=[Identifier('table_type'), Constant('SYSTEM VIEW')])
+                    ])
                 ])
                 if statement.where is not None:
                     where = BinaryOperation('and', args=[statement.where, where])

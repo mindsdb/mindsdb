@@ -37,14 +37,10 @@ class LightwoodHandler(PredictiveHandler):
         return self.check_status()
 
     def check_status(self) -> Dict[str, int]:
-        """ Checks that the connection is, as expected, an MlflowClient instance. """  # noqa
-        # todo: potentially nothing to do here, as we can assume user to install requirements first
         try:
-            import lightwood
+            import lightwood  # todo maybe we shouldn't even check, as we can assume user has installed requisites for the handler
             year, major, minor, hotfix = lightwood.__version__.split('.')
-            assert int(year) >= 22
-            assert int(major) >= 2
-            assert int(minor) >= 3
+            assert int(year) > 22 or (int(year) == 22 and int(major) >= 4)
             print("Lightwood OK!")
             return {'status': '200'}
         except AssertionError as e:
@@ -135,6 +131,11 @@ class LightwoodHandler(PredictiveHandler):
 
     def select_query(self, stmt) -> pd.DataFrame:
         model = self._get_model(stmt)
+        # if 'LATEST' in str(stmt.where):
+        #     stmt = self._get_latest_oby(stmt)  # todo: it would be easy if I had access to the handler here, just query the handler to get the latest available date then proceed as usual
+        # todo: with signatures as they stand, the way to do it is to actually fetch latest from model internal data, and emit forecast for that
+        # TODO: check with max whether there is support for latest without joining. if so, this is a problem. if not, then it's actually fine.
+        # todo: for now, will just ignore this possibility
         values = self._recur_get_conditionals(stmt.where.args, {})
         df = pd.DataFrame.from_dict(values)
         return self._call_predictor(df, model)
@@ -199,15 +200,30 @@ class LightwoodHandler(PredictiveHandler):
             data_clause = 'left'
         model_alias = str(getattr(stmt.from_table, model_clause).alias)
 
-        data_handler_table = getattr(stmt.from_table, data_clause).parts[-1]  # todo should be ".".join(...) if data handlers support more than one table
+        data_handler_table = getattr(stmt.from_table, data_clause).parts[-1]  # todo should be ".".join(...) if data handlers support more than one table?
         data_handler_cols = list(set([t.parts[-1] for t in stmt.targets]))
 
-        data_query = f"""SELECT {','.join(data_handler_cols)} FROM {data_handler_table}"""
-        if stmt.where:
-            data_query += f" WHERE {str(stmt.where)}"
-        if stmt.limit:
-            # todo integration should handle this depending on type of query... e.g. if it is TS, then we have to fetch correct groups first and limit later, use self._data_gather or similar
-            data_query += f" LIMIT {stmt.limit.value}"
+        model = self._get_model(stmt)
+        is_ts = model.problem_definition.timeseries_settings.is_timeseries
+
+        if not is_ts:
+            data_query = f"""SELECT {','.join(data_handler_cols)} FROM {data_handler_table}"""
+            if stmt.where:
+                data_query += f" WHERE {str(stmt.where)}"
+            if stmt.limit:
+                # todo integration should handle this depending on type of query... e.g. if it is TS, then we have to fetch correct groups first and limit later, use self._data_gather or similar
+                data_query += f" LIMIT {stmt.limit.value}"
+        else:
+            # 1. get all groups
+            # 2. get LATEST available date for each group
+            # 2. get WINDOW context (if not enough, check whether tss.allow_incomplete_history and depending on that either pass incomplete or not)
+            # 3. concatenate all contexts into single data query
+
+            # todo: how to retrieve groups? we can limit ourselves to the ones discovered at training (stored inside the predictor metadata),
+            # todo: however it is also possible for new groups to exist and for those we should probably still create predictions, right?
+            # todo: this means doing a query in the data handler to get the available groups in the table after doing the right order by filter (e.g. LATEST or any other particular cutoff)
+            # for group in data_handler_group_query_after_date_cutoff
+            pass
 
         parsed_query = self.parser(data_query, dialect=self.dialect)
         model_input = pd.DataFrame.from_records(
@@ -226,7 +242,6 @@ class LightwoodHandler(PredictiveHandler):
         model_input.columns = aliased_columns
 
         # get model output
-        model = self._get_model(stmt)
         predictions = self._call_predictor(model_input, model)
 
         # rename columns
@@ -304,12 +319,12 @@ if __name__ == '__main__':
     config = Config()
     print(cls.connect(config={'path': config['paths']['root'], 'name': 'lightwood_handler.db'}))
 
-    try:
-        print('dropping predictor...')
-        cls.run_native_query(f"DROP PREDICTOR {registered_model_name}")
-    except:
-        print('failed to drop')
-        pass
+    # try:
+    #     print('dropping predictor...')
+    #     cls.run_native_query(f"DROP PREDICTOR {registered_model_name}")
+    # except:
+    #     print('failed to drop')
+    #     pass
 
     print(cls.get_tables())
 
@@ -347,17 +362,17 @@ if __name__ == '__main__':
     except:
         pass
 
-    try:
-        cls.run_native_query(f"DROP PREDICTOR {model_name}")
-    except:
-        pass
+    # try:
+    #     cls.run_native_query(f"DROP PREDICTOR {model_name}")
+    # except:
+    #     pass
 
     # Test 2: add custom JsonAi
     model_name = 'lw_test_predictor2'
-    try:
-        cls.run_native_query(f"DROP PREDICTOR {model_name}")
-    except:
-        pass
+    # try:
+    #     cls.run_native_query(f"DROP PREDICTOR {model_name}")
+    # except:
+    #     pass
 
     if model_name not in cls.get_tables():
         using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
@@ -375,10 +390,10 @@ if __name__ == '__main__':
     horizon = 4
 
     model_name = 'lw_test_predictor3'
-    try:
-        cls.run_native_query(f"DROP PREDICTOR {model_name}")
-    except:
-        pass
+    # try:
+    #     cls.run_native_query(f"DROP PREDICTOR {model_name}")
+    # except:
+    #     pass
 
     if model_name not in cls.get_tables():
         query = f'CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
@@ -389,10 +404,12 @@ if __name__ == '__main__':
         _ = cls._load_predictor(p[model_name], model_name)
 
     # get predictions from a time series model
-    query = f"SELECT target from {model_name} WHERE {oby} > LATEST"
-    parsed = cls.parser(query, dialect=cls.dialect)
-    predicted = cls.select_query(parsed)
+    # TODO: for now, I will just ignore this use case, I don't think we even support it as of now, so let's just consider a normal JOIN
+    # query = f"SELECT target from {model_name} WHERE {oby} > LATEST"
+    # parsed = cls.parser(query, dialect=cls.dialect)
+    # predicted = cls.select_query(parsed)
 
+    # todo: limit in this case should be checked/compared against model's own HORIZON
     into_table = 'test_join_tsmodel_into_lw'
     query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {data_handler_name}.{data_table_name} AS ta JOIN {model_name} AS tb WHERE ta.{oby} > LATEST LIMIT 10"
     parsed = cls.parser(query, dialect=cls.dialect)

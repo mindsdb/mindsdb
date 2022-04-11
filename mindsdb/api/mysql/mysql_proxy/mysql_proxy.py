@@ -1317,7 +1317,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if (
             isinstance(self.session.database, str)
             and len(self.session.database) > 0
-            and self.session.database.lower() not in ('mindsdb', 'files')
+            and self.session.database.lower() not in ('mindsdb', 'files', 'information_schema')
             and '@@' not in sql.lower()
             and (
                 (

@@ -131,11 +131,6 @@ class LightwoodHandler(PredictiveHandler):
 
     def select_query(self, stmt) -> pd.DataFrame:
         model = self._get_model(stmt)
-        # if 'LATEST' in str(stmt.where):
-        #     stmt = self._get_latest_oby(stmt)  # todo: it would be easy if I had access to the handler here, just query the handler to get the latest available date then proceed as usual
-        # todo: with signatures as they stand, the way to do it is to actually fetch latest from model internal data, and emit forecast for that
-        # TODO: check with max whether there is support for latest without joining. if so, this is a problem. if not, then it's actually fine.
-        # todo: for now, will just ignore this possibility
         values = self._recur_get_conditionals(stmt.where.args, {})
         df = pd.DataFrame.from_dict(values)
         return self._call_predictor(df, model)
@@ -207,33 +202,85 @@ class LightwoodHandler(PredictiveHandler):
         is_ts = model.problem_definition.timeseries_settings.is_timeseries
 
         if not is_ts:
-            data_query = f"""SELECT {','.join(data_handler_cols)} FROM {data_handler_table}"""
+            data_query = f"SELECT {','.join(data_handler_cols)} FROM {data_handler_table}"
             if stmt.where:
                 data_query += f" WHERE {str(stmt.where)}"
             if stmt.limit:
-                # todo integration should handle this depending on type of query... e.g. if it is TS, then we have to fetch correct groups first and limit later, use self._data_gather or similar
                 data_query += f" LIMIT {stmt.limit.value}"
+
+            parsed_query = self.parser(data_query, dialect=self.dialect)
+            model_input = pd.DataFrame.from_records(
+                data_handler.select_query(
+                    parsed_query.targets,
+                    parsed_query.from_table,
+                    parsed_query.where
+                ))
         else:
-            # 1. get all groups
-            # 2. get LATEST available date for each group
-            # 2. get WINDOW context (if not enough, check whether tss.allow_incomplete_history and depending on that either pass incomplete or not)
-            # 3. concatenate all contexts into single data query
+            # for TS, fetch correct groups, build window context, predict and limit, using self._ts_data_gather
 
-            # todo: how to retrieve groups? we can limit ourselves to the ones discovered at training (stored inside the predictor metadata),
-            # todo: however it is also possible for new groups to exist and for those we should probably still create predictions, right?
-            # todo: this means doing a query in the data handler to get the available groups in the table after doing the right order by filter (e.g. LATEST or any other particular cutoff)
-            # for group in data_handler_group_query_after_date_cutoff
-            pass
+            # 1) get all groups
+            gby_col = model.problem_definition.timeseries_settings.group_by[0]  # todo add multiple group support
+            oby_col = model.problem_definition.timeseries_settings.order_by[0]  # remove indexing once lightwood drops multi-order support
+            for col in [gby_col] + [oby_col]:
+                if col not in data_handler_cols:
+                    data_handler_cols.append(col)
 
-        parsed_query = self.parser(data_query, dialect=self.dialect)
-        model_input = pd.DataFrame.from_records(
-            data_handler.select_query(
-                parsed_query.targets,
-                parsed_query.from_table,
-                parsed_query.where
-            ))
+            window = model.problem_definition.timeseries_settings.window
+            groups_query = f"SELECT {gby_col} from {data_handler_table}"  # todo add DISTINCT once parser supports it
+            parsed_groups_query = self.parser(groups_query, dialect=self.handler_dialect)
+            groups = list(pd.DataFrame.from_records(
+                data_handler.select_query(
+                    parsed_groups_query.targets,
+                    parsed_groups_query.from_table,
+                    parsed_groups_query.where
+                )
+            ).drop_duplicates().squeeze())
+
+            # 2) get LATEST available date and window for each group
+            latests = {}
+            windows = {}
+
+            for group in groups:
+                # get latest observed timestamp
+                latest_query = f"SELECT {oby_col} FROM {data_handler_table}"
+                latest_query += f" WHERE {gby_col}='{group}'"
+                parsed_latest_query = self.parser(latest_query, dialect=self.handler_dialect)
+
+                # we order and limit the df instead of via SELECT because it doesn't support those operators (yet)
+                df = pd.DataFrame.from_records(
+                    data_handler.select_query(
+                        parsed_latest_query.targets,
+                        parsed_latest_query.from_table,
+                        parsed_latest_query.where,
+                    ))
+                df = list(df.sort_values(oby_col, ascending=False).iloc[0].values)[0]
+                latests[group] = df
+
+                # get window context
+                window_query = f"SELECT {','.join(data_handler_cols)} FROM {data_handler_table}"
+                window_query += f" WHERE {gby_col}='{group}'"
+                # as above, we order and limit the df instead of via SELECT because it doesn't support those operators
+                parsed_window_query = self.parser(window_query, dialect=self.handler_dialect)
+                df = pd.DataFrame.from_records(
+                    data_handler.select_query(
+                        parsed_window_query.targets,
+                        parsed_window_query.from_table,
+                        parsed_window_query.where,
+                    ))
+
+                if len(df) < window and not model.problem_definition.timeseries_settings.allow_incomplete_history:
+                    raise Exception(f"Not enough data for group {group}. Either pass more historical context or train a predictor with the `allow_incomplete_history` argument set to True.")
+                df = df.sort_values(oby_col, ascending=False).iloc[0:window]
+                windows[group] = df
+
+            # 3) concatenate all contexts into single data query
+            model_input = pd.concat([v for k, v in windows.items()]).reset_index(drop=True)
+
+        # get model output
+        predictions = self._call_predictor(model_input, model)
 
         # rename columns
+        # todo: simplify this and move to separate method?
         aliased_columns = list(model_input.columns)
         for col in stmt.targets:
             if str(col.parts[0]) != model_alias and col.alias is not None:
@@ -241,10 +288,6 @@ class LightwoodHandler(PredictiveHandler):
                 aliased_columns[aliased_columns.index(col.parts[-1])] = str(col.alias)
         model_input.columns = aliased_columns
 
-        # get model output
-        predictions = self._call_predictor(model_input, model)
-
-        # rename columns
         aliased_columns = list(predictions.columns)
         for col in stmt.targets:
             if col.parts[0] == model_alias and col.alias is not None:
@@ -295,6 +338,8 @@ class LightwoodHandler(PredictiveHandler):
 
     def _call_predictor(self, df, predictor):
         predictions = predictor.predict(df)
+        if 'original_index' in predictions.columns:
+            predictions = predictions.sort_values(by='original_index')
         return df.join(predictions)
 
 
@@ -404,10 +449,6 @@ if __name__ == '__main__':
         _ = cls._load_predictor(p[model_name], model_name)
 
     # get predictions from a time series model
-    # TODO: for now, I will just ignore this use case, I don't think we even support it as of now, so let's just consider a normal JOIN
-    # query = f"SELECT target from {model_name} WHERE {oby} > LATEST"
-    # parsed = cls.parser(query, dialect=cls.dialect)
-    # predicted = cls.select_query(parsed)
 
     # todo: limit in this case should be checked/compared against model's own HORIZON
     into_table = 'test_join_tsmodel_into_lw'

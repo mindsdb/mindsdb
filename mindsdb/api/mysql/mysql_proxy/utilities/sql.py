@@ -1,3 +1,4 @@
+import copy
 import duckdb
 import numpy as np
 from mindsdb_sql import parse_sql
@@ -29,7 +30,7 @@ def query_df(df, query):
     if isinstance(query, str):
         query_ast = parse_sql(query, dialect='mysql')
     else:
-        query_ast = query
+        query_ast = copy.deepcopy(query)
 
     if isinstance(query_ast, Select) is False or isinstance(query_ast.from_table, Identifier) is False:
         raise Exception("Only 'SELECT from TABLE' statements supported for internal query")

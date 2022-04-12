@@ -180,7 +180,8 @@ def is_empty_prediction_row(predictor_value):
 class Column:
     def __init__(self, name=None, alias=None,
                  table_name=None, table_alias=None,
-                 type=None, database=None):
+                 type=None, database=None, flags=None,
+                 charset=None):
         if alias is None:
             alias = name
         if table_alias is None:
@@ -191,13 +192,15 @@ class Column:
         self.table_alias = table_alias
         self.type = type
         self.database = database
+        self.flags = flags
+        self.charset = charset
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.__dict__})'
 
 
 class SQLQuery():
-    def __init__(self, sql, session, execute=True):
+    def __init__(self, sql, session, planner=None, execute=True):
         self.session = session
         self.integration = session.integration
         self.database = None if session.database == '' else session.database.lower()
@@ -227,8 +230,9 @@ class SQLQuery():
         self.planner = None
         self.parameters = []
         self.fetched_data = None
-        self.model_types = {}
-        self._process_query(sql)
+        # self.model_types = {}
+        # self._process_query(sql)
+        self.planner = planner
         if execute:
             self.prepare_query(prepare=False)
             self.execute_query()
@@ -310,49 +314,6 @@ class SQLQuery():
 
         return data
 
-    def _process_query(self, sql):
-        # self.query = parse_sql(sql, dialect='mindsdb')
-
-        integrations_names = self.datahub.get_integrations_names()
-        integrations_names.append('information_schema')
-        integrations_names.append('files')
-        integrations_names.append('views')
-
-        all_tables = get_all_tables(self.query)
-
-        predictor_metadata = {}
-        predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
-        for model_name in set(all_tables):
-            for p in predictors:
-                if p.name == model_name:
-                    if isinstance(p.data, dict) and 'error' not in p.data:
-                        ts_settings = p.learn_args.get('timeseries_settings', {})
-                        if ts_settings.get('is_timeseries') is True:
-                            window = ts_settings.get('window')
-                            order_by = ts_settings.get('order_by')[0]
-                            group_by = ts_settings.get('group_by')
-                            if isinstance(group_by, list) is False and group_by is not None:
-                                group_by = [group_by]
-                            predictor_metadata[model_name] = {
-                                'timeseries': True,
-                                'window': window,
-                                'horizon': ts_settings.get('horizon'),
-                                'order_by_column': order_by,
-                                'group_by_columns': group_by
-                            }
-                        else:
-                            predictor_metadata[model_name] = {
-                                'timeseries': False
-                            }
-                        self.model_types.update(p.data.get('dtypes', {}))
-
-        self.planner = query_planner.QueryPlanner(
-            self.query,
-            integrations=integrations_names,
-            predictor_namespace=self.mindsdb_database_name,
-            predictor_metadata=predictor_metadata,
-            default_namespace=self.database
-        )
 
     def prepare_query(self, prepare=True):
         mindsdb_sql_struct = self.query
@@ -1112,34 +1073,4 @@ class SQLQuery():
 
     @property
     def columns(self):
-        return self.to_mysql_columns(self.columns_list)
-
-    def to_mysql_columns(self, columns_list):
-        result = []
-        for column_record in columns_list:
-            try:
-                field_type = self.model_types.get(column_record.name)
-            except Exception:
-                field_type = column_record.type
-
-            column_type = TYPES.MYSQL_TYPE_VAR_STRING
-            if field_type == dtype.date:
-                column_type = TYPES.MYSQL_TYPE_DATE
-            elif field_type == dtype.datetime:
-                column_type = TYPES.MYSQL_TYPE_DATETIME
-            elif field_type == dtype.float:
-                column_type = TYPES.MYSQL_TYPE_DOUBLE
-            elif field_type == dtype.integer:
-                column_type = TYPES.MYSQL_TYPE_LONG
-
-            result.append({
-                'database': column_record.database or self.database,
-                #  TODO add 'original_table'
-                'table_name': column_record.table_name,
-                'name': column_record.name,
-                'alias': column_record.alias or column_record.name,
-                # NOTE all work with text-type, but if/when wanted change types to real,
-                # it will need to check all types casts in BinaryResultsetRowPacket
-                'type': column_type
-            })
-        return result
+        raise Exception('this method must not use')

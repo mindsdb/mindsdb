@@ -280,7 +280,8 @@ class DataStore():
                 'athena': AthenaDS,
                 'cassandra': CassandraDS,
                 'scylladb': ScyllaDS,
-                'trinodb': TrinoDS
+                'trinodb': TrinoDS,
+                'questdb': PostgresDS
             }
 
             try:
@@ -305,7 +306,7 @@ class DataStore():
                 }
                 ds = dsClass(**creation_info['kwargs'])
 
-            elif integration['type'] in ['mssql', 'postgres', 'cockroachdb', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb']:
+            elif integration['type'] in ['mssql', 'postgres', 'cockroachdb', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb', 'questdb']:
                 creation_info = {
                     'class': dsClass.__name__,
                     'args': [],
@@ -490,8 +491,9 @@ class DataStore():
             self.fs_store.put(f'{company_id}@@@@@{name}', f'file_{company_id}_{file_record.id}', self.dir)
         except Exception as e:
             log.error(e)
-            shutil.rmtree(ds_meta_dir)
             raise
+        finally:
+            shutil.rmtree(ds_meta_dir)
 
         return file_record.id
 

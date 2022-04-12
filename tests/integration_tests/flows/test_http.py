@@ -299,26 +299,25 @@ class HTTPTest(unittest.TestCase):
     #     url = f'{root}/predictors/test_99_{pred_name}'
     #     res = requests.put(url, json=params)
     #     assert res.status_code == 200
-
+    #
     #     # Export the predictor as a binary
     #     res = requests.get(f'{root}/predictors/test_99_{pred_name}/export')
     #     assert res.status_code == 200
-    #     exported_predictor = res.text
-
+    #     exported_predictor = json.loads(res.text)  # undo the extra wrapping done by requests
+    #
     #     # Delete the predictor
     #     res = requests.delete(f'{root}/predictors/test_99_{pred_name}')
     #     assert res.status_code == 200
-
+    #
     #     # Import the predictor from the previous export
-    #     res = requests.put(f'{root}/predictors/test_99_{pred_name}/import', json={'serialized_predictor': exported_predictor})
+    #     res = requests.put(f'{root}/predictors/test_99_{pred_name}/import', json=exported_predictor)
     #     assert res.status_code == 200
-
+    #
     #     # Test that it still exists and that it can make predictions
     #     url = f'{root}/predictors/test_99_{pred_name}/predict'
     #     res = requests.post(url, json={'when': {'sqft': 500}})
     #     assert res.status_code == 200
     #     assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
-
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

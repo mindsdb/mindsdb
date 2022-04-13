@@ -1310,7 +1310,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.insert_predictor_answer(insert_dict)
 
     def process_query(self, sql):
-    # def query_answer(self, sql):
         # +++
         # if query not for mindsdb then process that query in integration db
         # TODO redirect only select data queries
@@ -2532,6 +2531,10 @@ class FakeMysqlProxy(MysqlProxy):
         server.original_data_store = DataStore()
         server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
+
+        self.charset = 'utf8'
+        self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
+        self.client_capabilities = None
 
         self.request = request
         self.client_address = client_address

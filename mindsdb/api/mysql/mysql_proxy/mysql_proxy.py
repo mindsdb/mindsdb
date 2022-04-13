@@ -39,6 +39,7 @@ from mindsdb_sql.parser.ast import (
     CreateTable,
     TableColumn,
     Identifier,
+    DropTables,
     Parameter,
     Describe,
     Constant,
@@ -641,6 +642,40 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if integration is not None:
             raise SqlApiException(f"Database '{datasource_name}' already exists.")
         self.session.integration_controller.add(datasource_name, connection_args)
+        return SQLAnswer(ANSWER_TYPE.OK)
+
+    def answer_drop_tables(self, statement):
+        """ answer on 'drop table [if exists] {name}'
+            Args:
+                statement: ast
+        """
+        if statement.if_exists is False:
+            for table in statement.tables:
+                if len(table.parts) > 1:
+                    db_name = table.parts[0]
+                else:
+                    db_name = self.session.database
+                if db_name not in ['files', 'mindsdb']:
+                    raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
+                table_name = table.parts[-1]
+                dn = self.session.datahub[db_name]
+                if dn.has_table(table_name) is False:
+                    raise SqlApiException(f"Cannot delete a table from database '{db_name}': table does not exists")
+
+        for table in statement.tables:
+            if len(table.parts) > 1:
+                db_name = table.parts[0]
+            else:
+                db_name = self.session.database
+            if db_name not in ['files', 'mindsdb']:
+                raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
+            table_name = table.parts[-1]
+            dn = self.session.datahub[db_name]
+            if dn.has_table(table_name):
+                if db_name == 'mindsdb':
+                    self.session.datahub['mindsdb'].delete_predictor(table_name)
+                elif db_name == 'files':
+                    self.session.data_store.delete_file(table_name)
         return SQLAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_datasource(self, ds_name):
@@ -1283,7 +1318,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if (
             isinstance(self.session.database, str)
             and len(self.session.database) > 0
-            and self.session.database.lower() not in ('mindsdb', 'files')
+            and self.session.database.lower() not in ('mindsdb', 'files', 'information_schema')
             and '@@' not in sql.lower()
             and (
                 (
@@ -1343,10 +1378,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'connection_args': statement.parameters
             }
             return self.answer_create_datasource(struct)
-        if type(statement) == DropPredictor:
+        elif type(statement) == DropPredictor:
             predictor_name = statement.name.parts[-1]
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
             return SQLAnswer(ANSWER_TYPE.OK)
+        elif type(statement) == DropTables:
+            return self.answer_drop_tables(statement)
         elif type(statement) == DropDatasource or type(statement) == DropDatabase:
             ds_name = statement.name.parts[-1]
             return self.answer_drop_datasource(ds_name)
@@ -1457,7 +1494,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     schema = statement.from_table.parts[-1]
                 where = BinaryOperation('and', args=[
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
-                    BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
+                    BinaryOperation('or', args=[
+                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')]),
+                        BinaryOperation('like', args=[Identifier('table_type'), Constant('SYSTEM VIEW')])
+                    ])
                 ])
                 if statement.where is not None:
                     where = BinaryOperation('and', args=[statement.where, where])

@@ -984,7 +984,7 @@ class SQLQuery():
                                 )
                     elif type(column_identifier) == Identifier:
                         column_name_parts = column_identifier.parts
-                        column_alias = None if column_identifier.alias is None else '.'.join(
+                        column_alias = column_identifier.parts[-1] if column_identifier.alias is None else '.'.join(
                             column_identifier.alias.parts)
                         if len(column_name_parts) > 2:
                             raise Exception(
@@ -1104,6 +1104,18 @@ class SQLQuery():
                 step_data['columns'][table] = new_table_columns
             # endregion
 
+            # region del columns filtered at projection step
+            filtered_column_names = [x.name for x in self.columns_list]
+            for table in step_data['columns']:
+                new_table_columns = []
+                for column in step_data['columns'][table]:
+                    if column[0].startswith('predictor.'):
+                        new_table_columns.append(column)
+                    elif column[0] in filtered_column_names:
+                        new_table_columns.append(column)
+                step_data['columns'][table] = new_table_columns
+            # endregion
+
             dn.create_table(table_name_parts=table_name_parts, columns=step_data['columns'], data=step_data['values'])
             data = None
         else:
@@ -1135,7 +1147,7 @@ class SQLQuery():
             for column_record in self.columns_list:
                 table_name = (column_record.database, column_record.table_name, column_record.table_alias)
                 column_name = (column_record.name, column_record.alias)
-                if not table_name in row:
+                if table_name in row is False:
                     # try without alias
                     table_name = (table_name[0], table_name[1], None)
 

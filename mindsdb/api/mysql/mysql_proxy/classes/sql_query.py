@@ -94,7 +94,7 @@ def get_table_alias(table_obj, default_db_name):
     if table_obj.alias is not None:
         name = name + ('.'.join(table_obj.alias.parts),)
     else:
-        name = name + (None,)
+        name = name + (name[1],)
     return name
 
 

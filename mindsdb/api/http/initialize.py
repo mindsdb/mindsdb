@@ -121,26 +121,12 @@ def download_gui(destignation, version):
     if isinstance(destignation, str):
         destignation = Path(destignation)
     log = get_log('http')
-    css_zip_path = str(destignation.joinpath('css.zip'))
-    js_zip_path = str(destignation.joinpath('js.zip'))
-    media_zip_path = str(destignation.joinpath('media.zip'))
+    dist_zip_path = str(destignation.joinpath('dist.zip'))
     bucket = "https://mindsdb-web-builds.s3.amazonaws.com/"
 
     resources = [{
-        'url': bucket + 'css-V' + version + '.zip',
-        'path': css_zip_path
-    }, {
-        'url': bucket + 'js-V' + version + '.zip',
-        'path': js_zip_path
-    }, {
-        'url': bucket + 'indexV' + version + '.html',
-        'path': str(destignation.joinpath('index.html'))
-    }, {
-        'url': bucket + 'favicon.ico',
-        'path': str(destignation.joinpath('favicon.ico'))
-    }, {
-        'url': bucket + 'media.zip',
-        'path': media_zip_path
+        'url': bucket + 'dist-V' + version + '.zip',
+        'path': dist_zip_path
     }]
 
     def get_resources(resource):
@@ -148,32 +134,23 @@ def download_gui(destignation, version):
         if response.status_code != requests.status_codes.codes.ok:
             raise Exception(f"Error {response.status_code} GET {resource['url']}")
         open(resource['path'], 'wb').write(response.content)
-
     try:
         for r in resources:
             get_resources(r)
     except Exception as e:
         log.error(f'Error during downloading files from s3: {e}')
         return False
+    
+    static_folder = destignation
+    static_folder.mkdir(mode=0o777, exist_ok=True, parents=True)
+    ZipFile(dist_zip_path).extractall(static_folder)
+    
+    if static_folder.joinpath('dist').is_dir():
+        shutil.move(str(destignation.joinpath('dist').joinpath('index.html')), static_folder)
+        shutil.move(str(destignation.joinpath('dist').joinpath('assets')), static_folder)
+        shutil.rmtree(destignation.joinpath('dist'))
 
-    for zip_path, dir_name in [[js_zip_path, 'js'], [css_zip_path, 'css']]:
-        temp_dir = destignation.joinpath(f'temp_{dir_name}')
-        temp_dir.mkdir(mode=0o777, exist_ok=True, parents=True)
-        ZipFile(zip_path).extractall(temp_dir)
-        files_path = destignation.joinpath('static', dir_name)
-        if temp_dir.joinpath('build', 'static', dir_name).is_dir():
-            shutil.move(temp_dir.joinpath('build', 'static', dir_name), files_path)
-            shutil.rmtree(temp_dir)
-        else:
-            shutil.move(temp_dir, files_path)
-
-    static_folder = Path(destignation).joinpath('static')
-    static_folder.mkdir(parents=True, exist_ok=True)
-    ZipFile(media_zip_path).extractall(static_folder)
-
-    os.remove(js_zip_path)
-    os.remove(css_zip_path)
-    os.remove(media_zip_path)
+    os.remove(dist_zip_path)
 
     version_txt_path = destignation.joinpath('version.txt')  # os.path.join(destignation, 'version.txt')
     with open(version_txt_path, 'wt') as f:

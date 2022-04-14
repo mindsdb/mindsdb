@@ -22,6 +22,7 @@ from mindsdb_sql.parser.dialects.mindsdb.latest import Latest
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     UnaryOperation,
+    CreateTable,
     Identifier,
     Operation,
     Constant,
@@ -37,13 +38,14 @@ from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
     GetPredictorColumns,
-    GetTableColumns,
     FetchDataframeStep,
     ApplyPredictorStep,
+    GetTableColumns,
     LimitOffsetStep,
     MapReduceStep,
     MultipleSteps,
     ProjectStep,
+    SaveToTable,
     FilterStep,
     UnionStep,
     JoinStep
@@ -92,7 +94,7 @@ def get_table_alias(table_obj, default_db_name):
     if table_obj.alias is not None:
         name = name + ('.'.join(table_obj.alias.parts),)
     else:
-        name = name + (None,)
+        name = name + (name[1],)
     return name
 
 
@@ -222,13 +224,16 @@ class SQLQuery():
         else:
             self.query = sql
             renderer = SqlalchemyRender('mysql')
-            self.query_str = renderer.get_string(self.query, with_failback=True)
+            try:
+                self.query_str = renderer.get_string(self.query, with_failback=True)
+            except Exception:
+                self.query_str = str(self.query)
 
         self.planner = None
         self.parameters = []
         self.fetched_data = None
         self.model_types = {}
-        self._process_query(sql)
+        self._process_query()
         if execute:
             self.prepare_query(prepare=False)
             self.execute_query()
@@ -310,7 +315,7 @@ class SQLQuery():
 
         return data
 
-    def _process_query(self, sql):
+    def _process_query(self):
         # self.query = parse_sql(sql, dialect='mindsdb')
 
         integrations_names = self.datahub.get_integrations_names()
@@ -318,7 +323,10 @@ class SQLQuery():
         integrations_names.append('files')
         integrations_names.append('views')
 
-        all_tables = get_all_tables(self.query)
+        if isinstance(self.query, Select):
+            all_tables = get_all_tables(self.query)
+        elif isinstance(self.query, CreateTable):
+            all_tables = [self.query.from_select.from_table.right.parts[-1]]
 
         predictor_metadata = {}
         predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
@@ -791,7 +799,20 @@ class SQLQuery():
                 #             data = data[window_size:]
                 #             if len(data) > horizon and horizon > 1:
                 #                 data = data[:-horizon + 1]
-                data = [{(key, key): value for key, value in row.items()} for row in data]
+                if isinstance(self.query, CreateTable):
+                    new_data = []
+                    for row in data:
+                        new_row = {}
+                        for key, value in row.items():
+                            if key not in ('__mindsdb_row_id', '__mdb_make_predictions'):
+                                new_key = f'predictor.{key}'
+                            else:
+                                new_key = key
+                            new_row[(new_key, new_key)] = value
+                        new_data.append(new_row)
+                    data = new_data
+                else:
+                    data = [{(key, key): value for key, value in row.items()} for row in data]
 
                 table_name = get_preditor_alias(step, self.database)
                 values = [{table_name: x} for x in data]
@@ -963,7 +984,7 @@ class SQLQuery():
                                 )
                     elif type(column_identifier) == Identifier:
                         column_name_parts = column_identifier.parts
-                        column_alias = None if column_identifier.alias is None else '.'.join(
+                        column_alias = column_identifier.parts[-1] if column_identifier.alias is None else '.'.join(
                             column_identifier.alias.parts)
                         if len(column_name_parts) > 2:
                             raise Exception(
@@ -1064,6 +1085,39 @@ class SQLQuery():
                 data = step_data
             except Exception as e:
                 raise SqlApiException(f'error on project step:{e} ') from e
+        elif type(step) == SaveToTable:
+            step_data = step.dataframe.result_data
+            integration_name = step.table.parts[0]
+            table_name_parts = step.table.parts[1:]
+
+            dn = self.datahub.get(integration_name)
+
+            if hasattr(dn, 'create_table') is False:
+                raise Exception(f"Creating table in '{integration_name}' is not supporting")
+
+            # region del 'service' columns
+            for table in step_data['columns']:
+                new_table_columns = []
+                for column in step_data['columns'][table]:
+                    if column[-1] not in ('__mindsdb_row_id', '__mdb_make_predictions'):
+                        new_table_columns.append(column)
+                step_data['columns'][table] = new_table_columns
+            # endregion
+
+            # region del columns filtered at projection step
+            filtered_column_names = [x.name for x in self.columns_list]
+            for table in step_data['columns']:
+                new_table_columns = []
+                for column in step_data['columns'][table]:
+                    if column[0].startswith('predictor.'):
+                        new_table_columns.append(column)
+                    elif column[0] in filtered_column_names:
+                        new_table_columns.append(column)
+                step_data['columns'][table] = new_table_columns
+            # endregion
+
+            dn.create_table(table_name_parts=table_name_parts, columns=step_data['columns'], data=step_data['values'])
+            data = None
         else:
             raise SqlApiException(F'Unknown planner step: {step}')
         return data
@@ -1093,7 +1147,7 @@ class SQLQuery():
             for column_record in self.columns_list:
                 table_name = (column_record.database, column_record.table_name, column_record.table_alias)
                 column_name = (column_record.name, column_record.alias)
-                if not table_name in row:
+                if table_name in row is False:
                     # try without alias
                     table_name = (table_name[0], table_name[1], None)
 

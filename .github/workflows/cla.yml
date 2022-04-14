@@ -10,9 +10,6 @@ jobs:
   CLAssistant:
     runs-on: ubuntu-latest
     steps:
-      - name: "TEST"
-        run: |
-            echo ${{github.event_name}}
       - name: "CLA Assistant"
         if: (github.event.comment.body == 'recheckcla' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') || github.event_name == 'pull_request'
         # Alpha Release

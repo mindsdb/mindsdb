@@ -84,12 +84,10 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErNotSupportedYet,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
-
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery,
 )
-
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     getConstName,
     CHARSET_NUMBERS,
@@ -102,7 +100,6 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     FIELD_FLAG,
     CAPABILITIES
 )
-
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     ErrPacket,
     HandshakePacket,
@@ -120,11 +117,11 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     STMTPrepareHeaderPacket,
     BinaryResultsetRowPacket
 )
-
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
+from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
 
 
 def empty_fn():
@@ -637,6 +634,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         database_type = struct['database_type']
         connection_args = struct['connection_args']
         connection_args['type'] = database_type
+
+        # we have connection checkers not for any db. So do nothing if fail
+        # TODO return rich error message
+        connection_success = True
+        try:
+            checker_class = DB_CONNECTION_CHECKERS.get(database_type, None)
+            if checker_class is not None:
+                checker = checker_class(**connection_args)
+                connection_success = checker.check_connection()
+        except Exception:
+            pass
+        if connection_success is False:
+            raise SqlApiException("Can't connect to db")
 
         integration = self.session.integration_controller.get(datasource_name)
         if integration is not None:

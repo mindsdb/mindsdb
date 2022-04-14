@@ -120,7 +120,8 @@ class HTTPTest(unittest.TestCase):
 
         if Path('train.csv').is_file() is False:
             resp = requests.get('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/home_rentals/dataset/train.csv')
-            open('tests/train.csv', 'wb').write(resp.content)
+            with open('tests/train.csv', 'wb') as f:
+                f.write(resp.content)
 
         file_path = Path('tests/train.csv')
         df = pd.read_csv(file_path)

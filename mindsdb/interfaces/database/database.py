@@ -75,9 +75,9 @@ class DatabaseWrapper():
                 try:
                     integration.register_predictors(model_data_arr)
                 except Exception as e:
-                    logger.warning(f"Error {e} when trying to register predictor to {integration.name}. Predictor wouldn't be registred.")
+                    logger.warning(f"Error {e} when trying to register predictor to {integration.name}. Predictor wouldn't be registered.")
             else:
-                logger.warning(f"There is no connection to {integration.name}. Predictor wouldn't be registred.")
+                logger.warning(f"There is no connection to {integration.name}. Predictor wouldn't be registered.")
 
     def unregister_predictor(self, name):
         for integration in self._get_integrations(publish=True):
@@ -90,7 +90,7 @@ class DatabaseWrapper():
             if integration.check_connection():
                 integration.unregister_predictor(name)
             else:
-                logger.warning(f"There is no connection to {integration.name}. predictor wouldn't be unregistred")
+                logger.warning(f"There is no connection to {integration.name}. predictor wouldn't be unregistered")
 
     def check_connections(self):
         connections = {}

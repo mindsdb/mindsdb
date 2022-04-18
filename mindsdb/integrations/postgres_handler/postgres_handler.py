@@ -12,19 +12,17 @@ class PostgresHandler(DatabaseHandler):
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
+        self.connection_args = kwargs
         self.dialect = 'postgresql'
         self.database = kwargs.get('database')
-        self.host = kwargs.get('host')
-        self.port = kwargs.get('port')
-        self.user = kwargs.get('user')
-        self.password = kwargs.get('password')
 
     def __connect(self):
         """
         Handles the connection to a PostgreSQL database insance.
         """
         #TODO: Check psycopg_pool
-        connection = psycopg.connect(f'host={self.host} port={self.port} dbname={self.database} user={self.user} password={self.password}', connect_timeout=10)
+        connection_args['dbname'] = self.database
+        connection = psycopg.connect(**self.connection_args, connect_timeout=10)
         return connection
 
     def check_status(self):

@@ -3,8 +3,7 @@ name: MindsDB Tests & Deploy
 on:
   push:
   pull_request:
-    branches:
-      - stable
+    branches: [stable, staging]
     paths-ignore:
       - 'docs/**'
       - 'README.md'

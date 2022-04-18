@@ -3,6 +3,7 @@ import psycopg
 from mindsdb.utilities.log import log
 from contextlib import closing
 from mindsdb_sql import parse_sql
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 class PostgresHandler(DatabaseHandler):
     """
@@ -89,15 +90,12 @@ class PostgresHandler(DatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def select_query(self, targets, from_stmt, where_stmt):
+    def select_query(self, query):
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
-        query = f"SELECT {','.join([t.__str__() for t in targets])} FROM {from_stmt.parts[-1]}"
-        if where_stmt:
-            query += f" WHERE {str(where_stmt)}"
-
-        result = self.native_query(query)
-        return result
+        renderer = SqlalchemyRender('postgres')
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
 
     #TODO: JOIN, SELECT INTO

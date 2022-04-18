@@ -56,11 +56,7 @@ class MySQLHandlerTest(unittest.TestCase):
 
     def test_8_select_query(self):
         query = "SELECT * FROM test_mdb WHERE 'id'='a'"
-        parsed = self.handler.parser(query, dialect=self.handler.dialect)
-        targets = parsed.targets
-        from_stmt = parsed.from_table
-        where_stmt = parsed.where
-        result = self.handler.select_query(targets, from_stmt, where_stmt)
+        result = self.handler.select_query(query)
 
     def test_8_select_into(self):
         try:
@@ -89,4 +85,4 @@ class MySQLHandlerTest(unittest.TestCase):
 
         q = f"SELECT * FROM {into_table}"
         qp = self.handler.parser(q, dialect='mysql')
-        assert len(self.handler.select_query(qp.targets, qp.from_table, qp.where)) > 0
+        assert len(self.handler.select_query(query)) > 0

@@ -123,7 +123,7 @@ class MySqlApiTest(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as f:
             df.to_csv(f, index=False)
             f.flush()
-            url = f'{HTTP_API_ROOT}/datasources/{name}'
+            url = f'{HTTP_API_ROOT}/files/{name}'
             data = {
                 "source_type": (None, 'file'),
                 "file": (f.name, f, 'text/csv'),

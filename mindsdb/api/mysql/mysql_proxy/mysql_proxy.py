@@ -1367,9 +1367,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         # TODO
         if sql_lower == "set names 'utf8mb4' collate 'utf8mb4_general_ci'":
-            return SQLAnswer(ANSWER_TYPE.OK)
+            return SQLAnswer(RESPONSE_TYPE.OK)
         if sql_lower.startswith('alter table') and sql_lower.endswith('disable keys'):
-            return SQLAnswer(ANSWER_TYPE.OK)
+            return SQLAnswer(RESPONSE_TYPE.OK)
 
         try:
             try:
@@ -2208,7 +2208,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             session=self.session,
             execute=True
         )
-        return SQLAnswer(ANSWER_TYPE.OK)
+        return SQLAnswer(RESPONSE_TYPE.OK)
 
     def answer_select(self, query):
         result = query.fetch(

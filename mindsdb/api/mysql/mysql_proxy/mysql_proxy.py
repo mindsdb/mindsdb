@@ -1383,7 +1383,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             sql_list = [x for x in lower_sql.split(' ') if x not in ('', ' ')]
             if len(sql_list) > 1 and sql_list[0] == "show":
-                    raise SqlApiException(f"unknown command: {sql}")
+                raise SqlApiException(f"unknown command: {sql}")
             if len(sql_list) > 2 and " ".join(sql_list[:2]) == "create predictor":
                 if 'predict' not in sql_list:
                     raise SqlApiException(f"'predict' field is mandatory: {sql}")

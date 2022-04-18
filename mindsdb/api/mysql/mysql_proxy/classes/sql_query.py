@@ -1045,7 +1045,7 @@ class SQLQuery():
                                     else:
                                         raise Exception(f'Can not find column "{column_name}" in table "{table_name}"')
                             if appropriate_table is None:
-                                raise Exception(f'Can not find approproate table for column {column_name}')
+                                raise SqlApiException(f'Can not find appropriate table for column {column_name}')
 
                             columns_to_copy = None
                             table_column_names_list = [x[1] or x[0] for x in table_columns]
@@ -1055,8 +1055,8 @@ class SQLQuery():
                                     columns_to_copy = column
                                     break
                             else:
-                                raise Exception(
-                                    f'Can not find approproate column in data: {(column_name, column_alias)}')
+                                raise ErKeyColumnDoesNotExist(
+                                    f'Can not find appropriate column in data: {(column_name, column_alias)}')
 
                             for row in step_data['values']:
                                 row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][
@@ -1070,21 +1070,28 @@ class SQLQuery():
                                        alias=column_alias)
                             )
                         else:
-                            raise Exception('Undefined column name')
+                            raise SqlApiException('Undefined column name')
 
                         # if column not exists in result - copy value to it
                         if (column_name, column_alias) not in step_data['columns'][appropriate_table]:
                             step_data['columns'][appropriate_table].append((column_name, column_alias))
                             for row in step_data['values']:
                                 if (column_name, column_alias) not in row[appropriate_table]:
-                                    row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][(column_name, column_name)]
+                                    try:
+                                        row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][(column_name, column_name)]
+                                    except KeyError:
+                                        raise ErKeyColumnDoesNotExist(f'Unknown column: {column_name}')
+
                     else:
-                        raise Exception(f'Unexpected column name type: {column_identifier}')
+                        raise ErKeyColumnDoesNotExist(f'Unknown column type: {column_identifier}')
 
                 self.columns_list = columns_list
                 data = step_data
             except Exception as e:
-                raise SqlApiException(f'error on project step:{e} ') from e
+                if isinstance(e, SqlApiException):
+                    raise e
+                raise SqlApiException(f'error on project step: {e} ') from e
+
         elif type(step) == SaveToTable:
             step_data = step.dataframe.result_data
             integration_name = step.table.parts[0]

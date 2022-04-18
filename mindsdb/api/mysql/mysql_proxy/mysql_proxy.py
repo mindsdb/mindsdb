@@ -21,7 +21,6 @@ import tempfile
 import datetime
 import socket
 import struct
-from collections import OrderedDict
 from functools import partial
 import select
 import base64
@@ -179,20 +178,20 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         log.error(traceback.format_exc())
 
 
-class ANSWER_TYPE:
+class RESPONSE_TYPE:
     __slots__ = ()
-    TABLE = 'table'
     OK = 'ok'
+    TABLE = 'table'
     ERROR = 'error'
 
 
-ANSWER_TYPE = ANSWER_TYPE()
+RESPONSE_TYPE = RESPONSE_TYPE()
 
 
 class SQLAnswer:
-    def __init__(self, answer_type: ANSWER_TYPE, columns: List[Dict] = None, data: List[Dict] = None,
+    def __init__(self, resp_type: RESPONSE_TYPE, columns: List[Dict] = None, data: List[Dict] = None,
                  status: int = None, state_track: List[List] = None, error_code: int = None, error_message: str = None):
-        self.answer_type = answer_type
+        self.resp_type = resp_type
         self.columns = columns
         self.data = data
         self.status = status
@@ -202,7 +201,7 @@ class SQLAnswer:
 
     @property
     def type(self):
-        return self.answer_type
+        return self.resp_type
 
 
 class MysqlProxy(SocketServer.BaseRequestHandler):
@@ -388,7 +387,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         select_data_query = insert.get('select_data_query')
         if isinstance(select_data_query, str) is False or len(select_data_query) == 0:
             return SQLAnswer(
-                ANSWER_TYPE.ERROR,
+                RESPONSE_TYPE.ERROR,
                 error_code=ERR.ER_WRONG_ARGUMENTS,
                 error_message="'select_data_query' should not be empty"
             )
@@ -396,7 +395,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         models = model_interface.get_models()
         if insert['name'] in [x['name'] for x in models]:
             return SQLAnswer(
-                ANSWER_TYPE.ERROR,
+                RESPONSE_TYPE.ERROR,
                 error_code=ERR.ER_WRONG_ARGUMENTS,
                 error_message=f"predictor with name '{insert['name']}'' already exists"
             )
@@ -408,7 +407,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 kwargs = json.loads(insert['training_options'])
             except Exception:
                 return SQLAnswer(
-                    ANSWER_TYPE.ERROR,
+                    RESPONSE_TYPE.ERROR,
                     error_code=ERR.ER_WRONG_ARGUMENTS,
                     error_message='training_options should be in valid JSON string'
                 )
@@ -416,7 +415,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         integration = self.session.integration
         if isinstance(integration, str) is False or len(integration) == 0:
             return SQLAnswer(
-                ANSWER_TYPE.ERROR,
+                RESPONSE_TYPE.ERROR,
                 error_code=ERR.ER_WRONG_ARGUMENTS,
                 error_message='select_data_query can be used only in query from database'
             )
@@ -445,7 +444,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True
         )
 
-        return SQLAnswer(ANSWER_TYPE.OK)
+        return SQLAnswer(RESPONSE_TYPE.OK)
 
     def _check_predict_columns(self, predict_column_names, ds_column_names):
         ''' validate 'predict' column names
@@ -614,7 +613,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 raise ErNotSupportedYet("DESCRIBE '%s' predictor attribute is not supported yet" % predictor_attr)
 
         return SQLAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
+            resp_type=RESPONSE_TYPE.TABLE,
             columns=columns,
             data=data
         )
@@ -625,7 +624,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if predictor_name not in [x['name'] for x in models]:
             raise ErBadTableError(f"Can't retrain predictor. There is no predictor with name '{predictor_name}'")
         model_interface.update_model(predictor_name)
-        return SQLAnswer(ANSWER_TYPE.OK)
+        return SQLAnswer(RESPONSE_TYPE.OK)
 
     def answer_create_datasource(self, struct: dict):
         ''' create new datasource (integration in old terms)
@@ -641,7 +640,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if integration is not None:
             raise SqlApiException(f"Database '{datasource_name}' already exists.")
         self.session.integration_controller.add(datasource_name, connection_args)
-        return SQLAnswer(ANSWER_TYPE.OK)
+        return SQLAnswer(RESPONSE_TYPE.OK)
 
     def answer_drop_tables(self, statement):
         """ answer on 'drop table [if exists] {name}'
@@ -675,7 +674,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     self.session.datahub['mindsdb'].delete_predictor(table_name)
                 elif db_name == 'files':
                     self.session.data_store.delete_file(table_name)
-        return SQLAnswer(ANSWER_TYPE.OK)
+        return SQLAnswer(RESPONSE_TYPE.OK)
 
     def answer_drop_datasource(self, ds_name):
         try:
@@ -683,7 +682,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.session.integration_controller.delete(ds['database_name'])
         except Exception:
             raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
-        return SQLAnswer(answer_type=ANSWER_TYPE.OK)
+        return SQLAnswer(RESPONSE_TYPE.OK)
 
     def answer_create_view(self, statement):
         name = statement.name
@@ -691,7 +690,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         datasource_name = statement.from_table.parts[-1]
 
         self.session.view_interface.add(name, query, datasource_name)
-        return SQLAnswer(answer_type=ANSWER_TYPE.OK)
+        return SQLAnswer(RESPONSE_TYPE.OK)
 
     def answer_create_predictor(self, statement):
         integration_name = None
@@ -810,7 +809,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         model_interface.learn(predictor_name, ds, predict, ds_id, kwargs=kwargs, delete_ds_on_fail=True)
 
-        return SQLAnswer(ANSWER_TYPE.OK)
+        return SQLAnswer(RESPONSE_TYPE.OK)
 
     def delete_predictor_query(self, query):
 
@@ -850,7 +849,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if command[0].lower() == 'delete' and command[1].lower() == 'predictor':
             if len(command) != 3:
                 return SQLAnswer(
-                    ANSWER_TYPE.ERROR,
+                    RESPONSE_TYPE.ERROR,
                     error_code=ERR.ER_SYNTAX_ERROR,
                     error_message="wrong syntax of 'DELETE PREDICTOR {NAME}' command"
                 )
@@ -859,10 +858,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 f"delete from mindsdb.predictors where name = '{predictor_name}'",
                 'mindsdb'
             ))
-            return SQLAnswer(ANSWER_TYPE.OK)
+            return SQLAnswer(RESPONSE_TYPE.OK)
 
         return SQLAnswer(
-            ANSWER_TYPE.ERROR,
+            RESPONSE_TYPE.ERROR,
             error_code=ERR.ER_SYNTAX_ERROR,
             error_message="at this moment only 'delete predictor' command supported"
         )
@@ -1255,7 +1254,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         ]
 
         return SQLAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
+            resp_type=RESPONSE_TYPE.TABLE,
             columns=columns,
             data=data,
             status=status
@@ -1273,7 +1272,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ['command', 'varchar(255)', 'NO', 'PRI', None, '']
         ]
         return SQLAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
+            resp_type=RESPONSE_TYPE.TABLE,
             columns=columns,
             data=data,
             status=status
@@ -1346,7 +1345,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 data = [[str(value) for key, value in x.items()] for x in result]
 
             return SQLAnswer(
-                answer_type=ANSWER_TYPE.TABLE,
+                resp_type=RESPONSE_TYPE.TABLE,
                 columns=columns,
                 data=data
             )
@@ -1380,7 +1379,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         elif type(statement) == DropPredictor:
             predictor_name = statement.name.parts[-1]
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
-            return SQLAnswer(ANSWER_TYPE.OK)
+            return SQLAnswer(RESPONSE_TYPE.OK)
         elif type(statement) == DropTables:
             return self.answer_drop_tables(statement)
         elif keyword == 'create_datasource':
@@ -1563,13 +1562,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 }]
 
                 return SQLAnswer(
-                    answer_type=ANSWER_TYPE.TABLE,
+                    resp_type=RESPONSE_TYPE.TABLE,
                     columns=columns,
                     data=data
                 )
             elif "show status like 'ssl_version'" in sql_lower:
                 return SQLAnswer(
-                    answer_type=ANSWER_TYPE.TABLE,
+                    resp_type=RESPONSE_TYPE.TABLE,
                     columns=[{
                         'table_name': 'session_variables',
                         'name': 'Variable_name',
@@ -1695,13 +1694,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 raise ErNotSupportedYet(f'Statement not implemented: {sql}')
         elif type(statement) in (StartTransaction, CommitTransaction, RollbackTransaction):
-            return SQLAnswer(ANSWER_TYPE.OK)
+            return SQLAnswer(RESPONSE_TYPE.OK)
         elif type(statement) == Set:
             category = (statement.category or '').lower()
             if category == '' and type(statement.arg) == BinaryOperation:
-                return SQLAnswer(ANSWER_TYPE.OK)
+                return SQLAnswer(RESPONSE_TYPE.OK)
             elif category == 'autocommit':
-                return SQLAnswer(ANSWER_TYPE.OK)
+                return SQLAnswer(RESPONSE_TYPE.OK)
             elif category == 'names':
                 # set names utf8;
                 charsets = {
@@ -1714,7 +1713,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     log.warning(f"Unknown charset: {self.charset}. Setting up 'utf8_general_ci' as charset text type.")
                     self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
                 return SQLAnswer(
-                    ANSWER_TYPE.OK,
+                    RESPONSE_TYPE.OK,
                     state_track=[
                         ['character_set_client', self.charset],
                         ['character_set_connection', self.charset],
@@ -1723,31 +1722,31 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 )
             else:
                 log.warning(f'SQL statement is not processable, return OK package: {sql}')
-                return SQLAnswer(ANSWER_TYPE.OK)
+                return SQLAnswer(RESPONSE_TYPE.OK)
         elif type(statement) == Use:
             db_name = statement.value.parts[-1]
             self.change_default_db(db_name)
-            return SQLAnswer(ANSWER_TYPE.OK)
+            return SQLAnswer(RESPONSE_TYPE.OK)
         elif type(statement) == CreatePredictor:
             return self.answer_create_predictor(statement)
         elif type(statement) == CreateView:
             return self.answer_create_view(statement)
         elif keyword == 'set':
             log.warning(f'Unknown SET query, return OK package: {sql}')
-            return SQLAnswer(ANSWER_TYPE.OK)
+            return SQLAnswer(RESPONSE_TYPE.OK)
         elif type(statement) == Delete:
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
             if statement.table.parts[-1] != 'predictors':
                 raise ErBadTableError("Only 'DELETE' from table 'mindsdb.predictors' is possible at this moment")
             self.delete_predictor_query(statement)
-            return SQLAnswer(ANSWER_TYPE.OK)
+            return SQLAnswer(RESPONSE_TYPE.OK)
         elif type(statement) == Insert:
             return self.process_insert(statement)
         elif keyword in ('update', 'insert'):
             raise ErNotSupportedYet('Update and Insert are not implemented')
         elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
-            return SQLAnswer(ANSWER_TYPE.OK)
+            return SQLAnswer(RESPONSE_TYPE.OK)
         elif type(statement) == Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
@@ -1779,7 +1778,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     'type': TYPES.MYSQL_TYPE_VAR_STRING
                 }]
                 return SQLAnswer(
-                    answer_type=ANSWER_TYPE.TABLE,
+                    resp_type=RESPONSE_TYPE.TABLE,
                     columns=columns,
                     data=[data]
                 )
@@ -1796,7 +1795,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
 
     def send_query_answer(self, answer: SQLAnswer):
-        if answer.type == ANSWER_TYPE.TABLE:
+        if answer.type == RESPONSE_TYPE.TABLE:
             packages = []
             packages += self.get_tabel_packets(
                 columns=answer.columns,
@@ -1807,9 +1806,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 packages.append(self.last_packet())
             self.send_package_group(packages)
-        elif answer.type == ANSWER_TYPE.OK:
+        elif answer.type == RESPONSE_TYPE.OK:
             self.packet(OkPacket, state_track=answer.state_track).send()
-        elif answer.type == ANSWER_TYPE.ERROR:
+        elif answer.type == RESPONSE_TYPE.ERROR:
             self.packet(
                 ErrPacket,
                 err_code=answer.error_code,
@@ -1868,7 +1867,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data.append(result)
 
         return SQLAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
+            resp_type=RESPONSE_TYPE.TABLE,
             columns=columns,
             data=[data]
         )
@@ -1884,7 +1883,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'type': TYPES.MYSQL_TYPE_VAR_STRING
         }]
         return SQLAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
+            resp_type=RESPONSE_TYPE.TABLE,
             columns=columns,
             data=[[table, f'create table {table} ()']]
         )
@@ -1980,7 +1979,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'charset': self.charset_text_type
         }]
         return SQLAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
+            resp_type=RESPONSE_TYPE.TABLE,
             columns=columns,
             data=[]
         )
@@ -2136,7 +2135,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ''              # Comment
         ]]
         return SQLAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
+            resp_type=RESPONSE_TYPE.TABLE,
             columns=columns,
             data=data
         )
@@ -2165,7 +2164,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'charset': self.charset_text_type
         }]
         return SQLAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
+            resp_type=RESPONSE_TYPE.TABLE,
             columns=columns,
             data=[]
         )
@@ -2181,7 +2180,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         }]
         data = [[self.connection_id]]
         return SQLAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
+            resp_type=RESPONSE_TYPE.TABLE,
             columns=columns,
             data=data
         )
@@ -2193,13 +2192,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         if result['success'] is False:
             return SQLAnswer(
-                ANSWER_TYPE.ERROR,
+                RESPONSE_TYPE.ERROR,
                 error_code=result['error_code'],
                 error_message=result['msg']
             )
 
         return SQLAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
+            resp_type=RESPONSE_TYPE.TABLE,
             columns=query.columns,
             data=query.result
         )

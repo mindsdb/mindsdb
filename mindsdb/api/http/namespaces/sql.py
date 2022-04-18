@@ -2,7 +2,7 @@ from flask_restx import Resource
 from flask import request
 
 from mindsdb.api.http.namespaces.configs.sql import ns_conf
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import FakeMysqlProxy, ANSWER_TYPE as SQL_ANSWER_TYPE
+from mindsdb.api.mysql.mysql_proxy.mysql_proxy import FakeMysqlProxy, RESPONSE_TYPE as SQL_RESPONSE_TYPE
 
 
 @ns_conf.route('/query')
@@ -17,17 +17,17 @@ class Query(Resource):
         mysql_proxy.set_context(context)
         try:
             result = mysql_proxy.process_query(query)
-            if result.type == SQL_ANSWER_TYPE.ERROR:
+            if result.type == SQL_RESPONSE_TYPE.ERROR:
                 query_response = {
                     'type': 'error',
                     'error_code': result.error_code,
                     'error_message': result.error_message
                 }
-            elif result.type == SQL_ANSWER_TYPE.OK:
+            elif result.type == SQL_RESPONSE_TYPE.OK:
                 query_response = {
                     'type': 'ok'
                 }
-            elif result.type == SQL_ANSWER_TYPE.TABLE:
+            elif result.type == SQL_RESPONSE_TYPE.TABLE:
                 query_response = {
                     'type': 'table',
                     'data': result.data,

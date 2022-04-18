@@ -25,8 +25,8 @@ class MySQLHandlerTest(unittest.TestCase):
     def test_1_check_status(self):
         assert self.handler.check_status()
 
-    def test_2_run_native_query_show_dbs(self):
-        dbs = self.handler.run_native_query("SHOW DATABASES;")
+    def test_2_native_query_show_dbs(self):
+        dbs = self.handler.native_query("SHOW DATABASES;")
         assert isinstance(dbs, list)
 
     def test_3_get_tables(self):
@@ -39,14 +39,14 @@ class MySQLHandlerTest(unittest.TestCase):
 
     def test_5_drop_table(self):
         try:
-            result = self.handler.run_native_query("DROP TABLE test_mdb")
+            result = self.handler.native_query("DROP TABLE test_mdb")
         except:
-            self.handler.run_native_query("CREATE TABLE test_mdb (test_col INT)")
+            self.handler.native_query("CREATE TABLE test_mdb (test_col INT)")
             self.test_5_drop_table_native()
 
     def test_6_create_table(self):
         try:
-            self.handler.run_native_query("CREATE TABLE test_mdb (test_col INT)")
+            self.handler.native_query("CREATE TABLE test_mdb (test_col INT)")
         except Exception:
             pass
 
@@ -64,11 +64,11 @@ class MySQLHandlerTest(unittest.TestCase):
 
     def test_8_select_into(self):
         try:
-            result = self.handler.run_native_query("DROP TABLE test_mdb2")
+            result = self.handler.native_query("DROP TABLE test_mdb2")
         except:
             pass
         try:
-            self.handler.run_native_query("CREATE TABLE test_mdb2 (test_col INT)")
+            self.handler.native_query("CREATE TABLE test_mdb2 (test_col INT)")
         except Exception:
             pass
 
@@ -78,8 +78,8 @@ class MySQLHandlerTest(unittest.TestCase):
         assert 'test_mdb2' in [item['Tables_in_test'] for item in tbls]
 
     def test_9_join(self):
-        self.handler.run_native_query("INSERT INTO test_mdb(test_col) VALUES (1)")
-        self.handler.run_native_query("INSERT INTO test_mdb2(test_col) VALUES (1)")
+        self.handler.native_query("INSERT INTO test_mdb(test_col) VALUES (1)")
+        self.handler.native_query("INSERT INTO test_mdb2(test_col) VALUES (1)")
 
         into_table = 'test_join_into_mysql'
         query = f"SELECT test_col FROM test_mdb JOIN test_mdb2"

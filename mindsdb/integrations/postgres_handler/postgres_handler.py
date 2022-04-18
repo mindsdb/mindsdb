@@ -45,7 +45,7 @@ class PostgresHandler(DatabaseHandler):
             status['error'] = e
         return status
     
-    def run_native_query(self, query_str):
+    def native_query(self, query_str):
         """
         Receive SQL query and runs it
         :param query_str: The SQL query to run in PostgreSQL
@@ -69,7 +69,7 @@ class PostgresHandler(DatabaseHandler):
         """
         query = f"SELECT * FROM information_schema.tables WHERE \
                  table_schema NOT IN ('information_schema', 'pg_catalog')"
-        res = self.run_native_query(query)
+        res = self.native_query(query)
         return res
     
     def get_views(self):
@@ -77,7 +77,7 @@ class PostgresHandler(DatabaseHandler):
         List all views in PostgreSQL without the system views information_schema and pg_catalog
         """
         query = f"SELECT * FROM information_schema.views WHERE table_schema NOT IN ('information_schema', 'pg_catalog')"
-        result = self.run_native_query(query)
+        result = self.native_query(query)
         return result
 
     def describe_table(self, table_name):
@@ -86,7 +86,7 @@ class PostgresHandler(DatabaseHandler):
         """
         query = f"SELECT table_name, column_name, data_type FROM \
               information_schema.columns WHERE table_name='{table_name}';"
-        result = self.run_native_query(query)
+        result = self.native_query(query)
         return result
 
     def select_query(self, targets, from_stmt, where_stmt):
@@ -97,7 +97,7 @@ class PostgresHandler(DatabaseHandler):
         if where_stmt:
             query += f" WHERE {str(where_stmt)}"
 
-        result = self.run_native_query(query)
+        result = self.native_query(query)
         return result
 
     #TODO: JOIN, SELECT INTO

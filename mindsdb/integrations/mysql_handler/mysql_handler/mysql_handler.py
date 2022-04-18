@@ -56,7 +56,7 @@ class MySQLHandler(DatabaseHandler):
             pass
         return connected
 
-    def run_native_query(self, query_str):
+    def native_query(self, query_str):
         try:
             with closing(self.connect()) as con:
                 cur = con.cursor(dictionary=True, buffered=True)
@@ -74,17 +74,17 @@ class MySQLHandler(DatabaseHandler):
 
     def get_tables(self):
         q = "SHOW TABLES;"
-        result = self.run_native_query(q)
+        result = self.native_query(q)
         return result
 
     def get_views(self):
         q = f"SHOW FULL TABLES IN {self.database} WHERE TABLE_TYPE LIKE 'VIEW';"
-        result = self.run_native_query(q)
+        result = self.native_query(q)
         return result
 
     def describe_table(self, table_name):
         q = f"DESCRIBE {table_name};"
-        result = self.run_native_query(q)
+        result = self.native_query(q)
         return result
 
     def select_query(self, targets, from_stmt, where_stmt):
@@ -92,7 +92,7 @@ class MySQLHandler(DatabaseHandler):
         if where_stmt:
             query += f" WHERE {str(where_stmt)}"
 
-        result = self.run_native_query(query)
+        result = self.native_query(query)
         return result
 
     def select_into(self, table, dataframe: pd.DataFrame):

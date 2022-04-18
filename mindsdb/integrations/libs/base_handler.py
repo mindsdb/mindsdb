@@ -32,7 +32,7 @@ class BaseHandler:
         """  # noqa
         raise NotImplementedError()
 
-    def run_native_query(self, query_str: str) -> Optional[object]:
+    def native_query(self, query_str: str) -> Optional[object]:
         """ 
         Receive raw SQL and act upon it somehow.
         """  # noqa

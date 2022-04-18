@@ -35,6 +35,7 @@ from mindsdb_sql.parser.ast import (
     BinaryOperation,
     DropDatabase,
     NullConstant,
+    CreateTable,
     TableColumn,
     Identifier,
     DropTables,
@@ -82,12 +83,10 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErNotSupportedYet,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
-
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery,
 )
-
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     getConstName,
     CHARSET_NUMBERS,
@@ -100,7 +99,6 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     FIELD_FLAG,
     CAPABILITIES
 )
-
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     ErrPacket,
     HandshakePacket,
@@ -118,11 +116,11 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     STMTPrepareHeaderPacket,
     BinaryResultsetRowPacket
 )
-
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
+from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
 
 
 def empty_fn():
@@ -636,6 +634,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         connection_args = struct['connection_args']
         connection_args['type'] = database_type
 
+        # we have connection checkers not for any db. So do nothing if fail
+        # TODO return rich error message
+        connection_success = True
+        try:
+            checker_class = DB_CONNECTION_CHECKERS.get(database_type, None)
+            if checker_class is not None:
+                checker = checker_class(**connection_args)
+                connection_success = checker.check_connection()
+        except Exception:
+            pass
+        if connection_success is False:
+            raise SqlApiException("Can't connect to db")
+
         integration = self.session.integration_controller.get(datasource_name)
         if integration is not None:
             raise SqlApiException(f"Database '{datasource_name}' already exists.")
@@ -711,7 +722,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if statement.order_by is not None:
             struct['order_by'] = [x.field.parts[-1] for x in statement.order_by]
             if len(struct['order_by']) > 1:
-                raise SqlApiException("Only one field can be in 'OPRDER BY'")
+                raise SqlApiException("Only one field can be in 'ORDER BY'")
         if statement.group_by is not None:
             struct['group_by'] = [x.parts[-1] for x in statement.group_by]
         if statement.window is not None:
@@ -1351,28 +1362,41 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             )
         # ---
 
-        statement = SqlStatementParser(sql)
-        sql = statement.sql
         sql_lower = sql.lower()
         sql_lower = sql_lower.replace('`', '')
 
-        keyword = statement.keyword
-        struct = statement.struct
+        # TODO
+        if sql_lower == "set names 'utf8mb4' collate 'utf8mb4_general_ci'":
+            return SQLAnswer(ANSWER_TYPE.OK)
+        if sql_lower.startswith('alter table') and sql_lower.endswith('disable keys'):
+            return SQLAnswer(ANSWER_TYPE.OK)
 
         try:
             try:
                 statement = parse_sql(sql, dialect='mindsdb')
             except Exception:
                 statement = parse_sql(sql, dialect='mysql')
-        except Exception:
+        except Exception as e:
             # not all statemts are parse by parse_sql
             log.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
-            pass
+            lower_sql = sql.lower().replace('\t', ' ')
+
+            sql_list = [x for x in lower_sql.split(' ') if x not in ('', ' ')]
+            if len(sql_list) > 1 and sql_list[0] == "show":
+                    raise SqlApiException(f"unknown command: {sql}")
+            if len(sql_list) > 2 and " ".join(sql_list[:2]) == "create predictor":
+                if 'predict' not in sql_list:
+                    raise SqlApiException(f"'predict' field is mandatory: {sql}")
+                # analyze predictor name
+                if not sql_list[2][0].isalpha():
+                    raise SqlApiException(f"predictor name must start from letter character: {sql}")
+
+            raise SqlApiException(f'SQL statement cannot be parsed by mindsdb_sql - {sql}: {e}') from e
 
         if type(statement) == CreateDatasource:
             struct = {
                 'datasource_name': statement.name,
-                'database_type': statement.engine,
+                'database_type': statement.engine.lower(),
                 'connection_args': statement.parameters
             }
             return self.answer_create_datasource(struct)
@@ -1382,9 +1406,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return SQLAnswer(RESPONSE_TYPE.OK)
         elif type(statement) == DropTables:
             return self.answer_drop_tables(statement)
-        elif keyword == 'create_datasource':
-            # fallback for statement
-            return self.answer_create_datasource(struct)
         elif type(statement) == DropDatasource or type(statement) == DropDatabase:
             ds_name = statement.name.parts[-1]
             return self.answer_drop_datasource(ds_name)
@@ -1731,9 +1752,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.answer_create_predictor(statement)
         elif type(statement) == CreateView:
             return self.answer_create_view(statement)
-        elif keyword == 'set':
-            log.warning(f'Unknown SET query, return OK package: {sql}')
-            return SQLAnswer(RESPONSE_TYPE.OK)
         elif type(statement) == Delete:
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
@@ -1743,10 +1761,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return SQLAnswer(RESPONSE_TYPE.OK)
         elif type(statement) == Insert:
             return self.process_insert(statement)
-        elif keyword in ('update', 'insert'):
-            raise ErNotSupportedYet('Update and Insert are not implemented')
-        elif keyword == 'alter' and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
-            return SQLAnswer(RESPONSE_TYPE.OK)
         elif type(statement) == Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
@@ -1790,6 +1804,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.answer_select(query)
         elif type(statement) == Explain:
             return self.answer_explain_table(statement.target.parts)
+        elif type(statement) == CreateTable:
+            # TODO
+            return self.answer_apply_predictor(statement)
         else:
             log.warning(f'Unknown SQL statement: {sql}')
             raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
@@ -2184,6 +2201,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             columns=columns,
             data=data
         )
+
+    def answer_apply_predictor(self, statement):
+        SQLQuery(
+            statement,
+            session=self.session,
+            execute=True
+        )
+        return SQLAnswer(ANSWER_TYPE.OK)
 
     def answer_select(self, query):
         result = query.fetch(

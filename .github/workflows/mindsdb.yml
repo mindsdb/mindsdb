@@ -3,8 +3,7 @@ name: MindsDB Tests & Deploy
 on:
   push:
   pull_request:
-    branches:
-      - stable
+    branches: [stable, staging]
     paths-ignore:
       - 'docs/**'
       - 'README.md'
@@ -52,10 +51,11 @@ jobs:
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-    - name: Install lightwood/staging if it's not mindsdb/stable
-      if: ${{ github.ref != 'refs/heads/stable' }}
-      run: |
-          pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+    # TEMP DISABLE
+    # - name: Install lightwood/staging if it's not mindsdb/stable
+    #   if: ${{ github.ref != 'refs/heads/stable' }}
+    #   run: |
+    #       pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then

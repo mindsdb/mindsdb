@@ -13,6 +13,7 @@ class PostgresHandler(DatabaseHandler):
         super().__init__(name)
         self.parser = parse_sql
         self.connection_args = kwargs
+        del self.connection_args['database']
         self.dialect = 'postgresql'
         self.database = kwargs.get('database')
 
@@ -21,25 +22,28 @@ class PostgresHandler(DatabaseHandler):
         Handles the connection to a PostgreSQL database insance.
         """
         #TODO: Check psycopg_pool
-        connection_args['dbname'] = self.database
+        self.connection_args['dbname'] = self.database
         connection = psycopg.connect(**self.connection_args, connect_timeout=10)
         return connection
 
     def check_status(self):
         """
         Check the connection of the PostgreSQL database
+        :return: success status and error message if error occurs
         """
-        connected = False
+        status = {
+            'success': False
+        }
         try:   
             con = self.__connect()
             with closing(con) as con:
                 with con.cursor() as cur:
                     cur.execute('select 1;')
-            connected = True
-        except Exception as e:
-            log.error(f'Error connecting to PostgreSQL {self.database} on {self.host}!')
-            pass
-        return connected
+            status['success'] = True
+        except psycopg.Error as e:
+            log.error(f'Error connecting to PostgreSQL {self.database}, {e}!')
+            status['error'] = e
+        return status
     
     def run_native_query(self, query_str):
         """

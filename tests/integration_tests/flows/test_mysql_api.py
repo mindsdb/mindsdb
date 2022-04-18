@@ -54,7 +54,7 @@ class MySqlApiTest(unittest.TestCase):
             }
         }
 
-        # run_environment(apis=['http', 'mysql'], override_config=override_config)
+        run_environment(apis=['http', 'mysql'], override_config=override_config)
         cls.docker_client = docker.from_env()
         cls.mysql_image = 'mysql'
 

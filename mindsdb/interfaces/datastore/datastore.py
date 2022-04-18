@@ -21,7 +21,6 @@ from mindsdb.interfaces.storage.db import session, Dataset, Semaphor, Predictor,
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
 
 class QueryDS:
@@ -55,7 +54,6 @@ class QueryDS:
         if self.source_type == 'view_query':
             if isinstance(query, str):
                 query = parse_sql(query, dialect='mysql')
-            query_str = str(query)
 
             table = query.from_table.parts[-1]
             view_metadata = view_interface.get(name=table)
@@ -591,3 +589,11 @@ class DataStore():
         except Exception as e:
             log.error(f'Error getting dataset {name}, exception: {e}')
             return None
+
+    def get_file_path(self, name, company_id):
+        file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
+        if file_record is None:
+            raise Exception("File '{name}' does not exists")
+        file_dir = f'file_{company_id}_{file_record.id}'
+        self.fs_store.get(file_dir, file_dir, self.dir)
+        return str(Path(self.dir).joinpath(file_dir).joinpath(Path(file_record.source_file_path).name))

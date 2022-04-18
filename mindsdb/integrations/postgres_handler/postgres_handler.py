@@ -61,3 +61,30 @@ class PostgresHandler(DatabaseHandler):
                     pass
         return res
     
+    def get_tables(self):
+        """
+        List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
+        """
+        query = f"SELECT * FROM information_schema.tables WHERE \
+                 table_schema NOT IN ('information_schema', 'pg_catalog')"
+        res = self.run_native_query(query)
+        return res
+    
+    def get_views(self):
+        """
+        List all views in PostgreSQL without the system views information_schema and pg_catalog
+        """
+        query = f"SELECT * FROM information_schema.views WHERE table_schema NOT IN ('information_schema', 'pg_catalog')"
+        result = self.run_native_query(query)
+        return result
+
+    def describe_table(self, table_name):
+        """
+        List names and data types about the table coulmns
+        """
+        query = f"SELECT table_name, column_name, data_type FROM \
+              information_schema.columns WHERE table_name='{table_name}';"
+        result = self.run_native_query(query)
+        return result
+
+  

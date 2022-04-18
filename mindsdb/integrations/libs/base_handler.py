@@ -38,7 +38,7 @@ class BaseHandler:
         """  # noqa
         raise NotImplementedError()
 
-    def select_query(self, query: ast) -> pd.DataFrame:
+    def select_query(self, query: str) -> pd.DataFrame:
         """
         Select data from some entity in the handler and return in dataframe format.
         

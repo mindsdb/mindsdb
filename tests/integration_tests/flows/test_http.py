@@ -60,9 +60,9 @@ class HTTPTest(unittest.TestCase):
             db_creds = json.load(f)
             cls.sql_db_creds = {
                 k: v for k, v in db_creds.items() if k in [
-                    'clickhouse', 'mariadb', 'mysql', 'postgres',
+                    'mariadb', 'mysql', 'postgres',
                     'snowflake', 'scylla', 'cassandra'
-                    # TODO mssql
+                    # TODO mssql clickhouse
                 ]
             }
 
@@ -79,7 +79,7 @@ class HTTPTest(unittest.TestCase):
         self.assertTrue(response.status_code == 200)
         response = response.json()
         self.assertTrue(
-            response.get('type') == expected_resp_type or [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR]
+            response.get('type') == (expected_resp_type or [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR])
         )
         self.assertIsInstance(response.get('context'), dict)
         if response['type'] == 'table':
@@ -364,8 +364,8 @@ class HTTPTest(unittest.TestCase):
         self.sql_via_http('use mindsdb', RESPONSE_TYPE.OK)
 
         resp_1 = self.sql_via_http('show tables', RESPONSE_TYPE.TABLE)
-        resp_2 = self.sql_via_http('show tables from mindsdb', RESPONSE_TYPE.OK)
-        resp_3 = self.sql_via_http('show full tables from mindsdb', RESPONSE_TYPE.OK)
+        resp_2 = self.sql_via_http('show tables from mindsdb', RESPONSE_TYPE.TABLE)
+        resp_3 = self.sql_via_http('show full tables from mindsdb', RESPONSE_TYPE.TABLE)
         self.assertTrue(
             resp_1['data'].sort() == resp_2['data'].sort()
             and resp_1['data'].sort() == resp_3['data'].sort()
@@ -420,13 +420,21 @@ class HTTPTest(unittest.TestCase):
 
     def test_06_sql_select_from_file(self):
         self.sql_via_http('use mindsdb', RESPONSE_TYPE.OK)
-        # resp = self.sql_via_http('select * from files.test_file', RESPONSE_TYPE.TABLE)
+        resp = self.sql_via_http('select * from files.test_file', RESPONSE_TYPE.TABLE)
+        self.assertTrue(len(resp['data']) == 50)
+        self.assertTrue(len(resp['column_names']) == 8)
+
+        resp = self.sql_via_http('select rental_price, rental_price as rp1, rental_price rp2 from files.test_file limit 10', RESPONSE_TYPE.TABLE)
+        self.assertTrue(len(resp['data']) == 10)
+        self.assertTrue(resp['column_names'] == ['rental_price', 'rp1', 'rp2'])
+        self.assertTrue(resp['data'][0][0] == resp['data'][0][1] and resp['data'][0][0] == resp['data'][0][2])
 
     def test_07_sql_create_predictor(self):
         resp = self.sql_via_http('show predictors', RESPONSE_TYPE.TABLE)
         self.assertTrue(len(resp['data']) == 0)
 
-        self.sql_via_http('show predictors', RESPONSE_TYPE.TABLE)
+        # self.sql_via_http('create predictor test1 from files (select * from test_file) ', RESPONSE_TYPE.TABLE)
+        # TODO
 
     def test_08_utils(self):
         """

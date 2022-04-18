@@ -1378,10 +1378,22 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 statement = parse_sql(sql, dialect='mindsdb')
             except Exception:
                 statement = parse_sql(sql, dialect='mysql')
-        except Exception:
+        except Exception as e:
             # not all statemts are parse by parse_sql
             log.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
-            pass
+            lower_sql = sql.lower().replace('\t', ' ')
+
+            sql_list = [x for x in lower_sql.split(' ') if x not in ('', ' ')]
+            if len(sql_list) > 1 and sql_list[0] == "show":
+                    raise SqlApiException(f"unknown command: {sql}")
+            if len(sql_list) > 2 and " ".join(sql_list[:2]) == "create predictor":
+                if 'predict' not in sql_list:
+                    raise SqlApiException(f"'predict' field is mandatory: {sql}")
+                # analyze predictor name
+                if not sql_list[2][0].isalpha():
+                    raise SqlApiException(f"predictor name must start from letter character: {sql}")
+
+            raise SqlApiException(f'SQL statement cannot be parsed by mindsdb_sql - {sql}: {e}') from e
 
         if type(statement) == CreateDatasource:
             struct = {

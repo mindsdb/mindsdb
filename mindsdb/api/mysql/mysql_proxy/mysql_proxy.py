@@ -1398,7 +1398,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if type(statement) == CreateDatasource:
             struct = {
                 'datasource_name': statement.name,
-                'database_type': statement.engine,
+                'database_type': statement.engine.lower(),
                 'connection_args': statement.parameters
             }
             return self.answer_create_datasource(struct)

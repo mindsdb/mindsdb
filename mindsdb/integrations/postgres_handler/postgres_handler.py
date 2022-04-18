@@ -87,4 +87,15 @@ class PostgresHandler(DatabaseHandler):
         result = self.run_native_query(query)
         return result
 
-  
+    def select_query(self, targets, from_stmt, where_stmt):
+        """
+        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
+        """
+        query = f"SELECT {','.join([t.__str__() for t in targets])} FROM {from_stmt.parts[-1]}"
+        if where_stmt:
+            query += f" WHERE {str(where_stmt)}"
+
+        result = self.run_native_query(query)
+        return result
+
+    #TODO: JOIN, SELECT INTO

@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 
 from mindsdb_sql import parse_sql
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 
 class MySQLHandler(DatabaseHandler):
@@ -87,13 +88,10 @@ class MySQLHandler(DatabaseHandler):
         result = self.native_query(q)
         return result
 
-    def select_query(self, targets, from_stmt, where_stmt):
-        query = f"SELECT {','.join([t.__str__() for t in targets])} FROM {from_stmt.parts[-1]}"
-        if where_stmt:
-            query += f" WHERE {str(where_stmt)}"
-
-        result = self.native_query(query)
-        return result
+    def select_query(self, query):
+        renderer = SqlalchemyRender('mysql')
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
 
     def select_into(self, table, dataframe: pd.DataFrame):
         try:

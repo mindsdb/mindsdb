@@ -38,11 +38,11 @@ class BaseHandler:
         """  # noqa
         raise NotImplementedError()
 
-    def select_query(self, targets, from_stmt, where_stmt) -> pd.DataFrame:
+    def select_query(self, query: ast) -> pd.DataFrame:
         """
         Select data from some entity in the handler and return in dataframe format.
         
-        This method assumes a raw query has been parsed beforehand with mindsdb_sql using some dialect compatible with the handler, and only targets, from, and where clauses are fed into it.
+        This method parses a raw query with SqlalchemyRender using specific dialect compatible with the handler.
         """  # noqa
         raise NotImplementedError()
 

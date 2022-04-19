@@ -264,7 +264,7 @@ def override_recursive(a, b):
             a[key] = b[key]
         elif key not in a or isinstance(a[key], dict) is False:
             a[key] = b[key]
-        #make config section empty by demand
+        # make config section empty by demand
         elif isinstance(b[key], dict) is True and b[key] == {}:
             a[key] = b[key]
         else:

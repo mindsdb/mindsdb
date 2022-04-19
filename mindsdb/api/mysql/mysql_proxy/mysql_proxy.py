@@ -1345,7 +1345,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # TODO
         if sql_lower == "set names 'utf8mb4' collate 'utf8mb4_general_ci'":
             return SQLAnswer(RESPONSE_TYPE.OK)
-        if sql_lower.startswith('alter table') and sql_lower.endswith('disable keys'):
+        if sql_lower.startswith('alter table') and (sql_lower.endswith('disable keys') or sql_lower.endswith('enable keys')):
             return SQLAnswer(RESPONSE_TYPE.OK)
 
         try:

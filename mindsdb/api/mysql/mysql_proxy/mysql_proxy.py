@@ -909,8 +909,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ):
                 raise ErNonInsertableTable("Only parametrized insert into table from 'mindsdb' database supported at this moment")
             table_name = statement.table.parts[-1]
-            if table_name not in ['predictors', 'commands']:
-                raise ErNonInsertableTable("Only parametrized insert into 'predictors' or 'commands' supported at this moment")
+            if table_name != 'predictors':
+                raise ErNonInsertableTable("Only parametrized insert into 'predictors' supported at this moment")
 
             # new_statement = Select(
             #     targets=statement.columns,
@@ -1188,10 +1188,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         table = target[-1].lower()
         if table == 'predictors' and db == 'mindsdb':
             return self.answer_explain_predictors()
-        elif table == 'commands' and db == 'mindsdb':
-            return self.answer_explain_commands()
         else:
-            raise ErNotSupportedYet("Only 'EXPLAIN predictors' and 'EXPLAIN commands' supported")
+            raise ErNotSupportedYet("Only 'EXPLAIN predictors' supported")
 
     def _get_explain_columns(self):
         return [{
@@ -1271,31 +1269,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             status=status
         )
 
-    def answer_explain_commands(self):
-        status = sum([
-            SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
-            SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
-        ])
-
-        columns = self._get_explain_columns()
-        data = [
-            # [Field, Type, Null, Key, Default, Extra]
-            ['command', 'varchar(255)', 'NO', 'PRI', None, '']
-        ]
-        return SQLAnswer(
-            resp_type=RESPONSE_TYPE.TABLE,
-            columns=columns,
-            data=data,
-            status=status
-        )
-
     def process_insert(self, statement):
         db_name = self.session.database
         if len(statement.table.parts) == 2:
             db_name = statement.table.parts[0].lower()
         table_name = statement.table.parts[-1].lower()
-        if db_name != 'mindsdb' or table_name not in ('predictors', 'commands'):
-            raise ErNonInsertableTable("At this moment only insert to 'mindsdb.predictors' or 'mindsdb.commands' is possible")
+        if db_name != 'mindsdb' or table_name != 'predictors':
+            raise ErNonInsertableTable("At this moment only insert to 'mindsdb.predictors' is possible")
         column_names = []
         for column_identifier in statement.columns:
             if isinstance(column_identifier, Identifier):
@@ -1314,10 +1294,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             for value in row:
                 values.append(value.value)
             insert_dict = dict(zip(column_names, values))
-        if table_name == 'commands':
-            return self.handle_custom_command(insert_dict['command'])
-        elif table_name == 'predictors':
-            return self.insert_predictor_answer(insert_dict)
+        return self.insert_predictor_answer(insert_dict)
 
     def process_query(self, sql):
         # +++

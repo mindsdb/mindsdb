@@ -44,7 +44,7 @@ class MindsDBDataNode(DataNode):
     def get_tables(self):
         models = self.model_interface.get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
-        models += ['predictors', 'commands', 'databases']
+        models += ['predictors', 'databases']
 
         return models
 
@@ -74,8 +74,6 @@ class MindsDBDataNode(DataNode):
             return ['name', 'status', 'accuracy', 'predict', 'update_status',
                     'mindsdb_version', 'error', 'select_data_query',
                     'training_options']
-        if table == 'commands':
-            return ['command']
         if table in ('datasources', 'databases'):
             return ['name', 'database_type', 'host', 'port', 'user']
 
@@ -147,8 +145,6 @@ class MindsDBDataNode(DataNode):
         '''
         if table == 'predictors':
             return self._select_predictors()
-        if table == 'commands':
-            return []
         if table == 'datasources':
             return self._select_datasources()
 

@@ -14,6 +14,7 @@ from common import (
     EXTERNAL_DB_CREDENTIALS,
     CONFIG_PATH)
 
+
 def get_docker0_inet_ip():
     if "docker0" not in netifaces.interfaces():
         raise Exception("Unable to find 'docker' interface. Please install docker first.")
@@ -39,11 +40,10 @@ class Dlist(list):
         return None
 
 
-
-
 class MySqlApiTest(unittest.TestCase):
     predictor_name = 'home_rentals'
     file_datasource_name = "from_files"
+
     @classmethod
     def setUpClass(cls):
         override_config = {
@@ -244,8 +244,6 @@ class MySqlApiTest(unittest.TestCase):
     def test_8_select_from_files(self):
         _query = f"select * from files.{self.file_datasource_name};"
         self.query(_query)
-
-
 
 
 if __name__ == "__main__":

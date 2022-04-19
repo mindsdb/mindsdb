@@ -1,9 +1,15 @@
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
-import psycopg
-from mindsdb.utilities.log import log
 from contextlib import closing
+
+import psycopg
+from psycopg.pq import ExecStatus
+from pandas import DataFrame
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+
+from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.api.mysql.mysql_proxy.mysql_proxy import ANSWER_TYPE
+from mindsdb.utilities.log import log
+
 
 class PostgresHandler(DatabaseHandler):
     """
@@ -22,7 +28,7 @@ class PostgresHandler(DatabaseHandler):
         """
         Handles the connection to a PostgreSQL database insance.
         """
-        #TODO: Check psycopg_pool
+        # TODO: Check psycopg_pool
         self.connection_args['dbname'] = self.database
         connection = psycopg.connect(**self.connection_args, connect_timeout=10)
         return connection
@@ -35,7 +41,7 @@ class PostgresHandler(DatabaseHandler):
         status = {
             'success': False
         }
-        try:   
+        try:
             con = self.__connect()
             with closing(con) as con:
                 with con.cursor() as cur:
@@ -45,39 +51,54 @@ class PostgresHandler(DatabaseHandler):
             log.error(f'Error connecting to PostgreSQL {self.database}, {e}!')
             status['error'] = e
         return status
-    
-    def native_query(self, query_str):
+
+    def native_query(self, query):
         """
         Receive SQL query and runs it
-        :param query_str: The SQL query to run in PostgreSQL
+        :param query: The SQL query to run in PostgreSQL
         :return: returns the records from the current recordset
         """
         con = self.__connect()
         with closing(con) as con:
             with con.cursor() as cur:
-                res = True
                 try:
-                    cur.execute(query_str)
-                    res = cur.fetchall()
-                except psycopg.Error as e:
-                    log.error(f'Error running {query_str} on {self.database}!')
-                    pass
-        return res
-    
+                    cur.execute(query)
+                    if ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
+                        response = {
+                            'type': ANSWER_TYPE.OK
+                        }
+                    else:
+                        result = cur.fetchall()
+                        response = {
+                            'type': ANSWER_TYPE.TABLE,
+                            'data_frame': DataFrame(
+                                result,
+                                columns=[x.name for x in cur.description]
+                            )
+                        }
+                except Exception as e:
+                    log.error(f'Error running query: {query} on {self.database}!')
+                    response = {
+                        'type': ANSWER_TYPE.ERROR,
+                        'error_code': 0,
+                        'error_message': str(e)
+                    }
+        return response
+
     def get_tables(self):
         """
         List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
         """
-        query = f"SELECT * FROM information_schema.tables WHERE \
+        query = "SELECT * FROM information_schema.tables WHERE \
                  table_schema NOT IN ('information_schema', 'pg_catalog')"
         res = self.native_query(query)
         return res
-    
+
     def get_views(self):
         """
         List all views in PostgreSQL without the system views information_schema and pg_catalog
         """
-        query = f"SELECT * FROM information_schema.views WHERE table_schema NOT IN ('information_schema', 'pg_catalog')"
+        query = "SELECT * FROM information_schema.views WHERE table_schema NOT IN ('information_schema', 'pg_catalog')"
         result = self.native_query(query)
         return result
 
@@ -90,7 +111,7 @@ class PostgresHandler(DatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def select_query(self, query):
+    def query(self, query):
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
@@ -98,4 +119,4 @@ class PostgresHandler(DatabaseHandler):
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    #TODO: JOIN, SELECT INTO
+    # TODO: JOIN, SELECT INTO

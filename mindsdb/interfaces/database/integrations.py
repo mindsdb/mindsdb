@@ -10,6 +10,7 @@ from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.fs import create_directory
+from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
 
 
 class IntegrationController:
@@ -184,3 +185,15 @@ class IntegrationController:
                 continue
             integration_dict[record.name] = self._get_integration_record_data(record, sensitive_info)
         return integration_dict
+
+    def check_connections(self):
+        connections = {}
+        for integration_name, integration_meta in self.get_all().items():
+            connection_checker = DB_CONNECTION_CHECKERS.get(integration_meta.get('type'))
+            if connection_checker is not None:
+                status = connection_checker(**integration_meta).check_connection()
+                connections[integration_name] = status
+            else:
+                connections[integration_name] = True
+
+        return connections

@@ -24,7 +24,6 @@ from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.json_encoder import json_serialiser
-from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
@@ -488,8 +487,6 @@ class ModelController():
                 pass
         db.session.commit()
 
-        DatabaseWrapper(company_id).unregister_predictor(name)
-
         # delete from s3
         self.fs_store.delete(f'predictor_{company_id}_{db_p.id}')
 
@@ -499,9 +496,6 @@ class ModelController():
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=old_name).first()
         db_p.name = new_name
         db.session.commit()
-        dbw = DatabaseWrapper(company_id)
-        dbw.unregister_predictor(old_name)
-        dbw.register_predictors([self.get_model_data(new_name, company_id)])
 
     @mark_process(name='learn')
     def update_model(self, name: str, company_id: int):

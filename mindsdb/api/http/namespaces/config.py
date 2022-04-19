@@ -193,17 +193,6 @@ class Check(Resource):
         return connections.get(name, False), 200
 
 
-@ns_conf.route('/telemetry/<flag>')
-@ns_conf.param('flag', 'Turn telemtry on or off')
-class ToggleTelemetry(Resource):
-    @ns_conf.doc('check')
-    def get(self, flag):
-        if flag in ["True", "true", "t"]:
-            return 'Enabled telemetry', 200
-        else:
-            return 'Disabled telemetry', 200
-
-
 @ns_conf.route('/vars')
 class Vars(Resource):
     def get(self):
@@ -227,16 +216,6 @@ class Vars(Resource):
             'cloud': cloud,
             'timezone': local_timezone,
         }
-
-
-@ns_conf.param('flag', 'Turn telemtry on or off')
-class ToggleTelemetry2(Resource):
-    @ns_conf.doc('check')
-    def get(self, flag):
-        if flag in ["True", "true", "t"]:
-            return 'Enabled telemetry', 200
-        else:
-            return 'Disabled telemetry', 200
 
 
 @ns_conf.route('/install_options')

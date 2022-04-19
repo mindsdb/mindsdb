@@ -6,11 +6,21 @@ from pathlib import Path
 
 import docker
 import netifaces
+import pandas as pd
+import requests
 
 from common import (
     run_environment,
     EXTERNAL_DB_CREDENTIALS,
     CONFIG_PATH)
+
+def get_docker0_inet_ip():
+    if "docker0" not in netifaces.interfaces():
+        raise Exception("Unable to find 'docker' interface. Please install docker first.")
+    return netifaces.ifaddresses('docker0')[netifaces.AF_INET][0]['addr']
+
+
+HTTP_API_ROOT = f'http://{get_docker0_inet_ip()}:47334/api'
 
 
 class Dlist(list):
@@ -29,14 +39,11 @@ class Dlist(list):
         return None
 
 
-def get_docker0_inet_ip():
-    if "docker0" not in netifaces.interfaces():
-        raise Exception("Unable to find 'docker' interface. Please install docker first.")
-    return netifaces.ifaddresses('docker0')[netifaces.AF_INET][0]['addr']
 
 
 class MySqlApiTest(unittest.TestCase):
     predictor_name = 'home_rentals'
+    file_datasource_name = "from_files"
     @classmethod
     def setUpClass(cls):
         override_config = {
@@ -110,6 +117,22 @@ class MySqlApiTest(unittest.TestCase):
             json.dumps(self.db_creds[db_type]))
         return self.query(_query)
 
+    @staticmethod
+    def upload_ds(df, name):
+        """Upload pandas df as csv file."""
+        with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as f:
+            df.to_csv(f, index=False)
+            f.flush()
+            url = f'{HTTP_API_ROOT}/datasources/{name}'
+            data = {
+                "source_type": (None, 'file'),
+                "file": (f.name, f, 'text/csv'),
+                "source": (None, f.name.split('/')[-1]),
+                "name": (None, name)
+            }
+            res = requests.put(url, files=data)
+            res.raise_for_status()
+
     def validate_datasource_creation(self, ds_type):
         self.create_datasource(ds_type.lower())
         res = self.query("SELECT * FROM mindsdb.datasources WHERE name='{}';".format(ds_type.upper()))
@@ -181,6 +204,48 @@ class MySqlApiTest(unittest.TestCase):
             with self.subTest(msg=attr):
                 print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{attr}]")
                 self.query(f"describe mindsdb.{self.predictor_name}.{attr};")
+
+    def test_7_train_predictor_from_files(self):
+        df = pd.DataFrame({
+            'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],
+            'x2': [x * 2 for x in range(100, 210)] + [x * 3 for x in range(100, 210)],
+            'y': [x * 3 for x in range(100, 210)] + [x * 2 for x in range(100, 210)]
+        })
+        file_predictor_name = "predictor_from_file"
+        self.upload_ds(df, self.file_datasource_name)
+        timeout = 5
+        threshold = time.time() + timeout
+        res = ''
+        while time.time() < threshold:
+            _query = "USE files; SHOW tables;"
+            res = self.query(_query)
+            if 'Tables_in_files' in res and res.get_record('Tables_in_files', self.file_datasource_name):
+                break
+            time.sleep(0.5)
+        self.assertTrue('Tables_in_files' in res and res.get_record('Tables_in_files', self.file_datasource_name),
+                        f"file datasource {self.file_datasource_name} is not ready to use after {timeout} seconds")
+
+        _query = f"CREATE PREDICTOR {file_predictor_name} from files (select * from {self.file_datasource_name}) predict y;"
+        self.query(_query)
+
+        timeout = 600
+        threshold = time.time() + timeout
+        res = ''
+        while time.time() < threshold:
+            _query = "SELECT status FROM predictors WHERE name='{}';".format(file_predictor_name)
+            res = self.query(_query)
+            res = self.query(_query)
+            if 'status' in res and res.get_record('status', 'complete'):
+                break
+            time.sleep(2)
+        self.assertTrue('status' in res and res.get_record('status', 'complete'),
+                        f"predictor {file_predictor_name} is not complete after {timeout} seconds")
+
+    def test_8_select_from_files(self):
+        _query = f"select * from files.{self.file_datasource_name};"
+        self.query(_query)
+
+
 
 
 if __name__ == "__main__":

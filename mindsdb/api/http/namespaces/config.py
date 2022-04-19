@@ -135,7 +135,7 @@ class Integration(Resource):
                         except Exception:
                             pass
 
-                stream_controller = StreamController(request.company_id).setup()
+                stream_controller = StreamController(request.company_id)
                 if params.get('type') in stream_controller.known_dbs and params.get('publish', False) is True:
                     stream_controller.setup(name)
         except Exception as e:
@@ -177,7 +177,7 @@ class Integration(Resource):
                 del params['enabled']
             request.integration_controller.modify(name, params)
 
-            stream_controller = StreamController(request.company_id).setup()
+            stream_controller = StreamController(request.company_id)
             if params.get('type') in stream_controller.known_dbs and params.get('publish', False) is True:
                 stream_controller.setup(name)
         except Exception as e:

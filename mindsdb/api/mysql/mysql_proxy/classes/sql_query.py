@@ -402,23 +402,6 @@ class SQLQuery():
                 }
                 return
 
-            # is it query to 'commands'?
-            if (
-                isinstance(mindsdb_sql_struct.from_table, Identifier)
-                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'
-                and (
-                    self.database == 'mindsdb'
-                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-                )
-            ):
-                self.fetched_data = {
-                    'values': [],
-                    'columns': {('mindsdb', 'commands', 'commands'): [('command', 'command')]},
-                    'tables': [('mindsdb', 'commands', 'commands')]
-                }
-                self.columns_list = [Column(database='mindsdb', table_name='commands', name='command')]
-                return
-
             # is it query to 'datasources'?
             if (
                 isinstance(mindsdb_sql_struct.from_table, Identifier)

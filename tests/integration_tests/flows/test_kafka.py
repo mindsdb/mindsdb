@@ -1,14 +1,11 @@
-import sys
 import time
 import tempfile
 import unittest
 import json
 import uuid
-import logging
 
 import requests
 import pandas as pd
-import kafka
 
 from common import HTTP_API_ROOT, run_environment, EXTERNAL_DB_CREDENTIALS, USE_EXTERNAL_DB_SERVER
 
@@ -156,7 +153,7 @@ class KafkaTest(unittest.TestCase):
         # wait when the integration launches created stream
         time.sleep(10)
         for x in range(1, 3):
-            stream_in.write({'x1': x, 'x2': 2*x})
+            stream_in.write({'x1': x, 'x2': 2 * x})
             time.sleep(5)
         time.sleep(10)
         self.assertEqual(len(list(stream_out.read())), 2)
@@ -184,7 +181,7 @@ class KafkaTest(unittest.TestCase):
         # wait when the integration launches created stream
         time.sleep(10)
         for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'group': 'A', 'y': 3*x})
+            stream_in.write({'x1': x, 'x2': 2 * x, 'order': x, 'group': 'A', 'y': 3 * x})
             time.sleep(0.001)
         time.sleep(10)
         self.assertEqual(len(list(stream_out.read())), 2)
@@ -207,7 +204,7 @@ class KafkaTest(unittest.TestCase):
         stream_out = KafkaStream(STREAM_OUT_NATIVE, CONNECTION_PARAMS)
 
         for x in range(1, 3):
-            stream_in.write({'x1': x, 'x2': 2*x})
+            stream_in.write({'x1': x, 'x2': 2 * x})
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 2)

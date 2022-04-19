@@ -3,14 +3,13 @@ import unittest
 import inspect
 from random import randint
 from pathlib import Path
-from uuid import uuid1
 import json
+import time
 
 import pandas as pd
 
 from common import (
     CONFIG_PATH,
-    DATASETS_PATH,
     EXTERNAL_DB_CREDENTIALS,
     make_test_csv,
     run_environment
@@ -91,6 +90,21 @@ class HTTPTest(unittest.TestCase):
         self._sql_via_http_context = response['context']
         return response
 
+    def await_predictor(self, predictor_name, timeout=60):
+        start = time.time()
+        while (time.time() - start) < timeout:
+            resp = self.sql_via_http('show predictors', RESPONSE_TYPE.TABLE)
+            name_index = resp['column_names'].index('name')
+            status_index = resp['column_names'].index('status')
+            status = None
+            for row in resp['data']:
+                if row[name_index] == predictor_name:
+                    status = row[status_index]
+            if status in ['complete', 'error']:
+                break
+            time.sleep(1)
+        return status
+
     def show_databases(self):
         resp = self.sql_via_http('show databases', RESPONSE_TYPE.TABLE)
         return [x[0] for x in resp['data']]
@@ -161,7 +175,7 @@ class HTTPTest(unittest.TestCase):
     #     res = requests.get(f'{root}/config/integrations/test_integration')
     #     assert res.status_code != 200
 
-    def test_00_files(self):
+    def test_01_files(self):
         ''' sql-via-http:
             upload file
             delete file
@@ -178,7 +192,8 @@ class HTTPTest(unittest.TestCase):
 
         file_path = Path('tests/train.csv')
         df = pd.read_csv(file_path)
-        test_csv_path = make_test_csv('test_home_rentals.csv', df.head(50))
+        test_csv_path = make_test_csv('test_home_rentals', df.head(50))
+        small_test_csv_path = make_test_csv('small_test_home_rentals', df.head(5))
 
         with open(test_csv_path) as td:
             files = {
@@ -207,10 +222,15 @@ class HTTPTest(unittest.TestCase):
             response = requests.request('PUT', f'{root}/files/test_file', files=files, json=None, params=None, data=None)
             self.assertTrue(response.status_code == 200)
 
-        files_list = self.get_files_list()
-        self.assertTrue(files_list[0]['name'] == 'test_file')
+        with open(small_test_csv_path) as td:
+            files = {
+                'file': ('small_test_data.csv', td, 'text/csv')
+            }
 
-    def test_01_sql_general_syntax(self):
+            response = requests.request('PUT', f'{root}/files/small_test_file', files=files, json=None, params=None, data=None)
+            self.assertTrue(response.status_code == 200)
+
+    def test_02_sql_general_syntax(self):
         ''' test sql in general
         '''
         select_const_int = [
@@ -277,7 +297,7 @@ class HTTPTest(unittest.TestCase):
                     print(f'Error in query: {query}')
                     raise
 
-    def test_02_context_changing(self):
+    def test_03_context_changing(self):
         resp = self.sql_via_http('use mindsdb', RESPONSE_TYPE.OK)
         self.assertTrue(resp['context']['db'] == 'mindsdb')
 
@@ -294,7 +314,7 @@ class HTTPTest(unittest.TestCase):
         self.assertTrue('test_file' in table_names)
         self.assertTrue('predictors' not in table_names)
 
-    def test_03_special_queries(self):
+    def test_04_special_queries(self):
         # "show databases;",
         # "show schemas;",
         # "show tables;",
@@ -360,7 +380,7 @@ class HTTPTest(unittest.TestCase):
             print(f'Error in query: {query}')
             raise
 
-    def test_04_show_tables(self):
+    def test_05_show_tables(self):
         self.sql_via_http('use mindsdb', RESPONSE_TYPE.OK)
 
         resp_1 = self.sql_via_http('show tables', RESPONSE_TYPE.TABLE)
@@ -371,7 +391,7 @@ class HTTPTest(unittest.TestCase):
             and resp_1['data'].sort() == resp_3['data'].sort()
         )
 
-    def test_05_sql_create_database(self):
+    def test_06_sql_create_database(self):
         ''' sql-via-http:
             'create datasource' for each db (obsolete?)
             'drop datasource' for each db (obsolete?)
@@ -418,7 +438,7 @@ class HTTPTest(unittest.TestCase):
             for name in created_db_names:
                 self.assertTrue(name in db_names)
 
-    def test_06_sql_select_from_file(self):
+    def test_07_sql_select_from_file(self):
         self.sql_via_http('use mindsdb', RESPONSE_TYPE.OK)
         resp = self.sql_via_http('select * from files.test_file', RESPONSE_TYPE.TABLE)
         self.assertTrue(len(resp['data']) == 50)
@@ -429,14 +449,37 @@ class HTTPTest(unittest.TestCase):
         self.assertTrue(resp['column_names'] == ['rental_price', 'rp1', 'rp2'])
         self.assertTrue(resp['data'][0][0] == resp['data'][0][1] and resp['data'][0][0] == resp['data'][0][2])
 
-    def test_07_sql_create_predictor(self):
+    def test_08_sql_create_predictor(self):
         resp = self.sql_via_http('show predictors', RESPONSE_TYPE.TABLE)
         self.assertTrue(len(resp['data']) == 0)
 
-        # self.sql_via_http('create predictor test1 from files (select * from test_file) ', RESPONSE_TYPE.TABLE)
-        # TODO
+        self.sql_via_http('''
+            create predictor p_test_1
+            from files (select sqft, location, rental_price from test_file limit 30)
+            predict rental_price
+        ''', RESPONSE_TYPE.OK)
+        status = self.await_predictor('p_test_1', timeout=120)
+        self.assertTrue(status == 'complete')
 
-    def test_08_utils(self):
+        resp = self.sql_via_http('''
+            select * from mindsdb.p_test_1 where sqft = 1000
+        ''', RESPONSE_TYPE.TABLE)
+        sqft_index = resp['column_names'].index('sqft')
+        rental_price_index = resp['column_names'].index('rental_price')
+        self.assertTrue(len(resp['data']) == 1)
+        self.assertTrue(resp['data'][0][sqft_index] == 1000)
+        self.assertTrue(resp['data'][0][rental_price_index] > 0)
+
+        resp = self.sql_via_http('''
+            select * from files.small_test_file ta join mindsdb.p_test_1
+        ''', RESPONSE_TYPE.TABLE)
+        rental_price_index = resp['column_names'].index('rental_price')
+        self.assertTrue(len(resp['data']) == 5)
+        # FIXME rental price is str instead of float
+        # for row in resp['data']:
+        #     self.assertTrue(row[rental_price_index] > 0)
+
+    def test_09_utils(self):
         """
         Call utilities ping endpoint
         THEN check the response is success
@@ -451,7 +494,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/config/vars')
         assert response.status_code == 200
 
-    def test_09_predictors(self):
+    def test_10_predictors(self):
         """
         Call list predictors endpoint
         THEN check the response is success
@@ -459,7 +502,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/predictors/')
         assert response.status_code == 200
 
-    def test_010_predictor_not_found(self):
+    def test_11_predictor_not_found(self):
         """
         Call unexisting predictor
         then check the response is NOT FOUND
@@ -467,7 +510,7 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/predictors/dummy_predictor')
         assert response.status_code != 200
 
-    def test_11_gui_is_served(self):
+    def test_12_gui_is_served(self):
         """
         GUI downloaded and available
         """
@@ -475,7 +518,7 @@ class HTTPTest(unittest.TestCase):
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0
 
-    # def test_93_generate_predictor(self):
+    # def test_13_generate_predictor(self):
     #     r = requests.put(
     #         f'{root}/predictors/generate/lwr_{pred_name}',
     #         json={
@@ -486,7 +529,7 @@ class HTTPTest(unittest.TestCase):
     #     )
     #     r.raise_for_status()
 
-    # def test_94_edit_json_ai(self):
+    # def test_14_edit_json_ai(self):
     #     # Get the json ai
     #     resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
     #     predictor_data = resp.json()
@@ -505,7 +548,7 @@ class HTTPTest(unittest.TestCase):
     #     )
     #     r.raise_for_status()
 
-    # def test_95_validate_json_ai(self):
+    # def test_15_validate_json_ai(self):
     #     # Get the json ai
     #     resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
     #     predictor_data = resp.json()
@@ -517,7 +560,7 @@ class HTTPTest(unittest.TestCase):
     #     )
     #     r.raise_for_status()
 
-    # def test_96_edit_code(self):
+    # def test_16_edit_code(self):
     #     # Make sure json ai edits went through
     #     resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
     #     predictor_data = resp.json()
@@ -534,14 +577,14 @@ class HTTPTest(unittest.TestCase):
     #     )
     #     r.raise_for_status()
 
-    # def test_97_train_predictor(self):
+    # def test_17_train_predictor(self):
     #     r = requests.put(
     #         f'{root}/predictors/lwr_{pred_name}/train',
     #         json={'data_source_name': ds_name, 'join_learn_process': True}
     #     )
     #     r.raise_for_status()
 
-    # def test_98_predict_modified_predictor(self):
+    # def test_18_predict_modified_predictor(self):
     #     params = {
     #         'when': {'sqft': 500}
     #     }
@@ -551,7 +594,7 @@ class HTTPTest(unittest.TestCase):
     #     pvs = res.json()
     #     assert pvs[0]['rental_price']['predicted_value'] == 5555555
 
-    # def test_99_export_and_import_predictor(self):
+    # def test_19_export_and_import_predictor(self):
     #     # Create and train a new predictor
     #     params = {
     #         'data_source_name': ds_name,
@@ -584,5 +627,6 @@ class HTTPTest(unittest.TestCase):
     #     assert res.status_code == 200
     #     assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
 
+
 if __name__ == '__main__':
-     unittest.main(failfast=True)
+    unittest.main(failfast=True)

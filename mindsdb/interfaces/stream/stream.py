@@ -26,6 +26,6 @@ class StreamController():
                 raise Exception(f'Unkonw database integration: {db_alias}')
             if integration.get('type') not in self.known_dbs:
                 raise Exception(f'Unkonw database integration type for: {db_alias}')
-            integration.setup()
+            self.known_dbs[integration['type']](self.config, db_alias, integration).setup()
         except Exception as e:
             logger.warning('Failed to setup stream for ' + db_alias + f', error: {e}')

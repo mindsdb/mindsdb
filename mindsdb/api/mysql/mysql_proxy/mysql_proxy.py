@@ -1184,92 +1184,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def answer_stmt_close(self, stmt_id):
         self.session.unregister_stmt(stmt_id)
 
-    def answer_explain_table(self, target):
-        db = ((self.session.database or 'mindsdb') if len(target) != 2 else target[0]).lower()
-        table = target[-1].lower()
-        if table == 'predictors' and db == 'mindsdb':
-            return self.answer_explain_predictors()
-        else:
-            raise ErNotSupportedYet("Only 'EXPLAIN predictors' supported")
-
-    def _get_explain_columns(self):
-        return [{
-            'database': 'information_schema',
-            'table_name': 'COLUMNS',
-            'name': 'COLUMN_NAME',
-            'alias': 'Field',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type,
-            'flags': sum([FIELD_FLAG.NOT_NULL])
-        }, {
-            'database': 'information_schema',
-            'table_name': 'COLUMNS',
-            'name': 'COLUMN_TYPE',
-            'alias': 'Type',
-            'type': TYPES.MYSQL_TYPE_BLOB,
-            'charset': self.charset_text_type,
-            'flags': sum([
-                FIELD_FLAG.NOT_NULL,
-                FIELD_FLAG.BLOB
-            ])
-        }, {
-            'database': 'information_schema',
-            'table_name': 'COLUMNS',
-            'name': 'IS_NULLABLE',
-            'alias': 'Null',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type,
-            'flags': sum([FIELD_FLAG.NOT_NULL])
-        }, {
-            'database': 'information_schema',
-            'table_name': 'COLUMNS',
-            'name': 'COLUMN_KEY',
-            'alias': 'Key',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type,
-            'flags': sum([FIELD_FLAG.NOT_NULL])
-        }, {
-            'database': 'information_schema',
-            'table_name': 'COLUMNS',
-            'name': 'COLUMN_DEFAULT',
-            'alias': 'Default',
-            'type': TYPES.MYSQL_TYPE_BLOB,
-            'charset': self.charset_text_type,
-            'flags': sum([FIELD_FLAG.BLOB])
-        }, {
-            'database': 'information_schema',
-            'table_name': 'COLUMNS',
-            'name': 'EXTRA',
-            'alias': 'Extra',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type,
-            'flags': sum([FIELD_FLAG.NOT_NULL])
-        }]
-
-    def answer_explain_predictors(self):
-        status = sum([
-            SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
-            SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
-        ])
-
-        columns = self._get_explain_columns()
-        data = [
-            # [Field, Type, Null, Key, Default, Extra]
-            ['name', 'varchar(255)', 'NO', 'PRI', None, ''],
-            ['status', 'varchar(255)', 'YES', '', None, ''],
-            ['accuracy', 'varchar(255)', 'YES', '', None, ''],
-            ['predict', 'varchar(255)', 'YES', '', None, ''],
-            ['select_data_query', 'varchar(255)', 'YES', '', None, ''],
-            ['training_options', 'varchar(255)', 'YES', '', None, ''],
-        ]
-
-        return SQLAnswer(
-            resp_type=RESPONSE_TYPE.TABLE,
-            columns=columns,
-            data=data,
-            status=status
-        )
-
     def process_insert(self, statement):
         db_name = self.session.database
         if len(statement.table.parts) == 2:
@@ -1388,6 +1302,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             ds_name = statement.name.parts[-1]
             return self.answer_drop_datasource(ds_name)
         elif type(statement) == Describe:
+            # NOTE in sql 'describe table' is same as 'show columns'
             if statement.value.parts[-1] in self.predictor_attrs:
                 return self.answer_describe_predictor(statement.value.parts[-2:])
             else:
@@ -1783,7 +1698,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             )
             return self.answer_select(query)
         elif type(statement) == Explain:
-            return self.answer_explain_table(statement.target.parts)
+            # It target 'table' then same as 'show columns'
+            return self.answer_show_columns(statement.target)
         elif type(statement) == CreateTable:
             # TODO
             return self.answer_apply_predictor(statement)

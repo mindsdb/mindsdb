@@ -133,6 +133,33 @@ class MySqlApiTest(unittest.TestCase):
             res = requests.put(url, files=data)
             res.raise_for_status()
 
+    def verify_file_ds(self, ds_name):
+        timeout = 5
+        threshold = time.time() + timeout
+        res = ''
+        while time.time() < threshold:
+            _query = "USE files; SHOW tables;"
+            res = self.query(_query)
+            if 'Tables_in_files' in res and res.get_record('Tables_in_files', ds_name):
+                break
+            time.sleep(0.5)
+        self.assertTrue('Tables_in_files' in res and res.get_record('Tables_in_files', ds_name),
+                        f"file datasource {ds_name} is not ready to use after {timeout} seconds")
+
+    def check_predictor_readiness(self, predictor_name):
+        timeout = 600
+        threshold = time.time() + timeout
+        res = ''
+        while time.time() < threshold:
+            _query = "SELECT status FROM predictors WHERE name='{}';".format(predictor_name)
+            res = self.query(_query)
+            res = self.query(_query)
+            if 'status' in res and res.get_record('status', 'complete'):
+                break
+            time.sleep(2)
+        self.assertTrue('status' in res and res.get_record('status', 'complete'),
+                        f"predictor {predictor_name} is not complete after {timeout} seconds")
+
     def validate_datasource_creation(self, ds_type):
         self.create_datasource(ds_type.lower())
         res = self.query("SELECT * FROM mindsdb.datasources WHERE name='{}';".format(ds_type.upper()))
@@ -150,17 +177,7 @@ class MySqlApiTest(unittest.TestCase):
     def test_2_create_predictor(self):
         _query = f"CREATE PREDICTOR {self.predictor_name} from MYSQL (select * from test_data.home_rentals) as hr_ds predict rental_price;"
         self.query(_query)
-        timeout = 600
-        threshold = time.time() + timeout
-        res = ''
-        while time.time() < threshold:
-            _query = "SELECT status FROM predictors WHERE name='{}';".format(self.predictor_name)
-            res = self.query(_query)
-            if 'status' in res and res.get_record('status', 'complete'):
-                break
-            time.sleep(2)
-        self.assertTrue('status' in res and res.get_record('status', 'complete'),
-                        f"predictor {self.predictor_name} is not complete after {timeout} seconds")
+        self.check_predictor_readiness(self.predictor_name)
 
     def test_3_making_prediction(self):
         _query = ('SELECT rental_price, rental_price_explain FROM ' +
@@ -213,37 +230,66 @@ class MySqlApiTest(unittest.TestCase):
         })
         file_predictor_name = "predictor_from_file"
         self.upload_ds(df, self.file_datasource_name)
-        timeout = 5
-        threshold = time.time() + timeout
-        res = ''
-        while time.time() < threshold:
-            _query = "USE files; SHOW tables;"
-            res = self.query(_query)
-            if 'Tables_in_files' in res and res.get_record('Tables_in_files', self.file_datasource_name):
-                break
-            time.sleep(0.5)
-        self.assertTrue('Tables_in_files' in res and res.get_record('Tables_in_files', self.file_datasource_name),
-                        f"file datasource {self.file_datasource_name} is not ready to use after {timeout} seconds")
+        self.verify_file_ds(self.file_datasource_name)
 
         _query = f"CREATE PREDICTOR {file_predictor_name} from files (select * from {self.file_datasource_name}) predict y;"
         self.query(_query)
-
-        timeout = 600
-        threshold = time.time() + timeout
-        res = ''
-        while time.time() < threshold:
-            _query = "SELECT status FROM predictors WHERE name='{}';".format(file_predictor_name)
-            res = self.query(_query)
-            res = self.query(_query)
-            if 'status' in res and res.get_record('status', 'complete'):
-                break
-            time.sleep(2)
-        self.assertTrue('status' in res and res.get_record('status', 'complete'),
-                        f"predictor {file_predictor_name} is not complete after {timeout} seconds")
+        self.check_predictor_readiness(file_predictor_name)
 
     def test_8_select_from_files(self):
         _query = f"select * from files.{self.file_datasource_name};"
         self.query(_query)
+
+
+    def test_9_ts_train_and_predict(self):
+        train_df = pd.DataFrame({
+            'group': ["A" for _ in range(100, 210)] + ["B" for _ in range(100, 210)],
+            'order': [x for x in range(100, 210)] + [x for x in range(200, 310)],
+            'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],
+            'x2': [x * 2 for x in range(100, 210)] + [x * 3 for x in range(100, 210)],
+            'y': [x * 3 for x in range(100, 210)] + [x * 2 for x in range(100, 210)]
+        })
+
+        test_df = pd.DataFrame({
+            'group': ["A" for _ in range(210, 220)] + ["B" for _ in range(210, 220)],
+            'order': [x for x in range(210, 220)] + [x for x in range(310, 320)],
+            'x1': [x for x in range(210, 220)] + [x for x in range(210, 220)],
+            'x2': [x * 2 for x in range(210, 220)] + [x * 3 for x in range(210, 220)],
+            'y': [x * 3 for x in range(210, 220)] + [x * 2 for x in range(210, 220)]
+        })
+
+        train_ds_name = "train_ts_file_ds"
+        test_ds_name = "test_ts_file_ds"
+        for df, ds_name in [(train_df, train_ds_name), (test_df, test_ds_name)]:
+            self.upload_ds(df, ds_name)
+            self.verify_file_ds(ds_name)
+
+        params = [
+                ("with_group_by_hor1",
+                 f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order GROUP BY group WINDOW 10 HORIZON 1;",
+                 f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.group= 'A' LIMIT 1;",
+                 1),
+                ("no_group_by_hor1",
+                 f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order WINDOW 10 HORIZON 1;",
+                 f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 1;",
+                 1),
+                ("with_group_by_hor2",
+                 f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order GROUP BY group WINDOW 10 HORIZON 2;",
+                 f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.group= 'A' LIMIT 2;",
+                 2),
+                ("no_group_by_hor2",
+                 f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order WINDOW 10 HORIZON 2;",
+                 f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 2;",
+                 2),
+                ]
+        for predictor_name, create_query, select_query, res_len in params:
+            with self.subTest(msg=predictor_name):
+                print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{predictor_name}]")
+                self.query(create_query % predictor_name)
+                self.check_predictor_readiness(predictor_name)
+                res = self.query(select_query % predictor_name)
+                self.assertTrue(len(res) == res_len, f"prediction result {res} contains more that {res_len} records")
+
 
 
 if __name__ == "__main__":

@@ -1297,48 +1297,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         return self.insert_predictor_answer(insert_dict)
 
     def process_query(self, sql):
-        # +++
-        # if query not for mindsdb then process that query in integration db
-        # TODO redirect only select data queries
-        if (
-            isinstance(self.session.database, str)
-            and len(self.session.database) > 0
-            and self.session.database.lower() not in ('mindsdb', 'files', 'information_schema')
-            and '@@' not in sql.lower()
-            and (
-                (
-                    sql.lower().startswith('select')
-                    and 'from' in sql.lower()
-                )
-                or (
-                    sql.lower().startswith('show')
-                    # and 'databases' in sql.lower()
-                    and 'tables' in sql.lower()
-                )
-            )
-        ):
-            datanode = self.session.datahub.get(self.session.database)
-            if datanode is None:
-                raise ErBadDbError('Unknown database - %s' % self.session.database)
-            result, _column_names = datanode.select(sql)
-
-            columns = []
-            data = []
-            if len(result) > 0:
-                columns = [{
-                    'table_name': '',
-                    'name': x,
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                } for x in result[0].keys()]
-                data = [[str(value) for key, value in x.items()] for x in result]
-
-            return SQLAnswer(
-                resp_type=RESPONSE_TYPE.TABLE,
-                columns=columns,
-                data=data
-            )
-        # ---
-
         sql_lower = sql.lower()
         sql_lower = sql_lower.replace('`', '')
 

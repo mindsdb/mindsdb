@@ -160,9 +160,12 @@ class DataStore():
         file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
         if file_record is None:
             return None
+        columns = file_record.columns
+        if isinstance(columns, str):
+            columns = json.loads(columns)
         return {
             'name': file_record.name,
-            'columns': file_record.columns,
+            'columns': columns,
             'row_count': file_record.row_count
         }
 

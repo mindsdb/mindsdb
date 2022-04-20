@@ -24,7 +24,7 @@ import struct
 from functools import partial
 import select
 import base64
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import pandas as pd
 from mindsdb_sql import parse_sql
@@ -40,6 +40,7 @@ from mindsdb_sql.parser.ast import (
     Identifier,
     DropTables,
     Parameter,
+    Operation,
     Describe,
     Constant,
     Function,
@@ -1413,6 +1414,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     session=self.session
                 )
                 return self.answer_select(query)
+            elif sql_category == 'columns':
+                return self.answer_show_columns(statement.from_table, statement.where, statement.like)
             elif sql_category == 'views':
                 where = BinaryOperation('and', args=[
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant('views')]),
@@ -1808,6 +1811,44 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 err_code=answer.error_code,
                 msg=answer.error_message
             ).send()
+
+    def answer_show_columns(self, target: Identifier, where: Optional[Operation], like: Optional[str]) -> SQLAnswer:
+        if len(target.parts) > 1:
+            db = target.parts[0]
+        elif isinstance(self.session.database, str) and len(self.session.database) > 0:
+            db = self.session.database
+        else:
+            db = 'mindsdb'
+        table_name = target.parts[-1]
+
+        new_where = BinaryOperation('and', args=[
+            BinaryOperation('=', args=[Identifier('TABLE_SCHEMA'), Constant(db)]),
+            BinaryOperation('=', args=[Identifier('TABLE_NAME'), Constant(table_name)])
+        ])
+        if where is not None:
+            new_where = BinaryOperation('and', args=[new_where, where])
+        if like is not None:
+            like = BinaryOperation('like', args=[Identifier('View'), Constant(like)])
+            new_where = BinaryOperation('and', args=[new_where, like])
+
+        new_statement = Select(
+            targets=[
+                Identifier('COLUMN_NAME', alias=Identifier('Field')),
+                Identifier('COLUMN_TYPE', alias=Identifier('Type')),
+                Identifier('IS_NULLABLE', alias=Identifier('Null')),
+                Identifier('COLUMN_KEY', alias=Identifier('Key')),
+                Identifier('COLUMN_DEFAULT', alias=Identifier('Default')),
+                Identifier('EXTRA', alias=Identifier('Extra'))
+            ],
+            from_table=Identifier(parts=['information_schema', 'COLUMNS']),
+            where=new_where
+        )
+
+        query = SQLQuery(
+            new_statement,
+            session=self.session
+        )
+        return self.answer_select(query)
 
     def answer_single_row_select(self, statement):
         columns = []

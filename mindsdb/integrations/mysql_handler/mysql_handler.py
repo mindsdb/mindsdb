@@ -110,4 +110,20 @@ class MySQLHandler(DatabaseHandler):
         result = self.native_query(q)
         return result
 
-  
+    def get_views(self):
+        """
+        Get more information about specific database views
+        """
+        q = f"SHOW FULL TABLES IN {self.database} WHERE TABLE_TYPE LIKE 'VIEW';"
+        result = self.native_query(q)
+        return result
+
+    def describe_table(self, table_name):
+        """
+        Show details about the table
+        """
+        q = f"DESCRIBE {table_name};"
+        result = self.native_query(q)
+        return result
+
+   

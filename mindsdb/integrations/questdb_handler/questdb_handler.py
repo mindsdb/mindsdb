@@ -23,7 +23,6 @@ class QuestDBHandler(PostgresHandler):
         """
         query = f"SELECT * FROM tables() WHERE name='{table_name}';"
         result = super().native_query(query)
-        print('RESULTTT ', result)
         return result
     
     def get_views(self):

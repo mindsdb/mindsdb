@@ -7,7 +7,7 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import ANSWER_TYPE
+from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
 from mindsdb.utilities.log import log
 
 
@@ -65,12 +65,12 @@ class PostgresHandler(DatabaseHandler):
                     cur.execute(query)
                     if ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
                         response = {
-                            'type': ANSWER_TYPE.OK
+                            'type': RESPONSE_TYPE.OK
                         }
                     else:
                         result = cur.fetchall()
                         response = {
-                            'type': ANSWER_TYPE.TABLE,
+                            'type': RESPONSE_TYPE.TABLE,
                             'data_frame': DataFrame(
                                 result,
                                 columns=[x.name for x in cur.description]
@@ -79,7 +79,7 @@ class PostgresHandler(DatabaseHandler):
                 except Exception as e:
                     log.error(f'Error running query: {query} on {self.database}!')
                     response = {
-                        'type': ANSWER_TYPE.ERROR,
+                        'type': RESPONSE_TYPE.ERROR,
                         'error_code': 0,
                         'error_message': str(e)
                     }

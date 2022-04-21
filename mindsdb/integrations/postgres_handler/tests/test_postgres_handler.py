@@ -1,6 +1,4 @@
 import unittest
-
-from mindsdb.utilities.config import Config
 from mindsdb.integrations.postgres_handler.postgres_handler import PostgresHandler
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
 
@@ -8,7 +6,6 @@ from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
 class PostgresHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config = Config()
         cls.kwargs = {
             "host": "localhost",
             "port": "5432",
@@ -25,7 +22,6 @@ class PostgresHandlerTest(unittest.TestCase):
     def test_1_describe_table(self):
         described = self.handler.describe_table("test_mdb")
         assert described['type'] is not RESPONSE_TYPE.ERROR
-
     
     def test_2_get_tables(self):
         tables = self.handler.get_tables()

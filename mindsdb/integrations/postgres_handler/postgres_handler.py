@@ -1,11 +1,9 @@
 from contextlib import closing
-
 import psycopg
 from psycopg.pq import ExecStatus
 from pandas import DataFrame
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
 from mindsdb.utilities.log import log

@@ -30,6 +30,7 @@ from mindsdb.utilities.log import log
 from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess, LearnRemoteProcess
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.datastore.datastore import QueryDS
+from mindsdb.utilities.hooks import after_predict as after_predict_hook
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -310,6 +311,13 @@ class ModelController():
             # del self.predictor_cache[name]
 
         predictions = predictions.to_dict(orient='records')
+        after_predict_hook(
+            company_id=company_id,
+            predictor_id=predictor_record.id,
+            rows_in_count=df.shape[0],
+            columns_in_count=df.shape[1],
+            rows_out_count=len(predictions)
+        )
         target = predictor_record.to_predict[0]
         if pred_format in ('explain', 'dict', 'dict&explain'):
             explain_arr = []
@@ -326,7 +334,7 @@ class ModelController():
                 if 'lower' in row:
                     obj[target]['confidence_lower_bound'] = row.get('lower', None)
                     obj[target]['confidence_upper_bound'] = row.get('upper', None)
-                    
+
                 explain_arr.append(obj)
 
                 td = {'predicted_value': row['prediction']}

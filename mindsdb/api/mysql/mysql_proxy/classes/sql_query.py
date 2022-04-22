@@ -10,15 +10,14 @@
 """
 
 import re
-import pandas as pd
 import datetime
 import time
 
 import duckdb
+import pandas as pd
+import numpy as np
 from lightwood.api import dtype
 from mindsdb_sql import parse_sql
-from mindsdb_sql.planner import plan_query
-from mindsdb_sql.parser.dialects.mindsdb.latest import Latest
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     UnaryOperation,
@@ -51,7 +50,7 @@ from mindsdb_sql.planner.steps import (
     JoinStep
 )
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.planner import query_planner, utils as planner_utils
+from mindsdb_sql.planner import query_planner
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, ERR
@@ -71,7 +70,6 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErNonInsertableTable,
     ErNotSupportedYet,
 )
-
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -890,7 +888,8 @@ class SQLQuery():
                 con.unregister(a_name)
                 con.unregister(b_name)
                 con.close()
-                resp_df = resp_df.where(pd.notnull(resp_df), None)
+
+                resp_df = resp_df.replace({np.nan: None})
                 resp_dict = resp_df.to_dict(orient='records')
 
                 for row in resp_dict:

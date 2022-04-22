@@ -1,7 +1,5 @@
 import unittest
 import pandas as pd
-
-from mindsdb.utilities.config import Config
 from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
 
@@ -9,7 +7,6 @@ from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
 class MySQLHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config = Config()
         cls.kwargs = {
             "host": "localhost",
             "port": "3306",

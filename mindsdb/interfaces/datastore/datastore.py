@@ -467,13 +467,7 @@ class DataStore():
             file_name = Path(file_path).name
 
         try:
-            ds_meta_dir = Path(self.dir).joinpath(f'{company_id}@@@@@{name}')
-            ds_meta_dir.mkdir()
-
-            source = ds_meta_dir.joinpath(file_name)
-            shutil.move(file_path, str(source))
-
-            ds = FileDS(str(source))
+            ds = FileDS(str(file_path))
             ds_meta = self._get_ds_meta(ds)
 
             column_names = ds_meta['column_names']
@@ -483,18 +477,28 @@ class DataStore():
                 name=name,
                 company_id=company_id,
                 source_file_path=file_name,
-                file_path=str(source),
+                file_path='',
                 row_count=ds_meta['row_count'],
                 columns=column_names
             )
             session.add(file_record)
             session.commit()
-            self.fs_store.put(f'{company_id}@@@@@{name}', f'file_{company_id}_{file_record.id}', self.dir)
+            store_file_path = f'file_{company_id}_{file_record.id}'
+            file_record.file_path = store_file_path
+            session.commit()
+
+            file_dir = Path(self.dir).joinpath(store_file_path)
+            file_dir.mkdir(parents=True, exist_ok=True)
+            source = file_dir.joinpath(file_name)
+            # NOTE may be delay between db record exists and file is really in folder
+            shutil.move(file_path, str(source))
+
+            self.fs_store.put(store_file_path, store_file_path, self.dir)
         except Exception as e:
             log.error(e)
             raise
         finally:
-            shutil.rmtree(ds_meta_dir)
+            shutil.rmtree(file_dir)
 
         return file_record.id
 

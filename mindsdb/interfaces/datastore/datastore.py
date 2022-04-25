@@ -250,13 +250,14 @@ class DataStore():
             file_record = session.query(File).filter_by(company_id=company_id, name=file_name).first()
             if file_record is None:
                 raise Exception(f"Cant find file '{file_name}'")
-            self.fs_store.get(f'{company_id}@@@@@{file_name}', f'file_{company_id}_{file_record.id}', self.dir)
+            remote_file_path = f'file_{company_id}_{file_record.id}'
+            self.fs_store.get(remote_file_path, remote_file_path, self.dir)
             kwargs = {}
             query = source.get('query')
             if query is not None:
                 kwargs['query'] = query
 
-            path = Path(self.dir).joinpath(f'{company_id}@@@@@{file_name}').joinpath(file_record.source_file_path)
+            path = Path(self.dir).joinpath(remote_file_path).joinpath(file_record.source_file_path)
 
             creation_info = {
                 'class': 'FileDS',

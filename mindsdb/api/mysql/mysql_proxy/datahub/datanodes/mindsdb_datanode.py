@@ -68,7 +68,7 @@ class MindsDBDataNode(DataNode):
             predict = [predict]
         columns += [f'{x}_original' for x in predict]
         for col in predict:
-            if dtype_dict[col] in (dtype.integer, dtype.float):
+            if dtype_dict.get(col) in (dtype.integer, dtype.float):
                 columns += [f"{col}_min", f"{col}_max"]
             columns += [f"{col}_confidence"]
             columns += [f"{col}_explain"]

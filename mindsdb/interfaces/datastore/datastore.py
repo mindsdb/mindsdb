@@ -162,9 +162,13 @@ class DataStore():
         file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
         if file_record is None:
             return None
+
+        columns = file_record.columns
+        if isinstance(columns, str):
+            columns = json.loads(columns)
         return {
             'name': file_record.name,
-            'columns': file_record.columns,
+            'columns': columns,
             'row_count': file_record.row_count
         }
 
@@ -172,6 +176,8 @@ class DataStore():
         offset = 0 if offset is None else offset
         ds = self.get_datasource_obj(name, company_id=company_id)
 
+        if ds is None:
+            raise Exception(f'Unknown file: {name}')
         if limit is not None:
             # @TODO Add `offset` to the `filter` method of the datasource and get rid of `offset`
             filtered_ds = ds.filter(where=where, limit=limit + offset).iloc[offset:]

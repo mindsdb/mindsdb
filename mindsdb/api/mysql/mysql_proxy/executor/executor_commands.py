@@ -76,7 +76,7 @@ class ExecuteCommands:
         self.executor = executor
         self.sql_lower = executor.sql_lower
         self.sql = executor.sql
-        self.planner = executor.planner
+        self.planner = None
 
         # TODO remove
         self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
@@ -99,6 +99,7 @@ class ExecuteCommands:
             ds_name = statement.name.parts[-1]
             return self.answer_drop_datasource(ds_name)
         elif type(statement) == Describe:
+            # TODO move to answer_explain_table
             predictor_attrs = ("model", "features", "ensemble")
             if statement.value.parts[-1] in predictor_attrs:
                 return self.answer_describe_predictor(statement.value.parts[-2:])
@@ -289,7 +290,9 @@ class ExecuteCommands:
                 # SHOW PROCEDURE STATUS WHERE Db = 'MINDSDB'
                 # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB' AND Name LIKE '%';
                 return self.answer_function_status()
-            elif sql_category == 'index':
+            elif sql_category in ('index', 'keys', 'indexes'):
+                # INDEX | INDEXES | KEYS are synonyms
+                # https://dev.mysql.com/doc/refman/8.0/en/show-index.html
                 new_statement = Select(
                     targets=[
                         Identifier('TABLE_NAME', alias=Identifier('Table')),
@@ -399,6 +402,12 @@ class ExecuteCommands:
                     log.warning(err_str)
                     raise ErTableExistError(err_str)
                 return self.answer_show_table_status(table_name)
+            elif sql_category == 'columns':
+                # The DESCRIBE statement provides information similar to SHOW COLUMNS.
+                # The DESCRIBE and EXPLAIN statements are synonyms
+                # https://dev.mysql.com/doc/refman/8.0/en/describe.html
+                is_full = statement.modes is not None and 'full' in statement.modes
+                return self.answer_explain_table(statement.from_table, is_full=is_full)
             else:
                 raise ErNotSupportedYet(f'Statement not implemented: {self.sql}')
         elif type(statement) in (StartTransaction, CommitTransaction, RollbackTransaction):
@@ -461,7 +470,7 @@ class ExecuteCommands:
                 # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
                 if "table_schema like 'mindsdb'" in self.sql_lower:
                     data = [
-                        ['predictors', '', 'TABLE', 'mindsdb']
+                        ['predictors', '', 'TABLE', 'mindsdb', '']
                     ]
                 else:
                     data = []
@@ -475,7 +484,7 @@ class ExecuteCommands:
                 return ExecuteAnswer(
                     answer_type=ANSWER_TYPE.TABLE,
                     columns=columns,
-                    data=[data]
+                    data=data
                 )
 
             query = SQLQuery(
@@ -485,7 +494,7 @@ class ExecuteCommands:
             )
             return self.answer_select(query)
         elif type(statement) == Explain:
-            return self.answer_explain_table(statement.target.parts)
+            return self.answer_explain_table(statement.target)
         else:
             log.warning(f'Unknown SQL statement: {self.sql}')
             raise ErNotSupportedYet(f'Unknown SQL statement: {self.sql}')
@@ -505,31 +514,14 @@ class ExecuteCommands:
         description = model_interface.get_model_description(predictor_name)
 
         if predictor_attr is None:
-            columns = [{
-                'table_name': '',
-                'name': 'accuracies',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'column_importances',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': "outputs",
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'inputs',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'datasource',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'model',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }]
+            columns = [
+                Column(name='accuracies', table_name='', type='str'),
+                Column(name='column_importances', table_name='', type='str'),
+                Column(name='outputs', table_name='', type='str'),
+                Column(name='inputs', table_name='', type='str'),
+                Column(name='datasource', table_name='', type='str'),
+                Column(name='model', table_name='', type='str'),
+            ]
             description = [
                 description['accuracies'],
                 description['column_importances'],
@@ -628,6 +620,8 @@ class ExecuteCommands:
     def answer_create_view(self, statement):
         name = statement.name
         query = str(statement.query_str)
+        if statement.from_table is None:
+            raise SqlApiException('Integration has to me set')
         datasource_name = statement.from_table.parts[-1]
 
         self.session.view_interface.add(name, query, datasource_name)
@@ -814,18 +808,59 @@ class ExecuteCommands:
     #     # unknown
     #     return TYPES.MYSQL_TYPE_VAR_STRING
 
-    def answer_explain_table(self, target):
-        db = ((self.session.database or 'mindsdb') if len(target) != 2 else target[0]).lower()
-        table = target[-1].lower()
+    def is_predictor(self, target):
+        if target.parts[-1] in self.executor.predictor_metadata:
+            return True
+        else:
+            return False
+
+    def answer_explain_table(self, target, is_full=False):
+        parts = target.parts
+        db = ((self.session.database or 'mindsdb') if len(parts) != 2 else parts[0]).lower()
+        table = parts[-1].lower()
         if table == 'predictors' and db == 'mindsdb':
-            return self.answer_explain_predictors()
+            return self.answer_explain_predictors(is_full=is_full)
         elif table == 'commands' and db == 'mindsdb':
             return self.answer_explain_commands()
+        elif self.is_predictor(target):
+            # The DESCRIBE and EXPLAIN statements are synonyms
+            predictor_attrs = ("model", "features", "ensemble")
+            if parts[-1] in predictor_attrs:
+                return self.answer_describe_predictor(parts[-2:])
+            else:
+                return self.answer_describe_predictor(parts[-1])
+        elif db == 'files':
+            table = target.parts[-1]
+            return self.answer_explain_files(table)
         else:
             raise ErNotSupportedYet("Only 'EXPLAIN predictors' and 'EXPLAIN commands' supported")
 
-    def _get_explain_columns(self):
-        return [
+    def answer_explain_files(self, table, is_full=False):
+        dn = self.datahub.get('files')
+
+        columns = self._get_explain_columns(is_full=is_full)
+
+        table_cols = dn.get_table_columns(table)
+        data = []
+        for col in table_cols:
+            data.append([col, 'varchar(255)', 'YES', None, None, ''])
+
+        if is_full:
+            # The optional FULL keyword causes the output to include the column collation and comments
+            # as well as the privileges you have for each column.
+            data = [
+                row + [None, None, None]
+                for row in data
+            ]
+
+        return ExecuteAnswer(
+            answer_type=ANSWER_TYPE.TABLE,
+            columns=columns,
+            data=data
+        )
+
+    def _get_explain_columns(self, is_full=False):
+        columns = [
             Column(
                database='information_schema', type=TYPES.MYSQL_TYPE_VAR_STRING,
                name='COLUMN_NAME', alias='Field',
@@ -882,67 +917,45 @@ class ExecuteCommands:
                 ])
             ),
         ]
-        # return [
-        #     {
-        #     'database': 'information_schema',
-        #     'table_name': 'COLUMNS',
-        #     'name': 'COLUMN_NAME',
-        #     'alias': 'Field',
-        #     'type': TYPES.MYSQL_TYPE_VAR_STRING,
-        #     'charset': self.charset_text_type,
-        #     'flags': sum([FIELD_FLAG.NOT_NULL])
-        # }, {
-        #     'database': 'information_schema',
-        #     'table_name': 'COLUMNS',
-        #     'name': 'COLUMN_TYPE',
-        #     'alias': 'Type',
-        #     'type': TYPES.MYSQL_TYPE_BLOB,
-        #     'charset': self.charset_text_type,
-        #     'flags': sum([
-        #         FIELD_FLAG.NOT_NULL,
-        #         FIELD_FLAG.BLOB
-        #     ])
-        # }, {
-        #     'database': 'information_schema',
-        #     'table_name': 'COLUMNS',
-        #     'name': 'IS_NULLABLE',
-        #     'alias': 'Null',
-        #     'type': TYPES.MYSQL_TYPE_VAR_STRING,
-        #     'charset': self.charset_text_type,
-        #     'flags': sum([FIELD_FLAG.NOT_NULL])
-        # }, {
-        #     'database': 'information_schema',
-        #     'table_name': 'COLUMNS',
-        #     'name': 'COLUMN_KEY',
-        #     'alias': 'Key',
-        #     'type': TYPES.MYSQL_TYPE_VAR_STRING,
-        #     'charset': self.charset_text_type,
-        #     'flags': sum([FIELD_FLAG.NOT_NULL])
-        # }, {
-        #     'database': 'information_schema',
-        #     'table_name': 'COLUMNS',
-        #     'name': 'COLUMN_DEFAULT',
-        #     'alias': 'Default',
-        #     'type': TYPES.MYSQL_TYPE_BLOB,
-        #     'charset': self.charset_text_type,
-        #     'flags': sum([FIELD_FLAG.BLOB])
-        # }, {
-        #     'database': 'information_schema',
-        #     'table_name': 'COLUMNS',
-        #     'name': 'EXTRA',
-        #     'alias': 'Extra',
-        #     'type': TYPES.MYSQL_TYPE_VAR_STRING,
-        #     'charset': self.charset_text_type,
-        #     'flags': sum([FIELD_FLAG.NOT_NULL])
-        # }]
+        if is_full:
+            # The optional FULL keyword causes the output to include the column collation and comments,
+            #   as well as the privileges you have for each column.
+            columns.extend([
+                Column(
+                    database='information_schema', type=TYPES.MYSQL_TYPE_VAR_STRING,
+                    name='COLLATION', alias='Collation',
+                    table_name='COLUMNS',
+                    charset=self.charset_text_type,
+                    flags=sum([
+                    ])
+                ),
+                Column(
+                    database='information_schema', type=TYPES.MYSQL_TYPE_VAR_STRING,
+                    name='PRIVILEGES', alias='Privileges',
+                    table_name='COLUMNS',
+                    charset=self.charset_text_type,
+                    flags=sum([
+                        FIELD_FLAG.NOT_NULL
+                    ])
+                ),
+                Column(
+                    database='information_schema', type=TYPES.MYSQL_TYPE_VAR_STRING,
+                    name='COMMENT', alias='Comment',
+                    table_name='COLUMNS',
+                    charset=self.charset_text_type,
+                    flags=sum([
+                    ])
+                ),
+            ])
+        return columns
 
-    def answer_explain_predictors(self):
+    def answer_explain_predictors(self, is_full=False):
         status = sum([
             SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
             SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
         ])
 
-        columns = self._get_explain_columns()
+        columns = self._get_explain_columns(is_full=is_full)
         data = [
             # [Field, Type, Null, Key, Default, Extra]
             ['name', 'varchar(255)', 'NO', 'PRI', None, ''],
@@ -952,6 +965,14 @@ class ExecuteCommands:
             ['select_data_query', 'varchar(255)', 'YES', '', None, ''],
             ['training_options', 'varchar(255)', 'YES', '', None, ''],
         ]
+        if is_full:
+            # The optional FULL keyword causes the output to include the column collation and comments
+            # as well as the privileges you have for each column.
+            data = [
+                row + [None, None, None]
+                for row in data
+            ]
+
 
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
@@ -1025,14 +1046,18 @@ class ExecuteCommands:
                 else:
                     result = result[0]
             elif target_type == Function:
+                function_name = target.op.lower()
+                if function_name == 'connection_id':
+                    return self.answer_connection_id()
+
                 functions_results = {
-                    'connection_id': self.executor.connection_id,
+                    # 'connection_id': self.executor.sqlserver.connection_id,
                     'database': self.session.database,
                     'current_user': self.session.username,
                     'user': self.session.username,
                     'version': '8.0.17'
                 }
-                function_name = target.op.lower()
+
                 column_name = f'{target.op}()'
                 column_alias = target.alias or column_name
                 result = functions_results[function_name]
@@ -1095,96 +1120,49 @@ class ExecuteCommands:
         )
 
     def answer_function_status(self):
-        columns = [{
-            'database': 'mysql',
-            'table_name': 'schemata',
-            'table_alias': 'ROUTINES',
-            'name': 'Db',
-            'alias': 'Db',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'name',
-            'alias': 'name',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'Type',
-            'alias': 'Type',
-            'type': TYPES.MYSQL_TYPE_STRING,
-            'charset': CHARSET_NUMBERS['utf8_bin']
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'Definer',
-            'alias': 'Definer',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': CHARSET_NUMBERS['utf8_bin']
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'Modified',
-            'alias': 'Modified',
-            'type': TYPES.MYSQL_TYPE_TIMESTAMP,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'Created',
-            'alias': 'Created',
-            'type': TYPES.MYSQL_TYPE_TIMESTAMP,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'Security_type',
-            'alias': 'Security_type',
-            'type': TYPES.MYSQL_TYPE_STRING,
-            'charset': CHARSET_NUMBERS['utf8_bin']
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'Comment',
-            'alias': 'Comment',
-            'type': TYPES.MYSQL_TYPE_BLOB,
-            'charset': CHARSET_NUMBERS['utf8_bin']
-        }, {
-            'database': 'mysql',
-            'table_name': 'character_sets',
-            'table_alias': 'ROUTINES',
-            'name': 'character_set_client',
-            'alias': 'character_set_client',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': 'mysql',
-            'table_name': 'collations',
-            'table_alias': 'ROUTINES',
-            'name': 'collation_connection',
-            'alias': 'collation_connection',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': 'mysql',
-            'table_name': 'collations',
-            'table_alias': 'ROUTINES',
-            'name': 'Database Collation',
-            'alias': 'Database Collation',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }]
-        columns = [Column(*d) for d in columns]
+        columns = [
+            Column(name='Db', alias='Db',
+                   table_name='schemata', table_alias='ROUTINES',
+                   type='str', database='mysql', charset=self.charset_text_type),
+            Column(name='Db', alias='Db',
+                   table_name='routines', table_alias='ROUTINES',
+                   type='str', database='mysql', charset=self.charset_text_type),
+            Column(name='Type', alias='Type',
+                   table_name='routines', table_alias='ROUTINES',
+                   type='str', database='mysql', charset=CHARSET_NUMBERS['utf8_bin']),
+            Column(name='Definer', alias='Definer',
+                   table_name='routines', table_alias='ROUTINES',
+                   type='str', database='mysql', charset=CHARSET_NUMBERS['utf8_bin']),
+            Column(name='Modified', alias='Modified',
+                   table_name='routines', table_alias='ROUTINES',
+                   type=TYPES.MYSQL_TYPE_TIMESTAM, database='mysql',
+                   charset=CHARSET_NUMBERS['binary']),
+            Column(name='Created', alias='Created',
+                   table_name='routines', table_alias='ROUTINES',
+                   type=TYPES.MYSQL_TYPE_TIMESTAM, database='mysql',
+                   charset=CHARSET_NUMBERS['binary']),
+            Column(name='Security_type', alias='Security_type',
+                   table_name='routines', table_alias='ROUTINES',
+                   type=TYPES.MYSQL_TYPE_STRING, database='mysql',
+                   charset=CHARSET_NUMBERS['utf8_bin']),
+            Column(name='Comment', alias='Comment',
+                   table_name='routines', table_alias='ROUTINES',
+                   type=TYPES.MYSQL_TYPE_BLOB, database='mysql',
+                   charset=CHARSET_NUMBERS['utf8_bin']),
+            Column(name='character_set_client', alias='character_set_client',
+                   table_name='character_sets', table_alias='ROUTINES',
+                   type=TYPES.MYSQL_TYPE_VAR_STRING, database='mysql',
+                   charset=self.charset_text_type),
+            Column(name='collation_connection', alias='collation_connection',
+                   table_name='collations', table_alias='ROUTINES',
+                   type=TYPES.MYSQL_TYPE_VAR_STRING, database='mysql',
+                   charset=self.charset_text_type),
+            Column(name='Database Collation', alias='Database Collation',
+                   table_name='collations', table_alias='ROUTINES',
+                   type=TYPES.MYSQL_TYPE_VAR_STRING, database='mysql',
+                   charset=self.charset_text_type)
+        ]
+        columns = [Column(**d) for d in columns]
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=columns,
@@ -1321,7 +1299,7 @@ class ExecuteCommands:
             'type': TYPES.MYSQL_TYPE_BLOB,
             'charset': self.charset_text_type
         }]
-        columns = [Column(*d) for d in columns]
+        columns = [Column(**d) for d in columns]
         data = [[
             table_name,     # Name
             'InnoDB',       # Engine
@@ -1371,7 +1349,7 @@ class ExecuteCommands:
             'type': TYPES.MYSQL_TYPE_VAR_STRING,
             'charset': self.charset_text_type
         }]
-        columns = [Column(*d) for d in columns]
+        columns = [Column(**d) for d in columns]
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=columns,
@@ -1387,8 +1365,8 @@ class ExecuteCommands:
             'type': TYPES.MYSQL_TYPE_LONG,
             'charset': CHARSET_NUMBERS['binary']
         }]
-        columns = [Column(*d) for d in columns]
-        data = [[self.executor.connection_id]]
+        columns = [Column(**d) for d in columns]
+        data = [[self.executor.sqlserver.connection_id]]
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=columns,
@@ -1407,11 +1385,12 @@ class ExecuteCommands:
                 error_message=result['msg']
             )
 
-        # columns = [Column(*d) for d in query.columns_list]
+        # columns = [Column(**d) for d in query.columns_list]
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=query.columns_list,
-            data=query.result
+            data=query.result,
+            # model_types=query.model_types
         )
 
 

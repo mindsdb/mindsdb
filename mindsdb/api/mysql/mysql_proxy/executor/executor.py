@@ -1,3 +1,4 @@
+import mindsdb_sql
 from mindsdb_sql.parser.ast import (
     Insert,
     Set,
@@ -25,9 +26,9 @@ from .executor_commands import ExecuteCommands
 
 class Executor:
 
-    def __init__(self, session, connection_id):
+    def __init__(self, session, sqlserver):
         self.session = session
-        self.connection_id = connection_id
+        self.sqlserver = sqlserver
 
         # returns
         self.columns = []
@@ -35,10 +36,19 @@ class Executor:
         self.data = None
         self.state_track = None
         self.error = None
+        self.server_status = None
 
         self.is_executed = False
 
-        self.model_types = {}
+        # self.model_types = {}
+        self.predictor_metadata = {}
+
+        self.sql = ''
+        self.sql_lower = ''
+
+        self.command_executor = ExecuteCommands(self.session, self)
+
+
 
     # def set_env(self, environ):
     #     # i.e current database
@@ -56,7 +66,7 @@ class Executor:
             return
 
         self.parse(sql)
-        self.create_planner()
+        # self.create_planner()
 
         # if not params
         params = planner_utils.get_query_params(self.query)
@@ -73,7 +83,7 @@ class Executor:
             sqlquery = SQLQuery(
                 self.query,
                 session=self.session,
-                planner=self.planner,
+                # planner=self.planner,
                 execute=False
             )
 
@@ -91,14 +101,17 @@ class Executor:
             # self.params = sqlquery.parameters
 
             self.columns = sqlquery.columns_list
-
+            # self.model_types = sqlquery.model_types
 
     def stmt_execute(self, param_values):
+        if self.is_executed:
+            return
+
         # fill params
         self.query = planner_utils.fill_query_params(self.query, param_values)
 
         # query is changed, rebuild planner
-        self.create_planner()
+        # self.create_planner()
 
         # execute query
         self.do_execute()
@@ -115,56 +128,37 @@ class Executor:
             return
 
         self.parse(sql)
-        self.create_planner()
+        # self.create_planner()
         self.do_execute()
 
-
-    def create_planner(self):
-        # self.query = parse_sql(sql, dialect='mindsdb')
-
-        integrations_names = self.session.datahub.get_integrations_names()
-        integrations_names.append('information_schema')
-        integrations_names.append('files')
-        integrations_names.append('views')
-
-        all_tables = get_all_tables(self.query)
-
-        predictor_metadata = {}
-        predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
-        for model_name in set(all_tables):
-            for p in predictors:
-                if p.name == model_name:
-                    if isinstance(p.data, dict) and 'error' not in p.data:
-                        ts_settings = p.learn_args.get('timeseries_settings', {})
-                        if ts_settings.get('is_timeseries') is True:
-                            window = ts_settings.get('window')
-                            order_by = ts_settings.get('order_by')[0]
-                            group_by = ts_settings.get('group_by')
-                            if isinstance(group_by, list) is False and group_by is not None:
-                                group_by = [group_by]
-                            predictor_metadata[model_name] = {
-                                'timeseries': True,
-                                'window': window,
-                                'horizon': ts_settings.get('horizon'),
-                                'order_by_column': order_by,
-                                'group_by_columns': group_by
-                            }
-                        else:
-                            predictor_metadata[model_name] = {
-                                'timeseries': False
-                            }
-                        self.model_types.update(p.data.get('dtypes', {}))
-
-        mindsdb_database_name = 'mindsdb'
-        database = None if self.session.database == '' else self.session.database.lower()
-
-        self.planner = query_planner.QueryPlanner(
-            self.query,
-            integrations=integrations_names,
-            predictor_namespace=mindsdb_database_name,
-            predictor_metadata=predictor_metadata,
-            default_namespace=database
-        )
+    #
+    # def update_metadata(self):
+    #
+    #     self.predictor_metadata = {}
+    #     predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
+    #
+    #     for p in predictors:
+    #         model_name = p.name
+    #         if isinstance(p.data, dict) and 'error' not in p.data:
+    #             ts_settings = p.learn_args.get('timeseries_settings', {})
+    #             if ts_settings.get('is_timeseries') is True:
+    #                 window = ts_settings.get('window')
+    #                 order_by = ts_settings.get('order_by')[0]
+    #                 group_by = ts_settings.get('group_by')
+    #                 if isinstance(group_by, list) is False and group_by is not None:
+    #                     group_by = [group_by]
+    #                 self.predictor_metadata[model_name] = {
+    #                     'timeseries': True,
+    #                     'window': window,
+    #                     'horizon': ts_settings.get('horizon'),
+    #                     'order_by_column': order_by,
+    #                     'group_by_columns': group_by
+    #                 }
+    #             else:
+    #                 self.predictor_metadata[model_name] = {
+    #                     'timeseries': False
+    #                 }
+    #             self.model_types.update(p.data.get('dtypes', {}))
 
 
     def execute_external(self, sql):
@@ -172,15 +166,17 @@ class Executor:
         if (
             isinstance(self.session.database, str)
             and len(self.session.database) > 0
-            and self.session.database.lower() not in ('mindsdb', 'files')
+            and self.session.database.lower() not in ('mindsdb',
+                                                      'files',
+                                                      'information_schema')
             and '@@' not in sql.lower()
             and (
                 (
-                    sql.lower().startswith('select')
+                    sql.lower().strip().startswith('select')
                     and 'from' in sql.lower()
                 )
                 or (
-                    sql.lower().startswith('show')
+                    sql.lower().strip().startswith('show')
                     # and 'databases' in sql.lower()
                     and 'tables' in sql.lower()
                 )
@@ -189,9 +185,19 @@ class Executor:
             datanode = self.session.datahub.get(self.session.database)
             if datanode is None:
                 raise ErBadDbError('Unknown database - %s' % self.session.database)
-            result, _column_names = datanode.select(sql)
 
-            columns = []
+            # try parse or send raw sql
+            try:
+                sql = parse_sql(sql, dialect='mindsdb')
+            except mindsdb_sql.exceptions.ParsingException:
+                pass
+
+            result, column_info = datanode.select(sql)
+            columns = [
+                Column(name=col['name'], type=col['type'])
+                for col in column_info
+            ]
+
             data = []
             if len(result) > 0:
                 # columns = [{
@@ -200,8 +206,6 @@ class Executor:
                 #     'type': TYPES.MYSQL_TYPE_VAR_STRING
                 # } for x in result[0].keys()]
 
-                columns = [Column(name=x)
-                           for x in result[0].keys()]
                 data = [[str(value) for key, value in x.items()] for x in result]
             self.columns = columns
             self.data = data
@@ -248,12 +252,14 @@ class Executor:
         if self.is_executed:
             return
 
-        execComm = ExecuteCommands(self.session, self)
-        ret = execComm.execute_command(self.query)
+        # self.update_metadata()
+
+        ret = self.command_executor.execute_command(self.query)
 
         self.is_executed = True
 
         self.data = ret.data
+        self.server_status = ret.status
         if ret.columns is not None:
             self.columns = ret.columns
         if ret.error_code is not None:
@@ -262,3 +268,5 @@ class Executor:
                 message=ret.error_message
             )
         self.state_track = ret.state_track
+        # if ret.model_types is not None:
+        #     self.model_types = ret.model_types

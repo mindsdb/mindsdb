@@ -72,6 +72,9 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     BinaryResultsetRowPacket
 )
 
+from numpy import dtype as np_dtype
+from pandas.api import types as pd_types
+
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
@@ -330,12 +333,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.socket.sendall(string)
 
 
-    # def to_mysql_type(self, type_name):
-    #     if type_name == 'str':
-    #         return TYPES.MYSQL_TYPE_VAR_STRING
-    #
-    #     # unknown
-    #     return TYPES.MYSQL_TYPE_VAR_STRING
 
     def answer_stmt_close(self, stmt_id):
         self.session.unregister_stmt(stmt_id)
@@ -474,18 +471,29 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     # --------------
 
-    def to_mysql_columns(self, columns_list, model_types=None):
+    def to_mysql_columns(self, columns_list):
+
         result = []
 
-        if model_types is None:
-            model_types = {}
         database = None if self.session.database == '' else self.session.database.lower()
         for column_record in columns_list:
 
-            field_type = model_types.get(column_record.name, column_record.type)
+            field_type = column_record.type
 
             column_type = TYPES.MYSQL_TYPE_VAR_STRING
-            if field_type == dtype.date:
+            # is already in mysql protocol type?
+            if isinstance(field_type, int):
+                column_type = field_type
+            # pandas checks
+            elif isinstance(field_type, np_dtype):
+                if pd_types.is_integer_dtype(field_type):
+                    column_type = TYPES.MYSQL_TYPE_LONG
+                elif pd_types.is_numeric_dtype(field_type):
+                    column_type = TYPES.MYSQL_TYPE_DOUBLE
+                elif pd_types.is_datetime64_any_dtype(field_type):
+                    column_type = TYPES.MYSQL_TYPE_DATETIME
+            # lightwood checks
+            elif field_type == dtype.date:
                 column_type = TYPES.MYSQL_TYPE_DATE
             elif field_type == dtype.datetime:
                 column_type = TYPES.MYSQL_TYPE_DATETIME
@@ -509,7 +517,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def process_query(self, sql):
         executor = Executor(
             session=self.session,
-            connection_id=self.connection_id
+            sqlserver=self
         )
 
         executor.query_execute(sql)
@@ -526,22 +534,23 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 state_track=executor.state_track,
             )
         else:
+
             resp = SQLAnswer(
                 answer_type=ANSWER_TYPE.TABLE,
                 state_track=executor.state_track,
-                columns=self.to_mysql_columns(executor.columns,
-                                              model_types=executor.model_types),
-                data=executor.data
+                columns=self.to_mysql_columns(executor.columns),
+                data=executor.data,
+                status=executor.server_status
             )
         return resp
 
     def answer_stmt_prepare(self, sql):
         executor = Executor(
             session=self.session,
-            connection_id=self.connection_id
+            sqlserver=self
         )
         stmt_id = self.session.register_stmt(executor)
-        prepared_stmt = self.session.prepared_stmts[stmt_id]
+        # prepared_stmt = self.session.prepared_stmts[stmt_id]
 
         executor.stmt_prepare(sql)
 
@@ -556,8 +565,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
 
         if len(executor.params) > 0:
-            parameters_def = self.to_mysql_columns(executor.params,
-                                                   model_types=executor.model_types)
+            parameters_def = self.to_mysql_columns(executor.params)
             packages.extend(
                 self._get_column_defenition_packets(parameters_def)
             )
@@ -566,8 +574,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 packages.append(self.packet(EofPacket, status=status))
 
         if len(executor.columns) > 0:
-            columns_def = self.to_mysql_columns(executor.columns,
-                                                model_types=executor.model_types)
+            columns_def = self.to_mysql_columns(executor.columns)
             packages.extend(
                 self._get_column_defenition_packets(columns_def)
             )
@@ -601,13 +608,23 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.send_query_answer(resp)
 
         # TODO prepared_stmt['type'] == 'lock'
-        columns_def = self.to_mysql_columns(executor.columns,
-                                            model_types=executor.model_types)
+        columns_def = self.to_mysql_columns(executor.columns)
         packages = [self.packet(ColumnCountPacket, count=len(columns_def))]
 
         packages.extend(self._get_column_defenition_packets(columns_def))
 
-        packages.append(self.last_packet(status=0x0062))
+        if self.client_capabilities.DEPRECATE_EOF is False:
+            packages.append(self.packet(EofPacket, status=0x0062))
+        else:
+            # send all
+            for row in executor.data:
+                packages.append(
+                    self.packet(BinaryResultsetRowPacket, data=row, columns=columns_def)
+                )
+
+            server_status = executor.server_status or 0x0002
+            packages.append(self.last_packet(status=server_status))
+            prepared_stmt['fetched'] += len(executor.data)
 
         return self.send_package_group(packages)
 
@@ -631,8 +648,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.send_query_answer(resp)
 
         packages = []
-        columns = self.to_mysql_columns(executor.columns,
-                                        model_types=executor.model_types)
+        columns = self.to_mysql_columns(executor.columns)
         for row in executor.data[fetched:limit]:
 
             packages.append(
@@ -719,7 +735,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     break
                 elif p.type.value == COMMANDS.COM_INIT_DB:
                     new_database = p.database.value.decode()
-                    self.change_default_db(new_database)
+
+                    executor = Executor(
+                        session=self.session,
+                        sqlserver=self
+                    )
+                    executor.command_executor.change_default_db(new_database)
+
+                    # self.change_default_db(new_database)
                     self.packet(OkPacket).send()
                 elif p.type.value == COMMANDS.COM_FIELD_LIST:
                     # this command is deprecated, but console client still use it.

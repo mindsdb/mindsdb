@@ -9,8 +9,12 @@ This example will show how to upload a file to MindsDB Cloud and use it to creat
 ### Upload file to MindsDB Cloud
 
 1. Login to MindsDB Cloud.
-2. Navigate to the `Upload File` located on the right top corner.
-3. Click on `Upload a file` and choose your file.
+2. Navigate to  `Add Data ` located on the right navigation bar identified by a plug icon.
+3. Click on the tab `Files` and the card `Import File`
+
+![Add File](/assets/sql/add-file-data.png)
+
+
 5. Name your file in `Table name`.
 6. Click on `Save and Continue`.
 

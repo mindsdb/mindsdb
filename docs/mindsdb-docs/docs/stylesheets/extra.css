@@ -1,6 +1,7 @@
 :root{
     --md-primary-fg-color: #00A587 !important;
 	--md-typeset-color: #4A515E !important;
+	--md-default-fg-color--light:	#36333D !important;
 }
 
 .block {
@@ -107,13 +108,7 @@ a{
 	font-weight: 500;
 }
 
-a:hover {
-	color: #36333D !important;
-}
-
-
 h1{
-	color: #36333D !important;
 	font-weight: 900 !important;
 	font-size: 35px !important;
 	line-height: 36px !important;
@@ -121,7 +116,6 @@ h1{
 }
 
 h2{
-	color: #36333D !important;
 	font-weight: 700 !important;
 	font-size: 25px !important;
 	line-height: 32px !important;

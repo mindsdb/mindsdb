@@ -1,5 +1,6 @@
 :root{
     --md-primary-fg-color: #00A587 !important;
+	--md-typeset-color: #4A515E !important;
 }
 
 .block {
@@ -103,27 +104,35 @@
 }
 
 a{
-	font-weight: 600;
+	font-weight: 500;
 }
 
 a:hover {
 	color: #36333D !important;
 }
 
+
+h1{
+	color: #36333D !important;
+	font-weight: 900 !important;
+	font-size: 35px !important;
+	line-height: 36px !important;
+	letter-spacing: 0.3px !important;
+}
+
 h2{
 	color: #36333D !important;
-	font-family: 'Space Grotesk', sans-serif !important;
 	font-weight: 700 !important;
 	font-size: 25px !important;
 	line-height: 32px !important;
 	letter-spacing: 0.3px !important;
 }
 
-h1{
-	color: #36333D !important;
-	font-family: 'Space Grotesk', sans-serif !important;
+
+h3{
+	font-family: 'Inter' !important;
+	font-style: normal !important;
 	font-weight: 700 !important;
-	font-size: 30px !important;
-	line-height: 36px !important;
-	letter-spacing: 0.3px !important;
+	font-size: 20px !important;
+	line-height: 20px !important;
 }

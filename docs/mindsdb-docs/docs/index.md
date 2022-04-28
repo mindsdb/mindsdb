@@ -1,23 +1,23 @@
 # Quickstart Guide
 
-Follow these steps to start predicting in SQL straight away. To try MindsDB with your own data or model, check out our [Getting Started Guide](/getting-started/).
+Follow the following steps to start predicting in SQL straight away. Check out our [Getting Started Guide](/getting-started/) for trying MindsDB with your data or model.
 ## 1. Create an Account
 
 Create your [free MindsDB Cloud account](https://cloud.mindsdb.com/signup).
 
 ???+ Tip "Local Installation" 
-    If you prefer to proceed with a local installation, follow our [Docker instructions](/deployment/docker).
+    Follow our [Docker instructions](/deployment/docker). if you  prefer to proceed with a local installation.
 
 ---
-## 2. Connnect MindsDB to a MySQL Client
+## 2. Connect MindsDB to a MySQL Client
 
 You can use the MindsDB SQL Editor or open your preferred MySQL client and connect it to MindsDB.
 
 === "Using the MindsDB SQL Editor"
-    Just login to your account and you will be automatically directed to the [Editor](https://cloud.mindsdb.com/editor).
+    Just log in to your account, and you will be automatically directed to the  [Editor](https://cloud.mindsdb.com/editor).
 
 === "Connecting to a Third-party MySQL Client"
-    To connect to MindsDB from another SQL client use `cloud.mindsdb.com` as a host, `3306` port and your MindsDB Cloud credentials for username/password respectively.
+    To connect to MindsDB from another SQL client use `cloud.mindsdb.com` as a host, `3306` port and your MindsDB Cloud credentials for username/password.
     ```txt
       "user":[your_mindsdb_cloud_username],
       "password:"[your_mindsdb_cloud_password]",
@@ -30,9 +30,9 @@ You can use the MindsDB SQL Editor or open your preferred MySQL client and conne
 
 ---
 
-## 3. Connecting a Database [`#!sql CREATE DATABASE`](/sql/api/databases/) 
+## 3. Connecting a Database [`#!sql CREATE DATABASE`](/sql/api/databases/)
 
-For this quickstart we have already prepared some example data for you.  To add it to your account, use the [`#!sql CREATE DATABASE`](/sql/api/databases/) syntax by copy and pasting this command into your SQL client:
+For this quickstart, we have already prepared some example data for you.  To add it to your account, use the [`#!sql CREATE DATABASE`](/sql/api/databases/) syntax by copying and pasting this command into your SQL client:
 
 ```sql
 CREATE DATABASE example_data
@@ -46,7 +46,7 @@ PARAMETERS = {
 }
 ```
 
-On execution you should get:
+On execution, you should get:
 
 ```sql
 Query OK, 0 rows affected (3.22 sec)
@@ -64,7 +64,7 @@ FROM example_data.demo_data.home_rentals
 LIMIT 10;
 ```
 
-On execution you should get:
+On execution, you should get:
 
 ```sql
 +-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
@@ -88,7 +88,7 @@ On execution you should get:
 
 ## 5. Creating a Predictor [`#!sql CREATE PREDICTOR`](/sql/api/predictor/)
 
-Now you are ready to create your first predictor.  Use the [`#!sql CREATE PREDICTOR`](/sql/api/predictor/) syntax by copy and pasting this command into your SQL client:
+Now you are ready to create your first predictor. Use the [`#!sql CREATE PREDICTOR`](/sql/api/predictor/) syntax by copying and pasting this command into your SQL client:
 
 ```sql 
 CREATE PREDICTOR mindsdb.home_rentals_predictor
@@ -101,9 +101,11 @@ PREDICT rental_price;
 Query OK, 0 rows affected (9.79 sec)
 ```
 
-## 5. Checking the Status of a Predictor
+---
 
-A predictor may take a couple of minutes for the training to complete. You can monitor the status of your predictor by copy and pasting this command into your SQL client:
+## 6. Checking the Status of a Predictor
+
+A predictor may take a couple of minutes for the training to complete. You can monitor the status of your predictor by copying and pasting this command into your SQL client:
 
 ```sql
 SELECT status
@@ -111,7 +113,7 @@ FROM mindsdb.predictors
 WHERE name='home_rentals_predictor';
 ```
 
-On execution you should get:
+On execution, you should get:
 
 ```sql
 +----------+
@@ -132,14 +134,13 @@ Or:
 1 row in set (0.31 sec)
 ```
 
-??? attention "Predictor Status Must be 'complete' Before Making a Prediction"
-      Make sure the status for the predictor is 'complete' before moving on to the next step.
+!!! attention "Predictor Status Must be 'complete' Before Making a Prediction"
 
 ---
 
-## 5. Making a Prediction via [`#!sql SELECT`](/sql/api/select/)
+## 7. Making a Prediction via [`#!sql SELECT`](/sql/api/select/)
 
-The [`SELECT`](/sql/api/select/) syntax will allow you to make a prediction based on features.  Make your first prediction by copy and pasting this command into your SQL client:
+The [`SELECT`](/sql/api/select/) syntax will allow you to make a prediction based on features.  Make your first prediction by copying and pasting this command into your SQL client:
 
 ```sql 
 SELECT rental_price
@@ -147,7 +148,7 @@ FROM mindsdb.home_rentals_predictor
 WHERE number_of_bathrooms=2 AND sqft=1000;
 ```
 
-On execution you should get:
+On execution, you should get:
 
 ```sql
 +--------------+
@@ -159,4 +160,4 @@ On execution you should get:
 ```
 
 !!! done "Congratulations"
-      If you got this far you have, trained a predictive model using SQL, and have used it tell the future!
+      If you got this far, you have trained a predictive model using SQL and have used it to tell the future!

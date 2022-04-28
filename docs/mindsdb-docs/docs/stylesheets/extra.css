@@ -1,6 +1,6 @@
 :root{
-    --md-primary-fg-color: #00B090 !important;
-}        
+    --md-primary-fg-color: #00A587 !important;
+}
 
 .block {
 	position: static;
@@ -100,4 +100,30 @@
     border-width: 2px;
     border-color: #FFF;
     border-radius: 10px;
+}
+
+a{
+	font-weight: 600;
+}
+
+a:hover {
+	color: #36333D !important;
+}
+
+h2{
+	color: #36333D !important;
+	font-family: 'Space Grotesk', sans-serif !important;
+	font-weight: 700 !important;
+	font-size: 25px !important;
+	line-height: 32px !important;
+	letter-spacing: 0.3px !important;
+}
+
+h1{
+	color: #36333D !important;
+	font-family: 'Space Grotesk', sans-serif !important;
+	font-weight: 700 !important;
+	font-size: 30px !important;
+	line-height: 36px !important;
+	letter-spacing: 0.3px !important;
 }

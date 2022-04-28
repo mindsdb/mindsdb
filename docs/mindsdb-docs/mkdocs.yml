@@ -61,7 +61,6 @@ markdown_extensions:
 nav:
   - Quickstart: index.md
   - Using MindsDB:
-    - Getting Started: getting-started.md
     - Setup:
         - Docker: deployment/docker.md
         - Pip: deployment/pypi.md
@@ -70,6 +69,11 @@ nav:
         - MindsDB Editor: sql/connect/mindsdb_editor.md
         - DBeaver: sql/connect/dbeaver.md
         - MySQL Client: sql/connect/mysql-client.md
+        - Deepnote: sql/connect/deepnote.md
+        - SQL Alchemy: sql/connect/sql-alchemy.md
+        - DBT: sql/connect/dbt.md
+        - Kafka: sql/connect/kafka.md 
+        - Tableau: sql/connect/tableau.md 
   - Tutorials:
     - Regression:
       - Process Quality: sql/tutorials/process-quality.md
@@ -83,8 +87,12 @@ nav:
       - Mushrooms Hunting: sql/tutorials/mushrooms.md
     - Time Series:
       - AI powered forecasts with MindsDB: sql/tutorials/mindsdb-superset-snowflake.md
+    - Custom Models:
+      - MLFlow: sql/tutorials/mlflow.md
+      - Ray Serve: sql/tutorials/ray-serve.md
+      - HuggingFace: sql/tutorials/huggingface.md
+      - OpenAi: sql/tutorials/openai.md
   - SQL API:
-    - USE: sql/api/use.md
     - CREATE:
       - Database: sql/api/databases.md
       - Predictor: sql/api/predictor.md

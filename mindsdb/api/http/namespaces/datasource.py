@@ -6,6 +6,7 @@ import multipart
 import zipfile
 import tarfile
 import shutil
+from pathlib import Path
 
 import mysql.connector
 from flask import request, send_file
@@ -163,7 +164,11 @@ class Datasource(Resource):
                         return http_error(400, 'Wrong content.', 'Archive must contain data file in root.')
                 # TODO
                 # request.default_store.save_datasource(ds_name, source_type, source, file_path)
-                file_id = request.default_store.save_file(ds_name, file_path, file_name=data['file'])
+                if data['file'] is not None:
+                    file_name = Path(data['file']).name
+                else:
+                    file_name = Path(file_path).name
+                file_id = request.default_store.save_file(ds_name, file_path, file_name=file_name)
                 request.default_store.save_datasource(ds_name, source_type, source={'mindsdb_file_name': name})
             else:
                 file_path = None

@@ -3,8 +3,6 @@ import requests
 from pathlib import Path
 import json
 
-import mysql.connector
-
 from common import (
     HTTP_API_ROOT,
     CONFIG_PATH,
@@ -44,33 +42,7 @@ TEST_PREDICTOR = 'test_predictor'
 config = {}
 
 
-def query(q, as_dict=False, fetch=False):
-    con = mysql.connector.connect(
-        host=config['integrations']['default_mariadb']['host'],
-        port=config['integrations']['default_mariadb']['port'],
-        user=config['integrations']['default_mariadb']['user'],
-        passwd=config['integrations']['default_mariadb']['password']
-    )
-
-    cur = con.cursor(dictionary=as_dict)
-    cur.execute(q)
-    res = True
-    if fetch:
-        res = cur.fetchall()
-    con.commit()
-    con.close()
-    return res
-
-
-def fetch(q, as_dict=True):
-    return query(q, as_dict, fetch=True)
-
-
 class UserFlowTest_1(unittest.TestCase):
-    def get_tables_in(self, schema):
-        test_tables = fetch(f'show tables from {schema}', as_dict=False)
-        return [x[0] for x in test_tables]
-
     @classmethod
     def setUpClass(cls):
         run_environment(

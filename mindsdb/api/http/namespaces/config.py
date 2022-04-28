@@ -11,14 +11,14 @@ from pathlib import Path
 from flask import request
 from flask_restx import Resource, abort
 from flask import current_app as ca
+from dateutil.tz import tzlocal
 
 from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.log import get_logs
 from mindsdb.integrations import CHECKERS
 from mindsdb.api.http.utils import http_error
-from dateutil.tz import tzlocal
-from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.interfaces.stream.stream import StreamController
 
 
 @ns_conf.route('/logs')
@@ -134,8 +134,10 @@ class Integration(Resource):
                             model_data_arr.append(request.model_interface.get_model_data(model['name']))
                         except Exception:
                             pass
-                DatabaseWrapper(request.company_id).setup_integration(name)
-                DatabaseWrapper(request.company_id).register_predictors(model_data_arr, name)
+
+                stream_controller = StreamController(request.company_id)
+                if params.get('type') in stream_controller.known_dbs and params.get('publish', False) is True:
+                    stream_controller.setup(name)
         except Exception as e:
             log.error(str(e))
             if temp_dir is not None:
@@ -174,7 +176,10 @@ class Integration(Resource):
                 params['publish'] = params['enabled']
                 del params['enabled']
             request.integration_controller.modify(name, params)
-            DatabaseWrapper(request.company_id).setup_integration(name)
+
+            stream_controller = StreamController(request.company_id)
+            if params.get('type') in stream_controller.known_dbs and params.get('publish', False) is True:
+                stream_controller.setup(name)
         except Exception as e:
             log.error(str(e))
             abort(500, f'Error during integration modifycation: {str(e)}')
@@ -186,22 +191,10 @@ class Integration(Resource):
 class Check(Resource):
     @ns_conf.doc('check')
     def get(self, name):
-        company_id = request.company_id
         if request.integration_controller.get(name) is None:
             abort(404, f'Can\'t find database integration: {name}')
-        connections = DatabaseWrapper(company_id).check_connections()
+        connections = request.integration_controller.check_connections()
         return connections.get(name, False), 200
-
-
-@ns_conf.route('/telemetry/<flag>')
-@ns_conf.param('flag', 'Turn telemtry on or off')
-class ToggleTelemetry(Resource):
-    @ns_conf.doc('check')
-    def get(self, flag):
-        if flag in ["True", "true", "t"]:
-            return 'Enabled telemetry', 200
-        else:
-            return 'Disabled telemetry', 200
 
 
 @ns_conf.route('/vars')
@@ -227,16 +220,6 @@ class Vars(Resource):
             'cloud': cloud,
             'timezone': local_timezone,
         }
-
-
-@ns_conf.param('flag', 'Turn telemtry on or off')
-class ToggleTelemetry2(Resource):
-    @ns_conf.doc('check')
-    def get(self, flag):
-        if flag in ["True", "true", "t"]:
-            return 'Enabled telemetry', 200
-        else:
-            return 'Disabled telemetry', 200
 
 
 @ns_conf.route('/install_options')

@@ -6,7 +6,7 @@ with open("mindsdb/__about__.py") as fp:
     exec(fp.read(), about)
 
 
-with open("README.md", "r") as fh:
+with open("README.md", "r", encoding="utf8") as fh:
     long_description = fh.read()
 
 

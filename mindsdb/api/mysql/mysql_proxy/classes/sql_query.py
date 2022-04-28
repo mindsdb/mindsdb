@@ -10,15 +10,14 @@
 """
 
 import re
-import pandas as pd
 import datetime
 import time
 
 import duckdb
+import pandas as pd
+import numpy as np
 from lightwood.api import dtype
 from mindsdb_sql import parse_sql
-from mindsdb_sql.planner import plan_query
-from mindsdb_sql.parser.dialects.mindsdb.latest import Latest
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     UnaryOperation,
@@ -51,7 +50,7 @@ from mindsdb_sql.planner.steps import (
     JoinStep
 )
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.planner import query_planner, utils as planner_utils
+from mindsdb_sql.planner import query_planner
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import operator_map
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, ERR
@@ -71,7 +70,6 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErNonInsertableTable,
     ErNotSupportedYet,
 )
-
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -400,23 +398,6 @@ class SQLQuery():
                     'columns': {table_name: columns},
                     'tables': [table_name]
                 }
-                return
-
-            # is it query to 'commands'?
-            if (
-                isinstance(mindsdb_sql_struct.from_table, Identifier)
-                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'
-                and (
-                    self.database == 'mindsdb'
-                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-                )
-            ):
-                self.fetched_data = {
-                    'values': [],
-                    'columns': {('mindsdb', 'commands', 'commands'): [('command', 'command')]},
-                    'tables': [('mindsdb', 'commands', 'commands')]
-                }
-                self.columns_list = [Column(database='mindsdb', table_name='commands', name='command')]
                 return
 
             # is it query to 'datasources'?
@@ -907,7 +888,8 @@ class SQLQuery():
                 con.unregister(a_name)
                 con.unregister(b_name)
                 con.close()
-                resp_df = resp_df.where(pd.notnull(resp_df), None)
+
+                resp_df = resp_df.replace({np.nan: None})
                 resp_dict = resp_df.to_dict(orient='records')
 
                 for row in resp_dict:
@@ -1045,7 +1027,7 @@ class SQLQuery():
                                     else:
                                         raise Exception(f'Can not find column "{column_name}" in table "{table_name}"')
                             if appropriate_table is None:
-                                raise Exception(f'Can not find approproate table for column {column_name}')
+                                raise SqlApiException(f'Can not find appropriate table for column {column_name}')
 
                             columns_to_copy = None
                             table_column_names_list = [x[1] or x[0] for x in table_columns]
@@ -1055,8 +1037,8 @@ class SQLQuery():
                                     columns_to_copy = column
                                     break
                             else:
-                                raise Exception(
-                                    f'Can not find approproate column in data: {(column_name, column_alias)}')
+                                raise ErKeyColumnDoesNotExist(
+                                    f'Can not find appropriate column in data: {(column_name, column_alias)}')
 
                             for row in step_data['values']:
                                 row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][
@@ -1070,21 +1052,28 @@ class SQLQuery():
                                        alias=column_alias)
                             )
                         else:
-                            raise Exception('Undefined column name')
+                            raise SqlApiException('Undefined column name')
 
                         # if column not exists in result - copy value to it
                         if (column_name, column_alias) not in step_data['columns'][appropriate_table]:
                             step_data['columns'][appropriate_table].append((column_name, column_alias))
                             for row in step_data['values']:
                                 if (column_name, column_alias) not in row[appropriate_table]:
-                                    row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][(column_name, column_name)]
+                                    try:
+                                        row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][(column_name, column_name)]
+                                    except KeyError:
+                                        raise ErKeyColumnDoesNotExist(f'Unknown column: {column_name}')
+
                     else:
-                        raise Exception(f'Unexpected column name type: {column_identifier}')
+                        raise ErKeyColumnDoesNotExist(f'Unknown column type: {column_identifier}')
 
                 self.columns_list = columns_list
                 data = step_data
             except Exception as e:
-                raise SqlApiException(f'error on project step:{e} ') from e
+                if isinstance(e, SqlApiException):
+                    raise e
+                raise SqlApiException(f'error on project step: {e} ') from e
+
         elif type(step) == SaveToTable:
             step_data = step.dataframe.result_data
             integration_name = step.table.parts[0]

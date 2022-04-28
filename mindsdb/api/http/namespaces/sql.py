@@ -2,7 +2,7 @@ from flask_restx import Resource
 from flask import request
 
 from mindsdb.api.http.namespaces.configs.sql import ns_conf
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import FakeMysqlProxy, ANSWER_TYPE as SQL_ANSWER_TYPE
+from mindsdb.api.mysql.mysql_proxy.mysql_proxy import FakeMysqlProxy, RESPONSE_TYPE as SQL_RESPONSE_TYPE
 
 
 @ns_conf.route('/query')
@@ -17,17 +17,17 @@ class Query(Resource):
         mysql_proxy.set_context(context)
         try:
             result = mysql_proxy.process_query(query)
-            if result.type == SQL_ANSWER_TYPE.ERROR:
+            if result.type == SQL_RESPONSE_TYPE.ERROR:
                 listing_query_response = {
                     'type': 'error',
                     'error_code': result.error_code,
                     'error_message': result.error_message
                 }
-            elif result.type == SQL_ANSWER_TYPE.OK:
+            elif result.type == SQL_RESPONSE_TYPE.OK:
                 listing_query_response = {
                     'type': 'ok'
                 }
-            elif result.type == SQL_ANSWER_TYPE.TABLE:
+            elif result.type == SQL_RESPONSE_TYPE.TABLE:
                 listing_query_response = {
                     'type': 'table',
                     'data': result.data,
@@ -58,27 +58,25 @@ class ListDatabases(Resource):
             result = mysql_proxy.process_query(listing_query)
 
             # iterate over result.data and perform a query on each item to get the name of the tables
-           
-
-            if result.type == SQL_ANSWER_TYPE.ERROR:
+            if result.type == SQL_RESPONSE_TYPE.ERROR:
                 listing_query_response = {
                     'type': 'error',
                     'error_code': result.error_code,
                     'error_message': result.error_message
                 }
-            elif result.type == SQL_ANSWER_TYPE.OK:
+            elif result.type == SQL_RESPONSE_TYPE.OK:
                 listing_query_response = {
                     'type': 'ok'
                 }
-            elif result.type == SQL_ANSWER_TYPE.TABLE:
+            elif result.type == SQL_RESPONSE_TYPE.TABLE:
                 listing_query_response = {
-                'data': [{'name': x[0], 'tables': mysql_proxy.process_query('SHOW TABLES FROM `{}`'.format(x[0])).data} for x in result.data]
-            }
+                    'data': [{'name': x[0], 'tables': mysql_proxy.process_query('SHOW TABLES FROM `{}`'.format(x[0])).data} for x in result.data]
+                }
         except Exception as e:
             listing_query_response = {
                 'type': 'error',
                 'error_code': 0,
                 'error_message': str(e)
             }
-        
+
         return listing_query_response, 200

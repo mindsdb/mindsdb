@@ -1,6 +1,8 @@
 :root{
-    --md-primary-fg-color: #00B090 !important;
-}        
+    --md-primary-fg-color: #00A587 !important;
+	--md-typeset-color: #4A515E !important;
+	--md-default-fg-color--light:	#36333D !important;
+}
 
 .block {
 	position: static;
@@ -100,4 +102,31 @@
     border-width: 2px;
     border-color: #FFF;
     border-radius: 10px;
+}
+
+a{
+	font-weight: 500;
+}
+
+h1{
+	font-weight: 900 !important;
+	font-size: 35px !important;
+	line-height: 36px !important;
+	letter-spacing: 0.3px !important;
+}
+
+h2{
+	font-weight: 700 !important;
+	font-size: 25px !important;
+	line-height: 32px !important;
+	letter-spacing: 0.3px !important;
+}
+
+
+h3{
+	font-family: 'Inter' !important;
+	font-style: normal !important;
+	font-weight: 700 !important;
+	font-size: 20px !important;
+	line-height: 20px !important;
 }

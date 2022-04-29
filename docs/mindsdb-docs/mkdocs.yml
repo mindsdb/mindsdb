@@ -7,6 +7,8 @@ theme:
   custom_dir: overrides
   logo: assets/mdb_logo_w.svg
   favicon: assets/mdb_logo.png
+  font:
+      text: Inter
   icon:
     repo: fontawesome/brands/github
   features:
@@ -45,12 +47,6 @@ plugins:
             'installation/macos/': '/deployment/macos.md'
             'installation/linux/': '/deployment/linux.md'
     - table-reader
-    - i18n:
-        default_language: en
-        languages:
-          en: English
-          zh: Chinese
-
 markdown_extensions:
   - codehilite
   - admonition
@@ -62,10 +58,8 @@ markdown_extensions:
       emoji_index: !!python/name:materialx.emoji.twemoji
   - pymdownx.tasklist:
       custom_checkbox: true
-  - pymdownx.tilde
   - toc:
-    permalink: true
-  
+      permalink: true
 nav:
   - Quickstart: index.md
   - Using MindsDB:

@@ -33,7 +33,8 @@ WITH
 
 ### Create Database configurations
 
-> Click on each section to expand the example query for connection.
+!!! info "Database configurations"
+    Click on each section to expand the example query for specific connection.
 
 <details class="success">
    <summary>Connect to Snowflake</summary> 

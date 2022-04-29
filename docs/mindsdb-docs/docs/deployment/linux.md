@@ -1,9 +1,9 @@
 # Deploy Using pip on Linux
 
-!!! warning "Python 3.9"
+???+ warning "Python 3.9"
     Currently, some of our dependencies have issues with the latest versions of Python 3.9.x. For now, our suggestion is to use **Python 3.7.x, or 3.8.x versions**.
 
-!!! warning "Suggestions"
+???+ warning "Suggestions"
     Install MindsDB in a virtual environment when using **pip** to avoid dependency issues. Make sure your **Python>=3.7** and **pip>=19.3**.
 
 ## Using the Python [`#!bash venv`](https://docs.python.org/3/library/venv.html) Module.

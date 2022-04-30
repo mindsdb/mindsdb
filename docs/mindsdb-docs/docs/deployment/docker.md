@@ -14,7 +14,6 @@ You should see the `Hello from Docker!` message displayed. If not, check [Docker
 
     By default, Docker for Mac allocates **2.00GB of RAM**. This is insufficient for deploying MindsDB with docker. We recommend increasing the default RAM limit to **4.00GB**. Please refer to Docker's [Docker Desktop for Mac user manual](https://docs.docker.com/desktop/mac/#resources) for more information on how to increase the allocated memory.
 
-___
 ## Start MindsDB
 
 Run the below command to start MindsDB in Docker:

@@ -48,11 +48,14 @@ plugins:
             'installation/linux/': '/deployment/linux.md'
     - table-reader
 markdown_extensions:
+  - attr_list
+  - md_in_html
   - codehilite
   - admonition
   - pymdownx.details
   - pymdownx.inlinehilite
-  - pymdownx.tabbed
+  - pymdownx.tabbed:
+      alternate_style: true 
   - pymdownx.superfences
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji

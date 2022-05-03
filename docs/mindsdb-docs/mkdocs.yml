@@ -63,6 +63,8 @@ markdown_extensions:
       custom_checkbox: true
   - toc:
       permalink: true
+  - tables
+
 nav:
   - Quickstart: index.md
   - Using MindsDB:

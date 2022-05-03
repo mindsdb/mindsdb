@@ -8,11 +8,10 @@
       
       
       
-      
         <link rel="canonical" href="https://docs.mindsdb.com/sql/tutorials/customer-churn/">
       
       <link rel="icon" href="../../../assets/mdb_logo.png">
-      <meta name="generator" content="mkdocs-1.2.2, mkdocs-material-7.2.8">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.13">
     
     
       
@@ -20,26 +19,21 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.92558b1b.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.e411adfe.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.3f5d1f46.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.cc9b2e1e.min.css">
         
       
     
     
     
-      
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,400i,700%7C&display=fallback">
-        <style>:root{--md-text-font-family:"Inter";--md-code-font-family:""}</style>
-      
-    
-    
+<link  rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap">
+
     
       <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
+    <script>__md_scope=new URL("../../..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
 
 <!--iubenda privacy policy-->
@@ -74,9 +68,8 @@
     <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="" data-md-color-accent="">
   
     
-    <script>function __prefix(e){return new URL("../../..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
     
-      <script>var palette=__get("__palette");if(null!==palette&&"object"==typeof palette.color)for(var key in palette.color)document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
@@ -92,6 +85,7 @@
     <div data-md-component="announce">
       
     </div>
+    
     
       <!--
   Copyright (c) 2016-2021 Martin Donath <martin.donath@squidfunk.com>
@@ -141,7 +135,7 @@
 
     <!-- Button to open drawer -->
     <label class="md-header__button md-icon" for="__drawer">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
     </label>
 
     <!-- Header title -->
@@ -214,7 +208,7 @@
               for="__palette_1"
               hidden
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3z"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3Z"/></svg>
             </label>
           
         
@@ -227,7 +221,7 @@
       <div class="md-header__source" style="width: auto; margin: 0; margin-right: 1rem;">
         <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ" title="Slack invite link" class="md-source">
             <div class="md-source__icon md-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M94.12 315.1c0 25.9-21.16 47.06-47.06 47.06S0 341 0 315.1c0-25.9 21.16-47.06 47.06-47.06h47.06v47.06zm23.72 0c0-25.9 21.16-47.06 47.06-47.06s47.06 21.16 47.06 47.06v117.84c0 25.9-21.16 47.06-47.06 47.06s-47.06-21.16-47.06-47.06V315.1zm47.06-188.98c-25.9 0-47.06-21.16-47.06-47.06S139 32 164.9 32s47.06 21.16 47.06 47.06v47.06H164.9zm0 23.72c25.9 0 47.06 21.16 47.06 47.06s-21.16 47.06-47.06 47.06H47.06C21.16 243.96 0 222.8 0 196.9s21.16-47.06 47.06-47.06H164.9zm188.98 47.06c0-25.9 21.16-47.06 47.06-47.06 25.9 0 47.06 21.16 47.06 47.06s-21.16 47.06-47.06 47.06h-47.06V196.9zm-23.72 0c0 25.9-21.16 47.06-47.06 47.06-25.9 0-47.06-21.16-47.06-47.06V79.06c0-25.9 21.16-47.06 47.06-47.06 25.9 0 47.06 21.16 47.06 47.06V196.9zM283.1 385.88c25.9 0 47.06 21.16 47.06 47.06 0 25.9-21.16 47.06-47.06 47.06-25.9 0-47.06-21.16-47.06-47.06v-47.06h47.06zm0-23.72c-25.9 0-47.06-21.16-47.06-47.06 0-25.9 21.16-47.06 47.06-47.06h117.84c25.9 0 47.06 21.16 47.06 47.06 0 25.9-21.16 47.06-47.06 47.06H283.1z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M94.12 315.1c0 25.9-21.16 47.06-47.06 47.06S0 341 0 315.1c0-25.9 21.16-47.06 47.06-47.06h47.06v47.06zm23.72 0c0-25.9 21.16-47.06 47.06-47.06s47.06 21.16 47.06 47.06v117.84c0 25.9-21.16 47.06-47.06 47.06s-47.06-21.16-47.06-47.06V315.1zm47.06-188.98c-25.9 0-47.06-21.16-47.06-47.06S139 32 164.9 32s47.06 21.16 47.06 47.06v47.06H164.9zm0 23.72c25.9 0 47.06 21.16 47.06 47.06s-21.16 47.06-47.06 47.06H47.06C21.16 243.96 0 222.8 0 196.9s21.16-47.06 47.06-47.06H164.9zm188.98 47.06c0-25.9 21.16-47.06 47.06-47.06 25.9 0 47.06 21.16 47.06 47.06s-21.16 47.06-47.06 47.06h-47.06V196.9zm-23.72 0c0 25.9-21.16 47.06-47.06 47.06-25.9 0-47.06-21.16-47.06-47.06V79.06c0-25.9 21.16-47.06 47.06-47.06 25.9 0 47.06 21.16 47.06 47.06V196.9zM283.1 385.88c25.9 0 47.06 21.16 47.06 47.06 0 25.9-21.16 47.06-47.06 47.06-25.9 0-47.06-21.16-47.06-47.06v-47.06h47.06zm0-23.72c-25.9 0-47.06-21.16-47.06-47.06 0-25.9 21.16-47.06 47.06-47.06h117.84c25.9 0 47.06 21.16 47.06 47.06 0 25.9-21.16 47.06-47.06 47.06H283.1z"/></svg>
             </div>
             Join our Slack
         </a>
@@ -236,24 +230,23 @@
     <!-- Button to open search modal -->
     
       <label class="md-header__button md-icon" for="__search">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
       </label>
 
       <!-- Search interface -->
-      
-<div class="md-search" data-md-component="search" role="dialog">
+      <div class="md-search" data-md-component="search" role="dialog">
   <label class="md-search__overlay" for="__search"></label>
   <div class="md-search__inner" role="search">
     <form class="md-search__form" name="search">
       <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
       <label class="md-search__icon md-icon" for="__search">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
       </label>
       <nav class="md-search__options" aria-label="Search">
         
         <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
         </button>
       </nav>
       
@@ -277,11 +270,10 @@
     <!-- Repository information -->
     
       <div class="md-header__source">
-        
-<a href="https://github.com/mindsdb/mindsdb/" title="Go to repository" class="md-source" data-md-component="source">
+        <a href="https://github.com/mindsdb/mindsdb" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
   </div>
   <div class="md-source__repository">
     mindsdb/mindsdb
@@ -298,6 +290,8 @@
     <div class="md-container" data-md-component="container">
       
       
+        
+          
         
       
       <main class="md-main" data-md-component="main">
@@ -322,11 +316,10 @@
   </label>
   
     <div class="md-nav__source">
-      
-<a href="https://github.com/mindsdb/mindsdb/" title="Go to repository" class="md-source" data-md-component="source">
+      <a href="https://github.com/mindsdb/mindsdb" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
   </div>
   <div class="md-source__repository">
     mindsdb/mindsdb
@@ -364,10 +357,14 @@
       
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
       
-      <label class="md-nav__link" for="__nav_2">
-        Using MindsDB
-        <span class="md-nav__icon md-icon"></span>
-      </label>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Using MindsDB
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <nav class="md-nav" aria-label="Using MindsDB" data-md-level="1">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
@@ -376,6 +373,7 @@
         <ul class="md-nav__list" data-md-scrollfix>
           
             
+              
   
   
   
@@ -385,10 +383,14 @@
       
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_1" type="checkbox" id="__nav_2_1" >
       
-      <label class="md-nav__link" for="__nav_2_1">
-        Setup
-        <span class="md-nav__icon md-icon"></span>
-      </label>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_1">
+          Setup
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <nav class="md-nav" aria-label="Setup" data-md-level="2">
         <label class="md-nav__title" for="__nav_2_1">
           <span class="md-nav__icon md-icon"></span>
@@ -397,6 +399,7 @@
         <ul class="md-nav__list" data-md-scrollfix>
           
             
+              
   
   
   
@@ -407,8 +410,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -419,8 +424,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -431,14 +438,17 @@
     </li>
   
 
+            
           
         </ul>
       </nav>
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -448,10 +458,14 @@
       
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2_2" type="checkbox" id="__nav_2_2" >
       
-      <label class="md-nav__link" for="__nav_2_2">
-        Connect
-        <span class="md-nav__icon md-icon"></span>
-      </label>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2_2">
+          Connect
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <nav class="md-nav" aria-label="Connect" data-md-level="2">
         <label class="md-nav__title" for="__nav_2_2">
           <span class="md-nav__icon md-icon"></span>
@@ -460,6 +474,7 @@
         <ul class="md-nav__list" data-md-scrollfix>
           
             
+              
   
   
   
@@ -470,8 +485,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -482,8 +499,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -494,8 +513,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -506,8 +527,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -518,8 +541,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -530,8 +555,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -542,8 +569,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -554,12 +583,14 @@
     </li>
   
 
+            
           
         </ul>
       </nav>
     </li>
   
 
+            
           
         </ul>
       </nav>
@@ -582,10 +613,14 @@
       
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" checked>
       
-      <label class="md-nav__link" for="__nav_3">
-        Tutorials
-        <span class="md-nav__icon md-icon"></span>
-      </label>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          Tutorials
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <nav class="md-nav" aria-label="Tutorials" data-md-level="1">
         <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
@@ -594,6 +629,7 @@
         <ul class="md-nav__list" data-md-scrollfix>
           
             
+              
   
   
   
@@ -603,10 +639,14 @@
       
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_1" type="checkbox" id="__nav_3_1" >
       
-      <label class="md-nav__link" for="__nav_3_1">
-        Regression
-        <span class="md-nav__icon md-icon"></span>
-      </label>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3_1">
+          Regression
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <nav class="md-nav" aria-label="Regression" data-md-level="2">
         <label class="md-nav__title" for="__nav_3_1">
           <span class="md-nav__icon md-icon"></span>
@@ -615,6 +655,7 @@
         <ul class="md-nav__list" data-md-scrollfix>
           
             
+              
   
   
   
@@ -625,8 +666,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -637,8 +680,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -649,14 +694,17 @@
     </li>
   
 
+            
           
         </ul>
       </nav>
     </li>
   
 
+            
           
             
+              
   
   
     
@@ -668,10 +716,14 @@
       
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_2" type="checkbox" id="__nav_3_2" checked>
       
-      <label class="md-nav__link" for="__nav_3_2">
-        Classification
-        <span class="md-nav__icon md-icon"></span>
-      </label>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3_2">
+          Classification
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <nav class="md-nav" aria-label="Classification" data-md-level="2">
         <label class="md-nav__title" for="__nav_3_2">
           <span class="md-nav__icon md-icon"></span>
@@ -680,6 +732,7 @@
         <ul class="md-nav__list" data-md-scrollfix>
           
             
+              
   
   
   
@@ -690,8 +743,10 @@
     </li>
   
 
+            
           
             
+              
   
   
     
@@ -713,6 +768,7 @@
       </a>
       
         
+
 <nav class="md-nav md-nav--secondary" aria-label="Table of contents">
   
   
@@ -772,8 +828,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -784,8 +842,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -796,8 +856,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -808,14 +870,17 @@
     </li>
   
 
+            
           
         </ul>
       </nav>
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -825,10 +890,14 @@
       
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_3" type="checkbox" id="__nav_3_3" >
       
-      <label class="md-nav__link" for="__nav_3_3">
-        Time Series
-        <span class="md-nav__icon md-icon"></span>
-      </label>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3_3">
+          Time Series
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <nav class="md-nav" aria-label="Time Series" data-md-level="2">
         <label class="md-nav__title" for="__nav_3_3">
           <span class="md-nav__icon md-icon"></span>
@@ -837,6 +906,7 @@
         <ul class="md-nav__list" data-md-scrollfix>
           
             
+              
   
   
   
@@ -847,14 +917,17 @@
     </li>
   
 
+            
           
         </ul>
       </nav>
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -864,10 +937,14 @@
       
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_4" type="checkbox" id="__nav_3_4" >
       
-      <label class="md-nav__link" for="__nav_3_4">
-        Custom Models
-        <span class="md-nav__icon md-icon"></span>
-      </label>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3_4">
+          Custom Models
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <nav class="md-nav" aria-label="Custom Models" data-md-level="2">
         <label class="md-nav__title" for="__nav_3_4">
           <span class="md-nav__icon md-icon"></span>
@@ -876,6 +953,7 @@
         <ul class="md-nav__list" data-md-scrollfix>
           
             
+              
   
   
   
@@ -886,8 +964,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -898,8 +978,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -910,8 +992,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -922,12 +1006,14 @@
     </li>
   
 
+            
           
         </ul>
       </nav>
     </li>
   
 
+            
           
         </ul>
       </nav>
@@ -948,10 +1034,14 @@
       
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
       
-      <label class="md-nav__link" for="__nav_4">
-        SQL API
-        <span class="md-nav__icon md-icon"></span>
-      </label>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          SQL API
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <nav class="md-nav" aria-label="SQL API" data-md-level="1">
         <label class="md-nav__title" for="__nav_4">
           <span class="md-nav__icon md-icon"></span>
@@ -960,6 +1050,7 @@
         <ul class="md-nav__list" data-md-scrollfix>
           
             
+              
   
   
   
@@ -969,10 +1060,14 @@
       
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_1" type="checkbox" id="__nav_4_1" >
       
-      <label class="md-nav__link" for="__nav_4_1">
-        CREATE
-        <span class="md-nav__icon md-icon"></span>
-      </label>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_1">
+          CREATE
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <nav class="md-nav" aria-label="CREATE" data-md-level="2">
         <label class="md-nav__title" for="__nav_4_1">
           <span class="md-nav__icon md-icon"></span>
@@ -981,6 +1076,7 @@
         <ul class="md-nav__list" data-md-scrollfix>
           
             
+              
   
   
   
@@ -991,8 +1087,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -1003,8 +1101,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -1015,14 +1115,17 @@
     </li>
   
 
+            
           
         </ul>
       </nav>
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -1033,8 +1136,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -1045,8 +1150,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -1057,8 +1164,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -1069,8 +1178,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -1081,8 +1192,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -1093,6 +1206,7 @@
     </li>
   
 
+            
           
         </ul>
       </nav>
@@ -1113,10 +1227,14 @@
       
         <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
       
-      <label class="md-nav__link" for="__nav_5">
-        Contribution and Community
-        <span class="md-nav__icon md-icon"></span>
-      </label>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_5">
+          Contribution and Community
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <nav class="md-nav" aria-label="Contribution and Community" data-md-level="1">
         <label class="md-nav__title" for="__nav_5">
           <span class="md-nav__icon md-icon"></span>
@@ -1125,6 +1243,7 @@
         <ul class="md-nav__list" data-md-scrollfix>
           
             
+              
   
   
   
@@ -1135,8 +1254,10 @@
     </li>
   
 
+            
           
             
+              
   
   
   
@@ -1147,6 +1268,7 @@
     </li>
   
 
+            
           
         </ul>
       </nav>
@@ -1181,6 +1303,7 @@
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
+
 <nav class="md-nav md-nav--secondary" aria-label="Table of contents">
   
   
@@ -1245,14 +1368,15 @@
             <article class="md-content__inner md-typeset">
               
                 
-                  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/sql/tutorials/customer-churn.md" title="Edit this page" class="md-content__button md-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
-                  </a>
-                
-                
-                  <h1>Customer Churn</h1>
-                
-                <p>MindsDB as a Machine Learning framework can help marketing, sales, and customer retention teams determine the best incentive and the right time to make an offer to minimize customer turnover.</p>
+  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/sql/tutorials/customer-churn.md" title="Edit this page" class="md-content__button md-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
+
+
+  <h1>Customer Churn</h1>
+
+<p>MindsDB as a Machine Learning framework can help marketing, sales, and customer retention teams determine the best incentive and the right time to make an offer to minimize customer turnover.</p>
 <p>In this tutorial you will learn how to use SQL queries to train a machine learning model and make predictions in three simple steps:</p>
 <ol>
 <li>Connect a database with customer's data to MindsDB.</li>
@@ -1278,7 +1402,7 @@
 <p>The file will be stored as a table in your files table.</p>
 <p><img alt="Upload file" src="/assets/sql/tutorials/customer_churn/upload.png" /></p>
 <p>You can query the file you have uploaded as a table, eg.</p>
-<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">files</span><span class="p">.</span><span class="n">churn</span>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">files</span><span class="p">.</span><span class="n">churn</span><span class="w"></span>
 </code></pre></div>
 <h3 id="data-overview">Data Overview<a class="headerlink" href="#data-overview" title="Permanent link">&para;</a></h3>
 <p>In this tutorial, we will use the customer churn data-set . Each row represents a customer and we will train a machine learning model to help us predict if the customer is going to stop using the company products. Below is a short description of each feature inside the data.</p>
@@ -1308,10 +1432,10 @@
 <h3 id="create-a-predictor">Create a predictor<a class="headerlink" href="#create-a-predictor" title="Permanent link">&para;</a></h3>
 <p>We will create a machine learning model with the relevant parameters in order for it to train.</p>
 <p>For that we are going to use the CREATE PREDICTOR syntax, where we specify what query to train FROM and what we want to learn to PREDICT:</p>
-<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">predictor_name</span>
-<span class="k">FROM</span> <span class="n">files</span>
-  <span class="p">(</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">file_name</span><span class="p">)</span>
-<span class="n">PREDICT</span> <span class="k">column_name</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="n">PREDICTOR</span><span class="w"> </span><span class="n">predictor_name</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">files</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">file_name</span><span class="p">)</span><span class="w"></span>
+<span class="n">PREDICT</span><span class="w"> </span><span class="k">column_name</span><span class="p">;</span><span class="w"></span>
 </code></pre></div>
 <p>The required values that we need to provide are:</p>
 <ul>
@@ -1320,32 +1444,27 @@
 <li>column_name (string) - The feature you want to predict.</li>
 </ul>
 <p>To train the model that will predict customer churn, run the following syntax:</p>
-<div class="highlight"><pre><span></span><code><span class="k">CREATE</span> <span class="n">PREDICTOR</span> <span class="n">customer_churn</span>
-<span class="k">FROM</span> <span class="n">files</span>
-  <span class="p">(</span><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">churn</span><span class="p">)</span>
-<span class="n">PREDICT</span> <span class="n">Churn</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="n">PREDICTOR</span><span class="w"> </span><span class="n">customer_churn</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">files</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">churn</span><span class="p">)</span><span class="w"></span>
+<span class="n">PREDICT</span><span class="w"> </span><span class="n">Churn</span><span class="p">;</span><span class="w"></span>
 </code></pre></div>
 <p><img alt="Create predictor" src="/assets/sql/tutorials/customer_churn/create_churn.png" /></p>
 <p>What we did here was to create a predictor called customer_churn to predict the Churn and also ignore the gender column as an irrelevant column for the model.The model training has started. </p>
 <p>You can check the predictors status and will be able to make a prediction once the status shows complete:</p>
-<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">predictors</span> <span class="k">where</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;customer_churn&#39;</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">mindsdb</span><span class="p">.</span><span class="n">predictors</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;customer_churn&#39;</span><span class="p">;</span><span class="w"></span>
 </code></pre></div>
 <p><img alt="select" src="/assets/sql/tutorials/customer_churn/select.png" /></p>
 <p>The next steps would be to query the model and predict the customer churn. Let’s be creative and imagine a customer. Customer will use only DSL service, no phone service and multiple lines, she was with the company for 1 month and has a partner. Add all of this information to the WHERE clause.</p>
-<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">Churn</span><span class="p">,</span> <span class="n">Churn_confidence</span><span class="p">,</span> <span class="n">Churn_explain</span> <span class="k">FROM</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">customer_churn</span> <span class="k">WHERE</span> <span class="n">SeniorCitizen</span><span class="o">=</span><span class="mi">0</span> <span class="k">AND</span> <span class="n">Partner</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span> 
-<span class="k">AND</span> <span class="n">Dependents</span><span class="o">=</span><span class="s1">&#39;No&#39;</span> <span class="k">AND</span> <span class="n">tenure</span><span class="o">=</span><span class="mi">1</span> <span class="k">AND</span> <span class="n">PhoneService</span><span class="o">=</span><span class="s1">&#39;No&#39;</span> <span class="k">AND</span> <span class="n">MultipleLines</span><span class="o">=</span><span class="s1">&#39;No phone service&#39;</span> <span class="k">AND</span> <span class="n">InternetService</span><span class="o">=</span><span class="s1">&#39;DSL&#39;</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">Churn</span><span class="p">,</span><span class="w"> </span><span class="n">Churn_confidence</span><span class="p">,</span><span class="w"> </span><span class="n">Churn_explain</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">mindsdb</span><span class="p">.</span><span class="n">customer_churn</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">SeniorCitizen</span><span class="o">=</span><span class="mi">0</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">Partner</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span><span class="w"> </span>
+<span class="k">AND</span><span class="w"> </span><span class="n">Dependents</span><span class="o">=</span><span class="s1">&#39;No&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">tenure</span><span class="o">=</span><span class="mi">1</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">PhoneService</span><span class="o">=</span><span class="s1">&#39;No&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">MultipleLines</span><span class="o">=</span><span class="s1">&#39;No phone service&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">InternetService</span><span class="o">=</span><span class="s1">&#39;DSL&#39;</span><span class="p">;</span><span class="w"></span>
 </code></pre></div>
 <p><img alt="customer churn" src="/assets/sql/tutorials/customer_churn/customer_churn.png" /></p>
 <p>With the confidence of around 82% MindsDB predicted that this customer will churn. One important thing to check here is the important_missing_information value, where MindsDB is pointing to the important missing information for giving a more accurate prediction, in this case, Contract, MonthlyCharges, TotalCharges and OnlineBackup. Let’s include those values in the WHERE clause, and run a new query:</p>
-<div class="highlight"><pre><span></span><code><span class="k">SELECT</span> <span class="n">Churn</span><span class="p">,</span> <span class="n">Churn_confidence</span><span class="p">,</span> <span class="n">Churn_explain</span> <span class="k">FROM</span> <span class="n">mindsdb</span><span class="p">.</span><span class="n">customer_churn</span> <span class="k">WHERE</span> <span class="n">SeniorCitizen</span><span class="o">=</span><span class="mi">0</span> <span class="k">AND</span> <span class="n">Partner</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span> 
-<span class="k">AND</span> <span class="n">Dependents</span><span class="o">=</span><span class="s1">&#39;No&#39;</span> <span class="k">AND</span> <span class="n">tenure</span><span class="o">=</span><span class="mi">1</span> <span class="k">AND</span> <span class="n">PhoneService</span><span class="o">=</span><span class="s1">&#39;No&#39;</span> <span class="k">AND</span> <span class="n">MultipleLines</span><span class="o">=</span><span class="s1">&#39;No phone service&#39;</span> <span class="k">AND</span> <span class="n">InternetService</span><span class="o">=</span><span class="s1">&#39;DSL&#39;</span> <span class="k">AND</span> <span class="n">OnlineSecurity</span><span class="o">=</span><span class="s1">&#39;No&#39;</span> <span class="k">AND</span> <span class="n">OnlineBackup</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span> <span class="k">AND</span> <span class="n">DeviceProtection</span><span class="o">=</span><span class="s1">&#39;No&#39;</span> <span class="k">AND</span> <span class="n">TechSupport</span><span class="o">=</span><span class="s1">&#39;No&#39;</span> <span class="k">AND</span> <span class="n">StreamingTV</span><span class="o">=</span><span class="s1">&#39;No&#39;</span> <span class="k">AND</span> <span class="n">StreamingMovies</span><span class="o">=</span><span class="s1">&#39;No&#39;</span> <span class="k">AND</span> <span class="n">Contract</span><span class="o">=</span><span class="s1">&#39;Month-to-month&#39;</span> <span class="k">AND</span> <span class="n">PaperlessBilling</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span> <span class="k">AND</span> <span class="n">PaymentMethod</span><span class="o">=</span><span class="s1">&#39;Electronic check&#39;</span> <span class="k">AND</span> <span class="n">MonthlyCharges</span><span class="o">=</span><span class="mi">29</span><span class="p">.</span><span class="mi">85</span> <span class="k">AND</span> <span class="n">TotalCharges</span><span class="o">=</span><span class="mi">29</span><span class="p">.</span><span class="mi">85</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">Churn</span><span class="p">,</span><span class="w"> </span><span class="n">Churn_confidence</span><span class="p">,</span><span class="w"> </span><span class="n">Churn_explain</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">mindsdb</span><span class="p">.</span><span class="n">customer_churn</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">SeniorCitizen</span><span class="o">=</span><span class="mi">0</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">Partner</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span><span class="w"> </span>
+<span class="k">AND</span><span class="w"> </span><span class="n">Dependents</span><span class="o">=</span><span class="s1">&#39;No&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">tenure</span><span class="o">=</span><span class="mi">1</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">PhoneService</span><span class="o">=</span><span class="s1">&#39;No&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">MultipleLines</span><span class="o">=</span><span class="s1">&#39;No phone service&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">InternetService</span><span class="o">=</span><span class="s1">&#39;DSL&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">OnlineSecurity</span><span class="o">=</span><span class="s1">&#39;No&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">OnlineBackup</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">DeviceProtection</span><span class="o">=</span><span class="s1">&#39;No&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">TechSupport</span><span class="o">=</span><span class="s1">&#39;No&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">StreamingTV</span><span class="o">=</span><span class="s1">&#39;No&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">StreamingMovies</span><span class="o">=</span><span class="s1">&#39;No&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">Contract</span><span class="o">=</span><span class="s1">&#39;Month-to-month&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">PaperlessBilling</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">PaymentMethod</span><span class="o">=</span><span class="s1">&#39;Electronic check&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">MonthlyCharges</span><span class="o">=</span><span class="mi">29</span><span class="p">.</span><span class="mi">85</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">TotalCharges</span><span class="o">=</span><span class="mi">29</span><span class="p">.</span><span class="mi">85</span><span class="p">;</span><span class="w"></span>
 </code></pre></div>
 <p><img alt="customer churn2" src="/assets/sql/tutorials/customer_churn/customer_churn2.png" /></p>
-                
-              
-              
-                
-
 
               
             </article>
@@ -1360,10 +1479,10 @@
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../assets/javascripts/workers/search.94ec81fe.min.js", "version": null}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "search": "../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.48dfec6c.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.ed9748b7.min.js"></script>
       
     
   </body>

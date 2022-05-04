@@ -122,6 +122,7 @@ from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
+import mindsdb.utilities.hooks as hooks
 
 
 def empty_fn():
@@ -2293,18 +2294,29 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             log.debug('Command TYPE: {type}'.format(
                 type=getConstName(COMMANDS, p.type.value)))
 
+            command_names = {
+                COMMANDS.COM_QUERY: 'COM_QUERY',
+                COMMANDS.COM_STMT_PREPARE: 'COM_STMT_PREPARE',
+                COMMANDS.COM_STMT_EXECUTE: 'COM_STMT_EXECUTE',
+                COMMANDS.COM_STMT_FETCH: 'COM_STMT_FETCH',
+                COMMANDS.COM_STMT_CLOSE: 'COM_STMT_CLOSE',
+                COMMANDS.COM_QUIT: 'COM_QUIT',
+                COMMANDS.COM_INIT_DB: 'COM_INIT_DB',
+                COMMANDS.COM_FIELD_LIST: 'COM_FIELD_LIST'
+            }
+
+            command_name = command_names.get(p.type.value, f'UNKNOWN {p.type.value}')
+            sql = None
+            response = None
+
             try:
                 if p.type.value == COMMANDS.COM_QUERY:
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser.clear_sql(sql)
                     log.debug(f'COM_QUERY: {sql}')
-                    result = self.process_query(sql)
-                    self.send_query_answer(result)
+                    response = self.process_query(sql)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
-                    # https://dev.mysql.com/doc/internals/en/com-stmt-prepare.html
                     sql = self.decode_utf(p.sql.value)
-                    # statement = SqlStatementParser(sql)
-                    # log.debug(f'COM_STMT_PREPARE: {statement.sql}')
                     self.answer_stmt_prepare(sql)
                 elif p.type.value == COMMANDS.COM_STMT_EXECUTE:
                     self.answer_stmt_execute(p.stmt_id.value, p.parameters)
@@ -2319,39 +2331,56 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 elif p.type.value == COMMANDS.COM_INIT_DB:
                     new_database = p.database.value.decode()
                     self.change_default_db(new_database)
-                    self.packet(OkPacket).send()
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
                 elif p.type.value == COMMANDS.COM_FIELD_LIST:
                     # this command is deprecated, but console client still use it.
-                    self.packet(OkPacket).send()
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
                 else:
                     log.warning('Command has no specific handler, return OK msg')
                     log.debug(str(p))
                     # p.pprintPacket() TODO: Make a version of print packet
                     # that sends it to debug isntead
-                    self.packet(OkPacket).send()
-
-            except SqlApiException as e:
-                log.error(
-                    f'ERROR while executing query\n'
-                    f'{traceback.format_exc()}\n'
-                    f'{e}'
-                )
-                self.packet(
-                    ErrPacket,
-                    err_code=e.err_code,
-                    msg=str(e)
-                ).send()
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
             except Exception as e:
                 log.error(
                     f'ERROR while executing query\n'
                     f'{traceback.format_exc()}\n'
                     f'{e}'
                 )
-                self.packet(
-                    ErrPacket,
-                    err_code=ERR.ER_SYNTAX_ERROR,
-                    msg=str(e)
-                ).send()
+                error_code = ERR.ER_SYNTAX_ERROR
+                if hasattr(e, 'err_code'):
+                    error_code = e.err_code
+                response = SQLAnswer(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_code=error_code,
+                    error_message=str(e)
+                )
+
+            response_type = 'unknown'
+            if response is not None:
+                self.send_query_answer(response)
+                response_type = response.resp_type
+
+
+            # SQLAnswer(
+            #     RESPONSE_TYPE.ERROR,
+            #     error_code=ERR.ER_WRONG_ARGUMENTS,
+            #     error_message="'select_data_query' should not be empty"
+            # )
+            # elif answer.type == RESPONSE_TYPE.ERROR:
+            #     self.packet(
+            #         ErrPacket,
+            #         err_code=answer.error_code,
+            #         msg=answer.error_message
+            #     ).send()
+            hooks.after_mysql_query(
+                company_id=self.session.company_id,
+                api='mysql',
+                command=command_name,
+                query=sql,
+                response_type=response_type,
+                traceback=None
+            })
 
     def packet(self, packetClass=Packet, **kwargs):
         """

@@ -553,6 +553,7 @@ class ExecuteCommands:
                     'name': 'role',
                     'type': TYPES.MYSQL_TYPE_VAR_STRING
                 }]
+                columns = [Column(**d) for d in columns]
             elif predictor_attr == "model":
                 data = self._get_model_info(data)
                 columns = [{
@@ -572,6 +573,7 @@ class ExecuteCommands:
                     'name': "selected",
                     'type': TYPES.MYSQL_TYPE_VAR_STRING
                 }]
+                columns = [Column(**d) for d in columns]
             elif predictor_attr == "ensemble":
                 data = self._get_ensemble_data(data)
                 columns = [

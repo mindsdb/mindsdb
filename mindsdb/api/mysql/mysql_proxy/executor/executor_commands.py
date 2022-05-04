@@ -74,7 +74,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
 
 from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
 
-from .data_types import *
+from mindsdb.api.mysql.mysql_proxy.executor.data_types import *
 
 
 class ExecuteCommands:

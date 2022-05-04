@@ -23,7 +23,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 
 import mindsdb.interfaces.storage.db as db
 
-from .executor_commands import ExecuteCommands
+from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
 
 
 class Executor:

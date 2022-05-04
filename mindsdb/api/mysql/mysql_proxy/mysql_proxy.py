@@ -80,7 +80,7 @@ from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
 
-from .executor.executor import Executor
+from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
 
 def empty_fn():
     pass

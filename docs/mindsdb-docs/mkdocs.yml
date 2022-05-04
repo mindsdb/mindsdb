@@ -123,6 +123,5 @@ nav:
   - Contribution and Community:
       - How to contribute: contribute.md
       - Join our community: community.md
-  - FAQ: faq.md
 extra_css:
   - stylesheets/extra.css

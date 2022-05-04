@@ -1045,11 +1045,11 @@ class ExecuteCommands:
                    type='str', database='mysql', charset=CHARSET_NUMBERS['utf8_bin']),
             Column(name='Modified', alias='Modified',
                    table_name='routines', table_alias='ROUTINES',
-                   type=TYPES.MYSQL_TYPE_TIMESTAM, database='mysql',
+                   type=TYPES.MYSQL_TYPE_TIMESTAMP, database='mysql',
                    charset=CHARSET_NUMBERS['binary']),
             Column(name='Created', alias='Created',
                    table_name='routines', table_alias='ROUTINES',
-                   type=TYPES.MYSQL_TYPE_TIMESTAM, database='mysql',
+                   type=TYPES.MYSQL_TYPE_TIMESTAMP, database='mysql',
                    charset=CHARSET_NUMBERS['binary']),
             Column(name='Security_type', alias='Security_type',
                    table_name='routines', table_alias='ROUTINES',
@@ -1072,7 +1072,7 @@ class ExecuteCommands:
                    type=TYPES.MYSQL_TYPE_VAR_STRING, database='mysql',
                    charset=self.charset_text_type)
         ]
-        columns = [Column(**d) for d in columns]
+        # columns = [Column(**d) for d in columns]
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=columns,

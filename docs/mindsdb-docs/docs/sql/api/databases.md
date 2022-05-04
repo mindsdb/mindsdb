@@ -136,7 +136,7 @@ WITH
 </details>
 
 <details class="success">
-   <summary> Connect to MariaDB example</summary> 
+   <summary> Connect to MariaDB</summary> 
      ```sql
         CREATE DATABASE maria_datasource 
         WITH 
@@ -186,7 +186,7 @@ WITH
 <details class="success">
    <summary>Connect to Trino</summary> 
      ```sql
-        CREATE DATABASE schema_datasource 
+        CREATE DATABASE trino_datasource 
         WITH 
                 engine='trinodb', 
                 parameters={
@@ -196,6 +196,22 @@ WITH
                         "host": "127.0.0.1", 
                         "catalog": "default",
                         "schema": "test"
+                };
+     ```
+</details>
+
+<details class="success">
+   <summary>Connect to QuestDB</summary> 
+     ```sql
+        CREATE DATABASE questdb_datasource 
+        WITH 
+                engine='questdb', 
+                parameters={
+                        "user":"admin",
+                        "port": 8812, 
+                        "password": "quest", 
+                        "host": "127.0.0.1", 
+                        "database": "qdb"
                 };
      ```
 </details>

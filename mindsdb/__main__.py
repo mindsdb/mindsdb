@@ -21,7 +21,7 @@ from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.log import log
-from mindsdb.interfaces.database.database import DatabaseWrapper
+from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface
 import mindsdb.interfaces.storage.db as db
 
@@ -84,7 +84,6 @@ if __name__ == '__main__':
 
     # @TODO Backwards compatibiltiy for tests, remove later
     from mindsdb.interfaces.database.integrations import IntegrationController
-    dbw = DatabaseWrapper(COMPANY_ID)
     model_interface = WithKWArgsWrapper(ModelInterface(), company_id=COMPANY_ID)
     integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
     raw_model_data_arr = model_interface.get_models()
@@ -146,28 +145,27 @@ if __name__ == '__main__':
             db.session.commit()
         # endregion
 
-        for integration_name in integration_controller.get_all(sensitive_info=True):
-            print(f"Setting up integration: {integration_name}")
-            if integration_controller.get(integration_name).get('publish', False):
-                # do setup and register only if it is 'publish' integration
-                dbw.setup_integration(integration_name)
-                dbw.register_predictors(model_data_arr, integration_name=integration_name)
-
         for integration_name in config.get('integrations', {}):
             try:
                 it = integration_controller.get(integration_name)
                 if it is not None:
                     integration_controller.delete(integration_name)
                 print(f'Adding: {integration_name}')
-                integration_controller.add(integration_name, config['integrations'][integration_name])            # Setup for user `None`, since we don't need this for cloud
-                if config['integrations'][integration_name].get('publish', False) and not is_cloud:
-                    dbw.setup_integration(integration_name)
-                    dbw.register_predictors(model_data_arr, integration_name=integration_name)
+                integration_controller.add(integration_name, config['integrations'][integration_name])
             except Exception as e:
                 log.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 
+        stream_controller = StreamController(COMPANY_ID)
+        for integration_name, integration_meta in integration_controller.get_all(sensitive_info=True).items():
+            if (
+                integration_meta.get('type') in stream_controller.known_dbs
+                and integration_meta.get('publish', False) is True
+            ):
+                print(f"Setting up stream: {integration_name}")
+                stream_controller.setup(integration_name)
+        del stream_controller
+
     del model_interface
-    del dbw
     # @TODO Backwards compatibiltiy for tests, remove later
 
     if args.api is None:

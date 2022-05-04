@@ -15,3 +15,6 @@ mindsdb.egg-info/*
 clean_data
 .pypirc
 mindsdb_storage
+__pycache__/
+*.egg-info/
+*.egg

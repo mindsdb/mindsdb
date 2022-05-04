@@ -1,5 +1,8 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
+
 import pandas as pd
+from mindsdb_sql.parser.ast.base import ASTNode
+
 
 class BaseHandler:
     """
@@ -32,17 +35,35 @@ class BaseHandler:
         """  # noqa
         raise NotImplementedError()
 
-    def run_native_query(self, query_str: str) -> Optional[object]:
+    def native_query(self, query: Any) -> dict:
         """ 
-        Receive raw SQL and act upon it somehow.
+        Receive raw query and act upon it somehow.
+
+        Args:
+            query (Any): query in native format (str for sql databases, dict for mongo, etc)
+
+        Returns:
+            dict with response:
+            {
+                'type': 'table'
+                'data_frame': DataFrame
+            }
+            {
+                'type': 'ok'
+            }
+            {
+                'type': 'error',
+                'error_code': int,
+                'error_message': str
+            }
         """  # noqa
         raise NotImplementedError()
 
-    def select_query(self, targets, from_stmt, where_stmt) -> pd.DataFrame:
+    def query(self, query: ASTNode) -> dict:
         """
         Select data from some entity in the handler and return in dataframe format.
         
-        This method assumes a raw query has been parsed beforehand with mindsdb_sql using some dialect compatible with the handler, and only targets, from, and where clauses are fed into it.
+        This method parses a raw query with SqlalchemyRender using specific dialect compatible with the handler.
         """  # noqa
         raise NotImplementedError()
 

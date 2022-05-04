@@ -21,7 +21,6 @@ from mindsdb.interfaces.storage.db import session, Dataset, Semaphor, Predictor,
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
 
 class QueryDS:
@@ -55,7 +54,6 @@ class QueryDS:
         if self.source_type == 'view_query':
             if isinstance(query, str):
                 query = parse_sql(query, dialect='mysql')
-            query_str = str(query)
 
             table = query.from_table.parts[-1]
             view_metadata = view_interface.get(name=table)
@@ -162,7 +160,6 @@ class DataStore():
         file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
         if file_record is None:
             return None
-
         columns = file_record.columns
         if isinstance(columns, str):
             columns = json.loads(columns)
@@ -255,13 +252,14 @@ class DataStore():
             file_record = session.query(File).filter_by(company_id=company_id, name=file_name).first()
             if file_record is None:
                 raise Exception(f"Cant find file '{file_name}'")
-            self.fs_store.get(f'{company_id}@@@@@{file_name}', f'file_{company_id}_{file_record.id}', self.dir)
+            remote_file_path = f'file_{company_id}_{file_record.id}'
+            self.fs_store.get(remote_file_path, remote_file_path, self.dir)
             kwargs = {}
             query = source.get('query')
             if query is not None:
                 kwargs['query'] = query
 
-            path = Path(self.dir).joinpath(f'{company_id}@@@@@{file_name}').joinpath(file_record.source_file_path)
+            path = Path(self.dir).joinpath(remote_file_path).joinpath(file_record.source_file_path)
 
             creation_info = {
                 'class': 'FileDS',
@@ -286,7 +284,8 @@ class DataStore():
                 'athena': AthenaDS,
                 'cassandra': CassandraDS,
                 'scylladb': ScyllaDS,
-                'trinodb': TrinoDS
+                'trinodb': TrinoDS,
+                'questdb': PostgresDS
             }
 
             try:
@@ -311,7 +310,7 @@ class DataStore():
                 }
                 ds = dsClass(**creation_info['kwargs'])
 
-            elif integration['type'] in ['mssql', 'postgres', 'cockroachdb', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb']:
+            elif integration['type'] in ['mssql', 'postgres', 'cockroachdb', 'mariadb', 'mysql', 'singlestore', 'cassandra', 'scylladb', 'questdb']:
                 creation_info = {
                     'class': dsClass.__name__,
                     'args': [],
@@ -471,13 +470,7 @@ class DataStore():
             file_name = Path(file_path).name
 
         try:
-            ds_meta_dir = Path(self.dir).joinpath(f'{company_id}@@@@@{name}')
-            ds_meta_dir.mkdir()
-
-            source = ds_meta_dir.joinpath(file_name)
-            shutil.move(file_path, str(source))
-
-            ds = FileDS(str(source))
+            ds = FileDS(str(file_path))
             ds_meta = self._get_ds_meta(ds)
 
             column_names = ds_meta['column_names']
@@ -487,18 +480,28 @@ class DataStore():
                 name=name,
                 company_id=company_id,
                 source_file_path=file_name,
-                file_path=str(source),
+                file_path='',
                 row_count=ds_meta['row_count'],
                 columns=column_names
             )
             session.add(file_record)
             session.commit()
-            self.fs_store.put(f'{company_id}@@@@@{name}', f'file_{company_id}_{file_record.id}', self.dir)
+            store_file_path = f'file_{company_id}_{file_record.id}'
+            file_record.file_path = store_file_path
+            session.commit()
+
+            file_dir = Path(self.dir).joinpath(store_file_path)
+            file_dir.mkdir(parents=True, exist_ok=True)
+            source = file_dir.joinpath(file_name)
+            # NOTE may be delay between db record exists and file is really in folder
+            shutil.move(file_path, str(source))
+
+            self.fs_store.put(store_file_path, store_file_path, self.dir)
         except Exception as e:
             log.error(e)
             raise
         finally:
-            shutil.rmtree(ds_meta_dir)
+            shutil.rmtree(file_dir)
 
         return file_record.id
 
@@ -596,3 +599,11 @@ class DataStore():
         except Exception as e:
             log.error(f'Error getting dataset {name}, exception: {e}')
             return None
+
+    def get_file_path(self, name, company_id):
+        file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
+        if file_record is None:
+            raise Exception("File '{name}' does not exists")
+        file_dir = f'file_{company_id}_{file_record.id}'
+        self.fs_store.get(file_dir, file_dir, self.dir)
+        return str(Path(self.dir).joinpath(file_dir).joinpath(Path(file_record.source_file_path).name))

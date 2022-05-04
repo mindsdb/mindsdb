@@ -24,13 +24,13 @@ from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.json_encoder import json_serialiser
-from mindsdb.interfaces.database.database import DatabaseWrapper
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess, LearnRemoteProcess
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.datastore.datastore import QueryDS
+from mindsdb.utilities.hooks import after_predict as after_predict_hook
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -311,6 +311,13 @@ class ModelController():
             # del self.predictor_cache[name]
 
         predictions = predictions.to_dict(orient='records')
+        after_predict_hook(
+            company_id=company_id,
+            predictor_id=predictor_record.id,
+            rows_in_count=df.shape[0],
+            columns_in_count=df.shape[1],
+            rows_out_count=len(predictions)
+        )
         target = predictor_record.to_predict[0]
         if pred_format in ('explain', 'dict', 'dict&explain'):
             explain_arr = []
@@ -327,7 +334,7 @@ class ModelController():
                 if 'lower' in row:
                     obj[target]['confidence_lower_bound'] = row.get('lower', None)
                     obj[target]['confidence_upper_bound'] = row.get('upper', None)
-                    
+
                 explain_arr.append(obj)
 
                 td = {'predicted_value': row['prediction']}
@@ -488,8 +495,6 @@ class ModelController():
                 pass
         db.session.commit()
 
-        DatabaseWrapper(company_id).unregister_predictor(name)
-
         # delete from s3
         self.fs_store.delete(f'predictor_{company_id}_{db_p.id}')
 
@@ -499,9 +504,6 @@ class ModelController():
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=old_name).first()
         db_p.name = new_name
         db.session.commit()
-        dbw = DatabaseWrapper(company_id)
-        dbw.unregister_predictor(old_name)
-        dbw.register_predictors([self.get_model_data(new_name, company_id)])
 
     @mark_process(name='learn')
     def update_model(self, name: str, company_id: int):
@@ -619,10 +621,10 @@ class ModelController():
         return json.dumps(predictor_record_serialized, default=json_serialiser)
 
     def import_predictor(self, name: str, payload: json, company_id: int) -> None:
-        prs = json.loads(json.loads(payload))
+        prs = json.loads(payload)
 
         predictor_record = db.Predictor(
-            name=prs['name'],
+            name=name,
             data=prs['data'],
             to_predict=prs['to_predict'],
             company_id=company_id,

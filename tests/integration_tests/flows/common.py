@@ -99,7 +99,8 @@ CONFIG_PATH = TEMP_DIR.joinpath('config.json')
 
 with open(TEST_CONFIG, 'rt') as f:
     config_json = json.loads(f.read())
-    config_json['storage_dir'] = str(TEMP_DIR)
+    config_json['storage_dir'] = f'{TEMP_DIR}'
+    config_json['storage_db'] = f'sqlite:///{TEMP_DIR}/mindsdb.sqlite3.db?check_same_thread=False&timeout=30'
 
 
 def close_all_ssh_tunnels():
@@ -263,7 +264,7 @@ def override_recursive(a, b):
             a[key] = b[key]
         elif key not in a or isinstance(a[key], dict) is False:
             a[key] = b[key]
-        #make config section empty by demand
+        # make config section empty by demand
         elif isinstance(b[key], dict) is True and b[key] == {}:
             a[key] = b[key]
         else:

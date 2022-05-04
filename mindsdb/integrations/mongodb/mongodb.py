@@ -3,8 +3,6 @@ import re
 import certifi
 from pymongo import MongoClient
 
-from mindsdb.integrations.base import Integration
-
 
 class MongoConnectionChecker:
     def __init__(self, **kwargs):
@@ -47,24 +45,3 @@ class MongoConnectionChecker:
         except Exception:
             connected = False
         return connected
-
-
-class MongoDB(Integration, MongoConnectionChecker):
-    def __init__(self, config, name, db_info):
-        super().__init__(config, name)
-        self.user = db_info.get('user', 'default')
-        self.password = db_info.get('password', None)
-        self.host = db_info.get('host')
-        self.port = db_info.get('port', 27017)
-
-    def _query(self, query):
-        return None
-
-    def setup(self):
-        pass
-
-    def register_predictors(self, model_data_arr):
-        pass
-
-    def unregister_predictor(self, name):
-        pass

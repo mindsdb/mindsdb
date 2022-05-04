@@ -17,8 +17,10 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatem
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErBadDbError,
     ErNotSupportedYet,
+    SqlApiException,
     log
 )
+
 import mindsdb.interfaces.storage.db as db
 
 from .executor_commands import ExecuteCommands
@@ -162,6 +164,10 @@ class Executor:
 
 
     def execute_external(self, sql):
+
+        # not exec in directly in integration
+        return None
+
         # try exec in external integration
         if (
             isinstance(self.session.database, str)
@@ -223,9 +229,26 @@ class Executor:
                 self.query = parse_sql(sql, dialect='mindsdb')
             except Exception:
                 self.query = parse_sql(sql, dialect='mysql')
-        except Exception:
+        except Exception as e:
             # not all statemts are parse by parse_sql
             log.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
+
+            sql_list = [x for x in self.sql_lower.replace('\t', ' ').split(' ') if x not in ('', ' ')]
+            if len(sql_list) > 1 and sql_list[0] == "show":
+                raise SqlApiException(f"unknown command: {sql}")
+            if len(sql_list) > 2 and " ".join(sql_list[:2]) == "create predictor":
+                if 'predict' not in sql_list:
+                    raise SqlApiException(f"'predict' field is mandatory: {sql}")
+                # analyze predictor name
+                if not sql_list[2][0].isalpha():
+                    raise SqlApiException(f"predictor name must start from letter character: {sql}")
+
+            # TODO
+            # if sql_lower == "set names 'utf8mb4' collate 'utf8mb4_general_ci'":
+            #     return SQLAnswer(RESPONSE_TYPE.OK)
+            # if sql_lower.startswith('alter table') and (
+            #         sql_lower.endswith('disable keys') or sql_lower.endswith('enable keys')):
+            #     return SQLAnswer(RESPONSE_TYPE.OK)
 
             st = SqlStatementParser(sql)
             keyword = st.keyword
@@ -238,14 +261,13 @@ class Executor:
             elif keyword == 'alter':
                 self.query = Alter()
             else:
-                raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
+                raise SqlApiException(f'SQL statement cannot be parsed by mindsdb_sql - {sql}: {e}') from e
+
+            # not all statemts are parse by parse_sql
+            log.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
 
             # TODO place for workarounds
             # or run sql in integration without parsing
-
-
-    # def execute_step(self, step):
-    #     ...
 
     def do_execute(self):
         # it can be already run at prepare state

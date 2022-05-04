@@ -1,4 +1,4 @@
-from pandas import DataFrame as DF
+from mindsdb_datasources import FileDS
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
@@ -27,8 +27,9 @@ class FileDataNode(DataNode):
         if len(query_tables) != 1:
             raise Exception(f'Only one table can be used in query to information_schema: {query}')
 
-        data = self.data_store.get_data(query_tables[0], where=None, limit=None, offset=None)
-        data_df = DF(data['data'])
+        file_path = self.data_store.get_file_path(query_tables[0])
+        file_datasource = FileDS(file_path)
+        data_df = file_datasource.df
         result = query_df(data_df, query)
 
         columns_info = [

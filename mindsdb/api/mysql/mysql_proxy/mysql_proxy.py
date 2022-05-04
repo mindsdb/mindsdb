@@ -135,20 +135,20 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         log.error(traceback.format_exc())
 
 
-class ANSWER_TYPE:
+class RESPONSE_TYPE:
     __slots__ = ()
-    TABLE = 'table'
     OK = 'ok'
+    TABLE = 'table'
     ERROR = 'error'
 
 
-ANSWER_TYPE = ANSWER_TYPE()
+RESPONSE_TYPE = RESPONSE_TYPE()
 
 
 class SQLAnswer:
-    def __init__(self, answer_type: ANSWER_TYPE, columns: List[Dict] = None, data: List[Dict] = None,
+    def __init__(self, resp_type: RESPONSE_TYPE, columns: List[Dict] = None, data: List[Dict] = None,
                  status: int = None, state_track: List[List] = None, error_code: int = None, error_message: str = None):
-        self.answer_type = answer_type
+        self.resp_type = resp_type
         self.columns = columns
         self.data = data
         self.status = status
@@ -158,7 +158,7 @@ class SQLAnswer:
 
     @property
     def type(self):
-        return self.answer_type
+        return self.resp_type
 
 
 class MysqlProxy(SocketServer.BaseRequestHandler):
@@ -339,7 +339,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
 
     def send_query_answer(self, answer: SQLAnswer):
-        if answer.type == ANSWER_TYPE.TABLE:
+        if answer.type == RESPONSE_TYPE.TABLE:
             packages = []
             packages += self.get_tabel_packets(
                 columns=answer.columns,
@@ -350,9 +350,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             else:
                 packages.append(self.last_packet())
             self.send_package_group(packages)
-        elif answer.type == ANSWER_TYPE.OK:
+        elif answer.type == RESPONSE_TYPE.OK:
             self.packet(OkPacket, state_track=answer.state_track).send()
-        elif answer.type == ANSWER_TYPE.ERROR:
+        elif answer.type == RESPONSE_TYPE.ERROR:
             self.packet(
                 ErrPacket,
                 err_code=answer.error_code,
@@ -524,19 +524,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         if executor.error is not None:
             resp = SQLAnswer(
-                answer_type = ANSWER_TYPE.ERROR,
+                resp_type = RESPONSE_TYPE.ERROR,
                 error_code=executor.error['code'],
                 error_message=executor.error['message']
             )
         elif executor.data is None:
             resp = SQLAnswer(
-                answer_type = ANSWER_TYPE.OK,
+                resp_type = RESPONSE_TYPE.OK,
                 state_track=executor.state_track,
             )
         else:
 
             resp = SQLAnswer(
-                answer_type=ANSWER_TYPE.TABLE,
+                resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
                 columns=self.to_mysql_columns(executor.columns),
                 data=executor.data,
@@ -594,7 +594,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         if executor.error is not None:
             resp = SQLAnswer(
-                answer_type = ANSWER_TYPE.ERROR,
+                resp_type=RESPONSE_TYPE.ERROR,
                 error_code=executor.error['code'],
                 error_message=executor.error['message']
             )
@@ -602,7 +602,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         elif executor.data is None:
             resp = SQLAnswer(
-                answer_type=ANSWER_TYPE.OK,
+                resp_type=RESPONSE_TYPE.OK,
                 state_track=executor.state_track
             )
             return self.send_query_answer(resp)
@@ -635,14 +635,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         if executor.error is not None:
             resp = SQLAnswer(
-                answer_type=ANSWER_TYPE.ERROR,
+                resp_type=RESPONSE_TYPE.ERROR,
                 error_code=executor.error['code'],
                 error_message=executor.error['message']
             )
             return self.send_query_answer(resp)
         elif executor.data is None:
             resp = SQLAnswer(
-                answer_type=ANSWER_TYPE.OK,
+                resp_type=RESPONSE_TYPE.OK,
                 state_track=executor.state_track
             )
             return self.send_query_answer(resp)
@@ -871,6 +871,10 @@ class FakeMysqlProxy(MysqlProxy):
         server.original_data_store = DataStore()
         server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
+
+        self.charset = 'utf8'
+        self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
+        self.client_capabilities = None
 
         self.request = request
         self.client_address = client_address

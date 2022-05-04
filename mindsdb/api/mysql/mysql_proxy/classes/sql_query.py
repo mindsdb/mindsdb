@@ -15,61 +15,51 @@ import datetime
 import time
 
 import duckdb
-from lightwood.api import dtype
+import pandas as pd
+import numpy as np
 from mindsdb_sql import parse_sql
-from mindsdb_sql.planner import plan_query
-from mindsdb_sql.parser.dialects.mindsdb.latest import Latest
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     UnaryOperation,
+    CreateTable,
     Identifier,
-    Operation,
     Constant,
-    OrderBy,
     Select,
     Union,
     Join,
     Star,
     Insert,
     Delete,
-    Function
 )
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
     GetPredictorColumns,
-    GetTableColumns,
     FetchDataframeStep,
     ApplyPredictorStep,
+    GetTableColumns,
     LimitOffsetStep,
     MapReduceStep,
     MultipleSteps,
     ProjectStep,
+    SaveToTable,
     FilterStep,
     UnionStep,
     JoinStep,
     GroupByStep
 )
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.planner import query_planner, utils as planner_utils
+from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import operator_map
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, ERR
-from mindsdb.api.mysql.mysql_proxy.utilities import log
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
-    ErBadDbError,
-    ErBadTableError,
     ErKeyColumnDoesNotExist,
-    ErTableExistError,
-    ErDubFieldName,
-    ErDbDropDelete,
-    ErNonInsertableTable,
     ErNotSupportedYet,
 )
 
@@ -95,7 +85,7 @@ def get_table_alias(table_obj, default_db_name):
     if table_obj.alias is not None:
         name = name + ('.'.join(table_obj.alias.parts),)
     else:
-        name = name + (None,)
+        name = name + (name[1],)
     return name
 
 
@@ -203,7 +193,7 @@ class Column:
 
 
 class SQLQuery():
-    def __init__(self, sql, session, planner=None, execute=True):
+    def __init__(self, sql, session, execute=True):
         self.session = session
         self.integration = session.integration
         self.database = None if session.database == '' else session.database.lower()
@@ -229,8 +219,12 @@ class SQLQuery():
         else:
             self.query = sql
             renderer = SqlalchemyRender('mysql')
-            self.query_str = renderer.get_string(self.query, with_failback=True)
+            try:
+                self.query_str = renderer.get_string(self.query, with_failback=True)
+            except Exception:
+                self.query_str = str(self.query)
 
+        self.planner = None
         self.parameters = []
         self.fetched_data = None
         # self._process_query(sql)
@@ -370,14 +364,14 @@ class SQLQuery():
             'tables': []
         }
 
-        for substep in step.steps:
-            if isinstance(substep, FetchDataframeStep) is False:
-                raise Exception(f'Wrong step type for MultipleSteps: {step}')
-            markQueryVar(substep.query.where)
-
-        for name, value in vars.items():
+        for var_group in vars:
             for substep in step.steps:
-                replaceQueryVar(substep.query.where, value, name)
+                if isinstance(substep, FetchDataframeStep) is False:
+                    raise Exception(f'Wrong step type for MultipleSteps: {step}')
+                markQueryVar(substep.query.where)
+            for name, value in var_group.items():
+                for substep in step.steps:
+                    replaceQueryVar(substep.query.where, value, name)
             sub_data = self._multiple_steps(step)
             join_query_data(data, sub_data)
 
@@ -422,23 +416,6 @@ class SQLQuery():
                     'columns': {table_name: columns},
                     'tables': [table_name]
                 }
-                return
-
-            # is it query to 'commands'?
-            if (
-                isinstance(mindsdb_sql_struct.from_table, Identifier)
-                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'commands'
-                and (
-                    self.database == 'mindsdb'
-                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-                )
-            ):
-                self.fetched_data = {
-                    'values': [],
-                    'columns': {('mindsdb', 'commands', 'commands'): [('command', 'command')]},
-                    'tables': [('mindsdb', 'commands', 'commands')]
-                }
-                self.columns_list = [Column(database='mindsdb', table_name='commands', name='command')]
                 return
 
             # is it query to 'datasources'?
@@ -543,7 +520,6 @@ class SQLQuery():
                         data_row[column_record.alias or column_record.name] = row[table_name][column_name]
                     result.append(data_row)
                 # ---
-                # result is expected as dict bot is list
                 data = self._make_list_result_view(result)
                 df = pd.DataFrame(data)
                 result = query_df(df, self.outer_query)
@@ -797,7 +773,20 @@ class SQLQuery():
                         integration_type=self.session.integration_type
                     )
 
-                    data = [{(key, key): value for key, value in row.items()} for row in data]
+                    if isinstance(self.query, CreateTable):
+                        new_data = []
+                        for row in data:
+                            new_row = {}
+                            for key, value in row.items():
+                                if key not in ('__mindsdb_row_id', '__mdb_make_predictions'):
+                                    new_key = f'predictor.{key}'
+                                else:
+                                    new_key = key
+                                new_row[(new_key, new_key)] = value
+                            new_data.append(new_row)
+                        data = new_data
+                    else:
+                        data = [{(key, key): value for key, value in row.items()} for row in data]
 
                     values = [{table_name: x} for x in data]
 
@@ -897,7 +886,8 @@ class SQLQuery():
                 con.unregister(a_name)
                 con.unregister(b_name)
                 con.close()
-                resp_df = resp_df.where(pd.notnull(resp_df), None)
+
+                resp_df = resp_df.replace({np.nan: None})
                 resp_dict = resp_df.to_dict(orient='records')
 
                 for row in resp_dict:
@@ -974,7 +964,7 @@ class SQLQuery():
                                 )
                     elif type(column_identifier) == Identifier:
                         column_name_parts = column_identifier.parts
-                        column_alias = None if column_identifier.alias is None else '.'.join(
+                        column_alias = column_identifier.parts[-1] if column_identifier.alias is None else '.'.join(
                             column_identifier.alias.parts)
                         if len(column_name_parts) > 2:
                             raise Exception(
@@ -1035,7 +1025,7 @@ class SQLQuery():
                                     else:
                                         raise Exception(f'Can not find column "{column_name}" in table "{table_name}"')
                             if appropriate_table is None:
-                                raise Exception(f'Can not find approproate table for column {column_name}')
+                                raise SqlApiException(f'Can not find appropriate table for column {column_name}')
 
                             columns_to_copy = None
                             table_column_names_list = [x[1] or x[0] for x in table_columns]
@@ -1045,8 +1035,8 @@ class SQLQuery():
                                     columns_to_copy = column
                                     break
                             else:
-                                raise Exception(
-                                    f'Can not find approproate column in data: {(column_name, column_alias)}')
+                                raise ErKeyColumnDoesNotExist(
+                                    f'Can not find appropriate column in data: {(column_name, column_alias)}')
 
                             for row in step_data['values']:
                                 row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][
@@ -1060,23 +1050,27 @@ class SQLQuery():
                                        alias=column_alias)
                             )
                         else:
-                            raise Exception('Undefined column name')
+                            raise SqlApiException('Undefined column name')
 
                         # if column not exists in result - copy value to it
                         if (column_name, column_alias) not in step_data['columns'][appropriate_table]:
                             step_data['columns'][appropriate_table].append((column_name, column_alias))
                             for row in step_data['values']:
                                 if (column_name, column_alias) not in row[appropriate_table]:
-                                    row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][(column_name, column_name)]
-                    elif type(column_identifier) == Function:
-                        raise Exception(f'Unknown function: {column_identifier}')
+                                    try:
+                                        row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][(column_name, column_name)]
+                                    except KeyError:
+                                        raise ErKeyColumnDoesNotExist(f'Unknown column: {column_name}')
+
                     else:
-                        raise Exception(f'Unexpected column name type: {column_identifier}')
+                        raise ErKeyColumnDoesNotExist(f'Unknown column type: {column_identifier}')
 
                 self.columns_list = columns_list
                 data = step_data
             except Exception as e:
-                raise SqlApiException(f'error on project step:{e} ') from e
+                if isinstance(e, SqlApiException):
+                    raise e
+                raise SqlApiException(f'error on project step: {e} ') from e
         elif type(step) == GroupByStep:
             step_data = steps_data[step.dataframe.step_num]
 
@@ -1102,7 +1096,6 @@ class SQLQuery():
 
             # stick all columns to first table
             appropriate_table = step_data['tables'][0]
-
 
             columns_list = []
             columns = []
@@ -1138,6 +1131,39 @@ class SQLQuery():
                 'values': values
             }
 
+        elif type(step) == SaveToTable:
+            step_data = step.dataframe.result_data
+            integration_name = step.table.parts[0]
+            table_name_parts = step.table.parts[1:]
+
+            dn = self.datahub.get(integration_name)
+
+            if hasattr(dn, 'create_table') is False:
+                raise Exception(f"Creating table in '{integration_name}' is not supporting")
+
+            # region del 'service' columns
+            for table in step_data['columns']:
+                new_table_columns = []
+                for column in step_data['columns'][table]:
+                    if column[-1] not in ('__mindsdb_row_id', '__mdb_make_predictions'):
+                        new_table_columns.append(column)
+                step_data['columns'][table] = new_table_columns
+            # endregion
+
+            # region del columns filtered at projection step
+            filtered_column_names = [x.name for x in self.columns_list]
+            for table in step_data['columns']:
+                new_table_columns = []
+                for column in step_data['columns'][table]:
+                    if column[0].startswith('predictor.'):
+                        new_table_columns.append(column)
+                    elif column[0] in filtered_column_names:
+                        new_table_columns.append(column)
+                step_data['columns'][table] = new_table_columns
+            # endregion
+
+            dn.create_table(table_name_parts=table_name_parts, columns=step_data['columns'], data=step_data['values'])
+            data = None
         else:
             raise SqlApiException(F'Unknown planner step: {step}')
         return data
@@ -1167,7 +1193,7 @@ class SQLQuery():
             for column_record in self.columns_list:
                 table_name = (column_record.database, column_record.table_name, column_record.table_alias)
                 column_name = (column_record.name, column_record.alias)
-                if not table_name in row:
+                if table_name in row is False:
                     # try without alias
                     table_name = (table_name[0], table_name[1], None)
 

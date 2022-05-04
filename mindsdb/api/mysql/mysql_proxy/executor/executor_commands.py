@@ -1,6 +1,7 @@
 import json
 import datetime
 import pandas as pd
+from typing import List, Dict, Optional
 
 from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatasource,
@@ -36,7 +37,13 @@ from mindsdb_sql.parser.ast import (
     Set,
     Use,
     Alter,
-    Update
+    Update,
+    CreateTable,
+    TableColumn,
+    Identifier,
+    DropTables,
+    Parameter,
+    Operation,
 )
 
 from mindsdb.api.mysql.mysql_proxy.utilities import (
@@ -65,6 +72,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     FIELD_FLAG,
 )
 
+from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
 
 from .data_types import *
 
@@ -76,7 +84,6 @@ class ExecuteCommands:
         self.executor = executor
         self.sql_lower = executor.sql_lower
         self.sql = executor.sql
-        self.planner = None
 
         # TODO remove
         self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
@@ -87,7 +94,7 @@ class ExecuteCommands:
         if type(statement) == CreateDatasource:
             struct = {
                 'datasource_name': statement.name,
-                'database_type': statement.engine,
+                'database_type': statement.engine.lower(),
                 'connection_args': statement.parameters
             }
             return self.answer_create_datasource(struct)
@@ -95,11 +102,13 @@ class ExecuteCommands:
             predictor_name = statement.name.parts[-1]
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
+        elif type(statement) == DropTables:
+            return self.answer_drop_tables(statement)
         elif type(statement) == DropDatasource or type(statement) == DropDatabase:
             ds_name = statement.name.parts[-1]
             return self.answer_drop_datasource(ds_name)
         elif type(statement) == Describe:
-            # TODO move to answer_explain_table
+            # NOTE in sql 'describe table' is same as 'show columns'
             predictor_attrs = ("model", "features", "ensemble")
             if statement.value.parts[-1] in predictor_attrs:
                 return self.answer_describe_predictor(statement.value.parts[-2:])
@@ -124,7 +133,6 @@ class ExecuteCommands:
                 )
                 query = SQLQuery(
                     new_statement,
-                    planner=self.planner,
                     session=self.session
                 )
                 return self.answer_select(query)
@@ -147,7 +155,6 @@ class ExecuteCommands:
 
                 query = SQLQuery(
                     new_statement,
-                    planner=self.planner,
                     session=self.session
                 )
                 return self.answer_select(query)
@@ -160,7 +167,6 @@ class ExecuteCommands:
                 )
                 query = SQLQuery(
                     new_statement,
-                    planner=self.planner,
                     session=self.session
                 )
                 return self.answer_select(query)
@@ -183,7 +189,6 @@ class ExecuteCommands:
 
                 query = SQLQuery(
                     new_statement,
-                    planner=self.planner,
                     session=self.session
                 )
                 return self.answer_select(query)
@@ -202,7 +207,6 @@ class ExecuteCommands:
                 )
                 query = SQLQuery(
                     new_statement,
-                    planner=self.planner,
                     session=self.session
                 )
                 return self.answer_select(query)
@@ -212,7 +216,10 @@ class ExecuteCommands:
                     schema = statement.from_table.parts[-1]
                 where = BinaryOperation('and', args=[
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
-                    BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
+                    BinaryOperation('or', args=[
+                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')]),
+                        BinaryOperation('like', args=[Identifier('table_type'), Constant('SYSTEM VIEW')])
+                    ])
                 ])
                 if statement.where is not None:
                     where = BinaryOperation('and', args=[statement.where, where])
@@ -231,7 +238,6 @@ class ExecuteCommands:
 
                 query = SQLQuery(
                     new_statement,
-                    planner=self.planner,
                     session=self.session
                 )
                 return self.answer_select(query)
@@ -316,7 +322,6 @@ class ExecuteCommands:
                 )
                 query = SQLQuery(
                     new_statement,
-                    planner=self.planner,
                     session=self.session
                 )
                 return self.answer_select(query)
@@ -345,7 +350,6 @@ class ExecuteCommands:
                 )
                 query = SQLQuery(
                     new_statement,
-                    planner=self.planner,
                     session=self.session
                 )
                 return self.answer_select(query)
@@ -358,7 +362,6 @@ class ExecuteCommands:
                 )
                 query = SQLQuery(
                     new_statement,
-                    planner=self.planner,
                     session=self.session
                 )
                 return self.answer_select(query)
@@ -385,7 +388,6 @@ class ExecuteCommands:
                 )
                 query = SQLQuery(
                     new_statement,
-                    planner=self.planner,
                     session=self.session
                 )
                 return self.answer_select(query)
@@ -403,11 +405,8 @@ class ExecuteCommands:
                     raise ErTableExistError(err_str)
                 return self.answer_show_table_status(table_name)
             elif sql_category == 'columns':
-                # The DESCRIBE statement provides information similar to SHOW COLUMNS.
-                # The DESCRIBE and EXPLAIN statements are synonyms
-                # https://dev.mysql.com/doc/refman/8.0/en/describe.html
                 is_full = statement.modes is not None and 'full' in statement.modes
-                return self.answer_explain_table(statement.from_table, is_full=is_full)
+                return self.answer_show_columns(statement.from_table, statement.where, statement.like, is_full=is_full)
             else:
                 raise ErNotSupportedYet(f'Statement not implemented: {self.sql}')
         elif type(statement) in (StartTransaction, CommitTransaction, RollbackTransaction):
@@ -489,12 +488,14 @@ class ExecuteCommands:
 
             query = SQLQuery(
                 statement,
-                planner=self.planner,
                 session=self.session
             )
             return self.answer_select(query)
         elif type(statement) == Explain:
-            return self.answer_explain_table(statement.target)
+            return self.answer_show_columns(statement.target)
+        elif type(statement) == CreateTable:
+            # TODO
+            return self.answer_apply_predictor(statement)
         else:
             log.warning(f'Unknown SQL statement: {self.sql}')
             raise ErNotSupportedYet(f'Unknown SQL statement: {self.sql}')
@@ -603,6 +604,19 @@ class ExecuteCommands:
         connection_args = struct['connection_args']
         connection_args['type'] = database_type
 
+        # we have connection checkers not for any db. So do nothing if fail
+        # TODO return rich error message
+        connection_success = True
+        try:
+            checker_class = DB_CONNECTION_CHECKERS.get(database_type, None)
+            if checker_class is not None:
+                checker = checker_class(**connection_args)
+                connection_success = checker.check_connection()
+        except Exception:
+            pass
+        if connection_success is False:
+            raise SqlApiException("Can't connect to db")
+
         integration = self.session.integration_controller.get(datasource_name)
         if integration is not None:
             raise SqlApiException(f"Database '{datasource_name}' already exists.")
@@ -616,6 +630,42 @@ class ExecuteCommands:
         except Exception:
             raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+
+    def answer_drop_tables(self, statement):
+        """ answer on 'drop table [if exists] {name}'
+            Args:
+                statement: ast
+        """
+        if statement.if_exists is False:
+            for table in statement.tables:
+                if len(table.parts) > 1:
+                    db_name = table.parts[0]
+                else:
+                    db_name = self.session.database
+                if db_name not in ['files', 'mindsdb']:
+                    raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
+                table_name = table.parts[-1]
+                dn = self.session.datahub[db_name]
+                if dn.has_table(table_name) is False:
+                    raise SqlApiException(f"Cannot delete a table from database '{db_name}': table does not exists")
+
+        for table in statement.tables:
+            if len(table.parts) > 1:
+                db_name = table.parts[0]
+            else:
+                db_name = self.session.database
+            if db_name not in ['files', 'mindsdb']:
+                raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
+            table_name = table.parts[-1]
+            dn = self.session.datahub[db_name]
+            if dn.has_table(table_name):
+                if db_name == 'mindsdb':
+                    self.session.datahub['mindsdb'].delete_predictor(table_name)
+                elif db_name == 'files':
+                    self.session.data_store.delete_file(table_name)
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
 
     def answer_create_view(self, statement):
         name = statement.name
@@ -755,7 +805,6 @@ class ExecuteCommands:
         # fake_sql = 'select name ' + fake_sql[len('delete '):]
         sqlquery = SQLQuery(
             query2.to_string(),
-            planner=self.planner,
             session=self.session
         )
 
@@ -814,198 +863,13 @@ class ExecuteCommands:
         else:
             return False
 
-    def answer_explain_table(self, target, is_full=False):
-        parts = target.parts
-        db = ((self.session.database or 'mindsdb') if len(parts) != 2 else parts[0]).lower()
-        table = parts[-1].lower()
-        if table == 'predictors' and db == 'mindsdb':
-            return self.answer_explain_predictors(is_full=is_full)
-        elif table == 'commands' and db == 'mindsdb':
-            return self.answer_explain_commands()
-        elif self.is_predictor(target):
-            # The DESCRIBE and EXPLAIN statements are synonyms
-            predictor_attrs = ("model", "features", "ensemble")
-            if parts[-1] in predictor_attrs:
-                return self.answer_describe_predictor(parts[-2:])
-            else:
-                return self.answer_describe_predictor(parts[-1])
-        elif db == 'files':
-            table = target.parts[-1]
-            return self.answer_explain_files(table)
-        else:
-            raise ErNotSupportedYet("Only 'EXPLAIN predictors' and 'EXPLAIN commands' supported")
-
-    def answer_explain_files(self, table, is_full=False):
-        dn = self.datahub.get('files')
-
-        columns = self._get_explain_columns(is_full=is_full)
-
-        table_cols = dn.get_table_columns(table)
-        data = []
-        for col in table_cols:
-            data.append([col, 'varchar(255)', 'YES', None, None, ''])
-
-        if is_full:
-            # The optional FULL keyword causes the output to include the column collation and comments
-            # as well as the privileges you have for each column.
-            data = [
-                row + [None, None, None]
-                for row in data
-            ]
-
-        return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
-            columns=columns,
-            data=data
-        )
-
-    def _get_explain_columns(self, is_full=False):
-        columns = [
-            Column(
-               database='information_schema', type=TYPES.MYSQL_TYPE_VAR_STRING,
-               name='COLUMN_NAME', alias='Field',
-               table_name='COLUMNS',
-               charset=self.charset_text_type,
-               flags= sum([
-                    FIELD_FLAG.NOT_NULL
-               ])
-            ),
-            Column(
-                database='information_schema', type=TYPES.MYSQL_TYPE_BLOB,
-                name='COLUMN_TYPE', alias='Type',
-                table_name='COLUMNS',
-                charset=self.charset_text_type,
-                flags=sum([
-                    FIELD_FLAG.NOT_NULL,
-                    FIELD_FLAG.BLOB
-                ])
-            ),
-            Column(
-                database='information_schema', type=TYPES.MYSQL_TYPE_VAR_STRING,
-                name='IS_NULLABLE', alias='Null',
-                table_name='COLUMNS',
-                charset=self.charset_text_type,
-                flags=sum([
-                    FIELD_FLAG.NOT_NULL
-                ])
-            ),
-            Column(
-                database='information_schema', type=TYPES.MYSQL_TYPE_VAR_STRING,
-                name='COLUMN_KEY', alias='Key',
-                table_name='COLUMNS',
-                charset=self.charset_text_type,
-                flags=sum([
-                    FIELD_FLAG.NOT_NULL
-                ])
-            ),
-            Column(
-                database='information_schema', type=TYPES.MYSQL_TYPE_BLOB,
-                name='COLUMN_DEFAULT', alias='Default',
-                table_name='COLUMNS',
-                charset=self.charset_text_type,
-                flags=sum([
-                    FIELD_FLAG.BLOB
-                ])
-            ),
-            Column(
-                database='information_schema', type=TYPES.MYSQL_TYPE_VAR_STRING,
-                name='EXTRA', alias='Extra',
-                table_name='COLUMNS',
-                charset=self.charset_text_type,
-                flags=sum([
-                    FIELD_FLAG.NOT_NULL
-                ])
-            ),
-        ]
-        if is_full:
-            # The optional FULL keyword causes the output to include the column collation and comments,
-            #   as well as the privileges you have for each column.
-            columns.extend([
-                Column(
-                    database='information_schema', type=TYPES.MYSQL_TYPE_VAR_STRING,
-                    name='COLLATION', alias='Collation',
-                    table_name='COLUMNS',
-                    charset=self.charset_text_type,
-                    flags=sum([
-                    ])
-                ),
-                Column(
-                    database='information_schema', type=TYPES.MYSQL_TYPE_VAR_STRING,
-                    name='PRIVILEGES', alias='Privileges',
-                    table_name='COLUMNS',
-                    charset=self.charset_text_type,
-                    flags=sum([
-                        FIELD_FLAG.NOT_NULL
-                    ])
-                ),
-                Column(
-                    database='information_schema', type=TYPES.MYSQL_TYPE_VAR_STRING,
-                    name='COMMENT', alias='Comment',
-                    table_name='COLUMNS',
-                    charset=self.charset_text_type,
-                    flags=sum([
-                    ])
-                ),
-            ])
-        return columns
-
-    def answer_explain_predictors(self, is_full=False):
-        status = sum([
-            SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
-            SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
-        ])
-
-        columns = self._get_explain_columns(is_full=is_full)
-        data = [
-            # [Field, Type, Null, Key, Default, Extra]
-            ['name', 'varchar(255)', 'NO', 'PRI', None, ''],
-            ['status', 'varchar(255)', 'YES', '', None, ''],
-            ['accuracy', 'varchar(255)', 'YES', '', None, ''],
-            ['predict', 'varchar(255)', 'YES', '', None, ''],
-            ['select_data_query', 'varchar(255)', 'YES', '', None, ''],
-            ['training_options', 'varchar(255)', 'YES', '', None, ''],
-        ]
-        if is_full:
-            # The optional FULL keyword causes the output to include the column collation and comments
-            # as well as the privileges you have for each column.
-            data = [
-                row + [None, None, None]
-                for row in data
-            ]
-
-
-        return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
-            columns=columns,
-            data=data,
-            status=status
-        )
-
-    def answer_explain_commands(self):
-        status = sum([
-            SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
-            SERVER_STATUS.SERVER_QUERY_NO_INDEX_USED,
-        ])
-
-        columns = self._get_explain_columns()
-        data = [
-            # [Field, Type, Null, Key, Default, Extra]
-            ['command', 'varchar(255)', 'NO', 'PRI', None, '']
-        ]
-        return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
-            columns=columns,
-            data=data,
-            status=status
-        )
-
     def process_insert(self, statement):
         db_name = self.session.database
         if len(statement.table.parts) == 2:
             db_name = statement.table.parts[0].lower()
         table_name = statement.table.parts[-1].lower()
-        if db_name != 'mindsdb' or table_name not in ('predictors', 'commands'):
-            raise ErNonInsertableTable("At this moment only insert to 'mindsdb.predictors' or 'mindsdb.commands' is possible")
+        if db_name != 'mindsdb' or table_name != 'predictors':
+            raise ErNonInsertableTable("At this moment only insert to 'mindsdb.predictors' is possible")
         column_names = []
         for column_identifier in statement.columns:
             if isinstance(column_identifier, Identifier):
@@ -1028,6 +892,52 @@ class ExecuteCommands:
             return self.handle_custom_command(insert_dict['command'])
         elif table_name == 'predictors':
             return self.insert_predictor_answer(insert_dict)
+
+    def answer_show_columns(self, target: Identifier, where: Optional[Operation] = None,
+                            like: Optional[str] = None, is_full=False):
+        if len(target.parts) > 1:
+            db = target.parts[0]
+        elif isinstance(self.session.database, str) and len(self.session.database) > 0:
+            db = self.session.database
+        else:
+            db = 'mindsdb'
+        table_name = target.parts[-1]
+
+        new_where = BinaryOperation('and', args=[
+            BinaryOperation('=', args=[Identifier('TABLE_SCHEMA'), Constant(db)]),
+            BinaryOperation('=', args=[Identifier('TABLE_NAME'), Constant(table_name)])
+        ])
+        if where is not None:
+            new_where = BinaryOperation('and', args=[new_where, where])
+        if like is not None:
+            like = BinaryOperation('like', args=[Identifier('View'), Constant(like)])
+            new_where = BinaryOperation('and', args=[new_where, like])
+
+        targets = [
+            Identifier('COLUMN_NAME', alias=Identifier('Field')),
+            Identifier('COLUMN_TYPE', alias=Identifier('Type')),
+            Identifier('IS_NULLABLE', alias=Identifier('Null')),
+            Identifier('COLUMN_KEY', alias=Identifier('Key')),
+            Identifier('COLUMN_DEFAULT', alias=Identifier('Default')),
+            Identifier('EXTRA', alias=Identifier('Extra'))
+        ]
+        if is_full:
+            targets.extend([
+                Constant('COLLATION', alias=Identifier('Collation')),
+                Constant('PRIVILEGES', alias=Identifier('Privileges')),
+                Constant('COMMENT', alias=Identifier('Comment')),
+            ])
+        new_statement = Select(
+            targets=targets,
+            from_table=Identifier(parts=['information_schema', 'COLUMNS']),
+            where=new_where
+        )
+
+        query = SQLQuery(
+            new_statement,
+            session=self.session
+        )
+        return self.answer_select(query)
 
 
     def answer_single_row_select(self, statement):
@@ -1373,6 +1283,14 @@ class ExecuteCommands:
             data=data
         )
 
+    def answer_apply_predictor(self, statement):
+        SQLQuery(
+            statement,
+            session=self.session,
+            execute=True
+        )
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
     def answer_select(self, query):
         result = query.fetch(
             self.session.datahub
@@ -1402,7 +1320,6 @@ class ExecuteCommands:
         )
         query = SQLQuery(
             sql_statement,
-            planner=self.planner,
             session=self.session
         )
         result = query.fetch(

@@ -2308,6 +2308,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             command_name = command_names.get(p.type.value, f'UNKNOWN {p.type.value}')
             sql = None
             response = None
+            error_type = None
+            error_code = None
+            error_text = None
+            error_traceback = None
 
             try:
                 if p.type.value == COMMANDS.COM_QUERY:
@@ -2342,9 +2346,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     # that sends it to debug isntead
                     response = SQLAnswer(RESPONSE_TYPE.OK)
             except Exception as e:
+                error_type = 'unexpected'
+                error_traceback = traceback.format_exc()
                 log.error(
                     f'ERROR while executing query\n'
-                    f'{traceback.format_exc()}\n'
+                    f'{error_traceback}\n'
                     f'{e}'
                 )
                 error_code = ERR.ER_SYNTAX_ERROR
@@ -2356,31 +2362,23 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     error_message=str(e)
                 )
 
-            response_type = 'unknown'
             if response is not None:
                 self.send_query_answer(response)
-                response_type = response.resp_type
+                if response.type == RESPONSE_TYPE.ERROR:
+                    error_text = response.error_message
+                    error_code = response.error_code
+                    error_type = error_type or 'expected'
 
-
-            # SQLAnswer(
-            #     RESPONSE_TYPE.ERROR,
-            #     error_code=ERR.ER_WRONG_ARGUMENTS,
-            #     error_message="'select_data_query' should not be empty"
-            # )
-            # elif answer.type == RESPONSE_TYPE.ERROR:
-            #     self.packet(
-            #         ErrPacket,
-            #         err_code=answer.error_code,
-            #         msg=answer.error_message
-            #     ).send()
-            hooks.after_mysql_query(
+            hooks.after_api_query(
                 company_id=self.session.company_id,
                 api='mysql',
                 command=command_name,
-                query=sql,
-                response_type=response_type,
-                traceback=None
-            })
+                payload=sql,
+                error_type=error_type,
+                error_code=error_code,
+                error_text=error_text,
+                traceback=error_traceback
+            )
 
     def packet(self, packetClass=Packet, **kwargs):
         """

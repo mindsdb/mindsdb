@@ -9,10 +9,6 @@ except ImportError:
 
 
 try:
-    from mindsdb.utilities.hooks.after_mysql_query import after_mysql_query
+    from mindsdb.utilities.hooks.after_api_query import after_api_query
 except ImportError:
-    after_mysql_query = empty_fn
-
-
-# class Hooks:
-#     @property
+    after_api_query = empty_fn

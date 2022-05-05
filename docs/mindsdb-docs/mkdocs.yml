@@ -63,54 +63,65 @@ markdown_extensions:
       custom_checkbox: true
   - toc:
       permalink: true
+  - tables
+
 nav:
   - Quickstart: index.md
-  - Using MindsDB:
-    - Setup:
-        - Docker: deployment/docker.md
-        - Pip: deployment/pypi.md
-        - MindsDB Cloud: deployment/cloud.md
-    - Connect:
-        - MindsDB Editor: sql/connect/mindsdb_editor.md
-        - DBeaver: sql/connect/dbeaver.md
-        - MySQL Client: sql/connect/mysql-client.md
-        - Deepnote: sql/connect/deepnote.md
-        - SQL Alchemy: sql/connect/sql-alchemy.md
-        - DBT: sql/connect/dbt.md
-        - Kafka: sql/connect/kafka.md 
-        - Tableau: sql/connect/tableau.md 
-  - Tutorials:
-    - Regression:
-      - Process Quality: sql/tutorials/process-quality.md
-      - Body Fat Prediction: sql/tutorials/bodyfat.md
-      - Insurance Cost: sql/tutorials/insurance-cost-prediction.md
-    - Classification:
-      - Crop Recommendation: sql/tutorials/crop-prediction.md
-      - Customer Churn: sql/tutorials/customer-churn.md
-      - Diabetes: sql/tutorials/diabetes.md
-      - Heart Disease: sql/tutorials/heart-disease.md
-      - Mushrooms Hunting: sql/tutorials/mushrooms.md
-    - Time Series:
-      - AI powered forecasts with MindsDB: sql/tutorials/mindsdb-superset-snowflake.md
-    - Custom Models:
-      - MLFlow: sql/tutorials/mlflow.md
-      - Ray Serve: sql/tutorials/ray-serve.md
-      - HuggingFace: sql/tutorials/huggingface.md
-      - OpenAi: sql/tutorials/openai.md
+  - What is MindsDB?: what-is-mindsdb.md
+  - Setup:
+    - Self-hosted:
+      - Docker: setup/self-hosted/docker.md
+      - pip:
+        - Windows via pip: setup/self-hosted/pip/windows.md
+        - Linux via pip: setup/self-hosted/pip/linux.md
+        - MacOs via pip: setup/self-hosted/pip/macos.md
+        - Sourcecode via pip: setup/self-hosted/pip/source.md
+    - MindsDB Cloud: setup/cloud.md
+  - Connect:
+      - MySQL CLI: connect/mysql-client.md
+      - MindsDB Cloud Editor: connect/mindsdb_editor.md
+      - DBeaver: connect/dbeaver.md
+      - Deepnote: connect/deepnote.md
+      - SQL Alchemy: connect/sql-alchemy.md
+      - DBT: connect/dbt.md
+      - Kafka: connect/kafka.md 
+      - Tableau: connect/tableau.md
   - SQL API:
+    - Table Structure (Schema): sql/table-structure.md
     - CREATE:
-      - Database: sql/api/databases.md
-      - Predictor: sql/api/predictor.md
-      - View: sql/api/view.md
+      - Database: sql/create/databases.md
+      - Predictor: sql/create/predictor.md
+      - View: sql/create/view.md
     - DESCRIBE: sql/api/describe.md
     - RETRAIN: sql/api/retrain.md
     - DROP: sql/api/drop.md
     - SELECT: sql/api/select.md
     - SELECT from files: sql/api/select_files.md
     - JOIN: sql/api/join.md
+  - Using a custom model:
+    - MLFlow: custom-model/mlflow.md
+    - Ray Serve: custom-model/ray-serve.md
+    - HuggingFace: custom-model/huggingface.md
+    - OpenAi: custom-model/openai.md
+
+  - Tutorials:
+    - Regression:
+      - Process Quality: tutorials/regression/process-quality.md
+      - Body Fat Prediction: tutorials/regression/bodyfat.md
+    - Classification:
+      - Customer Churn: tutorials/classification/customer-churn.md
+      - Heart Disease: tutorials/classification/heart-disease.md
+      - Mushrooms Hunting: tutorials/classification/mushrooms.md
+    - Time Series:
+      - AI powered forecasts with MindsDB: tutorials/time-series/mindsdb-superset-snowflake.md
+  - Community Tutorials:
+    - Regression:
+      - Insurance Cost: sql/tutorials/insurance-cost-prediction.md
+    - Classification:
+      - Crop Recommendation: sql/tutorials/crop-prediction.md
+      - Diabetes: sql/tutorials/diabetes.md  
   - Contribution and Community:
       - How to contribute: contribute.md
       - Join our community: community.md
-  - FAQ: faq.md
 extra_css:
   - stylesheets/extra.css

@@ -1,4 +1,4 @@
-# Quickstart Guide
+# Quickstart
 
 Follow the following steps to start predicting in SQL straight away. Check out our [Getting Started Guide](/getting-started/) for trying MindsDB with your data or model.
 ## 1. Create an Account

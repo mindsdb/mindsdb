@@ -473,7 +473,7 @@ class DataStore():
 
             column_names = ds_meta['column_names']
             if ds_meta['column_names'] is not None:
-                column_names = json.dumps([dict(name=x) for x in ds_meta['column_names']])
+                column_names = [dict(name=x) for x in ds_meta['column_names']]
             file_record = File(
                 name=name,
                 company_id=company_id,

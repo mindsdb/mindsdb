@@ -106,14 +106,14 @@ nav:
 
   - Tutorials:
     - Regression:
-      - Process Quality: tutorials/regression/process-quality.md
-      - Body Fat Prediction: tutorials/regression/bodyfat.md
+      - Process Quality: sql/tutorials/process-quality.md
+      - Body Fat Prediction: sql/tutorials/bodyfat.md
     - Classification:
-      - Customer Churn: tutorials/classification/customer-churn.md
-      - Heart Disease: tutorials/classification/heart-disease.md
-      - Mushrooms Hunting: tutorials/classification/mushrooms.md
+      - Customer Churn: sql/tutorials/customer-churn.md
+      - Heart Disease: sql/tutorials/heart-disease.md
+      - Mushrooms Hunting: sql/tutorials/mushrooms.md
     - Time Series:
-      - AI powered forecasts with MindsDB: tutorials/time-series/mindsdb-superset-snowflake.md
+      - AI powered forecasts with MindsDB: sql/tutorials/mindsdb-superset-snowflake.md
   - Community Tutorials:
     - Regression:
       - Insurance Cost: sql/tutorials/insurance-cost-prediction.md

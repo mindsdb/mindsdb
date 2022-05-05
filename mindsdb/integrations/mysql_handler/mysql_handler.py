@@ -126,7 +126,7 @@ class MySQLHandler(DatabaseHandler):
         result = self.native_query(q)
         return result
 
-    def select_query(self, query):
+    def query(self, query):
         """
         Retrieve the data from the SQL statement.
         """
@@ -150,8 +150,8 @@ class MySQLHandler(DatabaseHandler):
         """
         TODO: Update this
         """
-        local_result = self.select_query(stmt.targets, stmt.from_table.left, stmt.where)  # should check it's actually on the left
-        external_result = data_handler.select_query(stmt.targets, stmt.from_table.right, stmt.where)  # should check it's actually on the right
+        local_result = self.query(stmt.targets, stmt.from_table.left, stmt.where)  # should check it's actually on the left
+        external_result = data_handler.query(stmt.targets, stmt.from_table.right, stmt.where)  # should check it's actually on the right
 
         local_df = pd.DataFrame.from_records(local_result)
         external_df = pd.DataFrame.from_records(external_result)

@@ -10,7 +10,7 @@ from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, 
 
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
-from mindsdb.integrations.mysql_handler.mysql_handler.mysql_handler import MySQLHandler
+from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.interfaces.model.learn_process import brack_to_mod, rep_recur
 from mindsdb.utilities.config import Config
 from mindsdb_sql import parse_sql
@@ -59,8 +59,8 @@ class LightwoodHandler(PredictiveHandler):
             return {}
         return self.storage.get('models')[model_name]['jsonai']
 
-    def run_native_query(self, query_str: str) -> Optional[object]:
-        statement = self.parser(query_str, dialect=self.dialect)
+    def native_query(self, query: str) -> Optional[object]:
+        statement = self.parser(query, dialect=self.dialect)
 
         if type(statement) == CreatePredictor:
             model_name = statement.name.parts[-1]
@@ -129,11 +129,12 @@ class LightwoodHandler(PredictiveHandler):
         else:
             raise Exception(f"Query type {type(statement)} not supported")
 
-    def select_query(self, stmt) -> pd.DataFrame:
-        model = self._get_model(stmt)
-        values = self._recur_get_conditionals(stmt.where.args, {})
+    def query(self, query) -> dict:
+        model = self._get_model(query)
+        values = self._recur_get_conditionals(query.where.args, {})
         df = pd.DataFrame.from_dict(values)
-        return self._call_predictor(df, model)
+        df = self._call_predictor(df, model)
+        return {'data_frame': df}
 
     def _recur_get_conditionals(self, args: list, values):
         """ Gets all the specified data from an arbitrary amount of AND clauses inside the WHERE statement """  # noqa
@@ -156,7 +157,7 @@ class LightwoodHandler(PredictiveHandler):
             return self._default_data_gather(handler, query)
 
     def _default_data_gather(self, handler, query):
-        records = handler.select_query(targets=query.targets, from_stmt=query.from_table, where_stmt=query.where)
+        records = handler.query(query)['data_frame']
         df = pd.DataFrame.from_records(records)  #[:10]  # todo remove forced cap, testing purposes only
         return df
 
@@ -167,13 +168,13 @@ class LightwoodHandler(PredictiveHandler):
             #     pass
             # else:
             #     pass
-            records = handler.select_query(targets=query.targets, from_stmt=query.from_table, where_stmt=query.where)
+            records = handler.query(query)['data_frame']
             return pd.DataFrame.from_records(records)  # [:10]  # todo remove forced cap, testing purposes only
 
         if True:  # todo  # query.group_by is None:
             df = _gather_partition(handler, query)
         else:
-            groups = handler.select_query(targets=query.group_by, from_stmt=query.from_table, where_stmt=query.where)
+            groups = handler.query(query)['data_frame']
             dfs = []
             for group in groups:
                 # query.where_stmt =  # todo turn BinaryOperation and other types into an AND with the respective group filter
@@ -210,11 +211,7 @@ class LightwoodHandler(PredictiveHandler):
 
             parsed_query = self.parser(data_query, dialect=self.dialect)
             model_input = pd.DataFrame.from_records(
-                data_handler.select_query(
-                    parsed_query.targets,
-                    parsed_query.from_table,
-                    parsed_query.where
-                ))
+                data_handler.query(parsed_query)['data_frame'])
         else:
             # for TS, fetch correct groups, build window context, predict and limit, using self._ts_data_gather
 
@@ -228,12 +225,9 @@ class LightwoodHandler(PredictiveHandler):
             window = model.problem_definition.timeseries_settings.window
             groups_query = f"SELECT {gby_col} from {data_handler_table}"  # todo add DISTINCT once parser supports it
             parsed_groups_query = self.parser(groups_query, dialect=self.handler_dialect)
+            out = data_handler.query(parsed_groups_query)['data_frame']
             groups = list(pd.DataFrame.from_records(
-                data_handler.select_query(
-                    parsed_groups_query.targets,
-                    parsed_groups_query.from_table,
-                    parsed_groups_query.where
-                )
+                data_handler.query(parsed_groups_query)['data_frame']
             ).drop_duplicates().squeeze())
 
             # 2) get LATEST available date and window for each group
@@ -248,11 +242,8 @@ class LightwoodHandler(PredictiveHandler):
 
                 # we order and limit the df instead of via SELECT because it doesn't support those operators (yet)
                 df = pd.DataFrame.from_records(
-                    data_handler.select_query(
-                        parsed_latest_query.targets,
-                        parsed_latest_query.from_table,
-                        parsed_latest_query.where,
-                    ))
+                    data_handler.query(parsed_latest_query)['data_frame']
+                )
                 df = list(df.sort_values(oby_col, ascending=False).iloc[0].values)[0]
                 latests[group] = df
 
@@ -262,11 +253,10 @@ class LightwoodHandler(PredictiveHandler):
                 # as above, we order and limit the df instead of via SELECT because it doesn't support those operators
                 parsed_window_query = self.parser(window_query, dialect=self.handler_dialect)
                 df = pd.DataFrame.from_records(
-                    data_handler.select_query(
-                        parsed_window_query.targets,
-                        parsed_window_query.from_table,
-                        parsed_window_query.where,
-                    ))
+                    data_handler.query(
+                        parsed_window_query
+                    )['data_frame']
+                )
 
                 if len(df) < window and not model.problem_definition.timeseries_settings.allow_incomplete_history:
                     raise Exception(f"Not enough data for group {group}. Either pass more historical context or train a predictor with the `allow_incomplete_history` argument set to True.")
@@ -366,7 +356,7 @@ if __name__ == '__main__':
 
     # try:
     #     print('dropping predictor...')
-    #     cls.run_native_query(f"DROP PREDICTOR {registered_model_name}")
+    #     cls.native_query(f"DROP PREDICTOR {registered_model_name}")
     # except:
     #     print('failed to drop')
     #     pass
@@ -378,19 +368,19 @@ if __name__ == '__main__':
     target = 'rental_price'
     if model_name not in cls.get_tables():
         query = f"CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target}"
-        cls.run_native_query(query)
+        cls.native_query(query)
 
     print(cls.describe_table(f'{model_name}'))
 
     # try single WHERE condition
     query = f"SELECT target from {model_name} WHERE sqft=100"
     parsed = cls.parser(query, dialect=cls.dialect)
-    predicted = cls.select_query(parsed)
+    predicted = cls.query(parsed)['data_frame']
 
     # try multiple
     query = f"SELECT target from {model_name} WHERE sqft=100 AND number_of_rooms=2 AND number_of_bathrooms=1"
     parsed = cls.parser(query, dialect=cls.dialect)
-    predicted = cls.select_query(parsed)
+    predicted = cls.query(parsed)['data_frame']
 
     into_table = 'test_join_into_lw'
     query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.sqft from {data_handler_name}.{data_table_name} AS ta JOIN {model_name} AS tb LIMIT 10"
@@ -400,29 +390,29 @@ if __name__ == '__main__':
     # checks whether `into` kwarg does insert into the table or not
     q = f"SELECT * FROM {into_table}"
     qp = cls.parser(q, dialect='mysql')
-    assert len(data_handler.select_query(qp.targets, qp.from_table, qp.where)) > 0
-
-    try:
-        data_handler.run_native_query(f"DROP TABLE test.{into_table}")
-    except:
-        pass
+    assert len(data_handler.query(qp)['data_frame']) > 0
 
     # try:
-    #     cls.run_native_query(f"DROP PREDICTOR {model_name}")
+    #     data_handler.native_query(f"DROP TABLE test.{into_table}")
+    # except:
+    #     pass
+
+    # try:
+    #     cls.native_query(f"DROP PREDICTOR {model_name}")
     # except:
     #     pass
 
     # Test 2: add custom JsonAi
     model_name = 'lw_test_predictor2'
     # try:
-    #     cls.run_native_query(f"DROP PREDICTOR {model_name}")
+    #     cls.native_query(f"DROP PREDICTOR {model_name}")
     # except:
     #     pass
 
     if model_name not in cls.get_tables():
         using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
         query = f'CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target} USING {using_str}'
-        cls.run_native_query(query)
+        cls.native_query(query)
         # todo write assertion to check new predictor only uses LightGBM model (it does happen, but assert is missing)
 
     # Timeseries predictor
@@ -436,13 +426,13 @@ if __name__ == '__main__':
 
     model_name = 'lw_test_predictor3'
     # try:
-    #     cls.run_native_query(f"DROP PREDICTOR {model_name}")
+    #     cls.native_query(f"DROP PREDICTOR {model_name}")
     # except:
     #     pass
 
     if model_name not in cls.get_tables():
         query = f'CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
-        cls.run_native_query(query)
+        cls.native_query(query)
 
         # todo missing assert that predictor is a TS one
         p = cls.storage.get('models')

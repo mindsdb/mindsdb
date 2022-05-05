@@ -19,6 +19,7 @@ class Responce(Responder):
                 'status': x['status'],
                 'accuracy': str(x['accuracy']) if x['accuracy'] is not None else None,
                 'predict': ', '.join(x['predict'] if isinstance(x['predict'], list) else [x['predict']]),
+                'error': x['error'],
                 'select_data_query': '',
                 'training_options': ''
             } for x in models]

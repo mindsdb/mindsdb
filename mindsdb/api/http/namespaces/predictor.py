@@ -295,5 +295,4 @@ class PredictorExport(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorExport(Resource):
     def put(self, name):
-        serialized_predictor = request.json.get('serialized_predictor')
-        request.model_interface.import_predictor(name, serialized_predictor)
+        request.model_interface.import_predictor(name, request.json)

@@ -14,17 +14,12 @@ class SnowflakeConnectionChecker:
         self.port = kwargs.get('port')
 
     def check_connection(self):
+        connected = False
         try:
             ds = SnowflakeDS('SELECT 1;', self.host, self.user, self.password, self.account, self.warehouse, self.database, self.schema, self.protocol, self.port)
             assert len(ds.df) == 1
             connected = True
         except Exception as e:
-            try:
-                print(e)
-                connected = False
-            finally:
-                e = None
-                del e
-
-        else:
-            return connected
+            print(e)
+            connected = False
+        return connected

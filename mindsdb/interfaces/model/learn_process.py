@@ -1,4 +1,5 @@
 import os
+import sys
 import traceback
 import tempfile
 from pathlib import Path
@@ -16,8 +17,6 @@ from lightwood import __version__ as lightwood_version
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.storage.db import session, Predictor, Dataset
-from mindsdb.interfaces.database.database import DatabaseWrapper
-from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
@@ -85,6 +84,7 @@ def brack_to_mod(ovr):
 
     return ovr
 
+
 @mark_process(name='learn')
 def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None) -> int:
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
@@ -131,7 +131,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         # getting training time for each tried model. it is possible to do
         # after training only
         fit_mixers = list(predictor.runtime_log[x] for x in predictor.runtime_log
-                            if isinstance(x, tuple) and x[0] == "fit_mixer")
+                          if isinstance(x, tuple) and x[0] == "fit_mixer")
         submodel_data = predictor_record.data.get("submodel_data", [])
         # add training time to other mixers info
         if submodel_data and fit_mixers and len(submodel_data) == len(fit_mixers):
@@ -141,19 +141,11 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
 
         predictor_record.dtype_dict = predictor.dtype_dict
         session.commit()
-
-        dbw = DatabaseWrapper(predictor_record.company_id)
-        mi = WithKWArgsWrapper(ModelInterface(), company_id=predictor_record.company_id)
     except Exception as e:
         session.refresh(predictor_record)
         predictor_record.data = {'error': f'{traceback.format_exc()}\nMain error: {e}'}
         session.commit()
         raise e
-
-    try:
-        dbw.register_predictors([mi.get_model_data(predictor_record.name)])
-    except Exception as e:
-        log.warn(e)
 
 
 @mark_process(name='learn')
@@ -162,16 +154,15 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
         serialized_df = json.dumps(df.to_dict())
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
         resp = requests.post(predictor_record.data['train_url'],
-                            json={'df': serialized_df, 'target': predictor_record.to_predict[0]})
+                             json={'df': serialized_df, 'target': predictor_record.to_predict[0]})
 
         assert resp.status_code == 200
         predictor_record.data['status'] = 'complete'
-    except Exception as e:
+    except Exception:
         predictor_record.data['status'] = 'error'
         predictor_record.data['error'] = str(resp.text)
 
     session.commit()
-
 
 
 @mark_process(name='learn')
@@ -193,7 +184,16 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
                 if len(predictors_with_ds) == 0:
                     session.delete(linked_db_ds)
                     predictor_record.dataset_id = None
-        predictor_record.data = {"error": str(e)}
+
+        try:
+            exception_type, _exception_object, exception_traceback = sys.exc_info()
+            filename = exception_traceback.tb_frame.f_code.co_filename
+            line_number = exception_traceback.tb_lineno
+            error_message = f'{exception_type.__name__}: {e}, raised at: {filename}#{line_number}'
+        except Exception:
+            error_message = str(e)
+
+        predictor_record.data = {"error": error_message}
         session.commit()
 
 
@@ -270,6 +270,7 @@ class LearnRemoteProcess(ctx.Process):
 
     def run(self):
         run_learn_remote(*self._args)
+
 
 class LearnProcess(ctx.Process):
     daemon = True

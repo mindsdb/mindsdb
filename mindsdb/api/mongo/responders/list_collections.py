@@ -12,7 +12,7 @@ class Responce(Responder):
     def result(self, query, request_env, mindsdb_env, session):
         models = mindsdb_env['model_interface'].get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
-        models += ['predictors', 'commands']
+        models += ['predictors']
         cursor = {
             'id': Int64(0),  # should we save id somethere?
             'ns': 'qwe.$cmd.listCollections',

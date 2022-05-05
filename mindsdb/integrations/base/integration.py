@@ -19,19 +19,13 @@ class Integration:
     def _query(self, query, fetch=False):
         raise NotImplementedError
 
-    def register_predictors(self, model_data_arr):
-        raise NotImplementedError
-
-    def unregister_predictor(self, name):
-        raise NotImplementedError
-
 
 class StreamIntegration(Integration):
     def __init__(self, config, name, control_stream=None):
         Integration.__init__(self, config, name)
         self._streams = []
         self._control_stream = control_stream
-    
+
     def setup(self):
         Thread(target=StreamIntegration._loop, args=(self,)).start()
 
@@ -121,10 +115,4 @@ class StreamIntegration(Integration):
         raise NotImplementedError
 
     def _query(self, query, fetch=False):
-        pass
-
-    def register_predictors(self, model_data_arr):
-        pass
-
-    def unregister_predictor(self, name):
         pass

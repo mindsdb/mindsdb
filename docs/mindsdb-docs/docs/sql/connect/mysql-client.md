@@ -48,7 +48,7 @@ The required parameters are:
 
 ## MindsDB Database
 
-On startup the mindsdb database will contain 3 tables as  `predictors`, `commands` and `datasources`. 
+On startup the mindsdb database will contain 2 tables as `predictors` and `datasources`. 
     <div id="create-datasource">
       <style>
         #create-datasource code { background-color: #353535; color: #f5f5f5 }
@@ -61,7 +61,6 @@ On startup the mindsdb database will contain 3 tables as  `predictors`, `command
     | Tables_in_mindsdb         |
     +---------------------------+
     | predictors                |
-    | commands                  |
     | datasources               |
     +---------------------------+
     3 rows in set (0.14 sec)

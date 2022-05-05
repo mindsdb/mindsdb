@@ -11,6 +11,7 @@ Machine Learning powered data analysis can be performed quickly and efficiently 
 
 ### Data Overview
 For this tutorial, we'll be using the Body Fat Prediction dataset available at [Kaggle](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset).  Each row represents one person and we'll train an ML model to help us predict an individual's body fat percentage using MindsDB.  Below is a short description of each feature of the data:
+
 - Density: Individual's body density as determined by underwater weighing (float)
 - BodyFat: The individual's determined body fat percentage (float).  This is what we want to predict
 - Age: Age of the individual (int)

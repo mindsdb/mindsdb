@@ -33,14 +33,14 @@ class PingNative(Resource):
         ''' Checks server use native for learn or analyse.
             Will return right result only on Linux.
         '''
-        if os.name != 'posix':
-            return {'native_process': False}
-
         response = {
             'learn': False,
             'predict': False,
             'analyse': False
         }
+
+        if os.name != 'posix':
+            return response
 
         for process_type in response:
             processes_dir = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{process_type}/')

@@ -1,19 +1,38 @@
 # MindsDB Cloud
 
-For a quick jumpstart into using MindsDB you can sign up for our Cloud. MindsDB Cloud is hosted by the MindsDB team and has all of the latest updates. You can start using it immediately for free by following these steps:
+You can sign up for a quick jumpstart using MindsDB in our Cloud. MindsDB Cloud is hosted by the MindsDB team and has all of the latest updates. You can start using it immediately for free by following these steps:
+## Create a [MindsDB Cloud](https://cloud.mindsdb.com/login) free account
 
-1. Create an account by visiting the [cloud.mindsdb.com/register](https://cloud.mindsdb.com/register) and filling out the sign-up form.
+Create an account by visiting the [sign-up](https://cloud.mindsdb.com/register) page and filling out the sign-up form.
 
-    ![Sign up](/assets/cloud-signup-filledout.png)
+<figure markdown> 
+    ![sign-up](/assets/cloud/cloud-signup-filledout.png){ width="600", loading=lazy  }
+    <figcaption></figcaption>
+</figure>
 
-2. After sign up, you will get a confirmation email to validate your account.    
+!!! Tip ""
+    You can see MindsDB Cloud's terms and conditions [here](https://mindsdb.com/mindsdb-atlas-cloud-terms-and-conditions/?_gl=1*1xapt4c*_ga*MTYwMjYxMzY3NS4xNjUwNjQ1ODM0*_ga_7LGFPGV6XV*MTY1MTI1NzcyMy4xNy4wLjE2NTEyNTc3MjMuMA..&_ga=2.183912166.1168371427.1651067937-1602613675.1650645834)
+## Log into [MindsDB Cloud](https://cloud.mindsdb.com/login)
 
-    ![Validate](/assets/cloud/email.png)
+Now you can go to the [log-in](https://cloud.mindsdb.com/login) page and input your credentials.
 
-3. Once your account is validated, you can login to MindsDB Cloud.
+<figure markdown> 
+    ![log-in](/assets/cloud/login.png){ width="600", loading=lazy }
+    <figcaption></figcaption>
+</figure>
 
-    ![Login](/assets/cloud/login.png)
+## Use [MindsDB Cloud](https://cloud.mindsdb.com/login)
 
-4. Now, you are ready to use MindsDB Cloud.
+Now, you are ready to use MindsDB Cloud.
 
-    ![GUI](/assets/cloud/gui.png)
+<figure markdown> 
+    ![GUI](/assets/cloud/gui.png){ width="800", loading=lazy }
+    <figcaption></figcaption>
+</figure>
+
+!!! Tip "What is next?" 
+    Now you can use [MindsDB Cloud as a SQL database](/docs/sql/connect/mindsdb_editor.md)
+
+<!-- 2. After sign up, you will get a confirmation email to validate your account.    
+
+    ![Validate](/assets/cloud/email.png) -->

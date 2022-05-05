@@ -3,6 +3,9 @@
 ![Train model from mongodb](/assets/databases/mongodb/mongo-mdb-code.png)
 
 
+Note: This is work in progress, please join our slack channel if you have any questions.
+
+
 ### Train new model
 
 To train a new model, you will need to `insert()` a new document inside the mindsdb.predictors collection.

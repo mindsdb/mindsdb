@@ -1,4 +1,4 @@
-# Connecting MindsDB MySQL API to MySQL CLI
+# Connect MindsDB MySQL API to MySQL CLI
 
 MindsDB provides a powerful MySQL API that allows users to connect to it using the [MySQL Command-Line Client](https://dev.mysql.com/doc/refman/8.0/en/mysql.html). Connecting to MySQL API is the same as connecting to a MySQL database:
 

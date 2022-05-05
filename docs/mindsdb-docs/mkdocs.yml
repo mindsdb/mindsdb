@@ -67,7 +67,7 @@ markdown_extensions:
 
 nav:
   - Quickstart: index.md
-  - What is MindsDB: what-is-mindsdb.md
+  - What is MindsDB?: what-is-mindsdb.md
   - Setup:
     - Self-hosted:
       - Docker: setup/self-hosted/docker.md

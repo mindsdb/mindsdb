@@ -116,10 +116,10 @@ nav:
       - AI powered forecasts with MindsDB: tutorials/time-series/mindsdb-superset-snowflake.md
   - Community Tutorials:
     - Regression:
-      - Insurance Cost: community-tutorials/regression/insurance-cost-prediction.md
+      - Insurance Cost: sql/tutorials/insurance-cost-prediction.md
     - Classification:
-      - Crop Recommendation: community-tutorials/classification/crop-prediction.md
-      - Diabetes: community-tutorials/classification/diabetes.md  
+      - Crop Recommendation: sql/tutorials/crop-prediction.md
+      - Diabetes: sql/tutorials/diabetes.md  
   - Contribution and Community:
       - How to contribute: contribute.md
       - Join our community: community.md

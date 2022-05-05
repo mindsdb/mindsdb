@@ -8,7 +8,7 @@ mysql -h [hostname] --port [TCP/IP port number] -u [user] -p [password]
 
 You can either connect locally or to a MindsDB Cloud instance, depending on the case; open your terminal and run:
 
-=== "Local Deployment"
+=== "Self-Hosted Local Deployment"
 
     ```bash
       mysql -h 127.0.0.1 --port 47335 -u mindsdb

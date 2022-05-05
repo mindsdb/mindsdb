@@ -1,4 +1,11 @@
-To integrate your predictions into your DBT workflow, you will need to make four changes:
+To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapter:
+
+| Adapter for      | Documentation                          | Install from PyPi |
+| ---------------- | ------------------------------------ | ----- |
+| MindsDB ([dbt-mindsdb](https://github.com/mindsdb/dbt-mindsdb))       | [Profile Setup](/sql/connect/dbt-mindsdb-profile), [Configuration](/sql/connect/dbt-mindsdb-configs)  | `pip install dbt-mindsdb` |
+
+		
+		
 
     === "profiles.yml"
 

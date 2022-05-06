@@ -126,6 +126,15 @@ h3{
 	line-height: 20px !important;
 }
 
+p a {
+	font-weight: 500;
+}
+
+p a:hover {
+	font-weight: 500;
+	color: #00A587 !important;
+}
+
 .md-nav__link{
 	font-size: 14px !important;
 	font-weight: 400 !important;

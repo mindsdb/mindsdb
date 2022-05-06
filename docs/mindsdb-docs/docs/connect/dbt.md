@@ -3,6 +3,7 @@ To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapte
 | Adapter for      | Documentation                          | Install from PyPi |
 | ---------------- | ------------------------------------ | ----- |
 | MindsDB ([dbt-mindsdb](https://github.com/mindsdb/dbt-mindsdb))       | [Profile Setup](/sql/connect/dbt-mindsdb-profile)  | `#!bash pip install dbt-mindsdb` |
+
 ## Usage
 
 ### Initialization
@@ -13,7 +14,7 @@ To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapte
     dbt init [project_name]
     ```
 
-2. Configure your [profiles.yml](/sql/connect/dbt-mindsdb-profile)
+2. Configure your [profiles.yml](/connect/dbt-mindsdb-profile)
 
 ### Create predictor
 
@@ -21,11 +22,11 @@ Create table_name.sql (<em>table_name</em> will be used as the name of the predi
 
 | Parameter     | Required | Description                                          | Example                        |
 | ------------- | :--------: | ---------------------------------------------------- | ------------------------------ |
-| materialized  |     ✔️    | Always `predictor`                                   | `predictor`                    |
-| integration   |     ✔️    | Name of integration to get data from and save result to.  It must be created in MindsDB beforehand.                 | `photorep`            |
-| predict       |     ✔️    | Field to be predicted                                      | `name`             |
-| predict_alias |          | Alias for predicted field   | `predicted_name`         |
-| using         |          | Configuration options for trained model         | ... |
+| `materialized`  |     ✔️    | Always `predictor`                                   | `predictor`                    |
+| `integration`   |     ✔️    | Name of integration to get data from and save result to.  It must be created in MindsDB beforehand.                 | `photorep`            |
+| `predict`       |     ✔️    | Field to be predicted                                      | `name`             |
+| `predict_alias` |          | Alias for predicted field   | `predicted_name`         |
+| `using`         |          | Configuration options for trained model         | ... |
 
 ```sql
 {{
@@ -49,9 +50,9 @@ Create <em>table_name</em>.sql (If you need to specify schema, you can do it wit
 
 | Parameter       | Required | Description                                          | Example                        |
 | --------------- |: -------- :| ---------------------------------------------------- | ------------------------------ |
-| materialized    |     ✔️    | Always `table`                                       | `table`                        |
-| predictor_name  |     ✔️    | Name of predictor model from `Create predictor`      | `store_predictor`                   |
-| integration     |     ✔️    | Name of integration to get data from and save result to.  It must be created in MindsDB beforehand.                 | `photorep`            |
+| `materialized`    |     ✔️    | Always `table`                                       | `table`                        |
+| `predictor_name`  |     ✔️    | Name of predictor model from `Create predictor`      | `store_predictor`                   |
+| `integration`     |     ✔️    | Name of integration to get data from and save result to.  It must be created in MindsDB beforehand.                 | `photorep`            |
 
 ```sql
 {{

@@ -105,7 +105,6 @@
 }
 
 h1{
-	font-family: 'Inter' !important;
 	font-weight: 700 !important;
 	font-size: 35px !important;
 	line-height: 36px !important;
@@ -121,7 +120,6 @@ h2{
 
 
 h3{
-	font-family: 'Inter' !important;
 	font-style: normal !important;
 	font-weight: 600 !important;
 	font-size: 20px !important;
@@ -129,7 +127,6 @@ h3{
 }
 
 .md-nav__link{
-	font-family: 'Inter' !important;
 	font-size: 14px !important;
 	font-weight: 400 !important;
 	color: #818085 !important;
@@ -137,7 +134,6 @@ h3{
 }
 
 .md-nav__link--active{
-	font-family: 'Inter' !important;
 	font-size: 14px !important;
 	font-weight: 700 !important;
 	color: #00A587 !important;
@@ -153,7 +149,6 @@ h3{
 }
 
 .md-header__title{
-	font-family: 'Inter' !important;
 	margin-top: 5px !important;
 	margin-left: 0;
 }

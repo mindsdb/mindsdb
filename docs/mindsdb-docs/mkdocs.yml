@@ -78,8 +78,8 @@ nav:
         - Sourcecode via pip: setup/self-hosted/pip/source.md
     - MindsDB Cloud: setup/cloud.md
   - Connect:
-      - MySQL CLI: connect/mysql-client.md
       - MindsDB Cloud Editor: connect/mindsdb_editor.md
+      - MySQL CLI: connect/mysql-client.md
       - DBeaver: connect/dbeaver.md
       - Deepnote: connect/deepnote.md
       - SQL Alchemy: connect/sql-alchemy.md
@@ -89,9 +89,11 @@ nav:
   - SQL API:
     - Table Structure (Schema): sql/table-structure.md
     - CREATE:
-      - Database: sql/create/databases.md
-      - Predictor: sql/create/predictor.md
-      - View: sql/create/view.md
+      - DATABASE: sql/create/databases.md
+      - PREDICTOR: sql/create/predictor.md
+      - TABLE: sql/create/table.md
+      - VIEW: sql/create/view.md
+    - INSERT: sql/api/insert.md
     - DESCRIBE: sql/api/describe.md
     - RETRAIN: sql/api/retrain.md
     - DROP: sql/api/drop.md

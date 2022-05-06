@@ -1,5 +1,5 @@
 :root{
-    --md-primary-fg-color: #00A587 !important;
+    --md-primary-fg-color: #36333D !important;
 	--md-typeset-color: #4A515E !important;
 	--md-default-fg-color--light:	#36333D !important;
 }
@@ -104,19 +104,16 @@
     border-radius: 10px;
 }
 
-a{
-	font-weight: 500;
-}
-
 h1{
-	font-weight: 900 !important;
+	font-family: 'Inter' !important;
+	font-weight: 700 !important;
 	font-size: 35px !important;
 	line-height: 36px !important;
 	letter-spacing: 0.3px !important;
 }
 
 h2{
-	font-weight: 700 !important;
+	font-weight: 600 !important;
 	font-size: 25px !important;
 	line-height: 32px !important;
 	letter-spacing: 0.3px !important;
@@ -126,7 +123,42 @@ h2{
 h3{
 	font-family: 'Inter' !important;
 	font-style: normal !important;
-	font-weight: 700 !important;
+	font-weight: 600 !important;
 	font-size: 20px !important;
 	line-height: 20px !important;
+}
+
+.md-nav__link{
+	font-family: 'Inter' !important;
+	font-size: 14px !important;
+	font-weight: 400 !important;
+	color: #818085 !important;
+	margin-top: 0.2rem;
+}
+
+.md-nav__link--active{
+	font-family: 'Inter' !important;
+	font-size: 14px !important;
+	font-weight: 700 !important;
+	color: #00A587 !important;
+}
+
+.md-nav__title{
+	display: none;
+}
+
+.md-header__inner.md-grid{
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+}
+
+.md-header__title{
+	font-family: 'Inter' !important;
+	margin-top: 5px !important;
+	margin-left: 0;
+}
+
+.md-content{
+	padding-left: 5vw;
+	padding-right: 5vw;
 }

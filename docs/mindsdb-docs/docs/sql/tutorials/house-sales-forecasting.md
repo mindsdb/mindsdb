@@ -8,7 +8,7 @@ In this short example we will produce forecasts for a multivariate time series.
 
 The dataset we will use is the pre-processed version of the "House Property Sales" [Kaggle competition](https://www.kaggle.com/datasets/htagholdings/property-sales), in particular, the "ma_lga_12345.csv" file, which tracks quarterly moving averages of house sales aggregated by type and amount of bedrooms in each listing.
 
-Make sure you have access to a working MindsDB installation (either local or via cloud.mindsdb.com), and either load it into a table in your database of choice or upload the file directly to the special `FILES` datasource (via SQL or GUI). Once you've done this, proceed to the next step. For the rest of the tutorial we'll assume you've opted for the latter option:
+Make sure you have access to a working MindsDB installation (either local or via cloud.mindsdb.com), and either load it into a table in your database of choice or upload the file directly to the special `FILES` datasource (via SQL or GUI). Once you've done this, proceed to the next step. For the rest of the tutorial we'll assume you've opted for the latter option and uploaded the file with the name `HR_MA`:
 
 ```
 SHOW TABLES FROM files;

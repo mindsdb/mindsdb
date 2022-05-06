@@ -8,21 +8,21 @@
       
       
       
-        <link rel="canonical" href="https://docs.mindsdb.com/setup/self-hosted/pip/linux/">
+        <link rel="canonical" href="https://docs.mindsdb.com/sql/tutorials/house-sales-forecasting/">
       
-      <link rel="icon" href="../../../../assets/mdb_logo.png">
+      <link rel="icon" href="../../../assets/mdb_logo.png">
       <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.13">
     
     
       
-        <title>Linux via pip - MindsDB Documentation</title>
+        <title>Forecasting house sales - MindsDB Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.e411adfe.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.e411adfe.min.css">
       
         
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cc9b2e1e.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.cc9b2e1e.min.css">
         
       
     
@@ -31,9 +31,9 @@
 <link  rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap">
 
     
-      <link rel="stylesheet" href="../../../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../../../..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
 
 <!--iubenda privacy policy-->
@@ -77,7 +77,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#setup-for-linux-via-pip" class="md-skip">
+        <a href="#forecast-quarterly-house-sales-using-mindsdb" class="md-skip">
           Skip to content
         </a>
       
@@ -122,14 +122,14 @@
 
     <!-- Link to home -->
     <a
-      href="../../../.."
+      href="../../.."
       title="MindsDB Documentation"
       class="md-header__button md-logo"
       aria-label="MindsDB Documentation"
       data-md-component="logo"
     >
       
-  <img src="../../../../assets/mdb_logo_w2.svg" alt="logo">
+  <img src="../../../assets/mdb_logo_w2.svg" alt="logo">
 
     </a>
 
@@ -149,7 +149,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Linux via pip
+              Forecasting house sales
             
           </span>
         </div>
@@ -307,9 +307,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../../.." title="MindsDB Documentation" class="md-nav__button md-logo" aria-label="MindsDB Documentation" data-md-component="logo">
+    <a href="../../.." title="MindsDB Documentation" class="md-nav__button md-logo" aria-label="MindsDB Documentation" data-md-component="logo">
       
-  <img src="../../../../assets/mdb_logo_w2.svg" alt="logo">
+  <img src="../../../assets/mdb_logo_w2.svg" alt="logo">
 
     </a>
     MindsDB Documentation
@@ -337,7 +337,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         Quickstart
       </a>
     </li>
@@ -352,7 +352,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../what-is-mindsdb/" class="md-nav__link">
+      <a href="../../../what-is-mindsdb/" class="md-nav__link">
         What is MindsDB?
       </a>
     </li>
@@ -365,14 +365,12 @@
 
   
   
-    
-  
   
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
       
       
       
@@ -393,14 +391,12 @@
               
   
   
-    
-  
   
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_1" type="checkbox" id="__nav_3_1" checked>
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_1" type="checkbox" id="__nav_3_1" >
       
       
       
@@ -423,7 +419,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../docker/" class="md-nav__link">
+      <a href="../../../setup/self-hosted/docker/" class="md-nav__link">
         Docker
       </a>
     </li>
@@ -435,14 +431,12 @@
               
   
   
-    
-  
   
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_1_2" type="checkbox" id="__nav_3_1_2" checked>
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3_1_2" type="checkbox" id="__nav_3_1_2" >
       
       
       
@@ -465,7 +459,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../windows/" class="md-nav__link">
+      <a href="../../../setup/self-hosted/pip/windows/" class="md-nav__link">
         Windows via pip
       </a>
     </li>
@@ -477,66 +471,11 @@
               
   
   
-    
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          Linux via pip
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../../setup/self-hosted/pip/linux/" class="md-nav__link">
         Linux via pip
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#using-the-python-venv-module" class="md-nav__link">
-    Using the Python venv Module
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-anaconda" class="md-nav__link">
-    Using Anaconda
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
-    Troubleshooting
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -548,7 +487,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../macos/" class="md-nav__link">
+      <a href="../../../setup/self-hosted/pip/macos/" class="md-nav__link">
         MacOs via pip
       </a>
     </li>
@@ -562,7 +501,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../source/" class="md-nav__link">
+      <a href="../../../setup/self-hosted/pip/source/" class="md-nav__link">
         Sourcecode via pip
       </a>
     </li>
@@ -590,7 +529,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../cloud/" class="md-nav__link">
+      <a href="../../../setup/cloud/" class="md-nav__link">
         MindsDB Cloud
       </a>
     </li>
@@ -638,7 +577,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../connect/mysql-client/" class="md-nav__link">
+      <a href="../../../connect/mysql-client/" class="md-nav__link">
         MySQL CLI
       </a>
     </li>
@@ -652,7 +591,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../connect/mindsdb_editor/" class="md-nav__link">
+      <a href="../../../connect/mindsdb_editor/" class="md-nav__link">
         MindsDB Cloud Editor
       </a>
     </li>
@@ -666,7 +605,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../connect/dbeaver/" class="md-nav__link">
+      <a href="../../../connect/dbeaver/" class="md-nav__link">
         DBeaver
       </a>
     </li>
@@ -680,7 +619,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../connect/deepnote/" class="md-nav__link">
+      <a href="../../../connect/deepnote/" class="md-nav__link">
         Deepnote
       </a>
     </li>
@@ -694,7 +633,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../connect/sql-alchemy/" class="md-nav__link">
+      <a href="../../../connect/sql-alchemy/" class="md-nav__link">
         SQL Alchemy
       </a>
     </li>
@@ -708,7 +647,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../connect/dbt/" class="md-nav__link">
+      <a href="../../../connect/dbt/" class="md-nav__link">
         DBT
       </a>
     </li>
@@ -722,7 +661,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../connect/kafka/" class="md-nav__link">
+      <a href="../../../connect/kafka/" class="md-nav__link">
         Kafka
       </a>
     </li>
@@ -736,7 +675,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../connect/tableau/" class="md-nav__link">
+      <a href="../../../connect/tableau/" class="md-nav__link">
         Tableau
       </a>
     </li>
@@ -784,7 +723,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/table-structure/" class="md-nav__link">
+      <a href="../../table-structure/" class="md-nav__link">
         Table Structure (Schema)
       </a>
     </li>
@@ -824,7 +763,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/create/databases/" class="md-nav__link">
+      <a href="../../create/databases/" class="md-nav__link">
         Database
       </a>
     </li>
@@ -838,7 +777,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/create/predictor/" class="md-nav__link">
+      <a href="../../create/predictor/" class="md-nav__link">
         Predictor
       </a>
     </li>
@@ -852,7 +791,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/create/view/" class="md-nav__link">
+      <a href="../../create/view/" class="md-nav__link">
         View
       </a>
     </li>
@@ -873,7 +812,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/api/describe/" class="md-nav__link">
+      <a href="../../api/describe/" class="md-nav__link">
         DESCRIBE
       </a>
     </li>
@@ -887,7 +826,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/api/retrain/" class="md-nav__link">
+      <a href="../../api/retrain/" class="md-nav__link">
         RETRAIN
       </a>
     </li>
@@ -901,7 +840,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/api/drop/" class="md-nav__link">
+      <a href="../../api/drop/" class="md-nav__link">
         DROP
       </a>
     </li>
@@ -915,7 +854,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/api/select/" class="md-nav__link">
+      <a href="../../api/select/" class="md-nav__link">
         SELECT
       </a>
     </li>
@@ -929,7 +868,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/api/select_files/" class="md-nav__link">
+      <a href="../../api/select_files/" class="md-nav__link">
         SELECT from files
       </a>
     </li>
@@ -943,7 +882,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/api/join/" class="md-nav__link">
+      <a href="../../api/join/" class="md-nav__link">
         JOIN
       </a>
     </li>
@@ -991,7 +930,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../custom-model/mlflow/" class="md-nav__link">
+      <a href="../../../custom-model/mlflow/" class="md-nav__link">
         MLFlow
       </a>
     </li>
@@ -1005,7 +944,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../custom-model/ray-serve/" class="md-nav__link">
+      <a href="../../../custom-model/ray-serve/" class="md-nav__link">
         Ray Serve
       </a>
     </li>
@@ -1019,7 +958,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../custom-model/huggingface/" class="md-nav__link">
+      <a href="../../../custom-model/huggingface/" class="md-nav__link">
         HuggingFace
       </a>
     </li>
@@ -1033,7 +972,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../custom-model/openai/" class="md-nav__link">
+      <a href="../../../custom-model/openai/" class="md-nav__link">
         OpenAi
       </a>
     </li>
@@ -1053,12 +992,14 @@
 
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_7" type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_7" type="checkbox" id="__nav_7" checked>
       
       
       
@@ -1107,7 +1048,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/tutorials/process-quality/" class="md-nav__link">
+      <a href="../process-quality/" class="md-nav__link">
         Process Quality
       </a>
     </li>
@@ -1121,7 +1062,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/tutorials/bodyfat/" class="md-nav__link">
+      <a href="../bodyfat/" class="md-nav__link">
         Body Fat Prediction
       </a>
     </li>
@@ -1168,7 +1109,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/tutorials/customer-churn/" class="md-nav__link">
+      <a href="../customer-churn/" class="md-nav__link">
         Customer Churn
       </a>
     </li>
@@ -1182,7 +1123,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/tutorials/heart-disease/" class="md-nav__link">
+      <a href="../heart-disease/" class="md-nav__link">
         Heart Disease
       </a>
     </li>
@@ -1196,7 +1137,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/tutorials/mushrooms/" class="md-nav__link">
+      <a href="../mushrooms/" class="md-nav__link">
         Mushrooms Hunting
       </a>
     </li>
@@ -1215,12 +1156,14 @@
               
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_7_3" type="checkbox" id="__nav_7_3" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_7_3" type="checkbox" id="__nav_7_3" checked>
       
       
       
@@ -1243,7 +1186,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/tutorials/mindsdb-superset-snowflake/" class="md-nav__link">
+      <a href="../mindsdb-superset-snowflake/" class="md-nav__link">
         AI powered forecasts with MindsDB
       </a>
     </li>
@@ -1255,11 +1198,80 @@
               
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../../../../sql/tutorials/house-sales-forecasting/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Forecasting house sales
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         Forecasting house sales
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    Introduction
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-and-setup" class="md-nav__link">
+    Data and setup
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#create-a-time-series-predictor" class="md-nav__link">
+    Create a time series predictor
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generating-some-forecasts" class="md-nav__link">
+    Generating some forecasts
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    Next steps
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1338,7 +1350,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/tutorials/insurance-cost-prediction/" class="md-nav__link">
+      <a href="../insurance-cost-prediction/" class="md-nav__link">
         Insurance Cost
       </a>
     </li>
@@ -1385,7 +1397,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/tutorials/crop-prediction/" class="md-nav__link">
+      <a href="../crop-prediction/" class="md-nav__link">
         Crop Recommendation
       </a>
     </li>
@@ -1399,7 +1411,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../sql/tutorials/diabetes/" class="md-nav__link">
+      <a href="../diabetes/" class="md-nav__link">
         Diabetes
       </a>
     </li>
@@ -1454,7 +1466,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../contribute/" class="md-nav__link">
+      <a href="../../../contribute/" class="md-nav__link">
         How to contribute
       </a>
     </li>
@@ -1468,7 +1480,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../community/" class="md-nav__link">
+      <a href="../../../community/" class="md-nav__link">
         Join our community
       </a>
     </li>
@@ -1509,22 +1521,36 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#using-the-python-venv-module" class="md-nav__link">
-    Using the Python venv Module
+  <a href="#introduction" class="md-nav__link">
+    Introduction
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#using-anaconda" class="md-nav__link">
-    Using Anaconda
+  <a href="#data-and-setup" class="md-nav__link">
+    Data and setup
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
-    Troubleshooting
+  <a href="#create-a-time-series-predictor" class="md-nav__link">
+    Create a time series predictor
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generating-some-forecasts" class="md-nav__link">
+    Generating some forecasts
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    Next steps
   </a>
   
 </li>
@@ -1541,104 +1567,51 @@
             <article class="md-content__inner md-typeset">
               
                 
-  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/setup/self-hosted/pip/linux.md" title="Edit this page" class="md-content__button md-icon">
+  <a href="https://github.com/mindsdb/mindsdb/edit/master/docs/sql/tutorials/house-sales-forecasting.md" title="Edit this page" class="md-content__button md-icon">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
   </a>
 
 
 
-<h1 id="setup-for-linux-via-pip">Setup for Linux via pip<a class="headerlink" href="#setup-for-linux-via-pip" title="Permanent link">&para;</a></h1>
-<details class="warning" open="open"><summary>Python 3.9</summary><p>Currently, some of our dependencies have issues with the latest versions of Python 3.9.x. For now, our suggestion is to use <strong>Python 3.7.x, or 3.8.x versions</strong>.</p>
-</details>
-<details class="warning" open="open"><summary>Suggestions</summary><p>Install MindsDB in a virtual environment when using <strong>pip</strong> to avoid dependency issues. Make sure your <strong>Python&gt;=3.7</strong> and <strong>pip&gt;=19.3</strong>.</p>
-</details>
-<h2 id="using-the-python-venv-module">Using the Python <a href="https://docs.python.org/3/library/venv.html"><code class="highlight">venv</code></a> Module<a class="headerlink" href="#using-the-python-venv-module" title="Permanent link">&para;</a></h2>
-<ol>
-<li>
-<p>Create new virtual environment called mindsdb:</p>
-<div class="highlight"><pre><span></span><code>python -m venv mindsdb
+<h1 id="forecast-quarterly-house-sales-using-mindsdb">Forecast quarterly house sales using MindsDB<a class="headerlink" href="#forecast-quarterly-house-sales-using-mindsdb" title="Permanent link">&para;</a></h1>
+<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h2>
+<p>In this short example we will produce forecasts for a multivariate time series.</p>
+<h2 id="data-and-setup">Data and setup<a class="headerlink" href="#data-and-setup" title="Permanent link">&para;</a></h2>
+<p>The dataset we will use is the pre-processed version of the "House Property Sales" <a href="https://www.kaggle.com/datasets/htagholdings/property-sales">Kaggle competition</a>, in particular, the "ma_lga_12345.csv" file, which tracks quarterly moving averages of house sales aggregated by type and amount of bedrooms in each listing.</p>
+<p>Make sure you have access to a working MindsDB installation (either local or via cloud.mindsdb.com), and either load it into a table in your database of choice or upload the file directly to the special <code>FILES</code> datasource (via SQL or GUI). Once you've done this, proceed to the next step. For the rest of the tutorial we'll assume you've opted for the latter option and uploaded the file with the name <code>HR_MA</code>:</p>
+<div class="highlight"><pre><span></span><code>SHOW TABLES FROM files;
+
+SELECT * FROM files.HR_MA LIMIT 10;
 </code></pre></div>
-<p>And, activate it:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">source</span> mindsdb/bin/activate
+<h2 id="create-a-time-series-predictor">Create a time series predictor<a class="headerlink" href="#create-a-time-series-predictor" title="Permanent link">&para;</a></h2>
+<p>Now, we can specify that we want to forecast the <code>MA</code> column, which is a moving average of the historical median price for house sales. However, looking at the data you can see several entries for the same date, depending on two factors: how many bedrooms the properties had, and whether properties were "houses" or "units". This means that we can have up to ten different groupings here (although, if you do some digging, you will find we only actually have seven of the possible ten combinations in practice).</p>
+<p>MindsDB makes it simple so that we don't need to repeat the predictor creation process for every group there is. Instead, we can just group for both columns and the predictor will learn from all series and enable forecasts for all of them! The command for this is:</p>
+<div class="highlight"><pre><span></span><code>CREATE PREDICTOR 
+  mindsdb.home_sales_model
+FROM files
+  (SELECT * FROM HR_MA)
+PREDICT MA
+ORDER BY saledate
+GROUP BY bedrooms, type
+-- as the target is quarterly, we will look back two years to forecast the next one
+WINDOW 8
+HORIZON 4;  
 </code></pre></div>
-</li>
-<li>
-<p>Install MindsDB:</p>
-<div class="highlight"><pre><span></span><code>pip install mindsdb
+<p>You can check the status of the predictor:</p>
+<div class="highlight"><pre><span></span><code>SELECT * FROM mindsdb.predictors where name=&#39;home_sales_model&#39;;
 </code></pre></div>
-</li>
-<li>
-<p>To verify that mindsdb was installed run:</p>
-<div class="highlight"><pre><span></span><code>pip freeze
+<h2 id="generating-some-forecasts">Generating some forecasts<a class="headerlink" href="#generating-some-forecasts" title="Permanent link">&para;</a></h2>
+<p>Once the predictor has been successfully trained, you can query it to get forecasts for a given period of time. Usually, you'll want to know what happens right after the latest training data point that was fed, for which we have a special bit of syntax, the "LATEST" key word:</p>
+<div class="highlight"><pre><span></span><code>SELECT m.saledate as date,
+       m.MA as forecast
+FROM mindsdb.home_sales_model as m 
+JOIN files.HR_MA as t
+WHERE t.saledate &gt; LATEST AND t.type = &#39;house&#39; AND t.bedrooms = 2
+LIMIT 4;
 </code></pre></div>
-<p>You should see a list with the names of installed packages included but not limited to:</p>
-<div class="highlight"><pre><span></span><code>...
-<span class="nv">alembic</span><span class="o">==</span><span class="m">1</span>.7.7
-<span class="nv">aniso8601</span><span class="o">==</span><span class="m">9</span>.0.1
-<span class="nv">appdirs</span><span class="o">==</span><span class="m">1</span>.4.4
-<span class="nv">lightgbm</span><span class="o">==</span><span class="m">3</span>.3.0
-<span class="nv">lightwood</span><span class="o">==</span><span class="m">22</span>.4.1.0
-<span class="nv">MindsDB</span><span class="o">==</span><span class="m">22</span>.4.5.0
-mindsdb-datasources<span class="o">==</span><span class="m">1</span>.8.2
-mindsdb-sql<span class="o">==</span><span class="m">0</span>.3.3
-mindsdb-streams<span class="o">==</span><span class="m">0</span>.0.5
-...
-</code></pre></div>
-</li>
-</ol>
-<h2 id="using-anaconda">Using Anaconda<a class="headerlink" href="#using-anaconda" title="Permanent link">&para;</a></h2>
-<p>You will need <a href="https://www.anaconda.com/products/individual">Anaconda</a> or <a href="https://conda.io/projects/conda/en/latest/index.html">Conda</a>
-installed and Python 64-bit version.</p>
-<ol>
-<li>
-<p>Open Anaconda Prompt and create new virtual environment </p>
-<div class="highlight"><pre><span></span><code>conda create -n mindsdb
-</code></pre></div>
-<div class="highlight"><pre><span></span><code>conda activate mindsdb
-</code></pre></div>
-</li>
-<li>
-<p>Install mindsdb in recently creeated virtual enviroment:</p>
-<div class="highlight"><pre><span></span><code>pip install mindsdb
-</code></pre></div>
-</li>
-<li>
-<p>To verify that Mindsdb was installed run:</p>
-<div class="highlight"><pre><span></span><code>conda list
-</code></pre></div>
-<p>You should see a list with the names of installed packages included but not limited to:</p>
-<div class="highlight"><pre><span></span><code>...
-<span class="nv">alembic</span><span class="o">==</span><span class="m">1</span>.7.7
-<span class="nv">aniso8601</span><span class="o">==</span><span class="m">9</span>.0.1
-<span class="nv">appdirs</span><span class="o">==</span><span class="m">1</span>.4.4
-<span class="nv">lightgbm</span><span class="o">==</span><span class="m">3</span>.3.0
-<span class="nv">lightwood</span><span class="o">==</span><span class="m">22</span>.4.1.0
-<span class="nv">MindsDB</span><span class="o">==</span><span class="m">22</span>.4.5.0
-mindsdb-datasources<span class="o">==</span><span class="m">1</span>.8.2
-mindsdb-sql<span class="o">==</span><span class="m">0</span>.3.3
-mindsdb-streams<span class="o">==</span><span class="m">0</span>.0.5
-...
-</code></pre></div>
-<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-</li>
-</ol>
-<p>If the installation fails, don't worry; follow the below instruction, which should fix most issues. If none of this works, try using the <a href="/deployment/docker/">docker setup</a> and create an issue with the installation errors you got on our <a href="https://github.com/mindsdb/mindsdb/issues">Github repository</a>. We'll try to review it and give you a response within a few hours.</p>
-<div class="admonition failure">
-<p class="admonition-title">Installation fail</p>
-<p>Note that <strong>Python 64</strong> bit version is required.</p>
-</div>
-<div class="admonition failure">
-<p class="admonition-title">Installation fail</p>
-<p>If you are using <strong>Python 3.9</strong> you may get installation errors. Some of MindsDB's dependencies are not working with <strong>Python 3.9</strong>, so please downgrade to older versions for now. We are working on this, and <strong>Python 3.9</strong> will be supported soon.</p>
-</div>
-<div class="admonition failure">
-<p class="admonition-title">IOError: [Errno 28] No space left on device while installing MindsDB</p>
-<p>MindsDB requires around 3GB of free disk space to install all of its dependencies.</p>
-</div>
-<div class="admonition failure">
-<p class="admonition-title">No module named mindsdb</p>
-<p>If you get this error, make sure that your <strong>virtual environment</strong>(where you installed mindsdb) is activated.</p>
-</div>
+<p>Now, try changing <code>type</code> to unit or <code>bedrooms</code> to any number between 1 to 5, and check how the forecast varies. This is because MindsDB recognizes each grouping as being its own different time series.</p>
+<h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<p>We invite you to try this tutorial with your own time series data. If you have any questions or feedback, be sure to join our slack community or make an issue in the github repository!</p>
 
               
             </article>
@@ -1653,10 +1626,10 @@ mindsdb-streams<span class="o">==</span><span class="m">0</span>.0.5
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../../../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "search": "../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.ed9748b7.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.ed9748b7.min.js"></script>
       
     
   </body>

@@ -76,6 +76,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#usage" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -124,7 +129,7 @@
       data-md-component="logo"
     >
       
-  <img src="../../assets/mdb_logo_w.svg" alt="logo">
+  <img src="../../assets/mdb_logo_w2.svg" alt="logo">
 
     </a>
 
@@ -304,7 +309,7 @@
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="MindsDB Documentation" class="md-nav__button md-logo" aria-label="MindsDB Documentation" data-md-component="logo">
       
-  <img src="../../assets/mdb_logo_w.svg" alt="logo">
+  <img src="../../assets/mdb_logo_w2.svg" alt="logo">
 
     </a>
     MindsDB Documentation
@@ -651,9 +656,72 @@
       
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          DBT
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         DBT
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    Usage
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#initialization" class="md-nav__link">
+    Initialization
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-predictor" class="md-nav__link">
+    Create predictor
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-predictions-table" class="md-nav__link">
+    Create predictions table
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    Testing
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1195,6 +1263,20 @@
 
             
           
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/tutorials/house-sales-forecasting/" class="md-nav__link">
+        Forecasting house sales
+      </a>
+    </li>
+  
+
+            
+          
         </ul>
       </nav>
     </li>
@@ -1337,20 +1419,6 @@
 
             
           
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../sql/tutorials/spam_emails_tutorial/" class="md-nav__link">
-        Email spam
-      </a>
-    </li>
-  
-
-            
-          
         </ul>
       </nav>
     </li>
@@ -1444,6 +1512,55 @@
   
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    Usage
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#initialization" class="md-nav__link">
+    Initialization
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-predictor" class="md-nav__link">
+    Create predictor
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-predictions-table" class="md-nav__link">
+    Create predictions table
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    Testing
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1462,53 +1579,138 @@
 
   <h1>DBT</h1>
 
-<p>To integrate your predictions into your DBT workflow, you will need to make four changes:</p>
-<div class="codehilite"><pre><span></span><code><span class="o">===</span><span class="w"> </span><span class="ss">&quot;profiles.yml&quot;</span><span class="w"></span>
-
-<span class="w">    </span><span class="err">```</span><span class="w"></span>
-<span class="w">    </span><span class="nl">mindsdb</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="nl">type</span><span class="p">:</span><span class="w"> </span><span class="n">mysql</span><span class="w"></span>
-<span class="w">        </span><span class="k">host</span><span class="err">:</span><span class="w"> </span><span class="n">mysql</span><span class="p">.</span><span class="n">mindsdb</span><span class="p">.</span><span class="n">com</span><span class="w"></span>
-<span class="w">        </span><span class="k">user</span><span class="err">:</span><span class="w"> </span><span class="n">mindsdb</span><span class="p">.</span><span class="k">user</span><span class="nv">@example</span><span class="p">.</span><span class="n">com</span><span class="w"></span>
-<span class="w">        </span><span class="nl">password</span><span class="p">:</span><span class="w"> </span><span class="n">mindsdbpassword</span><span class="w"></span>
-<span class="w">        </span><span class="nl">port</span><span class="p">:</span><span class="w"> </span><span class="mi">3306</span><span class="w"></span>
-<span class="w">        </span><span class="nl">dbname</span><span class="p">:</span><span class="w"> </span><span class="n">mindsdb</span><span class="w"></span>
-<span class="w">        </span><span class="k">schema</span><span class="err">:</span><span class="w"> </span><span class="n">example_data</span><span class="w"></span>
-<span class="w">        </span><span class="nl">threads</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">        </span><span class="nl">keepalives_idle</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="err">#</span><span class="w"> </span><span class="k">default</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">indicating</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">system</span><span class="w"> </span><span class="k">default</span><span class="w"></span>
-<span class="w">        </span><span class="nl">connect_timeout</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="err">#</span><span class="w"> </span><span class="k">default</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="n">seconds</span><span class="w"></span>
-<span class="w">    </span><span class="err">```</span><span class="w"></span>
-
-<span class="o">===</span><span class="w"> </span><span class="ss">&quot;schema.yml&quot;</span><span class="w"></span>
-
-<span class="w">    </span><span class="err">```</span><span class="w"></span>
-<span class="w">    </span><span class="nl">version</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
-
-<span class="w">    </span><span class="nl">models</span><span class="p">:</span><span class="w"></span>
-<span class="w">          </span><span class="o">-</span><span class="w"> </span><span class="nl">name</span><span class="p">:</span><span class="w"> </span><span class="n">predicted_rentals</span><span class="w"></span>
-<span class="w">            </span><span class="nl">description</span><span class="p">:</span><span class="w"> </span><span class="ss">&quot;Integrating MindsDB predictions and historical   data&quot;</span><span class="w"></span>
-<span class="w">    </span><span class="err">```</span><span class="w"></span>
-
-<span class="o">===</span><span class="w"> </span><span class="ss">&quot;predicted_rentals.sql&quot;</span><span class="w"></span>
-
-<span class="w">    </span><span class="err">```</span><span class="w"></span>
-<span class="w">    </span><span class="k">with</span><span class="w"> </span><span class="n">predictions</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">        </span><span class="k">SELECT</span><span class="w"> </span><span class="n">hrp</span><span class="p">.</span><span class="n">rental_price</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">predicted_price</span><span class="p">,</span><span class="w"> </span><span class="n">hr</span><span class="p">.</span><span class="n">rental_price</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">actual_price</span><span class="w"></span>
-<span class="w">        </span><span class="k">FROM</span><span class="w"> </span><span class="n">mindsdb</span><span class="p">.</span><span class="n">home_rentals_predictor</span><span class="w"> </span><span class="n">hrp</span><span class="w"></span>
-<span class="w">        </span><span class="k">JOIN</span><span class="w"> </span><span class="n">exampleData</span><span class="p">.</span><span class="n">demo_data</span><span class="p">.</span><span class="n">home_rentals</span><span class="w"> </span><span class="n">hr</span><span class="w"></span>
-<span class="w">        </span><span class="k">WHERE</span><span class="w"> </span><span class="n">hr</span><span class="p">.</span><span class="n">number_of_bathrooms</span><span class="o">=</span><span class="mi">2</span><span class="w"> </span><span class="ow">AND</span><span class="w"> </span><span class="n">hr</span><span class="p">.</span><span class="n">sqft</span><span class="o">=</span><span class="mi">1000</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">predictions</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="err">```</span><span class="w"></span>
-
-<span class="o">===</span><span class="w"> </span><span class="ss">&quot;dbt_project.yml&quot;</span><span class="w"></span>
-
-<span class="w">    </span><span class="err">```</span><span class="w"></span>
-<span class="w">    </span><span class="nl">models</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="nl">home_rentals</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="o">+</span><span class="nl">materialized</span><span class="p">:</span><span class="w"> </span><span class="k">view</span><span class="w"></span>
-<span class="w">    </span><span class="err">```</span><span class="w"></span>
+<p>To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapter:</p>
+<table>
+<thead>
+<tr>
+<th>Adapter for</th>
+<th>Documentation</th>
+<th>Install from PyPi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MindsDB (<a href="https://github.com/mindsdb/dbt-mindsdb">dbt-mindsdb</a>)</td>
+<td><a href="/sql/connect/dbt-mindsdb-profile">Profile Setup</a></td>
+<td><code>pip install dbt-mindsdb</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
+<h3 id="initialization">Initialization<a class="headerlink" href="#initialization" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Create dbt project:
+<div class="highlight"><pre><span></span><code>    dbt init &lt;project_name&gt;
+</code></pre></div></li>
+<li>Configure your <a href="/sql/connect/dbt-mindsdb-profile">profiles.yml</a></li>
+</ol>
+<h3 id="create-predictor">Create predictor<a class="headerlink" href="#create-predictor" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Create <em>table_name</em>.sql (<em>table_name</em> will be used as the name of the predictor):</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>materialized</td>
+<td>✔️</td>
+<td>Always <code>predictor</code></td>
+<td><code>predictor</code></td>
+</tr>
+<tr>
+<td>integration</td>
+<td>✔️</td>
+<td>Name of integration to get data from and save result to.  It must be created in MindsDB beforehand.</td>
+<td><code>photorep</code></td>
+</tr>
+<tr>
+<td>predict</td>
+<td>✔️</td>
+<td>Field to be predicted</td>
+<td><code>name</code></td>
+</tr>
+<tr>
+<td>predict_alias</td>
+<td></td>
+<td>Alias for predicted field</td>
+<td><code>predicted_name</code></td>
+</tr>
+<tr>
+<td>using</td>
+<td></td>
+<td>Configuration options for trained model</td>
+<td>...</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="err">{{</span><span class="w"></span>
+<span class="w">        </span><span class="n">config</span><span class="p">(</span><span class="w"></span>
+<span class="w">            </span><span class="n">materialized</span><span class="o">=</span><span class="s1">&#39;predictor&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="n">integration</span><span class="o">=</span><span class="s1">&#39;photorep&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="n">predict</span><span class="o">=</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="n">predict_alias</span><span class="o">=</span><span class="s1">&#39;predicted_name&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="k">using</span><span class="o">=</span><span class="err">{</span><span class="w"></span>
+<span class="w">                </span><span class="s1">&#39;encoders.location.module&#39;</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;CategoricalAutoEncoder&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="s1">&#39;encoders.rental_price.module&#39;</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;NumericEncoder&#39;</span><span class="w"></span>
+<span class="w">            </span><span class="err">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="err">}}</span><span class="w"></span>
+<span class="w">      </span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">stores</span><span class="w"></span>
 </code></pre></div>
+<h3 id="create-predictions-table">Create predictions table<a class="headerlink" href="#create-predictions-table" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Create <em>table_name</em>.sql (If you need to specify schema, you can do it with a dot separator: <em><strong>schema_name.</strong>table_name</em>.sql):</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>materialized</td>
+<td>✔️</td>
+<td>Always <code>table</code></td>
+<td><code>table</code></td>
+</tr>
+<tr>
+<td>predictor_name</td>
+<td>✔️</td>
+<td>Name of predictor model from <code>Create predictor</code></td>
+<td><code>store_predictor</code></td>
+</tr>
+<tr>
+<td>integration</td>
+<td>✔️</td>
+<td>Name of integration to get data from and save result to.  It must be created in MindsDB beforehand.</td>
+<td><code>photorep</code></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="err">{{</span><span class="w"> </span><span class="n">config</span><span class="p">(</span><span class="n">materialized</span><span class="o">=</span><span class="s1">&#39;table&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">predictor_name</span><span class="o">=</span><span class="s1">&#39;store_predictor&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">integration</span><span class="o">=</span><span class="s1">&#39;photorep&#39;</span><span class="p">)</span><span class="w"> </span><span class="err">}}</span><span class="w"></span>
+<span class="w">        </span><span class="k">select</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">bc</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">ddd</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">latest</span><span class="w"></span>
+</code></pre></div>
+<p>Note that each time dbt is run, the results table will be rewritten.</p>
+<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Install dev requirements
+<div class="highlight"><pre><span></span><code>  pip install -r dev_requirements.txt
+</code></pre></div></li>
+<li>Run pytest
+<div class="highlight"><pre><span></span><code>  python -m pytest tests/
+</code></pre></div></li>
+</ul>
 
               
             </article>

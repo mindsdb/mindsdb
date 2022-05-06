@@ -114,6 +114,7 @@ nav:
       - Mushrooms Hunting: sql/tutorials/mushrooms.md
     - Time Series:
       - AI powered forecasts with MindsDB: sql/tutorials/mindsdb-superset-snowflake.md
+      - Forecasting house sales: sql/tutorials/house-sales-forecasting.md
   - Community Tutorials:
     - Regression:
       - Insurance Cost: sql/tutorials/insurance-cost-prediction.md

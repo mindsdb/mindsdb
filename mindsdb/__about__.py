@@ -1,6 +1,6 @@
 __title__ = 'MindsDB'
 __package_name__ = 'mindsdb'
-__version__ = '22.4.5.0'
+__version__ = '22.5.1.0'
 __description__ = "MindsDB server, provides server capabilities to mindsdb native python library"
 __email__ = "jorge@mindsdb.com"
 __author__ = 'MindsDB Inc'

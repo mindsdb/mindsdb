@@ -31,8 +31,7 @@ Now, you are ready to use MindsDB Cloud.
 </figure>
 
 !!! Tip "What is next?" 
-    Now you can use [MindsDB Cloud as a SQL database](/docs/sql/connect/mindsdb_editor.md)
-
+    Now you can use [MindsDB Cloud as a SQL database](/sql/connect/mindsdb_editor)
 <!-- 2. After sign up, you will get a confirmation email to validate your account.    
 
     ![Validate](/assets/cloud/email.png) -->

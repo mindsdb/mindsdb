@@ -1,4 +1,4 @@
-# Deploy Source Code
+# Setup with Sourcecode via pip
 
 This section describes how to deploy MindsDB from the source code. It is the preferred way to use MindsDB if you want to contribute to our code or debug MindsDB.
 

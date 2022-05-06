@@ -1,4 +1,4 @@
-# Deploy Using pip on Linux
+# Setup for Windows via pip
 
 ???+ warning "Python 3.9"
     Currently, some of our dependencies have issues with the latest versions of Python 3.9.x. For now, our suggestion is to use **Python 3.7.x, or 3.8.x versions**.
@@ -10,25 +10,25 @@
 
 1. Create new virtual environment called mindsdb:
 
-    ```bash
-    python -m venv mindsdb
+    ```console
+    py -m venv mindsdb
     ```
 
     And, activate it:
 
-    ```bash
-    source mindsdb/bin/activate
+    ```console
+    .\mindsdb\Scripts\activate.bat
     ```
 
 2. Install MindsDB:
 
-    ```bash
+    ```console
     pip install mindsdb
     ```
 
 3. To verify that mindsdb was installed run:
 
-    ```bash
+    ```console
     pip freeze
     ```
 
@@ -54,25 +54,24 @@ You will need [Anaconda](https://www.anaconda.com/products/individual) or [Conda
 installed and Python 64-bit version.
 
 1. Open Anaconda Prompt and create new virtual environment 
-    
-    ```bash
+
+    ```console
     conda create -n mindsdb
     ```
 
-    ```bash
+    ```console
     conda activate mindsdb
     ```
 
 2. Install mindsdb in recently creeated virtual enviroment:
 
-    ```bash
+    ```console
     pip install mindsdb
     ```
 
+3. To verify that mindsdb was installed run:
 
-3. To verify that Mindsdb was installed run:
-
-    ```bach 
+    ```console
     conda list
     ```
 
@@ -91,19 +90,23 @@ installed and Python 64-bit version.
     mindsdb-streams==0.0.5
     ...
     ```
+
 ## Troubleshooting
 
 If the installation fails, don't worry; follow the below instruction, which should fix most issues. If none of this works, try using the [docker setup](/deployment/docker/) and create an issue with the installation errors you got on our [Github repository](https://github.com/mindsdb/mindsdb/issues). We'll try to review it and give you a response within a few hours.
 
-   
+
 !!! failure "Installation fail"
     Note that **Python 64** bit version is required.
 
 !!! failure "Installation fail"
     If you are using **Python 3.9** you may get installation errors. Some of MindsDB's dependencies are not working with **Python 3.9**, so please downgrade to older versions for now. We are working on this, and **Python 3.9** will be supported soon.
 
-!!! failure "IOError: [Errno 28] No space left on device while installing MindsDB"
-    MindsDB requires around 3GB of free disk space to install all of its dependencies.
+!!! failure "Installation fail"
+    If installation fails when installing **torch** or **torchvision** try manually installing them following the simple instructions on their [official website](https://pytorch.org/get-started/locally/).
 
-!!! failure "No module named mindsdb"
-    If you get this error, make sure that your **virtual environment**(where you installed mindsdb) is activated.
+!!! failure "Installation fails because of system dependencies"
+    Try installing MindsDB with [Anaconda](https://www.anaconda.com/products/individual), and run the installation from the **anaconda prompt**.
+
+!!! failure "pip command not found fail"
+    Depending on your environment, you might have to use **pip3** instead of **pip**, and **python3.x** instead of **py** in the above commands e.g `#!console pip3 install mindsdb`

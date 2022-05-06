@@ -9,7 +9,7 @@ To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapte
 ### Initialization
 
 1. Create dbt project:
-```    
+```
     dbt init <project_name>
 ```
 1. Configure your [profiles.yml](/sql/connect/dbt-mindsdb-profile)
@@ -62,10 +62,10 @@ Note that each time dbt is run, the results table will be rewritten.
 ## Testing
 
 - Install dev requirements
-```    
+```
   pip install -r dev_requirements.txt
 ```
 - Run pytest
-```    
+```
   python -m pytest tests/
 ```

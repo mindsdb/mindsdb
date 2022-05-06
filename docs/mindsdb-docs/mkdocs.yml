@@ -93,7 +93,7 @@ nav:
       - PREDICTOR: sql/create/predictor.md
       - TABLE: sql/create/table.md
       - VIEW: sql/create/view.md
-    - INSERT: sql/api/insert.md
+    - INSERT INTO: sql/api/insert.md
     - DESCRIBE: sql/api/describe.md
     - RETRAIN: sql/api/retrain.md
     - DROP: sql/api/drop.md

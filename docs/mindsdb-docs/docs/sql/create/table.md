@@ -1,57 +1,49 @@
-CREATE TABLE
-============
+# CREATE TABLE Statement
 
-The CREATE TABLE statement is used to create table and fill it with result of subselect. 
+The `#!sql CREATE TABLE` statement is used to create table and fill it with result of a subselect.
 
-The syntax is:
-```
-    create [or replace] table integration_name.table_name
-    [(]  <select expression> [)]
-```
+## Syntax
 
-This command:
-- performs subselect and gets data from it. 
-- Then it creates table <table_name> in integration <integration_name>. 
-    - If 'replace' is indicated then table in integration will be droped beforehand. 
-    - if no 'replace' keyword is set and table already exists there will be error.
-- performs insert into created table.
-
-**Several examples:**
-
-Here:
-
-- int1 - name of integration where table is going to be created
-- tbl1 - name of table to create
-- tp3 - name of predictor
-- int2.fish - table that involved in select. 
-  - int2 - name of integration
-  - fish - name of table
- 
-
-Create table tbl1 of integration int1 with result of query "select * from fish where date > '2015-12-31'" executed in integration int2 
-```
-    create or replace table int1.tbl1
-    select * from int2.fish where date > '2015-12-31'
-```
-  
-Create table tbl1 of integration int1 with result of prediction of predictor tp3. 
-```
-    create table int1.tbl1 (
-        select * from int2.fish as ta  
-        join mindsdb.tp3 as tb 
-        where ta.date > '2015-12-31' 
-    )    
+```sql
+    CREATE /*REPLACE*/ TABLE [integration_name].[table_name]
+    [SELECT ...]
 ```
 
-The same query as previous in different composition 
+It performs a subselect `#!sql [SELECT ...]` and gets data from it, thereafter it creates a table `#!sql [table_name]` in  `#!sql [integration_name]`. lastly it performs an `#!sql INSERT INTO [integration_name].[table_name]` with the contents of the `#!sql [SELECT ...]`
+
+!!!warning "`#!sql REPLACE`"
+    If `#!sql REPLACE` is indicated then `#!sql [integration_name].[table_name]` will be  **Dropped**
+
+
+## Example
+
+In this example we want to persist the predictions into a table `#!sql int1.tbl1`. Given the following schema:
+
+```bash
+int1
+└── tbl1
+mindsdb
+└── predictor
+int2
+└── tbl2
 ```
-    create table int1.tbl1 
-    select * from (
-        select * from int2.fish as ta                  
-        where ta.date > '2015-12-31'
-    )
-    join mindsdb.tp3 as tb 
+Where:
+
+|                     | Description                                  |
+| ------------------- | -------------------------------------------- |
+| `int1`              | Integration for the table to be created in |
+| `tbl1`            | Table to be created   |
+| `predictor`           | Name of the `#!sql PREDICTOR`    |
+| `int2`          | Database to be used a a source in the inner `#!sql SELECT` |
+| `tbl2`     | Table to be used a a source. |
+
+In order to achive the desired result we could execute the following query:
+
+```sql
+CREATE TABLE int1.tbl1 
+SELECT * FROM (
+    SELECT * FROM int2.fish AS ta                  
+    WHERE ta.date > '2015-12-31'
+)
+JOIN mindsdb.tp3 AS tb 
 ```
-
-
-

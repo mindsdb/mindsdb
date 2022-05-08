@@ -124,7 +124,8 @@ nav:
       - Insurance Cost: sql/tutorials/insurance-cost-prediction.md
     - Classification:
       - Crop Recommendation: sql/tutorials/crop-prediction.md
-      - Diabetes: sql/tutorials/diabetes.md  
+      - Diabetes: sql/tutorials/diabetes.md
+      - Email spam: sql/tutorials/spam_emails_tutorial.md
   - Contribution and Community:
       - How to contribute: contribute.md
       - Join our community: community.md

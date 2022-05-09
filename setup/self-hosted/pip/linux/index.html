@@ -11,7 +11,7 @@
         <link rel="canonical" href="https://docs.mindsdb.com/setup/self-hosted/pip/linux/">
       
       <link rel="icon" href="../../../../assets/mdb_logo.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.13">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.14">
     
     
       
@@ -19,7 +19,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.e411adfe.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.3de6f41f.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.cc9b2e1e.min.css">
@@ -28,8 +28,14 @@
     
     
     
-<link  rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap">
-
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"Roboto Mono"}</style>
+      
+    
     
       <link rel="stylesheet" href="../../../../stylesheets/extra.css">
     
@@ -638,8 +644,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../connect/mysql-client/" class="md-nav__link">
-        MySQL CLI
+      <a href="../../../../connect/mindsdb_editor/" class="md-nav__link">
+        MindsDB Cloud Editor
       </a>
     </li>
   
@@ -652,8 +658,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../connect/mindsdb_editor/" class="md-nav__link">
-        MindsDB Cloud Editor
+      <a href="../../../../connect/mysql-client/" class="md-nav__link">
+        MySQL CLI
       </a>
     </li>
   
@@ -707,10 +713,57 @@
   
   
   
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_6" type="checkbox" id="__nav_4_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_6">
+          DBT
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="DBT" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_6">
+          <span class="md-nav__icon md-icon"></span>
+          DBT
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../../../connect/dbt/" class="md-nav__link">
-        DBT
+        DBT Connection
       </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../connect/dbt-mindsdb-profile/" class="md-nav__link">
+        DBT-MindsDB Profile
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -825,7 +878,7 @@
   
     <li class="md-nav__item">
       <a href="../../../../sql/create/databases/" class="md-nav__link">
-        Database
+        DATABASE
       </a>
     </li>
   
@@ -839,7 +892,21 @@
   
     <li class="md-nav__item">
       <a href="../../../../sql/create/predictor/" class="md-nav__link">
-        Predictor
+        PREDICTOR
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../sql/create/table/" class="md-nav__link">
+        TABLE
       </a>
     </li>
   
@@ -853,7 +920,7 @@
   
     <li class="md-nav__item">
       <a href="../../../../sql/create/view/" class="md-nav__link">
-        View
+        VIEW
       </a>
     </li>
   
@@ -862,6 +929,20 @@
           
         </ul>
       </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../sql/api/insert/" class="md-nav__link">
+        INSERT INTO
+      </a>
     </li>
   
 
@@ -1407,6 +1488,20 @@
 
             
           
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../sql/tutorials/spam_emails_tutorial/" class="md-nav__link">
+        Email spam
+      </a>
+    </li>
+  
+
+            
+          
         </ul>
       </nav>
     </li>
@@ -1548,9 +1643,13 @@
 
 
 <h1 id="setup-for-linux-via-pip">Setup for Linux via pip<a class="headerlink" href="#setup-for-linux-via-pip" title="Permanent link">&para;</a></h1>
-<details class="warning" open="open"><summary>Python 3.9</summary><p>Currently, some of our dependencies have issues with the latest versions of Python 3.9.x. For now, our suggestion is to use <strong>Python 3.7.x, or 3.8.x versions</strong>.</p>
+<details class="warning" open="open">
+<summary>Python 3.9</summary>
+<p>Currently, some of our dependencies have issues with the latest versions of Python 3.9.x. For now, our suggestion is to use <strong>Python 3.7.x, or 3.8.x versions</strong>.</p>
 </details>
-<details class="warning" open="open"><summary>Suggestions</summary><p>Install MindsDB in a virtual environment when using <strong>pip</strong> to avoid dependency issues. Make sure your <strong>Python&gt;=3.7</strong> and <strong>pip&gt;=19.3</strong>.</p>
+<details class="warning" open="open">
+<summary>Suggestions</summary>
+<p>Install MindsDB in a virtual environment when using <strong>pip</strong> to avoid dependency issues. Make sure your <strong>Python&gt;=3.7</strong> and <strong>pip&gt;=19.3</strong>.</p>
 </details>
 <h2 id="using-the-python-venv-module">Using the Python <a href="https://docs.python.org/3/library/venv.html"><code class="highlight">venv</code></a> Module<a class="headerlink" href="#using-the-python-venv-module" title="Permanent link">&para;</a></h2>
 <ol>
@@ -1656,7 +1755,7 @@ mindsdb-streams<span class="o">==</span><span class="m">0</span>.0.5
     <script id="__config" type="application/json">{"base": "../../../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.ed9748b7.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.c2e1ee47.min.js"></script>
       
     
   </body>

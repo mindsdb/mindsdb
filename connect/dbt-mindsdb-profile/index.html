@@ -11,15 +11,15 @@
         <link rel="canonical" href="https://docs.mindsdb.com/connect/dbt-mindsdb-profile/">
       
       <link rel="icon" href="../../assets/mdb_logo.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.13">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.14">
     
     
       
-        <title>MindsDB Profile - MindsDB Documentation</title>
+        <title>DBT-MindsDB Profile - MindsDB Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.e411adfe.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.3de6f41f.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.cc9b2e1e.min.css">
@@ -28,8 +28,14 @@
     
     
     
-<link  rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap">
-
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"Roboto Mono"}</style>
+      
+    
     
       <link rel="stylesheet" href="../../stylesheets/extra.css">
     
@@ -77,7 +83,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#overview-of-dbt-mindsdb" class="md-skip">
+        <a href="#dbt-mindsdb-profile" class="md-skip">
           Skip to content
         </a>
       
@@ -149,7 +155,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              MindsDB Profile
+              DBT-MindsDB Profile
             
           </span>
         </div>
@@ -549,12 +555,14 @@
 
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" checked>
       
       
       
@@ -577,8 +585,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../mysql-client/" class="md-nav__link">
-        MySQL CLI
+      <a href="../mindsdb_editor/" class="md-nav__link">
+        MindsDB Cloud Editor
       </a>
     </li>
   
@@ -591,8 +599,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../mindsdb_editor/" class="md-nav__link">
-        MindsDB Cloud Editor
+      <a href="../mysql-client/" class="md-nav__link">
+        MySQL CLI
       </a>
     </li>
   
@@ -645,11 +653,121 @@
               
   
   
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_6" type="checkbox" id="__nav_4_6" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_6">
+          DBT
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="DBT" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_6">
+          <span class="md-nav__icon md-icon"></span>
+          DBT
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
   
     <li class="md-nav__item">
       <a href="../dbt/" class="md-nav__link">
-        DBT
+        DBT Connection
       </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          DBT-MindsDB Profile
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        DBT-MindsDB Profile
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview-of-dbt-mindsdb" class="md-nav__link">
+    Overview of dbt-mindsdb
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authentication-methods" class="md-nav__link">
+    Authentication Methods
+  </a>
+  
+    <nav class="md-nav" aria-label="Authentication Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user-password-authentication" class="md-nav__link">
+    User / Password authentication
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -764,7 +882,7 @@
   
     <li class="md-nav__item">
       <a href="../../sql/create/databases/" class="md-nav__link">
-        Database
+        DATABASE
       </a>
     </li>
   
@@ -778,7 +896,21 @@
   
     <li class="md-nav__item">
       <a href="../../sql/create/predictor/" class="md-nav__link">
-        Predictor
+        PREDICTOR
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/create/table/" class="md-nav__link">
+        TABLE
       </a>
     </li>
   
@@ -792,7 +924,7 @@
   
     <li class="md-nav__item">
       <a href="../../sql/create/view/" class="md-nav__link">
-        View
+        VIEW
       </a>
     </li>
   
@@ -801,6 +933,20 @@
           
         </ul>
       </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/api/insert/" class="md-nav__link">
+        INSERT INTO
+      </a>
     </li>
   
 
@@ -1346,6 +1492,20 @@
 
             
           
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/tutorials/spam_emails_tutorial/" class="md-nav__link">
+        Email spam
+      </a>
+    </li>
+  
+
+            
+          
         </ul>
       </nav>
     </li>
@@ -1438,6 +1598,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1490,20 +1652,20 @@
 
 
 
-  <h1>MindsDB Profile</h1>
-
+<h1 id="dbt-mindsdb-profile">DBT-MindsDB Profile<a class="headerlink" href="#dbt-mindsdb-profile" title="Permanent link">&para;</a></h1>
 <h2 id="overview-of-dbt-mindsdb">Overview of dbt-mindsdb<a class="headerlink" href="#overview-of-dbt-mindsdb" title="Permanent link">&para;</a></h2>
 <p><strong>Maintained by:</strong> MindsDB
 <strong>Author:</strong> MindsDB<br />
-<strong>Source:</strong> <a href="https://github.com/mindsdb/dbt-mindsdb">Github</a>       </p>
+<strong>Source:</strong> <a href="https://github.com/mindsdb/dbt-mindsdb">Github</a></p>
 <!-- **dbt Cloud:** Supported        
 **dbt Slack channel** [Link to channel](https://getdbt.slack.com/archives/CJN7XRF1B)       -->
 
 <h2 id="authentication-methods">Authentication Methods<a class="headerlink" href="#authentication-methods" title="Permanent link">&para;</a></h2>
 <h3 id="user-password-authentication">User / Password authentication<a class="headerlink" href="#user-password-authentication" title="Permanent link">&para;</a></h3>
-<p>Currently MindsDB only supports user/password authentication, as shown below.</p>
-<p><File name='~/.dbt/profiles.yml'></p>
-<p>With local installation:</p>
+<p>Currently MindsDB only supports user/password authentication, as shown below on: <code>~/.dbt/profiles.yml</code></p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Self-Hosted Local Deployment</label><label for="__tabbed_1_2">MindsDB Cloud</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><pre><span></span><code>mindsdb:
   outputs:
     dev:
@@ -1516,7 +1678,8 @@
       username: &#39;mindsdb&#39;
   target: dev
 </code></pre></div>
-<p>With MindsDB Cloud:</p>
+</div>
+<div class="tabbed-block">
 <div class="highlight"><pre><span></span><code>mindsdb:
   outputs:
     dev:
@@ -1529,52 +1692,54 @@
       password: &#39;[mindsdb cloud password]&#39;
   target: dev
 </code></pre></div>
-<p></File></p>
+</div>
+</div>
+</div>
 <table>
 <thead>
 <tr>
 <th>Key</th>
-<th>Required</th>
+<th align="center">Required</th>
 <th>Description</th>
 <th>Example</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>type</td>
-<td>✔️</td>
+<td><code>type</code></td>
+<td align="center">✔️</td>
 <td>The specific adapter to use</td>
 <td><code>mindsdb</code></td>
 </tr>
 <tr>
-<td>host</td>
-<td>✔️</td>
+<td><code>host</code></td>
+<td align="center">✔️</td>
 <td>The MindsDB (hostname) to connect to</td>
 <td><code>cloud.mindsdb.com</code></td>
 </tr>
 <tr>
-<td>port</td>
-<td>✔️</td>
+<td><code>port</code></td>
+<td align="center">✔️</td>
 <td>The port to use</td>
 <td><code>3306</code>  or <code>47335</code></td>
 </tr>
 <tr>
-<td>schema</td>
-<td>✔️</td>
+<td><code>schema</code></td>
+<td align="center">✔️</td>
 <td>Specify the schema (database) to build models into</td>
 <td>The MindsDB datasource</td>
 </tr>
 <tr>
-<td>username</td>
-<td>✔️</td>
+<td><code>username</code></td>
+<td align="center">✔️</td>
 <td>The username to use to connect to the server</td>
 <td><code>mindsdb</code> or mindsdb cloud user</td>
 </tr>
 <tr>
-<td>password</td>
-<td>✔️</td>
+<td><code>password</code></td>
+<td align="center">✔️</td>
 <td>The password to use for authenticating to the server</td>
-<td>`pass</td>
+<td><code>pass</code></td>
 </tr>
 </tbody>
 </table>
@@ -1595,7 +1760,7 @@
     <script id="__config" type="application/json">{"base": "../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "search": "../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.ed9748b7.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c2e1ee47.min.js"></script>
       
     
   </body>

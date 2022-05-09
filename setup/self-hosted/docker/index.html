@@ -11,7 +11,7 @@
         <link rel="canonical" href="https://docs.mindsdb.com/setup/self-hosted/docker/">
       
       <link rel="icon" href="../../../assets/mdb_logo.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.13">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.14">
     
     
       
@@ -19,7 +19,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.e411adfe.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.3de6f41f.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.cc9b2e1e.min.css">
@@ -28,8 +28,14 @@
     
     
     
-<link  rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap">
-
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"Roboto Mono"}</style>
+      
+    
     
       <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
@@ -649,8 +655,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../connect/mysql-client/" class="md-nav__link">
-        MySQL CLI
+      <a href="../../../connect/mindsdb_editor/" class="md-nav__link">
+        MindsDB Cloud Editor
       </a>
     </li>
   
@@ -663,8 +669,8 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../connect/mindsdb_editor/" class="md-nav__link">
-        MindsDB Cloud Editor
+      <a href="../../../connect/mysql-client/" class="md-nav__link">
+        MySQL CLI
       </a>
     </li>
   
@@ -718,10 +724,57 @@
   
   
   
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_6" type="checkbox" id="__nav_4_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_6">
+          DBT
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="DBT" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_6">
+          <span class="md-nav__icon md-icon"></span>
+          DBT
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../../connect/dbt/" class="md-nav__link">
-        DBT
+        DBT Connection
       </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../connect/dbt-mindsdb-profile/" class="md-nav__link">
+        DBT-MindsDB Profile
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -836,7 +889,7 @@
   
     <li class="md-nav__item">
       <a href="../../../sql/create/databases/" class="md-nav__link">
-        Database
+        DATABASE
       </a>
     </li>
   
@@ -850,7 +903,21 @@
   
     <li class="md-nav__item">
       <a href="../../../sql/create/predictor/" class="md-nav__link">
-        Predictor
+        PREDICTOR
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql/create/table/" class="md-nav__link">
+        TABLE
       </a>
     </li>
   
@@ -864,7 +931,7 @@
   
     <li class="md-nav__item">
       <a href="../../../sql/create/view/" class="md-nav__link">
-        View
+        VIEW
       </a>
     </li>
   
@@ -873,6 +940,20 @@
           
         </ul>
       </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql/api/insert/" class="md-nav__link">
+        INSERT INTO
+      </a>
     </li>
   
 
@@ -1418,6 +1499,20 @@
 
             
           
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql/tutorials/spam_emails_tutorial/" class="md-nav__link">
+        Email spam
+      </a>
+    </li>
+  
+
+            
+          
         </ul>
       </nav>
     </li>
@@ -1577,7 +1672,9 @@
 <div class="highlight"><pre><span></span><code>docker run hello-world
 </code></pre></div>
 <p>You should see the <code>Hello from Docker!</code> message displayed. If not, check <a href="https://www.docker.com/get-started">Docker's Get Started</a> documentation.</p>
-<details class="warning" open="open"><summary>Docker for Mac users, RAM Allocation issues</summary><p>By default, Docker for Mac allocates <strong>2.00GB of RAM</strong>. This is insufficient for deploying MindsDB with docker. We recommend increasing the default RAM limit to <strong>4.00GB</strong>. Please refer to Docker's <a href="https://docs.docker.com/desktop/mac/#resources">Docker Desktop for Mac user manual</a> for more information on how to increase the allocated memory.</p>
+<details class="warning" open="open">
+<summary>Docker for Mac users, RAM Allocation issues</summary>
+<p>By default, Docker for Mac allocates <strong>2.00GB of RAM</strong>. This is insufficient for deploying MindsDB with docker. We recommend increasing the default RAM limit to <strong>4.00GB</strong>. Please refer to Docker's <a href="https://docs.docker.com/desktop/mac/#resources">Docker Desktop for Mac user manual</a> for more information on how to increase the allocated memory.</p>
 </details>
 <h2 id="start-mindsdb">Start MindsDB<a class="headerlink" href="#start-mindsdb" title="Permanent link">&para;</a></h2>
 <p>Run the below command to start MindsDB in Docker:</p>
@@ -1607,11 +1704,15 @@
 <span class="p">}</span><span class="w"></span>
 </code></pre></div>
 <p>To override the default configuration, you can provide values via the <code>MDB_CONFIG_CONTENT</code> environment variable.</p>
-<details class="example" open="open"><summary>Example</summary><div class="highlight"><pre><span></span><code>docker run -e <span class="nv">MDB_CONFIG_CONTENT</span><span class="o">=</span><span class="s1">&#39;{&quot;api&quot;:{&quot;http&quot;: {&quot;host&quot;: &quot;0.0.0.0&quot;,&quot;port&quot;: &quot;8080&quot;}}}&#39;</span> mindsdb/mindsdb
+<details class="example" open="open">
+<summary>Example</summary>
+<div class="highlight"><pre><span></span><code>docker run -e <span class="nv">MDB_CONFIG_CONTENT</span><span class="o">=</span><span class="s1">&#39;{&quot;api&quot;:{&quot;http&quot;: {&quot;host&quot;: &quot;0.0.0.0&quot;,&quot;port&quot;: &quot;8080&quot;}}}&#39;</span> mindsdb/mindsdb
 </code></pre></div>
 </details>
 <h3 id="known-issues">Known Issues<a class="headerlink" href="#known-issues" title="Permanent link">&para;</a></h3>
-<details class="warning"><summary>MKL Issues</summary><p>If you experience any issues related to MKL or if your training process does not complete, please add the <code class="highlight">MKL_SERVICE_FORCE_INTEL</code> environment variable:</p>
+<details class="warning">
+<summary>MKL Issues</summary>
+<p>If you experience any issues related to MKL or if your training process does not complete, please add the <code class="highlight">MKL_SERVICE_FORCE_INTEL</code> environment variable:</p>
 <div class="highlight"><pre><span></span><code>docker run -e <span class="nv">MKL_SERVICE_FORCE_INTEL</span><span class="o">=</span><span class="m">1</span> -p <span class="m">47334</span>:47334 -p <span class="m">47335</span>:47335 mindsdb/mindsdb
 </code></pre></div>
 </details>
@@ -1632,7 +1733,7 @@
     <script id="__config" type="application/json">{"base": "../../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "search": "../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.ed9748b7.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.c2e1ee47.min.js"></script>
       
     
   </body>

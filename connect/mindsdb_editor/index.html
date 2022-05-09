@@ -11,7 +11,7 @@
         <link rel="canonical" href="https://docs.mindsdb.com/connect/mindsdb_editor/">
       
       <link rel="icon" href="../../assets/mdb_logo.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.13">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.14">
     
     
       
@@ -19,7 +19,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.e411adfe.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.3de6f41f.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.cc9b2e1e.min.css">
@@ -28,8 +28,14 @@
     
     
     
-<link  rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap">
-
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"Roboto Mono"}</style>
+      
+    
     
       <link rel="stylesheet" href="../../stylesheets/extra.css">
     
@@ -77,7 +83,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#mindsdb-cloud-as-a-sql-database" class="md-skip">
+        <a href="#mindsdb-sql-editor" class="md-skip">
           Skip to content
         </a>
       
@@ -577,20 +583,6 @@
               
   
   
-  
-    <li class="md-nav__item">
-      <a href="../mysql-client/" class="md-nav__link">
-        MySQL CLI
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
     
   
   
@@ -606,6 +598,20 @@
         MindsDB Cloud Editor
       </a>
       
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mysql-client/" class="md-nav__link">
+        MySQL CLI
+      </a>
     </li>
   
 
@@ -658,10 +664,57 @@
   
   
   
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4_6" type="checkbox" id="__nav_4_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4_6">
+          DBT
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="DBT" data-md-level="2">
+        <label class="md-nav__title" for="__nav_4_6">
+          <span class="md-nav__icon md-icon"></span>
+          DBT
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
     <li class="md-nav__item">
       <a href="../dbt/" class="md-nav__link">
-        DBT
+        DBT Connection
       </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dbt-mindsdb-profile/" class="md-nav__link">
+        DBT-MindsDB Profile
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -776,7 +829,7 @@
   
     <li class="md-nav__item">
       <a href="../../sql/create/databases/" class="md-nav__link">
-        Database
+        DATABASE
       </a>
     </li>
   
@@ -790,7 +843,21 @@
   
     <li class="md-nav__item">
       <a href="../../sql/create/predictor/" class="md-nav__link">
-        Predictor
+        PREDICTOR
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/create/table/" class="md-nav__link">
+        TABLE
       </a>
     </li>
   
@@ -804,7 +871,7 @@
   
     <li class="md-nav__item">
       <a href="../../sql/create/view/" class="md-nav__link">
-        View
+        VIEW
       </a>
     </li>
   
@@ -813,6 +880,20 @@
           
         </ul>
       </nav>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/api/insert/" class="md-nav__link">
+        INSERT INTO
+      </a>
     </li>
   
 
@@ -1358,6 +1439,20 @@
 
             
           
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql/tutorials/spam_emails_tutorial/" class="md-nav__link">
+        Email spam
+      </a>
+    </li>
+  
+
+            
+          
         </ul>
       </nav>
     </li>
@@ -1469,12 +1564,41 @@
 
 
 
-<h1 id="mindsdb-cloud-as-a-sql-database"><a href="https://cloud.mindsdb.com/login">MindsDB Cloud</a> as a SQL Database<a class="headerlink" href="#mindsdb-cloud-as-a-sql-database" title="Permanent link">&para;</a></h1>
-<p>MindsDB Cloud provides a SQL Editor so you don't need to download additional SQL clients to connect to MindsDB. Once you log in to the cloud you are ready to run the queries from your browser.</p>
+<h1 id="mindsdb-sql-editor">MindsDB SQL Editor<a class="headerlink" href="#mindsdb-sql-editor" title="Permanent link">&para;</a></h1>
+<p>MindsDB provides a SQL Editor so you don't need to download additional SQL clients to connect to MindsDB. There are two ways you can use the Editor:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Self-Hosted Local Deployment</label><label for="__tabbed_1_2">MindsDB Cloud</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>After any of the Self-Hosted Setups - <a href="/setup/self-hosted/pip/linux">Linux</a>, <a href="/setup/self-hosted/pip/windows">Windows</a>, <a href="/setup/self-hosted/pip/macos">MacOs</a> or directly from <a href="/setup/self-hosted/pip/source">source code</a> go to you terminal and execute: </p>
+<div class="highlight"><pre><span></span><code>  python -m mindsdb 
+</code></pre></div>
+<p>On execution, you should get:</p>
+<div class="highlight"><pre><span></span><code>...
+<span class="m">2022</span>-05-06 <span class="m">14</span>:07:04,599 - INFO -  - GUI available at http://127.0.0.1:47334/
+...
+</code></pre></div>
+<p>Immediately after, your browser will automatically open the MindsDB SQL Editor. In case it doesn't, just visit the URL <code>http://127.0.0.1:47334/</code> in your browser of preference. </p>
+</div>
+<div class="tabbed-block">
+<ol>
+<li>
+<p>Go to <a href="https://cloud.mindsdb.com">MindsDB Cloud</a></p>
+</li>
+<li>
+<p>Just log in to your account, and you will be automatically directed to the Editor.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
 <figure>
 <p><img _="," alt="GUI" loading="lazy" src="/assets/cloud/gui_query.png" width="800" />
     <figcaption></figcaption></p>
 </figure>
+<div class="admonition tip">
+<p class="admonition-title">What is next?</p>
+<p>We recommend you to follow one of our tutorials or jump more into detail understanding the <a href="/sql/description/mindsdb_database">MindsDB Database</a></p>
+</div>
 
               
             </article>
@@ -1492,7 +1616,7 @@
     <script id="__config" type="application/json">{"base": "../..", "features": ["search.suggest", "search.highlight", "header.autohide"], "search": "../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.ed9748b7.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c2e1ee47.min.js"></script>
       
     
   </body>

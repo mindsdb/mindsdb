@@ -1,4 +1,4 @@
-lightwood >= 22.4.1.0, < 22.4.2.0
+lightwood >= 22.5.1.0
 markupsafe == 2.0.1
 flask-restx >= 0.2.0
 flask >= 1.0, < 2.0

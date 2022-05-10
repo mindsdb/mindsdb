@@ -69,45 +69,44 @@ class LightwoodHandler(PredictiveHandler):
 
             if model_name in self.get_tables():
                 raise Exception("Error: this model already exists!")
+
+            target = statement.targets[0].parts[-1]
+            params = { 'target': target }
+            if statement.order_by:
+                params['timeseries_settings'] = {
+                    'is_timeseries': True,
+                    'order_by': [str(col) for col in statement.order_by],
+                    'group_by': [str(col) for col in statement.group_by],
+                    'window': int(statement.window),
+                    'horizon': int(statement.horizon),
+                }
+
+            json_ai_override = statement.using if statement.using else {}
+            unpack_jsonai_old_args(json_ai_override)
+
+            # get training data from other integration
+            handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]
+            handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
+            df = self._data_gather(handler, handler_query)
+
+            json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
+            json_ai = json_ai_from_problem(df, ProblemDefinition.from_dict(params)).to_dict()
+            json_ai_override = brack_to_mod(json_ai_override)
+            rep_recur(json_ai, json_ai_override)
+            json_ai = JsonAI.from_dict(json_ai)
+
+            code = code_from_json_ai(json_ai)
+            predictor = predictor_from_code(code)
+            predictor.learn(df)
+            serialized_predictor = dill.dumps(predictor)
+
+            all_models = self.storage.get('models')
+            payload = {'jsonai': json_ai, 'predictor': serialized_predictor, 'code': code, 'stmt': statement}
+            if all_models is not None:
+                all_models[model_name] = payload
             else:
-                target = statement.targets[0].parts[-1]
-                params = { 'target': target }
-                if statement.order_by:
-                    params['timeseries_settings'] = {
-                        'is_timeseries': True,
-                        'order_by': [str(col) for col in statement.order_by],
-                        'group_by': [str(col) for col in statement.group_by],
-                        'window': int(statement.window),
-                        'horizon': int(statement.horizon),
-                    }
-
-                json_ai_override = statement.using if statement.using else {}
-
-                unpack_jsonai_old_args(json_ai_override)
-
-                # get training data from other integration
-                handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]
-                handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
-                df = self._data_gather(handler, handler_query)
-
-                json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
-                json_ai = json_ai_from_problem(df, ProblemDefinition.from_dict(params)).to_dict()
-                json_ai_override = brack_to_mod(json_ai_override)
-                rep_recur(json_ai, json_ai_override)
-                json_ai = JsonAI.from_dict(json_ai)
-
-                code = code_from_json_ai(json_ai)
-                predictor = predictor_from_code(code)
-                predictor.learn(df)
-                serialized_predictor = dill.dumps(predictor)
-
-                all_models = self.storage.get('models')
-                payload = {'jsonai': json_ai, 'predictor': serialized_predictor, 'code': code, 'stmt': statement}
-                if all_models is not None:
-                    all_models[model_name] = payload
-                else:
-                    all_models = {model_name: payload}
-                self.storage.set('models', all_models)
+                all_models = {model_name: payload}
+            self.storage.set('models', all_models)
 
         elif type(statement) == RetrainPredictor:
             model_name = statement.name.parts[-1]

@@ -6,8 +6,10 @@ from typing import Dict, List, Optional
 
 import lightwood
 from lightwood.api.types import JsonAI
+from lightwood.mixer import LightGBM
 from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition, _module_from_code
 
+from utils import unpack_jsonai_old_args, get_aliased_columns
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
@@ -16,7 +18,7 @@ from mindsdb.utilities.config import Config
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant
 from mindsdb_sql.parser.dialects.mindsdb import (
-    # RetrainPredictor,  # todo
+    RetrainPredictor,
     CreatePredictor,
     DropPredictor
 )
@@ -38,7 +40,7 @@ class LightwoodHandler(PredictiveHandler):
 
     def check_status(self) -> Dict[str, int]:
         try:
-            import lightwood  # todo maybe we shouldn't even check, as we can assume user has installed requisites for the handler
+            import lightwood
             year, major, minor, hotfix = lightwood.__version__.split('.')
             assert int(year) > 22 or (int(year) == 22 and int(major) >= 4)
             print("Lightwood OK!")
@@ -66,7 +68,7 @@ class LightwoodHandler(PredictiveHandler):
             model_name = statement.name.parts[-1]
 
             if model_name in self.get_tables():
-                print("Error: this model already exists!")
+                raise Exception("Error: this model already exists!")
             else:
                 target = statement.targets[0].parts[-1]
                 params = { 'target': target }
@@ -81,22 +83,9 @@ class LightwoodHandler(PredictiveHandler):
 
                 json_ai_override = statement.using if statement.using else {}
 
-                # this is copied and adapted from ModelController._unpack_old_args, should be a helper function
-                while '.' in str(list(json_ai_override.keys())):
-                    for k in list(json_ai_override.keys()):
-                        if '.' in k:
-                            nks = k.split('.')
-                            obj = json_ai_override
-                            for nk in nks[:-1]:
-                                if nk not in obj:
-                                    obj[nk] = {}
-                                obj = obj[nk]
-                            obj[nks[-1]] = json_ai_override[k]
-                            del json_ai_override[k]
+                unpack_jsonai_old_args(json_ai_override)
 
                 # get training data from other integration
-                # todo: MDB needs to expose all available handlers through some sort of global state
-                # todo: change data gathering logic if task is TS, use self._data_gather or similar
                 handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]
                 handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
                 df = self._data_gather(handler, handler_query)
@@ -113,12 +102,28 @@ class LightwoodHandler(PredictiveHandler):
                 serialized_predictor = dill.dumps(predictor)
 
                 all_models = self.storage.get('models')
-                payload = {'jsonai': json_ai, 'predictor': serialized_predictor, 'code': code}
+                payload = {'jsonai': json_ai, 'predictor': serialized_predictor, 'code': code, 'stmt': statement}
                 if all_models is not None:
                     all_models[model_name] = payload
                 else:
                     all_models = {model_name: payload}
                 self.storage.set('models', all_models)
+
+        elif type(statement) == RetrainPredictor:
+            model_name = statement.name.parts[-1]
+            if model_name not in self.get_tables():
+                raise Exception("Error: this model does not exist, so it can't be retrained. Train a model first.")
+
+            all_models = self.storage.get('models')
+            original_stmt = all_models[model_name]['stmt']
+
+            handler = MDB_CURRENT_HANDLERS[str(original_stmt.integration_name)]
+            handler_query = self.parser(original_stmt.query_str, dialect=self.handler_dialect)
+            df = self._data_gather(handler, handler_query)
+            predictor = self._load_predictor(all_models[model_name], model_name)
+            predictor.adjust(df)
+            all_models[model_name]['predictor'] = dill.dumps(predictor)
+            self.storage.set('models', all_models)
 
         elif type(statement) == DropPredictor:
             to_drop = statement.name.parts[-1]
@@ -158,10 +163,11 @@ class LightwoodHandler(PredictiveHandler):
 
     def _default_data_gather(self, handler, query):
         records = handler.query(query)['data_frame']
-        df = pd.DataFrame.from_records(records)  #[:10]  # todo remove forced cap, testing purposes only
+        df = pd.DataFrame.from_records(records)
         return df
 
     def _ts_data_gather(self, handler, query):
+        # todo: this should all be replaced by the mindsdb_sql logic
         def _gather_partition(handler, query):
             # todo apply limit and date here (LATEST vs other cutoffs)
             # if 'date' == 'LATEST':
@@ -196,7 +202,7 @@ class LightwoodHandler(PredictiveHandler):
             data_clause = 'left'
         model_alias = str(getattr(stmt.from_table, model_clause).alias)
 
-        data_handler_table = getattr(stmt.from_table, data_clause).parts[-1]  # todo should be ".".join(...) if data handlers support more than one table?
+        data_handler_table = getattr(stmt.from_table, data_clause).parts[-1]
         data_handler_cols = list(set([t.parts[-1] for t in stmt.targets]))
 
         model = self._get_model(stmt)
@@ -214,16 +220,17 @@ class LightwoodHandler(PredictiveHandler):
                 data_handler.query(parsed_query)['data_frame'])
         else:
             # for TS, fetch correct groups, build window context, predict and limit, using self._ts_data_gather
+            # todo: call mindsdb_sql group by retrieval
 
             # 1) get all groups
             gby_col = model.problem_definition.timeseries_settings.group_by[0]  # todo add multiple group support
-            oby_col = model.problem_definition.timeseries_settings.order_by[0]  # remove indexing once lightwood drops multi-order support
+            oby_col = model.problem_definition.timeseries_settings.order_by[0]
             for col in [gby_col] + [oby_col]:
                 if col not in data_handler_cols:
                     data_handler_cols.append(col)
 
             window = model.problem_definition.timeseries_settings.window
-            groups_query = f"SELECT {gby_col} from {data_handler_table}"  # todo add DISTINCT once parser supports it
+            groups_query = f"SELECT {gby_col} from {data_handler_table}"  # add DISTINCT once the parser supports it
             parsed_groups_query = self.parser(groups_query, dialect=self.handler_dialect)
             out = data_handler.query(parsed_groups_query)['data_frame']
             groups = list(pd.DataFrame.from_records(
@@ -270,19 +277,8 @@ class LightwoodHandler(PredictiveHandler):
         predictions = self._call_predictor(model_input, model)
 
         # rename columns
-        # todo: simplify this and move to separate method?
-        aliased_columns = list(model_input.columns)
-        for col in stmt.targets:
-            if str(col.parts[0]) != model_alias and col.alias is not None:
-                # assumes mdb_sql will alert if there are two columns with the same alias
-                aliased_columns[aliased_columns.index(col.parts[-1])] = str(col.alias)
-        model_input.columns = aliased_columns
-
-        aliased_columns = list(predictions.columns)
-        for col in stmt.targets:
-            if col.parts[0] == model_alias and col.alias is not None:
-                aliased_columns[aliased_columns.index('prediction')] = str(col.alias)
-        predictions.columns = aliased_columns
+        model_input.columns = get_aliased_columns(list(model_input.columns), model_alias, stmt.targets, mode='input')
+        predictions.columns = get_aliased_columns(list(predictions.columns), model_alias, stmt.targets, mode='output')
 
         if into:
             try:
@@ -310,7 +306,6 @@ class LightwoodHandler(PredictiveHandler):
         return self.storage.get('models')[model_name]
 
     def _load_predictor(self, predictor_dict, name):
-        # todo update lightwood method (predictor_from_state) so that it can take a memory representation of the predictor object OR a file path, and call that instead
         try:
             module_name = None
             return dill.loads(predictor_dict['predictor'])
@@ -337,6 +332,9 @@ if __name__ == '__main__':
     # TODO: turn this into tests
 
     data_handler_name = 'mysql_handler'
+    # todo: MDB needs to expose all available handlers through some sort of global state DB
+    # todo: change data gathering logic if task is TS, use self._data_gather or similar
+    # todo: eventually we would maybe do `from mindsdb.handlers import MDB_CURRENT_HANDLERS` registry
     MDB_CURRENT_HANDLERS = {
         data_handler_name: MySQLHandler('test_handler', **{
             "host": "localhost",
@@ -354,9 +352,10 @@ if __name__ == '__main__':
     config = Config()
     print(cls.connect(config={'path': config['paths']['root'], 'name': 'lightwood_handler.db'}))
 
+    model_name = 'lw_test_predictor'
     # try:
     #     print('dropping predictor...')
-    #     cls.native_query(f"DROP PREDICTOR {registered_model_name}")
+    #     cls.native_query(f"DROP PREDICTOR {model_name}")
     # except:
     #     print('failed to drop')
     #     pass
@@ -364,7 +363,6 @@ if __name__ == '__main__':
     print(cls.get_tables())
 
     data_table_name = 'home_rentals_subset'
-    model_name = 'lw_test_predictor'
     target = 'rental_price'
     if model_name not in cls.get_tables():
         query = f"CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target}"
@@ -392,6 +390,10 @@ if __name__ == '__main__':
     qp = cls.parser(q, dialect='mysql')
     assert len(data_handler.query(qp)['data_frame']) > 0
 
+    # retrain syntax
+    query = f"RETRAIN {model_name}"
+    cls.native_query(query)
+
     # try:
     #     data_handler.native_query(f"DROP TABLE test.{into_table}")
     # except:
@@ -413,7 +415,10 @@ if __name__ == '__main__':
         using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
         query = f'CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target} USING {using_str}'
         cls.native_query(query)
-        # todo write assertion to check new predictor only uses LightGBM model (it does happen, but assert is missing)
+
+    m = cls._load_predictor(cls.storage.get('models')[model_name], model_name)
+    assert len(m.ensemble.mixers) == 1
+    assert isinstance(m.ensemble.mixers[0], LightGBM)
 
     # Timeseries predictor
     model_name = 'lw_test_predictor3'
@@ -434,15 +439,13 @@ if __name__ == '__main__':
         query = f'CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
         cls.native_query(query)
 
-        # todo missing assert that predictor is a TS one
-        p = cls.storage.get('models')
-        _ = cls._load_predictor(p[model_name], model_name)
+    p = cls.storage.get('models')
+    m = cls._load_predictor(p[model_name], model_name)
+    assert m.problem_definition.timeseries_settings.is_timeseries
 
     # get predictions from a time series model
-
     # todo: limit in this case should be checked/compared against model's own HORIZON
     into_table = 'test_join_tsmodel_into_lw'
     query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {data_handler_name}.{data_table_name} AS ta JOIN {model_name} AS tb WHERE ta.{oby} > LATEST LIMIT 10"
     parsed = cls.parser(query, dialect=cls.dialect)
     predicted = cls.join(parsed, data_handler, into=into_table)
-

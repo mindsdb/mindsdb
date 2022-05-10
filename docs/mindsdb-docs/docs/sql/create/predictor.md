@@ -13,6 +13,13 @@ FROM [integration_name]
 PREDICT [target_column]
 ```
 
+On execution, you should get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+
 Where:
 
 | Expressions                                     | Description                                                                   |
@@ -20,9 +27,44 @@ Where:
 | `[predictor_name]`                              | Name of the model to be created                                               |
 | `[integration_name]`                            | is the name of the [datasource](/connect/#create-new-datasource)              |
 | `(SELECT [column_name, ...] FROM [table_name])` | SELECT statement for selecting the data to be used for traning and validation |
-| `PREDICT [target_column]`                         | where `target_column` is the column name of the target variable.                |
+| `PREDICT [target_column]`                         | where `target_column` is the column name of the target variable.            |
+
+!!! TIP "Checking the status of the model" 
+    After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training model, by selecting from the [`#!sql mindsdb.predictors`](/sql/table-structure/#the-predictors-table)
+    ```#!sql SELECT * FROM mindsdb.predictors WHERE name='[predictor_name]';```
 
 ## Example
+
+This example shows how you can train a Machine Learning model called home_rentals_model to predict the rental prices for real estate properties inside the dataset.
+
+```sql
+CREATE PREDICTOR mindsdb.home_rentals_model
+FROM db_integration (SELECT * FROM house_rentals_data) as rentals
+PREDICT rental_price as price;
+```
+
+On execution:
+
+```sql
+Query OK, 0 rows affected (8.878 sec)
+```
+
+To check the predictor status query the [`#!sql mindsdb.predictors`](/sql/table-structure/#the-predictors-table) :
+
+```sql
+SELECT * FROM mindsdb.predictors WHERE name='home_rentals_model';
+```
+
+On execution,
+
+```sql
++-----------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
+| name            | status   | accuracy           | predict      | update_status | mindsdb_version | error | select_data_query | training_options |
++-----------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
+| home_rentals123 | complete | 0.9991920992432087 | rental_price | up_to_date    | 22.5.1.0        | NULL  |                   |                  |
++-----------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
+1 row in set (0.091 sec)
+```
 
 ## `#!sql USING` Statement
 

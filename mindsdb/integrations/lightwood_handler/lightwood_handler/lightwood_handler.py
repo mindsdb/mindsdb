@@ -9,7 +9,8 @@ from lightwood.api.types import JsonAI
 from lightwood.mixer import LightGBM
 from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition, _module_from_code
 
-from utils import unpack_jsonai_old_args, get_aliased_columns
+from utils import unpack_jsonai_old_args, get_aliased_columns, _recur_get_conditionals
+from utils import default_data_gather, ts_data_gather, load_predictor
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
@@ -119,7 +120,7 @@ class LightwoodHandler(PredictiveHandler):
             handler = MDB_CURRENT_HANDLERS[str(original_stmt.integration_name)]
             handler_query = self.parser(original_stmt.query_str, dialect=self.handler_dialect)
             df = self._data_gather(handler, handler_query)
-            predictor = self._load_predictor(all_models[model_name], model_name)
+            predictor = load_predictor(all_models[model_name], model_name)
             predictor.adjust(df)
             all_models[model_name]['predictor'] = dill.dumps(predictor)
             self.storage.set('models', all_models)
@@ -135,19 +136,10 @@ class LightwoodHandler(PredictiveHandler):
 
     def query(self, query) -> dict:
         model = self._get_model(query)
-        values = self._recur_get_conditionals(query.where.args, {})
+        values = _recur_get_conditionals(query.where.args, {})
         df = pd.DataFrame.from_dict(values)
         df = self._call_predictor(df, model)
         return {'data_frame': df}
-
-    def _recur_get_conditionals(self, args: list, values):
-        """ Gets all the specified data from an arbitrary amount of AND clauses inside the WHERE statement """  # noqa
-        if isinstance(args[0], Identifier) and isinstance(args[1], Constant):
-            values[args[0].parts[0]] = [args[1].value]
-        else:
-            for op in args:
-                values = {**values, **self._recur_get_conditionals([*op.args], {})}
-        return values
 
     def _data_gather(self, handler, query):
         """
@@ -155,38 +147,9 @@ class LightwoodHandler(PredictiveHandler):
         e.g. for time series tasks, gather data per partition and fuse into a single dataframe
         """  # noqa
         if query.order_by is not None:
-            return self._ts_data_gather(handler, query)
+            return ts_data_gather(handler, query)
         else:
-            # trigger default gather
-            return self._default_data_gather(handler, query)
-
-    def _default_data_gather(self, handler, query):
-        records = handler.query(query)['data_frame']
-        df = pd.DataFrame.from_records(records)
-        return df
-
-    def _ts_data_gather(self, handler, query):
-        # todo: this should all be replaced by the mindsdb_sql logic
-        def _gather_partition(handler, query):
-            # todo apply limit and date here (LATEST vs other cutoffs)
-            # if 'date' == 'LATEST':
-            #     pass
-            # else:
-            #     pass
-            records = handler.query(query)['data_frame']
-            return pd.DataFrame.from_records(records)  # [:10]  # todo remove forced cap, testing purposes only
-
-        if True:  # todo  # query.group_by is None:
-            df = _gather_partition(handler, query)
-        else:
-            groups = handler.query(query)['data_frame']
-            dfs = []
-            for group in groups:
-                # query.where_stmt =  # todo turn BinaryOperation and other types into an AND with the respective group filter
-                dfs.append(_gather_partition(handler, query))
-            df = pd.concat(*dfs)
-
-        return df
+            return default_data_gather(handler, query)
 
     def join(self, stmt, data_handler: BaseHandler, into: Optional[str] = None) -> pd.DataFrame:
         """
@@ -297,28 +260,12 @@ class LightwoodHandler(PredictiveHandler):
             raise Exception("Error, not found. Please create this predictor first.")
 
         predictor_dict = self._get_model_info(model_name)
-        predictor = self._load_predictor(predictor_dict, model_name)
+        predictor = load_predictor(predictor_dict, model_name)
         return predictor
 
     def _get_model_info(self, model_name):
         """ Returns a dictionary with three keys: 'jsonai', 'predictor' (serialized), and 'code'. """  # noqa
         return self.storage.get('models')[model_name]
-
-    def _load_predictor(self, predictor_dict, name):
-        try:
-            module_name = None
-            return dill.loads(predictor_dict['predictor'])
-        except Exception as e:
-            module_name = str(e).lstrip("No module named '").split("'")[0]
-
-            try:
-                del sys.modules[module_name]
-            except Exception:
-                pass
-
-            gc.collect()
-            _module_from_code(predictor_dict['code'], module_name)
-            return dill.loads(predictor_dict['predictor'])
 
     def _call_predictor(self, df, predictor):
         predictions = predictor.predict(df)
@@ -415,7 +362,7 @@ if __name__ == '__main__':
         query = f'CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target} USING {using_str}'
         cls.native_query(query)
 
-    m = cls._load_predictor(cls.storage.get('models')[model_name], model_name)
+    m = load_predictor(cls.storage.get('models')[model_name], model_name)
     assert len(m.ensemble.mixers) == 1
     assert isinstance(m.ensemble.mixers[0], LightGBM)
 
@@ -439,7 +386,7 @@ if __name__ == '__main__':
         cls.native_query(query)
 
     p = cls.storage.get('models')
-    m = cls._load_predictor(p[model_name], model_name)
+    m = load_predictor(p[model_name], model_name)
     assert m.problem_definition.timeseries_settings.is_timeseries
 
     # get predictions from a time series model

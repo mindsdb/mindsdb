@@ -9,7 +9,6 @@
  *******************************************************
 """
 
-
 import os
 import sys
 import socketserver as SocketServer
@@ -34,10 +33,6 @@ from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapab
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.mysql.mysql_proxy.utilities import log
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    SqlApiException,
-
-)
 
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 
@@ -80,7 +75,10 @@ from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
 
+import mindsdb.utilities.hooks as hooks
+
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
+
 
 def empty_fn():
     pass
@@ -165,7 +163,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     """
     The Main Server controller class
     """
-
 
     @staticmethod
     def server_close(srv):
@@ -332,11 +329,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         string = b''.join([x.accum() for x in packages])
         self.socket.sendall(string)
 
-
-
     def answer_stmt_close(self, stmt_id):
         self.session.unregister_stmt(stmt_id)
-
 
     def send_query_answer(self, answer: SQLAnswer):
         if answer.type == RESPONSE_TYPE.TABLE:
@@ -524,13 +518,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         if executor.error is not None:
             resp = SQLAnswer(
-                resp_type = RESPONSE_TYPE.ERROR,
+                resp_type=RESPONSE_TYPE.ERROR,
                 error_code=executor.error['code'],
                 error_message=executor.error['message']
             )
         elif executor.data is None:
             resp = SQLAnswer(
-                resp_type = RESPONSE_TYPE.OK,
+                resp_type=RESPONSE_TYPE.OK,
                 state_track=executor.state_track,
             )
         else:
@@ -647,7 +641,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packages = []
         columns = self.to_mysql_columns(executor.columns)
         for row in executor.data[fetched:limit]:
-
             packages.append(
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
             )
@@ -707,18 +700,33 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             log.debug('Command TYPE: {type}'.format(
                 type=getConstName(COMMANDS, p.type.value)))
 
+            command_names = {
+                COMMANDS.COM_QUERY: 'COM_QUERY',
+                COMMANDS.COM_STMT_PREPARE: 'COM_STMT_PREPARE',
+                COMMANDS.COM_STMT_EXECUTE: 'COM_STMT_EXECUTE',
+                COMMANDS.COM_STMT_FETCH: 'COM_STMT_FETCH',
+                COMMANDS.COM_STMT_CLOSE: 'COM_STMT_CLOSE',
+                COMMANDS.COM_QUIT: 'COM_QUIT',
+                COMMANDS.COM_INIT_DB: 'COM_INIT_DB',
+                COMMANDS.COM_FIELD_LIST: 'COM_FIELD_LIST'
+            }
+
+            command_name = command_names.get(p.type.value, f'UNKNOWN {p.type.value}')
+            sql = None
+            response = None
+            error_type = None
+            error_code = None
+            error_text = None
+            error_traceback = None
+
             try:
                 if p.type.value == COMMANDS.COM_QUERY:
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser.clear_sql(sql)
                     log.debug(f'COM_QUERY: {sql}')
-                    result = self.process_query(sql)
-                    self.send_query_answer(result)
+                    response = self.process_query(sql)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
-                    # https://dev.mysql.com/doc/internals/en/com-stmt-prepare.html
                     sql = self.decode_utf(p.sql.value)
-                    # statement = SqlStatementParser(sql)
-                    # log.debug(f'COM_STMT_PREPARE: {statement.sql}')
                     self.answer_stmt_prepare(sql)
                 elif p.type.value == COMMANDS.COM_STMT_EXECUTE:
                     self.answer_stmt_execute(p.stmt_id.value, p.parameters)
@@ -739,40 +747,51 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     )
                     executor.command_executor.change_default_db(new_database)
 
-                    # self.change_default_db(new_database)
-                    self.packet(OkPacket).send()
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
                 elif p.type.value == COMMANDS.COM_FIELD_LIST:
                     # this command is deprecated, but console client still use it.
-                    self.packet(OkPacket).send()
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
                 else:
                     log.warning('Command has no specific handler, return OK msg')
                     log.debug(str(p))
                     # p.pprintPacket() TODO: Make a version of print packet
-                    # that sends it to debug isntead
-                    self.packet(OkPacket).send()
+                    # that sends it to debug instead
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
 
-            except SqlApiException as e:
-                log.error(
-                    f'ERROR while executing query\n'
-                    f'{traceback.format_exc()}\n'
-                    f'{e}'
-                )
-                self.packet(
-                    ErrPacket,
-                    err_code=e.err_code,
-                    msg=str(e)
-                ).send()
             except Exception as e:
+                error_type = 'unexpected'
+                error_traceback = traceback.format_exc()
                 log.error(
                     f'ERROR while executing query\n'
-                    f'{traceback.format_exc()}\n'
+                    f'{error_traceback}\n'
                     f'{e}'
                 )
-                self.packet(
-                    ErrPacket,
-                    err_code=ERR.ER_SYNTAX_ERROR,
-                    msg=str(e)
-                ).send()
+                error_code = ERR.ER_SYNTAX_ERROR
+                if hasattr(e, 'err_code'):
+                    error_code = e.err_code
+                response = SQLAnswer(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_code=error_code,
+                    error_message=str(e)
+                )
+
+            if response is not None:
+                self.send_query_answer(response)
+                if response.type == RESPONSE_TYPE.ERROR:
+                    error_text = response.error_message
+                    error_code = response.error_code
+                    error_type = error_type or 'expected'
+
+            hooks.after_api_query(
+                company_id=self.session.company_id,
+                api='mysql',
+                command=command_name,
+                payload=sql,
+                error_type=error_type,
+                error_code=error_code,
+                error_text=error_text,
+                traceback=error_traceback
+            )
 
     def packet(self, packetClass=Packet, **kwargs):
         """

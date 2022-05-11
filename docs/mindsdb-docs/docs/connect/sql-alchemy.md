@@ -17,7 +17,7 @@ If you have a mindsdb cloud, please use the following information:
     * MindsDB Cloud username and password
 
 
-## On premise Deploument 
+## On premise Deployment 
 
 1. Hostname:
     * 127.0.0.1 or the IP address where you are hosting your MindsDB server.

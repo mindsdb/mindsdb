@@ -86,7 +86,7 @@ USING [parameter_key] = ['parameter_value']
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `encoders`                                  | Grants access to configure how each column is encoded.By default, the AutoML engine will try to get the best match for the data. To learn more about how encoders work and their options, go [here](https://lightwood.io/encoder.html).                   |
 | `model`                                     | Allows you to specify what type of Machine Learning algorithm to learn from the encoder data. To learn more about all the model options, go [here](https://lightwood.io/mixer.html).                                                                      |
-| Other keys supported by lightwood in JsonAI | he most common usecases for configuring predictors will be listed and explained in the example below. To see all options available in detail, you should checkout the [lightwood docs about JsonAI](https://lightwood.io/api/types.html#api.types.JsonAI) |
+| Other keys supported by lightwood in JsonAI | The most common usecases for configuring predictors will be listed and explained in the example below. To see all options available in detail, you should checkout the [lightwood docs about JsonAI](https://lightwood.io/api/types.html#api.types.JsonAI) |
 
 ### `#!sql ... USING encoders` Key
 
@@ -164,6 +164,12 @@ Where:
 | `WINDOW [int]` | Specifies the number `[int]` of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be interpreted like "Always use the previous 10 rows". |
 | `HORIZON [int]` (optional)                      |  keyword specifies the number of future predictions, default value is 1  |
 
+
+On execution,
+
+```sql
+Query OK, 0 rows affected (8.878 sec)
+```
 ### Example
 
 ```sql

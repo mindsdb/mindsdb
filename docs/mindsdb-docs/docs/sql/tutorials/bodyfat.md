@@ -2,7 +2,7 @@
 Before you start make sure that you've:
 
 - Visited [Getting Started Guide](/info)
-- Visited [Getting Started with Cloud](/deployment/cloud)
+- Visited [Getting Started with Cloud](/setup/cloud)
 - Downloaded the dataset. The dataset being used for this tutorial. Get it from [Kaggle](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset).
 
 # Determining Body Fat Percentage

@@ -10,7 +10,7 @@
 """
 
 import re
-import pandas as pd
+from collections import OrderedDict
 import datetime
 import time
 
@@ -234,20 +234,17 @@ class SQLQuery():
             self.execute_query()
 
     def create_planner(self):
-        # self.query = parse_sql(sql, dialect='mindsdb')
 
         integrations_names = self.session.datahub.get_integrations_names()
         integrations_names.append('information_schema')
         integrations_names.append('files')
         integrations_names.append('views')
 
-        # all_tables = get_all_tables(self.query)
-
         predictor_metadata = {}
         predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
-        # for model_name in set(all_tables):
 
         query_tables = []
+
         def get_all_query_tables(node, is_table, **kwargs):
             if is_table and isinstance(node, Identifier):
                 query_tables.append(node.parts[-1])
@@ -293,7 +290,6 @@ class SQLQuery():
             predictor_metadata=predictor_metadata,
             default_namespace=database
         )
-
 
     def fetch(self, datahub, view='list'):
         data = self.fetched_data
@@ -848,8 +844,8 @@ class SQLQuery():
                 left_key = left_data['tables'][0]
                 right_key = right_data['tables'][0]
 
-                left_columns_map = {}
-                left_columns_map_reverse = {}
+                left_columns_map = OrderedDict()
+                left_columns_map_reverse = OrderedDict()
                 for i, column_name in enumerate(left_data['columns'][left_key]):
                     left_columns_map[f'a{i}'] = column_name
                     left_columns_map_reverse[column_name] = f'a{i}'

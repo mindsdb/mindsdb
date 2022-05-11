@@ -1,7 +1,7 @@
 import json
 import datetime
 import pandas as pd
-from typing import List, Dict, Optional
+from typing import Optional
 
 from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatasource,
@@ -23,8 +23,6 @@ from mindsdb_sql.parser.ast import (
     BinaryOperation,
     DropDatabase,
     NullConstant,
-    TableColumn,
-    Identifier,
     Describe,
     Constant,
     Function,
@@ -42,7 +40,6 @@ from mindsdb_sql.parser.ast import (
     TableColumn,
     Identifier,
     DropTables,
-    Parameter,
     Operation,
 )
 
@@ -68,8 +65,6 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     ERR,
     TYPES,
     SERVER_VARIABLES,
-    SERVER_STATUS,
-    FIELD_FLAG,
 )
 
 from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
@@ -85,7 +80,6 @@ class ExecuteCommands:
         self.sql_lower = executor.sql_lower
         self.sql = executor.sql
 
-        # TODO remove
         self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
         self.datahub = session.datahub
 
@@ -852,19 +846,6 @@ class ExecuteCommands:
             error_message="at this moment only 'delete predictor' command supported"
         )
 
-    # def to_mysql_type(self, type_name):
-    #     if type_name == 'str':
-    #         return TYPES.MYSQL_TYPE_VAR_STRING
-    #
-    #     # unknown
-    #     return TYPES.MYSQL_TYPE_VAR_STRING
-
-    def is_predictor(self, target):
-        if target.parts[-1] in self.executor.predictor_metadata:
-            return True
-        else:
-            return False
-
     def process_insert(self, statement):
         db_name = self.session.database
         if len(statement.table.parts) == 2:
@@ -995,13 +976,6 @@ class ExecuteCommands:
                     type=TYPES.MYSQL_TYPE_VAR_STRING if isinstance(result, str) else TYPES.MYSQL_TYPE_LONG,
                     charset=self.charset_text_type if isinstance(result, str) else CHARSET_NUMBERS['binary']
                 )
-                # {
-                # 'table_name': '',
-                # 'name': column_name,
-                # 'alias': column_alias,
-                # 'type': TYPES.MYSQL_TYPE_VAR_STRING if isinstance(result, str) else TYPES.MYSQL_TYPE_LONG,
-                # 'charset': self.charset_text_type if isinstance(result, str) else CHARSET_NUMBERS['binary']
-                #  }
             )
             data.append(result)
 
@@ -1015,15 +989,6 @@ class ExecuteCommands:
         columns = [
             Column(table_name='', name='Table', type=TYPES.MYSQL_TYPE_VAR_STRING),
             Column(table_name='', name='Create Table', type=TYPES.MYSQL_TYPE_VAR_STRING),
-        # {
-        #     'table_name': '',
-        #     'name': 'Table',
-        #     'type': TYPES.MYSQL_TYPE_VAR_STRING
-        # }, {
-        #     'table_name': '',
-        #     'name': 'Create Table',
-        #     'type': TYPES.MYSQL_TYPE_VAR_STRING
-        # }
         ]
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
@@ -1074,7 +1039,7 @@ class ExecuteCommands:
                    type=TYPES.MYSQL_TYPE_VAR_STRING, database='mysql',
                    charset=self.charset_text_type)
         ]
-        # columns = [Column(**d) for d in columns]
+
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=columns,
@@ -1305,12 +1270,10 @@ class ExecuteCommands:
                 error_message=result['msg']
             )
 
-        # columns = [Column(**d) for d in query.columns_list]
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=query.columns_list,
             data=query.result,
-            # model_types=query.model_types
         )
 
 

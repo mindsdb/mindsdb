@@ -173,8 +173,6 @@ class DataStore():
         offset = 0 if offset is None else offset
         ds = self.get_datasource_obj(name, company_id=company_id)
 
-        if ds is None:
-            raise Exception(f'Unknown file: {name}')
         if limit is not None:
             # @TODO Add `offset` to the `filter` method of the datasource and get rid of `offset`
             filtered_ds = ds.filter(where=where, limit=limit + offset).iloc[offset:]

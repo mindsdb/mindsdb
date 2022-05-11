@@ -550,7 +550,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             sqlserver=self
         )
         stmt_id = self.session.register_stmt(executor)
-        # prepared_stmt = self.session.prepared_stmts[stmt_id]
 
         executor.stmt_prepare(sql)
 
@@ -562,7 +561,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 num_params=len(executor.params)
             )
         ]
-
 
         if len(executor.params) > 0:
             parameters_def = self.to_mysql_columns(executor.params)
@@ -591,7 +589,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         executor.stmt_execute(parameters)
 
-
         if executor.error is not None:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.ERROR,
@@ -607,7 +604,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             )
             return self.send_query_answer(resp)
 
-        # TODO prepared_stmt['type'] == 'lock'
+        # TODO prepared_stmt['type'] == 'lock' is not used but it works
         columns_def = self.to_mysql_columns(executor.columns)
         packages = [self.packet(ColumnCountPacket, count=len(columns_def))]
 

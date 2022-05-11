@@ -6,22 +6,19 @@ from mindsdb_sql.parser.ast import (
     Update
 )
 from mindsdb_sql import parse_sql
-from mindsdb_sql.planner import query_planner, utils as planner_utils
+from mindsdb_sql.planner import utils as planner_utils
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
-    get_all_tables,
     Column,
     SQLQuery
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErBadDbError,
-    ErNotSupportedYet,
     SqlApiException,
     log
 )
 
-import mindsdb.interfaces.storage.db as db
 
 from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
 
@@ -31,6 +28,8 @@ class Executor:
     def __init__(self, session, sqlserver):
         self.session = session
         self.sqlserver = sqlserver
+
+        self.query = None
 
         # returns
         self.columns = []
@@ -42,22 +41,12 @@ class Executor:
 
         self.is_executed = False
 
-        # self.model_types = {}
-        self.predictor_metadata = {}
+        # self.predictor_metadata = {}
 
         self.sql = ''
         self.sql_lower = ''
 
         self.command_executor = ExecuteCommands(self.session, self)
-
-
-
-    # def set_env(self, environ):
-    #     # i.e current database
-    #     self.environ = environ
-    #
-    # def get_env(self):
-    #     return self.environ
 
     def stmt_prepare(self, sql):
 
@@ -68,7 +57,6 @@ class Executor:
             return
 
         self.parse(sql)
-        # self.create_planner()
 
         # if not params
         params = planner_utils.get_query_params(self.query)
@@ -81,17 +69,14 @@ class Executor:
             # TODO less complex.
             #  planner is inside SQLQuery now.
 
-
             sqlquery = SQLQuery(
                 self.query,
                 session=self.session,
-                # planner=self.planner,
                 execute=False
             )
 
             sqlquery.prepare_query()
 
-            # fixme: select from mindsdb.* doesn't invoke prepare_steps and not fill params
             self.params = [
                 Column(
                     alias=p.value,
@@ -100,10 +85,10 @@ class Executor:
                 )
                 for p in params
             ]
-            # self.params = sqlquery.parameters
 
+            # TODO:
+            #   select * from mindsdb.predictors doesn't invoke prepare_steps and columns_list is empty
             self.columns = sqlquery.columns_list
-            # self.model_types = sqlquery.model_types
 
     def stmt_execute(self, param_values):
         if self.is_executed:
@@ -112,15 +97,8 @@ class Executor:
         # fill params
         self.query = planner_utils.fill_query_params(self.query, param_values)
 
-        # query is changed, rebuild planner
-        # self.create_planner()
-
         # execute query
         self.do_execute()
-
-
-    def stmt_fetch(self):
-        ...
 
     def query_execute(self, sql):
         resp = self.execute_external(sql)
@@ -130,42 +108,11 @@ class Executor:
             return
 
         self.parse(sql)
-        # self.create_planner()
         self.do_execute()
-
-    #
-    # def update_metadata(self):
-    #
-    #     self.predictor_metadata = {}
-    #     predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
-    #
-    #     for p in predictors:
-    #         model_name = p.name
-    #         if isinstance(p.data, dict) and 'error' not in p.data:
-    #             ts_settings = p.learn_args.get('timeseries_settings', {})
-    #             if ts_settings.get('is_timeseries') is True:
-    #                 window = ts_settings.get('window')
-    #                 order_by = ts_settings.get('order_by')[0]
-    #                 group_by = ts_settings.get('group_by')
-    #                 if isinstance(group_by, list) is False and group_by is not None:
-    #                     group_by = [group_by]
-    #                 self.predictor_metadata[model_name] = {
-    #                     'timeseries': True,
-    #                     'window': window,
-    #                     'horizon': ts_settings.get('horizon'),
-    #                     'order_by_column': order_by,
-    #                     'group_by_columns': group_by
-    #                 }
-    #             else:
-    #                 self.predictor_metadata[model_name] = {
-    #                     'timeseries': False
-    #                 }
-    #             self.model_types.update(p.data.get('dtypes', {}))
-
 
     def execute_external(self, sql):
 
-        # not exec in directly in integration
+        # not exec directly in integration
         return None
 
         # try exec in external integration
@@ -217,8 +164,6 @@ class Executor:
             self.data = data
             return True
 
-
-
     def parse(self, sql):
         self.sql = sql
         sql_lower = sql.lower()
@@ -230,7 +175,7 @@ class Executor:
             except Exception:
                 self.query = parse_sql(sql, dialect='mysql')
         except Exception as e:
-            # not all statemts are parse by parse_sql
+            # not all statements are parsed by parse_sql
             log.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
 
             sql_list = [x for x in self.sql_lower.replace('\t', ' ').split(' ') if x not in ('', ' ')]
@@ -244,11 +189,11 @@ class Executor:
                     raise SqlApiException(f"predictor name must start from letter character: {sql}")
 
             # TODO
-            # if sql_lower == "set names 'utf8mb4' collate 'utf8mb4_general_ci'":
-            #     return SQLAnswer(RESPONSE_TYPE.OK)
-            # if sql_lower.startswith('alter table') and (
-            #         sql_lower.endswith('disable keys') or sql_lower.endswith('enable keys')):
-            #     return SQLAnswer(RESPONSE_TYPE.OK)
+            if sql_lower == "set names 'utf8mb4' collate 'utf8mb4_general_ci'":
+                self.query = Set()  # empty set command
+            if sql_lower.startswith('alter table') and (
+                    sql_lower.endswith('disable keys') or sql_lower.endswith('enable keys')):
+                self.query = Set()  # empty set command
 
             st = SqlStatementParser(sql)
             keyword = st.keyword
@@ -263,18 +208,16 @@ class Executor:
             else:
                 raise SqlApiException(f'SQL statement cannot be parsed by mindsdb_sql - {sql}: {e}') from e
 
-            # not all statemts are parse by parse_sql
+            # not all statements are parse by parse_sql
             log.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
 
-            # TODO place for workarounds
+            # == a place for workarounds ==
             # or run sql in integration without parsing
 
     def do_execute(self):
         # it can be already run at prepare state
         if self.is_executed:
             return
-
-        # self.update_metadata()
 
         ret = self.command_executor.execute_command(self.query)
 
@@ -290,5 +233,3 @@ class Executor:
                 message=ret.error_message
             )
         self.state_track = ret.state_track
-        # if ret.model_types is not None:
-        #     self.model_types = ret.model_types

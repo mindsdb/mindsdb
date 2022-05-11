@@ -54,4 +54,13 @@ def query_df(df, query):
     res = duckdb.query_df(df, 'df_table', query_str)
     result_df = res.df()
     result_df = result_df.replace({np.nan: None})
+
+    new_column_names = {}
+    real_column_names = [x[0] for x in res.description()]
+    for i, duck_column_name in enumerate(result_df.columns):
+        new_column_names[duck_column_name] = real_column_names[i]
+    result_df = result_df.rename(
+        new_column_names,
+        axis='columns'
+    )
     return result_df

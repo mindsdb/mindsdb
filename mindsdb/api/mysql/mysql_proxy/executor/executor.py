@@ -178,7 +178,7 @@ class Executor:
             # not all statements are parsed by parse_sql
             log.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
 
-            sql_list = [x for x in self.sql_lower.replace('\t', ' ').split(' ') if x not in ('', ' ')]
+            sql_list = [x for x in self.sql_lower.replace('\t', ' ').replace('\n', ' ').split(' ') if x not in ('', ' ')]
             if len(sql_list) > 1 and sql_list[0] == "show":
                 raise SqlApiException(f"unknown command: {sql}")
             if len(sql_list) > 2 and " ".join(sql_list[:2]) == "create predictor":

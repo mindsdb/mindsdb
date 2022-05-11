@@ -22,7 +22,7 @@ helm upgrade -i \
 
 # Configuration
 
-All the configurations can be done in the [values.yaml](./mindsdb/values.yaml) file or you can create a seperate YAML file with only the values that you want to override and pass it with a `-f` to the `helm install` command
+All the configurations can be done in the [values.yaml](./mindsdb/values.yaml) file or you can create a separate YAML file with only the values that you want to override and pass it with a `-f` to the `helm install` command
 
 ### Image
 

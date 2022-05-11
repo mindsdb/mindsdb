@@ -140,4 +140,12 @@ class IntegrationDataNode(DataNode):
         if len(column_names) == 0:
             column_names = ['dataframe_is_empty']
 
-        return data, column_names
+        columns_info = [
+            {
+                'name': k,
+                'type': v
+            }
+            for k, v in dso.df.dtypes.items()
+        ]
+
+        return data, columns_info

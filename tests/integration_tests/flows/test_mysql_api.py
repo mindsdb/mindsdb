@@ -8,7 +8,7 @@ import docker
 import netifaces
 import pandas as pd
 import requests
-import mysql.connector
+
 
 from common import (
     run_environment,
@@ -41,75 +41,9 @@ class Dlist(list):
         return None
 
 
-class MySqlApiTest(unittest.TestCase):
+class TestScenario:
     predictor_name = 'home_rentals'
     file_datasource_name = "from_files"
-
-    @classmethod
-    def setUpClass(cls):
-        override_config = {
-            'integrations': {},
-            'api': {
-                "http": {"host": get_docker0_inet_ip()},
-                "mysql": {"host": get_docker0_inet_ip()}
-            }
-        }
-
-        run_environment(apis=['http', 'mysql'], override_config=override_config)
-        cls.docker_client = docker.from_env()
-        cls.mysql_image = 'mysql'
-
-        cls.config = json.loads(Path(CONFIG_PATH).read_text())
-
-        with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
-            cls.db_creds = json.load(f)
-
-        cls.launch_query_tmpl = "mysql --host=%s --port=%s --user=%s --database=mindsdb" % (
-            cls.config["api"]["mysql"]["host"],
-            cls.config["api"]["mysql"]["port"],
-            cls.config["api"]["mysql"]["user"])
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.docker_client.close()
-
-    def query(self, _query, encoding='utf-8'):
-        """Run mysql docker container
-           Perform connection to mindsdb database
-           Execute sql request
-           ----------------------
-           It is very problematic (or even impossible)
-           to provide sql statement as it is in 'docker run command',
-           that's why this action is splitted on three steps:
-               Save sql statement into temporary dir in .sql file
-               Run docker container with volume points to this temp dir,
-               Provide .sql file as input parameter for 'mysql' command"""
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            with open(f"{tmpdirname}/test.sql", 'w') as f:
-                f.write(_query)
-            cmd = f"{self.launch_query_tmpl} < /temp/test.sql"
-            cmd = 'sh -c "' + cmd + '"'
-            res = self.docker_client.containers.run(
-                self.mysql_image,
-                command=cmd,
-                remove=True,
-                volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
-                environment={"MYSQL_PWD": self.config["api"]["mysql"]["password"]})
-        return self.to_dicts(res.decode(encoding))
-
-    @staticmethod
-    def to_dicts(response):
-        if not response:
-            return {}
-        lines = response.splitlines()
-        if len(lines) < 2:
-            return {}
-        headers = tuple(lines[0].split("\t"))
-        res = Dlist()
-        for body in lines[1:]:
-            data = tuple(body.split("\t"))
-            res.append(dict(zip(headers, data)))
-        return res
 
     def create_datasource(self, db_type):
         _query = "CREATE DATASOURCE %s WITH ENGINE = '%s', PARAMETERS = %s;" % (
@@ -241,7 +175,6 @@ class MySqlApiTest(unittest.TestCase):
         _query = f"select * from files.{self.file_datasource_name};"
         self.query(_query)
 
-
     def test_9_ts_train_and_predict(self):
         train_df = pd.DataFrame({
             'group': ["A" for _ in range(100, 210)] + ["B" for _ in range(100, 210)],
@@ -292,95 +225,74 @@ class MySqlApiTest(unittest.TestCase):
                 self.assertTrue(len(res) == res_len, f"prediction result {res} contains more that {res_len} records")
 
 
-class MySqlBinApiTest(unittest.TestCase):
-    file_datasource_name = "from_files"
+
+class MySqlApiTest(unittest.TestCase, TestScenario):
+
+    @classmethod
+    def setUpClass(cls):
+        override_config = {
+            'integrations': {},
+            'api': {
+                "http": {"host": get_docker0_inet_ip()},
+                "mysql": {"host": get_docker0_inet_ip()}
+            }
+        }
+
+        run_environment(apis=['http', 'mysql'], override_config=override_config)
+        cls.docker_client = docker.from_env()
+        cls.mysql_image = 'mysql'
+
+        cls.config = json.loads(Path(CONFIG_PATH).read_text())
+
+        with open(EXTERNAL_DB_CREDENTIALS, 'rt') as f:
+            cls.db_creds = json.load(f)
+
+        cls.launch_query_tmpl = "mysql --host=%s --port=%s --user=%s --database=mindsdb" % (
+            cls.config["api"]["mysql"]["host"],
+            cls.config["api"]["mysql"]["port"],
+            cls.config["api"]["mysql"]["user"])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.docker_client.close()
 
     def query(self, _query, encoding='utf-8'):
+        """Run mysql docker container
+           Perform connection to mindsdb database
+           Execute sql request
+           ----------------------
+           It is very problematic (or even impossible)
+           to provide sql statement as it is in 'docker run command',
+           that's why this action is splitted on three steps:
+               Save sql statement into temporary dir in .sql file
+               Run docker container with volume points to this temp dir,
+               Provide .sql file as input parameter for 'mysql' command"""
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            with open(f"{tmpdirname}/test.sql", 'w') as f:
+                f.write(_query)
+            cmd = f"{self.launch_query_tmpl} < /temp/test.sql"
+            cmd = 'sh -c "' + cmd + '"'
+            res = self.docker_client.containers.run(
+                self.mysql_image,
+                command=cmd,
+                remove=True,
+                volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
+                environment={"MYSQL_PWD": self.config["api"]["mysql"]["password"]})
+        return self.to_dicts(res.decode(encoding))
 
-        cnx = mysql.connector.connect(
-            host=self.config["api"]["mysql"]["host"],
-            port=self.config["api"]["mysql"]["port"],
-            user=self.config["api"]["mysql"]["user"],
-            database='mindsdb',
-            password=self.config["api"]["mysql"]["password"]
-        )
-        cursor = cnx.cursor(prepared=True)
-
-        for subquery in _query.split(';'):
-            # multiple queries in one string
-            if subquery.strip() == '':
-                continue
-            cursor.execute(subquery)
-
-        if cursor.description:
-            columns = [i[0] for i in cursor.description]
-            data = cursor.fetchall()
-
-            res = Dlist()
-            for row in data:
-                res.append(dict(zip(columns, row)))
-
-        else:
-            res = {}
-
-        # print(f'==query==\n {_query}')
-        # print(f'==result==\n {res}')
+    @staticmethod
+    def to_dicts(response):
+        if not response:
+            return {}
+        lines = response.splitlines()
+        if len(lines) < 2:
+            return {}
+        headers = tuple(lines[0].split("\t"))
+        res = Dlist()
+        for body in lines[1:]:
+            data = tuple(body.split("\t"))
+            res.append(dict(zip(headers, data)))
         return res
-
-    def test_8_1_tableau_queries(self):
-        test_ds_name = self.file_datasource_name
-        predictor_name = "predictor_from_file"
-        integration = "files"
-
-        queries = [
-            f'''
-               SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),
-               TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES 
-               WHERE TABLE_SCHEMA LIKE '{integration}'
-                AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' ) ORDER BY TABLE_SCHEMA, TABLE_NAME
-            ''',
-            f'''
-                SELECT SUM(1) AS `cnt__0B4A4E8BD11C48FFB4730D4D2C32191A_ok`,
-                  max(`Custom SQL Query`.`x1`) AS `sum_height_ok`,
-                  max(`Custom SQL Query`.`y`) AS `sum_length1_ok`
-                FROM (
-                  SELECT res.x1, res.y 
-                   FROM files.{test_ds_name} as source
-                   JOIN mindsdb.{predictor_name} as res
-                ) `Custom SQL Query`
-                HAVING (COUNT(1) > 0)
-            ''',
-            f'''
-                SHOW FULL TABLES FROM {integration}
-            ''',
-            '''
-                SELECT `table_name`, `column_name`
-                FROM `information_schema`.`columns`
-                WHERE `data_type`='enum' AND `table_schema`='views';
-            ''',
-            '''
-                SHOW KEYS FROM `mindsdb`.`predictors`
-            ''',
-            '''
-                show full columns from `predictors`
-            ''',
-            '''
-                SELECT `table_name`, `column_name` FROM `information_schema`.`columns`
-                 WHERE `data_type`='enum' AND `table_schema`='mindsdb'
-            ''',
-            f'''
-                SELECT `Custom SQL Query`.`x1` AS `height`,
-                  `Custom SQL Query`.`y` AS `length1`
-                FROM (
-                   SELECT res.x1, res.y 
-                   FROM files.{test_ds_name} as source
-                   JOIN mindsdb.{predictor_name} as res
-                ) `Custom SQL Query`
-                LIMIT 100
-            '''
-        ]
-        for _query in queries:
-            self.query(_query)
 
 
 if __name__ == "__main__":

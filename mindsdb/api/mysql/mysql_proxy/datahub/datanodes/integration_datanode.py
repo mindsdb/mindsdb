@@ -29,7 +29,11 @@ class IntegrationDataNode(DataNode):
     def get_table_columns(self, tableName):
         return []
 
-    def create_table(self, table_name_parts, columns, data):
+    def create_table(self, table_name_parts, columns, data, is_replace=False, is_create=False):
+        # is_create - create table
+        # is_replace - drop table if exists
+        # is_create==False and is_replace==False: just insert
+
         dso, _creation_info = self.data_store.create_datasource(self.integration_name, {'query': 'select 1'})
         if hasattr(dso, 'execute') is False:
             raise Exception(f"Cant create table in {self.integration_name}")
@@ -67,22 +71,29 @@ class IntegrationDataNode(DataNode):
                     'name': column,
                     'type': column_type
                 })
-        create_table_ast = CreateTable(
-            name=Identifier(parts=table_name_parts),
-            columns=table_columns,
-            is_replace=True
-        )
 
-        create_query_str = renderer.get_string(create_table_ast, with_failback=False)
+        if is_replace:
+            # drop
+            drop_ast = DropTables(
+                tables=[Identifier(parts=table_name_parts)],
+                if_exists=True
+            )
 
-        drop_ast = DropTables(
-            tables=[Identifier(parts=table_name_parts)],
-            if_exists=True
-        )
+            drop_query_str = renderer.get_string(drop_ast, with_failback=False)
+            dso.execute(drop_query_str)
 
-        drop_query_str = renderer.get_string(drop_ast, with_failback=False)
-        dso.execute(drop_query_str)
-        dso.execute(create_query_str)
+            is_create = True
+
+        if is_create:
+
+            create_table_ast = CreateTable(
+                name=Identifier(parts=table_name_parts),
+                columns=table_columns,
+                is_replace=True
+            )
+
+            create_query_str = renderer.get_string(create_table_ast, with_failback=False)
+            dso.execute(create_query_str)
 
         insert_columns = [Identifier(parts=[x['name'][-1]]) for x in table_columns_meta]
         formatted_data = []

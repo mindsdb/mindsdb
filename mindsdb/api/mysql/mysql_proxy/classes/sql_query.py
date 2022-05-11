@@ -43,6 +43,7 @@ from mindsdb_sql.planner.steps import (
     MultipleSteps,
     ProjectStep,
     SaveToTable,
+    InsertToTable,
     FilterStep,
     UnionStep,
     JoinStep,
@@ -1127,7 +1128,16 @@ class SQLQuery():
                 'values': values
             }
 
-        elif type(step) == SaveToTable:
+        elif type(step) == SaveToTable or type(step) == InsertToTable:
+            is_replace = False
+            is_create = False
+
+            if type(step) == SaveToTable:
+                is_create = True
+
+                if step.is_replace:
+                    is_replace = True
+
             step_data = step.dataframe.result_data
             integration_name = step.table.parts[0]
             table_name_parts = step.table.parts[1:]
@@ -1158,7 +1168,13 @@ class SQLQuery():
                 step_data['columns'][table] = new_table_columns
             # endregion
 
-            dn.create_table(table_name_parts=table_name_parts, columns=step_data['columns'], data=step_data['values'])
+            dn.create_table(
+                table_name_parts=table_name_parts,
+                columns=step_data['columns'],
+                data=step_data['values'],
+                is_replace=is_replace,
+                is_create=is_create
+            )
             data = None
         else:
             raise SqlApiException(F'Unknown planner step: {step}')

@@ -1,7 +1,8 @@
 import json
 import datetime
-import pandas as pd
 from typing import Optional
+
+import pandas as pd
 
 from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatasource,

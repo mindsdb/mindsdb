@@ -124,6 +124,11 @@ h3{
 	font-weight: 600 !important;
 	font-size: 20px !important;
 	line-height: 20px !important;
+	padding-left: 10px !important;
+}
+
+h3 ~ p {
+	margin-left: 10px !important;
 }
 
 p a {
@@ -133,6 +138,10 @@ p a {
 p a:hover {
 	font-weight: 500;
 	color: #00A587 !important;
+}
+
+p:not(.admonition-title){
+	padding-left: 5px !important;
 }
 
 .md-nav__link{

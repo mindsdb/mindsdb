@@ -14,7 +14,7 @@ from common import (
     make_test_csv,
     run_environment
 )
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 rand = randint(0, pow(10, 12))
 ds_name = f'hr_ds_{rand}'

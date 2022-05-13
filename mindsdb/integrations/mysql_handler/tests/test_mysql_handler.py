@@ -1,7 +1,7 @@
 import unittest
-import pandas as pd
+
 from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 class MySQLHandlerTest(unittest.TestCase):
@@ -24,7 +24,6 @@ class MySQLHandlerTest(unittest.TestCase):
         dbs = self.handler.native_query("SHOW DATABASES;")
         assert dbs['type'] is not RESPONSE_TYPE.ERROR
 
-    
     def test_2_get_tables(self):
         tbls = self.handler.get_tables()
         assert tbls['type'] is not RESPONSE_TYPE.ERROR

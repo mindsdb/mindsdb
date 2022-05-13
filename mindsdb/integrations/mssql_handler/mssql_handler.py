@@ -3,9 +3,10 @@ from mindsdb_sql import parse_sql
 import pymssql
 from mindsdb.utilities.log import log
 from contextlib import closing
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 import pandas as pd
+
 
 class SqlServerHandler(DatabaseHandler):
     """

@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.mssql_handler.mssql_handler import SqlServerHandler
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 class SqlServerHandlerTest(unittest.TestCase):
@@ -15,10 +15,9 @@ class SqlServerHandlerTest(unittest.TestCase):
         }
         cls.handler = SqlServerHandler('test_sqlserver_handler', **cls.kwargs)
 
-
     def test_0_check_status(self):
         assert self.handler.check_status()
-        
+
     def test_1_describe_table(self):
         described = self.handler.describe_table("home_rentals")
         assert described['type'] is not RESPONSE_TYPE.ERROR

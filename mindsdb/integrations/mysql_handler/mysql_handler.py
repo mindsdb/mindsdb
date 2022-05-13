@@ -10,16 +10,7 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.utilities.log import log
-# from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
-
-class RESPONSE_TYPE:
-    __slots__ = ()
-    OK = 'ok'
-    TABLE = 'table'
-    ERROR = 'error'
-
-
-RESPONSE_TYPE = RESPONSE_TYPE()
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 class MySQLHandler(DatabaseHandler):

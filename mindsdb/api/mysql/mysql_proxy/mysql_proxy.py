@@ -36,6 +36,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import log
 
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     getConstName,
     CHARSET_NUMBERS,
@@ -74,10 +75,8 @@ from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
-
-import mindsdb.utilities.hooks as hooks
-
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
+import mindsdb.utilities.hooks as hooks
 
 
 def empty_fn():
@@ -131,16 +130,6 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         log.error(f'Check auth, user={username}: ERROR')
         log.error(e)
         log.error(traceback.format_exc())
-
-
-class RESPONSE_TYPE:
-    __slots__ = ()
-    OK = 'ok'
-    TABLE = 'table'
-    ERROR = 'error'
-
-
-RESPONSE_TYPE = RESPONSE_TYPE()
 
 
 class SQLAnswer:

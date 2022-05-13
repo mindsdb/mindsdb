@@ -60,6 +60,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery, Column
 )
 
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
     ERR,
@@ -709,9 +710,11 @@ class ExecuteCommands:
         integration_name = struct.get('integration_name')
 
         if integration_name is not None:
-            handler = self.session.integration_controller.get_handler(integration_name)
-            result = handler.native_query(struct['select'])
+            # handler = self.session.integration_controller.get_handler(integration_name)
+            # result = handler.native_query(struct['select'])
             # TODO
+            # if result.get('type') != RESPONSE_TYPE.TABLE:
+
 
 
             if integration_name.lower().startswith('datasource.'):

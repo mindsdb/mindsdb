@@ -7,7 +7,7 @@ from mindsdb_sql.parser.ast import Insert, Identifier, Constant, CreateTable, Ta
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.utilities.log import log
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 class IntegrationDataNode(DataNode):

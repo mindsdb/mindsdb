@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.questdb_handler.questdb_handler import QuestDBHandler
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 class QuestDBHandlerTest(unittest.TestCase):
@@ -14,7 +14,6 @@ class QuestDBHandlerTest(unittest.TestCase):
             "database": "questdb"
         }
         cls.handler = QuestDBHandler('test_questdb_handler', **cls.kwargs)
-
 
     def test_0_check_status(self):
         assert self.handler.check_status()

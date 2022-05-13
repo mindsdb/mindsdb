@@ -251,12 +251,15 @@ class LightwoodHandler(PredictiveHandler):
         return predictions
 
     def _get_model(self, stmt):
+        models = self.get_tables()
         if type(stmt.from_table) == Join:
             model_name = stmt.from_table.right.parts[-1]
+            if model_name not in models:
+                model_name = stmt.from_table.left.parts[-1]
         else:
             model_name = stmt.from_table.parts[-1]
 
-        if not model_name in self.get_tables():
+        if model_name not in models:
             raise Exception("Error, not found. Please create this predictor first.")
 
         predictor_dict = self._get_model_info(model_name)
@@ -314,6 +317,9 @@ if __name__ == '__main__':
         query = f"CREATE PREDICTOR {model_name} FROM {data_handler_name} (SELECT * FROM test.{data_table_name}) PREDICT {target}"
         cls.native_query(query)
 
+        query = f"RETRAIN {model_name}"  # try retrain syntax
+        cls.native_query(query)
+
     print(cls.describe_table(f'{model_name}'))
 
     # try single WHERE condition
@@ -335,10 +341,6 @@ if __name__ == '__main__':
     q = f"SELECT * FROM {into_table}"
     qp = cls.parser(q, dialect='mysql')
     assert len(data_handler.query(qp)['data_frame']) > 0
-
-    # retrain syntax
-    query = f"RETRAIN {model_name}"
-    cls.native_query(query)
 
     # try:
     #     data_handler.native_query(f"DROP TABLE test.{into_table}")

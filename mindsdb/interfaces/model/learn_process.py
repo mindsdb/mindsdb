@@ -167,7 +167,7 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
 
 @mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
-              delete_ds_on_fail: Optional[bool] = False, json_ai_override: dict = None) -> None:
+              json_ai_override: dict = None) -> None:
     if json_ai_override is None:
         json_ai_override = {}
     try:
@@ -175,15 +175,6 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
         run_fit(predictor_id, df)
     except Exception as e:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
-        if delete_ds_on_fail is True:
-            linked_db_ds = Dataset.query.filter_by(id=predictor_record.dataset_id).first()
-            if linked_db_ds is not None:
-                predictors_with_ds = Predictor.query.filter(
-                    (Predictor.id != predictor_id) & (Predictor.dataset_id == linked_db_ds.id)
-                ).all()
-                if len(predictors_with_ds) == 0:
-                    session.delete(linked_db_ds)
-                    predictor_record.dataset_id = None
 
         try:
             exception_type, _exception_object, exception_traceback = sys.exc_info()

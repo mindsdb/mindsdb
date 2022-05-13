@@ -85,16 +85,19 @@ class ModelController():
         finally:
             self._unlock_predictor(id)
 
-    def _get_from_data_df(self, from_data: dict) -> DataFrame:
-        if from_data['class'] == 'QueryDS':
-            ds = QueryDS(*from_data['args'], **from_data['kwargs'])
-        else:
-            ds_cls = getattr(mindsdb_datasources, from_data['class'])
-            ds = ds_cls(*from_data['args'], **from_data['kwargs'])
-        return ds.df
+    # def _get_from_data_df(self, from_data: dict) -> DataFrame:
+    #     if from_data['class'] == 'QueryDS':
+    #         ds = QueryDS(*from_data['args'], **from_data['kwargs'])
+    #     else:
+    #         ds_cls = getattr(mindsdb_datasources, from_data['class'])
+    #         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
+    #     return ds.df
 
+    # def _unpack_old_args(
+    #     self, from_data: dict, kwargs: dict, to_predict: Optional[Union[str, list]] = None
+    # ) -> Tuple[pd.DataFrame, ProblemDefinition, bool]:
     def _unpack_old_args(
-        self, from_data: dict, kwargs: dict, to_predict: Optional[Union[str, list]] = None
+        self, kwargs: dict, to_predict: Optional[Union[str, list]] = None
     ) -> Tuple[pd.DataFrame, ProblemDefinition, bool]:
         problem_definition = kwargs or {}
         if isinstance(to_predict, str):
@@ -143,21 +146,27 @@ class ModelController():
         ):
             problem_definition['ignore_features'] = [problem_definition['ignore_features']]
 
-        if from_data is not None:
-            df = self._get_from_data_df(from_data)
-        else:
-            df = None
+        # if from_data is not None:
+        #     df = self._get_from_data_df(from_data)
+        # else:
+        #     df = None
 
-        return df, problem_definition, join_learn_process, json_ai_override
+        # return df, problem_definition, join_learn_process, json_ai_override
+        return problem_definition, join_learn_process, json_ai_override
 
     @mark_process(name='learn')
-    def learn(self, name: str, from_data: dict, to_predict: str, dataset_id: int, kwargs: dict,
-              company_id: int, delete_ds_on_fail: Optional[bool] = False) -> None:
+    def learn(self, name: str, training_data: DataFrame, to_predict: str, kwargs: dict,
+              company_id: int) -> None:
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         if predictor_record is not None:
             raise Exception('Predictor name must be unique.')
 
-        df, problem_definition, join_learn_process, json_ai_override = self._unpack_old_args(from_data, kwargs, to_predict)
+        # TODO
+        # from_data -> dataframe
+        # del dataset_id
+        # del delete_ds_on_fail
+
+        problem_definition, join_learn_process, json_ai_override = self._unpack_old_args(kwargs, to_predict)
 
         is_cloud = self.config.get('cloud', False)
         if is_cloud is True:
@@ -174,7 +183,7 @@ class ModelController():
                         count += 1
                 if count == 2:
                     raise Exception('You can train no more than 2 models at the same time')
-            if len(df) > 10000:
+            if len(training_data) > 10000:
                 raise Exception('Datasets are limited to 10,000 rows on free accounts')
 
         if 'url' in problem_definition:
@@ -186,7 +195,8 @@ class ModelController():
             predictor_record = db.Predictor(
                 company_id=company_id,
                 name=name,
-                dataset_id=dataset_id,
+                # dataset_id=dataset_id,
+                dataset_id=None,
                 mindsdb_version=mindsdb_version,
                 lightwood_version=lightwood_version,
                 to_predict=problem_definition['target'],
@@ -201,7 +211,7 @@ class ModelController():
             db.session.add(predictor_record)
             db.session.commit()
             if train_url is not None:
-                p = LearnRemoteProcess(df, predictor_record.id)
+                p = LearnRemoteProcess(training_data, predictor_record.id)
                 p.start()
                 if join_learn_process:
                     p.join()
@@ -215,7 +225,8 @@ class ModelController():
         predictor_record = db.Predictor(
             company_id=company_id,
             name=name,
-            dataset_id=dataset_id,
+            # dataset_id=dataset_id,
+            dataset_id=None,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,
@@ -227,7 +238,7 @@ class ModelController():
         db.session.commit()
         predictor_id = predictor_record.id
 
-        p = LearnProcess(df, problem_definition, predictor_id, delete_ds_on_fail, json_ai_override)
+        p = LearnProcess(training_data, problem_definition, predictor_id, json_ai_override)
         p.start()
         if join_learn_process:
             p.join()
@@ -580,16 +591,18 @@ class ModelController():
 
     @mark_process(name='learn')
     def fit_predictor(self, name: str, from_data: dict, join_learn_process: bool, company_id: int) -> None:
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-        assert predictor_record is not None
+        # TODO
+        pass
+        # predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        # assert predictor_record is not None
 
-        df = self._get_from_data_df(from_data)
-        p = FitProcess(predictor_record.id, df)
-        p.start()
-        if join_learn_process:
-            p.join()
-            if not IS_PY36:
-                p.close()
+        # df = self._get_from_data_df(from_data)
+        # p = FitProcess(predictor_record.id, df)
+        # p.start()
+        # if join_learn_process:
+        #     p.join()
+        #     if not IS_PY36:
+        #         p.close()
 
     def export_predictor(self, name: str, company_id: int) -> json:
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()

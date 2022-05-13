@@ -268,17 +268,19 @@ class PredictorEditCode(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorTrain(Resource):
     def put(self, name):
-        for param in ['data_source_name']:
-            if param not in request.json:
-                return abort(400, 'Please provide {}'.format(param))
+        return abort(410, 'Method is not available')
 
-        from_data = request.default_store.get_datasource_obj(
-            request.json['data_source_name'],
-            raw=True
-        )
+        # for param in ['data_source_name']:
+        #     if param not in request.json:
+        #         return abort(400, 'Please provide {}'.format(param))
 
-        request.model_interface.fit_predictor(name, from_data, request.json.get('join_learn_process', False))
-        return '', 200
+        # from_data = request.default_store.get_datasource_obj(
+        #     request.json['data_source_name'],
+        #     raw=True
+        # )
+
+        # request.model_interface.fit_predictor(name, from_data, request.json.get('join_learn_process', False))
+        # return '', 200
 
 
 @ns_conf.route('/<name>/export')

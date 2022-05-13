@@ -699,7 +699,7 @@ class ExecuteCommands:
             struct['horizon'] = statement.horizon
 
         model_interface = self.session.model_interface
-        data_store = self.session.data_store
+        # data_store = self.session.data_store
 
         models = model_interface.get_models()
         model_names = [x['name'] for x in models]
@@ -710,45 +710,49 @@ class ExecuteCommands:
         integration_name = struct.get('integration_name')
 
         if integration_name is not None:
-            # handler = self.session.integration_controller.get_handler(integration_name)
-            # result = handler.native_query(struct['select'])
+            handler = self.session.integration_controller.get_handler(integration_name)
             # TODO
-            # if result.get('type') != RESPONSE_TYPE.TABLE:
+            # raise ErBadDbError(f"Unknown datasource: {integration_name}")
+            result = handler.native_query(struct['select'])
 
+            if result.get('type') != RESPONSE_TYPE.TABLE:
+                raise Exception(f'Error during query: {result.get("error_message")}')
 
+            ds_data_df = result['data_frame']
+            ds_column_names = list(ds_data_df.columns)
 
-            if integration_name.lower().startswith('datasource.'):
-                ds_name = integration_name[integration_name.find('.') + 1:]
-                ds = data_store.get_datasource_obj(ds_name, raw=True)
-                ds_data = data_store.get_datasource(ds_name)
-            else:
-                if (
-                    self.session.integration_controller.get(integration_name) is None
-                    and integration_name not in ('views', 'files')
-                ):
-                    raise ErBadDbError(f"Unknown datasource: {integration_name}")
+            # if integration_name.lower().startswith('datasource.'):
+            #     ds_name = integration_name[integration_name.find('.') + 1:]
+            #     ds = data_store.get_datasource_obj(ds_name, raw=True)
+            #     ds_data = data_store.get_datasource(ds_name)
+            # else:
+            #     if (
+            #         self.session.integration_controller.get(integration_name) is None
+            #         and integration_name not in ('views', 'files')
+            #     ):
+            #         raise ErBadDbError(f"Unknown datasource: {integration_name}")
 
-                ds_name = struct.get('datasource_name')
-                if ds_name is None:
-                    ds_name = data_store.get_vacant_name(predictor_name)
+            #     ds_name = struct.get('datasource_name')
+            #     if ds_name is None:
+            #         ds_name = data_store.get_vacant_name(predictor_name)
 
-                ds_kwargs = {'query': struct['select']}
-                if integration_name in ('views', 'files'):
-                    parsed = parse_sql(struct['select'])
-                    query_table = parsed.from_table.parts[-1]
-                    if integration_name == 'files':
-                        ds_kwargs['mindsdb_file_name'] = query_table
-                    else:
-                        ds_kwargs['source'] = query_table
-                ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)
-                ds_data = data_store.get_datasource(ds_name)
-                ds_id = ds_data['id']
+            #     ds_kwargs = {'query': struct['select']}
+            #     if integration_name in ('views', 'files'):
+            #         parsed = parse_sql(struct['select'])
+            #         query_table = parsed.from_table.parts[-1]
+            #         if integration_name == 'files':
+            #             ds_kwargs['mindsdb_file_name'] = query_table
+            #         else:
+            #             ds_kwargs['source'] = query_table
+            #     ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)
+            #     ds_data = data_store.get_datasource(ds_name)
+            #     ds_id = ds_data['id']
 
-            ds_column_names = [x['name'] for x in ds_data['columns']]
+            # ds_column_names = [x['name'] for x in ds_data['columns']]
             try:
                 predict = self._check_predict_columns(struct['predict'], ds_column_names)
             except Exception as e:
-                data_store.delete_datasource(ds_name)
+                # data_store.delete_datasource(ds_name)
                 raise e
 
             for i, p in enumerate(predict):
@@ -793,7 +797,8 @@ class ExecuteCommands:
                             f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
                         )
 
-        model_interface.learn(predictor_name, ds, predict, ds_id, kwargs=kwargs, delete_ds_on_fail=True)
+        # - ds - ds_id - delete_ds_on_fail
+        model_interface.learn(predictor_name, ds_data_df, predict, kwargs=kwargs)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 

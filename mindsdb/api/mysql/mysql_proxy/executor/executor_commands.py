@@ -455,28 +455,6 @@ class ExecuteCommands:
         elif type(statement) == Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
-            if "table_name,table_comment,if(table_type='base table', 'table', table_type)" in self.executor.sql_lower:
-                # TABLEAU
-                # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA LIKE 'mindsdb' AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
-                # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
-                if "table_schema like 'mindsdb'" in self.executor.sql_lower:
-                    data = [
-                        ['predictors', '', 'TABLE', 'mindsdb', '']
-                    ]
-                else:
-                    data = []
-                columns = [
-                    Column(name='TABLE_NAME', table_name='', type='str'),
-                    Column(name='TABLE_COMMENT', table_name='', type='str'),
-                    Column(name="IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE)", table_name='', type='str'),
-                    Column(name='TABLE_SCHEMA', table_name='', type='str'),
-                    Column(name='Value', table_name='', type='str'),
-                ]
-                return ExecuteAnswer(
-                    answer_type=ANSWER_TYPE.TABLE,
-                    columns=columns,
-                    data=data
-                )
 
             query = SQLQuery(
                 statement,

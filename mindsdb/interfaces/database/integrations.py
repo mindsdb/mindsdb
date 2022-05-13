@@ -12,6 +12,9 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.fs import create_directory
 from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
 
+from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
+from mindsdb.integrations.postgres_handler.postgres_handler import PostgresHandler
+
 
 class IntegrationController:
     @staticmethod
@@ -197,3 +200,25 @@ class IntegrationController:
                 connections[integration_name] = True
 
         return connections
+
+    def get_handler(self, name, company_id=None, case_sensitive=False):
+        if case_sensitive:
+            integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+        else:
+            integration_record = session.query(Integration).filter(
+                (Integration.company_id == company_id)
+                & (func.lower(Integration.name) == func.lower(name))
+            ).first()
+        integration_data = self._get_integration_record_data(integration_record, True)
+
+        integration_type = integration_data.get('type')
+        if integration_type not in ['mysql', 'postgres']:
+            raise Exception('Only mysql atm')
+
+        integration_name = integration_data.get('name')
+        del integration_data['name']
+        if integration_name == 'mysql':
+            handler = MySQLHandler(name=integration_name, **integration_data)
+        else:
+            handler = PostgresHandler(name=integration_name, **integration_data)
+        return handler

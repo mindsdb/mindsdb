@@ -72,7 +72,12 @@ class InformationSchema(DataNode):
         for datasource_name in datasource_names:
             if datasource_name.lower() == name_lower:
                 datasource = self.integration_controller.get(name=datasource_name)
-                return IntegrationDataNode(datasource_name, self.data_store, ds_type=datasource['type'])
+                return IntegrationDataNode(
+                    datasource_name,
+                    self.data_store,
+                    ds_type=datasource['type'],
+                    integration_controller=self.session.integration_controller
+                )
 
         return None
 

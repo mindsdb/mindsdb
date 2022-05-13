@@ -69,7 +69,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
 
 from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
 
-from mindsdb.api.mysql.mysql_proxy.executor.data_types import *
+from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
 
 
 class ExecuteCommands:
@@ -494,7 +494,6 @@ class ExecuteCommands:
             log.warning(f'Unknown SQL statement: {self.sql}')
             raise ErNotSupportedYet(f'Unknown SQL statement: {self.sql}')
 
-
     def answer_describe_predictor(self, predictor_value):
         predictor_attr = None
         if isinstance(predictor_value, (list, tuple)):
@@ -627,7 +626,6 @@ class ExecuteCommands:
             raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-
     def answer_drop_tables(self, statement):
         """ answer on 'drop table [if exists] {name}'
             Args:
@@ -661,7 +659,6 @@ class ExecuteCommands:
                 elif db_name == 'files':
                     self.session.data_store.delete_file(table_name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
-
 
     def answer_create_view(self, statement):
         name = statement.name
@@ -712,6 +709,11 @@ class ExecuteCommands:
         integration_name = struct.get('integration_name')
 
         if integration_name is not None:
+            handler = self.session.integration_controller.get_handler(integration_name)
+            result = handler.native_query(struct['select'])
+            # TODO
+
+
             if integration_name.lower().startswith('datasource.'):
                 ds_name = integration_name[integration_name.find('.') + 1:]
                 ds = data_store.get_datasource_obj(ds_name, raw=True)
@@ -921,7 +923,6 @@ class ExecuteCommands:
             session=self.session
         )
         return self.answer_select(query)
-
 
     def answer_single_row_select(self, statement):
         columns = []
@@ -1276,7 +1277,6 @@ class ExecuteCommands:
             data=query.result,
         )
 
-
     def is_db_exists(self, db_name):
         sql_statement = Select(
             targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
@@ -1420,7 +1420,6 @@ class ExecuteCommands:
             data.append(c_data)
         return data
 
-
     def _get_model_info(self, data):
         models_data = data.get("submodel_data", [])
         if models_data == []:
@@ -1434,7 +1433,6 @@ class ExecuteCommands:
             m_data.append(1 if model["is_best"] else 0)
             data.append(m_data)
         return data
-
 
     def _get_ensemble_data(self, data):
         ai_info = data.get('json_ai', {})

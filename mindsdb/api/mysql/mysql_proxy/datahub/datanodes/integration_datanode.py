@@ -7,15 +7,17 @@ from mindsdb_sql.parser.ast import Insert, Identifier, Constant, CreateTable, Ta
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.utilities.log import log
+from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
 
 
 class IntegrationDataNode(DataNode):
     type = 'integration'
 
-    def __init__(self, integration_name, data_store, ds_type):
+    def __init__(self, integration_name, data_store, ds_type, integration_controller):
         self.integration_name = integration_name
         self.data_store = data_store
         self.ds_type = ds_type
+        self.integration_controller = integration_controller
 
     def get_type(self):
         return self.type
@@ -113,39 +115,56 @@ class IntegrationDataNode(DataNode):
         dso.execute(query_str)
 
     def select(self, query):
-        if isinstance(query, str):
-            query_str = query
-        else:
-            if self.ds_type in ('postgres', 'snowflake'):
-                dialect = 'postgres'
-            else:
-                dialect = 'mysql'
-            render = SqlalchemyRender(dialect)
-            try:
-                query_str = render.get_string(query, with_failback=False)
-            except Exception as e:
-                log.error(f"Exception during query casting to '{dialect}' dialect. Query: {query}. Error: {e}")
-                query_str = render.get_string(query, with_failback=True)
+        handler = self.integration_controller.get_handler(self.integration_name)
+        result = handler.query(query)
 
-        dso, _creation_info = self.data_store.create_datasource(self.integration_name, {'query': query_str})
-        data = dso.df.to_dict(orient='records')
-        column_names = list(dso.df.columns)
+        if result.get('type') == RESPONSE_TYPE.ERROR:
+            raise Exception(result.get('error_message', ''))
 
-        for column_name in column_names:
-            if pd.core.dtypes.common.is_datetime_or_timedelta_dtype(dso.df[column_name]):
-                pass_data = dso.df[column_name].dt.to_pydatetime()
-                for i, rec in enumerate(data):
-                    rec[column_name] = pass_data[i].timestamp()
-
-        if len(column_names) == 0:
-            column_names = ['dataframe_is_empty']
-
+        df = result['data_frame']
         columns_info = [
             {
                 'name': k,
                 'type': v
             }
-            for k, v in dso.df.dtypes.items()
+            for k, v in df.dtypes.items()
         ]
-
+        data = df.to_dict(orient='records')
         return data, columns_info
+
+        # if isinstance(query, str):
+        #     query_str = query
+        # else:
+        #     if self.ds_type in ('postgres', 'snowflake'):
+        #         dialect = 'postgres'
+        #     else:
+        #         dialect = 'mysql'
+        #     render = SqlalchemyRender(dialect)
+        #     try:
+        #         query_str = render.get_string(query, with_failback=False)
+        #     except Exception as e:
+        #         log.error(f"Exception during query casting to '{dialect}' dialect. Query: {query}. Error: {e}")
+        #         query_str = render.get_string(query, with_failback=True)
+
+        # dso, _creation_info = self.data_store.create_datasource(self.integration_name, {'query': query_str})
+        # data = dso.df.to_dict(orient='records')
+        # column_names = list(dso.df.columns)
+
+        # for column_name in column_names:
+        #     if pd.core.dtypes.common.is_datetime_or_timedelta_dtype(dso.df[column_name]):
+        #         pass_data = dso.df[column_name].dt.to_pydatetime()
+        #         for i, rec in enumerate(data):
+        #             rec[column_name] = pass_data[i].timestamp()
+
+        # if len(column_names) == 0:
+        #     column_names = ['dataframe_is_empty']
+
+        # columns_info = [
+        #     {
+        #         'name': k,
+        #         'type': v
+        #     }
+        #     for k, v in dso.df.dtypes.items()
+        # ]
+
+        # return data, columns_info

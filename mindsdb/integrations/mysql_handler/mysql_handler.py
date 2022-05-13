@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 from contextlib import closing
 
 import pandas as pd
@@ -6,15 +6,25 @@ import mysql.connector
 from sqlalchemy import create_engine
 
 from mindsdb_sql import parse_sql
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+
+from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.utilities.log import log
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
+# from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
+
+class RESPONSE_TYPE:
+    __slots__ = ()
+    OK = 'ok'
+    TABLE = 'table'
+    ERROR = 'error'
+
+
+RESPONSE_TYPE = RESPONSE_TYPE()
 
 
 class MySQLHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the MySQL statements. 
+    This handler handles connection and execution of the MySQL statements.
     """
 
     def __init__(self, name, **kwargs):
@@ -79,9 +89,9 @@ class MySQLHandler(DatabaseHandler):
             with con.cursor(dictionary=True, buffered=True) as cur:
                 try:
                     cur.execute(f"USE {self.database};")
-                    cur.execute(query)       
-                    if cur.with_rows:                               
-                        result = cur.fetchall()                
+                    cur.execute(query)
+                    if cur.with_rows:
+                        result = cur.fetchall()
                         response = {
                             'type': RESPONSE_TYPE.TABLE,
                             'data_frame': pd.DataFrame(
@@ -133,7 +143,7 @@ class MySQLHandler(DatabaseHandler):
         renderer = SqlalchemyRender('mysql')
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
-  
+
     def select_into(self, table, dataframe: pd.DataFrame):
         """
         TODO: Update this

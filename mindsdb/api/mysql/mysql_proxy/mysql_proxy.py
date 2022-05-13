@@ -528,7 +528,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 state_track=executor.state_track,
             )
         else:
-
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,

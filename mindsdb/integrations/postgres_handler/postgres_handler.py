@@ -1,12 +1,25 @@
 from contextlib import closing
+
 import psycopg
 from psycopg.pq import ExecStatus
 from pandas import DataFrame
+
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
+# from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
 from mindsdb.utilities.log import log
+
+
+class RESPONSE_TYPE:
+    __slots__ = ()
+    OK = 'ok'
+    TABLE = 'table'
+    ERROR = 'error'
+
+
+RESPONSE_TYPE = RESPONSE_TYPE()
 
 
 class PostgresHandler(DatabaseHandler):
@@ -18,9 +31,9 @@ class PostgresHandler(DatabaseHandler):
         super().__init__(name)
         self.parser = parse_sql
         self.connection_args = kwargs
-        del self.connection_args['database']
         self.dialect = 'postgresql'
         self.database = kwargs.get('database')
+        del self.connection_args['database']
 
     def __connect(self):
         """
@@ -28,7 +41,16 @@ class PostgresHandler(DatabaseHandler):
         """
         # TODO: Check psycopg_pool
         self.connection_args['dbname'] = self.database
-        connection = psycopg.connect(**self.connection_args, connect_timeout=10)
+        args = self.connection_args.copy()
+        del args['type']
+        del args['publish']
+        del args['test']
+        # del args['dbname']
+        del args['date_last_update']
+        del args['integrations_name']
+        del args['database_name']
+        del args['id']
+        connection = psycopg.connect(**args, connect_timeout=10)
         return connection
 
     def check_status(self):

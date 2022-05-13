@@ -63,31 +63,11 @@ def load_predictor(predictor_dict, name):
         return dill.loads(predictor_dict['predictor'])
 
 
-def default_data_gather(handler, query):
+def default_train_data_gather(handler, query):
     records = handler.query(query)['data_frame']
     df = pd.DataFrame.from_records(records)
     return df
 
 
-def ts_data_gather(handler, query):
-    # todo: this should all be replaced by the mindsdb_sql logic
-    def _gather_partition(handler, query):
-        # todo apply limit and date here (LATEST vs other cutoffs)
-        # if 'date' == 'LATEST':
-        #     pass
-        # else:
-        #     pass
-        records = handler.query(query)['data_frame']
-        return pd.DataFrame.from_records(records)  # [:10]  # todo remove forced cap, testing purposes only
-
-    if True:  # todo  # query.group_by is None:
-        df = _gather_partition(handler, query)
-    else:
-        groups = handler.query(query)['data_frame']
-        dfs = []
-        for group in groups:
-            # query.where_stmt =  # todo turn BinaryOperation and other types into an AND with the respective group filter
-            dfs.append(_gather_partition(handler, query))
-        df = pd.concat(*dfs)
-
-    return df
+def ts_train_data_gather(handler, query):
+    return default_train_data_gather(handler, query)

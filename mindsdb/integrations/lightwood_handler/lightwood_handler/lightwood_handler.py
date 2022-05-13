@@ -9,8 +9,9 @@ from lightwood.api.types import JsonAI
 from lightwood.mixer import LightGBM
 from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition, _module_from_code
 
-from utils import unpack_jsonai_old_args, get_aliased_columns, _recur_get_conditionals
-from utils import default_data_gather, ts_data_gather, load_predictor
+from utils import unpack_jsonai_old_args, get_aliased_columns, _recur_get_conditionals, load_predictor
+from utils import default_train_data_gather, ts_train_data_gather
+from ts_planner import ts_join
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
@@ -88,7 +89,10 @@ class LightwoodHandler(PredictiveHandler):
             # get training data from other integration
             handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]
             handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
-            df = self._data_gather(handler, handler_query)
+            if handler_query.order_by is not None:
+                df = ts_train_data_gather(handler, handler_query)
+            else:
+                df = default_train_data_gather(handler, handler_query)
 
             json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
             json_ai = json_ai_from_problem(df, ProblemDefinition.from_dict(params)).to_dict()
@@ -119,7 +123,11 @@ class LightwoodHandler(PredictiveHandler):
 
             handler = MDB_CURRENT_HANDLERS[str(original_stmt.integration_name)]
             handler_query = self.parser(original_stmt.query_str, dialect=self.handler_dialect)
-            df = self._data_gather(handler, handler_query)
+            if handler_query.order_by is not None:
+                df = ts_train_data_gather(handler, handler_query)
+            else:
+                df = default_train_data_gather(handler, handler_query)
+
             predictor = load_predictor(all_models[model_name], model_name)
             predictor.adjust(df)
             all_models[model_name]['predictor'] = dill.dumps(predictor)
@@ -141,103 +149,112 @@ class LightwoodHandler(PredictiveHandler):
         df = self._call_predictor(df, model)
         return {'data_frame': df}
 
-    def _data_gather(self, handler, query):
-        """
-        Dispatcher to task-specialized data gathering methods.
-        e.g. for time series tasks, gather data per partition and fuse into a single dataframe
-        """  # noqa
-        if query.order_by is not None:
-            return ts_data_gather(handler, query)
-        else:
-            return default_data_gather(handler, query)
-
     def join(self, stmt, data_handler: BaseHandler, into: Optional[str] = None) -> pd.DataFrame:
         """
         Batch prediction using the output of a query passed to a data handler as input for the model.
         """  # noqa
-        if len(stmt.from_table.left.parts) == 1:
+        if len(stmt.from_table.left.parts) == 1:  # TODO: try fetching the model instead, more robust
             model_clause = 'left'
             data_clause = 'right'
         else:
             model_clause = 'right'
             data_clause = 'left'
 
+        model_name = str(getattr(stmt.from_table, model_clause))
         model_alias = str(getattr(stmt.from_table, model_clause).alias)
-        data_handler_table = getattr(stmt.from_table, data_clause).parts[-1]
-        data_handler_cols = list(set([t.parts[-1] for t in stmt.targets]))
 
         model = self._get_model(stmt)
         is_ts = model.problem_definition.timeseries_settings.is_timeseries
+
+        data_handler_table = getattr(stmt.from_table, data_clause).parts[-1]
+        data_handler_cols = list(set([t.parts[-1] for t in stmt.targets]))
 
         if not is_ts:
             data_query = Select(
                 targets=[Identifier(col) for col in data_handler_cols],
                 from_table=Identifier(data_handler_table),
                 where=stmt.where,
+                group_by = stmt.group_by,
+                having = stmt.having,
+                order_by = stmt.order_by,
+                offset = stmt.offset,
                 limit=stmt.limit
             )
+
             model_input = pd.DataFrame.from_records(
                 data_handler.query(data_query)['data_frame']
             )
         else:
-            # for TS, fetch correct groups, build window context, predict and limit, using self._ts_data_gather
-            # todo: call mindsdb_sql group by retrieval
-
-            # 1) get all groups
-            gby_col = model.problem_definition.timeseries_settings.group_by[0]  # todo add multiple group support
             oby_col = model.problem_definition.timeseries_settings.order_by[0]
-            for col in [gby_col] + [oby_col]:
-                if col not in data_handler_cols:
-                    data_handler_cols.append(col)
-
+            gby_col = model.problem_definition.timeseries_settings.group_by[0]  # todo add multiple group support
             window = model.problem_definition.timeseries_settings.window
-            groups_query = Select(
-                targets=[Identifier(gby_col)],
-                distinct=True,
-                from_table=Identifier(data_handler_table),
-            )
-            groups = list(data_handler.query(groups_query)['data_frame'].squeeze().values)
 
-            # 2) get LATEST available date and window for each group
-            latests = {}
-            windows = {}
+            # for TS, fetch correct groups, build window context, predict and limit, using self._ts_data_gather
+            model_input = ts_join(self.parser(query, dialect=self.dialect),
+                                  integrations=[data_handler_name],
+                                  predictor_namespace='mindsdb',
+                                  predictor_metadata={'timeseries': True,
+                                                      'model_name': model_name,
+                                                      'order_by_column': oby_col,
+                                                      'group_by_columns': [gby_col],
+                                                      'window': window
+                                                      }
+                                  )
 
-            for group in groups:
-                latest_oby_query = Select(
-                    targets=[Identifier(oby_col)],
+            # TODO: this is what should be replaced with mdb_sql logic to gather model_input
+            if False:
+                # 1) get all groups
+                for col in [gby_col] + [oby_col]:
+                    if col not in data_handler_cols:
+                        data_handler_cols.append(col)
+
+                groups_query = Select(
+                    targets=[Identifier(gby_col)],
+                    distinct=True,
                     from_table=Identifier(data_handler_table),
-                    where=BinaryOperation(op='=',
-                                          args=[
-                                              Identifier(gby_col),
-                                              Constant(group)
-                                          ]),
-                    order_by=[OrderBy(
-                        field=Identifier(oby_col),
-                        direction='DESC'
-                    )],
-                    limit=Constant(1)
                 )
-                latests[group] = data_handler.query(latest_oby_query)['data_frame'].values[0][0]
+                groups = list(data_handler.query(groups_query)['data_frame'].squeeze().values)
 
-                window_query =  Select(
-                    targets=[Identifier(col) for col in data_handler_cols],
-                    from_table=Identifier(data_handler_table),
-                    where=BinaryOperation(op='=',
-                                          args=[
-                                              Identifier(gby_col),
-                                              Constant(group)
-                                          ]),
-                )
-                # order and limit the df instead of SELECT to hedge against badly defined dtypes in the DB
-                df = data_handler.query(window_query)['data_frame']
+                # 2) get LATEST available date and window for each group
+                latests = {}
+                windows = {}
 
-                if len(df) < window and not model.problem_definition.timeseries_settings.allow_incomplete_history:
-                    raise Exception(f"Not enough data for group {group}. Either pass more historical context or train a predictor with the `allow_incomplete_history` argument set to True.")
-                df = df.sort_values(oby_col, ascending=False).iloc[0:window]
-                windows[group] = df[::-1]
+                for group in groups:
+                    latest_oby_query = Select(
+                        targets=[Identifier(oby_col)],
+                        from_table=Identifier(data_handler_table),
+                        where=BinaryOperation(op='=',
+                                              args=[
+                                                  Identifier(gby_col),
+                                                  Constant(group)
+                                              ]),
+                        order_by=[OrderBy(
+                            field=Identifier(oby_col),
+                            direction='DESC'
+                        )],
+                        limit=Constant(1)
+                    )
+                    latests[group] = data_handler.query(latest_oby_query)['data_frame'].values[0][0]
 
-            # 3) concatenate all contexts into single data query
-            model_input = pd.concat([v for k, v in windows.items()]).reset_index(drop=True)
+                    window_query =  Select(
+                        targets=[Identifier(col) for col in data_handler_cols],
+                        from_table=Identifier(data_handler_table),
+                        where=BinaryOperation(op='=',
+                                              args=[
+                                                  Identifier(gby_col),
+                                                  Constant(group)
+                                              ]),
+                    )
+                    # order and limit the df instead of SELECT to hedge against badly defined dtypes in the DB
+                    df = data_handler.query(window_query)['data_frame']
+
+                    if len(df) < window and not model.problem_definition.timeseries_settings.allow_incomplete_history:
+                        raise Exception(f"Not enough data for group {group}. Either pass more historical context or train a predictor with the `allow_incomplete_history` argument set to True.")
+                    df = df.sort_values(oby_col, ascending=False).iloc[0:window]
+                    windows[group] = df[::-1]
+
+                # 3) concatenate all contexts into single data query
+                model_input = pd.concat([v for k, v in windows.items()]).reset_index(drop=True)
 
         # get model output and rename columns
         predictions = self._call_predictor(model_input, model)

@@ -17,7 +17,7 @@ from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.interfaces.model.learn_process import brack_to_mod, rep_recur
 from mindsdb.utilities.config import Config
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant
+from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant, Select, OrderBy
 from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
     CreatePredictor,
@@ -155,15 +155,14 @@ class LightwoodHandler(PredictiveHandler):
         """
         Batch prediction using the output of a query passed to a data handler as input for the model.
         """  # noqa
-        # tag data and predictive handlers
         if len(stmt.from_table.left.parts) == 1:
             model_clause = 'left'
             data_clause = 'right'
         else:
             model_clause = 'right'
             data_clause = 'left'
-        model_alias = str(getattr(stmt.from_table, model_clause).alias)
 
+        model_alias = str(getattr(stmt.from_table, model_clause).alias)
         data_handler_table = getattr(stmt.from_table, data_clause).parts[-1]
         data_handler_cols = list(set([t.parts[-1] for t in stmt.targets]))
 
@@ -171,15 +170,15 @@ class LightwoodHandler(PredictiveHandler):
         is_ts = model.problem_definition.timeseries_settings.is_timeseries
 
         if not is_ts:
-            data_query = f"SELECT {','.join(data_handler_cols)} FROM {data_handler_table}"
-            if stmt.where:
-                data_query += f" WHERE {str(stmt.where)}"
-            if stmt.limit:
-                data_query += f" LIMIT {stmt.limit.value}"
-
-            parsed_query = self.parser(data_query, dialect=self.dialect)
+            data_query = Select(
+                targets=[Identifier(col) for col in data_handler_cols],
+                from_table=Identifier(data_handler_table),
+                where=stmt.where,
+                limit=stmt.limit
+            )
             model_input = pd.DataFrame.from_records(
-                data_handler.query(parsed_query)['data_frame'])
+                data_handler.query(data_query)['data_frame']
+            )
         else:
             # for TS, fetch correct groups, build window context, predict and limit, using self._ts_data_gather
             # todo: call mindsdb_sql group by retrieval
@@ -192,53 +191,56 @@ class LightwoodHandler(PredictiveHandler):
                     data_handler_cols.append(col)
 
             window = model.problem_definition.timeseries_settings.window
-            groups_query = f"SELECT {gby_col} from {data_handler_table}"  # add DISTINCT once the parser supports it
-            parsed_groups_query = self.parser(groups_query, dialect=self.handler_dialect)
-            out = data_handler.query(parsed_groups_query)['data_frame']
-            groups = list(pd.DataFrame.from_records(
-                data_handler.query(parsed_groups_query)['data_frame']
-            ).drop_duplicates().squeeze())
+            groups_query = Select(
+                targets=[Identifier(gby_col)],
+                distinct=True,
+                from_table=Identifier(data_handler_table),
+            )
+            groups = list(data_handler.query(groups_query)['data_frame'].squeeze().values)
 
             # 2) get LATEST available date and window for each group
             latests = {}
             windows = {}
 
             for group in groups:
-                # get latest observed timestamp
-                latest_query = f"SELECT {oby_col} FROM {data_handler_table}"
-                latest_query += f" WHERE {gby_col}='{group}'"
-                parsed_latest_query = self.parser(latest_query, dialect=self.handler_dialect)
-
-                # we order and limit the df instead of via SELECT because it doesn't support those operators (yet)
-                df = pd.DataFrame.from_records(
-                    data_handler.query(parsed_latest_query)['data_frame']
+                latest_oby_query = Select(
+                    targets=[Identifier(oby_col)],
+                    from_table=Identifier(data_handler_table),
+                    where=BinaryOperation(op='=',
+                                          args=[
+                                              Identifier(gby_col),
+                                              Constant(group)
+                                          ]),
+                    order_by=[OrderBy(
+                        field=Identifier(oby_col),
+                        direction='DESC'
+                    )],
+                    limit=Constant(1)
                 )
-                df = list(df.sort_values(oby_col, ascending=False).iloc[0].values)[0]
-                latests[group] = df
+                latests[group] = data_handler.query(latest_oby_query)['data_frame'].values[0][0]
 
-                # get window context
-                window_query = f"SELECT {','.join(data_handler_cols)} FROM {data_handler_table}"
-                window_query += f" WHERE {gby_col}='{group}'"
-                # as above, we order and limit the df instead of via SELECT because it doesn't support those operators
-                parsed_window_query = self.parser(window_query, dialect=self.handler_dialect)
-                df = pd.DataFrame.from_records(
-                    data_handler.query(
-                        parsed_window_query
-                    )['data_frame']
+                window_query =  Select(
+                    targets=[Identifier(col) for col in data_handler_cols],
+                    from_table=Identifier(data_handler_table),
+                    where=BinaryOperation(op='=',
+                                          args=[
+                                              Identifier(gby_col),
+                                              Constant(group)
+                                          ]),
                 )
+                # order and limit the df instead of SELECT to hedge against badly defined dtypes in the DB
+                df = data_handler.query(window_query)['data_frame']
 
                 if len(df) < window and not model.problem_definition.timeseries_settings.allow_incomplete_history:
                     raise Exception(f"Not enough data for group {group}. Either pass more historical context or train a predictor with the `allow_incomplete_history` argument set to True.")
                 df = df.sort_values(oby_col, ascending=False).iloc[0:window]
-                windows[group] = df
+                windows[group] = df[::-1]
 
             # 3) concatenate all contexts into single data query
             model_input = pd.concat([v for k, v in windows.items()]).reset_index(drop=True)
 
-        # get model output
+        # get model output and rename columns
         predictions = self._call_predictor(model_input, model)
-
-        # rename columns
         model_input.columns = get_aliased_columns(list(model_input.columns), model_alias, stmt.targets, mode='input')
         predictions.columns = get_aliased_columns(list(predictions.columns), model_alias, stmt.targets, mode='output')
 

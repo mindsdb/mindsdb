@@ -77,8 +77,6 @@ class ExecuteCommands:
     def __init__(self, session, executor):
         self.session = session
         self.executor = executor
-        self.sql_lower = executor.sql_lower
-        self.sql = executor.sql
 
         self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
         self.datahub = session.datahub
@@ -276,7 +274,7 @@ class ExecuteCommands:
                     columns=columns,
                     data=data
                 )
-            elif "show status like 'ssl_version'" in self.sql_lower:
+            elif "show status like 'ssl_version'" in self.executor.sql_lower:
                 return ExecuteAnswer(
                     answer_type=ANSWER_TYPE.TABLE,
                     columns=[
@@ -320,9 +318,9 @@ class ExecuteCommands:
                 )
                 return self.answer_select(query)
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
-            elif 'show create table' in self.sql_lower:
+            elif 'show create table' in self.executor.sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = self.sql[self.sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
+                table = self.executor.sql[self.executor.sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
                 return self.answer_show_create_table(table)
             elif sql_category in ('character set', 'charset'):
                 where = statement.where
@@ -394,7 +392,7 @@ class ExecuteCommands:
                 # elif condition == 'from' and type(expression) == Identifier:
                 #     table_name = expression.parts[-1]
                 if table_name is None:
-                    err_str = f"Can't determine table name in query: {self.sql}"
+                    err_str = f"Can't determine table name in query: {self.executor.sql}"
                     log.warning(err_str)
                     raise ErTableExistError(err_str)
                 return self.answer_show_table_status(table_name)
@@ -402,7 +400,7 @@ class ExecuteCommands:
                 is_full = statement.modes is not None and 'full' in statement.modes
                 return self.answer_show_columns(statement.from_table, statement.where, statement.like, is_full=is_full)
             else:
-                raise ErNotSupportedYet(f'Statement not implemented: {self.sql}')
+                raise ErNotSupportedYet(f'Statement not implemented: {self.executor.sql}')
         elif type(statement) in (StartTransaction, CommitTransaction, RollbackTransaction):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Set:
@@ -431,7 +429,7 @@ class ExecuteCommands:
                     ]
                 )
             else:
-                log.warning(f'SQL statement is not processable, return OK package: {self.sql}')
+                log.warning(f'SQL statement is not processable, return OK package: {self.executor.sql}')
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Use:
             db_name = statement.value.parts[-1]
@@ -452,16 +450,16 @@ class ExecuteCommands:
             return self.process_insert(statement)
         elif type(statement) == Update:
             raise ErNotSupportedYet('Update is not implemented')
-        elif type(statement) == Alter and ('disable keys' in self.sql_lower) or ('enable keys' in self.sql_lower):
+        elif type(statement) == Alter and ('disable keys' in self.executor.sql_lower) or ('enable keys' in self.executor.sql_lower):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
-            if "table_name,table_comment,if(table_type='base table', 'table', table_type)" in self.sql_lower:
+            if "table_name,table_comment,if(table_type='base table', 'table', table_type)" in self.executor.sql_lower:
                 # TABLEAU
                 # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA LIKE 'mindsdb' AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
                 # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
-                if "table_schema like 'mindsdb'" in self.sql_lower:
+                if "table_schema like 'mindsdb'" in self.executor.sql_lower:
                     data = [
                         ['predictors', '', 'TABLE', 'mindsdb', '']
                     ]
@@ -491,8 +489,8 @@ class ExecuteCommands:
             # TODO
             return self.answer_apply_predictor(statement)
         else:
-            log.warning(f'Unknown SQL statement: {self.sql}')
-            raise ErNotSupportedYet(f'Unknown SQL statement: {self.sql}')
+            log.warning(f'Unknown SQL statement: {self.executor.sql}')
+            raise ErNotSupportedYet(f'Unknown SQL statement: {self.executor.sql}')
 
 
     def answer_describe_predictor(self, predictor_value):

@@ -10,22 +10,20 @@
 """
 
 import re
+from collections import OrderedDict
 import datetime
 import time
 
 import duckdb
 import pandas as pd
 import numpy as np
-from lightwood.api import dtype
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     UnaryOperation,
     CreateTable,
     Identifier,
-    Operation,
     Constant,
-    OrderBy,
     Select,
     Union,
     Join,
@@ -47,29 +45,24 @@ from mindsdb_sql.planner.steps import (
     SaveToTable,
     FilterStep,
     UnionStep,
-    JoinStep
+    JoinStep,
+    GroupByStep
 )
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
+from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.mysql.mysql_proxy.classes.com_operators import operator_map
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES, ERR
-from mindsdb.api.mysql.mysql_proxy.utilities import log
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
-    ErBadDbError,
-    ErBadTableError,
     ErKeyColumnDoesNotExist,
-    ErTableExistError,
-    ErDubFieldName,
-    ErDbDropDelete,
-    ErNonInsertableTable,
     ErNotSupportedYet,
 )
+
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -180,7 +173,8 @@ def is_empty_prediction_row(predictor_value):
 class Column:
     def __init__(self, name=None, alias=None,
                  table_name=None, table_alias=None,
-                 type=None, database=None):
+                 type=None, database=None, flags=None,
+                 charset=None):
         if alias is None:
             alias = name
         if table_alias is None:
@@ -191,6 +185,8 @@ class Column:
         self.table_alias = table_alias
         self.type = type
         self.database = database
+        self.flags = flags
+        self.charset = charset
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.__dict__})'
@@ -205,6 +201,7 @@ class SQLQuery():
         self.outer_query = None
         self.row_id = 0
         self.columns_list = None
+        self.model_types = {}
 
         self.mindsdb_database_name = 'mindsdb'
 
@@ -230,11 +227,69 @@ class SQLQuery():
         self.planner = None
         self.parameters = []
         self.fetched_data = None
-        self.model_types = {}
-        self._process_query()
+        # self._process_query(sql)
+        self.create_planner()
         if execute:
             self.prepare_query(prepare=False)
             self.execute_query()
+
+    def create_planner(self):
+
+        integrations_names = self.session.datahub.get_integrations_names()
+        integrations_names.append('information_schema')
+        integrations_names.append('files')
+        integrations_names.append('views')
+
+        predictor_metadata = {}
+        predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
+
+        query_tables = []
+
+        def get_all_query_tables(node, is_table, **kwargs):
+            if is_table and isinstance(node, Identifier):
+                query_tables.append(node.parts[-1])
+
+        query_traversal(self.query, get_all_query_tables)
+
+        # get all predictors
+        for p in predictors:
+            model_name = p.name
+
+            if model_name not in query_tables:
+                # skip
+                continue
+
+            if isinstance(p.data, dict) and 'error' not in p.data:
+                ts_settings = p.learn_args.get('timeseries_settings', {})
+                if ts_settings.get('is_timeseries') is True:
+                    window = ts_settings.get('window')
+                    order_by = ts_settings.get('order_by')[0]
+                    group_by = ts_settings.get('group_by')
+                    if isinstance(group_by, list) is False and group_by is not None:
+                        group_by = [group_by]
+                    predictor_metadata[model_name] = {
+                        'timeseries': True,
+                        'window': window,
+                        'horizon': ts_settings.get('horizon'),
+                        'order_by_column': order_by,
+                        'group_by_columns': group_by
+                    }
+                else:
+                    predictor_metadata[model_name] = {
+                        'timeseries': False
+                    }
+                self.model_types.update(p.data.get('dtypes', {}))
+
+        mindsdb_database_name = 'mindsdb'
+        database = None if self.session.database == '' else self.session.database.lower()
+
+        self.planner = query_planner.QueryPlanner(
+            self.query,
+            integrations=integrations_names,
+            predictor_namespace=mindsdb_database_name,
+            predictor_metadata=predictor_metadata,
+            default_namespace=database
+        )
 
     def fetch(self, datahub, view='list'):
         data = self.fetched_data
@@ -258,11 +313,11 @@ class SQLQuery():
         table_alias = get_table_alias(step.query.from_table, self.database)
         # TODO for information_schema we have 'database' = 'mindsdb'
 
-        data, column_names = dn.select(
+        data, columns_info = dn.select(
             query=query
         )
 
-        columns = [(column_name, column_name) for column_name in column_names]
+        columns = [(column['name'], column['name']) for column in columns_info]
         columns.append(('__mindsdb_row_id', '__mindsdb_row_id'))
 
         for i, row in enumerate(data):
@@ -272,10 +327,15 @@ class SQLQuery():
         data = [{(key, key): value for key, value in row.items()} for row in data]
         data = [{table_alias: x} for x in data]
 
+        col_types = {
+            column['name']: column['type']
+            for column in columns_info
+        }
         data = {
             'values': data,
             'columns': {table_alias: columns},
-            'tables': [table_alias]
+            'tables': [table_alias],
+            'types': {table_alias: col_types}
         }
         return data
 
@@ -313,52 +373,6 @@ class SQLQuery():
 
         return data
 
-    def _process_query(self):
-        # self.query = parse_sql(sql, dialect='mindsdb')
-
-        integrations_names = self.datahub.get_integrations_names()
-        integrations_names.append('information_schema')
-        integrations_names.append('files')
-        integrations_names.append('views')
-
-        if isinstance(self.query, Select):
-            all_tables = get_all_tables(self.query)
-        elif isinstance(self.query, CreateTable):
-            all_tables = [self.query.from_select.from_table.right.parts[-1]]
-
-        predictor_metadata = {}
-        predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
-        for model_name in set(all_tables):
-            for p in predictors:
-                if p.name == model_name:
-                    if isinstance(p.data, dict) and 'error' not in p.data:
-                        ts_settings = p.learn_args.get('timeseries_settings', {})
-                        if ts_settings.get('is_timeseries') is True:
-                            window = ts_settings.get('window')
-                            order_by = ts_settings.get('order_by')[0]
-                            group_by = ts_settings.get('group_by')
-                            if isinstance(group_by, list) is False and group_by is not None:
-                                group_by = [group_by]
-                            predictor_metadata[model_name] = {
-                                'timeseries': True,
-                                'window': window,
-                                'horizon': ts_settings.get('horizon'),
-                                'order_by_column': order_by,
-                                'group_by_columns': group_by
-                            }
-                        else:
-                            predictor_metadata[model_name] = {
-                                'timeseries': False
-                            }
-                        self.model_types.update(p.data.get('dtypes', {}))
-
-        self.planner = query_planner.QueryPlanner(
-            self.query,
-            integrations=integrations_names,
-            predictor_namespace=self.mindsdb_database_name,
-            predictor_metadata=predictor_metadata,
-            default_namespace=self.database
-        )
 
     def prepare_query(self, prepare=True):
         mindsdb_sql_struct = self.query
@@ -558,14 +572,18 @@ class SQLQuery():
             if self.columns_list is None:
                 self.columns_list = []
                 for table_name in self.fetched_data['columns']:
-                    self.columns_list.extend([
-                        Column(database=table_name[0],
-                               table_name=table_name[1],
-                               table_alias=table_name[2],
-                               name=column[0],
-                               alias=column[1])
-                        for column in self.fetched_data['columns'][table_name]
-                    ])
+                    col_types = self.fetched_data['types'].get(table_name, {})
+                    for column in self.fetched_data['columns'][table_name]:
+                        self.columns_list.append(
+                            Column(
+                                database=table_name[0],
+                                table_name=table_name[1],
+                                table_alias=table_name[2],
+                                name=column[0],
+                                alias=column[1],
+                                type=col_types.get(column[0])
+                            )
+                        )
 
             self.columns_list = [x for x in self.columns_list if x.name != '__mindsdb_row_id']
         except Exception as e:
@@ -735,78 +753,49 @@ class SQLQuery():
                         if isinstance(row[key], datetime.date):
                             row[key] = str(row[key])
 
-                data = dn.select(
-                    table=predictor,
-                    columns=None,
-                    where_data=where_data,
-                    integration_name=self.session.integration,
-                    integration_type=self.session.integration_type
-                )
-
-                # if is_timeseries:
-                #     if 'LATEST' not in self.raw:
-                #         # remove additional records from predictor results:
-                #         # first 'window_size' and last 'horizon' records
-                #         # otherwise there are many unxpected rows in prediciton result:
-                #         # ----------------------------------------------------------------------------------------
-                #         # mysql> SELECT tb.time, tb.state, tb.pnew_case, tb.new_case from
-                #         # MYSQL_LOCAL.test_data.covid AS
-                #         # ta JOIN mindsdb.covid_hor3 AS tb
-                #         # WHERE ta.state = "CA" AND ta.time BETWEEN "2020-10-19" AND "2020-10-20";
-                #         # ----------------------------------------------------------------------------------------
-                #         # +------------+-------+-----------+----------+
-                #         # | time       | state | pnew_case | new_case |
-                #         # +------------+-------+-----------+----------+
-                #         # | 2020-10-09 | CA    | 0         | 2862     |
-                #         # | 2020-10-10 | CA    | 0         | 2979     |
-                #         # | 2020-10-11 | CA    | 0         | 3075     |
-                #         # | 2020-10-12 | CA    | 0         | 3329     |
-                #         # | 2020-10-13 | CA    | 0         | 2666     |
-                #         # | 2020-10-14 | CA    | 0         | 2378     |
-                #         # | 2020-10-15 | CA    | 0         | 3449     |
-                #         # | 2020-10-16 | CA    | 0         | 3803     |
-                #         # | 2020-10-17 | CA    | 0         | 4170     |
-                #         # | 2020-10-18 | CA    | 0         | 3806     |
-                #         # | 2020-10-19 | CA    | 0         | 3286     |
-                #         # | 2020-10-20 | CA    | 0         | 3474     |
-                #         # | 2020-10-21 | CA    | 0         | 3474     |
-                #         # | 2020-10-22 | CA    | 0         | 3474     |
-                #         # +------------+-------+-----------+----------+
-                #         # 14 rows in set (2.52 sec)
-
-                #         window_size = predictor_metadata[predictor]['window']
-                #         horizon = predictor_metadata[predictor]['horizon']
-                #         if len(data) >= (window_size + horizon):
-                #             data = data[window_size:]
-                #             if len(data) > horizon and horizon > 1:
-                #                 data = data[:-horizon + 1]
-                if isinstance(self.query, CreateTable):
-                    new_data = []
-                    for row in data:
-                        new_row = {}
-                        for key, value in row.items():
-                            if key not in ('__mindsdb_row_id', '__mdb_make_predictions'):
-                                new_key = f'predictor.{key}'
-                            else:
-                                new_key = key
-                            new_row[(new_key, new_key)] = value
-                        new_data.append(new_row)
-                    data = new_data
-                else:
-                    data = [{(key, key): value for key, value in row.items()} for row in data]
-
                 table_name = get_preditor_alias(step, self.database)
-                values = [{table_name: x} for x in data]
                 columns = {table_name: []}
-                if len(data) > 0:
-                    row = data[0]
-                    columns[table_name] = list(row.keys())
-                # TODO else
+                if len(where_data) == 0:
+                    # no data, don't run predictor
+                    cols = dn.get_table_columns(predictor) + ['__mindsdb_row_id']
+                    columns[table_name] = [(c, c) for c in cols]
+                    values = []
+                else:
+                    data = dn.select(
+                        table=predictor,
+                        columns=None,
+                        where_data=where_data,
+                        integration_name=self.session.integration,
+                        integration_type=self.session.integration_type
+                    )
+
+                    if isinstance(self.query, CreateTable):
+                        new_data = []
+                        for row in data:
+                            new_row = {}
+                            for key, value in row.items():
+                                if key not in ('__mindsdb_row_id', '__mdb_make_predictions'):
+                                    new_key = f'predictor.{key}'
+                                else:
+                                    new_key = key
+                                new_row[(new_key, new_key)] = value
+                            new_data.append(new_row)
+                        data = new_data
+                    else:
+                        data = [{(key, key): value for key, value in row.items()} for row in data]
+
+                    values = [{table_name: x} for x in data]
+
+                    if len(data) > 0:
+                        row = data[0]
+                        columns[table_name] = list(row.keys())
+                    # TODO else
 
                 data = {
                     'values': values,
                     'columns': columns,
-                    'tables': [table_name]
+                    'tables': [table_name],
+                    'types': {table_name: self.model_types}
                 }
             except Exception as e:
                 raise SqlApiException(f'error in apply predictor step: {e}') from e
@@ -835,23 +824,28 @@ class SQLQuery():
                 data = {
                     'values': [],
                     'columns': {},
-                    'tables': list(set(left_data['tables'] + right_data['tables']))
+                    'tables': list(set(left_data['tables'] + right_data['tables'])),
+                    'types': {}
                 }
 
                 for data_part in [left_data, right_data]:
                     for table_name in data_part['columns']:
                         if table_name not in data['columns']:
                             data['columns'][table_name] = data_part['columns'][table_name]
+                            # keep types
+                            data['types'][table_name] = data_part.get('types', {}).get(table_name, {}).copy()
                         else:
                             data['columns'][table_name].extend(data_part['columns'][table_name])
+                            # keep types
+                            data['types'][table_name].update(data_part.get('types', {}).get(table_name, {}))
                 for table_name in data['columns']:
                     data['columns'][table_name] = list(set(data['columns'][table_name]))
 
                 left_key = left_data['tables'][0]
                 right_key = right_data['tables'][0]
 
-                left_columns_map = {}
-                left_columns_map_reverse = {}
+                left_columns_map = OrderedDict()
+                left_columns_map_reverse = OrderedDict()
                 for i, column_name in enumerate(left_data['columns'][left_key]):
                     left_columns_map[f'a{i}'] = column_name
                     left_columns_map_reverse[column_name] = f'a{i}'
@@ -872,8 +866,8 @@ class SQLQuery():
                     row = row[right_key]
                     right_df_data.append({right_columns_map_reverse[key]: value for key, value in row.items()})
 
-                df_a = pd.DataFrame(left_df_data)
-                df_b = pd.DataFrame(right_df_data)
+                df_a = pd.DataFrame(left_df_data, columns=left_columns_map.keys())
+                df_b = pd.DataFrame(right_df_data, columns=right_columns_map.keys())
 
                 a_name = f'a{round(time.time() * 1000)}'
                 b_name = f'b{round(time.time() * 1000)}'
@@ -982,9 +976,9 @@ class SQLQuery():
                                     table_column_names_list = [x[1] or x[0] for x in table_columns]
                                     column_exists = get_column_in_case(table_column_names_list, column_name)
                                     if column_exists:
-                                        if appropriate_table is not None:
+                                        if appropriate_table is not None and not step.ignore_doubles:
                                             raise Exception(
-                                                'Found multiple appropriate tables for column {column_name}')
+                                                f'Found multiple appropriate tables for column {column_name}')
                                         else:
                                             appropriate_table = table_name
                             if appropriate_table is None:
@@ -1073,6 +1067,65 @@ class SQLQuery():
                 if isinstance(e, SqlApiException):
                     raise e
                 raise SqlApiException(f'error on project step: {e} ') from e
+        elif type(step) == GroupByStep:
+            step_data = steps_data[step.dataframe.step_num]
+
+            result = []
+            cols = set()
+            for _, col_list in step_data['columns'].items():
+                for col in col_list:
+                    cols.add(col[0])
+
+            for row in step_data['values']:
+                data_row = {}
+                for table, col_list in step_data['columns'].items():
+                    for col in col_list:
+                        data_row[col[0]] = row[table][col]
+                result.append(data_row)
+
+            df = pd.DataFrame(result, columns=list(cols))
+
+            query = Select(targets=step.targets, from_table='df', group_by=step.columns).to_string()
+            res = query_df(df, query)
+
+            resp_dict = res.to_dict(orient='records')
+
+            # stick all columns to first table
+            appropriate_table = step_data['tables'][0]
+
+            columns_list = []
+            columns = []
+            for key, dtyp in res.dtypes.items():
+                columns_list.append(
+                    Column(database=appropriate_table[0],
+                           table_name=appropriate_table[1],
+                           table_alias=appropriate_table[2],
+                           name=key,
+                           type=dtyp,
+                           alias=key)
+                )
+                columns.append((key, key))
+
+            values = []
+            for row in resp_dict:
+                row2 = {
+                    (key, key): value
+                    for key, value in row.items()
+                }
+
+                values.append(
+                    {
+                        appropriate_table: row2
+                    }
+                )
+
+            # columns are changed
+            self.columns_list = columns_list
+            data = {
+                'tables': [appropriate_table],
+                'columns': columns,
+                'values': values
+            }
 
         elif type(step) == SaveToTable:
             step_data = step.dataframe.result_data
@@ -1155,34 +1208,4 @@ class SQLQuery():
 
     @property
     def columns(self):
-        return self.to_mysql_columns(self.columns_list)
-
-    def to_mysql_columns(self, columns_list):
-        result = []
-        for column_record in columns_list:
-            try:
-                field_type = self.model_types.get(column_record.name)
-            except Exception:
-                field_type = column_record.type
-
-            column_type = TYPES.MYSQL_TYPE_VAR_STRING
-            if field_type == dtype.date:
-                column_type = TYPES.MYSQL_TYPE_DATE
-            elif field_type == dtype.datetime:
-                column_type = TYPES.MYSQL_TYPE_DATETIME
-            elif field_type == dtype.float:
-                column_type = TYPES.MYSQL_TYPE_DOUBLE
-            elif field_type == dtype.integer:
-                column_type = TYPES.MYSQL_TYPE_LONG
-
-            result.append({
-                'database': column_record.database or self.database,
-                #  TODO add 'original_table'
-                'table_name': column_record.table_name,
-                'name': column_record.name,
-                'alias': column_record.alias or column_record.name,
-                # NOTE all work with text-type, but if/when wanted change types to real,
-                # it will need to check all types casts in BinaryResultsetRowPacket
-                'type': column_type
-            })
-        return result
+        raise Exception('this method must not use')

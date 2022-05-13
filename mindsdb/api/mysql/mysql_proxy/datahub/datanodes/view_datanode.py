@@ -46,4 +46,13 @@ class ViewDataNode(DataNode):
             self.data_store.delete_datasource(dataset_name)
 
         result = query_df(data_df, query_str)
-        return result.to_dict(orient='records'), result.columns.to_list()
+
+        columns_info = [
+            {
+                'name': k,
+                'type': v
+            }
+            for k, v in result.dtypes.items()
+        ]
+
+        return result.to_dict(orient='records'), columns_info

@@ -31,4 +31,13 @@ class FileDataNode(DataNode):
         file_datasource = FileDS(file_path)
         data_df = file_datasource.df
         result = query_df(data_df, query)
-        return result.to_dict(orient='records'), result.columns.to_list()
+
+        columns_info = [
+            {
+                'name': k,
+                'type': v
+            }
+            for k, v in result.dtypes.items()
+        ]
+
+        return result.to_dict(orient='records'), columns_info

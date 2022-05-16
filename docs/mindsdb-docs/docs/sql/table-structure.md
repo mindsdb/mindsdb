@@ -5,8 +5,13 @@
 On startup the mindsdb database will contain 2 tables: `predictors` and `datasources`
 
 ```sql
-
 MySQL [mindsdb]> show tables;
+
+```
+
+```sql
+
+MySQL [mindsdb]> 
 +---------------------------+
 | Tables_in_mindsdb         |
 +---------------------------+

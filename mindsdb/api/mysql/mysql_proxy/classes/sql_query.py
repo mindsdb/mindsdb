@@ -572,19 +572,20 @@ class SQLQuery():
             # if there was no 'ProjectStep', then get columns list from last step:
             if self.columns_list is None:
                 self.columns_list = []
-                for table_name in self.fetched_data['columns']:
-                    col_types = self.fetched_data['types'].get(table_name, {})
-                    for column in self.fetched_data['columns'][table_name]:
-                        self.columns_list.append(
-                            Column(
-                                database=table_name[0],
-                                table_name=table_name[1],
-                                table_alias=table_name[2],
-                                name=column[0],
-                                alias=column[1],
-                                type=col_types.get(column[0])
+                if self.fetched_data is not None:
+                    for table_name in self.fetched_data['columns']:
+                        col_types = self.fetched_data['types'].get(table_name, {})
+                        for column in self.fetched_data['columns'][table_name]:
+                            self.columns_list.append(
+                                Column(
+                                    database=table_name[0],
+                                    table_name=table_name[1],
+                                    table_alias=table_name[2],
+                                    name=column[0],
+                                    alias=column[1],
+                                    type=col_types.get(column[0])
+                                )
                             )
-                        )
 
             self.columns_list = [x for x in self.columns_list if x.name != '__mindsdb_row_id']
         except Exception as e:

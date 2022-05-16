@@ -453,7 +453,16 @@ class ExecuteCommands:
             self.delete_predictor_query(statement)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Insert:
-            return self.process_insert(statement)
+            if statement.from_select is None:
+                return self.process_insert(statement)
+            else:
+                # run with planner
+                SQLQuery(
+                    statement,
+                    session=self.session,
+                    execute=True
+                )
+                return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
             raise ErNotSupportedYet('Update is not implemented')
         elif type(statement) == Alter and ('disable keys' in self.sql_lower) or ('enable keys' in self.sql_lower):

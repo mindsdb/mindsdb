@@ -771,20 +771,7 @@ class SQLQuery():
                         integration_type=self.session.integration_type
                     )
 
-                    if isinstance(self.query, CreateTable):
-                        new_data = []
-                        for row in data:
-                            new_row = {}
-                            for key, value in row.items():
-                                if key not in ('__mindsdb_row_id', '__mdb_make_predictions'):
-                                    new_key = f'predictor.{key}'
-                                else:
-                                    new_key = key
-                                new_row[(new_key, new_key)] = value
-                            new_data.append(new_row)
-                        data = new_data
-                    else:
-                        data = [{(key, key): value for key, value in row.items()} for row in data]
+                    data = [{(key, key): value for key, value in row.items()} for row in data]
 
                     values = [{table_name: x} for x in data]
 
@@ -1158,16 +1145,39 @@ class SQLQuery():
             # endregion
 
             # region del columns filtered at projection step
-            filtered_column_names = [x.name for x in self.columns_list]
-            for table in step_data['columns']:
-                new_table_columns = []
-                for column in step_data['columns'][table]:
-                    if column[0].startswith('predictor.'):
-                        new_table_columns.append(column)
-                    elif column[0] in filtered_column_names:
-                        new_table_columns.append(column)
-                step_data['columns'][table] = new_table_columns
+            if self.columns_list is not None:
+                filtered_column_names = [x.name for x in self.columns_list]
+                for table in step_data['columns']:
+                    new_table_columns = []
+                    for column in step_data['columns'][table]:
+                        if column[0].startswith('predictor.'):
+                            new_table_columns.append(column)
+                        elif column[0] in filtered_column_names:
+                            new_table_columns.append(column)
+                    step_data['columns'][table] = new_table_columns
             # endregion
+
+            # drop double names
+            if len(step_data['tables']) > 1:
+                # set prefixes for all tables except first one
+                for table in step_data['tables'][1:]:
+                    table_name = table[1]
+                    col_map = []
+                    col_list = []
+                    for column in step_data['columns'][table]:
+                        column_new = (f'{table_name}.{column[0]}', f'{table_name}.{column[1]}')
+                        col_list.append(column_new)
+                        col_map.append([column, column_new])
+
+                    # replace columns
+                    step_data['columns'][table] = col_list
+
+                    # replace in values
+                    for row in step_data['values']:
+                        table_row = row[table]
+
+                        for column, column_new in col_map:
+                            table_row[column_new] = table_row.pop(column)
 
             dn.create_table(
                 table_name_parts=table_name_parts,

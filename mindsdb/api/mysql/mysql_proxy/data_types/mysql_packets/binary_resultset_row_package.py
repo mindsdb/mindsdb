@@ -8,7 +8,7 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-
+import datetime as dt
 import struct
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
@@ -41,27 +41,34 @@ class BinaryResultsetRowPacket(Packet):
 
         for i, col in enumerate(columns):
             # NOTE at this moment all types sends as strings, and it works
-            if data[i] is None:
+            val = data[i]
+            if val is None:
                 continue
 
-            enc = ''
+            enc = None
+            env_val = None
             col_type = col['type']
             if col_type == TYPES.MYSQL_TYPE_DOUBLE:
                 enc = '<d'
+                val = float(val)
             elif col_type == TYPES.MYSQL_TYPE_LONGLONG:
                 enc = '<q'
+                val = int(float(val))
             elif col_type == TYPES.MYSQL_TYPE_LONG:
                 enc = '<l'
+                val = int(float(val))
             elif col_type == TYPES.MYSQL_TYPE_FLOAT:
                 enc = '<f'
+                val = float(val)
             elif col_type == TYPES.MYSQL_TYPE_YEAR:
                 enc = '<h'
+                val = int(float(val))
             elif col_type == TYPES.MYSQL_TYPE_DATE:
-                enc = ''
+                env_val = self.encode_date(val)
             elif col_type == TYPES.MYSQL_TYPE_TIMESTAMP:
-                enc = ''
+                env_val = self.encode_date(val)
             elif col_type == TYPES.MYSQL_TYPE_DATETIME:
-                enc = ''
+                env_val = self.encode_date(val)
             elif col_type == TYPES.MYSQL_TYPE_TIME:
                 enc = ''
             elif col_type == TYPES.MYSQL_TYPE_NEWDECIMAL:
@@ -73,9 +80,43 @@ class BinaryResultsetRowPacket(Packet):
                 raise Exception(f'Column with type {col_type} cant be encripted')
 
             if enc == 'string':
-                self.value.append(Datum('string<lenenc>', str(data[i])).toStringPacket())
+                self.value.append(Datum('string<lenenc>', str(val)).toStringPacket())
             else:
-                self.value.append(struct.pack(enc, data[i]))
+
+
+                if env_val is None:
+                    env_val = struct.pack(enc, val)
+                self.value.append(env_val)
+
+
+    def encode_date(self, val):
+        # date_type = None
+        # date_value = None
+        try:
+            date_value = dt.datetime.strptime(val, '%Y-%m-%d')
+            date_type = 'date'
+        except ValueError:
+            try:
+                date_value = dt.datetime.strptime(val, '%Y-%m-%dT%H:%M:%S')
+                date_type = 'datetime'
+            except ValueError:
+                date_value = dt.datetime.strptime(val, '%Y-%m-%dT%H:%M:%S.%f')
+                date_type = 'datetime'
+
+        out = struct.pack('<H', date_value.year)
+        out += struct.pack('<B', date_value.month)
+        out += struct.pack('<B', date_value.day)
+
+        if date_type == 'datetime':
+            out += struct.pack('<B', date_value.hour)
+            out += struct.pack('<B', date_value.minute)
+            out += struct.pack('<B', date_value.second)
+            out += struct.pack('<L', date_value.microsecond)
+
+        len_bit = struct.pack('<B', len(out))
+        return len_bit + out
+
+
 
     @property
     def body(self):

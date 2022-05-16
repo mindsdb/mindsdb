@@ -17,8 +17,6 @@ from lightwood import __version__ as lightwood_version
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.storage.db import session, Predictor, Dataset
-from mindsdb.interfaces.database.database import DatabaseWrapper
-from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
@@ -143,19 +141,11 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
 
         predictor_record.dtype_dict = predictor.dtype_dict
         session.commit()
-
-        dbw = DatabaseWrapper(predictor_record.company_id)
-        mi = WithKWArgsWrapper(ModelInterface(), company_id=predictor_record.company_id)
     except Exception as e:
         session.refresh(predictor_record)
         predictor_record.data = {'error': f'{traceback.format_exc()}\nMain error: {e}'}
         session.commit()
         raise e
-
-    try:
-        dbw.register_predictors([mi.get_model_data(predictor_record.name)])
-    except Exception as e:
-        log.warn(e)
 
 
 @mark_process(name='learn')

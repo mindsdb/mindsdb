@@ -9,11 +9,6 @@ import numpy as np
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
-from mindsdb.integrations.clickhouse.clickhouse import Clickhouse
-from mindsdb.integrations.postgres.postgres import PostgreSQL
-from mindsdb.integrations.mariadb.mariadb import Mariadb
-from mindsdb.integrations.mysql.mysql import MySQL
-from mindsdb.integrations.mssql.mssql import MSSQL
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
@@ -49,7 +44,7 @@ class MindsDBDataNode(DataNode):
     def get_tables(self):
         models = self.model_interface.get_models()
         models = [x['name'] for x in models if x['status'] == 'complete']
-        models += ['predictors', 'commands', 'databases']
+        models += ['predictors', 'databases']
 
         return models
 
@@ -68,7 +63,7 @@ class MindsDBDataNode(DataNode):
             predict = [predict]
         columns += [f'{x}_original' for x in predict]
         for col in predict:
-            if dtype_dict[col] in (dtype.integer, dtype.float):
+            if dtype_dict.get(col) in (dtype.integer, dtype.float):
                 columns += [f"{col}_min", f"{col}_max"]
             columns += [f"{col}_confidence"]
             columns += [f"{col}_explain"]
@@ -79,8 +74,6 @@ class MindsDBDataNode(DataNode):
             return ['name', 'status', 'accuracy', 'predict', 'update_status',
                     'mindsdb_version', 'error', 'select_data_query',
                     'training_options']
-        if table == 'commands':
-            return ['command']
         if table in ('datasources', 'databases'):
             return ['name', 'database_type', 'host', 'port', 'user']
 
@@ -152,8 +145,6 @@ class MindsDBDataNode(DataNode):
         '''
         if table == 'predictors':
             return self._select_predictors()
-        if table == 'commands':
-            return []
         if table == 'datasources':
             return self._select_datasources()
 
@@ -170,31 +161,6 @@ class MindsDBDataNode(DataNode):
                 raise ValueError(f'''Error while parse 'when_data'="{where_data}"''')
 
         select_data_query = None
-        if integration_name is not None and 'select_data_query' in where_data:
-            select_data_query = where_data['select_data_query']
-            del where_data['select_data_query']
-
-            integration_data = self.integration_controller.get(integration_name)
-            if integration_type == 'clickhouse':
-                ch = Clickhouse(self.config, integration_name, integration_data)
-                res = ch._query(select_data_query.strip(' ;\n') + ' FORMAT JSON')
-                data = res.json()['data']
-            elif integration_type == 'mariadb':
-                maria = Mariadb(self.config, integration_name, integration_data)
-                data = maria._query(select_data_query)
-            elif integration_type == 'mysql':
-                mysql = MySQL(self.config, integration_name, integration_data)
-                data = mysql._query(select_data_query)
-            elif integration_type == 'postgres':
-                mysql = PostgreSQL(self.config, integration_name, integration_data)
-                data = mysql._query(select_data_query)
-            elif integration_type == 'mssql':
-                mssql = MSSQL(self.config, integration_name, integration_data)
-                data = mssql._query(select_data_query, fetch=True)
-            else:
-                raise Exception(f'Unknown database type: {integration_type}')
-
-            where_data = data
 
         new_where = {}
         if where_data is None:

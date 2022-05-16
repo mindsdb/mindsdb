@@ -1,7 +1,6 @@
 from flask import request
 from flask_restx import Resource, abort
 
-from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.streams import ns_conf
 import mindsdb.interfaces.storage.db as db
 
@@ -67,15 +66,14 @@ class Stream(Resource):
             # cloud
             if 'type' not in params_keys:
                 return abort(404, "'type' parameter is required in case of cloud.")
-            #because '_' is not allowed in pod name - replace it.
-            name=name.replace('_', '-')
+            # because '_' is not allowed in pod name - replace it.
+            name = name.replace('_', '-')
 
         if db.session.query(db.Stream).filter_by(company_id=request.company_id, name=name).first() is not None:
             return abort(404, 'Stream "{}" already exists'.format(name))
 
         if db.session.query(db.Predictor).filter_by(company_id=request.company_id, name=params['predictor']).first() is None:
             return abort(404, 'Predictor "{}" doesn\'t exist'.format(params['predictor']))
-        
 
         stream = db.Stream(
             company_id=request.company_id,
@@ -85,10 +83,10 @@ class Stream(Resource):
             stream_in=params['stream_in'],
             stream_out=params['stream_out'],
             anomaly_stream=params.get('anomaly_stream'),
-            type = params.get('type'),
-            connection_info = params.get('connection'),
-            learning_params = params.get('learning_params', {}),
-            learning_threshold = params.get('learning_threshold', 0)
+            type=params.get('type'),
+            connection_info=params.get('connection'),
+            learning_params=params.get('learning_params', {}),
+            learning_threshold=params.get('learning_threshold', 0)
         )
 
         db.session.add(stream)

@@ -1,6 +1,8 @@
 :root{
-    --md-primary-fg-color: #00B090 !important;
-}        
+    --md-primary-fg-color: #36333D !important;
+	--md-typeset-color: #4A515E !important;
+	--md-default-fg-color--light:	#36333D !important;
+}
 
 .block {
 	position: static;
@@ -100,4 +102,76 @@
     border-width: 2px;
     border-color: #FFF;
     border-radius: 10px;
+}
+
+h1{
+	font-weight: 700 !important;
+	font-size: 35px !important;
+	line-height: 36px !important;
+	letter-spacing: 0.3px !important;
+}
+
+h2{
+	font-weight: 600 !important;
+	font-size: 25px !important;
+	line-height: 32px !important;
+	letter-spacing: 0.3px !important;
+}
+
+
+h3{
+	font-style: normal !important;
+	font-weight: 600 !important;
+	font-size: 20px !important;
+	line-height: 20px !important;
+	padding-left: 10px !important;
+}
+
+h3 ~ p {
+	margin-left: 10px !important;
+}
+
+p a {
+	font-weight: 500;
+}
+
+p a:hover {
+	font-weight: 500;
+	color: #00A587 !important;
+}
+
+p:not(.admonition-title){
+	padding-left: 5px !important;
+}
+
+.md-nav__link{
+	font-size: 14px !important;
+	font-weight: 400 !important;
+	color: #818085 !important;
+	margin-top: 0.2rem;
+}
+
+.md-nav__link--active{
+	font-size: 14px !important;
+	font-weight: 700 !important;
+	color: #00A587 !important;
+}
+
+.md-nav__title{
+	display: none;
+}
+
+.md-header__inner.md-grid{
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+}
+
+.md-header__title{
+	margin-top: 5px !important;
+	margin-left: 0;
+}
+
+.md-content{
+	padding-left: 5vw;
+	padding-right: 5vw;
 }

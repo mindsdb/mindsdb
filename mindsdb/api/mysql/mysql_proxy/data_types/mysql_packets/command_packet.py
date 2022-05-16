@@ -117,25 +117,28 @@ class CommandPacket(Packet):
 
             prepared_stmt = self.session.prepared_stmts[self.stmt_id.value]
 
-            if prepared_stmt['type'] == 'select':
-                num_params = len(prepared_stmt['statement'].parameters)
-
-                self.read_params(buffer, num_params)
-
-            elif prepared_stmt['type'] in ['insert', 'delete']:
-                # if prepared_stmt['type'] == 'insert':
-                #     prepared_stmt['statement'].sql
-                #     statement = parse_sql(prepared_stmt['statement'].sql)
-                #     num_params = 0
-                #     for row in statement.values:
-                #         for item in row:
-                #             if isinstance(item, Parameter):
-                #                 num_params = num_params + 1
-                # elif prepared_stmt['type'] == 'delete':
-                #     num_params = prepared_stmt['statement'].sql.count('?')
-
-                num_params = len(prepared_stmt['statement'].parameters)
-                self.read_params(buffer, num_params)
+            num_params = len(prepared_stmt['statement'].params)
+            self.read_params(buffer, num_params)
+            #
+            # if prepared_stmt['type'] == 'select':
+            #     num_params = len(prepared_stmt['statement'].parameters)
+            #
+            #     self.read_params(buffer, num_params)
+            #
+            # elif prepared_stmt['type'] in ['insert', 'delete']:
+            #     # if prepared_stmt['type'] == 'insert':
+            #     #     prepared_stmt['statement'].sql
+            #     #     statement = parse_sql(prepared_stmt['statement'].sql)
+            #     #     num_params = 0
+            #     #     for row in statement.values:
+            #     #         for item in row:
+            #     #             if isinstance(item, Parameter):
+            #     #                 num_params = num_params + 1
+            #     # elif prepared_stmt['type'] == 'delete':
+            #     #     num_params = prepared_stmt['statement'].sql.count('?')
+            #
+            #     num_params = len(prepared_stmt['statement'].parameters)
+            #     self.read_params(buffer, num_params)
 
 
         elif self.type.value == COMMANDS.COM_STMT_CLOSE:

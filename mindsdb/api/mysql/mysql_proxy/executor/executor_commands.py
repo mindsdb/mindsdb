@@ -95,8 +95,11 @@ class ExecuteCommands:
             return self.answer_create_datasource(struct)
         if type(statement) == DropPredictor:
             predictor_name = statement.name.parts[-1]
-            self.session.datahub['mindsdb'].delete_predictor(predictor_name)
-            return ExecuteAnswer(ANSWER_TYPE.OK)
+            try:
+                self.session.datahub['mindsdb'].delete_predictor(predictor_name)
+            except Exception as e:
+                if not statement.if_exists:
+                    raise e
         elif type(statement) == DropTables:
             return self.answer_drop_tables(statement)
         elif type(statement) == DropDatasource or type(statement) == DropDatabase:

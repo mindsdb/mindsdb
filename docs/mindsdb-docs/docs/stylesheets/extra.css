@@ -183,3 +183,16 @@ p:not(.admonition-title){
 .highlight :is(.cpf,.l,.s,.sb,.sc,.s2,.si,.s1,.ss) {
     color:#818085 !important;
 }
+
+.md-search-result__title {
+	font-size: 24px !important;
+	margin: 5px !important;
+}
+
+.md-search-result__article .md-search-result__title {
+	font-size: 20px !important;
+}
+
+mark {
+	color: #00A587 !important;
+}

@@ -5,20 +5,20 @@
 On startup the mindsdb database will contain 2 tables: `predictors` and `datasources`
 
 ```sql
-MySQL [mindsdb]> show tables;
-
+SHOW TABLES;
 ```
+
+On execution, you should get:
 
 ```sql
 
-MySQL [mindsdb]> 
 +---------------------------+
 | Tables_in_mindsdb         |
 +---------------------------+
 | predictors                |
-| datasources               |
+| databases                 |
+| integration_name          |
 +---------------------------+
-3 rows in set (0.14 sec)
 
 ```
 

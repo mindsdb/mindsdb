@@ -11,8 +11,11 @@ Our MindsDB SQL API supports creating a database connection by passing any crede
 ```sql
 CREATE DATABASE [datasource_name]
 WITH
-        engine=[engine_string],
-        parameters={"key":"value", ...};
+    engine=[engine_string],
+    parameters={
+            "key":"value",
+            ...
+        };
 ```
 
 On execution, you should get:
@@ -52,9 +55,48 @@ On execution:
 Query OK, 0 rows affected (8.878 sec)
 ```
 
-##  Example configurations
+## Listing Linked DATABASES
 
-Click on each section to expand the example query for specific connection.
+You can list linked databases as follows:
+
+```sql
+SHOW DATABASES;
+```
+
+On execution:
+
+```sql 
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mindsdb            |
+| files              |
+| views              |
+| example_db         |
++--------------------+
+```
+
+## Getting Linked DATABASES Metadata
+
+You can also get metadata about the linked databases in `mindsdb.datasources`:
+
+```sql
+SELECT * FROM mindsdb.datasources;
+```
+
+On execution:
+
+```sql
+
++------------+---------------+--------------+------+-----------+
+| name       | database_type | host         | port | user      |
++------------+---------------+--------------+------+-----------+
+| example_db | postgres      | 3.220.66.106 | 5432 | demo_user |
++------------+---------------+--------------+------+-----------+
+```
+
+## Example configurations
 
 ### Snowflake
 
@@ -238,47 +280,6 @@ WITH
             "host": "127.0.0.1",
             "database": "qdb"
     };
-```
-
-## Listing Linked DATABASES
-
-You can list linked databases as follows:
-
-```sql
-SHOW DATABASES;
-```
-
-On execution:
-
-```sql 
-+--------------------+
-| Database           |
-+--------------------+
-| information_schema |
-| mindsdb            |
-| files              |
-| views              |
-| example_db         |
-+--------------------+
-```
-
-## Getting Linked DATABASES Metadata
-
-You can also get metadata about the linked databases in in `mindsdb.datasources`:.
-
-```sql
-select * from mindsdb.datasources;
-```
-
-On execution:
-
-```sql
-
-+------------+---------------+--------------+------+-----------+
-| name       | database_type | host         | port | user      |
-+------------+---------------+--------------+------+-----------+
-| example_db | postgres      | 3.220.66.106 | 5432 | demo_user |
-+------------+---------------+--------------+------+-----------+
 ```
 
 !!! info "Work in progress"

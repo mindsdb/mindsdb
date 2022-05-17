@@ -86,7 +86,7 @@ class LightwoodHandler(PredictiveHandler):
             # get training data from other integration
             handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]  # TODO import from mindsdb init
             handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
-            records = handler.query(query)['data_frame']
+            records = handler.query(handler_query)['data_frame']
             df = pd.DataFrame.from_records(records)
 
             json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
@@ -123,7 +123,7 @@ class LightwoodHandler(PredictiveHandler):
 
             handler = MDB_CURRENT_HANDLERS[str(original_stmt.integration_name)]  # TODO import from mindsdb init
             handler_query = self.parser(original_stmt.query_str, dialect=self.handler_dialect)
-            records = handler.query(query)['data_frame']
+            records = handler.query(handler_query)['data_frame']
             df = pd.DataFrame.from_records(records)
 
             predictor = load_predictor(all_models[model_name], model_name)
@@ -152,7 +152,7 @@ class LightwoodHandler(PredictiveHandler):
         Batch prediction using the output of a query passed to a data handler as input for the model.
         """  # noqa
         model_name, model_clause = self._get_model_name(stmt)
-        data_clause = 'right' if model_clause == 'left' else 'right'
+        data_clause = 'right' if model_clause == 'left' else 'left'
         model_alias = str(getattr(stmt.from_table, model_clause).alias)
 
         model = self._get_model(stmt)
@@ -251,7 +251,7 @@ class LightwoodHandler(PredictiveHandler):
         if type(stmt.from_table) == Join:
             model_name = stmt.from_table.right.parts[-1]
             clause = 'right'
-            if model_name not in models:
+            if model_name not in self.get_tables():
                 model_name = stmt.from_table.left.parts[-1]
                 clause = 'left'
         else:
@@ -259,9 +259,8 @@ class LightwoodHandler(PredictiveHandler):
         return model_name, clause
 
     def _get_model(self, stmt):
-        models = self.get_tables()
         model_name, _ = self._get_model_name(stmt)
-        if model_name not in models:
+        if model_name not in self.get_tables():
             raise Exception("Error, not found. Please create this predictor first.")
 
         predictor_dict = self._get_model_info(model_name)

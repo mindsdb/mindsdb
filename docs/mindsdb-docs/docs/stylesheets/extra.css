@@ -196,3 +196,16 @@ p:not(.admonition-title){
 mark {
 	color: #00A587 !important;
 }
+
+.md-search-result__icon {
+	display: none !important;
+}
+
+.md-search-result__article{
+	padding-right: 2.2rem !important;
+}
+
+.md-search-result__item{
+	padding-top: 1.2rem !important;
+	padding-bottom: 1.2rem !important;
+}

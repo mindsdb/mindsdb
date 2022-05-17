@@ -2,7 +2,13 @@
     --md-primary-fg-color: #36333D !important;
 	--md-typeset-color: #4A515E !important;
 	--md-default-fg-color--light:	#36333D !important;
+	--md-accent-fg-color:  #00A587 !important;
 }
+
+body {
+color: #40545e !important;
+}
+
 
 .block {
 	position: static;
@@ -105,6 +111,7 @@
 }
 
 h1{
+	color: #36464e !important;
 	font-weight: 700 !important;
 	font-size: 35px !important;
 	line-height: 36px !important;
@@ -112,6 +119,7 @@ h1{
 }
 
 h2{
+	color: #36464e !important;
 	font-weight: 600 !important;
 	font-size: 25px !important;
 	line-height: 32px !important;
@@ -120,6 +128,7 @@ h2{
 
 
 h3{
+	color: #36464e !important;
 	font-style: normal !important;
 	font-weight: 600 !important;
 	font-size: 20px !important;
@@ -208,4 +217,16 @@ mark {
 .md-search-result__item{
 	padding-top: 1.2rem !important;
 	padding-bottom: 1.2rem !important;
+}
+
+.headerlink{
+	display: none !important;
+}
+
+.md-content__button{
+	color: #e0e0e0 !important;
+}
+
+.md-content__button :hover{ 
+	color: #00A587 !important;
 }

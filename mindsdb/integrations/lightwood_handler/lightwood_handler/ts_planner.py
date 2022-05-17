@@ -1,38 +1,7 @@
 from ts_planner_utils import validate_ts_where_condition, find_time_filter, add_order_not_null, replace_time_filter, find_and_remove_time_filter
 
 
-def ts_join(query, integrations, predictor_namespace, predictor_metadata):
-    predictor_name = predictor_metadata['model_name']
-    predictor_steps = plan_timeseries_predictor(query, table, predictor_namespace, predictor)
-
-    # Update reference
-    _, table = self.get_integration_path_from_identifier_or_error(table)
-    table_alias = table.alias or Identifier(table.to_string(alias=False).replace('.', '_'))
-
-    left = Identifier(predictor_steps['predictor'].result.ref_name,
-                       alias=predictor.alias or Identifier(predictor.to_string(alias=False)))
-    right = Identifier(predictor_steps['data'].result.ref_name, alias=table_alias)
-
-    if not predictor_is_left:
-        # swap join
-        left, right = right, left
-    new_join = Join(left=left, right=right, join_type=join.join_type)
-
-    left = predictor_steps['predictor'].result
-    right = predictor_steps['data'].result
-    if not predictor_is_left:
-        # swap join
-        left, right = right, left
-
-    last_step = self.plan.add_step(JoinStep(left=left, right=right, query=new_join))
-
-    # limit from timeseries
-    if predictor_steps.get('saved_limit'):
-        last_step = self.plan.add_step(LimitOffsetStep(dataframe=last_step.result,
-                                                  limit=predictor_steps['saved_limit']))
-
-    # TODO: 2) instead of planning steps, actually execute them and run predictor! refactor all logic in ts_planner.py
-
+# TODO: 2) instead of planning steps, actually execute them and run predictor! refactor all logic in ts_planner.py
 
 def plan_timeseries_predictor(query, table, predictor_namespace, predictor_metadata):
     if query.order_by:

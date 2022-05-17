@@ -1,4 +1,5 @@
 from mindsdb_sql.exceptions import PlanningException
+# from mindsdb_sql.planner.utils import get_integration_path_from_identifier
 from mindsdb_sql.parser.ast import Identifier, Operation, BinaryOperation, BetweenOperation
 
 
@@ -86,3 +87,20 @@ def validate_ts_where_condition(op, allowed_columns, allow_and=True):
         validate_ts_where_condition(op.args[0], allowed_columns, allow_and=True)
     if isinstance(op.args[1], Operation):
         validate_ts_where_condition(op.args[1], allowed_columns, allow_and=True)
+
+
+# def get_integration_path_from_identifier_or_error(identifier, integrations, default_namespace, recurse=True):
+#     # @TODO: ask for this to be a static method in mdb_sql
+#     try:
+#         integration_name, table = get_integration_path_from_identifier(identifier)
+#         if not integration_name.lower() in integrations:
+#             raise PlanningException(
+#                 f'Unknown integration {integration_name} for table {str(identifier)}. Available integrations: {", ".join(integrations)}')
+#     except PlanningException:
+#         if not recurse or not default_namespace:
+#             raise
+#         else:
+#             new_identifier = copy.deepcopy(identifier)
+#             new_identifier.parts = [default_namespace, *identifier.parts]
+#             return self.get_integration_path_from_identifier_or_error(new_identifier, recurse=False)
+#     return integration_name, table

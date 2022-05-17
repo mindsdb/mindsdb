@@ -175,3 +175,11 @@ p:not(.admonition-title){
 	padding-left: 5vw;
 	padding-right: 5vw;
 }
+
+.highlight :is(.k,.kd,.kn,.kp,.kr,.kt) {
+    color: #00A587 !important;
+}
+
+.highlight :is(.cpf,.l,.s,.sb,.sc,.s2,.si,.s1,.ss) {
+    color:#818085 !important;
+}

@@ -12,7 +12,7 @@ from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, 
 from utils import unpack_jsonai_old_args, get_aliased_columns, _recur_get_conditionals, load_predictor
 from utils import default_train_data_gather, ts_train_data_gather
 from ts_planner import plan_timeseries_predictor
-from ts_planner_utils import get_integration_path_from_identifier_or_error
+from query_executioner import execute_step
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
@@ -162,7 +162,7 @@ class LightwoodHandler(PredictiveHandler):
             model_clause = 'right'
             data_clause = 'left'
 
-        model_name = str(getattr(stmt.from_table, model_clause))
+        model_name = getattr(stmt.from_table, model_clause).parts[-1]
         model_alias = str(getattr(stmt.from_table, model_clause).alias)
 
         model = self._get_model(stmt)
@@ -187,46 +187,31 @@ class LightwoodHandler(PredictiveHandler):
                 data_handler.query(data_query)['data_frame']
             )
         else:
-            oby_col = model.problem_definition.timeseries_settings.order_by[0]
-            gby_col = model.problem_definition.timeseries_settings.group_by[0]  # todo add multiple group support
-            window = model.problem_definition.timeseries_settings.window
-
+            # for TS, fetch correct groups, build window context, predict and limit
             predictor_metadata = {
-                'timeseries': True,
-                'model_name': model_name,
-                'order_by_column': oby_col,
-                'group_by_columns': [gby_col],
-                'window': window
+                f'{model_name}' : {
+                    'timeseries': True,
+                    'model_name': model_name,
+                    'order_by_column': model.problem_definition.timeseries_settings.order_by[0],
+                    'group_by_columns': [model.problem_definition.timeseries_settings.group_by[0]],  # todo add multiple group support
+                    'window': model.problem_definition.timeseries_settings.window
+                }
             }
 
-            # for TS, fetch correct groups, build window context, predict and limit, using self._ts_data_gather
-            # q = QueryPlanner()?
-            data_step, saved_limit = plan_timeseries_predictor(stmt, data_handler_table, 'mindsdb', predictor_metadata)
-            _, table = get_integration_path_from_identifier_or_error(data_handler_table, ['mindsdb'], 'mindsdb')  # TODO: rewrite this to alternative method?
-            table_alias = table.alias or Identifier(table.to_string(alias=False).replace('.', '_'))
+            qp = QueryPlanner(
+                query=stmt,
+                integrations=[data_handler_name, 'mindsdb'],
+                predictor_namespace='mindsdb',
+                predictor_metadata=predictor_metadata,
+                default_namespace='mindsdb'
+            )
+            qp.plan_join(stmt, data_handler_name)
 
-            left = Identifier(predictor_steps['predictor'].result.ref_name,
-                              alias=predictor.alias or Identifier(predictor.to_string(alias=False)))
-            right = Identifier(predictor_steps['data'].result.ref_name, alias=table_alias)
-
-            if model_clause == 'right':
-                left, right = right, left  # swap join
-
-            new_join = Join(left=left, right=right, join_type=join.join_type)
-            left = predictor_steps['predictor'].result
-            right = predictor_steps['data'].result
-
-            if model_clause == 'right':
-                left, right = right, left  # swap join
-
-            last_step = plan.add_step(JoinStep(left=left, right=right, query=new_join))
-
-            # limit from timeseries
-            if predictor_steps.get('saved_limit'):
-                last_step = plan.add_step(LimitOffsetStep(dataframe=last_step.result,
-                                                          limit=predictor_steps['saved_limit']))
-
-            # @TODO: figure out where steps are executed?
+            steps_data = []
+            for step in qp.plan.steps:
+                data = execute_step(step, steps_data, data_handler, model)
+                step.set_result(data)
+                steps_data.append(data)
 
             if False:
                 # TODO: this is what should be replaced with mdb_sql logic to gather model_input
@@ -440,6 +425,6 @@ if __name__ == '__main__':
     # get predictions from a time series model
     # todo: limit in this case should be checked/compared against model's own HORIZON
     into_table = 'test_join_tsmodel_into_lw'
-    query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {data_handler_name}.{data_table_name} AS ta JOIN {model_name} AS tb WHERE ta.{oby} > LATEST LIMIT 10"
+    query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {data_handler_name}.{data_table_name} AS ta JOIN mindsdb.{model_name} AS tb ON 1=1 WHERE ta.{oby} > LATEST LIMIT 10"
     parsed = cls.parser(query, dialect=cls.dialect)
     predicted = cls.join(parsed, data_handler, into=into_table)

@@ -1,26 +1,21 @@
-import os
-import gc
 import dill
 import pandas as pd
 from typing import Dict, List, Optional
 
+from utils import unpack_jsonai_old_args, get_aliased_columns, _recur_get_conditionals, load_predictor
+
 import lightwood
 from lightwood.api.types import JsonAI
-from lightwood.mixer import LightGBM
-from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition, _module_from_code
+from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition
 
-from utils import unpack_jsonai_old_args, get_aliased_columns, _recur_get_conditionals, load_predictor
-from utils import default_train_data_gather, ts_train_data_gather
-from ts_planner import plan_timeseries_predictor
-from ts_planner_utils import get_integration_path_from_identifier_or_error
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.interfaces.model.learn_process import brack_to_mod, rep_recur
 from mindsdb.utilities.config import Config
+
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant, Select, OrderBy
-from mindsdb_sql.planner.query_planner import QueryPlanner
 from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
     CreatePredictor,
@@ -39,7 +34,7 @@ class LightwoodHandler(PredictiveHandler):
 
     def connect(self, **kwargs) -> Dict[str, int]:
         """ Setup storage handler and check lightwood version """  # noqa
-        self.storage = SqliteStorageHandler(context=self.name, config=kwargs['config'])
+        self.storage = SqliteStorageHandler(context=self.name, config=kwargs['config'])  # TODO non-KV storage handler
         return self.check_status()
 
     def check_status(self) -> Dict[str, int]:
@@ -89,12 +84,10 @@ class LightwoodHandler(PredictiveHandler):
             unpack_jsonai_old_args(json_ai_override)
 
             # get training data from other integration
-            handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]
+            handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]  # TODO import from mindsdb init
             handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
-            if handler_query.order_by is not None:
-                df = ts_train_data_gather(handler, handler_query)
-            else:
-                df = default_train_data_gather(handler, handler_query)
+            records = handler.query(query)['data_frame']
+            df = pd.DataFrame.from_records(records)
 
             json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
             json_ai = json_ai_from_problem(df, ProblemDefinition.from_dict(params)).to_dict()
@@ -105,10 +98,15 @@ class LightwoodHandler(PredictiveHandler):
             code = code_from_json_ai(json_ai)
             predictor = predictor_from_code(code)
             predictor.learn(df)
-            serialized_predictor = dill.dumps(predictor)
 
             all_models = self.storage.get('models')
-            payload = {'jsonai': json_ai, 'predictor': serialized_predictor, 'code': code, 'stmt': statement}
+            serialized_predictor = dill.dumps(predictor)
+            payload = {
+                'code': code,
+                'jsonai': json_ai,
+                'stmt': statement,
+                'predictor': serialized_predictor,
+            }
             if all_models is not None:
                 all_models[model_name] = payload
             else:
@@ -123,12 +121,10 @@ class LightwoodHandler(PredictiveHandler):
             all_models = self.storage.get('models')
             original_stmt = all_models[model_name]['stmt']
 
-            handler = MDB_CURRENT_HANDLERS[str(original_stmt.integration_name)]
+            handler = MDB_CURRENT_HANDLERS[str(original_stmt.integration_name)]  # TODO import from mindsdb init
             handler_query = self.parser(original_stmt.query_str, dialect=self.handler_dialect)
-            if handler_query.order_by is not None:
-                df = ts_train_data_gather(handler, handler_query)
-            else:
-                df = default_train_data_gather(handler, handler_query)
+            records = handler.query(query)['data_frame']
+            df = pd.DataFrame.from_records(records)
 
             predictor = load_predictor(all_models[model_name], model_name)
             predictor.adjust(df)
@@ -155,14 +151,8 @@ class LightwoodHandler(PredictiveHandler):
         """
         Batch prediction using the output of a query passed to a data handler as input for the model.
         """  # noqa
-        if len(stmt.from_table.left.parts) == 1:  # TODO: try fetching the model instead, more robust
-            model_clause = 'left'
-            data_clause = 'right'
-        else:
-            model_clause = 'right'
-            data_clause = 'left'
-
-        model_name = str(getattr(stmt.from_table, model_clause))
+        model_name, model_clause = self._get_model_name(stmt)
+        data_clause = 'right' if model_clause == 'left' else 'right'
         model_alias = str(getattr(stmt.from_table, model_clause).alias)
 
         model = self._get_model(stmt)
@@ -191,94 +181,54 @@ class LightwoodHandler(PredictiveHandler):
             gby_col = model.problem_definition.timeseries_settings.group_by[0]  # todo add multiple group support
             window = model.problem_definition.timeseries_settings.window
 
-            predictor_metadata = {
-                'timeseries': True,
-                'model_name': model_name,
-                'order_by_column': oby_col,
-                'group_by_columns': [gby_col],
-                'window': window
-            }
+            # 1) get all groups
+            for col in [gby_col] + [oby_col]:
+                if col not in data_handler_cols:
+                    data_handler_cols.append(col)
 
-            # for TS, fetch correct groups, build window context, predict and limit, using self._ts_data_gather
-            # q = QueryPlanner()?
-            data_step, saved_limit = plan_timeseries_predictor(stmt, data_handler_table, 'mindsdb', predictor_metadata)
-            _, table = get_integration_path_from_identifier_or_error(data_handler_table, ['mindsdb'], 'mindsdb')  # TODO: rewrite this to alternative method?
-            table_alias = table.alias or Identifier(table.to_string(alias=False).replace('.', '_'))
+            groups_query = Select(
+                targets=[Identifier(gby_col)],
+                distinct=True,
+                from_table=Identifier(data_handler_table),
+            )
+            groups = list(data_handler.query(groups_query)['data_frame'].squeeze().values)
 
-            left = Identifier(predictor_steps['predictor'].result.ref_name,
-                              alias=predictor.alias or Identifier(predictor.to_string(alias=False)))
-            right = Identifier(predictor_steps['data'].result.ref_name, alias=table_alias)
+            # 2) get LATEST available date and window for each group
+            latests = {}
+            windows = {}
 
-            if model_clause == 'right':
-                left, right = right, left  # swap join
-
-            new_join = Join(left=left, right=right, join_type=join.join_type)
-            left = predictor_steps['predictor'].result
-            right = predictor_steps['data'].result
-
-            if model_clause == 'right':
-                left, right = right, left  # swap join
-
-            last_step = plan.add_step(JoinStep(left=left, right=right, query=new_join))
-
-            # limit from timeseries
-            if predictor_steps.get('saved_limit'):
-                last_step = plan.add_step(LimitOffsetStep(dataframe=last_step.result,
-                                                          limit=predictor_steps['saved_limit']))
-
-            # @TODO: figure out where steps are executed?
-
-            if False:
-                # TODO: this is what should be replaced with mdb_sql logic to gather model_input
-                # 1) get all groups
-                for col in [gby_col] + [oby_col]:
-                    if col not in data_handler_cols:
-                        data_handler_cols.append(col)
-
-                groups_query = Select(
-                    targets=[Identifier(gby_col)],
-                    distinct=True,
+            for group in groups:
+                latest_oby_query = Select(
+                    targets=[Identifier(oby_col)],
                     from_table=Identifier(data_handler_table),
+                    where=BinaryOperation(op='=',
+                                          args=[
+                                              Identifier(gby_col),
+                                              Constant(group)
+                                          ]),
+                    order_by=[OrderBy(
+                        field=Identifier(oby_col),
+                        direction='DESC'
+                    )],
+                    limit=Constant(1)
                 )
-                groups = list(data_handler.query(groups_query)['data_frame'].squeeze().values)
+                latests[group] = data_handler.query(latest_oby_query)['data_frame'].values[0][0]
 
-                # 2) get LATEST available date and window for each group
-                latests = {}
-                windows = {}
-
-                for group in groups:
-                    latest_oby_query = Select(
-                        targets=[Identifier(oby_col)],
-                        from_table=Identifier(data_handler_table),
-                        where=BinaryOperation(op='=',
-                                              args=[
-                                                  Identifier(gby_col),
-                                                  Constant(group)
-                                              ]),
-                        order_by=[OrderBy(
-                            field=Identifier(oby_col),
-                            direction='DESC'
-                        )],
-                        limit=Constant(1)
-                    )
-                    latests[group] = data_handler.query(latest_oby_query)['data_frame'].values[0][0]
-
-                    window_query =  Select(
-                        targets=[Identifier(col) for col in data_handler_cols],
-                        from_table=Identifier(data_handler_table),
-                        where=BinaryOperation(op='=',
-                                              args=[
-                                                  Identifier(gby_col),
-                                                  Constant(group)
-                                              ]),
-                    )
-                    # order and limit the df instead of SELECT to hedge against badly defined dtypes in the DB
-                    df = data_handler.query(window_query)['data_frame']
-
-                    if len(df) < window and not model.problem_definition.timeseries_settings.allow_incomplete_history:
-                        raise Exception(f"Not enough data for group {group}. Either pass more historical context or train a predictor with the `allow_incomplete_history` argument set to True.")
-                    df = df.sort_values(oby_col, ascending=False).iloc[0:window]
-                    windows[group] = df[::-1]
+                window_query =  Select(
+                    targets=[Identifier(col) for col in data_handler_cols],
+                    from_table=Identifier(data_handler_table),
+                    where=BinaryOperation(op='=',
+                                          args=[
+                                              Identifier(gby_col),
+                                              Constant(group)
+                                          ]),
+                )
+                # order and limit the df instead of SELECT to hedge against badly defined dtypes in the DB
+                df = data_handler.query(window_query)['data_frame']
+                if len(df) < window and not model.problem_definition.timeseries_settings.allow_incomplete_history:
+                    raise Exception(f"Not enough data for group {group}. Either pass more historical context or train a predictor with the `allow_incomplete_history` argument set to True.")
+                df = df.sort_values(oby_col, ascending=False) # .iloc[0:window]  # TODO check stmt.limit
+                windows[group] = df[::-1]
 
                 # 3) concatenate all contexts into single data query
                 model_input = pd.concat([v for k, v in windows.items()]).reset_index(drop=True)
@@ -296,15 +246,21 @@ class LightwoodHandler(PredictiveHandler):
 
         return predictions
 
-    def _get_model(self, stmt):
-        models = self.get_tables()
+    def _get_model_name(self, stmt):
+        clause = None
         if type(stmt.from_table) == Join:
             model_name = stmt.from_table.right.parts[-1]
+            clause = 'right'
             if model_name not in models:
                 model_name = stmt.from_table.left.parts[-1]
+                clause = 'left'
         else:
             model_name = stmt.from_table.parts[-1]
+        return model_name, clause
 
+    def _get_model(self, stmt):
+        models = self.get_tables()
+        model_name, _ = self._get_model_name(stmt)
         if model_name not in models:
             raise Exception("Error, not found. Please create this predictor first.")
 
@@ -324,6 +280,7 @@ class LightwoodHandler(PredictiveHandler):
 
 
 if __name__ == '__main__':
+    from lightwood.mixer import LightGBM
     # TODO: turn this into tests
 
     data_handler_name = 'mysql_handler'
@@ -438,7 +395,6 @@ if __name__ == '__main__':
     assert m.problem_definition.timeseries_settings.is_timeseries
 
     # get predictions from a time series model
-    # todo: limit in this case should be checked/compared against model's own HORIZON
     into_table = 'test_join_tsmodel_into_lw'
     query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {data_handler_name}.{data_table_name} AS ta JOIN {model_name} AS tb WHERE ta.{oby} > LATEST LIMIT 10"
     parsed = cls.parser(query, dialect=cls.dialect)

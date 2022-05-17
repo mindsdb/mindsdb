@@ -2,8 +2,6 @@ import gc
 import sys
 import dill
 
-import pandas as pd
-
 from mindsdb_sql.parser.ast import Identifier, Constant
 from lightwood.api.high_level import _module_from_code
 
@@ -61,13 +59,3 @@ def load_predictor(predictor_dict, name):
         gc.collect()
         _module_from_code(predictor_dict['code'], module_name)
         return dill.loads(predictor_dict['predictor'])
-
-
-def default_train_data_gather(handler, query):
-    records = handler.query(query)['data_frame']
-    df = pd.DataFrame.from_records(records)
-    return df
-
-
-def ts_train_data_gather(handler, query):
-    return default_train_data_gather(handler, query)

@@ -171,9 +171,9 @@ class Executor:
         try:
             try:
                 self.query = parse_sql(sql, dialect='mindsdb')
-            except mindsdb_sql.exceptions.ParsingException:
+            except Exception:
                 self.query = parse_sql(sql, dialect='mysql')
-        except mindsdb_sql.exceptions.ParsingException as e:
+        except Exception as e:
             # not all statements are parsed by parse_sql
             log.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
 

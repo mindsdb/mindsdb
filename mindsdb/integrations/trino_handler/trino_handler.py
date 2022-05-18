@@ -34,13 +34,19 @@ class TrinoHandler(DatabaseHandler):
         self.dialect = self.kerberos_config['dialect']
         config = self.kerberos_config['config']
         hostname_override = self.kerberos_config['hostname_override']
-        principal = "{}@{}".format(kwargs.get('user'), hostname_override)
+        principal = f"{kwargs.get('user')}@{hostname_override}"
         ca_bundle = self.kerberos_config['ca_bundle']
         self.auth_config = KerberosAuthentication(config=config,
                                                   service_name=service_name,
                                                   principal=principal,
                                                   ca_bundle=ca_bundle,
                                                   hostname_override=hostname_override)
+
+    def connect(self, **kwargs) -> Dict[str, int]:
+        conn_status = self.check_status()
+        if conn_status.get('success'):
+            return {'status': 200}
+        return {'status': 503}
 
     def __connect(self):
         """"
@@ -135,4 +141,10 @@ class TrinoHandler(DatabaseHandler):
         pass
 
     def join(self, stmt, data_handler, into: Optional[str]) -> pd.DataFrame:
+        pass
+
+    def get_views(self) -> List:
+        pass
+
+    def select_into(self, table: str, dataframe: pd.DataFrame):
         pass

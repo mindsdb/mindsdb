@@ -98,7 +98,7 @@ nav:
     - INSERT INTO: sql/api/insert.md
     - DESCRIBE: sql/api/describe.md
     - RETRAIN: sql/api/retrain.md
-    - DROP: sql/api/drop.md
+    - DROP PREDICTOR: sql/api/drop.md
     - SELECT: sql/api/select.md
     - SELECT from files: sql/api/select_files.md
     - JOIN: sql/api/join.md

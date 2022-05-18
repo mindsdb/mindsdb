@@ -1,6 +1,7 @@
 import os
 import shutil
 import tempfile
+import importlib
 from pathlib import Path
 from copy import deepcopy
 
@@ -20,6 +21,9 @@ class IntegrationController:
     @staticmethod
     def _is_not_empty_str(s):
         return isinstance(s, str) and len(s) > 0
+
+    def __init__(self):
+        self._load_handler_modules()
 
     def add(self, name, data, company_id=None):
         if 'database_name' not in data:
@@ -217,8 +221,23 @@ class IntegrationController:
 
         integration_name = integration_data.get('name')
         del integration_data['name']
-        if integration_name == 'mysql':
-            handler = MySQLHandler(name=integration_name, **integration_data)
-        else:
-            handler = PostgresHandler(name=integration_name, **integration_data)
+
+        if integration_type not in self.handler_modules:
+            raise Exception(f'Cant find handler for {integration_name}')
+
+        handler = self.handler_modules[integration_type].Handler(
+            name=integration_name, **integration_data
+        )
+
         return handler
+
+    def _load_handler_modules(self):
+        handlers_list = ['postgres_handler', 'file_handler']
+        self.handler_modules = {}
+
+        for module_name in handlers_list:
+            try:
+                handler_module = importlib.import_module(f'mindsdb.integrations.{module_name}')
+                self.handler_modules[handler_module.Handler.name] = handler_module
+            except Exception as e:
+                print(f'Cand import module {module_name}: {e}')

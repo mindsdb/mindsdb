@@ -13,7 +13,8 @@ from mindsdb.utilities.log import log
 
 class TrinoHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Trino statements.
+    This handler handles connection and execution of the Trino statements
+    using kerberos authentication
     """
 
     def __init__(self, name, **kwargs):
@@ -46,7 +47,8 @@ class TrinoHandler(DatabaseHandler):
         conn_status = self.check_status()
         if conn_status.get('success'):
             return {'status': 200}
-        return {'status': 503}
+        return {'status': 503,
+                'error': conn_status.get('error')}
 
     def __connect(self):
         """"

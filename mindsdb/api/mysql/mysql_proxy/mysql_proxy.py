@@ -34,6 +34,12 @@ from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_cap
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 
+from mindsdb.api.mysql.mysql_proxy.utilities import (
+    SqlApiException,
+    ErWrongCharset,
+    SqlApiUnknownError
+)
+
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
@@ -407,13 +413,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         try:
             return text.decode('utf-8')
         except Exception as e:
-            log.error(f'SQL contains non utf-8 values: {text}')
-            self.packet(
-                ErrPacket,
-                err_code=ERR.ER_SYNTAX_ERROR,
-                msg=str(e)
-            ).send()
-            raise
+            raise ErWrongCharset(f'SQL contains non utf-8 values: {text}')
 
     def is_cloud_connection(self):
         ''' Determine source of connection. Must be call before handshake.
@@ -516,19 +516,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         executor.query_execute(sql)
 
-        if executor.error is not None:
-            resp = SQLAnswer(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_code=executor.error['code'],
-                error_message=executor.error['message']
-            )
-        elif executor.data is None:
+        if executor.data is None:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.OK,
                 state_track=executor.state_track,
             )
         else:
-
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
@@ -583,15 +576,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         executor.stmt_execute(parameters)
 
-        if executor.error is not None:
-            resp = SQLAnswer(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_code=executor.error['code'],
-                error_message=executor.error['message']
-            )
-            return self.send_query_answer(resp)
-
-        elif executor.data is None:
+        if executor.data is None:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.OK,
                 state_track=executor.state_track
@@ -624,14 +609,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         executor = prepared_stmt['statement']
         fetched = prepared_stmt['fetched']
 
-        if executor.error is not None:
-            resp = SQLAnswer(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_code=executor.error['code'],
-                error_message=executor.error['message']
-            )
-            return self.send_query_answer(resp)
-        elif executor.data is None:
+        if executor.data is None:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.OK,
                 state_track=executor.state_track
@@ -758,7 +736,28 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     # that sends it to debug instead
                     response = SQLAnswer(RESPONSE_TYPE.OK)
 
+            except SqlApiException as e:
+                # classified error
+                error_type = 'expected'
+
+                response = SQLAnswer(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_code=e.err_code,
+                    error_message=str(e)
+                )
+
+            except SqlApiUnknownError as e:
+                # unclassified
+                error_type = 'unexpected'
+
+                response = SQLAnswer(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_code=ERR.ER_INTERNAL_ERROR,
+                    error_message=str(e)
+                )
+
             except Exception as e:
+                # any other exception
                 error_type = 'unexpected'
                 error_traceback = traceback.format_exc()
                 log.error(
@@ -767,8 +766,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     f'{e}'
                 )
                 error_code = ERR.ER_SYNTAX_ERROR
-                if hasattr(e, 'err_code'):
-                    error_code = e.err_code
                 response = SQLAnswer(
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_code=error_code,

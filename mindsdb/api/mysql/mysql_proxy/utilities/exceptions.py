@@ -1,8 +1,14 @@
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
 
+
+# base exception for unknown error
+class SqlApiUnknownError(Exception):
+    pass
+
+
+# base exception for known error
 class SqlApiException(Exception):
     err_code = ERR.ER_SYNTAX_ERROR
-
 
 
 class ErBadDbError(SqlApiException):
@@ -28,3 +34,15 @@ class ErNonInsertableTable(SqlApiException):
 
 class ErNotSupportedYet(SqlApiException):
     err_code = ERR.ER_NOT_SUPPORTED_YET
+
+class ErSqlSyntaxError(SqlApiException):
+    err_code = ERR.ER_SYNTAX_ERROR
+
+class ErSqlWrongArguments(SqlApiException):
+    err_code = ERR.ER_WRONG_ARGUMENTS
+
+class ErWrongCharset(SqlApiException):
+    err_code = ERR.ER_UNKNOWN_CHARACTER_SET
+
+class ErLogicError(SqlApiException):
+    err_code = ERR.ER_WRONG_USAGE

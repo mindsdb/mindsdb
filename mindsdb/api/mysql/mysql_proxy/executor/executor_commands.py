@@ -53,6 +53,8 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErDbDropDelete,
     ErNonInsertableTable,
     ErNotSupportedYet,
+    ErSqlSyntaxError,
+    ErSqlWrongArguments,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 
@@ -808,13 +810,6 @@ class ExecuteCommands:
             self.session.datahub
         )
 
-        if result['success'] is False:
-            return ExecuteAnswer(
-                ANSWER_TYPE.ERROR,
-                error_code=result['error_code'],
-                error_message=result['msg']
-            )
-
         predictors_names = [x[0] for x in result['result']]
 
         if len(predictors_names) == 0:
@@ -828,11 +823,8 @@ class ExecuteCommands:
 
         if command[0].lower() == 'delete' and command[1].lower() == 'predictor':
             if len(command) != 3:
-                return ExecuteAnswer(
-                    ANSWER_TYPE.ERROR,
-                    error_code=ERR.ER_SYNTAX_ERROR,
-                    error_message="wrong syntax of 'DELETE PREDICTOR {NAME}' command"
-                )
+                raise ErSqlSyntaxError("wrong syntax of 'DELETE PREDICTOR {NAME}' command")
+
             predictor_name = command[2]
             self.delete_predictor_query(parse_sql(
                 f"delete from mindsdb.predictors where name = '{predictor_name}'",
@@ -840,11 +832,7 @@ class ExecuteCommands:
             ))
             return ExecuteAnswer(ANSWER_TYPE.OK)
 
-        return ExecuteAnswer(
-            ANSWER_TYPE.ERROR,
-            error_code=ERR.ER_SYNTAX_ERROR,
-            error_message="at this moment only 'delete predictor' command supported"
-        )
+        raise ErSqlSyntaxError("at this moment only 'delete predictor' command supported")
 
     def process_insert(self, statement):
         db_name = self.session.database
@@ -1259,16 +1247,9 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_select(self, query):
-        result = query.fetch(
+        query.fetch(
             self.session.datahub
         )
-
-        if result['success'] is False:
-            return ExecuteAnswer(
-                ANSWER_TYPE.ERROR,
-                error_code=result['error_code'],
-                error_message=result['msg']
-            )
 
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
@@ -1313,39 +1294,24 @@ class ExecuteCommands:
 
         select_data_query = insert.get('select_data_query')
         if isinstance(select_data_query, str) is False or len(select_data_query) == 0:
-            return ExecuteAnswer(
-                ANSWER_TYPE.ERROR,
-                error_code=ERR.ER_WRONG_ARGUMENTS,
-                error_message="'select_data_query' should not be empty"
-            )
+            raise ErSqlWrongArguments("'select_data_query' should not be empty")
 
         models = model_interface.get_models()
         if insert['name'] in [x['name'] for x in models]:
-            return ExecuteAnswer(
-                ANSWER_TYPE.ERROR,
-                error_code=ERR.ER_WRONG_ARGUMENTS,
-                error_message=f"predictor with name '{insert['name']}'' already exists"
-            )
+            raise ErSqlWrongArguments(f"predictor with name '{insert['name']}'' already exists")
 
         kwargs = {}
         if isinstance(insert.get('training_options'), str) \
                 and len(insert['training_options']) > 0:
             try:
                 kwargs = json.loads(insert['training_options'])
-            except Exception:
-                return ExecuteAnswer(
-                    ANSWER_TYPE.ERROR,
-                    error_code=ERR.ER_WRONG_ARGUMENTS,
-                    error_message='training_options should be in valid JSON string'
-                )
+            except json.JSONDecodeError:
+                raise ErSqlWrongArguments('training_options should be in valid JSON string')
 
         integration = self.session.integration
         if isinstance(integration, str) is False or len(integration) == 0:
-            return ExecuteAnswer(
-                ANSWER_TYPE.ERROR,
-                error_code=ERR.ER_WRONG_ARGUMENTS,
-                error_message='select_data_query can be used only in query from database'
-            )
+            raise ErSqlWrongArguments('select_data_query can be used only in query from database')
+
         insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
         ds_name = data_store.get_vacant_name(insert['name'])
         ds = data_store.save_datasource(ds_name, integration, {'query': insert['select_data_query']})

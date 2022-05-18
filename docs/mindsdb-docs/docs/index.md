@@ -30,9 +30,9 @@ You can use the MindsDB SQL Editor or open your preferred MySQL client and conne
 
 ---
 
-## 3. Connecting a Database [`#!sql CREATE DATABASE`](/sql/api/databases/)
+## 3. Connecting a Database [`#!sql CREATE DATABASE`](sql/create/databases/)
 
-For this quickstart, we have already prepared some example data for you.  To add it to your account, use the [`#!sql CREATE DATABASE`](/sql/api/databases/) syntax by copying and pasting this command into your SQL client:
+For this quickstart, we have already prepared some example data for you.  To add it to your account, use the [`#!sql CREATE DATABASE`](sql/create/databases/) syntax by copying and pasting this command into your SQL client:
 
 ```sql
 CREATE DATABASE example_data

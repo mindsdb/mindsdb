@@ -206,18 +206,22 @@ class IntegrationController:
         return connections
 
     def get_handler(self, name, company_id=None, case_sensitive=False):
-        if case_sensitive:
-            integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+        if name.lower() == 'files':
+            integration_data = {
+                'type': 'files',
+                'name': 'files'
+            }
         else:
-            integration_record = session.query(Integration).filter(
-                (Integration.company_id == company_id)
-                & (func.lower(Integration.name) == func.lower(name))
-            ).first()
-        integration_data = self._get_integration_record_data(integration_record, True)
+            if case_sensitive:
+                integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+            else:
+                integration_record = session.query(Integration).filter(
+                    (Integration.company_id == company_id)
+                    & (func.lower(Integration.name) == func.lower(name))
+                ).first()
+            integration_data = self._get_integration_record_data(integration_record, True)
 
         integration_type = integration_data.get('type')
-        if integration_type not in ['mysql', 'postgres']:
-            raise Exception('Only mysql atm')
 
         integration_name = integration_data.get('name')
         del integration_data['name']
@@ -225,8 +229,13 @@ class IntegrationController:
         if integration_type not in self.handler_modules:
             raise Exception(f'Cant find handler for {integration_name}')
 
+        fs_store = FsStore()
+
         handler = self.handler_modules[integration_type].Handler(
-            name=integration_name, **integration_data
+            name=integration_name,
+            db_store=None,
+            fs_store=fs_store,
+            connection_data=integration_data
         )
 
         return handler

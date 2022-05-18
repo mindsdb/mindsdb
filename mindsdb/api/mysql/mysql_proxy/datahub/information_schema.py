@@ -40,7 +40,13 @@ class InformationSchema(DataNode):
                 session.data_store,
                 session.integration_controller
             ),
-            'files': FileDataNode(session.data_store),
+            # 'files': FileDataNode(session.data_store),
+            'files': IntegrationDataNode(
+                'files',
+                self.data_store,
+                ds_type='file',
+                integration_controller=self.session.integration_controller
+            ),
             'views': ViewDataNode(session.view_interface, session.integration_controller, session.data_store)
         }
 

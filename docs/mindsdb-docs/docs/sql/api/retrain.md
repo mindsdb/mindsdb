@@ -1,4 +1,4 @@
-# `#!sql RETRAIN PREDICTOR` Statement
+# `#!sql RETRAIN` Statement
 
 ## Description
 

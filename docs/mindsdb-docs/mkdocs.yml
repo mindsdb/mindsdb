@@ -106,7 +106,7 @@ nav:
     - MLFlow: custom-model/mlflow.md
     - Ray Serve: custom-model/ray-serve.md
     - HuggingFace: custom-model/huggingface.md
-    - OpenAi: custom-model/openai.md
+    - OpenAI: custom-model/openai.md
 
   - Tutorials:
     - Regression:

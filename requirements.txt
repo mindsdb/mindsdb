@@ -24,3 +24,5 @@ checksumdir >= 1.2.0
 mindsdb-streams == 0.0.5
 duckdb == 0.3.1
 requests >= 2.0.0
+trino~=0.313.0
+requests-kerberos==0.12.0

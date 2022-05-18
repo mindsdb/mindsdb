@@ -16,6 +16,7 @@ from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.datastore.datastore import DataStore
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
 
 def clean_row(row):
@@ -55,19 +56,17 @@ class FileHandler(DatabaseHandler):
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
-        # renderer = SqlalchemyRender('postgres')
-        # query_str = renderer.get_string(query, with_failback=True)
-        # return self.native_query(query_str)
         table_name = query.from_table.parts[-1]
 
         data_store = DataStore()    # TODO for cloud
         file_path = data_store.get_file_path(table_name, company_id=None)
 
-        df, columns = self._handle_source(file_path)
+        df, _columns = self._handle_source(file_path)
+        result_df = query_df(df, query)
 
         return {
             'type': RESPONSE_TYPE.TABLE,
-            'data_frame': df
+            'data_frame': result_df
         }
 
     def native_query(self, query):

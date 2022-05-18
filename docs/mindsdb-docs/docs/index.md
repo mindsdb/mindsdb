@@ -81,7 +81,6 @@ On execution, you should get:
 | 0.0             | 1.0                 | 298  | great    | 9              | 2104          | south_side   | 2104         |
 | 2.0             | 1.0                 | 878  | great    | 8              | 3861          | south_side   | 3861         |
 +-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
-10 rows in set (0.36 sec)
 ```
 
 ---
@@ -121,7 +120,6 @@ On execution, you should get:
 +----------+
 | training |
 +----------+
-1 row in set (0.19 sec)
 ```
 Or:
 
@@ -131,7 +129,6 @@ Or:
 +----------+
 | complete |
 +----------+
-1 row in set (0.31 sec)
 ```
 
 !!! attention "Predictor Status Must be 'complete' Before Making a Prediction"
@@ -156,7 +153,6 @@ On execution, you should get:
 +--------------+
 | 1130         |
 +--------------+
-1 row in set (0.38 sec)
 ```
 
 !!! done "Congratulations"

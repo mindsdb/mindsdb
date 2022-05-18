@@ -3,7 +3,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
 
 # base exception for unknown error
 class SqlApiUnknownError(Exception):
-    pass
+    err_code = ERR.ER_UNKNOWN_ERROR
 
 
 # base exception for known error

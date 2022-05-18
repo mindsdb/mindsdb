@@ -5,6 +5,10 @@ from flask import request
 
 from mindsdb.api.http.namespaces.configs.sql import ns_conf
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import FakeMysqlProxy, RESPONSE_TYPE as SQL_RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.utilities import (
+    SqlApiException,
+    SqlApiUnknownError
+)
 import mindsdb.utilities.hooks as hooks
 
 
@@ -25,13 +29,8 @@ class Query(Resource):
         mysql_proxy.set_context(context)
         try:
             result = mysql_proxy.process_query(query)
-            if result.type == SQL_RESPONSE_TYPE.ERROR:
-                query_response = {
-                    'type': SQL_RESPONSE_TYPE.ERROR,
-                    'error_code': result.error_code,
-                    'error_message': result.error_message
-                }
-            elif result.type == SQL_RESPONSE_TYPE.OK:
+
+            if result.type == SQL_RESPONSE_TYPE.OK:
                 query_response = {
                     'type': SQL_RESPONSE_TYPE.OK
                 }
@@ -41,6 +40,24 @@ class Query(Resource):
                     'data': result.data,
                     'column_names': [x['alias'] or x['name'] if 'alias' in x else x['name'] for x in result.columns]
                 }
+        except SqlApiException as e:
+            # classified error
+            error_type = 'expected'
+            query_response = {
+                'type': SQL_RESPONSE_TYPE.ERROR,
+                'error_code': e.err_code,
+                'error_message': str(e)
+            }
+
+        except SqlApiUnknownError as e:
+            # unclassified
+            error_type = 'unexpected'
+            query_response = {
+                'type': SQL_RESPONSE_TYPE.ERROR,
+                'error_code': e.err_code,
+                'error_message': str(e)
+            }
+
         except Exception as e:
             error_type = 'unexpected'
             query_response = {

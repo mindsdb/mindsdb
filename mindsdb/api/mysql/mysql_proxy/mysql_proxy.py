@@ -752,7 +752,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
                 response = SQLAnswer(
                     resp_type=RESPONSE_TYPE.ERROR,
-                    error_code=ERR.ER_INTERNAL_ERROR,
+                    error_code=e.err_code,
                     error_message=str(e)
                 )
 

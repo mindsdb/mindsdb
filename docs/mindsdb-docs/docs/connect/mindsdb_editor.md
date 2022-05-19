@@ -4,7 +4,7 @@ MindsDB provides a SQL Editor so you don't need to download additional SQL clien
 
 === "Self-Hosted Local Deployment"
 
-    After any of the Self-Hosted Setups - [Linux](/setup/self-hosted/pip/linux), [Windows](/setup/self-hosted/pip/windows), [MacOs](/setup/self-hosted/pip/macos) or directly from [source code](/setup/self-hosted/pip/source) go to you terminal and execute: 
+    After any of the Self-Hosted Setups - [Linux](/setup/self-hosted/pip/linux), [Windows](/setup/self-hosted/pip/windows), [MacOs](/setup/self-hosted/pip/macos) or directly from [source code](/setup/self-hosted/pip/source) - go to your terminal and execute: 
 
     ```bash
       python -m mindsdb 

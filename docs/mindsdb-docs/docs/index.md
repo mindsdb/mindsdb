@@ -6,7 +6,7 @@ Follow the following steps to start predicting in SQL straight away. Check out o
 Create your [free MindsDB Cloud account](https://cloud.mindsdb.com/register).
 
 ???+ Tip "Local Installation" 
-    Follow our [Docker instructions](/deployment/docker). if you  prefer to proceed with a local installation.
+    Follow our [Docker instructions](setup/self-hosted/docker/). if you  prefer to proceed with a local installation.
 
 ---
 ## 2. Connect MindsDB to a MySQL Client

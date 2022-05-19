@@ -43,6 +43,7 @@ from mindsdb_sql.planner.steps import (
     MultipleSteps,
     ProjectStep,
     SaveToTable,
+    InsertToTable,
     FilterStep,
     UnionStep,
     JoinStep,
@@ -584,19 +585,20 @@ class SQLQuery():
             # if there was no 'ProjectStep', then get columns list from last step:
             if self.columns_list is None:
                 self.columns_list = []
-                for table_name in self.fetched_data['columns']:
-                    col_types = self.fetched_data['types'].get(table_name, {})
-                    for column in self.fetched_data['columns'][table_name]:
-                        self.columns_list.append(
-                            Column(
-                                database=table_name[0],
-                                table_name=table_name[1],
-                                table_alias=table_name[2],
-                                name=column[0],
-                                alias=column[1],
-                                type=col_types.get(column[0])
+                if self.fetched_data is not None:
+                    for table_name in self.fetched_data['columns']:
+                        col_types = self.fetched_data['types'].get(table_name, {})
+                        for column in self.fetched_data['columns'][table_name]:
+                            self.columns_list.append(
+                                Column(
+                                    database=table_name[0],
+                                    table_name=table_name[1],
+                                    table_alias=table_name[2],
+                                    name=column[0],
+                                    alias=column[1],
+                                    type=col_types.get(column[0])
+                                )
                             )
-                        )
 
             self.columns_list = [x for x in self.columns_list if x.name != '__mindsdb_row_id']
         except Exception as e:
@@ -782,20 +784,7 @@ class SQLQuery():
                         integration_type=self.session.integration_type
                     )
 
-                    if isinstance(self.query, CreateTable):
-                        new_data = []
-                        for row in data:
-                            new_row = {}
-                            for key, value in row.items():
-                                if key not in ('__mindsdb_row_id', '__mdb_make_predictions'):
-                                    new_key = f'predictor.{key}'
-                                else:
-                                    new_key = key
-                                new_row[(new_key, new_key)] = value
-                            new_data.append(new_row)
-                        data = new_data
-                    else:
-                        data = [{(key, key): value for key, value in row.items()} for row in data]
+                    data = [{(key, key): value for key, value in row.items()} for row in data]
 
                     values = [{table_name: x} for x in data]
 
@@ -1138,7 +1127,16 @@ class SQLQuery():
                 'values': values
             }
 
-        elif type(step) == SaveToTable:
+        elif type(step) == SaveToTable or type(step) == InsertToTable:
+            is_replace = False
+            is_create = False
+
+            if type(step) == SaveToTable:
+                is_create = True
+
+                if step.is_replace:
+                    is_replace = True
+
             step_data = step.dataframe.result_data
             integration_name = step.table.parts[0]
             table_name_parts = step.table.parts[1:]
@@ -1158,18 +1156,47 @@ class SQLQuery():
             # endregion
 
             # region del columns filtered at projection step
-            filtered_column_names = [x.name for x in self.columns_list]
-            for table in step_data['columns']:
-                new_table_columns = []
-                for column in step_data['columns'][table]:
-                    if column[0].startswith('predictor.'):
-                        new_table_columns.append(column)
-                    elif column[0] in filtered_column_names:
-                        new_table_columns.append(column)
-                step_data['columns'][table] = new_table_columns
+            if self.columns_list is not None:
+                filtered_column_names = [x.name for x in self.columns_list]
+                for table in step_data['columns']:
+                    new_table_columns = []
+                    for column in step_data['columns'][table]:
+                        if column[0].startswith('predictor.'):
+                            new_table_columns.append(column)
+                        elif column[0] in filtered_column_names:
+                            new_table_columns.append(column)
+                    step_data['columns'][table] = new_table_columns
             # endregion
 
-            dn.create_table(table_name_parts=table_name_parts, columns=step_data['columns'], data=step_data['values'])
+            # drop double names
+            if len(step_data['tables']) > 1:
+                # set prefixes for all tables except first one
+                for table in step_data['tables'][1:]:
+                    table_name = table[1]
+                    col_map = []
+                    col_list = []
+                    for column in step_data['columns'][table]:
+                        column_new = (f'{table_name}.{column[0]}', f'{table_name}.{column[1]}')
+                        col_list.append(column_new)
+                        col_map.append([column, column_new])
+
+                    # replace columns
+                    step_data['columns'][table] = col_list
+
+                    # replace in values
+                    for row in step_data['values']:
+                        table_row = row[table]
+
+                        for column, column_new in col_map:
+                            table_row[column_new] = table_row.pop(column)
+
+            dn.create_table(
+                table_name_parts=table_name_parts,
+                columns=step_data['columns'],
+                data=step_data['values'],
+                is_replace=is_replace,
+                is_create=is_create
+            )
             data = None
         else:
             raise ErLogicError(F'Unknown planner step: {step}')

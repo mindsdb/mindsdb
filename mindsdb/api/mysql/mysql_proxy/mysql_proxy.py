@@ -23,6 +23,8 @@ import select
 import base64
 from typing import List, Dict
 
+from numpy import dtype as np_dtype
+from pandas.api import types as pd_types
 from lightwood.api import dtype
 
 from mindsdb.utilities.wizards import make_ssl_cert
@@ -48,10 +50,8 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     ERR,
     COMMANDS,
     TYPES,
-    SERVER_VARIABLES,
     DEFAULT_AUTH_METHOD,
     SERVER_STATUS,
-    FIELD_FLAG,
     CAPABILITIES
 )
 
@@ -72,9 +72,6 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     STMTPrepareHeaderPacket,
     BinaryResultsetRowPacket
 )
-
-from numpy import dtype as np_dtype
-from pandas.api import types as pd_types
 
 from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface

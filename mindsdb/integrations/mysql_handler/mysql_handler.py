@@ -19,6 +19,8 @@ class MySQLHandler(DatabaseHandler):
     This handler handles connection and execution of the MySQL statements.
     """
 
+    name = 'mysql'
+
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.mysql_url = None

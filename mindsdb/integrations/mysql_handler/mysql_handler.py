@@ -26,15 +26,16 @@ class MySQLHandler(DatabaseHandler):
         self.mysql_url = None
         self.parser = parse_sql
         self.dialect = 'mysql'
-        self.host = kwargs.get('host')
-        self.port = kwargs.get('port')
-        self.user = kwargs.get('user')
-        self.database = kwargs.get('database')  # todo: may want a method to change active DB
-        self.password = kwargs.get('password')
-        self.ssl = kwargs.get('ssl')
-        self.ssl_ca = kwargs.get('ssl_ca')
-        self.ssl_cert = kwargs.get('ssl_cert')
-        self.ssl_key = kwargs.get('ssl_key')
+        connection_data = kwargs.get('connection_data')
+        self.host = connection_data.get('host')
+        self.port = connection_data.get('port')
+        self.user = connection_data.get('user')
+        self.database = connection_data.get('database')  # todo: may want a method to change active DB
+        self.password = connection_data.get('password')
+        self.ssl = connection_data.get('ssl')
+        self.ssl_ca = connection_data.get('ssl_ca')
+        self.ssl_cert = connection_data.get('ssl_cert')
+        self.ssl_key = connection_data.get('ssl_key')
 
     def __connect(self):
         config = {

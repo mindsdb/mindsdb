@@ -767,7 +767,7 @@ class ExecuteCommands:
                 for i, col in enumerate(order_by):
                     new_name = get_column_in_case(ds_column_names, col)
                     if new_name is None:
-                        raise Exception(
+                        raise ErSqlWrongArguments(
                             f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
                         )
                     kwargs['timeseries_settings']['order_by'][i] = new_name
@@ -777,7 +777,7 @@ class ExecuteCommands:
                     new_name = get_column_in_case(ds_column_names, col)
                     kwargs['timeseries_settings']['group_by'][i] = new_name
                     if new_name is None:
-                        raise Exception(
+                        raise ErSqlWrongArguments(
                             f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
                         )
 
@@ -946,7 +946,7 @@ class ExecuteCommands:
                 column_name = str(result)
                 column_alias = '.'.join(target.alias.parts) if type(target.alias) == Identifier else column_name
             else:
-                raise Exception(f'Unknown constant type: {target_type}')
+                raise ErSqlWrongArguments(f'Unknown constant type: {target_type}')
 
             columns.append(
                 Column(

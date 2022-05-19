@@ -6,6 +6,7 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast import Insert, Identifier, Constant, CreateTable, TableColumn, DropTables
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
+from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 from mindsdb.utilities.log import log
 
 
@@ -36,9 +37,9 @@ class IntegrationDataNode(DataNode):
 
         dso, _creation_info = self.data_store.create_datasource(self.integration_name, {'query': 'select 1'})
         if hasattr(dso, 'execute') is False:
-            raise Exception(f"Cant create table in {self.integration_name}")
+            raise exc.ErBadTableError(f"Cant create table in {self.integration_name}")
         if self.ds_type not in ('postgres', 'mysql', 'mariadb'):
-            raise Exception(f'At this moment is no possible to create table in "{self.ds_type}"')
+            raise exc.ErNotSupportedYet(f'At this moment is no possible to create table in "{self.ds_type}"')
 
         if self.ds_type in ('mysql', 'mariadb'):
             dialect = 'mysql'

@@ -3,6 +3,7 @@ from mindsdb_datasources import FileDS
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 
 
 class FileDataNode(DataNode):
@@ -25,7 +26,7 @@ class FileDataNode(DataNode):
         query_tables = get_all_tables(query)
 
         if len(query_tables) != 1:
-            raise Exception(f'Only one table can be used in query to information_schema: {query}')
+            raise exc.ErBadTableError(f'Only one table can be used in query to information_schema: {query}')
 
         file_path = self.data_store.get_file_path(query_tables[0])
         file_datasource = FileDS(file_path)

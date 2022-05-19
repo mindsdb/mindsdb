@@ -4,6 +4,7 @@ from mindsdb_sql import parse_sql
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 
 
 class ViewDataNode(DataNode):
@@ -24,7 +25,7 @@ class ViewDataNode(DataNode):
 
     def get_table_columns(self, table):
         # TODO
-        raise Exception('not iomplemented')
+        raise exc.ErNotSupportedYet('not iomplemented')
 
     def select(self, query):
         if isinstance(query, str):

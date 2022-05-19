@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.utilities.log import log
@@ -127,7 +128,7 @@ class MySQLHandler(DatabaseHandler):
         result = self.native_query(q)
         return result
 
-    def select_query(self, query):
+    def query(self, query: ASTNode):
         """
         Retrieve the data from the SQL statement.
         """

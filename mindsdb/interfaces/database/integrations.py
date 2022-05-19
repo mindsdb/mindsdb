@@ -241,7 +241,7 @@ class IntegrationController:
         return handler
 
     def _load_handler_modules(self):
-        handlers_list = ['postgres_handler', 'file_handler']
+        handlers_list = ['postgres_handler', 'mysql_handler', 'file_handler']
         self.handler_modules = {}
 
         for module_name in handlers_list:

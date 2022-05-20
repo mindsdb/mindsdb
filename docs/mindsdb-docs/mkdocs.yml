@@ -83,9 +83,7 @@ nav:
       - DBeaver: connect/dbeaver.md
       - Deepnote: connect/deepnote.md
       - SQL Alchemy: connect/sql-alchemy.md
-      - DBT:
-        - DBT Connection: connect/dbt.md
-        - DBT-MindsDB Profile: connect/dbt-mindsdb-profile.md
+      - DBT: connect/dbt.md
       - Kafka: connect/kafka.md 
       - Tableau: connect/tableau.md
   - SQL API:

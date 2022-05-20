@@ -78,7 +78,7 @@ nav:
         - Sourcecode via pip: setup/self-hosted/pip/source.md
     - MindsDB Cloud: setup/cloud.md
   - Connect:
-      - MindsDB Cloud Editor: connect/mindsdb_editor.md
+      - MindsDB SQL Editor: connect/mindsdb_editor.md
       - MySQL CLI: connect/mysql-client.md
       - DBeaver: connect/dbeaver.md
       - Deepnote: connect/deepnote.md

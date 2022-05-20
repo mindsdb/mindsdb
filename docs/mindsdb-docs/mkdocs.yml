@@ -77,7 +77,7 @@ nav:
         - MacOs via pip: setup/self-hosted/pip/macos.md
         - Sourcecode via pip: setup/self-hosted/pip/source.md
     - MindsDB Cloud: setup/cloud.md
-  - Connect:
+  - Connect to MindsDB:
       - MindsDB SQL Editor: connect/mindsdb_editor.md
       - MySQL CLI: connect/mysql-client.md
       - DBeaver: connect/dbeaver.md
@@ -86,6 +86,8 @@ nav:
       - DBT: connect/dbt.md
       - Kafka: connect/kafka.md 
       - Tableau: connect/tableau.md
+  - Connect data to MindsDB: sql/create/databases.md
+  - Train a Predictor: sql/create/predictor.md
   - SQL API:
     - Table Structure (Schema): sql/table-structure.md
     - CREATE:

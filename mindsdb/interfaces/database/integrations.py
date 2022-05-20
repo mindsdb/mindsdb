@@ -13,8 +13,8 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.fs import create_directory
 from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
 
-from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
-from mindsdb.integrations.postgres_handler.postgres_handler import PostgresHandler
+from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 
 
 class IntegrationController:
@@ -231,12 +231,20 @@ class IntegrationController:
 
         fs_store = FsStore()
 
-        handler = self.handler_modules[integration_type].Handler(
+        handler_ars = dict(
             name=integration_name,
             db_store=None,
             fs_store=fs_store,
             connection_data=integration_data
         )
+
+        if integration_type == 'files':
+            handler_ars['file_controller'] = WithKWArgsWrapper(
+                FileController(),
+                company_id=company_id
+            )
+
+        handler = self.handler_modules[integration_type].Handler(**handler_ars)
 
         return handler
 

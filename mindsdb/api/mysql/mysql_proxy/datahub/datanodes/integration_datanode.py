@@ -18,12 +18,13 @@ class IntegrationDataNode(DataNode):
         self.data_store = data_store
         self.ds_type = ds_type
         self.integration_controller = integration_controller
+        self.integration_handler = self.integration_controller.get_handler(self.integration_name)
 
     def get_type(self):
         return self.type
 
     def get_tables(self):
-        return []
+        return self.integration_handler.get_tables()
 
     def has_table(self, tableName):
         return True
@@ -115,8 +116,7 @@ class IntegrationDataNode(DataNode):
         dso.execute(query_str)
 
     def select(self, query):
-        handler = self.integration_controller.get_handler(self.integration_name)
-        result = handler.query(query)
+        result = self.integration_handler.query(query)
 
         if result.get('type') == RESPONSE_TYPE.ERROR:
             raise Exception(result.get('error_message', ''))

@@ -12,6 +12,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -43,13 +44,17 @@ class MindsDBDataNode(DataNode):
 
     def get_tables(self):
         models = self.model_interface.get_models()
-        models = [x['name'] for x in models if x['status'] == 'complete']
-        models += ['predictors', 'databases']
+        tables = []
+        for model in models:
+            tables.append(TablesRow(TABLE_NAME=model['name'], TABLE_CATALOG='mindsdb'))
+        tables.append(TablesRow(TABLE_NAME='predictors', TABLE_CATALOG='mindsdb'))
+        tables.append(TablesRow(TABLE_NAME='databases', TABLE_CATALOG='mindsdb'))
 
         return models
 
     def has_table(self, table):
-        return table in self.get_tables()
+        names = [table.TABLE_NAME for table in self.get_tables()]
+        return table in names
 
     def _get_model_columns(self, table_name):
         model = self.model_interface.get_model_data(name=table_name)

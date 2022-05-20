@@ -107,6 +107,11 @@ def start(verbose, no_studio, with_nlp):
             company_id=company_id
         )
 
+        request.file_controller = WithKWArgsWrapper(
+            current_app.original_file_controller,
+            company_id=company_id
+        )
+
     port = config['api']['http']['port']
     host = config['api']['http']['host']
 

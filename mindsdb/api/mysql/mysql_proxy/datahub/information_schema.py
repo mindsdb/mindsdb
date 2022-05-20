@@ -1,4 +1,5 @@
 from functools import partial
+from collections import OrderedDict
 
 import pandas as pd
 
@@ -8,6 +9,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.view_datanode import ViewDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.mindsdb_datanode import MindsDBDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import IntegrationDataNode
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 
 
 class InformationSchema(DataNode):
@@ -15,7 +17,8 @@ class InformationSchema(DataNode):
 
     information_schema = {
         'SCHEMATA': ['CATALOG_NAME', 'SCHEMA_NAME', 'DEFAULT_CHARACTER_SET_NAME', 'DEFAULT_COLLATION_NAME', 'SQL_PATH'],
-        'TABLES': ['TABLE_NAME', 'TABLE_SCHEMA', 'TABLE_TYPE', 'TABLE_ROWS', 'TABLE_COLLATION', 'TABLE_COMMENT'],
+        # 'TABLES': ['TABLE_NAME', 'TABLE_SCHEMA', 'TABLE_TYPE', 'TABLE_ROWS', 'TABLE_COLLATION', 'TABLE_COMMENT'],
+        'TABLES': ['TABLE_CATALOG', 'TABLE_SCHEMA', 'TABLE_NAME', 'TABLE_TYPE', 'ENGINE', 'VERSION', 'ROW_FORMAT', 'TABLE_ROWS', 'AVG_ROW_LENGTH', 'DATA_LENGTH', 'MAX_DATA_LENGTH', 'INDEX_LENGTH', 'DATA_FREE', 'AUTO_INCREMENT', 'CREATE_TIME', 'UPDATE_TIME', 'CHECK_TIME', 'TABLE_COLLATION', 'CHECKSUM', 'CREATE_OPTIONS', 'TABLE_COMMENT'],
         'COLUMNS': ['TABLE_CATALOG', 'TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME', 'ORDINAL_POSITION', 'COLUMN_DEFAULT', 'IS_NULLABLE', 'DATA_TYPE', 'CHARACTER_MAXIMUM_LENGTH', 'CHARACTER_OCTET_LENGTH', 'NUMERIC_PRECISION', 'NUMERIC_SCALE', 'DATETIME_PRECISION', 'CHARACTER_SET_NAME', 'COLLATION_NAME', 'COLUMN_TYPE', 'COLUMN_KEY', 'EXTRA', 'PRIVILEGES', 'COLUMN_COMMENT', 'GENERATION_EXPRESSION'],
         'EVENTS': ['EVENT_CATALOG', 'EVENT_SCHEMA', 'EVENT_NAME', 'DEFINER', 'TIME_ZONE', 'EVENT_BODY', 'EVENT_DEFINITION', 'EVENT_TYPE', 'EXECUTE_AT', 'INTERVAL_VALUE', 'INTERVAL_FIELD', 'SQL_MODE', 'STARTS', 'ENDS', 'STATUS', 'ON_COMPLETION', 'CREATED', 'LAST_ALTERED', 'LAST_EXECUTED', 'EVENT_COMMENT', 'ORIGINATOR', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION'],
         'ROUTINES': ['SPECIFIC_NAME', 'ROUTINE_CATALOG', 'ROUTINE_SCHEMA', 'ROUTINE_NAME', 'ROUTINE_TYPE', 'DATA_TYPE', 'CHARACTER_MAXIMUM_LENGTH', 'CHARACTER_OCTET_LENGTH', 'NUMERIC_PRECISION', 'NUMERIC_SCALE', 'DATETIME_PRECISION', 'CHARACTER_SET_NAME', 'COLLATION_NAME', 'DTD_IDENTIFIER', 'ROUTINE_BODY', 'ROUTINE_DEFINITION', 'EXTERNAL_NAME', 'EXTERNAL_LANGUAGE', 'PARAMETER_STYLE', 'IS_DETERMINISTIC', 'SQL_DATA_ACCESS', 'SQL_PATH', 'SECURITY_TYPE', 'CREATED', 'LAST_ALTERED', 'SQL_MODE', 'ROUTINE_COMMENT', 'DEFINER', 'CHARACTER_SET_CLIENT', 'COLLATION_CONNECTION', 'DATABASE_COLLATION'],
@@ -107,19 +110,20 @@ class InformationSchema(DataNode):
     def _get_tables(self):
         columns = self.information_schema['TABLES']
 
-        data = [
-            [name, 'information_schema', 'SYSTEM VIEW', [], 'utf8mb4_0900_ai_ci', None]
-            for name in self.information_schema.keys()
-        ]
+        data = []
+        for name in self.information_schema.keys():
+            row = TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.SYSTEM_VIEW, TABLE_NAME=name)
+            data.append(row.to_list())
 
         for ds_name, ds in self.persis_datanodes.items():
             ds_tables = ds.get_tables()
-            data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci', None] for x in ds_tables]
+            data += ds_tables
+            # data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci', None] for x in ds_tables]
 
-        for ds_name in self.get_integrations_names():
-            ds = self.get(ds_name)
-            ds_tables = ds.get_tables()
-            data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci', None] for x in ds_tables]
+        # for ds_name in self.get_integrations_names():
+        #     ds = self.get(ds_name)
+        #     ds_tables = ds.get_tables()
+        #     data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci', None] for x in ds_tables]
 
         df = pd.DataFrame(data, columns=columns)
         return df

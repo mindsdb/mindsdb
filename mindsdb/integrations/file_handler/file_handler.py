@@ -5,6 +5,7 @@ import json
 import codecs
 import traceback
 import tempfile
+from urllib.parse import urlparse
 
 import requests
 import pandas as pd
@@ -15,8 +16,8 @@ from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.utilities.log import log
-from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 
 
 def clean_row(row):
@@ -36,12 +37,13 @@ class FileHandler(DatabaseHandler):
     """
     name = 'files'
 
-    def __init__(self, name, db_store=None, fs_store=None, connection_data=None):
+    def __init__(self, name, db_store=None, fs_store=None, connection_data=None, file_controller=None):
         super().__init__(name)
         self.parser = parse_sql
         self.fs_store = fs_store    # or data_store ???
         self.custom_parser = connection_data.get('custom_parser')
         self.clean_rows = connection_data.get('clean_rows', True)
+        self.file_controller = file_controller
 
     def check_status(self):
         """
@@ -58,10 +60,9 @@ class FileHandler(DatabaseHandler):
         """
         table_name = query.from_table.parts[-1]
 
-        data_store = DataStore()    # TODO for cloud
-        file_path = data_store.get_file_path(table_name, company_id=None)
+        file_path = self.file_controller.get_file_path(table_name, company_id=None)
 
-        df, _columns = self._handle_source(file_path)
+        df, _columns = self._handle_source(file_path, self.clean_rows, self.custom_parser)
         result_df = query_df(df, query)
 
         return {
@@ -78,18 +79,17 @@ class FileHandler(DatabaseHandler):
         pass
         # TODO
 
-    def _handle_source(self, file_path):
-        self._file_name = os.path.basename(file_path)
-
+    @staticmethod
+    def _handle_source(file_path, clean_rows=True, custom_parser=None):
         # get file data io, format and dialect
-        data, fmt, self.dialect = self._getDataIo(file_path)
+        data, fmt, dialect = FileHandler._get_data_io(file_path)
         data.seek(0)  # make sure we are at 0 in file pointer
 
-        if self.custom_parser:
-            header, file_data = self.custom_parser(data, fmt)
+        if custom_parser:
+            header, file_data = custom_parser(data, fmt)
 
         elif fmt == 'csv':
-            csv_reader = list(csv.reader(data, self.dialect))
+            csv_reader = list(csv.reader(data, dialect))
             header = csv_reader[0]
             file_data = csv_reader[1:]
 
@@ -109,7 +109,7 @@ class FileHandler(DatabaseHandler):
         else:
             raise ValueError('Could not load file into any format, supported formats are csv, json, xls, xlsx')
 
-        if self.clean_rows:
+        if clean_rows:
             file_list_data = [clean_row(row) for row in file_data]
         else:
             file_list_data = file_data
@@ -117,7 +117,8 @@ class FileHandler(DatabaseHandler):
         col_map = dict((col, col) for col in header)
         return pd.DataFrame(file_list_data, columns=header), col_map
 
-    def _getDataIo(self, file_path):
+    @staticmethod
+    def _get_data_io(file_path):
         """
         This gets a file either url or local file and defiens what the format is as well as dialect
         :param file: file path or url
@@ -204,7 +205,7 @@ class FileHandler(DatabaseHandler):
 
         # lets try to figure out if its a csv
         try:
-            dialect = self._get_csv_dialect(file_path)
+            dialect = FileHandler._get_csv_dialect(file_path)
             if dialect:
                 return data, 'csv', dialect
             return data, None, dialect
@@ -215,15 +216,18 @@ class FileHandler(DatabaseHandler):
             # No file type identified
             return data, None, dialect
 
-    def _get_file_path(self) -> str:
-        path = self.file
-        if self.is_url:
-            self._fetch_url()
-            path = os.path.join(self._temp_dir, 'file')
+    @staticmethod
+    def _get_file_path(path) -> str:
+        try:
+            is_url = urlparse(path).scheme in ('http', 'https')
+        except Exception:
+            is_url = False
+        if is_url:
+            path = FileHandler._fetch_url(path)
         return path
 
-    def _get_csv_dialect(self, file_path) -> object:
-        # file_path = self._get_file_path()
+    @staticmethod
+    def _get_csv_dialect(file_path) -> csv.Dialect:
         with open(file_path, 'rt') as f:
             try:
                 accepted_csv_delimiters = [',', '\t', ';']
@@ -232,31 +236,50 @@ class FileHandler(DatabaseHandler):
                 dialect = None
         return dialect
 
-    def _fetch_url(self):
-        if self._temp_dir is not None and os.path.isfile(os.path.join(self._temp_dir, 'file')):
-            return
-        self._temp_dir = tempfile.mkdtemp(prefix='mindsdb_fileds_')
+    @staticmethod
+    def _fetch_url(url: str) -> str:
+        temp_dir = tempfile.mkdtemp(prefix='mindsdb_file_url_')
         try:
-            r = requests.get(self.file, stream=True)
+            r = requests.get(url, stream=True)
             if r.status_code == 200:
-                with open(os.path.join(self._temp_dir, 'file'), 'wb') as f:
+                with open(os.path.join(temp_dir, 'file'), 'wb') as f:
                     for chunk in r:
                         f.write(chunk)
             else:
                 raise Exception(f'Responce status code is {r.status_code}')
         except Exception as e:
-            print(f'Error during getting {self.file}')
+            print(f'Error during getting {url}')
             print(e)
             raise
+        return os.path.join(temp_dir, 'file')
+
+    # COMPANY_ID!!!!
+    # def get_files(self, company_id=None):
+    #     """ Get list of files
+
+    #         Returns:
+    #             list[dict]: files metadata
+    #     """
+    #     file_records = session.query(File).filter_by(company_id=company_id).all()
+    #     files_metadata = [{
+    #         'name': record.name,
+    #         'row_count': record.row_count,
+    #         'columns': record.columns,
+    #     } for record in file_records]
+    #     return files_metadata
 
     def get_tables(self):
         """
         List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
         """
-        query = "SELECT * FROM information_schema.tables WHERE \
-                 table_schema NOT IN ('information_schema', 'pg_catalog')"
-        res = self.native_query(query)
-        return res
+        result = []
+        files_meta = self.file_controller.get_files()
+        for file_meta in files_meta:
+            result.append(TablesRow(
+                TABLE_NAME=file_meta['name'],
+                TABLE_ROWS=file_meta['row_count']
+            ))
+        return result
 
     def describe_table(self, table_name):
         """
@@ -266,5 +289,3 @@ class FileHandler(DatabaseHandler):
               information_schema.columns WHERE table_name='{table_name}';"
         result = self.native_query(query)
         return result
-
-    # TODO: JOIN, SELECT INTO

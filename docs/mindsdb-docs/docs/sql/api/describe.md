@@ -11,7 +11,7 @@ The `DESCRIBE mindsdb.[name_of_your_predictor].features` statement is used to di
 ### Syntax
 
 ```sql
-DESCRIBE [mindsdb.name_of_your_predictor].features;
+DESCRIBE mindsdb.[name_of_your_predictor].features;
 ```
 
 On execution:
@@ -109,7 +109,7 @@ On execution:
 ### Syntax
 
 ```sql
-DESCRIBE [mindsdb.name_of_your_predictor].ensemble;
+DESCRIBE mindsdb.[name_of_your_predictor].ensemble;
 ```
 
 On execution:

@@ -86,9 +86,9 @@ On execution, you should get:
 
 ---
 
-## 5. Creating a Predictor [`#!sql CREATE PREDICTOR`](/sql/api/predictor/)
+## 5. Creating a Predictor [`#!sql CREATE PREDICTOR`](/sql/create/predictor/)
 
-Now you are ready to create your first predictor. Use the [`#!sql CREATE PREDICTOR`](/sql/api/predictor/) syntax by copying and pasting this command into your SQL client:
+Now you are ready to create your first predictor. Use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor/) syntax by copying and pasting this command into your SQL client:
 
 ```sql 
 CREATE PREDICTOR mindsdb.home_rentals_predictor

@@ -236,21 +236,6 @@ WITH
     };
 ```
 
-### Scylladb
-
-```sql
-CREATE DATABASE scylladb_datasource
-WITH
-    engine='scylladb',
-    parameters={
-            "user":"scylladb",
-            "port": 9042,
-            "password": "Mimzo3i-mxt@9CpThpBj",
-            "host": "127.0.0.1",
-            "database": "scylladb"
-    };
-```
-
 ### Trino
 
 ```sql

@@ -12,6 +12,7 @@ import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.parser.ast import DropTables, Select
 
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
@@ -62,13 +63,26 @@ class FileHandler(DatabaseHandler):
 
         file_path = self.file_controller.get_file_path(table_name, company_id=None)
 
-        df, _columns = self._handle_source(file_path, self.clean_rows, self.custom_parser)
-        result_df = query_df(df, query)
+        if type(query) == DropTables:
+            # TODO del files
+            response = {
+                'type': RESPONSE_TYPE.OK
+            }
+        elif type(query) == Select:
+            df, _columns = self._handle_source(file_path, self.clean_rows, self.custom_parser)
+            result_df = query_df(df, query)
+            response = {
+                'type': RESPONSE_TYPE.TABLE,
+                'data_frame': result_df
+            }
+        else:
+            response = {
+                'type': RESPONSE_TYPE.ERROR,
+                'error_code': 0,
+                'error_message': "Only 'select' and 'drop' queries allowed for files"
+            }
 
-        return {
-            'type': RESPONSE_TYPE.TABLE,
-            'data_frame': result_df
-        }
+        return response
 
     def native_query(self, query):
         """

@@ -1,11 +1,11 @@
-# CREATE TABLE Statement
+# `#!sql CREATE TABLE` Statement
 
 The `#!sql CREATE TABLE` statement is used to create table and fill it with result of a subselect.
 
 ## Syntax
 
 ```sql
-    CREATE /*REPLACE*/ TABLE [integration_name].[table_name]
+CREATE /*REPLACE*/ TABLE [integration_name].[table_name]
     [SELECT ...]
 ```
 
@@ -46,4 +46,3 @@ CREATE TABLE int1.tbl1 (
     WHERE ta.date > '2015-12-31'
 )
 ```
-

@@ -1,0 +1,2 @@
+trino~=0.313.0
+requests-kerberos==0.12.0

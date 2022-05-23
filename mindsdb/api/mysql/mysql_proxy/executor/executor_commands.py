@@ -1,7 +1,8 @@
 import json
 import datetime
-import pandas as pd
 from typing import Optional
+
+import pandas as pd
 
 from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatasource,
@@ -92,8 +93,11 @@ class ExecuteCommands:
             return self.answer_create_datasource(struct)
         if type(statement) == DropPredictor:
             predictor_name = statement.name.parts[-1]
-            self.session.datahub['mindsdb'].delete_predictor(predictor_name)
-            return ExecuteAnswer(ANSWER_TYPE.OK)
+            try:
+                self.session.datahub['mindsdb'].delete_predictor(predictor_name)
+            except Exception as e:
+                if not statement.if_exists:
+                    raise e
         elif type(statement) == DropTables:
             return self.answer_drop_tables(statement)
         elif type(statement) == DropDatasource or type(statement) == DropDatabase:
@@ -447,7 +451,16 @@ class ExecuteCommands:
             self.delete_predictor_query(statement)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Insert:
-            return self.process_insert(statement)
+            if statement.from_select is None:
+                return self.process_insert(statement)
+            else:
+                # run with planner
+                SQLQuery(
+                    statement,
+                    session=self.session,
+                    execute=True
+                )
+                return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
             raise ErNotSupportedYet('Update is not implemented')
         elif type(statement) == Alter and ('disable keys' in self.executor.sql_lower) or ('enable keys' in self.executor.sql_lower):

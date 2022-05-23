@@ -1,7 +1,5 @@
-from pandas import DataFrame as DF
 from mindsdb_sql import parse_sql
 
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
@@ -9,10 +7,9 @@ from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 class ViewDataNode(DataNode):
     type = 'view'
 
-    def __init__(self, view_interface, integration_controller, data_store):
+    def __init__(self, view_interface, integration_controller):
         self.view_interface = view_interface
         self.integration_controller = integration_controller
-        self.data_store = data_store
 
     def get_tables(self):
         views = self.view_interface.get_all()
@@ -37,13 +34,9 @@ class ViewDataNode(DataNode):
         integration = self.integration_controller.get_by_id(view_metadata['integration_id'])
         integration_name = integration['name']
 
-        dataset_name = self.data_store.get_vacant_name(table)
-        self.data_store.save_datasource(dataset_name, integration_name, {'query': view_metadata['query']})
-        try:
-            dataset_object = self.data_store.get_datasource_obj(dataset_name)
-            data_df = dataset_object.df
-        finally:
-            self.data_store.delete_datasource(dataset_name)
+        integration_handler = self.integration_controller.get_handler(integration_name)
+        result = integration_handler.query(view_metadata['query'])
+        data_df = result['data_frame']
 
         result = query_df(data_df, query_str)
 

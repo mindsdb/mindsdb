@@ -18,7 +18,6 @@ from lightwood import __version__ as lightwood_version
 import numpy as np
 import pandas as pd
 from pandas.core.frame import DataFrame
-import mindsdb_datasources
 
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
@@ -28,8 +27,6 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess, LearnRemoteProcess
-from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.datastore.datastore import QueryDS
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 
 IS_PY36 = sys.version_info[1] <= 6
@@ -161,11 +158,6 @@ class ModelController():
         if predictor_record is not None:
             raise Exception('Predictor name must be unique.')
 
-        # TODO
-        # from_data -> dataframe
-        # del dataset_id
-        # del delete_ds_on_fail
-
         problem_definition, join_learn_process, json_ai_override = self._unpack_old_args(kwargs, to_predict)
 
         is_cloud = self.config.get('cloud', False)
@@ -196,7 +188,6 @@ class ModelController():
                 company_id=company_id,
                 name=name,
                 # dataset_id=dataset_id,
-                dataset_id=None,
                 mindsdb_version=mindsdb_version,
                 lightwood_version=lightwood_version,
                 to_predict=problem_definition['target'],
@@ -226,7 +217,6 @@ class ModelController():
             company_id=company_id,
             name=name,
             # dataset_id=dataset_id,
-            dataset_id=None,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,
@@ -255,13 +245,9 @@ class ModelController():
         assert predictor_record is not None
         predictor_data = self.get_model_data(name, company_id)
 
-        if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
-            ds_cls = getattr(mindsdb_datasources, when_data['class'])
-            df = ds_cls(*when_data['args'], **when_data['kwargs']).df
-        else:
-            if isinstance(when_data, dict):
-                when_data = [when_data]
-            df = pd.DataFrame(when_data)
+        if isinstance(when_data, dict):
+            when_data = [when_data]
+        df = pd.DataFrame(when_data)
 
         if predictor_record.is_custom:
             if predictor_data['format'] == 'mlflow':
@@ -373,12 +359,12 @@ class ModelController():
         else:
             return predictions
 
-    @mark_process(name='analyse')
-    def analyse_dataset(self, ds: dict, company_id: int) -> lightwood.DataAnalysis:
-        ds_cls = getattr(mindsdb_datasources, ds['class'])
-        df = ds_cls(*ds['args'], **ds['kwargs']).df
-        analysis = lightwood.analyze_dataset(df)
-        return analysis.to_dict()  # type: ignore
+    # @mark_process(name='analyse')
+    # def analyse_dataset(self, ds: dict, company_id: int) -> lightwood.DataAnalysis:
+    #     ds_cls = getattr(mindsdb_datasources, ds['class'])
+    #     df = ds_cls(*ds['args'], **ds['kwargs']).df
+    #     analysis = lightwood.analyze_dataset(df)
+    #     return analysis.to_dict()  # type: ignore
 
     def get_model_data(self, name, company_id: int):
         if '@@@@@' in name:
@@ -393,7 +379,7 @@ class ModelController():
         if predictor_record is None:
             raise Exception(f"Model does not exists: {original_name}")
 
-        linked_dataset = db.session.query(db.Dataset).get(predictor_record.dataset_id)
+        # linked_dataset = db.session.query(db.Dataset).get(predictor_record.dataset_id)
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -405,7 +391,7 @@ class ModelController():
         data['name'] = predictor_record.name
         data['code'] = predictor_record.code
         data['json_ai'] = predictor_record.json_ai
-        data['data_source_name'] = linked_dataset.name if linked_dataset else None
+        # data['data_source_name'] = linked_dataset.name if linked_dataset else None !!!!!
         data['problem_definition'] = predictor_record.learn_args
 
         # assume older models are complete, only temporary
@@ -494,16 +480,6 @@ class ModelController():
             raise Exception('You are unable to delete models currently in progress, please wait before trying again')
 
         db.session.delete(db_p)
-        if db_p.dataset_id is not None:
-            try:
-                dataset_record = db.Datasource.query.get(db_p.dataset_id)
-                if (
-                    isinstance(dataset_record.data, str)
-                    and json.loads(dataset_record.data).get('source_type') != 'file'
-                ):
-                    DataStore().delete_datasource(dataset_record.name, company_id)
-            except Exception:
-                pass
         db.session.commit()
 
         # delete from s3
@@ -542,7 +518,7 @@ class ModelController():
         predictor_record = db.Predictor(
             company_id=company_id,
             name=name,
-            dataset_id=dataset_id,
+            # dataset_id=dataset_id,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,

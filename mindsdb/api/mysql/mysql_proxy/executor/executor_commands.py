@@ -658,7 +658,9 @@ class ExecuteCommands:
                 if db_name == 'mindsdb':
                     self.session.datahub['mindsdb'].delete_predictor(table_name)
                 elif db_name == 'files':
-                    self.session.data_store.delete_file(table_name)
+                    self.session.datahub['files'].select(
+                        DropTables(tables=[Identifier(table_name)])
+                    )
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_view(self, statement):
@@ -699,7 +701,6 @@ class ExecuteCommands:
             struct['horizon'] = statement.horizon
 
         model_interface = self.session.model_interface
-        # data_store = self.session.data_store
 
         models = model_interface.get_models()
         model_names = [x['name'] for x in models]
@@ -721,45 +722,11 @@ class ExecuteCommands:
             ds_data_df = result['data_frame']
             ds_column_names = list(ds_data_df.columns)
 
-            # if integration_name.lower().startswith('datasource.'):
-            #     ds_name = integration_name[integration_name.find('.') + 1:]
-            #     ds = data_store.get_datasource_obj(ds_name, raw=True)
-            #     ds_data = data_store.get_datasource(ds_name)
-            # else:
-            #     if (
-            #         self.session.integration_controller.get(integration_name) is None
-            #         and integration_name not in ('views', 'files')
-            #     ):
-            #         raise ErBadDbError(f"Unknown datasource: {integration_name}")
-
-            #     ds_name = struct.get('datasource_name')
-            #     if ds_name is None:
-            #         ds_name = data_store.get_vacant_name(predictor_name)
-
-            #     ds_kwargs = {'query': struct['select']}
-            #     if integration_name in ('views', 'files'):
-            #         parsed = parse_sql(struct['select'])
-            #         query_table = parsed.from_table.parts[-1]
-            #         if integration_name == 'files':
-            #             ds_kwargs['mindsdb_file_name'] = query_table
-            #         else:
-            #             ds_kwargs['source'] = query_table
-            #     ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)
-            #     ds_data = data_store.get_datasource(ds_name)
-            #     ds_id = ds_data['id']
-
-            # ds_column_names = [x['name'] for x in ds_data['columns']]
-            try:
-                predict = self._check_predict_columns(struct['predict'], ds_column_names)
-            except Exception as e:
-                # data_store.delete_datasource(ds_name)
-                raise e
+            predict = self._check_predict_columns(struct['predict'], ds_column_names)
 
             for i, p in enumerate(predict):
                 predict[i] = get_column_in_case(ds_column_names, p)
         else:
-            ds = None
-            ds_id = None
             predict = struct['predict']
 
         timeseries_settings = {}
@@ -797,7 +764,6 @@ class ExecuteCommands:
                             f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
                         )
 
-        # - ds - ds_id - delete_ds_on_fail
         model_interface.learn(predictor_name, ds_data_df, predict, kwargs=kwargs)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -1317,7 +1283,7 @@ class ExecuteCommands:
              - insert - dict with keys as columns of mindsb.predictors table.
         '''
         model_interface = self.session.model_interface
-        data_store = self.session.data_store
+        integration_controller = self.session.integration_controller
 
         select_data_query = insert.get('select_data_query')
         if isinstance(select_data_query, str) is False or len(select_data_query) == 0:
@@ -1355,29 +1321,21 @@ class ExecuteCommands:
                 error_message='select_data_query can be used only in query from database'
             )
         insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-        ds_name = data_store.get_vacant_name(insert['name'])
-        ds = data_store.save_datasource(ds_name, integration, {'query': insert['select_data_query']})
+
+        integration_handler = integration_controller.get_handler(integration)
+        result = integration_handler.native_query(insert['select_data_query'])
+        ds_data_df = result['data_frame']
+        ds_column_names = list(ds_data_df.columns)
 
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
 
-        ds_data = data_store.get_datasource(ds_name)
-        if ds_data is None:
-            raise ErBadDbError(f"DataSource '{ds_name}' does not exists")
-        ds_columns = [x['name'] for x in ds_data['columns']]
         for col in insert['predict']:
-            if col not in ds_columns:
-                data_store.delete_datasource(ds_name)
+            if col not in ds_column_names:
                 raise ErKeyColumnDoesNotExist(f"Column '{col}' not exists")
 
-        try:
-            insert['predict'] = self._check_predict_columns(insert['predict'], ds_columns)
-        except Exception:
-            data_store.delete_datasource(ds_name)
-            raise
+        insert['predict'] = self._check_predict_columns(insert['predict'], ds_column_names)
 
-        model_interface.learn(
-            insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True
-        )
+        model_interface.learn(insert['name'], ds_data_df, insert['predict'], kwargs=kwargs)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 

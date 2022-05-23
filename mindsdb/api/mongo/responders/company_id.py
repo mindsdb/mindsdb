@@ -11,16 +11,12 @@ class Responce(Responder):
         need_response = query.get('need_response', False)
 
         mindsdb_env['company_id'] = company_id
-        mindsdb_env['data_store'] = WithKWArgsWrapper(
-            mindsdb_env['origin_data_store'],
-            company_id=company_id
-        )
         mindsdb_env['model_interface'] = WithKWArgsWrapper(
             mindsdb_env['origin_model_interface'],
             company_id=company_id
         )
-        mindsdb_env['datasource_controller'] = WithKWArgsWrapper(
-            mindsdb_env['origin_datasource_controller'],
+        mindsdb_env['integration_controller'] = WithKWArgsWrapper(
+            mindsdb_env['origin_integration_controller'],
             company_id=company_id
         )
 

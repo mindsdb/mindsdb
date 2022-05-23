@@ -608,21 +608,15 @@ class SQLQuery():
             table = step.table
             dn = self.datahub.get(step.namespace)
             ds_query = Select(from_table=Identifier(table), targets=[Star()])
-            dso, _ = dn.data_store.create_datasource(dn.integration_name, {'query': ds_query.to_string()})
 
-            columns = dso.get_columns()
-            cols = []
-            for col in columns:
-                if not isinstance(col, dict):
-                    col = {'name': col, 'type': 'str'}
-                cols.append(col)
+            data, columns_info = dn.select(ds_query)
 
             table_alias = (self.database, table, table)
 
             data = {
                 'values': [],
                 'columns': {
-                    table_alias: cols
+                    table_alias: columns_info
                 },
                 'tables': [table_alias]
             }

@@ -104,7 +104,7 @@ class Predictor(Base):
     mindsdb_version = Column(String)
     native_version = Column(String)
     # TODO del it, add integration_id and training_data_query
-    dataset_id = Column(ForeignKey('dataset.id', name='fk_dataset_id'), nullable=True)
+    # dataset_id = Column(ForeignKey('dataset.id', name='fk_dataset_id'), nullable=True)
     is_custom = Column(Boolean)
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')

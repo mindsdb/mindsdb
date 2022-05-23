@@ -36,10 +36,9 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, model_interface, data_store, integration_controller):
+    def __init__(self, model_interface, integration_controller):
         self.config = Config()
         self.model_interface = model_interface
-        self.data_store = data_store
         self.integration_controller = integration_controller
 
     def get_tables(self):

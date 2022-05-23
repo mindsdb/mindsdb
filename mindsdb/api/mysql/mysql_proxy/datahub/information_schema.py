@@ -34,22 +34,18 @@ class InformationSchema(DataNode):
     def __init__(self, session):
         self.session = session
         self.integration_controller = session.integration_controller
-        self.data_store = session.data_store
         self.view_interface = session.view_interface
         self.persis_datanodes = {
             'mindsdb': MindsDBDataNode(
                 session.model_interface,
-                session.data_store,
                 session.integration_controller
             ),
-            # 'files': FileDataNode(session.data_store),
             'files': IntegrationDataNode(
                 'files',
-                self.data_store,
                 ds_type='file',
                 integration_controller=self.session.integration_controller
             ),
-            'views': ViewDataNode(session.view_interface, session.integration_controller, session.data_store)
+            'views': ViewDataNode(session.view_interface, session.integration_controller)
         }
 
         self.get_dataframe_funcs = {
@@ -82,7 +78,6 @@ class InformationSchema(DataNode):
                 datasource = self.integration_controller.get(name=datasource_name)
                 return IntegrationDataNode(
                     datasource_name,
-                    self.data_store,
                     ds_type=datasource['type'],
                     integration_controller=self.session.integration_controller
                 )

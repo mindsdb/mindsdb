@@ -71,7 +71,6 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
 
-from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
@@ -848,7 +847,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.hook_before_handle = empty_fn
 
         server.original_model_interface = ModelInterface()
-        server.original_data_store = DataStore()
         server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
 
@@ -872,7 +870,6 @@ class FakeMysqlProxy(MysqlProxy):
         server.connection_id = 0
         server.hook_before_handle = empty_fn
         server.original_model_interface = ModelInterface()
-        server.original_data_store = DataStore()
         server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
 

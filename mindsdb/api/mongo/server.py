@@ -12,7 +12,6 @@ from mindsdb.api.mongo.responders import responders
 from mindsdb.api.mongo.utilities import log
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.storage.db import session as db_session
-from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 
@@ -291,20 +290,15 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         self.mindsdb_env = {
             'config': config,
-            'origin_data_store': DataStore(),
             'origin_model_interface': ModelInterface(),
-            'origin_datasource_controller': IntegrationController(),
+            'origin_integration_controller': IntegrationController(),
         }
         self.mindsdb_env['model_interface'] = WithKWArgsWrapper(
             self.mindsdb_env['origin_model_interface'],
             company_id=None
         )
-        self.mindsdb_env['data_store'] = WithKWArgsWrapper(
-            self.mindsdb_env['origin_data_store'],
-            company_id=None
-        )
-        self.mindsdb_env['datasource_controller'] = WithKWArgsWrapper(
-            self.mindsdb_env['origin_datasource_controller'],
+        self.mindsdb_env['integration_controller'] = WithKWArgsWrapper(
+            self.mindsdb_env['origin_integration_controller'],
             company_id=None
         )
 

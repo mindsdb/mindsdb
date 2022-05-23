@@ -295,6 +295,7 @@ class PredictorExport(Resource):
 @ns_conf.route('/<name>/import')
 @ns_conf.param('name', 'The predictor identifier')
 @ns_conf.response(404, 'predictor not found')
-class PredictorExport(Resource):
+class PredictorImport(Resource):
     def put(self, name):
         request.model_interface.import_predictor(name, request.json)
+        return '', 200

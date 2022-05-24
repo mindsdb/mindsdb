@@ -67,7 +67,3 @@ def default_train_data_gather(handler, query):
     records = handler.query(query)['data_frame']
     df = pd.DataFrame.from_records(records)
     return df
-
-
-def ts_train_data_gather(handler, query):
-    return default_train_data_gather(handler, query)

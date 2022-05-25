@@ -8,6 +8,7 @@ from mindsdb_sql.parser.ast import Insert, Identifier, Constant, CreateTable, Ta
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.utilities.log import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 
 
 class IntegrationDataNode(DataNode):
@@ -23,7 +24,16 @@ class IntegrationDataNode(DataNode):
         return self.type
 
     def get_tables(self):
-        return self.integration_handler.get_tables()
+        response = self.integration_handler.get_tables()
+        if response['type'] is RESPONSE_TYPE.TABLE:
+            if 'data' in response:
+                return response['data']
+            else:
+                result_dict = response['data_frame'].to_dict(orient='records')
+                result = []
+                for row in result_dict:
+                    result.append(TablesRow.from_dict(row))
+            return result
 
     def has_table(self, tableName):
         return True

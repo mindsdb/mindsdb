@@ -10,6 +10,7 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.utilities.log import log
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 
 
 class PostgresHandler(DatabaseHandler):
@@ -110,8 +111,12 @@ class PostgresHandler(DatabaseHandler):
                 table_schema NOT IN ('information_schema', 'pg_catalog')
                 and table_type = 'BASE TABLE'
         """
-        res = self.native_query(query)
-        return res
+        result = self.native_query(query)
+        result['data'] = [
+            TablesRow(TABLE_SCHEMA=row[0], TABLE_NAME=row[1])
+            for row in result['data_frame'].to_numpy()
+        ]
+        return result
 
     def get_views(self):
         """

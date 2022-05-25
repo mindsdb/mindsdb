@@ -9,6 +9,14 @@ TABLES_ROW_TYPE = TABLES_ROW_TYPE()
 
 
 class TablesRow:
+    columns = [
+        'TABLE_CATALOG', 'TABLE_SCHEMA', 'TABLE_NAME', 'TABLE_TYPE',
+        'ENGINE', 'VERSION', 'ROW_FORMAT', 'TABLE_ROWS', 'AVG_ROW_LENGTH',
+        'DATA_LENGTH', 'MAX_DATA_LENGTH', 'INDEX_LENGTH', 'DATA_FREE',
+        'AUTO_INCREMENT', 'CREATE_TIME', 'UPDATE_TIME', 'CHECK_TIME',
+        'TABLE_COLLATION', 'CHECKSUM', 'CREATE_OPTIONS', 'TABLE_COMMENT'
+    ]
+
     def __init__(self, TABLE_CATALOG='def', TABLE_SCHEMA='information_schema',
                  TABLE_NAME=None, TABLE_TYPE=TABLES_ROW_TYPE.BASE_TABLE, ENGINE=None,
                  VERSION=None, ROW_FORMAT=None, TABLE_ROWS=0, AVG_ROW_LENGTH=0,
@@ -46,3 +54,11 @@ class TablesRow:
                 self.AUTO_INCREMENT, self.CREATE_TIME, self.UPDATE_TIME,
                 self.CHECK_TIME, self.TABLE_COLLATION, self.CHECKSUM,
                 self.CREATE_OPTIONS, self.TABLE_COMMENT]
+
+    @staticmethod
+    def from_dict(data: dict):
+        data = {k.upper(): v for k, v in data.items()}
+        for key in data:
+            if key not in TablesRow.columns:
+                del data[key]
+        return TablesRow(**data)

@@ -18,7 +18,7 @@ from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.utilities.log import log
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
-from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 
 
 def clean_row(row):
@@ -286,14 +286,17 @@ class FileHandler(DatabaseHandler):
         """
         List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
         """
-        result = []
+        response = {
+            'type': RESPONSE_TYPE.TABLE,
+            'data': []
+        }
         files_meta = self.file_controller.get_files()
         for file_meta in files_meta:
-            result.append(TablesRow(
+            response['data'].append(TablesRow(
                 TABLE_NAME=file_meta['name'],
                 TABLE_ROWS=file_meta['row_count']
             ))
-        return result
+        return response
 
     def describe_table(self, table_name):
         """

@@ -72,12 +72,12 @@ class InformationSchema(DataNode):
         if name_lower in self.persis_datanodes:
             return self.persis_datanodes[name_lower]
 
-        datasource_names = self.integration_controller.get_all().keys()
-        for datasource_name in datasource_names:
-            if datasource_name.lower() == name_lower:
-                datasource = self.integration_controller.get(name=datasource_name)
+        integration_names = self.integration_controller.get_all().keys()
+        for integration_name in integration_names:
+            if integration_name.lower() == name_lower:
+                datasource = self.integration_controller.get(name=integration_name)
                 return IntegrationDataNode(
-                    datasource_name,
+                    integration_name,
                     ds_type=datasource['type'],
                     integration_controller=self.session.integration_controller
                 )
@@ -120,13 +120,16 @@ class InformationSchema(DataNode):
             for row in ds_tables:
                 row.TABLE_SCHEMA = ds_name
                 data.append(row.to_list())
-            # data += ds_tables
-            # data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci', None] for x in ds_tables]
 
-        # for ds_name in self.get_integrations_names():
-        #     ds = self.get(ds_name)
-        #     ds_tables = ds.get_tables()
-        #     data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci', None] for x in ds_tables]
+        for ds_name in self.get_integrations_names():
+            # FIXME
+            if ds_name.lower() != 'pgpg':
+                continue
+            ds = self.get(ds_name)
+            ds_tables = ds.get_tables()
+            for row in ds_tables:
+                row.TABLE_SCHEMA = ds_name
+                data.append(row.to_list())
 
         df = pd.DataFrame(data, columns=columns)
         return df

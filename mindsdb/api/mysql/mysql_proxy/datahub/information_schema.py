@@ -118,6 +118,7 @@ class InformationSchema(DataNode):
             elif isinstance(ds_tables, list) and isinstance(ds_tables[0], str):
                 ds_tables = [TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.BASE_TABLE, TABLE_NAME=x) for x in ds_tables]
             for row in ds_tables:
+                row.TABLE_SCHEMA = ds_name
                 data.append(row.to_list())
             # data += ds_tables
             # data += [[x, ds_name, 'BASE TABLE', [], 'utf8mb4_0900_ai_ci', None] for x in ds_tables]

@@ -45,11 +45,11 @@ class MindsDBDataNode(DataNode):
         models = self.model_interface.get_models()
         tables = []
         for model in models:
-            tables.append(TablesRow(TABLE_NAME=model['name'], TABLE_CATALOG='mindsdb'))
-        tables.append(TablesRow(TABLE_NAME='predictors', TABLE_CATALOG='mindsdb'))
-        tables.append(TablesRow(TABLE_NAME='databases', TABLE_CATALOG='mindsdb'))
+            tables.append(TablesRow(TABLE_NAME=model['name']))
+        tables.append(TablesRow(TABLE_NAME='predictors'))
+        tables.append(TablesRow(TABLE_NAME='databases'))
 
-        return models
+        return tables
 
     def has_table(self, table):
         names = [table.TABLE_NAME for table in self.get_tables()]

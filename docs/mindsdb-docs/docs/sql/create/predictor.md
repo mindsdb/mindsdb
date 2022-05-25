@@ -19,7 +19,6 @@ On execution, you should get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-
 Where:
 
 | Expressions                                     | Description                                                                   |
@@ -27,11 +26,11 @@ Where:
 | `[predictor_name]`                              | Name of the model to be created                                               |
 | `[integration_name]`                            | is the name of the [datasource](/connect/#create-new-datasource)              |
 | `(SELECT [column_name, ...] FROM [table_name])` | SELECT statement for selecting the data to be used for traning and validation |
-| `PREDICT [target_column]`                         | where `target_column` is the column name of the target variable.            |
+| `PREDICT [target_column]`                       | where `target_column` is the column name of the target variable.              |
 
-!!! TIP "Checking the status of the model" 
-    After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training model, by selecting from the [`#!sql mindsdb.predictors`](/sql/table-structure/#the-predictors-table)
-    ```#!sql SELECT * FROM mindsdb.predictors WHERE name='[predictor_name]';```
+!!! TIP "Checking the status of the model"
+After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training model, by selecting from the [`#!sql mindsdb.predictors`](/sql/table-structure/#the-predictors-table)
+`#!sql SELECT * FROM mindsdb.predictors WHERE name='[predictor_name]';`
 
 ## Example
 
@@ -81,10 +80,10 @@ PREDICT [target_column]
 USING [parameter_key] = ['parameter_value']
 ```
 
-| parameter key                               | Description                                                                                                                                                                                                                                               |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `encoders`                                  | Grants access to configure how each column is encoded.By default, the AutoML engine will try to get the best match for the data. To learn more about how encoders work and their options, go [here](https://lightwood.io/encoder.html).                   |
-| `model`                                     | Allows you to specify what type of Machine Learning algorithm to learn from the encoder data. To learn more about all the model options, go [here](https://lightwood.io/mixer.html).                                                                      |
+| parameter key                               | Description                                                                                                                                                                                                                                                |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `encoders`                                  | Grants access to configure how each column is encoded.By default, the AutoML engine will try to get the best match for the data. To learn more about how encoders work and their options, go [here](https://lightwood.io/encoder.html).                    |
+| `model`                                     | Allows you to specify what type of Machine Learning algorithm to learn from the encoder data. To learn more about all the model options, go [here](https://lightwood.io/mixer.html).                                                                       |
 | Other keys supported by lightwood in JsonAI | The most common usecases for configuring predictors will be listed and explained in the example below. To see all options available in detail, you should checkout the [lightwood docs about JsonAI](https://lightwood.io/api/types.html#api.types.JsonAI) |
 
 ### `#!sql ... USING encoders` Key
@@ -129,8 +128,47 @@ USING
                          "stop_after": 12,
                           "fit_on_dev": true
                           }
-                    }    
+                    }
                 ]}';
+```
+
+## `#!sql CREATE PREDICTOR` From file
+
+### Description
+
+To train a model using a file:
+
+### Syntax
+
+```sql
+CREATE PREDICTOR mindsdb.[predictor_name]
+FROM files
+    (SELECT * FROM [file_name])
+PREDICT target_variable;
+```
+
+Where:
+
+|                               | Description                                                                   |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| `[predictor_name]`            | Name of the model to be created                                               |
+| `[file_name]`                 | Name of the file uploaded via the MindsDB editor                              |
+| `(SELECT * FROM [file_name])` | SELECT statement for selecting the data to be used for traning and validation |
+| `target_variable`             | `target_column` is the column name of the target variable.                    |
+
+On execution,
+
+```sql
+Query OK, 0 rows affected (8.878 sec)
+```
+
+### Example
+
+```sql
+CREATE PREDICTOR mindsdb.home_rentals_model
+FROM files
+    (SELECT * from home_rentals)
+PREDICT rental_price;
 ```
 
 ## `#!sql CREATE PREDICTOR` For Time Series Models
@@ -156,19 +194,19 @@ HORIZON [int];
 
 Where:
 
-| Expressions                                     | Description                                                                   |
-| ----------------------------------------------- | ----------------------------------------------------------------------------- |
-| `ORDER BY [sequantial_column]`                  | Defines the column that the time series will be order by. These can be a date, or anything that defines the sequence of events.|
-| `GROUP BY [partition_column]` (optional)        |  Groups the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series. |
-| `WINDOW [int]` | Specifies the number `[int]` of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be interpreted like "Always use the previous 10 rows". |
-| `HORIZON [int]` (optional)                      |  keyword specifies the number of future predictions, default value is 1  |
-
+| Expressions                              | Description                                                                                                                                                                                                                  |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ORDER BY [sequantial_column]`           | Defines the column that the time series will be order by. These can be a date, or anything that defines the sequence of events.                                                                                              |
+| `GROUP BY [partition_column]` (optional) | Groups the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series.              |
+| `WINDOW [int]`                           | Specifies the number `[int]` of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be interpreted like "Always use the previous 10 rows". |
+| `HORIZON [int]` (optional)               | keyword specifies the number of future predictions, default value is 1                                                                                                                                                       |
 
 On execution,
 
 ```sql
 Query OK, 0 rows affected (8.878 sec)
 ```
+
 ### Example
 
 ```sql

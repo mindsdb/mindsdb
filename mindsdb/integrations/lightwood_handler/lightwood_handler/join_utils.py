@@ -1,13 +1,14 @@
+import copy
 import pandas as pd
 
 from ts_utils import validate_ts_where_condition, find_time_filter, add_order_not_null, replace_time_filter, find_and_remove_time_filter, ts_select_dispatch, plan_fetch_timeseries_partitions
 
 from mindsdb_sql.parser.ast import Identifier, Constant, Operation, Select, BinaryOperation, BetweenOperation
-from mindsdb_sql.parser.ast import OrderBy, GroupBy
+from mindsdb_sql.parser.ast import OrderBy
 
 
-def get_join_input(query, model, data_handler):
-    data_handler_table = getattr(query.from_table, data_clause).parts[-1]
+def get_join_input(query, model, data_handler, data_side):
+    data_handler_table = getattr(query.from_table, data_side).parts[-1]
     data_handler_cols = list(set([t.parts[-1] for t in query.targets]))
 
     data_query = Select(
@@ -21,6 +22,7 @@ def get_join_input(query, model, data_handler):
         limit=query.limit
     )
 
+    print(data_handler.query(data_query))
     model_input = pd.DataFrame.from_records(
         data_handler.query(data_query)['data_frame']
     )
@@ -28,7 +30,7 @@ def get_join_input(query, model, data_handler):
     return model_input
 
 
-def get_ts_join_input(query, model, data_handler):
+def get_ts_join_input(query, model, data_handler, data_side):
     if query.order_by:
         raise PlanningException(
             f'Can\'t provide ORDER BY to time series predictor join query. Found: {query.order_by}.')
@@ -36,38 +38,41 @@ def get_ts_join_input(query, model, data_handler):
     if query.group_by or query.having or query.offset:
         raise PlanningException(f'Unsupported query to timeseries predictor: {str(query)}')
 
-    data_handler_table = getattr(query.from_table, data_clause).parts[-1]
+    data_handler_table = getattr(query.from_table, data_side).parts[-1]
     data_handler_cols = list(set([t.parts[-1] for t in query.targets]))
 
-    oby_col = model.problem_definition.timeseries_settings.order_by[0]
+    window = model.problem_definition.timeseries_settings.window
+    oby_col = [model.problem_definition.timeseries_settings.order_by[0]]
     gby_col = [model.problem_definition.timeseries_settings.group_by[0]]  # todo add multiple group support
 
     # validate where of TODO subquery? or query?
 
-    allowed_columns = oby_col
+    allowed_columns = [i.lower() for i in oby_col]
     if len(gby_col) > 0:
         allowed_columns += [i.lower() for i in gby_col]
     validate_ts_where_condition(query.where, allowed_columns=allowed_columns)
 
-    time_filter = find_time_filter(query.where, time_column_name=oby_col)
-    order_by = [OrderBy(Identifier(parts=[oby_col]), direction='DESC')]
+    time_filter = find_time_filter(query.where, time_column_name=oby_col[0])  # TODO: fix oby to be just a single column so that this signature is consistent with the rest (seems to expect just one col)
+    order_by = [OrderBy(Identifier(parts=oby_col), direction='DESC')]
 
     preparation_where = copy.deepcopy(query.where)
     preparation_where2 = copy.deepcopy(preparation_where)
-    preparation_where = add_order_not_null(preparation_where)
+    preparation_where = add_order_not_null(preparation_where, time_column_name=oby_col[0])  # TODO: same as in find_time_filter
 
-    integration_selects = ts_selects_dispatch(time_filter) # TODO: Selects to data handler after building list
+    # TODO: Selects to data handler after building list
+    integration_selects = ts_select_dispatch(time_filter, data_handler_table, window, order_by, preparation_where)  # TODO: same as in find_time_filter
 
     partial_dfs = []
     for step in integration_selects:
-        partial_dfs.append(pd.DataFrame.from_records(data_handler.query(step)['data_frame']))
+        result = pd.DataFrame.from_records(data_handler.query(step)['data_frame'])
+        partial_dfs.append(result)
 
-    # Turn all these into direct executions
+    # TODO: up to here all seems OK -- Turn all these below into direct executions
     if len(gby_col) == 0:
-        # todo: pretty sure all of this IF can be stripped away!
+        # todo: pretty sure all of this IF can be stripped away! yep, just need to retrieve the DF (which, has been done already?)
         # ts query without grouping - one or multistep
         if len(integration_selects) == 1:
-            select_partition_step = get_integration_select_step(integration_selects[0])  # TODO: where is it?
+            select_partition_step = get_integration_select_step(integration_selects[0])  # TODO: where is it? NOT DEFINED!
         else:
             select_partition_step = MultipleSteps(
                 steps=[get_integration_select_step(s) for s in integration_selects], reduce='union')  # TODO: where is it?

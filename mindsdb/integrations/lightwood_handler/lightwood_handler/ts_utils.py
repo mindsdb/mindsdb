@@ -1,6 +1,6 @@
 from mindsdb_sql.exceptions import PlanningException
 from mindsdb_sql.planner.utils import get_integration_path_from_identifier
-from mindsdb_sql.parser.ast import Identifier, Operation, BinaryOperation, BetweenOperation
+from mindsdb_sql.parser.ast import Identifier, Operation, BinaryOperation, BetweenOperation, NullConstant, Latest, Select, Star, Constant
 
 
 # TODO: 2) instead of planning steps, actually execute them and run predictor! refactor all logic in ts_utils.py
@@ -23,16 +23,17 @@ def plan_fetch_timeseries_partitions(self, query, table, predictor_group_by_name
     return select_step
 
 
-def ts_selects_dispatch(time_filter):
+def ts_select_dispatch(time_filter, table, window, order_by, preparation_where):
+    time_col = order_by[0]  # todo this is weird, replace
     if isinstance(time_filter, BetweenOperation):
         between_from = time_filter.args[1]
-        preparation_time_filter = BinaryOperation('<', args=[Identifier(predictor_time_column_name), between_from])
+        preparation_time_filter = BinaryOperation('<', args=[Identifier(time_col), between_from])
         preparation_where2 = replace_time_filter(preparation_where2, time_filter, preparation_time_filter)
         integration_select_1 = Select(targets=[Star()],
                                       from_table=table,
                                       where=add_order_not_null(preparation_where2),
                                       order_by=order_by,
-                                      limit=Constant(predictor_window))
+                                      limit=Constant(window))
 
         integration_select_2 = Select(targets=[Star()],
                                       from_table=table,
@@ -45,7 +46,7 @@ def ts_selects_dispatch(time_filter):
                                     from_table=table,
                                     where=preparation_where,
                                     order_by=order_by,
-                                    limit=Constant(predictor_window),
+                                    limit=Constant(window),
                                     )
         integration_select.where = find_and_remove_time_filter(integration_select.where, time_filter)
         integration_selects = [integration_select]
@@ -55,13 +56,13 @@ def ts_selects_dispatch(time_filter):
         preparation_time_filter_op = {'>': '<=', '>=': '<'}[time_filter.op]
 
         preparation_time_filter = BinaryOperation(preparation_time_filter_op,
-                                                  args=[Identifier(predictor_time_column_name), time_filter_date])
+                                                  args=[Identifier(time_col), time_filter_date])
         preparation_where2 = replace_time_filter(preparation_where2, time_filter, preparation_time_filter)
         integration_select_1 = Select(targets=[Star()],
                                       from_table=table,
                                       where=add_order_not_null(preparation_where2),
                                       order_by=order_by,
-                                      limit=Constant(predictor_window))
+                                      limit=Constant(window))
 
         integration_select_2 = Select(targets=[Star()],
                                       from_table=table,
@@ -105,9 +106,9 @@ def replace_time_filter(op, time_filter, new_filter):
     return op
 
 
-def add_order_not_null(condition):
+def add_order_not_null(condition, time_column_name):
     order_field_not_null = BinaryOperation(op='is not', args=[
-        Identifier(parts=[predictor_time_column_name]),
+        Identifier(parts=[time_column_name]),
         NullConstant()
     ])
     if condition is not None:

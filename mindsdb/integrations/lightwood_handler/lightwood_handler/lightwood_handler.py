@@ -10,9 +10,8 @@ from lightwood.mixer import LightGBM
 from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition, _module_from_code
 
 from utils import unpack_jsonai_old_args, get_aliased_columns, _recur_get_conditionals, load_predictor
-from utils import default_train_data_gather, ts_train_data_gather
-from join_utils import get_ts_join_input
-from ts_utils import plan_timeseries_predictor
+from utils import default_train_data_gather
+from join_utils import get_ts_join_input, get_join_input
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
@@ -139,7 +138,8 @@ class LightwoodHandler(PredictiveHandler):
             raise Exception(f"Query type {type(statement)} not supported")
 
     def query(self, query) -> dict:
-        model = self._get_model(query)
+        model_name, _, _ = self._get_model_name(query)
+        model = self._get_model(model_name)
         values = _recur_get_conditionals(query.where.args, {})
         df = pd.DataFrame.from_dict(values)
         df = self._call_predictor(df, model)
@@ -149,14 +149,15 @@ class LightwoodHandler(PredictiveHandler):
         """
         Batch prediction using the output of a query passed to a data handler as input for the model.
         """  # noqa
-        model_name, model_alias = self._get_model_name(stmt)
+        model_name, model_alias, model_side = self._get_model_name(stmt)
+        data_side = 'right' if model_side == 'left' else 'left'
         model = self._get_model(model_name)
         is_ts = model.problem_definition.timeseries_settings.is_timeseries
 
         if not is_ts:
-            model_input = get_join_input(stmt, model, data_handler)
+            model_input = get_join_input(stmt, model, data_handler, data_side)
         else:
-            model_input = get_ts_join_input(stmt, model, data_handler)
+            model_input = get_ts_join_input(stmt, model, data_handler, data_side)
 
         # get model output and rename columns
         predictions = self._call_predictor(model_input, model)
@@ -180,14 +181,15 @@ class LightwoodHandler(PredictiveHandler):
             if model_name not in models:
                 model_name = stmt.from_table.left.parts[-1]
                 side = 'left'
+            alias = str(getattr(stmt.from_table, side).alias)
         else:
             model_name = stmt.from_table.parts[-1]
+            alias = None  # todo: fix this
 
-        alias = str(getattr(stmt.from_table, side).alias)
         if model_name not in models:
             raise Exception("Error, not found. Please create this predictor first.")
 
-        return model_name, alias
+        return model_name, alias, side
 
     def _get_model(self, model_name):
         predictor_dict = self._get_model_info(model_name)

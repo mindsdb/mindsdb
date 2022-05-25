@@ -21,9 +21,9 @@ class PostgresHandler(DatabaseHandler):
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.connection_args = kwargs
+        self.connection_args = kwargs.get('connection_data')
         self.dialect = 'postgresql'
-        self.database = kwargs.get('database')
+        self.database = self.connection_args.get('database')
         del self.connection_args['database']
 
     def __connect(self):
@@ -100,8 +100,16 @@ class PostgresHandler(DatabaseHandler):
         """
         List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
         """
-        query = "SELECT * FROM information_schema.tables WHERE \
-                 table_schema NOT IN ('information_schema', 'pg_catalog')"
+        query = """
+            SELECT
+                table_schema,
+                table_name
+            FROM
+                information_schema.tables
+            WHERE
+                table_schema NOT IN ('information_schema', 'pg_catalog')
+                and table_type = 'BASE TABLE'
+        """
         res = self.native_query(query)
         return res
 

@@ -13,24 +13,25 @@ In this tutorial we will be exploring how we can use a machine learning model to
 
 1. Establish a connection between your database and MindsDB via MindsDB GUI(Cloud and local instance).
 2. Allow connections to the database using Ngrok.
-3. Create a machine learning predictor model using SQL.
+3. Create a machine learning model using SQL.
 4. Make a prediction.
 
 ## Connect your database to MindsDB GUI
 
-MindsDB has a functionality to upload your dataset directly to MindsDB in order for you to create a predictor and make a prediction. However in this tutorial, you will be shown how to connect your database to MindsDB cloud and local instance.
+MindsDB has a functionality to upload your dataset directly to MindsDB. However in this tutorial, you will be shown how to connect your database to MindsDB cloud and local instance.
 
 For this example we will be using a local postgres database, therefore we will connect using an ngrok tunnel.
 
 ### Running a Ngrok Tunnel
 
-To make our database available to MindsDB, we will run `ngrok` as our database instance is local.
+To make our database publicly avaiable, we will use `ngrok`.
 
 The following command can be run in docker or a terminal on your device to set up a ngrok tunnel.
 
 ```bash
 ngrok tcp [db-port]
 ```
+
 For this example the port number used is 5432.
 
 You should see a similar output:
@@ -45,7 +46,7 @@ Web Interface                 http://127.0.0.1:4040
 Forwarding                    tcp://4.tcp.ngrok.io:13096 -> localhost:5432
 ```
 
-The information required is by the forwarded address, next to 'Forwarding' select and copy `4.tcp.ngrok.io:13096`  Once you have copied the information, you can add it to the information requested by the MindsDB GUI which we will get to in a moment.
+The information required is by the forwarded address, next to 'Forwarding' select and copy `4.tcp.ngrok.io:13096`. Once you have copied the information, you can add it to the information requested by the MindsDB GUI which we will get to in a moment.
 
 For the next steps we will log into the MindsDB cloud interface and local gui. MindsDB Cloud is perfect if you are unable to install MindsDB on your device. If you are not registered yet, feel free to follow the below guide. If you have already registered, skip the next steps to connect your database.
 
@@ -53,25 +54,19 @@ For the next steps we will log into the MindsDB cloud interface and local gui. M
 
 The next step will be to connect your database to MindsDB.
 
-You can visit this [link](https://docs.mindsdb.com/setup/cloud/) and follow the steps in registering a MindsDB Cloud account. Access the MySQL Editor [here.](https://cloud.mindsdb.com/editor)
+You can visit this [link](https://docs.mindsdb.com/setup/cloud/) and follow the steps to create a MindsDB Cloud account. Access the MySQL Editor [here](https://cloud.mindsdb.com/).
 
-If you are using MindsDB locally, you can run the command below to start MindsDB in docker:
+If you are using MindsDB through Docker, you can run the command below to start MindsDB:
 
 ```bash
 docker run -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
 
-Once that is done, you can access MindsDB's MySQL CLI by running the below command:
-
-```bash
-  mysql -h 127.0.0.1 --port 47335 -u mindsdb
-```
-
-Once you are connected,head over to your browser and in the browser tab type in the host number 127.0.0.1:47334 to access the local MindsDB GUI.
+Once you are connected,head over to your browser and in the browser tab type in the host number `127.0.0.1:47334` to access the local MindsDB GUI.
 
 ### Establish connection between your database and MindsDB GUI
 
-Once you have accessed the GUI,you will be able to select a database type and enter the required parameters:
+Once you have accessed the GUI, you will be able to select a database type and enter the required parameters:
 - On the user interface,select the plug icon on the left sidebar.
 - A page will populate with different datasources to select from. For this tutorial we are choosing PostgreSQL.
 
@@ -97,9 +92,9 @@ You are now done with connecting MindsDB to your database! 🚀
 
 Now we are ready to create our own predictor! We will start by using the MySQL API to connect to MindsDB and with a single SQL command create a predictor.
 
-The predictor we will create will be trained to determine negative and positive cases for diabetes. Predictors are great machine learning models when working with large datasets and optimal for determining classifications.
+The predictor we will create will be trained to determine negative and positive cases for diabetes.
 
-Use the following query to create a predictor that will predict the `class` (*positive or negative*) for the specific field parameters.
+Use the following query to create a predictor that will predict the `Class` (*positive or negative*) for the specific field parameters.
 
 ```sql
 CREATE PREDICTOR diabetes_predictor
@@ -136,20 +131,22 @@ Use the following query using mock data with the predictor.
 
 
 ```sql
-SELECT Class
-FROM mindsdb.diabetes_predictor
-WHERE number_of_times_pregnant=0 AND plasma_glucose_concentration=135.0 AND diastolic_blood_pressure=65.0 AND triceps_skin_fold_thickness=30 AND two_Hour_serum_insulin=0 AND body_mass_index=23.5 AND diabetes_pedigree_function=0.366 AND age=31;
+SELECT Class FROM mindsdb.diabetes_predictor
+WHERE number_of_times_pregnant=0 AND plasma_glucose_concentration=135.0 
+AND diastolic_blood_pressure=65.0 AND triceps_skin_fold_thickness=30 
+AND two_Hour_serum_insulin=0 AND body_mass_index=23.5 
+AND diabetes_pedigree_function=0.366 AND age=31;
 ```
 
 MindsDB will provide you with results similar to below:
 
-![prediction](![select_predictor](/assets/tutorials/diabetes/prediction.png))
+![prediction](/assets/tutorials/diabetes/prediction.png)
 
-With the data we have inserted in making a prediction,the machine learning model predicted the diabetic class to be negative.
+The machine learning model predicted the diabetic class to be negative.
 
 Viola! We have successfully created and trained a model and made our own prediction. How easy and amazing is MindsDB? 🎉
 
-Want to try it out for yourself? Sign up for a [free MindsDB account](https://cloud.mindsdb.com/signup?utm_medium=community&utm_source=ext.%20blogs&utm_campaign=blog-crop-detection) and join our community!
-Engage with MindsDB community on [Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or [Github](https://github.com/mindsdb/mindsdb/discussions) to ask questions, share and express ideas and thoughts!
+Want to try it out?
 
-For more check out other [tutorials and MindsDB documentation](https://docs.mindsdb.com/).
+* Sign up for a [free MindsDB account](https://cloud.mindsdb.com/signup?utm_medium=community&utm_source=ext.%20blogs&utm_campaign=blog-crop-detection)
+* Join MindsDB community on [Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) and [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions, share and express ideas and thoughts!

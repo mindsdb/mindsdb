@@ -26,6 +26,7 @@ class PostgresHandler(DatabaseHandler):
         self.dialect = 'postgresql'
         self.database = self.connection_args.get('database')
         del self.connection_args['database']
+        self.renderer = SqlalchemyRender('postgres')
 
     def __connect(self):
         """
@@ -97,6 +98,13 @@ class PostgresHandler(DatabaseHandler):
                     }
         return response
 
+    def query(self, query):
+        """
+        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
+        """
+        query_str = self.renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
+
     def get_tables(self):
         """
         List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
@@ -134,13 +142,3 @@ class PostgresHandler(DatabaseHandler):
               information_schema.columns WHERE table_name='{table_name}';"
         result = self.native_query(query)
         return result
-
-    def query(self, query):
-        """
-        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
-        """
-        renderer = SqlalchemyRender('postgres')
-        query_str = renderer.get_string(query, with_failback=True)
-        return self.native_query(query_str)
-
-    # TODO: JOIN, SELECT INTO

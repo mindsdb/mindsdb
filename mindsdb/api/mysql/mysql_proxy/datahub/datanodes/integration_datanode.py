@@ -117,6 +117,8 @@ class IntegrationDataNode(DataNode):
 
         if result.get('type') == RESPONSE_TYPE.ERROR:
             raise Exception(result.get('error_message', ''))
+        if result.get('type') == RESPONSE_TYPE.OK:
+            return
 
         df = result['data_frame']
         columns_info = [

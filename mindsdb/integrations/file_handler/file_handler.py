@@ -59,39 +59,50 @@ class FileHandler(DatabaseHandler):
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
-        table_name = query.from_table.parts[-1]
-
-        file_path = self.file_controller.get_file_path(table_name, company_id=None)
-
         if type(query) == DropTables:
-            # TODO del files
-            response = {
+            for table_identifier in query.tables:
+                if len(table_identifier.parts) == 2 and table_identifier.parts[0] != self.name:
+                    return {
+                        'type': RESPONSE_TYPE.ERROR,
+                        'error_code': 0,
+                        'error_message': f"Can't delete table from database '{table_identifier.parts[0]}'"
+                    }
+                table_name = table_identifier.parts[-1]
+                try:
+                    self.file_controller.delete_file(table_name)
+                except Exception as e:
+                    return {
+                        'type': RESPONSE_TYPE.ERROR,
+                        'error_code': 0,
+                        'error_message': f"Can't delete table '{table_name}': {e}"
+                    }
+            return {
                 'type': RESPONSE_TYPE.OK
             }
         elif type(query) == Select:
+            table_name = query.from_table.parts[-1]
+            file_path = self.file_controller.get_file_path(table_name, company_id=None)
             df, _columns = self._handle_source(file_path, self.clean_rows, self.custom_parser)
             result_df = query_df(df, query)
-            response = {
+            return {
                 'type': RESPONSE_TYPE.TABLE,
                 'data_frame': result_df
             }
         else:
-            response = {
+            return {
                 'type': RESPONSE_TYPE.ERROR,
                 'error_code': 0,
                 'error_message': "Only 'select' and 'drop' queries allowed for files"
             }
 
-        return response
-
-    def native_query(self, query):
+    def native_query(self, query: str):
         """
         Receive SQL query and runs it
         :param query: The SQL query to run in PostgreSQL
         :return: returns the records from the current recordset
         """
-        pass
-        # TODO
+        ast = self.parser(query, dialect='mindsdb')
+        return self.query(ast)
 
     @staticmethod
     def _handle_source(file_path, clean_rows=True, custom_parser=None):

@@ -70,3 +70,32 @@ LIMIT 100
 +------------+-----------------+-----------------+---------------------+------+----------+----------------+
 
 ```
+
+## Example Time Series
+
+Having a time series predictor trained via:
+
+```sql
+CREATE PREDICTOR 
+  mindsdb.house_sales_model
+FROM example_db
+  (SELECT * FROM demo_data.house_sales)
+PREDICT MA
+ORDER BY saledate
+GROUP BY bedrooms, type
+-- as the target is quarterly, we will look back two years to forecast the next one
+WINDOW 8
+HORIZON 4;  
+```
+
+You can query it and get the forecast predictions like: 
+
+```sql 
+SELECT m.saledate as date,
+    m.ma as forecast
+FROM mindsdb.house_sales_model as m 
+JOIN example_db.demo_data.house_sales as t
+WHERE t.saledate > LATEST AND t.type = 'house'
+LIMIT 4;
+```
+

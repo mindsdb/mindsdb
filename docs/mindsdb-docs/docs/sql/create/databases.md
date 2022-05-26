@@ -96,7 +96,7 @@ On execution:
 +------------+---------------+--------------+------+-----------+
 ```
 
-## Example configurations
+## Supported Integrations
 
 ### Snowflake
 

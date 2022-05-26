@@ -710,11 +710,16 @@ class ExecuteCommands:
         predictor_name = struct['predictor_name']
         integration_name = struct.get('integration_name')
 
+        integration_id = None
+        fetch_data_query = None
         if integration_name is not None:
             handler = self.session.integration_controller.get_handler(integration_name)
+            integration_meta = self.session.integration_controller.get(integration_name)
+            integration_id = integration_meta.get('id')
             # TODO
             # raise ErBadDbError(f"Unknown datasource: {integration_name}")
             result = handler.native_query(struct['select'])
+            fetch_data_query = struct['select']
 
             if result.get('type') != RESPONSE_TYPE.TABLE:
                 raise Exception(f'Error during query: {result.get("error_message")}')
@@ -764,7 +769,10 @@ class ExecuteCommands:
                             f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
                         )
 
-        model_interface.learn(predictor_name, ds_data_df, predict, kwargs=kwargs)
+        model_interface.learn(
+            predictor_name, ds_data_df, predict, integration_id=integration_id,
+            fetch_data_query=fetch_data_query, kwargs=kwargs
+        )
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1335,7 +1343,14 @@ class ExecuteCommands:
 
         insert['predict'] = self._check_predict_columns(insert['predict'], ds_column_names)
 
-        model_interface.learn(insert['name'], ds_data_df, insert['predict'], kwargs=kwargs)
+        integration_meta = integration_controller.get(integration)
+        integration_id = integration_meta.get('id')
+        fetch_data_query = insert['select_data_query']
+
+        model_interface.learn(
+            insert['name'], ds_data_df, insert['predict'], integration_id=integration_id,
+            fetch_data_query=fetch_data_query, kwargs=kwargs
+        )
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 

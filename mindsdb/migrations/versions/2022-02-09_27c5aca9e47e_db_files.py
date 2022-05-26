@@ -1,4 +1,4 @@
-"""test
+"""db files
 
 Revision ID: 27c5aca9e47e
 Revises: 47f97b83cee4

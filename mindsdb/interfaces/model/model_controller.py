@@ -27,6 +27,9 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess, LearnRemoteProcess
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 
 IS_PY36 = sys.version_info[1] <= 6
@@ -152,8 +155,9 @@ class ModelController():
         return problem_definition, join_learn_process, json_ai_override
 
     @mark_process(name='learn')
-    def learn(self, name: str, training_data: DataFrame, to_predict: str, kwargs: dict,
-              company_id: int) -> None:
+    def learn(self, name: str, training_data: DataFrame, to_predict: str,
+              integration_id: int = None, fetch_data_query: str = None,
+              kwargs: dict = {}, company_id: int = None) -> None:
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         if predictor_record is not None:
             raise Exception('Predictor name must be unique.')
@@ -216,7 +220,8 @@ class ModelController():
         predictor_record = db.Predictor(
             company_id=company_id,
             name=name,
-            # dataset_id=dataset_id,
+            integration_id=integration_id,
+            fetch_data_query=fetch_data_query,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,
@@ -500,7 +505,17 @@ class ModelController():
         predictor_record.update_status = 'updating'
         db.session.commit()
 
-        p = UpdateProcess(name, company_id)
+        integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
+        integration_record = db.Integration.query.get(predictor_record.integration_id)
+        if integration_record is None:
+            raise Exception(f"There is no integration for predictor '{name}'")
+        integration_handler = integration_controller.get_handler(integration_record.name)
+
+        response = integration_handler.native_query(predictor_record.fetch_data_query)
+        if response['type'] != RESPONSE_TYPE.TABLE:
+            raise Exception("Can't fetch data for predictor training")
+
+        p = UpdateProcess(name, response['data_frame'], company_id)
         p.start()
         return 'Updated in progress'
 

@@ -16,12 +16,14 @@ from lightwood import __version__ as lightwood_version
 
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
-from mindsdb.interfaces.storage.db import session, Predictor, Dataset
+from mindsdb.interfaces.storage.db import Integration, session, Predictor
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.log import log
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 ctx = mp.get_context('spawn')
@@ -193,65 +195,57 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
 
 
 @mark_process(name='learn')
-def run_update(name: str, company_id: int):
-    # TODO
-    pass
-    # original_name = name
-    # name = f'{company_id}@@@@@{name}'
+def run_update(name: str, df: DataFrame, company_id: int):
+    original_name = name
+    name = f'{company_id}@@@@@{name}'
 
-    # fs_store = FsStore()
-    # config = Config()
-    # data_store = WithKWArgsWrapper(DataStore(), company_id=company_id)
+    fs_store = FsStore()
+    config = Config()
 
-    # try:
-    #     predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
-    #     assert predictor_record is not None
+    try:
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
+        assert predictor_record is not None
+        predictor_record.update_status = 'updating'
+        session.commit()
 
-    #     predictor_record.update_status = 'updating'
+        problem_definition = predictor_record.learn_args
+        problem_definition['target'] = predictor_record.to_predict[0]
 
-    #     session.commit()
-    #     ds = data_store.get_datasource_obj(None, raw=False, id=predictor_record.dataset_id)
-    #     df = ds.df
+        if 'join_learn_process' in problem_definition:
+            del problem_definition['join_learn_process']
 
-    #     problem_definition = predictor_record.learn_args
+        # Adapt kwargs to problem definition
+        if 'timeseries_settings' in problem_definition:
+            problem_definition['timeseries_settings'] = problem_definition['timeseries_settings']
 
-    #     problem_definition['target'] = predictor_record.to_predict[0]
+        if 'stop_training_in_x_seconds' in problem_definition:
+            problem_definition['time_aim'] = problem_definition['stop_training_in_x_seconds']
 
-    #     if 'join_learn_process' in problem_definition:
-    #         del problem_definition['join_learn_process']
+        json_ai = lightwood.json_ai_from_problem(df, problem_definition)
+        predictor_record.json_ai = json_ai.to_dict()
+        predictor_record.code = lightwood.code_from_json_ai(json_ai)
+        predictor_record.data = {'training_log': 'training'}
+        session.commit()
+        predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
+        predictor.learn(df)
 
-    #     # Adapt kwargs to problem definition
-    #     if 'timeseries_settings' in problem_definition:
-    #         problem_definition['timeseries_settings'] = problem_definition['timeseries_settings']
+        fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
+        pickle_path = os.path.join(config['paths']['predictors'], fs_name)
+        predictor.save(pickle_path)
+        fs_store.put(fs_name, fs_name, config['paths']['predictors'])
+        predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
+        session.commit()
 
-    #     if 'stop_training_in_x_seconds' in problem_definition:
-    #         problem_definition['time_aim'] = problem_definition['stop_training_in_x_seconds']
+        predictor_record.lightwood_version = lightwood_version
+        predictor_record.mindsdb_version = mindsdb_version
+        predictor_record.update_status = 'up_to_date'
+        session.commit()
 
-    #     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
-    #     predictor_record.json_ai = json_ai.to_dict()
-    #     predictor_record.code = lightwood.code_from_json_ai(json_ai)
-    #     predictor_record.data = {'training_log': 'training'}
-    #     session.commit()
-    #     predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
-    #     predictor.learn(df)
-
-    #     fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
-    #     pickle_path = os.path.join(config['paths']['predictors'], fs_name)
-    #     predictor.save(pickle_path)
-    #     fs_store.put(fs_name, fs_name, config['paths']['predictors'])
-    #     predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
-    #     session.commit()
-
-    #     predictor_record.lightwood_version = lightwood_version
-    #     predictor_record.mindsdb_version = mindsdb_version
-    #     predictor_record.update_status = 'up_to_date'
-    #     session.commit()
-
-    # except Exception as e:
-    #     log.error(e)
-    #     predictor_record.update_status = 'update_failed'  # type: ignore
-    #     session.commit()
-    #     return str(e)
+    except Exception as e:
+        log.error(e)
+        predictor_record.update_status = 'update_failed'  # type: ignore
+        session.commit()
+        return str(e)
 
 
 class LearnRemoteProcess(ctx.Process):

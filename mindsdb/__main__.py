@@ -97,32 +97,6 @@ if __name__ == '__main__':
                 pass
 
     if not is_cloud:
-        # region migrate files from datsources
-        datasets_records = db.session.query(db.Dataset).filter(db.Dataset.ds_class == 'FileDS').all()
-        file_records = db.session.query(db.File).all()
-        storage_dir = config['paths']['storage']
-        for ds_record in datasets_records:
-            ds_path = os.path.join(storage_dir, f'datasource_{ds_record.company_id}_{ds_record.id}')
-            if os.path.exists(ds_path):
-                try:
-                    ds_data = json.loads(ds_record.data)
-                    mindsdb_file_name = ds_data.get('source', {}).get('mindsdb_file_name')
-                    if mindsdb_file_name is not None:
-                        file_record = db.session.query(db.File).filter(
-                            db.File.company_id == ds_record.company_id,
-                            db.File.name == mindsdb_file_name
-                        ).first()
-                        if file_record is None:
-                            continue
-                        file_path = os.path.join(storage_dir, f'file_{file_record.company_id}_{file_record.id}')
-                        if not os.path.exists(file_path):
-                            shutil.move(ds_path, file_path)
-                        else:
-                            shutil.rmtree(ds_path)
-                except Exception:
-                    pass
-        # endregion
-
         # region Mark old predictors as outdated
         is_modified = False
         predictor_records = db.session.query(db.Predictor).all()

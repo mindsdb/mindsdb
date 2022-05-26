@@ -73,24 +73,6 @@ class Semaphor(Base):
     uniq_const = UniqueConstraint('entity_type', 'entity_id')
 
 
-class Dataset(Base):
-    __tablename__ = 'dataset'
-
-    id = Column(Integer, primary_key=True)
-    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    name = Column(String)
-    data = Column(String)  # Including, e.g. the query used to create it and even the connection info when there's no integration associated with it -- A JSON
-    creation_info = Column(String)
-    analysis_id = Column(ForeignKey('analysis.id'), nullable=True)
-    company_id = Column(Integer)
-    mindsdb_version = Column(String)
-    datasources_version = Column(String)
-    integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'), nullable=True)
-    ds_class = Column(String)
-    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
-
-
 class Predictor(Base):
     __tablename__ = 'predictor'
 
@@ -103,8 +85,8 @@ class Predictor(Base):
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     native_version = Column(String)
-    # TODO del it, add integration_id and training_data_query
-    # dataset_id = Column(ForeignKey('dataset.id', name='fk_dataset_id'), nullable=True)
+    integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'), nullable=True)
+    fetch_data_query = Column(String)
     is_custom = Column(Boolean)
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')
@@ -157,14 +139,6 @@ class Stream(Base):
     learning_threshold = Column(Integer, default=0)
 
 
-class Analysis(Base):
-    __tablename__ = 'analysis'
-    id = Column(Integer, primary_key=True)
-    analysis = Column(Json, nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-
-
 class File(Base):
     __tablename__ = 'file'
     id = Column(Integer, primary_key=True)
@@ -176,7 +150,6 @@ class File(Base):
     columns = Column(Json, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    analysis_id = Column(ForeignKey('analysis.id', name='fk_analysis_id'), nullable=True)
     uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
 
 

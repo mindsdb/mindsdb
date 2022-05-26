@@ -15,7 +15,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, 
 
 class PostgresHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the PostgreSQL statements. 
+    This handler handles connection and execution of the PostgreSQL statements.
     """
     name = 'postgres'
 
@@ -126,19 +126,19 @@ class PostgresHandler(DatabaseHandler):
         ]
         return result
 
-    def get_views(self):
-        """
-        List all views in PostgreSQL without the system views information_schema and pg_catalog
-        """
-        query = "SELECT * FROM information_schema.views WHERE table_schema NOT IN ('information_schema', 'pg_catalog')"
-        result = self.native_query(query)
-        return result
+    # def get_views(self):
+    #     """
+    #     List all views in PostgreSQL without the system views information_schema and pg_catalog
+    #     """
+    #     query = "SELECT * FROM information_schema.views WHERE table_schema NOT IN ('information_schema', 'pg_catalog')"
+    #     result = self.native_query(query)
+    #     return result
 
-    def describe_table(self, table_name):
-        """
-        List names and data types about the table coulmns
-        """
-        query = f"SELECT table_name, column_name, data_type FROM \
-              information_schema.columns WHERE table_name='{table_name}';"
-        result = self.native_query(query)
-        return result
+    # def describe_table(self, table_name):
+    #     """
+    #     List names and data types about the table coulmns
+    #     """
+    #     query = f"SELECT table_name, column_name, data_type FROM \
+    #           information_schema.columns WHERE table_name='{table_name}';"
+    #     result = self.native_query(query)
+    #     return result

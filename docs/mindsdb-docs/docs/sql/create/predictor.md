@@ -25,7 +25,7 @@ Where:
 | ----------------------------------------------- | ----------------------------------------------------------------------------- |
 | `[predictor_name]`                              | Name of the model to be created                                               |
 | `[integration_name]`                            | is the name of the [datasource](/connect/#create-new-datasource)              |
-| `(SELECT [column_name, ...] FROM [table_name])` | SELECT statement for selecting the data to be used for traning and validation |
+| `(SELECT [column_name, ...] FROM [table_name])` | SELECT statement for selecting the data to be used for training and validation |
 | `PREDICT [target_column]`                       | where `target_column` is the column name of the target variable.              |
 
 !!! TIP "Checking the status of the model"

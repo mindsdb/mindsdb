@@ -1,7 +1,7 @@
 import os
 from threading import Thread
 
-from mindsdb.utilities.config import STOP_THREADS_EVENT
+from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
 from mindsdb.utilities.log import log
 import mindsdb.interfaces.storage.db as db
 

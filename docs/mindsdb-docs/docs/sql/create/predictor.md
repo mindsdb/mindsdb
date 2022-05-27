@@ -21,12 +21,12 @@ Query OK, 0 rows affected (x.xxx sec)
 
 Where:
 
-| Expressions                                     | Description                                                                   |
-| ----------------------------------------------- | ----------------------------------------------------------------------------- |
-| `[predictor_name]`                              | Name of the model to be created                                               |
-| `[integration_name]`                            | is the name of the [datasource](/connect/#create-new-datasource)              |
-| `(SELECT [column_name, ...] FROM [table_name])` | SELECT statement for selecting the data to be used for traning and validation |
-| `PREDICT [target_column]`                       | where `target_column` is the column name of the target variable.              |
+| Expressions                                     | Description                                                                    |
+| ----------------------------------------------- |--------------------------------------------------------------------------------|
+| `[predictor_name]`                              | Name of the model to be created                                                |
+| `[integration_name]`                            | is the name of the [datasource](/connect/#create-new-datasource)               |
+| `(SELECT [column_name, ...] FROM [table_name])` | SELECT statement for selecting the data to be used for training and validation |
+| `PREDICT [target_column]`                       | where `target_column` is the column name of the target variable.               |
 
 !!! TIP "Checking the status of the model"
 After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training model, by selecting from the [`#!sql mindsdb.predictors`](/sql/table-structure/#the-predictors-table)
@@ -149,12 +149,12 @@ PREDICT target_variable;
 
 Where:
 
-|                               | Description                                                                   |
-| ----------------------------- | ----------------------------------------------------------------------------- |
-| `[predictor_name]`            | Name of the model to be created                                               |
-| `[file_name]`                 | Name of the file uploaded via the MindsDB editor                              |
-| `(SELECT * FROM [file_name])` | SELECT statement for selecting the data to be used for traning and validation |
-| `target_variable`             | `target_column` is the column name of the target variable.                    |
+|                               | Description                                                                    |
+| ----------------------------- |--------------------------------------------------------------------------------|
+| `[predictor_name]`            | Name of the model to be created                                                |
+| `[file_name]`                 | Name of the file uploaded via the MindsDB editor                               |
+| `(SELECT * FROM [file_name])` | SELECT statement for selecting the data to be used for training and validation |
+| `target_variable`             | `target_column` is the column name of the target variable.                     |
 
 On execution,
 

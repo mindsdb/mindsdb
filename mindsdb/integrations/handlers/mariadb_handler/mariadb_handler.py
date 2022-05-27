@@ -1,4 +1,4 @@
-from ..mysql_handler.mysql_handler import MySQLHandler
+from ..mysql_handler import Handler as MySQLHandler
 
 
 class MariaDBHandler(MySQLHandler):

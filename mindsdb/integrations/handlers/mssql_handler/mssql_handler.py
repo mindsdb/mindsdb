@@ -1,17 +1,21 @@
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
-from mindsdb_sql import parse_sql
-import pymssql
-from mindsdb.utilities.log import log
 from contextlib import closing
+
+import pymssql
+import pandas as pd
+
+from mindsdb_sql import parse_sql
+
+from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.utilities.log import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-import pandas as pd
 
 
 class SqlServerHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Microsoft SQL Server statements. 
     """
+    type = 'mssql'
 
     def __init__(self, name, **kwargs):
         super().__init__(name)

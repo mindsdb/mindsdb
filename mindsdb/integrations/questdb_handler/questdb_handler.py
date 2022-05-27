@@ -1,5 +1,6 @@
 from mindsdb.integrations.postgres_handler.postgres_handler import PostgresHandler
 
+
 class QuestDBHandler(PostgresHandler):
     """
     This handler handles connection and execution of the QuestDB statements. 

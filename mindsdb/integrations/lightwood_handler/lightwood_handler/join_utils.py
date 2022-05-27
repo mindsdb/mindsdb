@@ -1,7 +1,8 @@
 import copy
+from itertools import product
 import pandas as pd
 
-from ts_utils import validate_ts_where_condition, find_time_filter, add_order_not_null, replace_time_filter, find_and_remove_time_filter, ts_select_dispatch, plan_fetch_timeseries_partitions
+from ts_utils import validate_ts_where_condition, find_time_filter, add_order_not_null, replace_time_filter, find_and_remove_time_filter, get_time_selects
 
 from mindsdb_sql.parser.ast import Identifier, Constant, Operation, Select, BinaryOperation, BetweenOperation
 from mindsdb_sql.parser.ast import OrderBy
@@ -31,6 +32,9 @@ def get_join_input(query, model, data_handler, data_side):
 
 
 def get_ts_join_input(query, model, data_handler, data_side):
+    # TODO: bring in all TS tests from mindsdb_sql
+    
+    # step 1) query checks
     if query.order_by:
         raise PlanningException(
             f'Can\'t provide ORDER BY to time series predictor join query. Found: {query.order_by}.')
@@ -38,131 +42,119 @@ def get_ts_join_input(query, model, data_handler, data_side):
     if query.group_by or query.having or query.offset:
         raise PlanningException(f'Unsupported query to timeseries predictor: {str(query)}')
 
+    if not model.problem_definition.timeseries_settings.is_timeseries:
+        raise PlanningException(f"This is not a time-series predictor, aborting.")
+
     data_handler_table = getattr(query.from_table, data_side).parts[-1]
-    data_handler_cols = list(set([t.parts[-1] for t in query.targets]))
+    data_handler_alias = getattr(query.from_table, data_side).alias
+    data_handler_cols = list(set([t.parts[-1] for t in query.targets if t.parts[0] == str(data_handler_alias)]))
 
     window = model.problem_definition.timeseries_settings.window
-    oby_col = [model.problem_definition.timeseries_settings.order_by[0]]
-    gby_col = [model.problem_definition.timeseries_settings.group_by[0]]  # todo add multiple group support
+    oby_col = model.problem_definition.timeseries_settings.order_by[0]
+    gby_cols = model.problem_definition.timeseries_settings.group_by
 
-    # validate where of TODO subquery? or query?
-
-    allowed_columns = [i.lower() for i in oby_col]
-    if len(gby_col) > 0:
-        allowed_columns += [i.lower() for i in gby_col]
+    allowed_columns = [oby_col.lower()]
+    if len(gby_cols) > 0:
+        allowed_columns += [i.lower() for i in gby_cols]
     validate_ts_where_condition(query.where, allowed_columns=allowed_columns)
 
-    time_filter = find_time_filter(query.where, time_column_name=oby_col[0])  # TODO: fix oby to be just a single column so that this signature is consistent with the rest (seems to expect just one col)
-    order_by = [OrderBy(Identifier(parts=oby_col), direction='DESC')]
+    time_filter = find_time_filter(query.where, time_column_name=oby_col)
+    order_by = [OrderBy(Identifier(parts=[oby_col]), direction='DESC')]
 
+    # step 2) get time filter
     preparation_where = copy.deepcopy(query.where)
-    preparation_where2 = copy.deepcopy(preparation_where)
-    preparation_where = add_order_not_null(preparation_where, time_column_name=oby_col[0])  # TODO: same as in find_time_filter
+    preparation_where = add_order_not_null(preparation_where, time_column_name=oby_col)
+    time_selects = get_time_selects(time_filter, data_handler_table, window, order_by, preparation_where)
 
-    # TODO: Selects to data handler after building list
-    integration_selects = ts_select_dispatch(time_filter, data_handler_table, window, order_by, preparation_where)  # TODO: same as in find_time_filter
-
-    partial_dfs = []
-    for step in integration_selects:
-        result = pd.DataFrame.from_records(data_handler.query(step)['data_frame'])
-        partial_dfs.append(result)
-
-    # TODO: up to here all seems OK -- Turn all these below into direct executions
-    if len(gby_col) == 0:
-        # todo: pretty sure all of this IF can be stripped away! yep, just need to retrieve the DF (which, has been done already?)
-        # ts query without grouping - one or multistep
-        if len(integration_selects) == 1:
-            select_partition_step = get_integration_select_step(integration_selects[0])  # TODO: where is it? NOT DEFINED!
+    # step 3) execute time filter on all required partitions
+    if len(gby_cols) == 0:
+        # no groups - one or multistep
+        if len(time_selects) == 1:
+            model_input = pd.DataFrame.from_records(data_handler.query(time_selects[0])['data_frame'])
         else:
-            select_partition_step = MultipleSteps(
-                steps=[get_integration_select_step(s) for s in integration_selects], reduce='union')  # TODO: where is it?
+            dfs = []
+            for step in time_selects:
+                dfs.append(pd.DataFrame.from_records(data_handler.query(step)['data_frame']))  # TODO: is this efficient if we have a double cutoff?
+            model_input = pd.concat(dfs)
     else:
-        # todo: this one maybe not, ask andrey
-        # inject $var to queries
-        for integration_select in integration_selects:
-            condition = integration_select.where
-            for num, column in enumerate(gby_col):
-                cond = BinaryOperation('=', args=[Identifier(column), Constant(f'$var[{column}]')])
+        # grouped
+        groups = {}
+        dfs = []
+        # latests = {}
+        # windows = {}
+        for gcol in gby_cols:
+            groups_query = Select(
+                targets=[Identifier(gcol)],
+                distinct=True,
+                from_table=Identifier(data_handler_table),
+            )
+            groups[gcol] = list(data_handler.query(groups_query)['data_frame'].squeeze().values)
 
-                # join to main condition
-                if condition is None:
-                    condition = cond
+        partition_keys = list(groups.keys())
+        all_partitions = list(product(*[v for k, v in groups.items()]))  # TODO: check, also whether there is a better way to maybe retrive then project?
+
+        for group in all_partitions:
+            group_time_selects = copy.deepcopy(time_selects)
+
+            # TODO: pending
+            # # one or multistep
+            # if len(group_time_selects) == 1:
+            #     partial_df = partial_dfs[0]
+            # else:
+            #     partial_df = pd.concat(partial_dfs)  # todo: check
+            #
+            # # get grouping values
+            # # TODO: this time filter removal also sounds like we need to keep
+            # no_time_filter_query = copy.deepcopy(query)
+            # no_time_filter_query.where = find_and_remove_time_filter(no_time_filter_query.where, time_filter)
+            # /TODO: pending
+
+            filters = None
+            for i, val in enumerate(group):
+                col = partition_keys[i]
+                binop = BinaryOperation(op='=',
+                                        args=[
+                                            Identifier(col),
+                                            Constant(val)
+                                        ])
+                if filters is None:
+                    filters = binop
                 else:
-                    condition = BinaryOperation('and', args=[condition, cond])
+                    filters = BinaryOperation(op='and', args=[filters, binop])
 
-            integration_select.where = condition
-        # one or multistep
-        if len(integration_selects) == 1:
-            select_partition_step = get_integration_select_step(integration_selects[0])
-        else:
-            select_partition_step = MultipleSteps(
-                steps=[get_integration_select_step(s) for s in integration_selects], reduce='union')
+            # latest_oby_query = Select(  # TODO: don't think we need this one? check logic in time_selects...
+            #     targets=[Identifier(oby_col)],
+            #     from_table=Identifier(data_handler_table),
+            #     where=filters,
+            #     order_by=[OrderBy(
+            #         field=Identifier(oby_col),
+            #         direction='DESC'
+            #     )],
+            #     limit=Constant(1)
+            # )
+            # latests[group] = data_handler.query(latest_oby_query)['data_frame'].values[0][0]
+            #
+            # window_query = Select(
+            #     targets=[Identifier(col) for col in data_handler_cols],
+            #     from_table=Identifier(data_handler_table),
+            #     where=BinaryOperation(op='=',
+            #                           args=[
+            #                               Identifier(gby_cols),
+            #                               Constant(group)
+            #                           ]),
+            # )
 
-        # get grouping values
-        # TODO: this time filter removal also sounds like we need to keep
-        no_time_filter_query = copy.deepcopy(query)
-        no_time_filter_query.where = find_and_remove_time_filter(no_time_filter_query.where, time_filter)
-        select_partitions_step = plan_fetch_timeseries_partitions(no_time_filter_query, table,
-                                                                       gby_col)  # TODO: move query here, and execute directly
+            for time_select in group_time_selects:
+                # TODO: pretty sure this doesn't cover intersection case...
+                time_select.where = BinaryOperation(op='and', args=[time_select.where, filters])
 
-        # sub-query by every grouping value
-        # TODO: replace with a pandas concatenation
-        map_reduce_step = plan.add_step(
-            MapReduceStep(values=select_partitions_step.result, reduce='union', step=select_partition_step))
-        data_step = map_reduce_step
+                df = data_handler.query(time_select)['data_frame']
+                # df = df.sort_values(oby_col, ascending=False).iloc[0:window] # TODO: may want to order and limit the df instead of SELECT to hedge against badly defined dtypes in the DB?
+                dfs.append(df)
 
+            # windows[group] = df[::-1]  # reorder to ASC
 
-    # Original (working) code here:
-    # 1) get all groups
-    for col in [gby_col] + [oby_col]:
-        if col not in data_handler_cols:
-            data_handler_cols.append(col)
+        # 3) concatenate all contexts into single data query
+        model_input = pd.concat(dfs).reset_index(drop=True)
 
-    groups_query = Select(
-        targets=[Identifier(gby_col)],
-        distinct=True,
-        from_table=Identifier(data_handler_table),
-    )
-    groups = list(data_handler.query(groups_query)['data_frame'].squeeze().values)
-
-    # 2) get LATEST available date and window for each group
-    latests = {}
-    windows = {}
-
-    for group in groups:
-        latest_oby_query = Select(
-            targets=[Identifier(oby_col)],
-            from_table=Identifier(data_handler_table),
-            where=BinaryOperation(op='=',
-                                  args=[
-                                      Identifier(gby_col),
-                                      Constant(group)
-                                  ]),
-            order_by=[OrderBy(
-                field=Identifier(oby_col),
-                direction='DESC'
-            )],
-            limit=Constant(1)
-        )
-        latests[group] = data_handler.query(latest_oby_query)['data_frame'].values[0][0]
-
-        window_query =  Select(
-            targets=[Identifier(col) for col in data_handler_cols],
-            from_table=Identifier(data_handler_table),
-            where=BinaryOperation(op='=',
-                                  args=[
-                                      Identifier(gby_col),
-                                      Constant(group)
-                                  ]),
-        )
-        # order and limit the df instead of SELECT to hedge against badly defined dtypes in the DB
-        df = data_handler.query(window_query)['data_frame']
-
-        if len(df) < window and not model.problem_definition.timeseries_settings.allow_incomplete_history:
-            raise Exception(f"Not enough data for group {group}. Either pass more historical context or train a predictor with the `allow_incomplete_history` argument set to True.")
-        df = df.sort_values(oby_col, ascending=False).iloc[0:window]
-        windows[group] = df[::-1]
-
-    # 3) concatenate all contexts into single data query
-    model_input = pd.concat([v for k, v in windows.items()]).reset_index(drop=True)
     return model_input

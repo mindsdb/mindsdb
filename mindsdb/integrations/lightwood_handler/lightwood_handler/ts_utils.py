@@ -3,28 +3,10 @@ from mindsdb_sql.planner.utils import get_integration_path_from_identifier
 from mindsdb_sql.parser.ast import Identifier, Operation, BinaryOperation, BetweenOperation, NullConstant, Latest, Select, Star, Constant
 
 
-# TODO: 2) instead of planning steps, actually execute them and run predictor! refactor all logic in ts_utils.py
-
-def plan_fetch_timeseries_partitions(self, query, table, predictor_group_by_names):
-    # TODO: call from LWhandler join so that this is the AST sent to the "query" method in the data_handler passed to join
-    # TODO: this is the select partitions step
-    targets = [
-        Identifier(column)
-        for column in predictor_group_by_names
-    ]
-
-    query = Select(
-        distinct=True,
-        targets=targets,
-        from_table=table,
-        where=query.where,
-    )
-    select_step = plan_integration_select(query)  # TODO: most likely not needed
-    return select_step
-
-
-def ts_select_dispatch(time_filter, table, window, order_by, preparation_where):
-    time_col = order_by[0]  # todo this is weird, replace
+def get_time_selects(time_filter, table, window, order_by, preparation_where):
+    # TODO: add tests for all these cases
+    # also todo directly execute and return DF instead?
+    time_col = str(order_by[0].field)
     if isinstance(time_filter, BetweenOperation):
         between_from = time_filter.args[1]
         preparation_time_filter = BinaryOperation('<', args=[Identifier(time_col), between_from])

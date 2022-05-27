@@ -7,8 +7,22 @@ EXPOSE 47336/tcp
 ENV PYTHONUNBUFFERED=1
 
 RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==21.3.1 && \
-    pip install --prefer-binary --no-cache-dir wheel==0.37.0 && \
-    pip install --prefer-binary --no-cache-dir mindsdb==@@installer_version
+    pip install --prefer-binary --no-cache-dir wheel==0.37.0
+
+##### prophet temporal fix (because it's dumb) #####
+RUN apt update && \
+    apt install -y wget && \
+    apt-get install --yes --no-install-recommends build-essential
+# get 0.7 release requirements
+# RUN wget -L https://raw.githubusercontent.com/facebook/prophet/77da5b8c06d05d478af510198c685d454342db1f/python/requirements.txt
+# first: install all required packages for pystan
+# RUN pip install --no-cache-dir --upgrade cython numpy
+# second: install all required packages for prophet from their requirements.txt
+# RUN pip install --no-cache-dir --upgrade -r requirements.txt
+# RUN pip install --no-cache-dir --upgrade pystan==2.19.1.1
+####################################################
+
+RUN pip install --prefer-binary --no-cache-dir mindsdb==@@installer_version
 
 RUN echo \
     '{' \

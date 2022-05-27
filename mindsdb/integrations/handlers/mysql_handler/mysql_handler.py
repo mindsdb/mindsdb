@@ -107,6 +107,14 @@ class MySQLHandler(DatabaseHandler):
                     }
         return response
 
+    def query(self, query: ASTNode):
+        """
+        Retrieve the data from the SQL statement.
+        """
+        renderer = SqlalchemyRender('mysql')
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
+
     def get_tables(self):
         """
         Get a list with all of the tabels in MySQL
@@ -130,38 +138,3 @@ class MySQLHandler(DatabaseHandler):
         q = f"DESCRIBE {table_name};"
         result = self.native_query(q)
         return result
-
-    def query(self, query: ASTNode):
-        """
-        Retrieve the data from the SQL statement.
-        """
-        renderer = SqlalchemyRender('mysql')
-        query_str = renderer.get_string(query, with_failback=True)
-        return self.native_query(query_str)
-
-    def select_into(self, table, dataframe: pd.DataFrame):
-        """
-        TODO: Update this
-        """
-        try:
-            con = create_engine(f'mysql://{self.host}:{self.port}/{self.database}', echo=False)
-            dataframe.to_sql(table, con=con, if_exists='append', index=False)
-            return True
-        except Exception as e:
-            print(e)
-            raise Exception(f"Could not select into table {table}, aborting.")
-
-    def join(self, stmt, data_handler, into: Optional[str] = None) -> pd.DataFrame:
-        """
-        TODO: Update this
-        """
-        local_result = self.select_query(stmt.targets, stmt.from_table.left, stmt.where)  # should check it's actually on the left
-        external_result = data_handler.select_query(stmt.targets, stmt.from_table.right, stmt.where)  # should check it's actually on the right
-
-        local_df = pd.DataFrame.from_records(local_result)
-        external_df = pd.DataFrame.from_records(external_result)
-        df = local_df.join(external_df, on=[str(t) for t in stmt.targets], lsuffix='_left', rsuffix='_right')
-
-        if into:
-            self.select_into(into, df)
-        return df

@@ -82,6 +82,14 @@ class SqlServerHandler(DatabaseHandler):
                     }
         return response
 
+    def query(self, query):
+        """
+        Retrieve the data from the SQL statement.
+        """
+        renderer = SqlalchemyRender('mssql')
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
+
     def get_tables(self):
         """
         Get a list with all of the tabels in MySQL
@@ -106,11 +114,3 @@ class SqlServerHandler(DatabaseHandler):
         q = f"SELECT * FROM information_schema.columns WHERE table_name = '{table_name}';"
         result = self.native_query(q)
         return result
-
-    def query(self, query):
-        """
-        Retrieve the data from the SQL statement.
-        """
-        renderer = SqlalchemyRender('mysql')
-        query_str = renderer.get_string(query, with_failback=True)
-        return self.native_query(query_str)

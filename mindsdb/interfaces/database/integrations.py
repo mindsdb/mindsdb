@@ -256,12 +256,42 @@ class IntegrationController:
         return handler
 
     def _load_handler_modules(self):
-        handlers_list = ['postgres_handler', 'mysql_handler', 'file_handler']
+        mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent
+        handlers_path = mindsdb_path.joinpath('integrations/handlers')
         self.handler_modules = {}
-
-        for module_name in handlers_list:
+        self.handler_import_status = {}
+        for hanlder_dir in handlers_path.iterdir():
+            if hanlder_dir.is_dir() is False:
+                continue
+            handler_folder_name = str(hanlder_dir.name)
+            dependencies = []
+            requirements_txt = hanlder_dir.joinpath('requirements.txt')
+            if requirements_txt.is_file():
+                with open(str(requirements_txt), 'rt') as f:
+                    dependencies = [x.strip(' \t') for x in f.readlines()]
+                    dependencies = [x for x in dependencies if len(x) > 0]
             try:
-                handler_module = importlib.import_module(f'mindsdb.integrations.{module_name}')
+                handler_module = importlib.import_module(f'mindsdb.integrations.handlers.{handler_folder_name}')
                 self.handler_modules[handler_module.Handler.type] = handler_module
+                self.handler_import_status[handler_folder_name] = {
+                    'success': True,
+                    'dependencies': dependencies
+                }
             except Exception as e:
-                print(f'Cand import module {module_name}: {e}')
+                print(f'Cand import module {handler_folder_name}: {e}')
+                self.handler_import_status[handler_folder_name] = {
+                    'success': False,
+                    'error_message': str(e),
+                    'dependencies': dependencies
+                }
+        # handlers_list = ['postgres_handler', 'mysql_handler', 'file_handler']
+        # handlers_list = None
+        # Path(__file__)
+        # self.handler_modules = {}
+
+        # for module_name in handlers_list:
+        #     try:
+        #         handler_module = importlib.import_module(f'mindsdb.integrations.{module_name}')
+        #         self.handler_modules[handler_module.Handler.type] = handler_module
+        #     except Exception as e:
+        #         print(f'Cand import module {module_name}: {e}')

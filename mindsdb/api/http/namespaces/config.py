@@ -227,37 +227,25 @@ class Vars(Resource):
 @ns_conf.param('dependency_list', 'Install dependencies')
 class InstallDependenciesList(Resource):
     def get(self):
-        return {'dependencies': ['snowflake', 'athena', 'google', 's3', 'lightgbm_gpu', 'mssql', 'cassandra', 'scylladb']}
+        return self.request.integration_controller.handler_import_status
 
 
 @ns_conf.route('/install/<dependency>')
 @ns_conf.param('dependency', 'Install dependencies')
 class InstallDependencies(Resource):
     def get(self, dependency):
-        if dependency == 'snowflake':
-            dependency = ['snowflake-connector-python[pandas]', 'asn1crypto==1.3.0']
-        elif dependency == 'athena':
-            dependency = ['PyAthena >= 2.0.0']
-        elif dependency == 'google':
-            dependency = ['google-cloud-storage', 'google-auth']
-        elif dependency == 's3':
-            dependency = ['boto3 >= 1.9.0']
-        elif dependency == 'lightgbm_gpu':
-            dependency = ['lightgbm', '--install-option=--gpu', '--upgrade']
-        elif dependency == 'mssql':
-            dependency = ['pymssql >= 2.1.4']
-        elif dependency == 'cassandra':
-            dependency = ['cassandra-driver']
-        elif dependency == 'scylladb':
-            dependency = ['scylla-driver']
-        else:
+        if dependency not in self.request.integration_controller.handler_import_status:
             return f'Unkown dependency: {dependency}', 400
+
+        dependencies = self.request.integration_controller.handler_import_status[dependency]
+        if len(dependencies) == 0:
+            return 'Installed', 200
 
         outs = b''
         errs = b''
         try:
             sp = subprocess.Popen(
-                [sys.executable, '-m', 'pip', 'install', *dependency],
+                [sys.executable, '-m', 'pip', 'install', *dependencies],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
             )

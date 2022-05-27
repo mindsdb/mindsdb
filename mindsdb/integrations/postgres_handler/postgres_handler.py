@@ -17,9 +17,9 @@ class PostgresHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the PostgreSQL statements.
     """
-    name = 'postgres'
+    type = 'postgres'
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, name=None, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
         self.connection_args = kwargs.get('connection_data')
@@ -46,6 +46,7 @@ class PostgresHandler(DatabaseHandler):
         connection = psycopg.connect(**args, connect_timeout=10)
         return connection
 
+    # TODO check_connection ?
     def check_status(self):
         """
         Check the connection of the PostgreSQL database
@@ -142,3 +143,28 @@ class PostgresHandler(DatabaseHandler):
     #           information_schema.columns WHERE table_name='{table_name}';"
     #     result = self.native_query(query)
     #     return result
+
+# response = {
+#     'type': RESPONSE_TYPE.ERROR,
+#     'error_code': 0,
+#     'error_message': str(e)
+# }
+
+
+# class SQLAnswer:
+#     def __init__(self, resp_type: RESPONSE_TYPE, columns: List[Dict] = None, data: List[Dict] = None,
+#                  status: int = None, state_track: List[List] = None, error_code: int = None, error_message: str = None):
+#         self.resp_type = resp_type
+#         self.columns = columns
+#         self.data = data
+#         self.status = status
+#         self.state_track = state_track
+#         self.error_code = error_code
+#         self.error_message = error_message
+
+#     @property
+#     def type(self):
+#         return self.resp_type
+
+# class HandlerResponse:
+    

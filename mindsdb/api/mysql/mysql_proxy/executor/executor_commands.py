@@ -68,8 +68,6 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     SERVER_VARIABLES,
 )
 
-from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
-
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
 
 
@@ -602,16 +600,21 @@ class ExecuteCommands:
 
         # we have connection checkers not for any db. So do nothing if fail
         # TODO return rich error message
-        connection_success = True
+        status = {
+            'success': False,
+            'error': 'unknon'
+        }
         try:
-            checker_class = DB_CONNECTION_CHECKERS.get(database_type, None)
-            if checker_class is not None:
-                checker = checker_class(**connection_args)
-                connection_success = checker.check_connection()
-        except Exception:
-            pass
-        if connection_success is False:
-            raise SqlApiException("Can't connect to db")
+            handler = self.session.integration_controller.create_handler(
+                handler_type=database_type,
+                connection_data=connection_args
+            )
+            status = handler.check_status()
+        except Exception as e:
+            status['error'] = str(e)
+
+        if status.get('success') is False:
+            raise SqlApiException(f"Can't connect to db: {status.get('error')}")
 
         integration = self.session.integration_controller.get(datasource_name)
         if integration is not None:

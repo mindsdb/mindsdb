@@ -16,7 +16,6 @@ from dateutil.tz import tzlocal
 from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.log import get_logs
-from mindsdb.integrations import CHECKERS
 from mindsdb.api.http.utils import http_error
 from mindsdb.interfaces.stream.stream import StreamController
 
@@ -99,14 +98,16 @@ class Integration(Resource):
         is_test = params.get('test', False)
         if is_test:
             del params['test']
+
             db_type = params.get('type')
-            checker_class = CHECKERS.get(db_type, None)
-            if checker_class is None:
-                abort(400, f"Unknown integration type: {db_type}")
-            checker = checker_class(**params)
+            handler = request.integration_controller.create_handler(
+                handler_type=db_type,
+                connection_data=params
+            )
+            status = handler.check_status()
             if temp_dir is not None:
                 shutil.rmtree(temp_dir)
-            return {'success': checker.check_connection()}, 200
+            return status, 200
 
         integration = request.integration_controller.get(name, sensitive_info=False)
         if integration is not None:

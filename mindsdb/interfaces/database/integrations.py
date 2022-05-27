@@ -11,7 +11,6 @@ from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.fs import create_directory
-from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
 
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
@@ -196,14 +195,32 @@ class IntegrationController:
     def check_connections(self):
         connections = {}
         for integration_name, integration_meta in self.get_all().items():
-            connection_checker = DB_CONNECTION_CHECKERS.get(integration_meta.get('type'))
-            if connection_checker is not None:
-                status = connection_checker(**integration_meta).check_connection()
-                connections[integration_name] = status
-            else:
-                connections[integration_name] = True
-
+            handler = self.create_handler(
+                handler_type=integration_meta.get('type'),
+                connection_data=integration_meta
+            )
+            status = handler.check_status()
+            connections[integration_name] = status.get('success', False)
         return connections
+
+    def create_handler(self, name: str = None, handler_type: str = None,
+                       connection_data: dict = {}, company_id: int = None):
+        fs_store = FsStore()
+
+        handler_ars = dict(
+            name=name,
+            db_store=None,
+            fs_store=fs_store,
+            connection_data=connection_data
+        )
+
+        if handler_type == 'files':
+            handler_ars['file_controller'] = WithKWArgsWrapper(
+                FileController(),
+                company_id=company_id
+            )
+
+        return self.handler_modules[handler_type].Handler(**handler_ars)
 
     def get_handler(self, name, company_id=None, case_sensitive=False):
         if name.lower() == 'files':
@@ -229,22 +246,12 @@ class IntegrationController:
         if integration_type not in self.handler_modules:
             raise Exception(f'Cant find handler for {integration_name}')
 
-        fs_store = FsStore()
-
-        handler_ars = dict(
+        handler = self.create_handler(
             name=integration_name,
-            db_store=None,
-            fs_store=fs_store,
-            connection_data=integration_data
+            handler_type=integration_type,
+            connection_data=integration_data,
+            company_id=company_id
         )
-
-        if integration_type == 'files':
-            handler_ars['file_controller'] = WithKWArgsWrapper(
-                FileController(),
-                company_id=company_id
-            )
-
-        handler = self.handler_modules[integration_type].Handler(**handler_ars)
 
         return handler
 
@@ -255,6 +262,6 @@ class IntegrationController:
         for module_name in handlers_list:
             try:
                 handler_module = importlib.import_module(f'mindsdb.integrations.{module_name}')
-                self.handler_modules[handler_module.Handler.name] = handler_module
+                self.handler_modules[handler_module.Handler.type] = handler_module
             except Exception as e:
                 print(f'Cand import module {module_name}: {e}')

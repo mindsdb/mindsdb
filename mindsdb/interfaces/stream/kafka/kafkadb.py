@@ -3,7 +3,7 @@ from copy import deepcopy
 
 import kafka
 
-from mindsdb.integrations.base import StreamIntegration
+from mindsdb.interfaces.stream.base import StreamIntegration
 import mindsdb.interfaces.storage.db as db
 from mindsdb_streams import KafkaStream, StreamController, StreamLearningController
 

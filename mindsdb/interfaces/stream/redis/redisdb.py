@@ -2,7 +2,7 @@ import json
 
 import walrus
 
-from mindsdb.integrations.base import StreamIntegration
+from mindsdb.interfaces.stream.base import StreamIntegration
 import mindsdb.interfaces.storage.db as db
 from mindsdb_streams import RedisStream, StreamController, StreamLearningController
 

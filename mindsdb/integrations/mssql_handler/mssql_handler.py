@@ -38,7 +38,7 @@ class SqlServerHandler(DatabaseHandler):
         try:
             con = self.__connect()
             with closing(con) as con:
-                #TODO: best way to check con.connected ?             
+                # TODO: best way to check con.connected ?
                 status['success'] = True
         except Exception as e:
             log.error(f'Error connecting to SQL Server {self.database}, {e}!')
@@ -55,9 +55,9 @@ class SqlServerHandler(DatabaseHandler):
         with closing(con) as con:
             with con.cursor(as_dict=True) as cur:
                 try:
-                    res = cur.execute(query)
-                    result = cur.fetchall()  
-                    if result:                                  
+                    cur.execute(query)
+                    result = cur.fetchall()
+                    if result:
                         response = {
                             'type': RESPONSE_TYPE.TABLE,
                             'data_frame': pd.DataFrame(
@@ -90,8 +90,8 @@ class SqlServerHandler(DatabaseHandler):
         """
         Get more information about specific database views
         """
-        #TODO: check what info we need for views
-        q = f"SELECT * FROM sys.views;"
+        # TODO: check what info we need for views
+        q = "SELECT * FROM sys.views;"
         result = self.native_query(q)
         return result
 
@@ -102,7 +102,6 @@ class SqlServerHandler(DatabaseHandler):
         q = f"SELECT * FROM information_schema.columns WHERE table_name = '{table_name}';"
         result = self.native_query(q)
         return result
-
 
     def query(self, query):
         """

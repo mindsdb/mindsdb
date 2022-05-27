@@ -227,17 +227,18 @@ class Vars(Resource):
 @ns_conf.param('dependency_list', 'Install dependencies')
 class InstallDependenciesList(Resource):
     def get(self):
-        return self.request.integration_controller.handler_import_status
+        return self.request.integration_controller.get_handler_import_status()
 
 
 @ns_conf.route('/install/<dependency>')
 @ns_conf.param('dependency', 'Install dependencies')
 class InstallDependencies(Resource):
     def get(self, dependency):
-        if dependency not in self.request.integration_controller.handler_import_status:
+        handler_import_status = self.request.integration_controller.get_handler_import_status()
+        if dependency not in handler_import_status:
             return f'Unkown dependency: {dependency}', 400
 
-        dependencies = self.request.integration_controller.handler_import_status[dependency]
+        dependencies = handler_import_status[dependency]
         if len(dependencies) == 0:
             return 'Installed', 200
 

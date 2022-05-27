@@ -278,9 +278,11 @@ class IntegrationController:
                     'dependencies': dependencies
                 }
             except Exception as e:
-                print(f'Cand import module {handler_folder_name}: {e}')
                 self.handler_import_status[handler_folder_name] = {
                     'success': False,
                     'error_message': str(e),
                     'dependencies': dependencies
                 }
+
+    def get_handler_import_status(self):
+        return self.handler_import_status

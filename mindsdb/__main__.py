@@ -16,12 +16,13 @@ from packaging import version
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
+from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.stream.stream import StreamController
+from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
 from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface
 import mindsdb.interfaces.storage.db as db
 
@@ -86,6 +87,10 @@ if __name__ == '__main__':
     from mindsdb.interfaces.database.integrations import IntegrationController
     model_interface = WithKWArgsWrapper(ModelInterface(), company_id=COMPANY_ID)
     integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
+    for handler_name, handler_status in integration_controller.get_handler_import_status().items():
+        if handler_status.get('success', False) is not True:
+            print(f"Can't import handler '{handler_name}': {handler_status.get('error_message', 'unknown error')}")
+
     raw_model_data_arr = model_interface.get_models()
     model_data_arr = []
     for model in raw_model_data_arr:

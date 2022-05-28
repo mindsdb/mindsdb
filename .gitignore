@@ -28,3 +28,5 @@ docker/dist/*
 .vscode/*
 .history
 doc/lib/
+.DS_Store
+.DS_Store

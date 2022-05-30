@@ -1,17 +1,15 @@
-from typing import Optional
 from contextlib import closing
 
 import pandas as pd
 import mysql.connector
-from sqlalchemy import create_engine
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.utilities.log import log
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.response import HandlerResponse, RESPONSE_TYPE
 
 
 class MySQLHandler(DatabaseHandler):
@@ -73,7 +71,7 @@ class MySQLHandler(DatabaseHandler):
             status['error'] = e
         return status
 
-    def native_query(self, query):
+    def native_query(self, query: str) -> HandlerResponse:
         """
         Receive SQL query and runs it
         :param query: The SQL query to run in MySQL
@@ -87,27 +85,24 @@ class MySQLHandler(DatabaseHandler):
                     cur.execute(query)
                     if cur.with_rows:
                         result = cur.fetchall()
-                        response = {
-                            'type': RESPONSE_TYPE.TABLE,
-                            'data_frame': pd.DataFrame(
+                        response = HandlerResponse(
+                            RESPONSE_TYPE.TABLE,
+                            pd.DataFrame(
                                 result,
                                 columns=[x[0] for x in cur.description]
                             )
-                        }
+                        )
                     else:
-                        response = {
-                            'type': RESPONSE_TYPE.OK
-                        }
+                        response = HandlerResponse(RESPONSE_TYPE.OK)
                 except Exception as e:
                     log.error(f'Error running query: {query} on {self.database}!')
-                    response = {
-                        'type': RESPONSE_TYPE.ERROR,
-                        'error_code': 0,
-                        'error_message': str(e)
-                    }
+                    response = HandlerResponse(
+                        RESPONSE_TYPE.ERROR,
+                        error_message=str(e)
+                    )
         return response
 
-    def query(self, query: ASTNode):
+    def query(self, query: ASTNode) -> HandlerResponse:
         """
         Retrieve the data from the SQL statement.
         """
@@ -120,14 +115,6 @@ class MySQLHandler(DatabaseHandler):
         Get a list with all of the tabels in MySQL
         """
         q = "SHOW TABLES;"
-        result = self.native_query(q)
-        return result
-
-    def get_views(self):
-        """
-        Get more information about specific database views
-        """
-        q = f"SHOW FULL TABLES IN {self.database} WHERE TABLE_TYPE LIKE 'VIEW';"
         result = self.native_query(q)
         return result
 

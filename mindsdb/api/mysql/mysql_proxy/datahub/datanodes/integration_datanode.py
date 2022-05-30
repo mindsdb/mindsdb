@@ -1,9 +1,7 @@
-import pandas as pd
 from sqlalchemy.types import (
     Integer, Float, Text
 )
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast import Insert, Identifier, Constant, CreateTable, TableColumn, DropTables
+from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn, DropTables
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.utilities.log import log
@@ -25,15 +23,14 @@ class IntegrationDataNode(DataNode):
 
     def get_tables(self):
         response = self.integration_handler.get_tables()
-        if response['type'] is RESPONSE_TYPE.TABLE:
-            if 'data' in response:
-                return response['data']
-            else:
-                result_dict = response['data_frame'].to_dict(orient='records')
-                result = []
-                for row in result_dict:
-                    result.append(TablesRow.from_dict(row))
+        if response.type is RESPONSE_TYPE.TABLE:
+            result_dict = response.data_frame.to_dict(orient='records')
+            result = []
+            for row in result_dict:
+                result.append(TablesRow.from_dict(row))
             return result
+        else:
+            raise Exception(f"Can't get tables: {response.error_message}")
 
     def has_table(self, tableName):
         return True

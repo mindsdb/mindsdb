@@ -7,8 +7,9 @@ from mindsdb_sql import parse_sql
 
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.utilities.log import log
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+# from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.integrations.libs.response import HandlerResponse, RESPONSE_TYPE
 
 
 class SqlServerHandler(DatabaseHandler):
@@ -62,24 +63,21 @@ class SqlServerHandler(DatabaseHandler):
                     cur.execute(query)
                     result = cur.fetchall()
                     if result:
-                        response = {
-                            'type': RESPONSE_TYPE.TABLE,
-                            'data_frame': pd.DataFrame(
+                        response = HandlerResponse(
+                            RESPONSE_TYPE.TABLE,
+                            data_frame=pd.DataFrame(
                                 result,
                                 columns=[x[0] for x in cur.description]
                             )
-                        }
+                        )
                     else:
-                        response = {
-                            'type': RESPONSE_TYPE.OK
-                        }
+                        response = HandlerResponse(RESPONSE_TYPE.OK)
                 except Exception as e:
                     log.error(f'Error running query: {query} on {self.database}!')
-                    response = {
-                        'type': RESPONSE_TYPE.ERROR,
-                        'error_code': 0,
-                        'error_message': str(e)
-                    }
+                    response = HandlerResponse(
+                        RESPONSE_TYPE.ERROR,
+                        error_message=str(e)
+                    )
         return response
 
     def query(self, query):
@@ -94,23 +92,29 @@ class SqlServerHandler(DatabaseHandler):
         """
         Get a list with all of the tabels in MySQL
         """
-        q = f"SELECT * FROM {self.database}.INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';"
-        result = self.native_query(q)
-        return result
-
-    def get_views(self):
+        query = f"""
+            SELECT
+                table_schema,
+                table_name,
+                table_type
+            FROM {self.database}.INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_TYPE in ('BASE TABLE', 'VIEW');
         """
-        Get more information about specific database views
-        """
-        # TODO: check what info we need for views
-        q = "SELECT * FROM sys.views;"
-        result = self.native_query(q)
+        result = self.native_query(query)
         return result
 
     def describe_table(self, table_name):
         """
         Show details about the table
         """
-        q = f"SELECT * FROM information_schema.columns WHERE table_name = '{table_name}';"
+        q = f"""
+            SELECT
+                column_name as "Field",
+                data_type as "Type"
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{table_name}'
+        """
         result = self.native_query(q)
         return result

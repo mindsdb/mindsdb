@@ -14,11 +14,9 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import DropTables, Select
 
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb.utilities.log import log
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
-from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
+from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.response import HandlerResponse, RESPONSE_TYPE
 
 
 def clean_row(row):
@@ -55,47 +53,42 @@ class FileHandler(DatabaseHandler):
             'success': True
         }
 
-    def query(self, query: ASTNode):
+    def query(self, query: ASTNode) -> HandlerResponse:
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
         if type(query) == DropTables:
             for table_identifier in query.tables:
                 if len(table_identifier.parts) == 2 and table_identifier.parts[0] != self.name:
-                    return {
-                        'type': RESPONSE_TYPE.ERROR,
-                        'error_code': 0,
-                        'error_message': f"Can't delete table from database '{table_identifier.parts[0]}'"
-                    }
+                    return HandlerResponse(
+                        RESPONSE_TYPE.ERROR,
+                        error_message=f"Can't delete table from database '{table_identifier.parts[0]}'"
+                    )
                 table_name = table_identifier.parts[-1]
                 try:
                     self.file_controller.delete_file(table_name)
                 except Exception as e:
-                    return {
-                        'type': RESPONSE_TYPE.ERROR,
-                        'error_code': 0,
-                        'error_message': f"Can't delete table '{table_name}': {e}"
-                    }
-            return {
-                'type': RESPONSE_TYPE.OK
-            }
+                    return HandlerResponse(
+                        RESPONSE_TYPE.ERROR,
+                        error_message=f"Can't delete table '{table_name}': {e}"
+                    )
+            return HandlerResponse(RESPONSE_TYPE.OK)
         elif type(query) == Select:
             table_name = query.from_table.parts[-1]
             file_path = self.file_controller.get_file_path(table_name, company_id=None)
             df, _columns = self._handle_source(file_path, self.clean_rows, self.custom_parser)
             result_df = query_df(df, query)
-            return {
-                'type': RESPONSE_TYPE.TABLE,
-                'data_frame': result_df
-            }
+            return HandlerResponse(
+                RESPONSE_TYPE.TABLE,
+                data_frame=result_df
+            )
         else:
-            return {
-                'type': RESPONSE_TYPE.ERROR,
-                'error_code': 0,
-                'error_message': "Only 'select' and 'drop' queries allowed for files"
-            }
+            return HandlerResponse(
+                RESPONSE_TYPE.ERROR,
+                error_message="Only 'select' and 'drop' queries allowed for files"
+            )
 
-    def native_query(self, query: str):
+    def native_query(self, query: str) -> HandlerResponse:
         """
         Receive SQL query and runs it
         :param query: The SQL query to run in PostgreSQL
@@ -278,42 +271,29 @@ class FileHandler(DatabaseHandler):
             raise
         return os.path.join(temp_dir, 'file')
 
-    # COMPANY_ID!!!!
-    # def get_files(self, company_id=None):
-    #     """ Get list of files
-
-    #         Returns:
-    #             list[dict]: files metadata
-    #     """
-    #     file_records = session.query(File).filter_by(company_id=company_id).all()
-    #     files_metadata = [{
-    #         'name': record.name,
-    #         'row_count': record.row_count,
-    #         'columns': record.columns,
-    #     } for record in file_records]
-    #     return files_metadata
-
     def get_tables(self):
         """
-        List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
+        List all files
         """
-        response = {
-            'type': RESPONSE_TYPE.TABLE,
-            'data': []
-        }
         files_meta = self.file_controller.get_files()
-        for file_meta in files_meta:
-            response['data'].append(TablesRow(
-                TABLE_NAME=file_meta['name'],
-                TABLE_ROWS=file_meta['row_count']
-            ))
-        return response
+        data = [{
+            'TABLE_NAME': x['name'],
+            'TABLE_ROWS': x['row_count']
+        } for x in files_meta]
+        return HandlerResponse(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(data)
+        )
 
-    def describe_table(self, table_name):
-        """
-        List names and data types about the table coulmns
-        """
-        query = f"SELECT table_name, column_name, data_type FROM \
-              information_schema.columns WHERE table_name='{table_name}';"
-        result = self.native_query(query)
+    def get_columns(self, table_name):
+        file_meta = self.file_controller.get_file_meta(table_name)
+        result = HandlerResponse(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame([
+                {
+                    'Field': x,
+                    'Type': 'str'
+                } for x in file_meta['columns']
+            ])
+        )
         return result

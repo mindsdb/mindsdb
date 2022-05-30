@@ -33,7 +33,7 @@ def get_join_input(query, model, data_handler, data_side):
 
 def get_ts_join_input(query, model, data_handler, data_side):
     # TODO: bring in all TS tests from mindsdb_sql
-    
+
     # step 1) query checks
     if query.order_by:
         raise PlanningException(
@@ -74,14 +74,13 @@ def get_ts_join_input(query, model, data_handler, data_side):
         else:
             dfs = []
             for step in time_selects:
-                dfs.append(pd.DataFrame.from_records(data_handler.query(step)['data_frame']))  # TODO: is this efficient if we have a double cutoff?
+                # TODO: is this correct if we have a double cutoff?
+                dfs.append(pd.DataFrame.from_records(data_handler.query(step)['data_frame']))
             model_input = pd.concat(dfs)
     else:
-        # grouped
+        # grouped - multiple partitions
         groups = {}
         dfs = []
-        # latests = {}
-        # windows = {}
         for gcol in gby_cols:
             groups_query = Select(
                 targets=[Identifier(gcol)],
@@ -122,37 +121,13 @@ def get_ts_join_input(query, model, data_handler, data_side):
                 else:
                     filters = BinaryOperation(op='and', args=[filters, binop])
 
-            # latest_oby_query = Select(  # TODO: don't think we need this one? check logic in time_selects...
-            #     targets=[Identifier(oby_col)],
-            #     from_table=Identifier(data_handler_table),
-            #     where=filters,
-            #     order_by=[OrderBy(
-            #         field=Identifier(oby_col),
-            #         direction='DESC'
-            #     )],
-            #     limit=Constant(1)
-            # )
-            # latests[group] = data_handler.query(latest_oby_query)['data_frame'].values[0][0]
-            #
-            # window_query = Select(
-            #     targets=[Identifier(col) for col in data_handler_cols],
-            #     from_table=Identifier(data_handler_table),
-            #     where=BinaryOperation(op='=',
-            #                           args=[
-            #                               Identifier(gby_cols),
-            #                               Constant(group)
-            #                           ]),
-            # )
-
             for time_select in group_time_selects:
                 # TODO: pretty sure this doesn't cover intersection case...
                 time_select.where = BinaryOperation(op='and', args=[time_select.where, filters])
 
                 df = data_handler.query(time_select)['data_frame']
-                # df = df.sort_values(oby_col, ascending=False).iloc[0:window] # TODO: may want to order and limit the df instead of SELECT to hedge against badly defined dtypes in the DB?
+                # TODO: maybe order and limit df instead of SELECT to hedge against badly defined dtypes in the DB?
                 dfs.append(df)
-
-            # windows[group] = df[::-1]  # reorder to ASC
 
         # 3) concatenate all contexts into single data query
         model_input = pd.concat(dfs).reset_index(drop=True)

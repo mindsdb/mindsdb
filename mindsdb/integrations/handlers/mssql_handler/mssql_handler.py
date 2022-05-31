@@ -4,12 +4,16 @@ import pymssql
 import pandas as pd
 
 from mindsdb_sql import parse_sql
+from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.utilities.log import log
-# from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.libs.response import HandlerResponse, RESPONSE_TYPE
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
 
 
 class SqlServerHandler(DatabaseHandler):
@@ -32,25 +36,23 @@ class SqlServerHandler(DatabaseHandler):
         connection = pymssql.connect(**self.connection_args)
         return connection
 
-    def check_status(self):
+    def check_status(self) -> StatusResponse:
         """
         Check the connection of the SQL Server database
         :return: success status and error message if error occurs
         """
-        status = {
-            'success': False
-        }
+        response = StatusResponse(False)
         try:
             con = self.__connect()
             with closing(con) as con:
                 # TODO: best way to check con.connected ?
-                status['success'] = True
+                response.success = True
         except Exception as e:
             log.error(f'Error connecting to SQL Server {self.database}, {e}!')
-            status['error'] = e
-        return status
+            response.error_message = str(e)
+        return response
 
-    def native_query(self, query):
+    def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
         :param query: The SQL query to run in SQL Server
@@ -63,7 +65,7 @@ class SqlServerHandler(DatabaseHandler):
                     cur.execute(query)
                     result = cur.fetchall()
                     if result:
-                        response = HandlerResponse(
+                        response = Response(
                             RESPONSE_TYPE.TABLE,
                             data_frame=pd.DataFrame(
                                 result,
@@ -71,16 +73,16 @@ class SqlServerHandler(DatabaseHandler):
                             )
                         )
                     else:
-                        response = HandlerResponse(RESPONSE_TYPE.OK)
+                        response = Response(RESPONSE_TYPE.OK)
                 except Exception as e:
                     log.error(f'Error running query: {query} on {self.database}!')
-                    response = HandlerResponse(
+                    response = Response(
                         RESPONSE_TYPE.ERROR,
                         error_message=str(e)
                     )
         return response
 
-    def query(self, query):
+    def query(self, query: ASTNode) -> Response:
         """
         Retrieve the data from the SQL statement.
         """
@@ -88,7 +90,7 @@ class SqlServerHandler(DatabaseHandler):
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    def get_tables(self):
+    def get_tables(self) -> Response:
         """
         Get a list with all of the tabels in MySQL
         """
@@ -103,7 +105,7 @@ class SqlServerHandler(DatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def describe_table(self, table_name):
+    def get_columns(self, table_name) -> Response:
         """
         Show details about the table
         """

@@ -9,7 +9,11 @@ from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
-from mindsdb.integrations.libs.response import HandlerResponse, RESPONSE_TYPE
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
 
 
 class MySQLHandler(DatabaseHandler):
@@ -54,24 +58,23 @@ class MySQLHandler(DatabaseHandler):
         connection = mysql.connector.connect(**config)
         return connection
 
-    def check_status(self):
+    def check_status(self) -> StatusResponse:
         """
         Check the connection of the MySQL database
         :return: success status and error message if error occurs
         """
-        status = {
-            'success': False
-        }
+
+        result = StatusResponse(False)
         try:
             con = self.__connect()
             with closing(con) as con:
-                status['success'] = con.is_connected()
+                result.success = con.is_connected()
         except Exception as e:
             log.error(f'Error connecting to MySQL {self.database}, {e}!')
-            status['error'] = e
-        return status
+            result.error_message = str(e)
+        return result
 
-    def native_query(self, query: str) -> HandlerResponse:
+    def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
         :param query: The SQL query to run in MySQL
@@ -85,7 +88,7 @@ class MySQLHandler(DatabaseHandler):
                     cur.execute(query)
                     if cur.with_rows:
                         result = cur.fetchall()
-                        response = HandlerResponse(
+                        response = Response(
                             RESPONSE_TYPE.TABLE,
                             pd.DataFrame(
                                 result,
@@ -93,16 +96,16 @@ class MySQLHandler(DatabaseHandler):
                             )
                         )
                     else:
-                        response = HandlerResponse(RESPONSE_TYPE.OK)
+                        response = Response(RESPONSE_TYPE.OK)
                 except Exception as e:
                     log.error(f'Error running query: {query} on {self.database}!')
-                    response = HandlerResponse(
+                    response = Response(
                         RESPONSE_TYPE.ERROR,
                         error_message=str(e)
                     )
         return response
 
-    def query(self, query: ASTNode) -> HandlerResponse:
+    def query(self, query: ASTNode) -> Response:
         """
         Retrieve the data from the SQL statement.
         """
@@ -110,7 +113,7 @@ class MySQLHandler(DatabaseHandler):
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    def get_tables(self):
+    def get_tables(self) -> Response:
         """
         Get a list with all of the tabels in MySQL
         """
@@ -118,7 +121,7 @@ class MySQLHandler(DatabaseHandler):
         result = self.native_query(q)
         return result
 
-    def describe_table(self, table_name):
+    def get_columns(self, table_name) -> Response:
         """
         Show details about the table
         """

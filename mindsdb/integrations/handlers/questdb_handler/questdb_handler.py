@@ -16,19 +16,13 @@ class QuestDBHandler(PostgresHandler):
         List all tabels in QuestDB
         """
         query = "SHOW TABLES"
-        res = super().native_query(query)
-        return res
+        response = super().native_query(query)
+        return response
 
-    def describe_table(self, table_name):
+    def get_columns(self, table_name):
         """
         List information about the table
         """
         query = f"SELECT * FROM tables() WHERE name='{table_name}';"
-        result = super().native_query(query)
-        return result
-
-    def get_views(self):
-        """
-        QuestDB doesn't support views
-        """
-        raise NotImplementedError()
+        response = super().native_query(query)
+        return response

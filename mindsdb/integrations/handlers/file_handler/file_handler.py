@@ -16,7 +16,11 @@ from mindsdb_sql.parser.ast import DropTables, Select
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
-from mindsdb.integrations.libs.response import HandlerResponse, RESPONSE_TYPE
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
 
 
 def clean_row(row):
@@ -44,23 +48,21 @@ class FileHandler(DatabaseHandler):
         self.clean_rows = connection_data.get('clean_rows', True)
         self.file_controller = file_controller
 
-    def check_status(self):
+    def check_status(self) -> StatusResponse:
         """
         Check the connection of the PostgreSQL database
         :return: success status and error message if error occurs
         """
-        return {
-            'success': True
-        }
+        return StatusResponse(True)
 
-    def query(self, query: ASTNode) -> HandlerResponse:
+    def query(self, query: ASTNode) -> Response:
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
         if type(query) == DropTables:
             for table_identifier in query.tables:
                 if len(table_identifier.parts) == 2 and table_identifier.parts[0] != self.name:
-                    return HandlerResponse(
+                    return Response(
                         RESPONSE_TYPE.ERROR,
                         error_message=f"Can't delete table from database '{table_identifier.parts[0]}'"
                     )
@@ -68,27 +70,27 @@ class FileHandler(DatabaseHandler):
                 try:
                     self.file_controller.delete_file(table_name)
                 except Exception as e:
-                    return HandlerResponse(
+                    return Response(
                         RESPONSE_TYPE.ERROR,
                         error_message=f"Can't delete table '{table_name}': {e}"
                     )
-            return HandlerResponse(RESPONSE_TYPE.OK)
+            return Response(RESPONSE_TYPE.OK)
         elif type(query) == Select:
             table_name = query.from_table.parts[-1]
             file_path = self.file_controller.get_file_path(table_name, company_id=None)
             df, _columns = self._handle_source(file_path, self.clean_rows, self.custom_parser)
             result_df = query_df(df, query)
-            return HandlerResponse(
+            return Response(
                 RESPONSE_TYPE.TABLE,
                 data_frame=result_df
             )
         else:
-            return HandlerResponse(
+            return Response(
                 RESPONSE_TYPE.ERROR,
                 error_message="Only 'select' and 'drop' queries allowed for files"
             )
 
-    def native_query(self, query: str) -> HandlerResponse:
+    def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
         :param query: The SQL query to run in PostgreSQL
@@ -271,7 +273,7 @@ class FileHandler(DatabaseHandler):
             raise
         return os.path.join(temp_dir, 'file')
 
-    def get_tables(self):
+    def get_tables(self) -> Response:
         """
         List all files
         """
@@ -280,14 +282,14 @@ class FileHandler(DatabaseHandler):
             'TABLE_NAME': x['name'],
             'TABLE_ROWS': x['row_count']
         } for x in files_meta]
-        return HandlerResponse(
+        return Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(data)
         )
 
-    def get_columns(self, table_name):
+    def get_columns(self, table_name) -> Response:
         file_meta = self.file_controller.get_file_meta(table_name)
-        result = HandlerResponse(
+        result = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame([
                 {

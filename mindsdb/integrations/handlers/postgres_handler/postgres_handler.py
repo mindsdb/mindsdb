@@ -10,7 +10,11 @@ from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.utilities.log import log
-from mindsdb.integrations.libs.response import HandlerResponse, RESPONSE_TYPE
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
 
 
 class PostgresHandler(DatabaseHandler):
@@ -46,27 +50,24 @@ class PostgresHandler(DatabaseHandler):
         connection = psycopg.connect(**args, connect_timeout=10)
         return connection
 
-    # TODO check_connection ?
-    def check_status(self):
+    def check_status(self) -> StatusResponse:
         """
         Check the connection of the PostgreSQL database
         :return: success status and error message if error occurs
         """
-        status = {
-            'success': False
-        }
+        response = StatusResponse(False)
         try:
             con = self.__connect()
             with closing(con) as con:
                 with con.cursor() as cur:
                     cur.execute('select 1;')
-            status['success'] = True
+            response.success = True
         except psycopg.Error as e:
             log.error(f'Error connecting to PostgreSQL {self.database}, {e}!')
-            status['error'] = e
-        return status
+            response.error_message = e
+        return response
 
-    def native_query(self, query: str) -> HandlerResponse:
+    def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
         :param query: The SQL query to run in PostgreSQL
@@ -78,10 +79,10 @@ class PostgresHandler(DatabaseHandler):
                 try:
                     cur.execute(query)
                     if ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
-                        response = HandlerResponse(RESPONSE_TYPE.OK)
+                        response = Response(RESPONSE_TYPE.OK)
                     else:
                         result = cur.fetchall()
-                        response = HandlerResponse(
+                        response = Response(
                             RESPONSE_TYPE.TABLE,
                             DataFrame(
                                 result,
@@ -90,21 +91,21 @@ class PostgresHandler(DatabaseHandler):
                         )
                 except Exception as e:
                     log.error(f'Error running query: {query} on {self.database}!')
-                    response = HandlerResponse(
+                    response = Response(
                         RESPONSE_TYPE.ERROR,
                         error_code=0,
                         error_message=str(e)
                     )
         return response
 
-    def query(self, query: ASTNode) -> HandlerResponse:
+    def query(self, query: ASTNode) -> Response:
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
         query_str = self.renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    def get_tables(self) -> HandlerResponse:
+    def get_tables(self) -> Response:
         """
         List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
         """

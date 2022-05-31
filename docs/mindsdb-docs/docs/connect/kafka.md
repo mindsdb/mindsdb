@@ -1,6 +1,11 @@
 # MidnsDB and Kafka
 
 MindsDB provides a kafka connector plugin to connect to kafka cluster.
+
+At first, please visit <ins>[Kafka Connect Mindsdb](https://www.confluent.io/hub/mindsdb/mindsdb-kafka-connector)</ins> page on offical confluent site. It contains all instructions how to install the connector from the confluent hub.
+
+In addition it wouldn't be a mistake to briefly review instructions described below.
+
 You may use official connector docker image:
 
 ```bash

@@ -133,20 +133,11 @@ class TrinoHandler(DatabaseHandler):
         log.info(f'tables: {tables}')
         return tables
 
-    def describe_table(self, table_name: str) -> Dict:
+    def get_columns(self, table_name: str) -> Dict:
         query = f'DESCRIBE "{table_name}"'
         res = self.native_query(query)
         return res
 
     # TODO: complete the implementations
     def query(self, query: ASTNode) -> dict:
-        pass
-
-    def join(self, stmt, data_handler, into: Optional[str]) -> pd.DataFrame:
-        pass
-
-    def get_views(self) -> List:
-        pass
-
-    def select_into(self, table: str, dataframe: pd.DataFrame):
         pass

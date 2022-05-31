@@ -196,7 +196,7 @@ class MindsDBDataNode(DataNode):
             row = where_data[0]
             col_name_map = {}
             for i, col_name in enumerate(row):
-                if col_name in ('__mindsdb_row_id', '__mdb_make_predictions'):
+                if col_name in ('__mindsdb_row_id', '__mdb_forecast_offset'):
                     continue
                 new_col_name = get_column_in_case(columns, col_name)
                 if new_col_name is not None and col_name != new_col_name:
@@ -237,7 +237,7 @@ class MindsDBDataNode(DataNode):
         timeseries_settings = model['problem_definition']['timeseries_settings']
 
         if timeseries_settings['is_timeseries'] is True:
-            __mdb_make_predictions = set([row.get('__mdb_make_predictions', True) for row in where_data]) == {True}
+            __no_forecast_offset = set([row.get('__mdb_forecast_offset', None) for row in where_data]) == {None}
 
             predict = model['predict']
             group_by = timeseries_settings['group_by'] or []
@@ -298,7 +298,7 @@ class MindsDBDataNode(DataNode):
                     if horizon > 1:
                         new_row[predict] = new_row[predict][i]
                         new_row[order_by_column] = new_row[order_by_column][i]
-                    if '__mindsdb_row_id' in new_row and (i > 0 or __mdb_make_predictions is False):
+                    if '__mindsdb_row_id' in new_row and (i > 0 or __no_forecast_offset):
                         new_row['__mindsdb_row_id'] = None
                     rows.append(new_row)
 
@@ -333,7 +333,7 @@ class MindsDBDataNode(DataNode):
         keys = [x for x in pred_dicts[0] if x in columns]
         min_max_keys = []
         for col in predicted_columns:
-            if model['dtype_dict'][col] in (dtype.integer, dtype.float):
+            if model['dtype_dict'][col] in (dtype.integer, dtype.float, dtype.num_tsarray):
                 min_max_keys.append(col)
 
         data = []

@@ -333,7 +333,7 @@ class MindsDBDataNode(DataNode):
         keys = [x for x in pred_dicts[0] if x in columns]
         min_max_keys = []
         for col in predicted_columns:
-            if model['dtype_dict'][col] in (dtype.integer, dtype.float):
+            if model['dtype_dict'][col] in (dtype.integer, dtype.float, dtype.num_tsarray):
                 min_max_keys.append(col)
 
         data = []

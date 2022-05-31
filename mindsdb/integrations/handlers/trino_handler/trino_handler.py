@@ -90,7 +90,7 @@ class TrinoHandler(DatabaseHandler):
             conn.close()
         return response
 
-    def native_query(self, query):
+    def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
         :param query: The SQL query to run in Trino
@@ -101,45 +101,40 @@ class TrinoHandler(DatabaseHandler):
             cur = conn.cursor()
             result = cur.execute(query)
             if result:
-                response = {
-                    'type': RESPONSE_TYPE.TABLE,
-                    'data_frame': pd.DataFrame(
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.DataFrame(
                         result,
                         columns=[x[0] for x in cur.description]
                     )
-                }
+                )
             else:
-                response = {
-                    'type': RESPONSE_TYPE.OK
-                }
+                response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
             log.error(f'Error connecting to Trino {self.schema}, {e}!')
-            response = {
-                'type': RESPONSE_TYPE.ERROR,
-                'error_code': 0,
-                'error_message': str(e)
-            }
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
         finally:
             cur.close()
             conn.close()
         return response
 
-    def get_tables(self) -> List:
+    # TODO: complete the implementations
+    def query(self, query: ASTNode) -> dict:
+        pass
+
+    def get_tables(self) -> Response:
         """
         List all tables in Trino
         :return: list of all tables
         """
         query = "SHOW TABLES"
-        res_tables = self.native_query(query)
-        tables = res_tables.get('data_frame')['Table'].tolist()
-        log.info(f'tables: {tables}')
-        return tables
+        response = self.native_query(query)
+        return response
 
     def get_columns(self, table_name: str) -> Dict:
         query = f'DESCRIBE "{table_name}"'
-        res = self.native_query(query)
-        return res
-
-    # TODO: complete the implementations
-    def query(self, query: ASTNode) -> dict:
-        pass
+        response = self.native_query(query)
+        return response

@@ -1,8 +1,8 @@
-# MidnsDB and Kafka
+# MindsDB and Kafka
 
 MindsDB provides a kafka connector plugin to connect to kafka cluster.
 
-At first, please visit <ins>[Kafka Connect Mindsdb](https://www.confluent.io/hub/mindsdb/mindsdb-kafka-connector)</ins> page on offical confluent site. It contains all instructions how to install the connector from the confluent hub.
+At first, please visit <ins>[Kafka Connect Mindsdb](https://www.confluent.io/hub/mindsdb/mindsdb-kafka-connector)</ins> page on official confluent site. It contains all instructions how to install the connector from the confluent hub.
 
 In addition it wouldn't be a mistake to briefly review instructions described below.
 
@@ -23,15 +23,15 @@ docker-compose up -d
 
 from the root of repository to build the connector and launch it in the test environment locally.
 
-Please note, there are two types of connector config (do not forget to set a real value for each parameter befor using it):
+Please note, there are two types of connector config (do not forget to set a real value for each parameter before using it):
 
  - For <ins>[MindsDB Cloud](https://github.com/mindsdb/kafka_connector/blob/main/examples/kafkaConfig.json)</ins>
- - For a separate <ins>[MindsDB intallation](https://github.com/mindsdb/kafka_connector/blob/main/examples/kafkaConfigSeparateMindsdbInstance.json)</ins>
+ - For a separate <ins>[MindsDB installation](https://github.com/mindsdb/kafka_connector/blob/main/examples/kafkaConfigSeparateMindsdbInstance.json)</ins>
 
 
 ## Example
 
-### Pre-requesites:
+### Prerequisites:
 - Launch MindsDB instance where HTTP API interface is running on `docker network interface inet ip` (it is `172.17.0.1` in general)
 - Train a new model. You may use <ins>[this](/sql/tutorials/bodyfat)</ins> tutorial as example
 - run test kafka environment - `docker-compose up -d` (see details above)

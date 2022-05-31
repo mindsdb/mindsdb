@@ -69,28 +69,26 @@ class TrinoHandler(DatabaseHandler):
         )
         return conn
 
-    def check_status(self):
+    def check_status(self) -> StatusResponse:
         """
         Check the connection of the Trino instance
         :return: success status and error message if error occurs
         """
-        status = {
-            'success': False
-        }
+        response = StatusResponse(False)
         try:
             conn = self.__connect()
             cur = conn.cursor()
             cur.execute("SELECT * FROM system.runtime.nodes")
             rows = cur.fetchall()
             print('trino nodes: ', rows)
-            status['success'] = True
+            response.success = True
         except Exception as e:
             log.error(f'Error connecting to Trino {self.schema}, {e}!')
-            status['error'] = e
+            response.error_message = str(e)
         finally:
             cur.close()
             conn.close()
-        return status
+        return response
 
     def native_query(self, query):
         """

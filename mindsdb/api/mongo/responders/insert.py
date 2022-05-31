@@ -104,7 +104,8 @@ class Responce(Responder):
                 predict,
                 datasource_record.id,
                 kwargs=dict(kwargs),
-                delete_ds_on_fail=True
+                delete_ds_on_fail=True,
+                user_class=mindsdb_env.get('user_class', 0)
             )
 
         result = {

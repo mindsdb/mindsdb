@@ -442,6 +442,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             company_id = self.request.recv(4)
             company_id = struct.unpack('I', company_id)[0]
 
+            user_class = self.request.recv(1)
+            user_class = struct.unpack('B', user_class)[0]
+
             database_name_len = self.request.recv(2)
             database_name_len = struct.unpack('H', database_name_len)[0]
 
@@ -453,6 +456,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'is_cloud': True,
                 'client_capabilities': client_capabilities,
                 'company_id': company_id,
+                'user_class': user_class,
                 'database': database_name
             }
 
@@ -675,6 +679,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
             self.session.database = cloud_connection['database']
             self.session.username = 'cloud'
+            self.session.user_class = cloud_connection['user_class']
             self.session.auth = True
             self.session.integration = None
             self.session.integration_type = None

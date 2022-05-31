@@ -779,7 +779,7 @@ class ExecuteCommands:
                             f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
                         )
 
-        model_interface.learn(predictor_name, ds, predict, ds_id, kwargs=kwargs, delete_ds_on_fail=True)
+        model_interface.learn(predictor_name, ds, predict, ds_id, kwargs=kwargs, delete_ds_on_fail=True, user_class=self.session.user_class)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1359,7 +1359,7 @@ class ExecuteCommands:
             raise
 
         model_interface.learn(
-            insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True
+            insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True, user_class=self.session.user_class
         )
 
         return ExecuteAnswer(ANSWER_TYPE.OK)

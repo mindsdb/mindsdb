@@ -259,7 +259,7 @@ class IntegrationController:
         mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent
         handlers_path = mindsdb_path.joinpath('integrations/handlers')
         self.handler_modules = {}
-        self.handler_import_status = {}
+        self.handlers_import_status = {}
         for hanlder_dir in handlers_path.iterdir():
             if hanlder_dir.is_dir() is False:
                 continue
@@ -273,16 +273,16 @@ class IntegrationController:
             try:
                 handler_module = importlib.import_module(f'mindsdb.integrations.handlers.{handler_folder_name}')
                 self.handler_modules[handler_module.Handler.type] = handler_module
-                self.handler_import_status[handler_folder_name] = {
+                self.handlers_import_status[handler_folder_name] = {
                     'success': True,
                     'dependencies': dependencies
                 }
             except Exception as e:
-                self.handler_import_status[handler_folder_name] = {
+                self.handlers_import_status[handler_folder_name] = {
                     'success': False,
                     'error_message': str(e),
                     'dependencies': dependencies
                 }
 
-    def get_handler_import_status(self):
-        return self.handler_import_status
+    def get_handlers_import_status(self):
+        return self.handlers_import_status

@@ -18,6 +18,7 @@ from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.log import get_logs
 from mindsdb.api.http.utils import http_error
 from mindsdb.interfaces.stream.stream import StreamController
+from mindsdb.integrations.utilities.install import install_dependencies
 
 
 @ns_conf.route('/logs')
@@ -227,42 +228,29 @@ class Vars(Resource):
 @ns_conf.param('dependency_list', 'Install dependencies')
 class InstallDependenciesList(Resource):
     def get(self):
-        return self.request.integration_controller.get_handler_import_status()
+        return self.request.integration_controller.get_handlers_import_status()
 
 
 @ns_conf.route('/install/<dependency>')
 @ns_conf.param('dependency', 'Install dependencies')
 class InstallDependencies(Resource):
     def get(self, dependency):
-        handler_import_status = self.request.integration_controller.get_handler_import_status()
+        handler_import_status = self.request.integration_controller.get_handlers_import_status()
         if dependency not in handler_import_status:
             return f'Unkown dependency: {dependency}', 400
 
-        dependencies = handler_import_status[dependency]
+        if handler_import_status[dependency].get('success', False) is True:
+            return 'Installed', 200
+
+        dependencies = handler_import_status[dependency]['dependencies']
         if len(dependencies) == 0:
             return 'Installed', 200
 
-        outs = b''
-        errs = b''
-        try:
-            sp = subprocess.Popen(
-                [sys.executable, '-m', 'pip', 'install', *dependencies],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-            code = sp.wait()
-            outs, errs = sp.communicate(timeout=1)
-        except Exception as e:
-            return http_error(500, 'Failed to install dependency', str(e))
-
-        if code != 0:
-            output = ''
-            if isinstance(outs, bytes) and len(outs) > 0:
-                output = output + 'Output: ' + outs.decode()
-            if isinstance(errs, bytes) and len(errs) > 0:
-                if len(output) > 0:
-                    output = output + '\n'
-                output = output + 'Errors: ' + errs.decode()
-            return http_error(500, 'Failed to install dependency', output)
-
-        return 'Installed', 200
+        result = install_dependencies(dependencies)
+        if result.get('success') is True:
+            return 'Installed', 200
+        return http_error(
+            500,
+            'Failed to install dependency',
+            result.get('error_message', 'unknown error')
+        )

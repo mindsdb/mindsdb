@@ -24,7 +24,9 @@ from mindsdb.utilities.log import log
 from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
 from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface
+from mindsdb.interfaces.database.integrations import IntegrationController
 import mindsdb.interfaces.storage.db as db
+from mindsdb.integrations.utilities.install import install_dependencies
 
 
 COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
@@ -71,6 +73,22 @@ if __name__ == '__main__':
         # Figure this one out later
         pass
 
+    integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
+    if args.install_handlers is not None:
+        handlers_list = [s.strip() for s in args.install_handlers.split(',')]
+        for handler_name, handler_status in integration_controller.get_handlers_import_status().items():
+            if handler_name not in handlers_list:
+                continue
+            if handler_status.get('success') is True:
+                print(f"{'{0: <18}'.format(handler_name)} - already installed")
+                continue
+            result = install_dependencies(handler_status.get('dependencies', []))
+            if result.get('success') is True:
+                print(f"{'{0: <18}'.format(handler_name)} - successfully installed")
+            else:
+                print(f"{'{0: <18}'.format(handler_name)} - error during dependencies installation: {result.get('error_message', 'unknown error')}")
+        sys.exit(0)
+
     os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
 
@@ -84,10 +102,9 @@ if __name__ == '__main__':
     print(f"Storage path:\n   {config['paths']['root']}")
 
     # @TODO Backwards compatibiltiy for tests, remove later
-    from mindsdb.interfaces.database.integrations import IntegrationController
     model_interface = WithKWArgsWrapper(ModelInterface(), company_id=COMPANY_ID)
     integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
-    for handler_name, handler_status in integration_controller.get_handler_import_status().items():
+    for handler_name, handler_status in integration_controller.get_handlers_import_status().items():
         if handler_status.get('success', False) is not True:
             print(f"Can't import handler '{handler_name}': {handler_status.get('error_message', 'unknown error')}")
 

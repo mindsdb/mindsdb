@@ -1,14 +1,18 @@
-from typing import List, Optional, Dict
+from typing import List, Dict
 
 import pandas as pd
 from mindsdb_sql import parse_sql, ASTNode
 from trino.auth import KerberosAuthentication
 from trino.dbapi import connect
 
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
-from mindsdb.integrations.trino_handler.trino_config_provider import TrinoConfigProvider
 from mindsdb.utilities.log import log
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
+from .trino_config_provider import TrinoConfigProvider
 
 
 class TrinoHandler(DatabaseHandler):

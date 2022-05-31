@@ -1,7 +1,8 @@
 import json
 import datetime
-import pandas as pd
 from typing import Optional
+
+import pandas as pd
 
 from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatasource,
@@ -93,8 +94,11 @@ class ExecuteCommands:
             return self.answer_create_datasource(struct)
         if type(statement) == DropPredictor:
             predictor_name = statement.name.parts[-1]
-            self.session.datahub['mindsdb'].delete_predictor(predictor_name)
-            return ExecuteAnswer(ANSWER_TYPE.OK)
+            try:
+                self.session.datahub['mindsdb'].delete_predictor(predictor_name)
+            except Exception as e:
+                if not statement.if_exists:
+                    raise e
         elif type(statement) == DropTables:
             return self.answer_drop_tables(statement)
         elif type(statement) == DropDatasource or type(statement) == DropDatabase:
@@ -448,7 +452,16 @@ class ExecuteCommands:
             self.delete_predictor_query(statement)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Insert:
-            return self.process_insert(statement)
+            if statement.from_select is None:
+                return self.process_insert(statement)
+            else:
+                # run with planner
+                SQLQuery(
+                    statement,
+                    session=self.session,
+                    execute=True
+                )
+                return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
             raise ErNotSupportedYet('Update is not implemented')
         elif type(statement) == Alter and ('disable keys' in self.sql_lower) or ('enable keys' in self.sql_lower):
@@ -456,28 +469,6 @@ class ExecuteCommands:
         elif type(statement) == Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
-            if "table_name,table_comment,if(table_type='base table', 'table', table_type)" in self.sql_lower:
-                # TABLEAU
-                # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA LIKE 'mindsdb' AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
-                # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
-                if "table_schema like 'mindsdb'" in self.sql_lower:
-                    data = [
-                        ['predictors', '', 'TABLE', 'mindsdb', '']
-                    ]
-                else:
-                    data = []
-                columns = [
-                    Column(name='TABLE_NAME', table_name='', type='str'),
-                    Column(name='TABLE_COMMENT', table_name='', type='str'),
-                    Column(name="IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE)", table_name='', type='str'),
-                    Column(name='TABLE_SCHEMA', table_name='', type='str'),
-                    Column(name='Value', table_name='', type='str'),
-                ]
-                return ExecuteAnswer(
-                    answer_type=ANSWER_TYPE.TABLE,
-                    columns=columns,
-                    data=data
-                )
 
             query = SQLQuery(
                 statement,

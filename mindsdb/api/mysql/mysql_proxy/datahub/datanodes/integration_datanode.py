@@ -38,7 +38,11 @@ class IntegrationDataNode(DataNode):
     def get_table_columns(self, tableName):
         return []
 
-    def create_table(self, table_name_parts, columns, data):
+    def create_table(self, table_name_parts, columns, data, is_replace=False, is_create=False):
+        # is_create - create table
+        # is_replace - drop table if exists
+        # is_create==False and is_replace==False: just insert
+
         if self.ds_type not in ('postgres', 'mysql', 'mariadb'):
             raise Exception(f'At this moment is no possible to create table in "{self.ds_type}"')
 
@@ -67,19 +71,24 @@ class IntegrationDataNode(DataNode):
                     'name': column,
                     'type': column_type
                 })
-        create_table_ast = CreateTable(
-            name=Identifier(parts=table_name_parts),
-            columns=table_columns,
-            is_replace=True
-        )
 
-        drop_ast = DropTables(
-            tables=[Identifier(parts=table_name_parts)],
-            if_exists=True
-        )
+        if is_replace:
+            # drop
+            drop_ast = DropTables(
+                tables=[Identifier(parts=table_name_parts)],
+                if_exists=True
+            )
+            self.integration_handler.query(drop_ast)
+            is_create = True
 
-        self.integration_handler.native(create_table_ast)
-        self.integration_handler.native(drop_ast)
+        if is_create:
+            create_table_ast = CreateTable(
+                name=Identifier(parts=table_name_parts),
+                columns=table_columns,
+                is_replace=True
+            )
+
+            self.integration_handler.query(create_table_ast)
 
         insert_columns = [Identifier(parts=[x['name'][-1]]) for x in table_columns_meta]
         formatted_data = []

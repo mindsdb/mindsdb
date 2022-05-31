@@ -50,6 +50,7 @@ class Query(Resource):
                 'error_message': str(e)
             }
             error_traceback = traceback.format_exc()
+            print(error_traceback)
 
         if query_response.get('type') == SQL_RESPONSE_TYPE.ERROR:
             error_type = 'expected'

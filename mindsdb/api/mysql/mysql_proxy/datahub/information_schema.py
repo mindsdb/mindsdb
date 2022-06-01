@@ -45,7 +45,12 @@ class InformationSchema(DataNode):
                 ds_type='file',
                 integration_controller=self.session.integration_controller
             ),
-            'views': ViewDataNode(session.view_interface, session.integration_controller)
+            'views': IntegrationDataNode(
+                'views',
+                ds_type='view',
+                integration_controller=self.session.integration_controller
+            ),
+            # 'views': ViewDataNode(session.view_interface, session.integration_controller)
         }
 
         self.get_dataframe_funcs = {
@@ -122,14 +127,14 @@ class InformationSchema(DataNode):
                 data.append(row.to_list())
 
         for ds_name in self.get_integrations_names():
-            # FIXME
-            if ds_name.lower() != 'pgpg':
-                continue
-            ds = self.get(ds_name)
-            ds_tables = ds.get_tables()
-            for row in ds_tables:
-                row.TABLE_SCHEMA = ds_name
-                data.append(row.to_list())
+            try:
+                ds = self.get(ds_name)
+                ds_tables = ds.get_tables()
+                for row in ds_tables:
+                    row.TABLE_SCHEMA = ds_name
+                    data.append(row.to_list())
+            except Exception:
+                print(f"Can't get tables from '{ds_name}'")
 
         df = pd.DataFrame(data, columns=columns)
         return df

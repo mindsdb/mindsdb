@@ -215,7 +215,10 @@ class ExecuteCommands:
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
                     BinaryOperation('or', args=[
                         BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')]),
-                        BinaryOperation('like', args=[Identifier('table_type'), Constant('SYSTEM VIEW')])
+                        BinaryOperation('or', args=[
+                            BinaryOperation('like', args=[Identifier('table_type'), Constant('SYSTEM VIEW')]),
+                            BinaryOperation('like', args=[Identifier('table_type'), Constant('VIEW')])
+                        ])
                     ])
                 ])
                 if statement.where is not None:

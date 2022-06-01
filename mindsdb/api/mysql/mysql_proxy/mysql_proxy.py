@@ -96,12 +96,13 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         integration = None
         integration_type = None
         extracted_username = username
-        integrations_names = IntegrationController().get_all(company_id).keys()
+        integration_controller = IntegrationController()
+        integrations_names = integration_controller.get_all(company_id).keys()
         for integration_name in integrations_names:
             if username == f'{hardcoded_user}_{integration_name}':
                 extracted_username = hardcoded_user
                 integration = integration_name
-                integration_type = IntegrationController().get(integration, company_id)['type']
+                integration_type = integration_controller.get(integration, company_id)['type']
 
         if extracted_username != hardcoded_user:
             log.warning(f'Check auth, user={username}: user mismatch')
@@ -853,38 +854,3 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # interrupt the program with Ctrl-C
         log.info('Waiting for incoming connections...')
         server.serve_forever()
-
-
-class Dummy:
-    pass
-
-
-class FakeMysqlProxy(MysqlProxy):
-    def __init__(self, company_id):
-        request = Dummy()
-        client_address = ['', '']
-        server = Dummy()
-        server.connection_id = 0
-        server.hook_before_handle = empty_fn
-        server.original_model_interface = ModelInterface()
-        server.original_integration_controller = IntegrationController()
-        server.original_view_controller = ViewController()
-
-        self.charset = 'utf8'
-        self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
-        self.client_capabilities = None
-
-        self.request = request
-        self.client_address = client_address
-        self.server = server
-
-        self.session = SessionController(
-            server=self.server,
-            company_id=company_id
-        )
-        self.session.database = 'mindsdb'
-
-    def is_cloud_connection(self):
-        return {
-            'is_cloud': False
-        }

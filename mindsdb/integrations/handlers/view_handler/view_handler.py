@@ -1,0 +1,94 @@
+from contextlib import closing
+
+import psycopg
+from psycopg.pq import ExecStatus
+from pandas import DataFrame
+
+from mindsdb_sql import parse_sql
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql.parser.ast.base import ASTNode
+
+from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.utilities.log import log
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
+
+
+class ViewHandler(DatabaseHandler):
+    """
+    This handler handles connection and execution of the PostgreSQL statements.
+    """
+    type = 'views'
+
+    def __init__(self, name=None, **kwargs):
+        self.mysql_proxy = kwargs['mysql_proxy']
+        self.view_controller = kwargs['view_controller']
+        super().__init__(name)
+
+    def check_status(self) -> StatusResponse:
+        """
+        Check the connection of the PostgreSQL database
+        :return: success status and error message if error occurs
+        """
+        return StatusResponse(True)
+
+    def native_query(self, query: ASTNode) -> Response:
+        """
+        Receive SQL query and runs it
+        :param query: The SQL query to run in PostgreSQL
+        :return: returns the records from the current recordset
+        """
+        view_name = query.from_table.parts[-1]
+        view_meta = self.view_controller.get(name=view_name)
+        query_result = self.mysql_proxy.process_query(view_meta['query'])
+        x = 1
+        return self.query(query)
+        # response = Response(
+        #     RESPONSE_TYPE.TABLE,
+        #     DataFrame(
+        #         result,
+        #         columns=[x.name for x in cur.description]
+        #     )
+        # )
+        # return response
+
+    def query(self, query: ASTNode) -> Response:
+        """
+        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
+        """
+        return self.native_query(query)
+        # query_str = self.renderer.get_string(query, with_failback=True)
+        # return self.native_query(query_str)
+
+    def get_tables(self) -> Response:
+        """
+        List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
+        """
+        views = self.view_controller.get_all()
+        result = []
+        for view_name, view_meta in views.items():
+            result.append({
+                'table_name': view_meta['name'],
+                'table_type': 'VIEW'
+            })
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            DataFrame(result)
+        )
+        return response
+
+    def get_columns(self, table_name):
+        # TODO
+        query = f"""
+            SELECT
+                column_name as "Field",
+                data_type as "Type"
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{table_name}'
+        """
+        return self.native_query(query)

@@ -13,7 +13,10 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.fs import create_directory
 
 from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+# from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
+# import mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy as fmp
 
 
 class IntegrationController:
@@ -219,6 +222,13 @@ class IntegrationController:
                 FileController(),
                 company_id=company_id
             )
+        elif handler_type == 'views':
+            handler_ars['view_controller'] = WithKWArgsWrapper(
+                ViewController(),
+                company_id=company_id
+            )
+            # handler_ars['mysql_proxy'] = fmp.FakeMysqlProxy(company_id=company_id)
+            handler_ars['mysql_proxy'] = {}
 
         return self.handler_modules[handler_type].Handler(**handler_ars)
 
@@ -227,6 +237,11 @@ class IntegrationController:
             integration_data = {
                 'type': 'files',
                 'name': 'files'
+            }
+        elif name.lower() == 'views':
+            integration_data = {
+                'type': 'views',
+                'name': 'views'
             }
         else:
             if case_sensitive:
@@ -239,12 +254,11 @@ class IntegrationController:
             integration_data = self._get_integration_record_data(integration_record, True)
 
         integration_type = integration_data.get('type')
-
         integration_name = integration_data.get('name')
         del integration_data['name']
 
         if integration_type not in self.handler_modules:
-            raise Exception(f'Cant find handler for {integration_name}')
+            raise Exception(f"Cant find handler for '{integration_name}' ({integration_type})")
 
         handler = self.create_handler(
             name=integration_name,

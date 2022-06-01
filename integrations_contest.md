@@ -3,11 +3,11 @@
 	<br>
 </h1>
 
-# Democratize Machine learning on ... Contest 🎆 🎉
+# Democratize Machine Learning on ... Contest 🎆 🎉
 
-MindsDb is an open-source project on a quest to democratize machine learning and take it closer to your data, and we want you to join in. 
+MindsDB is an open-source project on a quest to democratize machine learning and take it closer to your data, and we want you to join in. 
 
-The Democratize Machine learning on ... CONTEST.  is a competition for data professionals, developers, machine learning experts, technical managers, students, analysts, CEOs, CTO, COO, CFO, Bears ... etc.
+The Democratize Machine learning on ... CONTEST.  is a competition for data professionals, developers, machine learning experts, technical managers, students, business analysts, decision makers ... etc.
 
 Contribute to our project with this open brainstorming session where you tell us where you would connect MindsDB to generate predictions. (We currently do it on most of SQL databases out there) 
 
@@ -19,20 +19,20 @@ Propose an idea of integrations that MindsDB should support. These could be data
 
 The `TOP-3` authors who submit ideas before `June 17th, 2022` will get SWAG and cool prizes:
 
-| Place | Price|
+| Place | Prize|
 --------|--------
-| 1st| 1000$|
-| 2nd| 500$|
-| 3th| 250$|
+| 1st| $1000|
+| 2nd| $500|
+| 3th| $250|
 
 > Rewards will be paid as one-time GitHub sponsorships.
 
 ### How to participate? 🏁
 
-1. Create a new GitHub issue
+1. Create a new [GitHub issue](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=integration%2Cenhancement&template=integrations_contest.yaml&title=%5BNew+Integration%5D%3A+)
 2. Invite everyone to upvote by adding 👍(thumbs up) emoji to an issue
-3. Share it on MindsDB community Slack, `using_mindsdb` channel
-4. Fork MindsDB repository
+3. Share it on MindsDB community Slack, [`using_mindsdb` channel](https://join.slack.com/share/enQtMzU5ODc5OTMzMDYzMC1iYzc1MmFkMjY0MDQ0MmM0OTM2ZWY0MzU2NWY2NjBmM2I5MjZlN2JlZDIzN2M4MzQwNzY3MzJhMjJmNjcyYWM1)
+4. [Fork MindsDB repository](https://github.com/mindsdb/mindsdb/fork)
 5. Commit the basic structure for the new integration:
 	 * [ ] Add a new integration directory under integrations.
 	 * [ ] Add __about__.py file that has all variables as this example.

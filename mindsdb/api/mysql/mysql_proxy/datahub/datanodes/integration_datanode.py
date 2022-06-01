@@ -129,6 +129,8 @@ class IntegrationDataNode(DataNode):
         else:
             if self.ds_type in ('postgres', 'snowflake'):
                 dialect = 'postgres'
+            elif self.ds_type == 'mssql':
+                dialect = 'mssql'
             else:
                 dialect = 'mysql'
             render = SqlalchemyRender(dialect)

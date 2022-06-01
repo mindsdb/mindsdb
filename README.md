@@ -25,6 +25,8 @@
     <a href="https://github.com/mindsdb/mindsdb/projects">Contribute</a>
     <span> | </span>
     <a href="https://cloud.mindsdb.com">Demo</a>
+    <span> | </span>
+    <a href="https://github.com/mindsdb/mindsdb/blob/staging/integrations_contest.md">Integrations Contest</a>
   </h3>
   
 </div>
@@ -35,6 +37,8 @@
 * Developers can quickly add AI capabilities to your applications.
 * Data Scientists can streamline MLOps by deploying ML models as AI Tables.
 * Data Analysts can easily make forecasts on complex data (like multivariate time-series with high cardinality) and visualize them in BI tools like Tableau.
+
+**NEW!** Check-out the new MindsDB [ideation 💡 challenge](https://github.com/mindsdb/mindsdb/blob/staging/integrations_contest.md) (and the cash:dollar: prizes) for democratizing machine learning!
 
 If you like our project then we would really appreciate **a Star ⭐!**
 

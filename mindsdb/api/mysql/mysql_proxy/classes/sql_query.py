@@ -734,15 +734,20 @@ class SQLQuery():
                 where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
 
                 is_timeseries = self.planner.predictor_metadata[predictor]['timeseries']
-                _mdb_make_predictions = None
+                _mdb_forecast_offset = None
                 if is_timeseries:
-                    if 'LATEST' in self.query_str:
-                        _mdb_make_predictions = False
+                    if '> LATEST' in self.query_str:
+                        # stream mode -- if > LATEST, forecast starts on inferred next timestamp
+                        _mdb_forecast_offset = 1
+                    elif '= LATEST' in self.query_str:
+                        # override: when = LATEST, forecast starts on last provided timestamp instead of inferred next time
+                        _mdb_forecast_offset = 0
                     else:
-                        _mdb_make_predictions = True
+                        # normal mode -- emit a forecast ($HORIZON data points on each) for each provided timestamp
+                        _mdb_forecast_offset = None
                     for row in where_data:
-                        if '__mdb_make_predictions' not in row:
-                            row['__mdb_make_predictions'] = _mdb_make_predictions
+                        if '__mdb_forecast_offset' not in row:
+                            row['__mdb_forecast_offset'] = _mdb_forecast_offset
 
                 for row in where_data:
                     for key in row:
@@ -1133,7 +1138,7 @@ class SQLQuery():
             for table in step_data['columns']:
                 new_table_columns = []
                 for column in step_data['columns'][table]:
-                    if column[-1] not in ('__mindsdb_row_id', '__mdb_make_predictions'):
+                    if column[-1] not in ('__mindsdb_row_id', '__mdb_forecast_offset'):
                         new_table_columns.append(column)
                 step_data['columns'][table] = new_table_columns
             # endregion

@@ -3,12 +3,22 @@
 * https://docs.mindsdb.com/deployment/docker/
 * https://hub.docker.com/u/mindsdb
 
-`release` image comes with pinned version. `beta` tries to update the
-shipped version when run. MindsDB is fetched from https://pypi.org
+## Building
 
-Use `build.py <beta|release` to get commands for building and publishing
-the images for the latest release.
+Build latest MindsDB from https://pypi.org/project/MindsDB/
 
-Or to build an image for a fixed MindsDB version.
+    docker build -f release -t mindsdb/mindsdb .
 
-    docker build -f release --build-arg VERSION=2.57.0 -t mindsdb/mindsdb
+Build specific MindsDB version.
+
+    docker build -f release --build-arg VERSION=2.57.0 -t mindsdb/mindsdb .
+
+### `beta` vs `release`
+
+`release` image pins MindsDB version. `beta` updates MindsDB when container
+is started if a new version is available.
+
+## Releasing
+
+The `build.py <beta|release>` script is used in CI to build and push images
+on release.

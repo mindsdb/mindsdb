@@ -11,4 +11,4 @@ the images for the latest release.
 
 Or to build an image for a fixed MindsDB version.
 
-    docker build -f release --build-arg VERSION=2.57.0 -t mindsdb
+    docker build -f release --build-arg VERSION=2.57.0 -t mindsdb/mindsdb

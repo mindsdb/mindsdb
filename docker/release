@@ -1,7 +1,5 @@
 FROM docker.io/pytorch/pytorch:1.10.0-cuda11.3-cudnn8-runtime
 
-ARG VERSION
-
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 EXPOSE 47336/tcp
@@ -16,7 +14,9 @@ RUN apt update && \
     apt-get install --yes --no-install-recommends build-essential
 #################################################################
 
-RUN pip install --prefer-binary --no-cache-dir mindsdb==$VERSION
+ARG VERSION=
+
+RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}
 
 COPY mindsdb_config.release.json /root/mindsdb_config.json
 COPY mindsdb_launcher.sh /root/

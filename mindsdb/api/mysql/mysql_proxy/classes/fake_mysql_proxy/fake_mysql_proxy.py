@@ -2,6 +2,7 @@ from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import Session
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CHARSET_NUMBERS
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
+# import mindsdb.interfaces.database.integrations
 # import mindsdb.interfaces.database as ddd
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import MysqlProxy
@@ -24,7 +25,7 @@ class FakeMysqlProxy(MysqlProxy):
         server.connection_id = 0
         server.hook_before_handle = empty_fn
         server.original_model_interface = ModelInterface()
-        server.original_integration_controller = IntegrationController()
+        server.original_integration_controller = IntegrationController(mysql_proxy=self)
         server.original_view_controller = ViewController()
 
         self.charset = 'utf8'

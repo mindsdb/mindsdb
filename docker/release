@@ -6,8 +6,8 @@ EXPOSE 47336/tcp
 
 ENV PYTHONUNBUFFERED=1
 
-RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==21.3.1 && \
-    pip install --prefer-binary --no-cache-dir wheel==0.37.0
+RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 && \
+    pip install --prefer-binary --no-cache-dir wheel==0.37.1
 
 ######### temporal fix for prophet (because it's dumb) ##########
 RUN apt update && \

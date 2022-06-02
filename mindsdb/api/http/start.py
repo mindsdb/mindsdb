@@ -15,6 +15,7 @@ from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
+from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
@@ -61,6 +62,7 @@ def start(verbose, no_studio, with_nlp):
     api.add_namespace(conf_ns)
     api.add_namespace(file_ns)
     api.add_namespace(sql_ns)
+    api.add_namespace(analysis_ns)
     if with_nlp:
         api.add_namespace(nlp_ns)
 

@@ -20,7 +20,7 @@ class SessionController():
     This class manages the server session
     '''
 
-    def __init__(self, server, company_id=None) -> object:
+    def __init__(self, server, company_id=None, handler=None) -> object:
         """
         Initialize the session
         :param company_id:
@@ -46,6 +46,7 @@ class SessionController():
             server.original_integration_controller,
             company_id=company_id
         )
+        self.integration_controller.mysql_proxy = handler
 
         self.view_interface = WithKWArgsWrapper(
             server.original_view_controller,

@@ -364,12 +364,10 @@ class ModelController():
         else:
             return predictions
 
-    # @mark_process(name='analyse')
-    # def analyse_dataset(self, ds: dict, company_id: int) -> lightwood.DataAnalysis:
-    #     ds_cls = getattr(mindsdb_datasources, ds['class'])
-    #     df = ds_cls(*ds['args'], **ds['kwargs']).df
-    #     analysis = lightwood.analyze_dataset(df)
-    #     return analysis.to_dict()  # type: ignore
+    @mark_process(name='analyse')
+    def analyse_dataset(self, df: DataFrame, company_id: int) -> lightwood.DataAnalysis:
+        analysis = lightwood.analyze_dataset(df)
+        return analysis.to_dict()  # type: ignore
 
     def get_model_data(self, name, company_id: int):
         if '@@@@@' in name:

@@ -121,12 +121,12 @@ class IntegrationDataNode(DataNode):
     def select(self, query):
         result = self.integration_handler.query(query)
 
-        if result.get('type') == RESPONSE_TYPE.ERROR:
+        if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.get('error_message', ''))
-        if result.get('type') == RESPONSE_TYPE.OK:
+        if result.type == RESPONSE_TYPE.OK:
             return
 
-        df = result['data_frame']
+        df = result.data_frame
         columns_info = [
             {
                 'name': k,

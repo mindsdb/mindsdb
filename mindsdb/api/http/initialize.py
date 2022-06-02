@@ -140,11 +140,11 @@ def download_gui(destignation, version):
     except Exception as e:
         log.error(f'Error during downloading files from s3: {e}')
         return False
-    
+
     static_folder = destignation
     static_folder.mkdir(mode=0o777, exist_ok=True, parents=True)
     ZipFile(dist_zip_path).extractall(static_folder)
-    
+
     if static_folder.joinpath('dist').is_dir():
         shutil.move(str(destignation.joinpath('dist').joinpath('index.html')), static_folder)
         shutil.move(str(destignation.joinpath('dist').joinpath('assets')), static_folder)

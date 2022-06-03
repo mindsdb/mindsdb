@@ -1,3 +1,7 @@
+*Dataset:[Heart Disease Data](https://www.kaggle.com/c/heart-disease-uci/data)*
+
+*Communtiy Author: [Mohd Talha](https://github.com/taltrums)*
+
 Cardiovascular disease remains the leading cause of morbidity and mortality according to the [National Center for Health Statistics](https://www.cdc.gov/nchs/products/databriefs/db328.htm) in the United States, and consequently, early diagnosis is of paramount importance. Machine learning technology, a subfield of artificial intelligence, is enabling scientists, clinicians and patients to detect it in the earlier stages and therefore save lives.
  
 Until now, building, deploying and maintaining applied machine learning solutions was a complicated and expensive task, because it required skilled personnel and expensive tools. But not only that. A traditional machine learning project requires building integrations with data and applications, that is not only a technical but also an organizational challenge. So what if machine learning can become a part of the standard tools that are already in use?

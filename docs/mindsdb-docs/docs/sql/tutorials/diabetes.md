@@ -2,7 +2,7 @@
 
 *Dataset:[Diabetes Data](https://github.com/mindsdb/mindsdb-examples/blob/a43f66f0250c460c0c4a0793baa941307b09c9f2/others/diabetes_example/dataset/diabetes-train.csv)*
 
-Communtiy Author: [Chandre Tosca Van Der Westhuizen](https://github.com/chandrevdw31)
+*Communtiy Author: [Chandre Tosca Van Der Westhuizen](https://github.com/chandrevdw31)*
 
 Diabetes is a metabolic disease that causes high blood sugar and if left untreated can damage your nerves, eyes, kidneys and other organs. It is known as a silent killer, as recent studies have shown that by the year 2040 the world's diabetic patients will reach 642 million. The need to analyze vast medical data to assist in the diagnoses, treatment and management of illnesses is increasing for the medical community. With the rapid development of machine learning, it has been applied to many aspects of medical health and is transforming the healthcare system.
 

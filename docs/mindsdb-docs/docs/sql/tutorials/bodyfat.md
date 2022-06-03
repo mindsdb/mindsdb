@@ -1,5 +1,9 @@
 # Determining Body Fat Percentage
 
+*Dataset: [Body fat prediction](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset)*
+
+*Communtiy Author: [Contip](https://github.com/contip)*
+
 Machine Learning powered data analysis can be performed quickly and efficiently by MindsDB to enable individuals to make accurate predictions for certain metrics based on a variety of associated values. MindsDB enables you to make predictions automatically using just SQL commands, all the ML workflow is automated, and abstracted as virtual “AI tables” in your database so you may start getting insights from forecasts right away. In this tutorial, we'll be using MindsDB and a MySQL database to predict body fat percentage based on several body part measurement criteria.
 
 # Pre-requisites

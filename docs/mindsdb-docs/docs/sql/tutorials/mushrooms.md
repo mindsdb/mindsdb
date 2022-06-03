@@ -1,8 +1,6 @@
-# **Mushrooms**
-
 *Dataset: [Mushrooms](https://www.kaggle.com/uciml/mushroom-classification)*
 
-Community Author: [Chandre Tosca Van Der Westhuizen](https://github.com/chandrevdw31)
+*Community Author: [Chandre Tosca Van Der Westhuizen](https://github.com/chandrevdw31)*
 
 Mushrooms are a fleshy sporocarp of fungi which can either be edible or poisonous. Its usage dates back centuries with ancient Greek, Chinese and African cultures. They can have high nutritional value and medicinal properties which provide great health benefits. On the other side,some of these fungi can be toxic and consuming the wrong mushroom can have deadly consequences. It is important for industries across the world, like the food and health sector, to identify which type of mushrooms are edible and which are poisonous.
 

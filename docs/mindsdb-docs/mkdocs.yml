@@ -108,25 +108,24 @@ nav:
     - Ray Serve: custom-model/ray-serve.md
     - HuggingFace: custom-model/huggingface.md
     - OpenAI: custom-model/openai.md
-
   - Tutorials:
     - Regression:
       - Process Quality: sql/tutorials/process-quality.md
-      - Body Fat Prediction: sql/tutorials/bodyfat.md
     - Classification:
       - Customer Churn: sql/tutorials/customer-churn.md
-      - Heart Disease: sql/tutorials/heart-disease.md
-      - Mushrooms Hunting: sql/tutorials/mushrooms.md
     - Time Series:
       - AI powered forecasts with MindsDB: sql/tutorials/mindsdb-superset-snowflake.md
       - Forecasting house sales: sql/tutorials/house-sales-forecasting.md
   - Community Tutorials:
     - Regression:
       - Insurance Cost: sql/tutorials/insurance-cost-prediction.md
+      - Body Fat Prediction: sql/tutorials/bodyfat.md
     - Classification:
       - Crop Recommendation: sql/tutorials/crop-prediction.md
       - Diabetes: sql/tutorials/diabetes.md
       - Email spam: sql/tutorials/spam_emails_tutorial.md
+      - Mushrooms Hunting: sql/tutorials/mushrooms.md
+      - Heart Disease: sql/tutorials/heart-disease.md
   - Contribution and Community:
       - How to contribute: contribute.md
       - Join our community: community.md

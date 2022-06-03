@@ -82,6 +82,7 @@ def start(verbose, no_studio, with_nlp):
     @app.before_request
     def before_request():
         company_id = request.headers.get('company-id')
+        user_class = request.headers.get('user-class')
 
         if company_id is not None:
             try:
@@ -90,7 +91,17 @@ def start(verbose, no_studio, with_nlp):
                 get_log('http').error(f'Cloud not parse company id: {company_id} | exception: {e}')
                 company_id = None
 
+        if user_class is not None:
+            try:
+                user_class = int(user_class)
+            except Exception as e:
+                get_log('http').error(f'Cloud not parse user_class: {user_class} | exception: {e}')
+                user_class = 0
+        else:
+            user_class = 0
+
         request.company_id = company_id
+        request.user_class = user_class
 
         request.default_store = WithKWArgsWrapper(
             current_app.original_data_store,

@@ -96,7 +96,6 @@ Companies looking to implement machine learning have found their current solutio
 
 A recent study has shown it takes 64% of companies a month, to over a year, to deploy a machine learning model into production¹. Leveraging existing databases and automating the feature engineering, building, training, and optimization of models, assembling them, and deploying them into production is called AutoML and has been gaining traction within enterprises for enabling non-experts to use machine learning models for practical applications.
 
-![Classical ML](/assets/sql/tutorials/snowflake-superset/3-AI_Tables-income-debt.jpg)
 
 
 ## Why is it called MindsDB?

@@ -1,4 +1,4 @@
-FROM docker.io/pytorch/pytorch:1.10.0-cuda11.3-cudnn8-runtime
+FROM docker.io/pytorch/pytorch:1.9.1-cuda11.1-cudnn8-runtime
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp

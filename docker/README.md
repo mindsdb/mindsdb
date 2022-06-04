@@ -5,18 +5,24 @@
 
 ## Building
 
-Build latest MindsDB from https://pypi.org/project/MindsDB/
+Docker images are using only released versions of MindsDB from
+https://pypi.org/project/MindsDB/ so no files in parent dir are used.
 
-    docker build -f release -t mindsdb/mindsdb .
+To build `release` image using version reported at
+https://public.api.mindsdb.com/installer/release/docker___success___None
 
-Build specific MindsDB version.
+    docker build -f release -t mindsdb/mindsdb
 
-    docker build -f release --build-arg VERSION=2.57.0 -t mindsdb/mindsdb .
+To build `release` image with specific MindsDB version.
+
+    docker build -f release --build-arg VERSION=2.57.0 -t mindsdb/mindsdb
 
 ### `beta` vs `release`
 
-`release` image pins MindsDB version. `beta` updates MindsDB when container
-is started if a new version is available.
+`release` image pins MindsDB version and builds from fixed PyTorch docker
+image. `beta` uses latest PyTorch image and updates MindsDB when container
+is started to a version set at
+https://public.api.mindsdb.com/installer/beta/docker___success___None
 
 ## Releasing
 

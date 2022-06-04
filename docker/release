@@ -4,21 +4,20 @@ EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 EXPOSE 47336/tcp
 
-ENV PYTHONUNBUFFERED=1
-
-RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 && \
-    pip install --prefer-binary --no-cache-dir wheel==0.37.1
-
 ######### temporal fix for prophet (because it's dumb) ##########
 RUN apt update && \
     apt-get install --yes --no-install-recommends build-essential
 #################################################################
 
-ARG VERSION=
+ENV PYTHONUNBUFFERED=1
 
+RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 && \
+    pip install --prefer-binary --no-cache-dir wheel==0.37.1
+
+ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}
 
 COPY mindsdb_config.release.json /root/mindsdb_config.json
 COPY mindsdb_launcher.sh /root/
 
-CMD bash /root/mindsdb_launcher.sh
+CMD bash /root/mindsdb_launcher.sh start

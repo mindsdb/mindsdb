@@ -5,7 +5,8 @@ if [[ -n "$MDB_CONFIG_CONTENT" ]]; then
 fi;
 
 if [[ -n "$MDB_AUTOUPDATE" ]]; then
-  VERSION=$(curl "https://public.api.mindsdb.com/installer/$MDB_RELTYPE/docker___started___None")
+  URL="https://public.api.mindsdb.com/installer/$MDB_RELTYPE/docker___started___None"
+  VERSION=$(python -c "import urllib.request as r; print(r.urlopen('$URL').read().decode())")
   echo "--- Updating to MindsDB $VERSION ---"
   pip install mindsdb=="$VERSION"
 fi;

@@ -8,6 +8,7 @@ if [[ -n "$MDB_AUTOUPDATE" ]]; then
   URL="https://public.api.mindsdb.com/installer/$MDB_RELTYPE/docker___started___None"
   VERSION=$(python -c "import urllib.request as r; print(r.urlopen('$URL').read().decode())")
   echo "--- Updating to MindsDB $VERSION ---"
+  pip install -U pip
   pip install mindsdb=="$VERSION"
 fi;
 

@@ -37,9 +37,9 @@ All of the newly trained machine learning models will be visible as a new record
 * status - Training status(training, complete, error).
 * predict - The name of the target variable column.
 * accuracy - The model accuracy.
-* update_status - Trainig update status(up_to_date, updating).
-* mindsdb_version - The mindsdb version used.
-* error - Error message info in case of an errror.
+* update_status - Training update status(up_to_date, updating).
+* mindsdb_version - The MindsDB version used.
+* error - Error message info in case of an error.
 * select_data_query - SQL select query to create the datasource.
 * training options - Additional training parameters.
 

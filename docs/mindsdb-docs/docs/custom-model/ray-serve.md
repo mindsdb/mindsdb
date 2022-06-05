@@ -86,13 +86,13 @@ dtype_dict={"number_of_rooms": "categorical", "initial_price": "integer", "renta
 format='ray_server';
 ```
 
-And you can query predictions as usual, either by conditioning on a subset of input colums:
+And you can query predictions as usual, either by conditioning on a subset of input columns:
 
 ```sql
 SELECT * FROM byom_ray_serve WHERE initial_price=3000 AND rental_price=3000;
 ```
 
-Or by `JOINING` to do batch predicions:
+Or by `JOINING` to do batch predictions:
 
 ```sql
 SELECT tb.number_of_rooms, t.rental_price FROM mydb.test_data.home_rentals AS t JOIN mindsdb.byom_ray_serve AS tb WHERE t.rental_price > 5300;
@@ -204,8 +204,8 @@ class Model:
         self.model.add(LSTM(64, dropout=0.2, recurrent_dropout=0.2))
         self.model.add(Dense(1, activation='sigmoid'))
 ​
-        optimzer = Adam(learning_rate=1e-5)
-        self.model.compile(loss='binary_crossentropy', optimizer=optimzer, metrics=['accuracy'])
+        optimizer = Adam(learning_rate=1e-5)
+        self.model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 ​
         X_train, X_test, y_train, y_test = train_test_split(df, target_arr, test_size=0.15)
         self.model.fit(X_train, y_train, batch_size=4, epochs=self.__class__.EPOCHS, validation_data=(X_test, y_test), verbose=2)

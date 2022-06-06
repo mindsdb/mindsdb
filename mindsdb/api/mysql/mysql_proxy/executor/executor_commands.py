@@ -99,6 +99,7 @@ class ExecuteCommands:
             except Exception as e:
                 if not statement.if_exists:
                     raise e
+            return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == DropTables:
             return self.answer_drop_tables(statement)
         elif type(statement) == DropDatasource or type(statement) == DropDatabase:

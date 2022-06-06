@@ -2,6 +2,8 @@ import dill
 import pandas as pd
 from typing import Dict, List, Optional
 
+import sqlalchemy
+
 from utils import unpack_jsonai_old_args, get_aliased_columns, _recur_get_conditionals, load_predictor
 
 import lightwood
@@ -34,6 +36,31 @@ class LightwoodHandler(PredictiveHandler):
         self.parser = parse_sql
         self.dialect = 'mindsdb'
         self.handler_dialect = 'mysql'
+
+        self.lw_dtypes_to_sql = {
+            "integer": sqlalchemy.Integer,
+            "float": sqlalchemy.Float,
+            "quantity": sqlalchemy.Float,
+            "binary": sqlalchemy.Text,
+            "categorical": sqlalchemy.Text,
+            "tags": sqlalchemy.Text,
+            "date": sqlalchemy.DateTime,
+            "datetime": sqlalchemy.DateTime,
+            "short_text": sqlalchemy.Text,
+            "rich_text": sqlalchemy.Text,
+            "num_array": sqlalchemy.Text,
+            "cat_array": sqlalchemy.Text,
+            "num_tsarray": sqlalchemy.Text,
+            "cat_tsarray": sqlalchemy.Text,
+            "empty": sqlalchemy.Text,
+            "invalid": sqlalchemy.Text,
+        }  # image, audio, video not supported
+        self.lw_dtypes_overrides = {
+            'original_index': sqlalchemy.Integer,
+            'confidence': sqlalchemy.Float,
+            'lower': sqlalchemy.Float,
+            'upper': sqlalchemy.Float
+        }
 
     def connect(self, **kwargs) -> Dict[str, int]:
         """ Setup storage handler and check lightwood version """  # noqa
@@ -170,7 +197,14 @@ class LightwoodHandler(PredictiveHandler):
 
         if into:
             try:
-                data_handler.select_into(into, predictions)
+                dtypes = {}
+                for col in predictions.columns:
+                    if model.dtype_dict.get(col, False):
+                        dtypes[col] = self.lw_dtypes_to_sql.get(col, sqlalchemy.Text)
+                    else:
+                        dtypes[col] = self.lw_dtypes_overrides.get(col, sqlalchemy.Text)
+
+                data_handler.select_into(into, predictions, dtypes=dtypes)
             except Exception as e:
                 print("Error when trying to store the JOIN output in data handler.")
 
@@ -190,9 +224,7 @@ class LightwoodHandler(PredictiveHandler):
             model_name = stmt.from_table.parts[-1]
             alias = None  # todo: fix this
 
-    def _get_model(self, stmt):
-        model_name, _ = self._get_model_name(stmt)
-        if model_name not in self.get_tables():
+        if model_name not in models:
             raise Exception("Error, not found. Please create this predictor first.")
 
         return model_name, alias, side
@@ -333,3 +365,10 @@ if __name__ == '__main__':
     query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {data_handler_name}.{data_table_name} AS ta JOIN mindsdb.{model_name} AS tb ON 1=1 WHERE ta.{oby} > LATEST LIMIT 10"
     parsed = cls.parser(query, dialect=cls.dialect)
     predicted = cls.join(parsed, data_handler, into=into_table)
+
+    # try:
+    #     data_handler.native_query(f"DROP TABLE {into_table}")
+    # except Exception as e:
+    #     print(e)
+
+    # TODO: bring all train+predict queries in mindsdb_sql test suite

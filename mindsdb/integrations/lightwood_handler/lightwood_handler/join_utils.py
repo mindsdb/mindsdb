@@ -23,7 +23,6 @@ def get_join_input(query, model, data_handler, data_side):
         limit=query.limit
     )
 
-    print(data_handler.query(data_query))
     model_input = pd.DataFrame.from_records(
         data_handler.query(data_query)['data_frame']
     )
@@ -32,7 +31,7 @@ def get_join_input(query, model, data_handler, data_side):
 
 
 def get_ts_join_input(query, model, data_handler, data_side):
-    # TODO: bring in all TS tests from mindsdb_sql
+    # TODO: TS query coverage should equal pre-handler release
 
     # step 1) query checks
     if query.order_by:
@@ -74,7 +73,7 @@ def get_ts_join_input(query, model, data_handler, data_side):
         else:
             dfs = []
             for step in time_selects:
-                # TODO: is this correct if we have a double cutoff?
+                # TODO: correctness if we have a double cutoff?
                 dfs.append(pd.DataFrame.from_records(data_handler.query(step)['data_frame']))
             model_input = pd.concat(dfs)
     else:
@@ -90,7 +89,7 @@ def get_ts_join_input(query, model, data_handler, data_side):
             groups[gcol] = list(data_handler.query(groups_query)['data_frame'].squeeze().values)
 
         partition_keys = list(groups.keys())
-        all_partitions = list(product(*[v for k, v in groups.items()]))  # TODO: check, also whether there is a better way to maybe retrive then project?
+        all_partitions = list(product(*[v for k, v in groups.items()]))  # TODO: check for better retrival then project?
 
         for group in all_partitions:
             group_time_selects = copy.deepcopy(time_selects)
@@ -100,13 +99,12 @@ def get_ts_join_input(query, model, data_handler, data_side):
             # if len(group_time_selects) == 1:
             #     partial_df = partial_dfs[0]
             # else:
-            #     partial_df = pd.concat(partial_dfs)  # todo: check
+            #     partial_df = pd.concat(partial_dfs)
             #
             # # get grouping values
-            # # TODO: this time filter removal also sounds like we need to keep
+            # # TODO: keep time filter removal?
             # no_time_filter_query = copy.deepcopy(query)
             # no_time_filter_query.where = find_and_remove_time_filter(no_time_filter_query.where, time_filter)
-            # /TODO: pending
 
             filters = None
             for i, val in enumerate(group):
@@ -122,7 +120,7 @@ def get_ts_join_input(query, model, data_handler, data_side):
                     filters = BinaryOperation(op='and', args=[filters, binop])
 
             for time_select in group_time_selects:
-                # TODO: pretty sure this doesn't cover intersection case...
+                # TODO: this doesn't cover intersection case...
                 time_select.where = BinaryOperation(op='and', args=[time_select.where, filters])
 
                 df = data_handler.query(time_select)['data_frame']

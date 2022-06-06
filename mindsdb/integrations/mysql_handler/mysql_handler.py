@@ -134,13 +134,13 @@ class MySQLHandler(DatabaseHandler):
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
   
-    def select_into(self, table, dataframe: pd.DataFrame):
+    def select_into(self, table, dataframe: pd.DataFrame, dtypes=None):
         """
         TODO: Update this
         """
         try:
             con = create_engine(f'mysql://{self.host}:{self.port}/{self.database}', echo=False)
-            dataframe.to_sql(table, con=con, if_exists='append', index=False)
+            dataframe.to_sql(table, con=con, if_exists='append', index=False, dtype=dtypes)
             return True
         except Exception as e:
             print(e)

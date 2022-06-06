@@ -122,7 +122,7 @@ class IntegrationDataNode(DataNode):
         result = self.integration_handler.query(query)
 
         if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.get('error_message', ''))
+            raise Exception(result.error_message)
         if result.type == RESPONSE_TYPE.OK:
             return
 

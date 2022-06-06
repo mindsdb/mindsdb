@@ -718,10 +718,10 @@ class ExecuteCommands:
             result = handler.native_query(struct['select'])
             fetch_data_query = struct['select']
 
-            if result.get('type') != RESPONSE_TYPE.TABLE:
-                raise Exception(f'Error during query: {result.get("error_message")}')
+            if result.type != RESPONSE_TYPE.TABLE:
+                raise Exception(f'Error during query: {result.error_message}')
 
-            ds_data_df = result['data_frame']
+            ds_data_df = result.data_frame
             ds_column_names = list(ds_data_df.columns)
 
             predict = self._check_predict_columns(struct['predict'], ds_column_names)

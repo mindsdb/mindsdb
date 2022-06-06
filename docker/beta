@@ -1,0 +1,18 @@
+FROM pytorch/pytorch:latest
+
+EXPOSE 47334/tcp
+EXPOSE 47335/tcp
+EXPOSE 47336/tcp
+
+ENV PYTHONUNBUFFERED=1
+ENV MDB_AUTOUPDATE=1
+ENV MDB_RELTYPE=beta
+
+COPY mindsdb_config.beta.json /root/mindsdb_config.json
+COPY mindsdb_launcher.sh /root/
+
+# run launcher to install beta MindsDB as specified at
+# https://public.api.mindsdb.com/installer/beta/docker___success___None
+RUN bash /root/mindsdb_launcher.sh
+
+CMD bash /root/mindsdb_launcher.sh start

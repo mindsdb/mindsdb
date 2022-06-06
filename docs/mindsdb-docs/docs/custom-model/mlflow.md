@@ -86,7 +86,7 @@ conda_env = {
 }
 ```
 
-Finally, to actually store the model you need to provide the wrapper class that will 1) load all produced artifacts into an accesible "context" and 2) implement all required inference logic:
+Finally, to actually store the model you need to provide the wrapper class that will 1) load all produced artifacts into an accessible "context" and 2) implement all required inference logic:
 
 ```python
 class Model(mlflow.pyfunc.PythonModel):
@@ -317,8 +317,8 @@ if __name__ == '__main__':
         model.add(LSTM(64, dropout=0.2, recurrent_dropout=0.2))
         model.add(Dense(1, activation='sigmoid'))
 
-        optimzer = Adam(learning_rate=1e-5)
-        model.compile(loss='binary_crossentropy', optimizer=optimzer, metrics=['accuracy'])
+        optimizer = Adam(learning_rate=1e-5)
+        model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
         # train and save
         model.fit(X_train, y_train, batch_size=4, epochs=EPOCHS, validation_data=(X_test, y_test), verbose=2)

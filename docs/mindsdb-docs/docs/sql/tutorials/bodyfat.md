@@ -45,6 +45,7 @@ The following is the steps to upload your data directly to MindsDB:
 
 ![uploadfile](/assets/sql/tutorials/bodyfat/upload_file.png)
 
+
 - Select the tab under 'Import a file'. Please note the dataset files should not exceed the maximum size limit which is 10MB.
 - Provide a name for the data file which will be saved as a table.
 
@@ -89,6 +90,7 @@ FROM files (
 Select the `Run` button or select Shift+Enter to run the syntax. Once is is successful you will receive a message in the console 'Query successfully completed'.
 
 You should see output similar to the following:
+
 
 ![create](/assets/sql/tutorials/bodyfat/create.png)
 

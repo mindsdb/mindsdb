@@ -9,23 +9,6 @@ With MindsDB, you will easily build, train, optimize and deploy your models. You
 
 ## What are AI Tables?
 
-There is an ongoing transformational shift within the modern business world from the “what happened and why” based on historical data analysis to the “what will we predict can happen and how can we make it happen” based on machine learning predictive modeling.
-
-![Analytics](/assets/sql/tutorials/snowflake-superset/1-ML_audience.png)
-
-The success of your predictions depends both on the data you have available and the models you train this data on. Data Scientists and Data Engineers need best-in-class tools to prepare the data for feature engineering, the best training models, and the best way of deploying, monitoring, and managing these implementations for optimal prediction confidence.
-
-### Machine Learning (ML) Lifecycle
-
-The ML lifecycle can be represented as a process that consists of the data preparation phase, modeling phase, and deployment phase. The diagram below presents all the steps included in each of the stages.
-
-![ML Workflow](/assets/sql/tutorials/snowflake-superset/2-ML_workflow.png)
-
-Companies looking to implement machine learning have found their current solutions require substantial amounts of data preparation, cleaning, and labeling, plus hard to find machine learning/AI data scientists to conduct feature engineering; build, train, and optimize models; assemble, verify, and deploy into production; and then monitor in real-time, improve, and refine. Machine learning models require multiple iterations with existing data to train. Additionally, extracting, transforming, and loading (ETL) data from one system to another is complicated, leads to multiple copies of information, and is a compliance and tracking nightmare.
-
-A recent study has shown it takes 64% of companies a month, to over a year, to deploy a machine learning model into production¹. Leveraging existing databases and automating the feature engineering, building, training, and optimization of models, assembling them, and deploying them into production is called AutoML and has been gaining traction within enterprises for enabling non-experts to use machine learning models for practical applications.
-
-![Classical ML](/assets/sql/tutorials/snowflake-superset/3-AI_Tables-income-debt.jpg)
 
 MindsDB brings machine learning to existing SQL databases with a concept called AI Tables. AI Tables integrate the machine learning models as virtual tables inside a database, create predictions, and can be queried with simple SQL statements. Almost instantly, time series, regression, and classification predictions can be done directly in your database.
 
@@ -95,6 +78,26 @@ You can help in the following ways:
  * Tell your friends, write a blog post about MindsDB.
  * Join our team, we are growing fast so [we should have a few open positions](https://career.mindsdb.com/).
 
+## Why is MindsDB important?
+
+There is an ongoing transformational shift within the modern business world from the “what happened and why” based on historical data analysis to the “what will we predict can happen and how can we make it happen” based on machine learning predictive modeling.
+
+![Analytics](/assets/sql/tutorials/snowflake-superset/1-ML_audience.png)
+
+The success of your predictions depends both on the data you have available and the models you train this data on. Data Scientists and Data Engineers need best-in-class tools to prepare the data for feature engineering, the best training models, and the best way of deploying, monitoring, and managing these implementations for optimal prediction confidence.
+
+### Machine Learning (ML) Lifecycle
+
+The ML lifecycle can be represented as a process that consists of the data preparation phase, modeling phase, and deployment phase. The diagram below presents all the steps included in each of the stages.
+
+![ML Workflow](/assets/sql/tutorials/snowflake-superset/2-ML_workflow.png)
+
+Companies looking to implement machine learning have found their current solutions require substantial amounts of data preparation, cleaning, and labeling, plus hard to find machine learning/AI data scientists to conduct feature engineering; build, train, and optimize models; assemble, verify, and deploy into production; and then monitor in real-time, improve, and refine. Machine learning models require multiple iterations with existing data to train. Additionally, extracting, transforming, and loading (ETL) data from one system to another is complicated, leads to multiple copies of information, and is a compliance and tracking nightmare.
+
+A recent study has shown it takes 64% of companies a month, to over a year, to deploy a machine learning model into production¹. Leveraging existing databases and automating the feature engineering, building, training, and optimization of models, assembling them, and deploying them into production is called AutoML and has been gaining traction within enterprises for enabling non-experts to use machine learning models for practical applications.
+
+
+
 ## Why is it called MindsDB?
 
 Well, as most names, we needed one, we like science fiction and the [culture series](https://en.wikipedia.org/wiki/The_Culture_(series)), where there are these AI super smart entities called Minds.
@@ -102,4 +105,4 @@ Well, as most names, we needed one, we like science fiction and the [culture ser
 How about the DB part? Although in the future we will support all kinds of data, currently our objective is to add intelligence to existing data stores/databases, hence the term DB.
 As to becoming a **Mind** to your **DB**.
 
-Why the bear? Who *doesn't* like bears! Anyway, a bear for UC Berkeley where this all was initially coded.
+Why the bear? We wanted to honor the open source tradition of animals related to projects! We went for a bear because of UC Berkeley where this all was initially coded. But we liked a cooler bear so went for a Polar Bear.

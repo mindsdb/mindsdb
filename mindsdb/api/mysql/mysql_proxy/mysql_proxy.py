@@ -879,7 +879,7 @@ class Dummy:
 
 
 class FakeMysqlProxy(MysqlProxy):
-    def __init__(self, company_id):
+    def __init__(self, company_id: int, user_class: int = 0):
         request = Dummy()
         client_address = ['', '']
         server = Dummy()
@@ -900,7 +900,8 @@ class FakeMysqlProxy(MysqlProxy):
 
         self.session = SessionController(
             server=self.server,
-            company_id=company_id
+            company_id=company_id,
+            user_class=user_class
         )
         self.session.database = 'mindsdb'
 

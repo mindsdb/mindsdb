@@ -43,17 +43,18 @@ class ViewHandler(DatabaseHandler):
         """
         view_name = query.from_table.parts[-1]
         view_meta = self.view_controller.get(name=view_name)
-        query_result = self.mysql_proxy.process_query(view_meta['query'])
-        x = 1
-        return self.query(query)
-        # response = Response(
-        #     RESPONSE_TYPE.TABLE,
-        #     DataFrame(
-        #         result,
-        #         columns=[x.name for x in cur.description]
-        #     )
-        # )
-        # return response
+        subquery_ast = parse_sql(view_meta['query'])
+        if query.from_table.parts[-1] != view_name:
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Query does not contain view name '{view_name}': {query}"
+            )
+        query.from_table = subquery_ast
+
+        return Response(
+            RESPONSE_TYPE.QUERY,
+            query=query
+        )
 
     def query(self, query: ASTNode) -> Response:
         """

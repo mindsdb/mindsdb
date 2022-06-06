@@ -5,8 +5,9 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 
 class HandlerResponse:
     def __init__(self, resp_type: RESPONSE_TYPE, data_frame: DataFrame = None,
-                 error_code: int = 0, error_message: str = None) -> None:
+                 query: str = 0, error_code: int = 0, error_message: str = None) -> None:
         self.resp_type = resp_type
+        self.query = query
         self.data_frame = data_frame
         self.error_code = error_code
         self.error_message = error_message

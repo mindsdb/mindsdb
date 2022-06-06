@@ -47,7 +47,6 @@ mysql -h cloud.mindsdb.com --port 3306 -u username@email.com -p
 2. 
 ```sql
 USE mindsdb;
-```dsdb;
 ```
 
 ## Create a predictor

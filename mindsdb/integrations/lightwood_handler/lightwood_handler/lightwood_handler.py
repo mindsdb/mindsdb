@@ -8,6 +8,9 @@ import lightwood
 from lightwood.api.types import JsonAI
 from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition
 
+from utils import unpack_jsonai_old_args, get_aliased_columns, _recur_get_conditionals, load_predictor
+from utils import default_train_data_gather
+from join_utils import get_ts_join_input, get_join_input
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
@@ -86,8 +89,7 @@ class LightwoodHandler(PredictiveHandler):
             # get training data from other integration
             handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]  # TODO import from mindsdb init
             handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
-            records = handler.query(handler_query)['data_frame']
-            df = pd.DataFrame.from_records(records)
+            df = default_train_data_gather(handler, handler_query)
 
             json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
             json_ai = json_ai_from_problem(df, ProblemDefinition.from_dict(params)).to_dict()
@@ -123,8 +125,7 @@ class LightwoodHandler(PredictiveHandler):
 
             handler = MDB_CURRENT_HANDLERS[str(original_stmt.integration_name)]  # TODO import from mindsdb init
             handler_query = self.parser(original_stmt.query_str, dialect=self.handler_dialect)
-            records = handler.query(handler_query)['data_frame']
-            df = pd.DataFrame.from_records(records)
+            df = default_train_data_gather(handler, handler_query)
 
             predictor = load_predictor(all_models[model_name], model_name)
             predictor.adjust(df)
@@ -141,7 +142,8 @@ class LightwoodHandler(PredictiveHandler):
             raise Exception(f"Query type {type(statement)} not supported")
 
     def query(self, query) -> dict:
-        model = self._get_model(query)
+        model_name, _, _ = self._get_model_name(query)
+        model = self._get_model(model_name)
         values = _recur_get_conditionals(query.where.args, {})
         df = pd.DataFrame.from_dict(values)
         df = self._call_predictor(df, model)
@@ -151,87 +153,15 @@ class LightwoodHandler(PredictiveHandler):
         """
         Batch prediction using the output of a query passed to a data handler as input for the model.
         """  # noqa
-        model_name, model_clause = self._get_model_name(stmt)
-        data_clause = 'right' if model_clause == 'left' else 'left'
-        model_alias = str(getattr(stmt.from_table, model_clause).alias)
-
-        model = self._get_model(stmt)
+        model_name, model_alias, model_side = self._get_model_name(stmt)
+        data_side = 'right' if model_side == 'left' else 'left'
+        model = self._get_model(model_name)
         is_ts = model.problem_definition.timeseries_settings.is_timeseries
 
-        data_handler_table = getattr(stmt.from_table, data_clause).parts[-1]
-        data_handler_cols = list(set([t.parts[-1] for t in stmt.targets]))
-
         if not is_ts:
-            data_query = Select(
-                targets=[Identifier(col) for col in data_handler_cols],
-                from_table=Identifier(data_handler_table),
-                where=stmt.where,
-                group_by = stmt.group_by,
-                having = stmt.having,
-                order_by = stmt.order_by,
-                offset = stmt.offset,
-                limit=stmt.limit
-            )
-
-            model_input = pd.DataFrame.from_records(
-                data_handler.query(data_query)['data_frame']
-            )
+            model_input = get_join_input(stmt, model, data_handler, data_side)
         else:
-            oby_col = model.problem_definition.timeseries_settings.order_by[0]
-            gby_col = model.problem_definition.timeseries_settings.group_by[0]  # todo add multiple group support
-            window = model.problem_definition.timeseries_settings.window
-
-            # 1) get all groups
-            for col in [gby_col] + [oby_col]:
-                if col not in data_handler_cols:
-                    data_handler_cols.append(col)
-
-            groups_query = Select(
-                targets=[Identifier(gby_col)],
-                distinct=True,
-                from_table=Identifier(data_handler_table),
-            )
-            groups = list(data_handler.query(groups_query)['data_frame'].squeeze().values)
-
-            # 2) get LATEST available date and window for each group
-            latests = {}
-            windows = {}
-
-            for group in groups:
-                latest_oby_query = Select(
-                    targets=[Identifier(oby_col)],
-                    from_table=Identifier(data_handler_table),
-                    where=BinaryOperation(op='=',
-                                          args=[
-                                              Identifier(gby_col),
-                                              Constant(group)
-                                          ]),
-                    order_by=[OrderBy(
-                        field=Identifier(oby_col),
-                        direction='DESC'
-                    )],
-                    limit=Constant(1)
-                )
-                latests[group] = data_handler.query(latest_oby_query)['data_frame'].values[0][0]
-
-                window_query =  Select(
-                    targets=[Identifier(col) for col in data_handler_cols],
-                    from_table=Identifier(data_handler_table),
-                    where=BinaryOperation(op='=',
-                                          args=[
-                                              Identifier(gby_col),
-                                              Constant(group)
-                                          ]),
-                )
-                # order and limit the df instead of SELECT to hedge against badly defined dtypes in the DB
-                df = data_handler.query(window_query)['data_frame']
-                if len(df) < window and not model.problem_definition.timeseries_settings.allow_incomplete_history:
-                    raise Exception(f"Not enough data for group {group}. Either pass more historical context or train a predictor with the `allow_incomplete_history` argument set to True.")
-                df = df.sort_values(oby_col, ascending=False) # .iloc[0:window]  # TODO check stmt.limit
-                windows[group] = df[::-1]
-
-                # 3) concatenate all contexts into single data query
-                model_input = pd.concat([v for k, v in windows.items()]).reset_index(drop=True)
+            model_input = get_ts_join_input(stmt, model, data_handler, data_side)
 
         # get model output and rename columns
         predictions = self._call_predictor(model_input, model)
@@ -247,22 +177,27 @@ class LightwoodHandler(PredictiveHandler):
         return predictions
 
     def _get_model_name(self, stmt):
-        clause = None
+        side = None
+        models = self.get_tables()
         if type(stmt.from_table) == Join:
             model_name = stmt.from_table.right.parts[-1]
-            clause = 'right'
-            if model_name not in self.get_tables():
+            side = 'right'
+            if model_name not in models:
                 model_name = stmt.from_table.left.parts[-1]
-                clause = 'left'
+                side = 'left'
+            alias = str(getattr(stmt.from_table, side).alias)
         else:
             model_name = stmt.from_table.parts[-1]
-        return model_name, clause
+            alias = None  # todo: fix this
 
     def _get_model(self, stmt):
         model_name, _ = self._get_model_name(stmt)
         if model_name not in self.get_tables():
             raise Exception("Error, not found. Please create this predictor first.")
 
+        return model_name, alias, side
+
+    def _get_model(self, model_name):
         predictor_dict = self._get_model_info(model_name)
         predictor = load_predictor(predictor_dict, model_name)
         return predictor
@@ -395,6 +330,6 @@ if __name__ == '__main__':
 
     # get predictions from a time series model
     into_table = 'test_join_tsmodel_into_lw'
-    query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {data_handler_name}.{data_table_name} AS ta JOIN {model_name} AS tb WHERE ta.{oby} > LATEST LIMIT 10"
+    query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {data_handler_name}.{data_table_name} AS ta JOIN mindsdb.{model_name} AS tb ON 1=1 WHERE ta.{oby} > LATEST LIMIT 10"
     parsed = cls.parser(query, dialect=cls.dialect)
     predicted = cls.join(parsed, data_handler, into=into_table)

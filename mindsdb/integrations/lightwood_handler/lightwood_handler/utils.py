@@ -59,3 +59,9 @@ def load_predictor(predictor_dict, name):
         gc.collect()
         _module_from_code(predictor_dict['code'], module_name)
         return dill.loads(predictor_dict['predictor'])
+
+
+def default_train_data_gather(handler, query):
+    records = handler.query(query)['data_frame']
+    df = pd.DataFrame.from_records(records)
+    return df

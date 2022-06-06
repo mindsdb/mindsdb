@@ -609,7 +609,7 @@ class ExecuteCommands:
             status['error'] = str(e)
 
         if status.success is False:
-            raise SqlApiException(f"Can't connect to db: {status.error}")
+            raise SqlApiException(f"Can't connect to db: {status.error_message}")
 
         integration = self.session.integration_controller.get(datasource_name)
         if integration is not None:

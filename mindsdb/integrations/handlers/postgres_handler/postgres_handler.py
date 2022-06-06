@@ -42,7 +42,7 @@ class PostgresHandler(DatabaseHandler):
             self.connection_args['dbname'] = self.database
         args = self.connection_args.copy()
 
-        for key in ['type', 'publish', 'test', 'date_last_update', 'integrations_name', 'database_name', 'id']:
+        for key in ['type', 'publish', 'test', 'date_last_update', 'integrations_name', 'database_name', 'id', 'database']:
             if key in args:
                 del args[key]
         connection = psycopg.connect(**args, connect_timeout=10)

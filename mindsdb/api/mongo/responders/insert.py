@@ -96,7 +96,10 @@ class Responce(Responder):
                 if col not in ds_column_names:
                     raise Exception(f"Column '{col}' not exists")
 
-            mindsdb_env['model_interface'].learn(doc['name'], ds_data_df, predict, kwargs=dict(kwargs))
+            mindsdb_env['model_interface'].learn(
+                doc['name'], ds_data_df, predict, kwargs=dict(kwargs),
+                user_class=mindsdb_env.get('user_class', 0)
+            )
 
         result = {
             "n": len(query['documents']),

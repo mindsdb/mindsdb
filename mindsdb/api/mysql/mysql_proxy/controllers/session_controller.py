@@ -27,6 +27,7 @@ class SessionController():
         """
 
         self.username = None
+        self.user_class = None
         self.auth = False
         self.company_id = company_id
         self.logging = log

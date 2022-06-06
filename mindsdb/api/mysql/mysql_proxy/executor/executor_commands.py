@@ -768,7 +768,7 @@ class ExecuteCommands:
 
         model_interface.learn(
             predictor_name, ds_data_df, predict, integration_id=integration_id,
-            fetch_data_query=fetch_data_query, kwargs=kwargs
+            fetch_data_query=fetch_data_query, kwargs=kwargs, user_class=self.session.user_class
         )
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -1346,7 +1346,7 @@ class ExecuteCommands:
 
         model_interface.learn(
             insert['name'], ds_data_df, insert['predict'], integration_id=integration_id,
-            fetch_data_query=fetch_data_query, kwargs=kwargs
+            fetch_data_query=fetch_data_query, kwargs=kwargs, user_class=self.session.user_class
         )
 
         return ExecuteAnswer(ANSWER_TYPE.OK)

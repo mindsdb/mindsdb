@@ -1,4 +1,8 @@
-# Pre-requisites
+*Dataset: [Mining process Data](https://www.kaggle.com/edumagalhaes/quality-prediction-in-a-mining-process)*
+
+*Communtiy Author: [pixpack](https://github.com/pixpack)*
+
+## Pre-requisites
 
 Before you start make sure that you've:
 

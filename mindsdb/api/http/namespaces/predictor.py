@@ -125,7 +125,7 @@ class Predictor(Resource):
 
         # request.model_interface.learn(
         #     name, ds, to_predict, request.default_store.get_datasource(ds_name)['id'],
-        #     kwargs=kwargs, delete_ds_on_fail=delete_ds_on_fail
+        #     kwargs=kwargs, delete_ds_on_fail=delete_ds_on_fail, user_class=request.user_class
         # )
 
         # if retrain is True:

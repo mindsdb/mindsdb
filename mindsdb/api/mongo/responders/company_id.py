@@ -8,8 +8,10 @@ class Responce(Responder):
 
     def result(self, query, request_env, mindsdb_env, session):
         company_id = query.get('company_id')
+        user_class = query.get('user_class', 0)
         need_response = query.get('need_response', False)
 
+        mindsdb_env['user_class'] = user_class
         mindsdb_env['company_id'] = company_id
         mindsdb_env['model_interface'] = WithKWArgsWrapper(
             mindsdb_env['origin_model_interface'],

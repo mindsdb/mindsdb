@@ -157,7 +157,7 @@ class ModelController():
     @mark_process(name='learn')
     def learn(self, name: str, training_data: DataFrame, to_predict: str,
               integration_id: int = None, fetch_data_query: str = None,
-              kwargs: dict = {}, company_id: int = None) -> None:
+              kwargs: dict = {}, company_id: int = None, user_class: int = 0) -> None:
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         if predictor_record is not None:
             raise Exception('Predictor name must be unique.')
@@ -179,7 +179,7 @@ class ModelController():
                         count += 1
                 if count == 2:
                     raise Exception('You can train no more than 2 models at the same time')
-            if len(training_data) > 10000:
+            if user_class != 1 and len(training_data) > 10000:
                 raise Exception('Datasets are limited to 10,000 rows on free accounts')
 
         if 'url' in problem_definition:

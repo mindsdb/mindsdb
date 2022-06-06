@@ -426,7 +426,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         read_poller = select.poll()
         read_poller.register(self.request, select.POLLIN)
-        events = read_poller.poll(0)
+        events = read_poller.poll(5)
 
         if len(events) == 0:
             return {

@@ -29,7 +29,8 @@ class PostgresHandler(DatabaseHandler):
         self.connection_args = kwargs.get('connection_data')
         self.dialect = 'postgresql'
         self.database = self.connection_args.get('database')
-        del self.connection_args['database']
+        if 'database' in self.connection_args:
+            self.connection_args['database']
         self.renderer = SqlalchemyRender('postgres')
 
     def __connect(self):
@@ -37,7 +38,8 @@ class PostgresHandler(DatabaseHandler):
         Handles the connection to a PostgreSQL database insance.
         """
         # TODO: Check psycopg_pool
-        self.connection_args['dbname'] = self.database
+        if self.connection_args.get('dbname') is None:
+            self.connection_args['dbname'] = self.database
         args = self.connection_args.copy()
 
         for key in ['type', 'publish', 'test', 'date_last_update', 'integrations_name', 'database_name', 'id']:

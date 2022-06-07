@@ -713,6 +713,8 @@ class ExecuteCommands:
         if integration_name is not None:
             handler = self.session.integration_controller.get_handler(integration_name)
             integration_meta = self.session.integration_controller.get(integration_name)
+            if integration_meta is None:
+                raise SqlApiException(f"Integration '{integration_meta}' does not exists.")
             integration_id = integration_meta.get('id')
             # TODO
             # raise ErBadDbError(f"Unknown datasource: {integration_name}")

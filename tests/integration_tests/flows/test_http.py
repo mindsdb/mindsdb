@@ -402,6 +402,8 @@ class HTTPTest(unittest.TestCase):
         print(f'\nExecuting {inspect.stack()[0].function}')
         created_db_names = []
         for db_type, db_creds in self.sql_db_creds.items():
+            if db_type not in ['postgres', 'mysql', 'mariadb']:
+                continue
             queries = [
                 {
                     'create': 'CREATE DATASOURCE',

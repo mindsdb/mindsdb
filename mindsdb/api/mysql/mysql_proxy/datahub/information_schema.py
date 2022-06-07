@@ -120,7 +120,7 @@ class InformationSchema(DataNode):
             # TODO fixme
             if len(ds_tables) > 0 and isinstance(ds_tables[0], dict):
                 ds_tables = [TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.BASE_TABLE, TABLE_NAME=x['name']) for x in ds_tables]
-            elif isinstance(ds_tables, list) and isinstance(ds_tables[0], str):
+            elif isinstance(ds_tables, list) and len(ds_tables) > 0 and isinstance(ds_tables[0], str):
                 ds_tables = [TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.BASE_TABLE, TABLE_NAME=x) for x in ds_tables]
             for row in ds_tables:
                 row.TABLE_SCHEMA = ds_name

@@ -22,7 +22,10 @@ class Query(Resource):
         error_text = None
         error_traceback = None
 
-        mysql_proxy = FakeMysqlProxy(company_id=request.company_id)
+        mysql_proxy = FakeMysqlProxy(
+            company_id=request.company_id,
+            user_class=request.user_class
+        )
         mysql_proxy.set_context(context)
         try:
             result = mysql_proxy.process_query(query)

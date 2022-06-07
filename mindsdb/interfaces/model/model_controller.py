@@ -435,7 +435,7 @@ class ModelController():
         model_description['column_importances'] = model_data['column_importances']
         model_description['outputs'] = [model_data['predict']]
         model_description['inputs'] = [col for col in model_data['dtype_dict'] if col not in model_description['outputs']]
-        model_description['datasource'] = model_data['data_source_name']
+        model_description['datasource'] = model_data.get('data_source_name')
         model_description['model'] = ' --> '.join(str(k) for k in model_data['json_ai'])
 
         return model_description

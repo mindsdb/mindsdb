@@ -1,7 +1,9 @@
+import numpy as np
 import pandas as pd
 from sqlalchemy.types import (
     Integer, Float, Text
 )
+
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast import Insert, Identifier, Constant, CreateTable, TableColumn, DropTables
 
@@ -141,12 +143,14 @@ class IntegrationDataNode(DataNode):
                 query_str = render.get_string(query, with_failback=True)
 
         dso, _creation_info = self.data_store.create_datasource(self.integration_name, {'query': query_str})
-        data = dso.df.to_dict(orient='records')
+        df = dso.df
+        df = df.replace({np.nan: None})
+        data = df.to_dict(orient='records')
         column_names = list(dso.df.columns)
 
         for column_name in column_names:
-            if pd.core.dtypes.common.is_datetime_or_timedelta_dtype(dso.df[column_name]):
-                pass_data = dso.df[column_name].dt.to_pydatetime()
+            if pd.core.dtypes.common.is_datetime_or_timedelta_dtype(df[column_name]):
+                pass_data = df[column_name].dt.to_pydatetime()
                 for i, rec in enumerate(data):
                     rec[column_name] = pass_data[i].timestamp()
 
@@ -158,7 +162,7 @@ class IntegrationDataNode(DataNode):
                 'name': k,
                 'type': v
             }
-            for k, v in dso.df.dtypes.items()
+            for k, v in df.dtypes.items()
         ]
 
         return data, columns_info

@@ -419,14 +419,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             connection. '0000' selected because in real mysql connection it should be lenght of package,
             and it can not be 0.
         '''
-        if sys.platform != 'linux':
+        config = Config()
+        is_cloud = config.get('cloud', False)
+
+        if sys.platform != 'linux' or is_cloud is False:
             return {
                 'is_cloud': False
             }
 
         read_poller = select.poll()
         read_poller.register(self.request, select.POLLIN)
-        events = read_poller.poll(5)
+        events = read_poller.poll(7)
 
         if len(events) == 0:
             return {

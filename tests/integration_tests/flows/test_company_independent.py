@@ -93,10 +93,8 @@ class CompanyIndependentTest(unittest.TestCase):
     def test_4_add_predictors_http(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         params = {
-            'from': {
-                'datasource': 'test_integration_a',
-                'query': 'select * from test_data.home_rentals limit 50'
-            },
+            'integration': 'test_integration_a',
+            'query': 'select * from test_data.home_rentals limit 50',
             'to_predict': 'rental_price',
             'kwargs': {
                 'time_aim': 5,
@@ -118,10 +116,8 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(len(mongo_predictors_b) == 0)
 
         params = {
-            'from': {
-                'datasource': 'test_integration_a',
-                'query': 'select * from test_data.home_rentals limit 50'
-            },
+            'integration': 'test_integration_a',
+            'query': 'select * from test_data.home_rentals limit 50',
             'to_predict': 'rental_price',
             'kwargs': {
                 'time_aim': 5,
@@ -144,10 +140,8 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(len(mongo_predictors_b) == 0)
 
         params = {
-            'from': {
-                'datasource': 'test_integration_b',
-                'query': 'select * from test_data.home_rentals limit 50'
-            },
+            'integration': 'test_integration_b',
+            'query': 'select * from test_data.home_rentals limit 50',
             'to_predict': 'rental_price',
             'kwargs': {
                 'time_aim': 5,

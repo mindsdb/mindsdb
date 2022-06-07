@@ -62,7 +62,7 @@ installed and Python 64-bit version.
     conda activate mindsdb
     ```
 
-2. Install mindsdb in recently creeated virtual enviroment:
+2. Install mindsdb in recently created virtual environment:
 
     ```bash
     pip install mindsdb

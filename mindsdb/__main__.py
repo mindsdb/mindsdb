@@ -119,6 +119,16 @@ if __name__ == '__main__':
                 pass
 
     if not is_cloud:
+        files_integration = integration_controller.get(name='files')
+        if files_integration is None:
+            integration_record = db.Integration(
+                name='files',
+                data={},
+                company_id=None
+            )
+            db.session.add(integration_record)
+            db.session.commit()
+
         # region Mark old predictors as outdated
         is_modified = False
         predictor_records = db.session.query(db.Predictor).all()

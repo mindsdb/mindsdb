@@ -58,12 +58,9 @@ class TestScenario:
         with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as f:
             df.to_csv(f, index=False)
             f.flush()
-            url = f'{HTTP_API_ROOT}/datasources/{name}'
+            url = f'{HTTP_API_ROOT}/files/{name}'
             data = {
-                "source_type": (None, 'file'),
-                "file": (f.name, f, 'text/csv'),
-                "source": (None, f.name.split('/')[-1]),
-                "name": (None, name)
+                "file": (f.name, f, 'text/csv')
             }
             res = requests.put(url, files=data)
             res.raise_for_status()
@@ -165,7 +162,11 @@ class TestScenario:
         self.upload_ds(df, self.file_datasource_name)
         self.verify_file_ds(self.file_datasource_name)
 
-        _query = f"CREATE PREDICTOR {file_predictor_name} from files (select * from {self.file_datasource_name}) predict y;"
+        _query = f"""
+            CREATE PREDICTOR {file_predictor_name}
+            from files (select * from {self.file_datasource_name})
+            predict y;
+        """
         self.query(_query)
         self.check_predictor_readiness(file_predictor_name)
 

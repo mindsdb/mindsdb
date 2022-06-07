@@ -1,3 +1,5 @@
+import time
+
 from flask import request
 from flask_restx import Resource
 from pandas.core.frame import DataFrame
@@ -42,8 +44,14 @@ class QueryAnalysis(Resource):
         if result.type != SQL_RESPONSE_TYPE.TABLE:
             return http_error(500, 'Error', 'Query does not return data')
 
+        column_names = [x['name'] for x in result.columns]
         analysis = request.model_interface.analyse_dataset(
-            df=DataFrame(result.data, columns=[x['name'] for x in result.columns]),
+            df=DataFrame(result.data, columns=column_names),
             company_id=None
         )
-        return analysis
+        return {
+            'analysis': analysis,
+            'column_names': column_names,
+            'row_count': len(result.data),
+            'timestamp': time.time()
+        }

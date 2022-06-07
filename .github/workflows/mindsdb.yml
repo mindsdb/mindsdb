@@ -76,14 +76,6 @@ jobs:
           echo -e "\n===============\ntest MySQL binary API\n===============\n"
           python tests/integration_tests/flows/test_mysql_bin_api.py
 
-          # # Kafka Stream
-          # echo -e "\n===============\ntest Kafka Stream\n===============\n"
-          # python tests/integration_tests/flows/test_kafka.py
-
-          # Redis Stream
-          echo -e "\n===============\ntest Redis Stream\n===============\n"
-          python tests/integration_tests/flows/test_redis.py
-
           # Company independent
           echo -e "\n===============\ntest company independent\n===============\n"
           python tests/integration_tests/flows/test_company_independent.py
@@ -99,6 +91,14 @@ jobs:
           # flow with mistakes
           echo -e "\n===============\nflow with mistakes\n===============\n"
           python tests/integration_tests/flows/test_mistakes.py
+
+          # # Kafka Stream
+          # echo -e "\n===============\ntest Kafka Stream\n===============\n"
+          # python tests/integration_tests/flows/test_kafka.py
+
+          # Redis Stream
+          echo -e "\n===============\ntest Redis Stream\n===============\n"
+          python tests/integration_tests/flows/test_redis.py
         fi
       shell: bash
       env:

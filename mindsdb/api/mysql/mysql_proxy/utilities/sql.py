@@ -14,7 +14,6 @@ from mindsdb_sql.parser.ast import (
 from mindsdb.utilities.log import log
 
 
-
 def query_df(df, query, session=None):
     """ Perform simple query ('select' from one table, without subqueries and joins) on DataFrame.
 
@@ -31,8 +30,11 @@ def query_df(df, query, session=None):
     else:
         query_ast = copy.deepcopy(query)
 
-    if isinstance(query_ast, Select) is False or isinstance(query_ast.from_table, Identifier) is False:
-        raise Exception("Only 'SELECT from TABLE' statements supported for internal query")
+    if isinstance(query_ast, Select) is False \
+       or isinstance(query_ast.from_table, Identifier) is False:
+        raise Exception(
+            "Only 'SELECT from TABLE' statements supported for internal query"
+        )
 
     query_ast.from_table.parts = ['df_table']
 
@@ -57,7 +59,9 @@ def query_df(df, query, session=None):
     try:
         query_str = render.get_string(query_ast, with_failback=False)
     except Exception as e:
-        log.error(f"Exception during query casting to 'postgres' dialect. Query: {str(query)}. Error: {e}")
+        log.error(
+            f"Exception during query casting to 'postgres' dialect. Query: {str(query)}. Error: {e}"
+        )
         query_str = render.get_string(query_ast, with_failback=True)
 
     res = duckdb.query_df(df, 'df_table', query_str)

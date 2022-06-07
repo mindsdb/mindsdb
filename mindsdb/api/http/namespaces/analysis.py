@@ -5,7 +5,8 @@ from flask_restx import Resource
 from pandas.core.frame import DataFrame
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Constant
+from mindsdb_sql.parser.ast import Constant, Identifier
+from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.analysis import ns_conf
@@ -24,8 +25,12 @@ class QueryAnalysis(Resource):
         if query is None or len(query) == 0:
             return http_error(400, 'Missed query', 'Need provide query to analyze')
 
-        if limit is not None:
+        try:
             ast = parse_sql(query)
+        except Exception as e:
+            return http_error(500, 'Wrong query', str(e))
+
+        if limit is not None:
             ast.limit = Constant(limit)
             query = str(ast)
 
@@ -49,9 +54,18 @@ class QueryAnalysis(Resource):
             df=DataFrame(result.data, columns=column_names),
             company_id=None
         )
+
+        query_tables = []
+
+        def find_tables(node, is_table, **kwargs):
+            if is_table and isinstance(node, Identifier):
+                query_tables.append('.'.join(node.parts))
+        query_traversal(ast, find_tables)
+
         return {
             'analysis': analysis,
             'column_names': column_names,
             'row_count': len(result.data),
-            'timestamp': time.time()
+            'timestamp': time.time(),
+            'tables': query_tables
         }

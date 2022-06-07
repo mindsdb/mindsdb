@@ -15,8 +15,6 @@ from mindsdb.utilities.fs import create_directory
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-# from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
-# import mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy  #  as fmp
 
 
 class IntegrationController:
@@ -24,8 +22,7 @@ class IntegrationController:
     def _is_not_empty_str(s):
         return isinstance(s, str) and len(s) > 0
 
-    def __init__(self, mysql_proxy=None):
-        self.mysql_proxy = mysql_proxy
+    def __init__(self):
         self._load_handler_modules()
 
     def add(self, name, data, company_id=None):
@@ -228,8 +225,6 @@ class IntegrationController:
                 ViewController(),
                 company_id=company_id
             )
-            # handler_ars['mysql_proxy'] = fmp.FakeMysqlProxy(company_id=company_id)
-            handler_ars['mysql_proxy'] = self.mysql_proxy
 
         return self.handler_modules[handler_type].Handler(**handler_ars)
 

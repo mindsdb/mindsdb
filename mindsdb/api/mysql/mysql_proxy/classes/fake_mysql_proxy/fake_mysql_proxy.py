@@ -22,7 +22,7 @@ class FakeMysqlProxy(MysqlProxy):
         server.connection_id = 0
         server.hook_before_handle = empty_fn
         server.original_model_interface = ModelInterface()
-        server.original_integration_controller = IntegrationController(mysql_proxy=self)
+        server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
 
         self.charset = 'utf8'

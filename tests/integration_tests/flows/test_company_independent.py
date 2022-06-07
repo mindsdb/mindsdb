@@ -14,7 +14,6 @@ from common import (
 
 from http_test_helpers import (
     get_predictors_names_list,
-    get_datasources_names,
     get_integrations_names
 )
 

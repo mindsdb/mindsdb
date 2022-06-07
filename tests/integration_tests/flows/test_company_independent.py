@@ -46,12 +46,6 @@ class CompanyIndependentTest(unittest.TestCase):
     def test_1_initial_state_http(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
-        # is no ds
-        datasources_a = get_datasources_names(company_id=CID_A)
-        datasources_b = get_datasources_names(company_id=CID_B)
-        self.assertTrue(len(datasources_a) == 0)
-        self.assertTrue(len(datasources_b) == 0)
-
         # is no predictors
         predictors_a = get_predictors_names_list(company_id=CID_A)
         predictors_b = get_predictors_names_list(company_id=CID_A)

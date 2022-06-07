@@ -34,15 +34,6 @@ def get_predictor_data(name):
     return None
 
 
-def get_datasources_names(company_id=None):
-    headers = {}
-    if company_id is not None:
-        headers['company-id'] = f'{company_id}'
-    res = requests.get(f'{HTTP_API_ROOT}/datasources', headers=headers)
-    assert res.status_code == 200
-    return [x['name'] for x in res.json()]
-
-
 def check_ds_not_exists(ds_name):
     res = requests.get(f'{HTTP_API_ROOT}/datasources')
     assert res.status_code == 200

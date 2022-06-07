@@ -1,4 +1,4 @@
-# Setup with Sourcecode via pip
+# Build From Source Using `pip`
 
 This section describes how to deploy MindsDB from the source code. It is the preferred way to use MindsDB if you want to contribute to our code or debug MindsDB.
 
@@ -53,7 +53,7 @@ We recommend installing MindsDB inside a virtual environment to avoid dependency
     python -m mindsdb
     ```
 
-6. Now you shoukd be able to access:
+6. Now you should be able to access:
 
     === "MindsDB APIs"
         ```
@@ -71,14 +71,29 @@ We recommend installing MindsDB inside a virtual environment to avoid dependency
         ```
 ## Troubleshooting
 
-If the installation fails, don't worry; follow the below instruction, which should fix most issues. If none of this works, try using the [docker setup](/deployment/docker/) and create an issue with the installation errors you got on our [Github repository](https://github.com/mindsdb/mindsdb/issues). We'll try to review it and give you a response within a few hours.
+If the installation fails, check for common error messages and solutions below. 
 
+### Common Issues
+
+```bash
 !!! failure "No module named mindsdb"
     If you get this error, make sure that your virtual environment is activated.
+```
 
+```bash
 !!! failure "ImportError: No module named {dependency name}"
     This type of error can occur if you skipped the 3rd step. Make sure that you install all of the MindsDB requirements.
+```
 
+```bash
 !!! failure "This site can’t be reached. 127.0.0.1 refused to connect."
     Please check the MindsDB server console in case the server is still in the `starting` phase. If the server has started and there is an error displayed, please report it on our [GitHub](https://github.com/mindsdb/mindsdb/issues).
+```
 
+### Still Having problems?
+If your error is not addressed in the `Common Issues`
+1) Replicate the issue using using the official [docker setup](/deployment/docker/).
+
+2) Create an issue with the installation errors you receive on our [Github repository](https://github.com/mindsdb/mindsdb/issues). 
+
+We'll try to review it and give you a response within a few hours.

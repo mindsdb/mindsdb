@@ -102,12 +102,10 @@ class TestScenario:
                         f"Expected datasource is not found after creation - {ds_type.upper()}: {res}")
 
     def test_1_create_datasources(self):
-        for ds_type in self.db_creds:
-            # TODO del clickhouse from list
-            if ds_type not in ['kafka', 'redis', 'mongodb_atlas', 'clickhouse']:
-                with self.subTest(msg=ds_type):
-                    print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{ds_type}]")
-                    self.validate_datasource_creation(ds_type)
+        for ds_type in ['postgres', 'mysql', 'mariadb']:
+            with self.subTest(msg=ds_type):
+                print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{ds_type}]")
+                self.validate_datasource_creation(ds_type)
 
     def test_2_create_predictor(self):
         _query = f"CREATE PREDICTOR {self.predictor_name} from MYSQL (select * from test_data.home_rentals) as hr_ds predict rental_price;"
@@ -122,7 +120,14 @@ class TestScenario:
         self.assertTrue('rental_price' in res and 'rental_price_explain' in res,
                         f"error getting prediction from {self.predictor_name} - {res}")
 
-    def test_4_service_requests(self):
+    def test_4_describe_predictor_attrs(self):
+        attrs = ["model", "features", "ensemble"]
+        for attr in attrs:
+            with self.subTest(msg=attr):
+                print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{attr}]")
+                self.query(f"describe mindsdb.{self.predictor_name}.{attr};")
+
+    def test_5_service_requests(self):
         service_requests = [
             "show databases;",
             "show schemas;",
@@ -147,15 +152,8 @@ class TestScenario:
                 print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{req}]")
                 self.query(req)
 
-    def test_5_drop_datasource(self):
+    def test_6_drop_datasource(self):
         self.query('drop datasource MYSQL;')
-
-    def test_6_describe_predictor_attrs(self):
-        attrs = ["model", "features", "ensemble"]
-        for attr in attrs:
-            with self.subTest(msg=attr):
-                print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{attr}]")
-                self.query(f"describe mindsdb.{self.predictor_name}.{attr};")
 
     def test_7_train_predictor_from_files(self):
         df = pd.DataFrame({
@@ -199,23 +197,23 @@ class TestScenario:
             self.verify_file_ds(ds_name)
 
         params = [
-                ("with_group_by_hor1",
-                 f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order GROUP BY group WINDOW 10 HORIZON 1;",
-                 f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.group= 'A' LIMIT 1;",
-                 1),
-                ("no_group_by_hor1",
-                 f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order WINDOW 10 HORIZON 1;",
-                 f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 1;",
-                 1),
-                ("with_group_by_hor2",
-                 f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order GROUP BY group WINDOW 10 HORIZON 2;",
-                 f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.group= 'A' LIMIT 2;",
-                 2),
-                ("no_group_by_hor2",
-                 f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order WINDOW 10 HORIZON 2;",
-                 f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 2;",
-                 2),
-                ]
+            ("with_group_by_hor1",
+                f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order GROUP BY group WINDOW 10 HORIZON 1;",
+                f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.group= 'A' LIMIT 1;",
+                1),
+            ("no_group_by_hor1",
+                f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order WINDOW 10 HORIZON 1;",
+                f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 1;",
+                1),
+            ("with_group_by_hor2",
+                f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order GROUP BY group WINDOW 10 HORIZON 2;",
+                f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.group= 'A' LIMIT 2;",
+                2),
+            ("no_group_by_hor2",
+                f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order WINDOW 10 HORIZON 2;",
+                f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 2;",
+                2),
+        ]
         for predictor_name, create_query, select_query, res_len in params:
             with self.subTest(msg=predictor_name):
                 print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{predictor_name}]")
@@ -223,7 +221,6 @@ class TestScenario:
                 self.check_predictor_readiness(predictor_name)
                 res = self.query(select_query % predictor_name)
                 self.assertTrue(len(res) == res_len, f"prediction result {res} contains more that {res_len} records")
-
 
 
 class MySqlApiTest(unittest.TestCase, TestScenario):

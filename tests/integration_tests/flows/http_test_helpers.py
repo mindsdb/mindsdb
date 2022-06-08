@@ -34,31 +34,6 @@ def get_predictor_data(name):
     return None
 
 
-def check_ds_not_exists(ds_name):
-    res = requests.get(f'{HTTP_API_ROOT}/datasources')
-    assert res.status_code == 200
-    ds_names = [x['name'] for x in res.json()]
-    assert ds_name not in ds_names
-
-
-def check_ds_exists(ds_name):
-    res = requests.get(f'{HTTP_API_ROOT}/datasources')
-    assert res.status_code == 200
-    ds_names = [x['name'] for x in res.json()]
-    assert ds_name in ds_names
-
-
-def check_ds_analyzable(ds_name):
-    start_time = time.time()
-    analyze_done = False
-    while analyze_done is False and (time.time() - start_time) < 30:
-        res = requests.get(f'{HTTP_API_ROOT}/datasources/{ds_name}/analyze')
-        assert res.status_code == 200
-        analyze_done = res.json().get('status', '') != 'analyzing'
-        time.sleep(1)
-    assert analyze_done
-
-
 def wait_predictor_learn(predictor_name):
     start_time = time.time()
     learn_done = False

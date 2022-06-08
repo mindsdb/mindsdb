@@ -78,26 +78,7 @@ class UserFlowTest_1(unittest.TestCase):
         for key in ['user', 'port', 'host', 'publish']:
             assert test_integration[key] == test_integration_data[key]
 
-    def test_3_create_ds_from_sql_by_http(self):
-        '''
-        check is no DS with this name
-        create DS
-        analyse it
-        '''
-        check_ds_not_exists(TEST_DS)
-
-        data = {
-            "integration_id": TEST_INTEGRATION,
-            "name": TEST_DS,
-            "query": f"select * from test_data.{TEST_DATASET} limit 100;"
-        }
-        res = requests.put(f'{HTTP_API_ROOT}/datasources/{TEST_DS}', json=data)
-        assert res.status_code == 200
-
-        check_ds_exists(TEST_DS)
-        check_ds_analyzable(TEST_DS)
-
-    def test_4_create_and_query_predictors(self):
+    def test_2_create_and_query_predictors(self):
         '''
         check predictor not exists
         learn predictor
@@ -108,7 +89,8 @@ class UserFlowTest_1(unittest.TestCase):
 
             data = {
                 'to_predict': list(TO_PREDICT.keys()),
-                'data_source_name': datasource_name
+                'integration': TEST_INTEGRATION,
+                'query': f"select * from test_data.{TEST_DATASET} limit 100;"
             }
             res = requests.put(f'{HTTP_API_ROOT}/predictors/{predictior_name}', json=data)
             assert res.status_code == 200
@@ -139,7 +121,7 @@ class UserFlowTest_1(unittest.TestCase):
 
         test_predictor(TEST_PREDICTOR, TEST_DS)
 
-    def test_5_delete(self):
+    def test_3_delete(self):
         res = requests.delete(f'{HTTP_API_ROOT}/predictors/{TEST_PREDICTOR}')
         assert res.status_code == 200
         check_predictor_not_exists(TEST_PREDICTOR)

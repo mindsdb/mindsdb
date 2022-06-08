@@ -118,7 +118,9 @@ class InformationSchema(DataNode):
         for ds_name, ds in self.persis_datanodes.items():
             ds_tables = ds.get_tables()
             # TODO fixme
-            if len(ds_tables) > 0 and isinstance(ds_tables[0], dict):
+            if len(ds_tables) == 0:
+                pass
+            elif isinstance(ds_tables[0], dict):
                 ds_tables = [TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.BASE_TABLE, TABLE_NAME=x['name']) for x in ds_tables]
             elif isinstance(ds_tables, list) and isinstance(ds_tables[0], str):
                 ds_tables = [TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.BASE_TABLE, TABLE_NAME=x) for x in ds_tables]

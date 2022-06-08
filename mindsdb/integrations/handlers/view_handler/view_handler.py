@@ -7,6 +7,8 @@ from pandas import DataFrame
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.parser.ast import Identifier
+from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.utilities.log import log
@@ -43,12 +45,27 @@ class ViewHandler(DatabaseHandler):
         """
         view_name = query.from_table.parts[-1]
         view_meta = self.view_controller.get(name=view_name)
+
         subquery_ast = parse_sql(view_meta['query'])
         if query.from_table.parts[-1] != view_name:
             return Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=f"Query does not contain view name '{view_name}': {query}"
             )
+
+        # inject integration
+        if view_meta['integration_name'] is not None:
+            int_name = view_meta['integration_name']
+
+            def inject_integration(node, is_table, **kwargs):
+                if is_table and isinstance(node, Identifier):
+                    if not node.parts[0] == int_name:
+                        node.parts.insert(0, int_name)
+
+            query_traversal(subquery_ast, inject_integration)
+
+        # set alias
+        subquery_ast.alias = Identifier(view_name)
         query.from_table = subquery_ast
 
         return Response(

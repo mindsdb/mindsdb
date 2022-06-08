@@ -159,7 +159,7 @@ class View(Base):
     name = Column(String, nullable=False)
     company_id = Column(Integer)
     query = Column(String, nullable=False)
-    integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'), nullable=False)
+    integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'))
     uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
 
 

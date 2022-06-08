@@ -664,9 +664,9 @@ class ExecuteCommands:
     def answer_create_view(self, statement):
         name = statement.name
         query = str(statement.query_str)
-        if statement.from_table is None:
-            raise SqlApiException('Integration has to me set')
-        datasource_name = statement.from_table.parts[-1]
+        datasource_name = None
+        if statement.from_table is not None:
+            datasource_name = statement.from_table.parts[-1]
 
         self.session.view_interface.add(name, query, datasource_name)
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)

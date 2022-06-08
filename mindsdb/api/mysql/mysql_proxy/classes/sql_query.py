@@ -63,7 +63,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErKeyColumnDoesNotExist,
     ErNotSupportedYet,
 )
-
+from mindsdb_sql.parser.ast.base import ASTNode
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -77,12 +77,18 @@ def get_preditor_alias(step, mindsdb_database):
 
 def get_table_alias(table_obj, default_db_name):
     # (database, table, alias)
-    if len(table_obj.parts) > 2:
-        raise SqlApiException(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
-    elif len(table_obj.parts) == 1:
-        name = (default_db_name, table_obj.parts[0])
+    if isinstance(table_obj, Identifier):
+        if len(table_obj.parts) > 2:
+            raise SqlApiException(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
+        elif len(table_obj.parts) == 1:
+            name = (default_db_name, table_obj.parts[0])
+        else:
+            name = tuple(table_obj.parts)
     else:
-        name = tuple(table_obj.parts)
+        # it is subquery
+        name = table_obj.alias.parts[0] or 't'
+        name = (default_db_name, name)
+
     if table_obj.alias is not None:
         name = name + ('.'.join(table_obj.alias.parts),)
     else:
@@ -317,6 +323,11 @@ class SQLQuery():
         data, columns_info = dn.select(
             query=query
         )
+
+        # if this is query: execute it
+        if isinstance(data, ASTNode):
+            subquery = SQLQuery(data, session=self.session)
+            return subquery.fetched_data
 
         columns = [(column['name'], column['name']) for column in columns_info]
         columns.append(('__mindsdb_row_id', '__mindsdb_row_id'))
@@ -574,7 +585,7 @@ class SQLQuery():
                 self.columns_list = []
                 if self.fetched_data is not None:
                     for table_name in self.fetched_data['columns']:
-                        col_types = self.fetched_data['types'].get(table_name, {})
+                        col_types = self.fetched_data.get('types', {}).get(table_name, {})
                         for column in self.fetched_data['columns'][table_name]:
                             self.columns_list.append(
                                 Column(
@@ -913,16 +924,100 @@ class SQLQuery():
                 raise SqlApiException(f'error in join step: {e}') from e
 
         elif type(step) == FilterStep:
-            raise ErNotSupportedYet('FilterStep is not implemented')
-        # elif type(step) == ApplyTimeseriesPredictorStep:
-        #     raise Exception('ApplyTimeseriesPredictorStep is not implemented')
+            step_data = steps_data[step.dataframe.step_num]
+
+            # dicts to look up column and table
+            column_idx = {}
+            tables_idx = {}
+            col_table_idx = {}
+
+            # prepare columns for dataframe. column name contains table name
+            cols = set()
+            for table, col_list in step_data['columns'].items():
+                _, t_name, t_alias = table
+
+                tables_idx[t_name] = t_name
+                tables_idx[t_alias] = t_name
+                for column in col_list:
+                    # table_column
+                    c_name, c_alias = column
+
+                    col_name = f'{t_name}^{c_name}'
+                    cols.add(col_name)
+
+                    col_table_idx[col_name] = (table, column)
+                    column_idx[c_name] = t_name
+
+            # prepare dict for dataframe
+            result = []
+            for row in step_data['values']:
+                data_row = {}
+                for table, col_list in step_data['columns'].items():
+                    for col in col_list:
+                        col_name = f'{table[1]}^{col[0]}'
+                        data_row[col_name] = row[table][col]
+                result.append(data_row)
+
+            df = pd.DataFrame(result, columns=list(cols))
+
+            # analyze condition and change name of columns
+            def check_fields(node, is_table=None, **kwargs):
+                if is_table:
+                    raise ErNotSupportedYet('Subqueries is not supported in WHERE')
+                if isinstance(node, Identifier):
+                    # only column name
+                    col_name = node.parts[-1]
+
+                    if len(node.parts) == 1:
+                        if col_name not in column_idx:
+                            raise ErKeyColumnDoesNotExist(f'Table not found for column: {col_name}')
+                        table_name = column_idx[col_name]
+                    else:
+                        table_name = node.parts[-2]
+
+                        # maybe it is alias
+                        table_name = tables_idx[table_name]
+
+                    new_name = f'{table_name}^{col_name}'
+                    return Identifier(parts=[new_name])
+
+            where_query = step.query
+            query_traversal(where_query, check_fields)
+
+            query = Select(targets=[Star()], from_table=Identifier('df'), where=where_query)
+
+            res = query_df(df, query)
+
+            resp_dict = res.to_dict(orient='records')
+
+            # convert result to dict-dict structure
+            values = []
+            for row in resp_dict:
+                value = {}
+                for key, v in row.items():
+                    # find original table and col
+                    table, column = col_table_idx[key]
+                    if table not in value:
+                        value[table] = {}
+                    value[table][column] = v
+
+                values.append(value)
+
+            data = {
+                'tables': step_data['tables'],
+                'columns': step_data['columns'],
+                'values': values,
+                'types': step_data.get('types', {})
+            }
+
         elif type(step) == LimitOffsetStep:
             try:
                 step_data = steps_data[step.dataframe.step_num]
                 data = {
                     'values': step_data['values'].copy(),
                     'columns': step_data['columns'].copy(),
-                    'tables': step_data['tables'].copy()
+                    'tables': step_data['tables'].copy(),
+                    'types': step_data.get('types', {}).copy(),
                 }
                 if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
                     data['values'] = data['values'][step.offset.value:]
@@ -1109,10 +1204,12 @@ class SQLQuery():
 
             # columns are changed
             self.columns_list = columns_list
+            types = step_data.get('types', {})
             data = {
                 'tables': [appropriate_table],
                 'columns': columns,
-                'values': values
+                'values': values,
+                'types': types  # copy
             }
 
         elif type(step) == SaveToTable or type(step) == InsertToTable:

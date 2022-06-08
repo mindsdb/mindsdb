@@ -43,7 +43,8 @@ The following is the steps to upload your data directly to MindsDB:
 - Select the button `Add data` or select the plug icon on the left side bar.
 - The page will navigate to 'Select your data source'. Select the option 'Files'.
 
-![uploadfile](/assets/tutorials/bodyfat/upload_file.png)
+![uploadfile](/assets/sql/tutorials/bodyfat/upload_file.png)
+
 
 - Select the tab under 'Import a file'. Please note the dataset files should not exceed the maximum size limit which is 10MB.
 - Provide a name for the data file which will be saved as a table.
@@ -56,7 +57,7 @@ Run the following syntax:
 SELECT * FROM files.bodyfat LIMIT 10;
 ```
 
-![selectdate](/assets/tutorials/bodyfat/selectdata.png)
+![selectdate](/assets/sql/tutorials/bodyfat/selectdata.png)
 
 Once you have confirmed the file has successfully uploaded and the data can be retrieved, we can move on to creating a predictor.
 
@@ -90,7 +91,8 @@ Select the `Run` button or select Shift+Enter to run the syntax. Once is is succ
 
 You should see output similar to the following:
 
-![create](/assets/tutorials/bodyfat/create.png)
+
+![create](/assets/sql/tutorials/bodyfat/create.png)
 
 At this point, the predictor will immediately begin training.  Check the status of the training by entering the command:
 
@@ -100,7 +102,7 @@ SELECT * FROM mindsdb.predictors WHERE name='bodyfat_predictor';
 
 When complete, you should see output similar to the following:
 
-![status](/assets/tutorials/bodyfat/status.png)
+![status](/assets/sql/tutorials/bodyfat/status.png)
 
 As you can see, the predictor training has been completed with an accuracy of approximately 99%.  At this point, you have successfully trained an ML model for our Body Fat Prediction dataset!
 
@@ -118,7 +120,7 @@ WHERE Density=1.08 AND Age=25 AND Weight=170 AND Height=70 AND Neck=38.1 AND Che
 
 This should return output similar to:
 
-![prediction](/assets/tutorials/bodyfat/prediction.png)
+![prediction](/assets/sql/tutorials/bodyfat/prediction.png)
 
 As you can see, with around 99% confidence, MindsDB predicted the body fat percentage for this individual at 8.97%.  You can at this point feel free to alter the prospective individual's bodypart measurement parameters and make additional prediction queries if you'd like.  
 
@@ -143,7 +145,7 @@ LIMIT 5;
 
 This should return an output table similar to the following:
 
-![join](/assets/tutorials/bodyfat/join.png)
+![join](/assets/sql/tutorials/bodyfat/join.png)
 
 As you can see, a prediction has been generated for each row in the input table.  Additionally, our predicted bodyfat percentages align closely with the original values!  Note that even though we chose only to display the Age, Density, Weight, Height, Neck, Chest, Abdomen, and Hip measurements in this example, the predicted_BodyFat field was determined by taking into consideration all of the data fields in the original bodyfat table (as this table was JOINed with the bodyfat_predictor table, from which we selected the specified fields).  In order to make predictions based ONLY on the specified fields, we would have to create a new table containing only those fields, and JOIN that with the bodyfat_predictor table!
 

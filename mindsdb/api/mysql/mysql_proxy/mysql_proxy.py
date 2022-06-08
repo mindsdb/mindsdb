@@ -172,8 +172,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.connection_id = self.server.connection_id
         self.session = SessionController(
             server=self.server,
-            company_id=company_id,
-            handler=self
+            company_id=company_id
         )
 
         if hasattr(self.server, 'salt') and isinstance(self.server.salt, str):
@@ -409,14 +408,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             connection. '0000' selected because in real mysql connection it should be lenght of package,
             and it can not be 0.
         '''
-        if sys.platform != 'linux':
+        config = Config()
+        is_cloud = config.get('cloud', False)
+
+        if sys.platform != 'linux' or is_cloud is False:
             return {
                 'is_cloud': False
             }
 
         read_poller = select.poll()
         read_poller.register(self.request, select.POLLIN)
-        events = read_poller.poll(0)
+        events = read_poller.poll(7)
 
         if len(events) == 0:
             return {

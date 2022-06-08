@@ -82,10 +82,10 @@ class Responce(Responder):
             handler = mindsdb_env['integration_controller'].get_handler(connection)
             result = handler.native_query(select_data_query)
 
-            if result.get('type') != RESPONSE_TYPE.TABLE:
-                raise Exception(f'Error during query: {result.get("error_message")}')
-            
-            ds_data_df = result['data_frame']
+            if result.type != RESPONSE_TYPE.TABLE:
+                raise Exception(f'Error during query: {result.error_message}')
+
+            ds_data_df = result.data_frame
             ds_column_names = list(ds_data_df.columns)
 
             predict = doc['predict']

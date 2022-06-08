@@ -26,7 +26,6 @@ class ViewHandler(DatabaseHandler):
     type = 'views'
 
     def __init__(self, name=None, **kwargs):
-        self.mysql_proxy = kwargs['mysql_proxy']
         self.view_controller = kwargs['view_controller']
         super().__init__(name)
 

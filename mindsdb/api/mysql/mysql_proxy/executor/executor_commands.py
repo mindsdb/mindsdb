@@ -606,8 +606,8 @@ class ExecuteCommands:
         except Exception as e:
             status['error'] = str(e)
 
-        if status.get('success') is False:
-            raise SqlApiException(f"Can't connect to db: {status.get('error')}")
+        if status.success is False:
+            raise SqlApiException(f"Can't connect to db: {status.error_message}")
 
         integration = self.session.integration_controller.get(datasource_name)
         if integration is not None:
@@ -711,6 +711,8 @@ class ExecuteCommands:
         if integration_name is not None:
             handler = self.session.integration_controller.get_handler(integration_name)
             integration_meta = self.session.integration_controller.get(integration_name)
+            if integration_meta is None:
+                raise SqlApiException(f"Integration '{integration_meta}' does not exists.")
             integration_id = integration_meta.get('id')
             # TODO
             # raise ErBadDbError(f"Unknown datasource: {integration_name}")

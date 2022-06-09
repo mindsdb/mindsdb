@@ -105,13 +105,14 @@ PREDICT rental_price;
 
 A predictor may take a couple of minutes for the training to complete. You can monitor the status of your predictor by copying and pasting this command into your SQL client:
 
+
 ```sql 
 SELECT status
 FROM mindsdb.predictors
 WHERE name='home_rentals_predictor';
 ```
 
-On execution, you should get:
+Here we are selecting the status from the table called mindsdb.predictors and using the where statement to only show the model we have just trained, On execution, you we get:
 
 ```sql
 +----------+
@@ -120,7 +121,7 @@ On execution, you should get:
 | training |
 +----------+
 ```
-Or:
+Or after a the model has been trained:
 
 ```sql
 +----------+
@@ -142,19 +143,23 @@ The [`SELECT`](/sql/api/select/) syntax will allow you to make a prediction base
 
 
 ```sql 
-SELECT rental_price
-FROM mindsdb.home_rentals_predictor
-WHERE number_of_bathrooms=2 AND sqft=1000;
+SELECT rental_price,
+       rental_price_explain
+FROM mindsdb.home_rentals_model
+WHERE sqft = 823
+AND location='good'
+AND neighborhood='downtown'
+AND days_on_market=10;
 ```
 
 On execution, you should get:
 
 ```sql
-+--------------+
-| rental_price |
-+--------------+
-| 1130         |
-+--------------+
++--------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| rental_price | rental_price_explain                                                                                                                          |
++--------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| 4394         | {"predicted_value": 4394, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 4313, "confidence_upper_bound": 4475} |
++--------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
 ### Making Batch Predictions Via [`#!sql JOIN`](/sql/api/join)
@@ -167,4 +172,16 @@ SELECT t.rental_price as real_price,
        t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market 
 FROM example_db.demo_data.home_rentals as t 
 JOIN mindsdb.home_rentals_model as m limit 100
+```
+
+```sql 
++------------+-----------------+-----------------+---------------------+------+----------+----------------+
+| real_price | predicted_price | number_of_rooms | number_of_bathrooms | sqft | location | days_on_market |
++------------+-----------------+-----------------+---------------------+------+----------+----------------+
+| 3901       | 3886            | 2               | 1                   | 917  | great    | 13             |
+| 2042       | 2007            | 0               | 1                   | 194  | great    | 10             |
+| 1871       | 1865            | 1               | 1                   | 543  | poor     | 18             |
+| 3026       | 3020            | 2               | 1                   | 503  | good     | 10             |
+| 4774       | 4748            | 3               | 2                   | 1066 | good     | 13             |
++------------+-----------------+-----------------+---------------------+------+----------+----------------+
 ```

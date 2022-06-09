@@ -86,7 +86,7 @@ nav:
       - DBT: connect/dbt.md
       - Kafka: connect/kafka.md 
       - Tableau: connect/tableau.md
-  - Connect data to MindsDB: sql/create/databases.md
+  - Plug data to MindsDB: sql/create/databases.md
   - Train a Predictor: sql/create/predictor.md
   - Get a Prediction: sql/api/select.md
   - SQL API:

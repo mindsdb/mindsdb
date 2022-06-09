@@ -9,6 +9,7 @@ Before you start make sure that you've:
 1. Visited [Getting Started Guide](/info)
 2. Visited [Getting Started with Cloud](/deployment/cloud)
 3. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/edumagalhaes/quality-prediction-in-a-mining-process).
+4. Optional- Visual studio.
 
 # Manufacturing process quality
 
@@ -22,11 +23,23 @@ In this tutorial you will learn how to predict the quality of a mining process u
 1. Fix headers: 
    - `sed -e 's/ /_/g' -e 's/\(.*\)/\L\1/' -e 's/%_//g' MiningProcess_Flotation_Plant_Database.csv > fixed_headers.csv` (for Linux/Unix)
    - edit headers manually: change `space` to `underscore`, upper case to lower case, remove `%` from headers (for Windows)
-2. Click on **Files** icon to go to datasets page
-3. Click on **FILE UPLOAD** button to upload file into MindsDB
+2. Access MindsDB GUI either on cloud or local via URL 127.0.0.1:47334/.
+3. Select the `Add data` button or the plug icon on the left side bar.
+4. The page will navigate to the 'Select your data source' page. Select 'Files'.
+5. Under 'Import a file' select the tab 'Click here to browse local files' and select your data file.
+6. Once the file is uploaded 100%, provide a name for the data file that will be saved as a table.
+7. Select the button Save and Continue.
 
+You can query the file that has been uploaded to see that the data does pull through.
+
+```sql
+SELECT * from files.file_name;
+```
 
 ## Connect to MindsDB SQL Sever
+
+MindsDB's GUI has a SQL Editor that allows you to create and train predictors and also makes predictions. However you can also do this via the mysql client in a local terminal by accessing MindsDB SQL Server.
+
 1. 
 ```sql
 mysql -h cloud.mindsdb.com --port 3306 -u username@email.com -p

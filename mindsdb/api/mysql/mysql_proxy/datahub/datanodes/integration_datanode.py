@@ -117,8 +117,7 @@ class IntegrationDataNode(DataNode):
 
         self.integration_handler.native(insert_ast)
 
-    # TODO rename to 'query'
-    def select(self, query):
+    def query(self, query):
         result = self.integration_handler.query(query)
 
         if result.type == RESPONSE_TYPE.ERROR:

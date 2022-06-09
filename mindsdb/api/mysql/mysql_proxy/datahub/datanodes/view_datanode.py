@@ -23,7 +23,7 @@ class ViewDataNode(DataNode):
         # TODO
         raise Exception('not iomplemented')
 
-    def select(self, query):
+    def query(self, query):
         if isinstance(query, str):
             query = parse_sql(query, dialect='mysql')
         query_str = str(query)

@@ -1,5 +1,4 @@
 from functools import partial
-from collections import OrderedDict
 
 import pandas as pd
 
@@ -238,7 +237,7 @@ class InformationSchema(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def select(self, query):
+    def query(self, query):
         query_tables = get_all_tables(query)
 
         if len(query_tables) != 1:

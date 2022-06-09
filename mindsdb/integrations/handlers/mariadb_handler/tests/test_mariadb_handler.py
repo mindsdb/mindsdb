@@ -47,5 +47,3 @@ class MariaDBHandlerTest(unittest.TestCase):
     def test_7_select_query(self):
         query = "SELECT * FROM dt_test WHERE 'id'='a'"
         result = self.handler.select_query(query)
-
-    

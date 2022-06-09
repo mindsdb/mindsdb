@@ -1,4 +1,4 @@
-# Setup for Docker 
+# Setup for Docker
 
 ## Install Docker
 
@@ -27,7 +27,9 @@ The `-p` flag allows access to MindsDB by two different methods:
 - `#!bash -p 47334:47334` - Publishes port 47334 to access MindsDB GUI and HTTP API.
 - `#!bash -p 47335:47335` - Publishes port 47335 to access MindsDB MySQL API.
 
-### Optional Additional Configuration
+## Optional Additional Configuration
+
+### Default Configuration
 
 The default configuration for MindsDB's Docker image is represented as a JSON block:
 
@@ -52,11 +54,12 @@ The default configuration for MindsDB's Docker image is represented as a JSON bl
 
 To override the default configuration, you can provide values via the `MDB_CONFIG_CONTENT` environment variable.
 
-???+ example
 
-    ```bash
-    docker run -e MDB_CONFIG_CONTENT='{"api":{"http": {"host": "0.0.0.0","port": "8080"}}}' mindsdb/mindsdb
-    ```
+### Example
+
+```bash
+docker run -e MDB_CONFIG_CONTENT='{"api":{"http": {"host": "0.0.0.0","port": "8080"}}}' mindsdb/mindsdb
+```
 ### Known Issues
 
 ??? warning "MKL Issues"
@@ -65,4 +68,3 @@ To override the default configuration, you can provide values via the `MDB_CONFI
 	```bash
     docker run -e MKL_SERVICE_FORCE_INTEL=1 -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 	```
-    

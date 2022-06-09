@@ -55,16 +55,18 @@ First, we need to connect MindsDB to the database where the Mushrooms data is st
 ![db](/assets/sql/tutorials/Mushrooms/database.png)
 
 - Once you have selected the database type,the page will automatically navigate to the SQL Editor where the syntax to create a database connection will automatically populate for you to enter the required parameters.
-​
+
+
 The required parameters are:
-CREATE DATABASE display_name  --- display name for database. 
-WITH ENGINE = "postgres",     --- name of the mindsdb handler 
-PARAMETERS = {
-    "user": " ",              --- Your database user.
-    "password": " ",          --- Your password.
-    "host": " ",              --- host, it can be an ip or an url. 
-    "port": "5432",           --- common port is 5432.
-    "database": " "           --- The name of your database *optional.
+
+- CREATE DATABASE display_name  --- display name for database. 
+- WITH ENGINE = "postgres",     --- name of the mindsdb handler 
+- PARAMETERS = {
+    - "user": " ",              --- Your database user.
+    - "password": " ",          --- Your password.
+    - "host": " ",              --- host, it can be an ip or an url. 
+    - "port": "5432",           --- common port is 5432.
+    - "database": " "           --- The name of your database *optional.
 }
 
 ![integration](/assets/sql/tutorials/Mushrooms/dbintegration.png)

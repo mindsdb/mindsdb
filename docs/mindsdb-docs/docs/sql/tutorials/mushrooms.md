@@ -113,7 +113,7 @@ The required values that we need to provide are:
 Use the following query to create a predictor that will predict the `target_class` for the specific field parameters.
 
 ```sql
-mysql>CREATE PREDICTOR mushroom_predictor
+CREATE PREDICTOR mushroom_predictor
 FROM mindsdb_predictions ( SELECT * FROM mushrooms)
 PREDICT class;
 ```
@@ -125,7 +125,7 @@ Select the `Run` button or Shift+Enter to execute the syntax. Once the predictor
 The predictor was created successfully and has started training. To check the status of the model, use the below query.
 
 ```sql
-mysql> SELECT * FROM mindsdb.predictors WHERE name='mushroom_predictor';
+SELECT * FROM mindsdb.predictors WHERE name='mushroom_predictor';
 ```
 
 After the predictor has finished training, you will see a similar output. Note that MindsDB does model testing for you automatically, so you will immediately see if the predictor is accurate enough.

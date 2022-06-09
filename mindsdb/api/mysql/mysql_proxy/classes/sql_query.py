@@ -1039,6 +1039,9 @@ class SQLQuery():
                                 columns[table_name].append(column)
 
                     elif type(column_identifier) == Identifier:
+                        appropriate_table = None
+                        columns_to_copy = None
+
                         column_name_parts = column_identifier.parts
                         column_alias = column_identifier.parts[-1] if column_identifier.alias is None else '.'.join(
                             column_identifier.alias.parts)
@@ -1048,90 +1051,73 @@ class SQLQuery():
                         elif len(column_name_parts) == 1:
                             column_name = column_name_parts[0]
 
-                            appropriate_table = None
-                            if len(step_data['tables']) == 1:
-                                appropriate_table = step_data['tables'][0]
-                            else:
-                                for table_name, table_columns in step_data['columns'].items():
-                                    table_column_names_list = [x[1] or x[0] for x in table_columns]
-                                    column_exists = get_column_in_case(table_column_names_list, column_name)
-                                    if column_exists:
-                                        if appropriate_table is not None and not step.ignore_doubles:
-                                            raise Exception(
-                                                f'Found multiple appropriate tables for column {column_name}')
-                                        else:
-                                            appropriate_table = table_name
-                            if appropriate_table is None:
-                                # it is probably constaint
-                                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/133
-                                # column_name = column_name.strip("'")
-                                # name_or_alias = column_alias or column_name
-                                # column_alias = name_or_alias
-                                # for row in step_data['values']:
-                                #     for table in row:
-                                #         row[table][(column_name, name_or_alias)] = row[table][(column_name, column_name)]
-                                # appropriate_table = step_data['tables'][0]
-                                # FIXME: must be exception
+                            for table_name, table_columns in step_data['columns'].items():
+                                table_col_idx = {}
+                                for x in table_columns:
+                                    name = x[1] or x[0]
+                                    table_col_idx[name] = x
 
-                                columns[appropriate_table].append((column_alias, column_alias))
-                            else:
-                                columns[appropriate_table].append((column_name, column_alias))
+                                column_exists = get_column_in_case(list(table_col_idx.keys()), column_name)
+                                if column_exists:
+                                    if appropriate_table is not None and not step.ignore_doubles:
+                                        raise Exception(
+                                            f'Found multiple appropriate tables for column {column_name}')
+                                    else:
+                                        appropriate_table = table_name
+                                        new_col = (column_name, column_alias)
+                                        cur_col = table_col_idx[column_exists]
+
+                                        columns[appropriate_table].append(new_col)
+                                        if cur_col != new_col:
+                                            columns_to_copy = cur_col, new_col
+                                        break
+
+                            if appropriate_table is None:
+                                raise SqlApiException(f'Can not find appropriate table for column {column_name}')
+
                         elif len(column_name_parts) == 2:
                             table_name_or_alias = column_name_parts[0]
                             column_name = column_name_parts[1]
 
-                            appropriate_table = None
                             for table_name, table_columns in step_data['columns'].items():
-                                table_column_names_list = [x[1] or x[0] for x in table_columns]
                                 checking_table_name_or_alias = table_name[2] or table_name[1]
                                 if table_name_or_alias.lower() == checking_table_name_or_alias.lower():
                                     # support select table.*
                                     if isinstance(column_name, Star):
+                                        # add all by table
                                         appropriate_table = table_name
+                                        for column in step_data['columns'][appropriate_table]:
+                                            columns[appropriate_table].append(column)
                                         break
 
-                                    column_exists = get_column_in_case(table_column_names_list, column_name)
+                                    table_col_idx = {}
+                                    for x in table_columns:
+                                        name = x[1] or x[0]
+                                        table_col_idx[name] = x
+
+                                    column_exists = get_column_in_case(list(table_col_idx.keys()), column_name)
                                     if column_exists:
                                         appropriate_table = table_name
+                                        new_col = (column_name, column_alias)
+                                        cur_col = table_col_idx[column_exists]
+
+                                        columns[appropriate_table].append(new_col)
+                                        if cur_col != new_col:
+                                            columns_to_copy = cur_col, new_col
+
                                         break
                                     else:
                                         raise Exception(f'Can not find column "{column_name}" in table "{table_name}"')
                             if appropriate_table is None:
                                 raise SqlApiException(f'Can not find appropriate table for column {column_name}')
-
-                            if isinstance(column_name, Star):
-                                # add all by table
-                                for column in step_data['columns'][appropriate_table]:
-                                    columns[appropriate_table].append(column)
-                            else:
-                                table_column_names_list = [x[1] or x[0] for x in table_columns]
-                                checking_name = get_column_in_case(table_column_names_list, column_name)
-                                for column in step_data['columns'][appropriate_table]:
-                                    if column[0] == checking_name and (column[1] is None or column[1] == checking_name):
-                                        columns_to_copy = column
-                                        break
-                                else:
-                                    raise ErKeyColumnDoesNotExist(
-                                        f'Can not find appropriate column in data: {(column_name, column_alias)}')
-
-                                for row in step_data['values']:
-                                    row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][
-                                        columns_to_copy]
-
-                                columns[appropriate_table].append((column_name, column_alias))
-
-                                # if column not exists in result - copy value to it
-                                if (column_name, column_alias) not in step_data['columns'][appropriate_table]:
-                                    step_data['columns'][appropriate_table].append((column_name, column_alias))
-                                    for row in step_data['values']:
-                                        if (column_name, column_alias) not in row[appropriate_table]:
-                                            try:
-                                                row[appropriate_table][(column_name, column_alias)] = \
-                                                    row[appropriate_table][(column_name, column_name)]
-                                            except KeyError:
-                                                raise ErKeyColumnDoesNotExist(f'Unknown column: {column_name}')
                         else:
                             raise SqlApiException('Undefined column name')
+
+                        if columns_to_copy is not None:
+                            col_from, col_to = columns_to_copy
+                            for row in step_data['values']:
+                                row[appropriate_table][col_to] = row[appropriate_table][col_from]
+                            # TODO copy types?
 
                     else:
                         raise ErKeyColumnDoesNotExist(f'Unknown column type: {column_identifier}')
@@ -1140,7 +1126,7 @@ class SQLQuery():
                     'tables': step_data['tables'],
                     'columns': columns,
                     'values': step_data['values'],  # TODO keep values only for columns
-                    'types': step_data['types']
+                    'types': step_data.get('types', {})
                 }
             except Exception as e:
                 if isinstance(e, SqlApiException):

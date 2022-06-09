@@ -5,12 +5,12 @@ import pandas as pd
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.mindsdb_datanode import MindsDBDataNode
-from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import IntegrationDataNode
+from mindsdb.api.mysql.mysql_proxy.datahub.datanodes import MindsDBDataNode
+from mindsdb.api.mysql.mysql_proxy.datahub.datanodes import IntegrationDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 
 
-class InformationSchema(DataNode):
+class InformationSchemaDataNode(DataNode):
     type = 'INFORMATION_SCHEMA'
 
     information_schema = {

@@ -32,8 +32,8 @@ The `TOP-3` authors who submit ideas before `June 17th, 2022` will get SWAG and 
 1. Create a new [GitHub issue](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=integration%2Cenhancement&template=integrations_contest.yaml&title=%5BNew+Integration%5D%3A+)
 2. Invite everyone to upvote by adding 👍(thumbs up) emoji to an issue
 3. Share it on MindsDB community Slack, [`using_mindsdb` channel](https://join.slack.com/share/enQtMzU5ODc5OTMzMDYzMC1iYzc1MmFkMjY0MDQ0MmM0OTM2ZWY0MzU2NWY2NjBmM2I5MjZlN2JlZDIzN2M4MzQwNzY3MzJhMjJmNjcyYWM1)
-4. [Fork MindsDB repository](https://github.com/mindsdb/mindsdb/fork)
-5. Commit the basic structure for the new integration:
+4. [Fork MindsDB repository](https://github.com/mindsdb/mindsdb/fork) [optional]
+5. Commit the basic structure for the new integration: [optional]
 	 * [ ] Add a new integration directory under integrations.
 	 * [ ] Add __about__.py file that has all variables as this example.
 	 * [ ] Add empty tests directory.

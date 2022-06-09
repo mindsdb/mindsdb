@@ -45,7 +45,7 @@ class ViewHandler(DatabaseHandler):
         view_name = query.from_table.parts[-1]
         view_meta = self.view_controller.get(name=view_name)
 
-        subquery_ast = parse_sql(view_meta['query'])
+        subquery_ast = parse_sql(view_meta['query'], dialect='mysql')
         if query.from_table.parts[-1] != view_name:
             return Response(
                 RESPONSE_TYPE.ERROR,

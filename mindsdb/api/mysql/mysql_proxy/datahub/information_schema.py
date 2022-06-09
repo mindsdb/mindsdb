@@ -103,8 +103,11 @@ class InformationSchema(DataNode):
 
     def get_integrations_names(self):
         integration_names = self.integration_controller.get_all().keys()
+        # remove files and views from list to prevent doubling in 'select from INFORMATION_SCHEMA.TABLES'
         return [
-            x.lower() for x in integration_names
+            x.lower()
+            for x in integration_names
+            if x not in ('files', 'views')
         ]
 
     def _get_tables(self):

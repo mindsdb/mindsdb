@@ -10,7 +10,7 @@ class ViewController:
             raise Exception(f'Name should be without dots: {name}')
 
         # name exists?
-        rec = session.query(View.id).query.filter(View.name == name).first()
+        rec = session.query(View.id).filter(View.name == name).first()
         if rec is not None:
             raise Exception(f'View already exists: {name}')
 

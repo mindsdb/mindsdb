@@ -51,12 +51,14 @@ Also, check-out the [rewards and community programs.](https://mindsdb.com/commun
 ----------------------------
 
 <h2 align="center">
-   Machine Learning using SQL
+   Machine Learning using SQL 
    <br/>
    <br/>
   <img width="600" src="https://docs.mindsdb.com/assets/mdb_image.png" alt="MindsDB">	
 
 </h2>
+
+<img width="1222" alt="image" src="https://user-images.githubusercontent.com/5898506/172740218-61db5eec-1bcf-4832-99d9-308709a426a7.png">
 
 ## Demo
 

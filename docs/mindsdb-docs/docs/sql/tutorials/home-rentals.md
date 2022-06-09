@@ -87,9 +87,7 @@ Where:
 !!!Info "Labels and Features"
 
     A **label** is the thing we're predicting—the y variable in simple linear regression ...
-    A **feature** is an input variable—the x variable in simple linear regression ...
-    Taken from: [Google's Machine Learning Crash Course](https://developers.google.com/machine-learning/crash-course/framing/ml-terminology)
-
+    A **feature** is an input variable—the x variable in simple linear regression ..
 
 ## Traning a Predictor Via [`#!sql CREATE PREDICTOR`](/sql/create/predictor)
 

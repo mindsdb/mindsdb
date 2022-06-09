@@ -6,65 +6,85 @@ from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusRes
 
 
 class BaseHandler:
+    """ Base class for handlers
+
+    Base class for handlers that associate a source of information with the
+    broader MindsDB ecosystem via SQL commands.
     """
-    Base class for handlers that associate a source of information with the broader MindsDB ecosystem via SQL commands.
-    """
-    def __init__(self, name):
+
+    def __init__(self, name: str):
         self.name = name
 
-    def connect(self, **kwargs) -> Dict[str, int]:
-        """
-        Set up any connections required by the handler here.
+    def connect(self, **kwargs) -> HandlerStatusResponse:
+        """ Set up any connections required by the handler
 
-        Should return output of check_status() method after attempting connection.
+        Should return output of check_status() method after attempting
+        connection.
+
+        Args:
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            HandlerStatusResponse
         """
         raise NotImplementedError()
 
     def check_status(self) -> HandlerStatusResponse:
-        """ Heartbeat method, should return 200 OK or 503 if there is an issue with the handler. """
+        """ Cehck connection to the handler
+
+        Returns:
+            HandlerStatusResponse
+        """
         raise NotImplementedError()
 
     def native_query(self, query: Any) -> HandlerResponse:
-        """
-        Receive raw query and act upon it somehow.
+        """Receive raw query and act upon it somehow.
 
         Args:
-            query (Any): query in native format (str for sql databases, dict for mongo, etc)
+            query (Any): query in native format (str for sql databases,
+                dict for mongo, etc)
 
         Returns:
-            dict with response:
-            {
-                'type': 'table'
-                'data_frame': DataFrame
-            }
-            {
-                'type': 'ok'
-            }
-            {
-                'type': 'error',
-                'error_code': int,
-                'error_message': str
-            }
+            HandlerResponse
         """
         raise NotImplementedError()
 
     def query(self, query: ASTNode) -> HandlerResponse:
-        """
-        Select data from some entity in the handler and return in dataframe format.
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
 
-        This method parses a raw query with SqlalchemyRender using specific dialect compatible with the handler.
+        Args:
+            query (ASTNode): sql query represented as AST. May be any kind
+                of query: SELECT, INTSERT, DELETE, etc
+
+        Returns:
+            HandlerResponse
         """
         raise NotImplementedError()
 
     def get_tables(self) -> HandlerResponse:
-        """
-        Return list of entities that will be accesible as tables thanks to the handler. 
+        """ Return list of entities
+
+        Return list of entities that will be accesible as tables.
+
+        Returns:
+            HandlerResponse: shoud have same columns as information_schema.tables
+                (https://dev.mysql.com/doc/refman/8.0/en/information-schema-tables-table.html)
+                Column 'TABLE_NAME' is mandatory, other is optional.
         """
         raise NotImplementedError()
 
     def get_columns(self, table_name: str) -> HandlerResponse:
-        """
-        For getting standard info about a table. e.g. data types
+        """ Returns a list of entity columns
+
+        Args:
+            table_name (str): name of one of tables returned by self.get_tables()
+
+        Returns:
+            HandlerResponse: shoud have same columns as information_schema.columns
+                (https://dev.mysql.com/doc/refman/8.0/en/information-schema-columns-table.html)
+                Column 'COLUMN_NAME' is mandatory, other is optional. Hightly
+                recomended to define also 'DATA_TYPE': it should be one of
+                python data types (by default it str).
         """
         raise NotImplementedError()
 

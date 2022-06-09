@@ -119,10 +119,10 @@ if __name__ == '__main__':
                 pass
 
     if not is_cloud:
-        # region create persist integrations
+        # region creating permanent integrations
         for integration_name in ['files', 'views']:
-            files_integration = integration_controller.get(name=integration_name)
-            if files_integration is None:
+            integration_meta = integration_controller.get(name=integration_name)
+            if integration_meta is None:
                 integration_record = db.Integration(
                     name=integration_name,
                     data={},

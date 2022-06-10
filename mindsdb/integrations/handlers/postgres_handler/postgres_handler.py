@@ -67,15 +67,22 @@ class PostgresHandler(DatabaseHandler):
         :return: success status and error message if error occurs
         """
         response = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
         try:
-            con = self.__connect()
-            with closing(con) as con:
-                with con.cursor() as cur:
-                    cur.execute('select 1;')
+            connection = self.connect()
+            with connection.cursor() as cur:
+                cur.execute('select 1;')
             response.success = True
         except psycopg.Error as e:
             log.error(f'Error connecting to PostgreSQL {self.database}, {e}!')
             response.error_message = e
+
+        if response.success is True and need_to_close:
+            self.disconnect()
+        if response.success is False and self.is_connected is True:
+            self.is_connected = False
+
         return response
 
     def native_query(self, query: str) -> Response:
@@ -84,29 +91,34 @@ class PostgresHandler(DatabaseHandler):
         :param query: The SQL query to run in PostgreSQL
         :return: returns the records from the current recordset
         """
-        con = self.__connect()
-        with closing(con) as con:
-            with con.cursor() as cur:
-                try:
-                    cur.execute(query)
-                    if ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
-                        response = Response(RESPONSE_TYPE.OK)
-                    else:
-                        result = cur.fetchall()
-                        response = Response(
-                            RESPONSE_TYPE.TABLE,
-                            DataFrame(
-                                result,
-                                columns=[x.name for x in cur.description]
-                            )
-                        )
-                except Exception as e:
-                    log.error(f'Error running query: {query} on {self.database}!')
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+        with connection.cursor() as cur:
+            try:
+                cur.execute(query)
+                if ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
+                    response = Response(RESPONSE_TYPE.OK)
+                else:
+                    result = cur.fetchall()
                     response = Response(
-                        RESPONSE_TYPE.ERROR,
-                        error_code=0,
-                        error_message=str(e)
+                        RESPONSE_TYPE.TABLE,
+                        DataFrame(
+                            result,
+                            columns=[x.name for x in cur.description]
+                        )
                     )
+            except Exception as e:
+                log.error(f'Error running query: {query} on {self.database}!')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_code=0,
+                    error_message=str(e)
+                )
+
+        if need_to_close is True:
+            self.disconnect()
+
         return response
 
     def query(self, query: ASTNode) -> Response:

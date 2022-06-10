@@ -602,7 +602,7 @@ class ExecuteCommands:
                 handler_type=database_type,
                 connection_data=connection_args
             )
-            status = handler.check_status()
+            status = handler.check_connection()
         except Exception as e:
             status['error'] = str(e)
 
@@ -654,7 +654,7 @@ class ExecuteCommands:
                 if db_name == 'mindsdb':
                     self.session.datahub['mindsdb'].delete_predictor(table_name)
                 elif db_name == 'files':
-                    self.session.datahub['files'].select(
+                    self.session.datahub['files'].query(
                         DropTables(tables=[Identifier(table_name)])
                     )
         return ExecuteAnswer(ANSWER_TYPE.OK)

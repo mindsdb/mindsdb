@@ -25,8 +25,8 @@ class TrinoHandlerTest(unittest.TestCase):
         assert True
         print('Canary test ran successfully')
 
-    def test_1_check_status(self):
-        conn_status = self.handler.check_status()
+    def test_1_check_connection(self):
+        conn_status = self.handler.check_connection()
         print('Trino connection status: ', conn_status)
         assert conn_status.get('success')
 

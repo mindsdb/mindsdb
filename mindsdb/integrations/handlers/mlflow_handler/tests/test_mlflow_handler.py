@@ -56,14 +56,14 @@ class MLflowHandlerTest(unittest.TestCase):
         self.handler.describe_table(f'{self.registered_model_name}')
 
     def test_6_select_from(self):
-        self.assertTrue(self.data_handler.check_status())
+        self.assertTrue(self.data_handler.check_connection())
 
         query = f"SELECT target from {self.registered_model_name} WHERE text='This is nice.'"
         parsed = self.handler.parser(query, dialect=self.handler.dialect)
         predicted = self.handler.select_query(parsed)
 
     def test_7_join(self):
-        self.assertTrue(self.data_handler.check_status())
+        self.assertTrue(self.data_handler.check_connection())
 
         into_table = 'test_join_into_mlflow'
         query = f"SELECT tb.target as predicted, ta.target as real, tb.text from {self.sql_handler_name}.{self.data_table_name} AS ta JOIN {self.registered_model_name} AS tb LIMIT 10"

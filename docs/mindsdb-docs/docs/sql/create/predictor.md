@@ -207,6 +207,9 @@ On execution,
 Query OK, 0 rows affected (8.878 sec)
 ```
 
+!!! warning "Getting a prediction of a Time Series model"
+    Due to the nature of Time Series Forecasting you will need to use the [`#!sql JOIN`](/sql/api/join) statement to get results.
+
 ### Example
 
 ```sql

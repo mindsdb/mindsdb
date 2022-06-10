@@ -320,7 +320,7 @@ class SQLQuery():
         table_alias = get_table_alias(step.query.from_table, self.database)
         # TODO for information_schema we have 'database' = 'mindsdb'
 
-        data, columns_info = dn.select(
+        data, columns_info = dn.query(
             query=query
         )
 
@@ -622,7 +622,7 @@ class SQLQuery():
             dn = self.datahub.get(step.namespace)
             ds_query = Select(from_table=Identifier(table), targets=[Star()])
 
-            data, columns_info = dn.select(ds_query)
+            data, columns_info = dn.query(ds_query)
 
             table_alias = (self.database, table, table)
 
@@ -698,7 +698,7 @@ class SQLQuery():
                 dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
 
-                data = dn.select(
+                data = dn.query(
                     table=predictor,
                     columns=None,
                     where_data=where_data,
@@ -773,7 +773,7 @@ class SQLQuery():
                     columns[table_name] = [(c, c) for c in cols]
                     values = []
                 else:
-                    data = dn.select(
+                    data = dn.query(
                         table=predictor,
                         columns=None,
                         where_data=where_data,

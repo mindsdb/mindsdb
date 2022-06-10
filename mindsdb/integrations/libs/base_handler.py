@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any
+from typing import Optional, Any
 
 import pandas as pd
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -13,13 +13,18 @@ class BaseHandler:
     """
 
     def __init__(self, name: str):
+        """ constructor
+        Args:
+            name (str): the handler name
+        """
+        self.is_connected: bool = False
         self.name = name
 
     def connect(self, **kwargs) -> HandlerStatusResponse:
         """ Set up any connections required by the handler
 
-        Should return output of check_status() method after attempting
-        connection.
+        Should return output of check_connection() method after attempting
+        connection. Should switch self.is_connected.
 
         Args:
             **kwargs: Arbitrary keyword arguments.
@@ -29,7 +34,15 @@ class BaseHandler:
         """
         raise NotImplementedError()
 
-    def check_status(self) -> HandlerStatusResponse:
+    def disconnect(self):
+        """ Close any existing connections
+
+        Should switch self.is_connected.
+        """
+        self.is_connected = False
+        return
+
+    def check_connection(self) -> HandlerStatusResponse:
         """ Cehck connection to the handler
 
         Returns:

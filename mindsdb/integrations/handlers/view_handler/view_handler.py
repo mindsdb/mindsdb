@@ -1,6 +1,3 @@
-from contextlib import closing
-
-
 from pandas import DataFrame
 
 from mindsdb_sql import parse_sql
@@ -17,7 +14,7 @@ from mindsdb.integrations.libs.response import (
 
 class ViewHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the PostgreSQL statements.
+    This handler handles views
     """
     type = 'views'
 
@@ -25,7 +22,7 @@ class ViewHandler(DatabaseHandler):
         self.view_controller = kwargs['view_controller']
         super().__init__(name)
 
-    def check_status(self) -> StatusResponse:
+    def check_connection(self) -> StatusResponse:
         """
         Check the connection of the PostgreSQL database
         :return: success status and error message if error occurs
@@ -67,7 +64,7 @@ class ViewHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
+        List all views
         """
         views = self.view_controller.get_all()
         result = []

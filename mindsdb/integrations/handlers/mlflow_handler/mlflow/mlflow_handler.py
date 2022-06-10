@@ -47,9 +47,9 @@ class MLflowHandler(PredictiveHandler):
         self.mlflow_server_path = kwargs['model_registry_path']
         self.connection = MlflowClient(self.mlflow_server_url, self.mlflow_server_path)
         self.storage = SqliteStorageHandler(context=self.name, config=kwargs['config'])
-        return self.check_status()
+        return self.check_connection()
 
-    def check_status(self) -> Dict[str, int]:
+    def check_connection(self) -> Dict[str, int]:
         """ Checks that the connection is, as expected, an MlflowClient instance. """  # noqa
         # todo: as it stands this does not truly check if the connection is alive...
         try:
@@ -62,7 +62,6 @@ class MLflowHandler(PredictiveHandler):
         """ Returns list of model names (that have been succesfully linked with CREATE PREDICTOR) """  # noqa
         models = self.storage.get('models')
         return list(models.keys()) if models else []
-
 
     def describe_table(self, table_name: str) -> Dict:
         """ For getting standard info about a table. e.g. data types """  # noqa

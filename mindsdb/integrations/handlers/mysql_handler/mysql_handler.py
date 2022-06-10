@@ -28,50 +28,72 @@ class MySQLHandler(DatabaseHandler):
         self.mysql_url = None
         self.parser = parse_sql
         self.dialect = 'mysql'
-        connection_data = kwargs.get('connection_data')
-        self.host = connection_data.get('host')
-        self.port = connection_data.get('port')
-        self.user = connection_data.get('user')
-        self.database = connection_data.get('database')  # todo: may want a method to change active DB
-        self.password = connection_data.get('password')
-        self.ssl = connection_data.get('ssl')
-        self.ssl_ca = connection_data.get('ssl_ca')
-        self.ssl_cert = connection_data.get('ssl_cert')
-        self.ssl_key = connection_data.get('ssl_key')
+        self.connection_data = kwargs.get('connection_data')
 
-    def __connect(self):
+        self.connection = None
+        self.is_connected = False
+
+    def __del__(self):
+        if self.is_connected is True:
+            self.disconnect()
+
+    def connect(self):
+        if self.is_connected is True:
+            return self.connection
+
         config = {
-            "host": self.host,
-            "port": self.port,
-            "user": self.user,
-            "password": self.password
+            'host': self.connection_data.get('host'),
+            'port': self.connection_data.get('port'),
+            'user': self.connection_data.get('user'),
+            'password': self.connection_data.get('password'),
+            'database': self.connection_data.get('database')
         }
-        if self.ssl is True:
+
+        ssl = self.connection_data.get('ssl')
+        if ssl is True:
+            ssl_ca = self.connection_data.get('ssl_ca')
+            ssl_cert = self.connection_data.get('ssl_cert')
+            ssl_key = self.connection_data.get('ssl_key')
             config['client_flags'] = [mysql.connector.constants.ClientFlag.SSL]
-            if self.ssl_ca is not None:
-                config["ssl_ca"] = self.ssl_ca
-            if self.ssl_cert is not None:
-                config["ssl_cert"] = self.ssl_cert
-            if self.ssl_key is not None:
-                config["ssl_key"] = self.ssl_key
+            if ssl_ca is not None:
+                config["ssl_ca"] = ssl_ca
+            if ssl_cert is not None:
+                config["ssl_cert"] = ssl_cert
+            if ssl_key is not None:
+                config["ssl_key"] = ssl_key
 
         connection = mysql.connector.connect(**config)
-        return connection
+        self.is_connected = True
+        self.connection = connection
+        return self.connection
 
-    def check_status(self) -> StatusResponse:
+    def disconnect(self):
+        if self.is_connected is False:
+            return
+        self.connection.close()
+        return
+
+    def check_connection(self) -> StatusResponse:
         """
         Check the connection of the MySQL database
         :return: success status and error message if error occurs
         """
 
         result = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
         try:
-            con = self.__connect()
-            with closing(con) as con:
-                result.success = con.is_connected()
+            connection = self.connect()
+            result.success = connection.is_connected()
         except Exception as e:
             log.error(f'Error connecting to MySQL {self.database}, {e}!')
             result.error_message = str(e)
+
+        if result.success is True and need_to_close:
+            self.disconnect()
+        if result.success is False and self.is_connected is True:
+            self.is_connected = False
+
         return result
 
     def native_query(self, query: str) -> Response:
@@ -80,29 +102,34 @@ class MySQLHandler(DatabaseHandler):
         :param query: The SQL query to run in MySQL
         :return: returns the records from the current recordset
         """
-        con = self.__connect()
-        with closing(con) as con:
-            with con.cursor(dictionary=True, buffered=True) as cur:
-                try:
-                    cur.execute(f"USE {self.database};")
-                    cur.execute(query)
-                    if cur.with_rows:
-                        result = cur.fetchall()
-                        response = Response(
-                            RESPONSE_TYPE.TABLE,
-                            pd.DataFrame(
-                                result,
-                                columns=[x[0] for x in cur.description]
-                            )
-                        )
-                    else:
-                        response = Response(RESPONSE_TYPE.OK)
-                except Exception as e:
-                    log.error(f'Error running query: {query} on {self.database}!')
+
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+        with connection.cursor(dictionary=True, buffered=True) as cur:
+            try:
+                cur.execute(query)
+                if cur.with_rows:
+                    result = cur.fetchall()
                     response = Response(
-                        RESPONSE_TYPE.ERROR,
-                        error_message=str(e)
+                        RESPONSE_TYPE.TABLE,
+                        pd.DataFrame(
+                            result,
+                            columns=[x[0] for x in cur.description]
+                        )
                     )
+                else:
+                    response = Response(RESPONSE_TYPE.OK)
+            except Exception as e:
+                log.error(f'Error running query: {query} on {self.database}!')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(e)
+                )
+
+        if need_to_close is True:
+            self.disconnect()
+
         return response
 
     def query(self, query: ASTNode) -> Response:

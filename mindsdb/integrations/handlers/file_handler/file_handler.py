@@ -48,17 +48,16 @@ class FileHandler(DatabaseHandler):
         self.clean_rows = connection_data.get('clean_rows', True)
         self.file_controller = file_controller
 
-    def check_status(self) -> StatusResponse:
-        """
-        Check the connection of the PostgreSQL database
-        :return: success status and error message if error occurs
-        """
+    def connect(self, **kwargs):
+        return
+
+    def disconnect(self, **kwargs):
+        return
+
+    def check_connection(self) -> StatusResponse:
         return StatusResponse(True)
 
     def query(self, query: ASTNode) -> Response:
-        """
-        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
-        """
         if type(query) == DropTables:
             for table_identifier in query.tables:
                 if len(table_identifier.parts) == 2 and table_identifier.parts[0] != self.name:
@@ -91,11 +90,6 @@ class FileHandler(DatabaseHandler):
             )
 
     def native_query(self, query: str) -> Response:
-        """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in PostgreSQL
-        :return: returns the records from the current recordset
-        """
         ast = self.parser(query, dialect='mindsdb')
         return self.query(ast)
 

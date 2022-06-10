@@ -103,7 +103,7 @@ class Integration(Resource):
                 handler_type=db_type,
                 connection_data=params
             )
-            status = handler.check_status()
+            status = handler.check_connection()
             if temp_dir is not None:
                 shutil.rmtree(temp_dir)
             return status, 200

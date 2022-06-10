@@ -19,8 +19,8 @@ class MariaDBHandlerTest(unittest.TestCase):
     def test_0_connect(self):
         self.handler.connect()
 
-    def test_1_check_status(self):
-        assert self.handler.check_status()
+    def test_1_check_connection(self):
+        assert self.handler.check_connection()
 
     def test_2_native_query_show_dbs(self):
         dbs = self.handler.native_query("SHOW DATABASES;")
@@ -47,5 +47,3 @@ class MariaDBHandlerTest(unittest.TestCase):
     def test_7_select_query(self):
         query = "SELECT * FROM dt_test WHERE 'id'='a'"
         result = self.handler.select_query(query)
-
-    

@@ -30,7 +30,17 @@ class MySQLHandler(DatabaseHandler):
         self.dialect = 'mysql'
         self.connection_data = kwargs.get('connection_data')
 
+        self.connection = None
+        self.is_connected = False
+
+    def __del__(self):
+        if self.is_connected is True:
+            self.disconnect()
+
     def connect(self):
+        if self.is_connected is True:
+            return self.connection
+
         config = {
             'host': self.connection_data.get('host'),
             'port': self.connection_data.get('port'),
@@ -53,7 +63,15 @@ class MySQLHandler(DatabaseHandler):
                 config["ssl_key"] = ssl_key
 
         connection = mysql.connector.connect(**config)
-        return connection
+        self.is_connected = True
+        self.connection = connection
+        return self.connection
+
+    def disconnect(self):
+        if self.is_connected is False:
+            return
+        self.connection.close()
+        return
 
     def check_status(self) -> StatusResponse:
         """
@@ -62,13 +80,20 @@ class MySQLHandler(DatabaseHandler):
         """
 
         result = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
         try:
-            con = self.connect()
-            with closing(con) as con:
-                result.success = con.is_connected()
+            connection = self.connect()
+            result.success = connection.is_connected()
         except Exception as e:
             log.error(f'Error connecting to MySQL {self.database}, {e}!')
             result.error_message = str(e)
+
+        if result.success is True and need_to_close:
+            self.disconnect()
+        if result.success is False and self.is_connected is True:
+            self.is_connected = False
+
         return result
 
     def native_query(self, query: str) -> Response:
@@ -77,28 +102,34 @@ class MySQLHandler(DatabaseHandler):
         :param query: The SQL query to run in MySQL
         :return: returns the records from the current recordset
         """
-        con = self.connect()
-        with closing(con) as con:
-            with con.cursor(dictionary=True, buffered=True) as cur:
-                try:
-                    cur.execute(query)
-                    if cur.with_rows:
-                        result = cur.fetchall()
-                        response = Response(
-                            RESPONSE_TYPE.TABLE,
-                            pd.DataFrame(
-                                result,
-                                columns=[x[0] for x in cur.description]
-                            )
-                        )
-                    else:
-                        response = Response(RESPONSE_TYPE.OK)
-                except Exception as e:
-                    log.error(f'Error running query: {query} on {self.database}!')
+
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+        with connection.cursor(dictionary=True, buffered=True) as cur:
+            try:
+                cur.execute(query)
+                if cur.with_rows:
+                    result = cur.fetchall()
                     response = Response(
-                        RESPONSE_TYPE.ERROR,
-                        error_message=str(e)
+                        RESPONSE_TYPE.TABLE,
+                        pd.DataFrame(
+                            result,
+                            columns=[x[0] for x in cur.description]
+                        )
                     )
+                else:
+                    response = Response(RESPONSE_TYPE.OK)
+            except Exception as e:
+                log.error(f'Error running query: {query} on {self.database}!')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(e)
+                )
+
+        if need_to_close is True:
+            self.disconnect()
+
         return response
 
     def query(self, query: ASTNode) -> Response:

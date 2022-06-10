@@ -1,7 +1,3 @@
-from contextlib import closing
-
-import psycopg
-from psycopg.pq import ExecStatus
 from pandas import DataFrame
 
 from mindsdb_sql import parse_sql
@@ -19,7 +15,7 @@ from mindsdb.integrations.libs.response import (
 
 class ViewHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the PostgreSQL statements.
+    This handler handles views
     """
     type = 'views'
 
@@ -65,7 +61,7 @@ class ViewHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
+        List all views
         """
         views = self.view_controller.get_all()
         result = []

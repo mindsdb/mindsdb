@@ -93,8 +93,7 @@ installed and Python 64-bit version.
 
 ## Troubleshooting
 
-If the installation fails, don't worry; follow the below instruction, which should fix most issues. If none of this works, try using the [docker setup](/deployment/docker/) and create an issue with the installation errors you got on our [Github repository](https://github.com/mindsdb/mindsdb/issues). We'll try to review it and give you a response within a few hours.
-
+### Common Issues
 
 !!! failure "Installation fail"
     Note that **Python 64** bit version is required.
@@ -110,3 +109,9 @@ If the installation fails, don't worry; follow the below instruction, which shou
 
 !!! failure "pip command not found fail"
     Depending on your environment, you might have to use **pip3** instead of **pip**, and **python3.x** instead of **py** in the above commands e.g `#!console pip3 install mindsdb`
+
+### Still Having problems?
+
+Don't worry! Try to replicate the issue using the official [docker setup](/setup/self-hosted/docker/), and please create an issue on our [Github repository](https://github.com/mindsdb/mindsdb/issues) as detailed as possible.
+
+We'll review it and give you a response within a few hours.

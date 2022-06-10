@@ -1,3 +1,8 @@
+from mindsdb_sql import parse_sql
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql.parser.ast import Identifier
+from mindsdb_sql.planner.utils import query_traversal
+
 from mindsdb.interfaces.storage.db import session, Integration, View
 
 
@@ -15,8 +20,9 @@ class ViewController:
             raise Exception(f'View already exists: {name}')
 
         integration_records = session.query(Integration).filter_by(company_id=company_id).all()
-        integration_id = None
+
         if integration_name is not None:
+            integration_id = None
             for record in integration_records:
                 if record.name.lower() == integration_name.lower():
                     integration_id = record.id
@@ -24,26 +30,28 @@ class ViewController:
             if integration_id is None:
                 raise Exception(f"Can't find integration with name: {integration_name}")
 
-        view_record = View(name=name, company_id=company_id, query=query, integration_id=integration_id)
+            # inject integration into sql
+            query_ast = parse_sql(query, dialect='mindsdb')
+
+            def inject_integration(node, is_table, **kwargs):
+                if is_table and isinstance(node, Identifier):
+                    if not node.parts[0] == integration_name:
+                        node.parts.insert(0, integration_name)
+
+            query_traversal(query_ast, inject_integration)
+
+            render = SqlalchemyRender('mysql')
+            query = render.get_string(query_ast, with_failback=False)
+
+        view_record = View(name=name, company_id=company_id, query=query)
         session.add(view_record)
         session.commit()
 
     def _get_view_record_data(self, record):
 
-        integration_name = None
-        integration_id = record.integration_id
-
-        if record.integration_id is not None:
-            rec = session.query(Integration.name).filter_by(id=integration_id).first()
-            if rec is None:
-                raise Exception(f"Can't find integration id : {integration_id}")
-            integration_name = rec.name
-
         return {
             'name': record.name,
-            'query': record.query,
-            'integration_id': integration_id,
-            'integration_name': integration_name
+            'query': record.query
         }
 
     def get(self, id=None, name=None, company_id=None):

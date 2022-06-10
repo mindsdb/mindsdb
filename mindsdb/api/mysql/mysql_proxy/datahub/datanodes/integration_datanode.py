@@ -43,9 +43,6 @@ class IntegrationDataNode(DataNode):
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
 
-        if self.ds_type not in ('postgres', 'mysql', 'mariadb'):
-            raise Exception(f'At this moment is no possible to create table in "{self.ds_type}"')
-
         table_columns_meta = []
         table_columns = []
         for table in columns:
@@ -115,7 +112,7 @@ class IntegrationDataNode(DataNode):
             values=formatted_data
         )
 
-        self.integration_handler.native(insert_ast)
+        self.integration_handler.query(insert_ast)
 
     def query(self, query):
         result = self.integration_handler.query(query)

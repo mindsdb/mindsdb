@@ -48,7 +48,7 @@ class TrinoHandler(DatabaseHandler):
                                                   hostname_override=hostname_override)
 
     def connect(self, **kwargs) -> Dict[str, int]:
-        conn_status = self.check_status()
+        conn_status = self.check_connection()
         if conn_status.get('success'):
             return {'status': 200}
         return {'status': 503,
@@ -69,7 +69,7 @@ class TrinoHandler(DatabaseHandler):
         )
         return conn
 
-    def check_status(self) -> StatusResponse:
+    def check_connection(self) -> StatusResponse:
         """
         Check the connection of the Trino instance
         :return: success status and error message if error occurs

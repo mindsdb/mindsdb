@@ -48,7 +48,7 @@ class FileHandler(DatabaseHandler):
         self.clean_rows = connection_data.get('clean_rows', True)
         self.file_controller = file_controller
 
-    def check_status(self) -> StatusResponse:
+    def check_connection(self) -> StatusResponse:
         """
         Check the connection of the PostgreSQL database
         :return: success status and error message if error occurs

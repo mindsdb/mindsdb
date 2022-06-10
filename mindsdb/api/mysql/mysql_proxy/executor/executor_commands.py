@@ -604,7 +604,7 @@ class ExecuteCommands:
                 handler_type=database_type,
                 connection_data=connection_args
             )
-            status = handler.check_status()
+            status = handler.check_connection()
         except Exception as e:
             status['error'] = str(e)
 

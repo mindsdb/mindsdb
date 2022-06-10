@@ -36,7 +36,7 @@ class SqlServerHandler(DatabaseHandler):
         connection = pymssql.connect(**self.connection_args)
         return connection
 
-    def check_status(self) -> StatusResponse:
+    def check_connection(self) -> StatusResponse:
         """
         Check the connection of the SQL Server database
         :return: success status and error message if error occurs

@@ -18,7 +18,7 @@ class MySQLHandlerTest(unittest.TestCase):
         cls.handler = MySQLHandler('test_mysql_handler', **cls.kwargs)
 
     def test_0_connect(self):
-        self.handler.check_status()
+        self.handler.check_connection()
 
     def test_1_native_query_show_dbs(self):
         dbs = self.handler.native_query("SHOW DATABASES;")

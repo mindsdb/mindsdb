@@ -200,7 +200,7 @@ class IntegrationController:
                 handler_type=integration_meta.get('type'),
                 connection_data=integration_meta
             )
-            status = handler.check_status()
+            status = handler.check_connection()
             connections[integration_name] = status.get('success', False)
         return connections
 

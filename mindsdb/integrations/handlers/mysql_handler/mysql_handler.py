@@ -73,7 +73,7 @@ class MySQLHandler(DatabaseHandler):
         self.connection.close()
         return
 
-    def check_status(self) -> StatusResponse:
+    def check_connection(self) -> StatusResponse:
         """
         Check the connection of the MySQL database
         :return: success status and error message if error occurs

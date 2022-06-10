@@ -27,7 +27,7 @@ class ViewHandler(DatabaseHandler):
         self.view_controller = kwargs['view_controller']
         super().__init__(name)
 
-    def check_status(self) -> StatusResponse:
+    def check_connection(self) -> StatusResponse:
         """
         Check the connection of the PostgreSQL database
         :return: success status and error message if error occurs

@@ -15,8 +15,8 @@ class SqlServerHandlerTest(unittest.TestCase):
         }
         cls.handler = SqlServerHandler('test_sqlserver_handler', **cls.kwargs)
 
-    def test_0_check_status(self):
-        assert self.handler.check_status()
+    def test_0_check_connection(self):
+        assert self.handler.check_connection()
 
     def test_1_describe_table(self):
         described = self.handler.describe_table("home_rentals")

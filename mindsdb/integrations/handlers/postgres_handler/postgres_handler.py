@@ -33,10 +33,20 @@ class PostgresHandler(DatabaseHandler):
             self.connection_args['database']
         self.renderer = SqlalchemyRender('postgres')
 
-    def __connect(self):
+        self.connection = None
+        self.is_connected = False
+
+    def __del__(self):
+        if self.is_connected is True:
+            self.disconnect()
+
+    def connect(self):
         """
         Handles the connection to a PostgreSQL database insance.
         """
+        if self.is_connected is True:
+            return self.connection
+
         # TODO: Check psycopg_pool
         if self.connection_args.get('dbname') is None:
             self.connection_args['dbname'] = self.database
@@ -46,9 +56,12 @@ class PostgresHandler(DatabaseHandler):
             if key in args:
                 del args[key]
         connection = psycopg.connect(**args, connect_timeout=10)
-        return connection
 
-    def check_status(self) -> StatusResponse:
+        self.is_connected = True
+        self.connection = connection
+        return self.connection
+
+    def check_connection(self) -> StatusResponse:
         """
         Check the connection of the PostgreSQL database
         :return: success status and error message if error occurs

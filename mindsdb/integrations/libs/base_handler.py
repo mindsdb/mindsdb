@@ -23,7 +23,7 @@ class BaseHandler:
     def connect(self, **kwargs) -> HandlerStatusResponse:
         """ Set up any connections required by the handler
 
-        Should return output of check_status() method after attempting
+        Should return output of check_connection() method after attempting
         connection. Should switch self.is_connected.
 
         Args:
@@ -41,7 +41,7 @@ class BaseHandler:
         """
         raise NotImplementedError()
 
-    def check_status(self) -> HandlerStatusResponse:
+    def check_connection(self) -> HandlerStatusResponse:
         """ Cehck connection to the handler
 
         Returns:

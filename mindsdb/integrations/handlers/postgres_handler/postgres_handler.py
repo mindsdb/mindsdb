@@ -1,5 +1,3 @@
-from contextlib import closing
-
 import psycopg
 from psycopg.pq import ExecStatus
 from pandas import DataFrame

@@ -46,13 +46,24 @@ class TrinoHandler(DatabaseHandler):
                                                   principal=principal,
                                                   ca_bundle=ca_bundle,
                                                   hostname_override=hostname_override)
+        self.connection = None
+        self.is_connected = False
 
-    def connect(self, **kwargs) -> Dict[str, int]:
-        conn_status = self.check_connection()
-        if conn_status.get('success'):
-            return {'status': 200}
-        return {'status': 503,
-                'error': conn_status.get('error')}
+    def __del__(self):
+        if self.is_connected is True:
+            self.disconnect()
+
+    def connect(self, **kwargs):
+        if self.is_connected is True:
+            return self.connection
+
+        self.connection = self.__connect()
+        self.is_connected = True
+        return self.connection
+
+    def disconnect(self):
+        if self.is_connected is True:
+            self.disconnect()
 
     def __connect(self):
         """"
@@ -75,9 +86,11 @@ class TrinoHandler(DatabaseHandler):
         :return: success status and error message if error occurs
         """
         response = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
         try:
-            conn = self.__connect()
-            cur = conn.cursor()
+            connection = self.connect()
+            cur = connection.cursor()
             cur.execute("SELECT * FROM system.runtime.nodes")
             rows = cur.fetchall()
             print('trino nodes: ', rows)
@@ -87,7 +100,8 @@ class TrinoHandler(DatabaseHandler):
             response.error_message = str(e)
         finally:
             cur.close()
-            conn.close()
+            if need_to_close is True:
+                connection.close()
         return response
 
     def native_query(self, query: str) -> Response:
@@ -96,9 +110,11 @@ class TrinoHandler(DatabaseHandler):
         :param query: The SQL query to run in Trino
         :return: returns the records from the current recordset
         """
+        need_to_close = self.is_connected is False
+
         try:
-            conn = self.__connect()
-            cur = conn.cursor()
+            connection = self.connect()
+            cur = connection.cursor()
             result = cur.execute(query)
             if result:
                 response = Response(
@@ -118,7 +134,9 @@ class TrinoHandler(DatabaseHandler):
             )
         finally:
             cur.close()
-            conn.close()
+            if need_to_close is True:
+                self.disconnect()
+
         return response
 
     # TODO: complete the implementations

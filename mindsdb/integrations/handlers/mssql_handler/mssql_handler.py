@@ -29,12 +29,24 @@ class SqlServerHandler(DatabaseHandler):
         self.dialect = 'mssql'
         self.database = kwargs.get('database')
 
-    def __connect(self):
+        self.connection = None
+        self.is_connected = False
+
+    def __del__(self):
+        if self.is_connected is True:
+            self.disconnect()
+
+    def connect(self):
         """
         Handles the connection to a SQL Server insance.
         """
-        connection = pymssql.connect(**self.connection_args)
-        return connection
+        if self.is_connected is True:
+            return self.connection
+
+        self.connection = pymssql.connect(**self.connection_args)
+        self.is_connected = True
+
+        return self.connection
 
     def check_connection(self) -> StatusResponse:
         """
@@ -42,14 +54,20 @@ class SqlServerHandler(DatabaseHandler):
         :return: success status and error message if error occurs
         """
         response = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
         try:
-            con = self.__connect()
-            with closing(con) as con:
-                # TODO: best way to check con.connected ?
-                response.success = True
+            self.connect()
+            response.success = True
         except Exception as e:
             log.error(f'Error connecting to SQL Server {self.database}, {e}!')
             response.error_message = str(e)
+        finally:
+            if response.success is True and need_to_close:
+                self.disconnect()
+            if response.success is False and self.is_connected is True:
+                self.is_connected = False
+
         return response
 
     def native_query(self, query: str) -> Response:
@@ -58,28 +76,34 @@ class SqlServerHandler(DatabaseHandler):
         :param query: The SQL query to run in SQL Server
         :return: returns the records from the current recordset
         """
-        con = self.__connect()
-        with closing(con) as con:
-            with con.cursor(as_dict=True) as cur:
-                try:
-                    cur.execute(query)
-                    result = cur.fetchall()
-                    if result:
-                        response = Response(
-                            RESPONSE_TYPE.TABLE,
-                            data_frame=pd.DataFrame(
-                                result,
-                                columns=[x[0] for x in cur.description]
-                            )
-                        )
-                    else:
-                        response = Response(RESPONSE_TYPE.OK)
-                except Exception as e:
-                    log.error(f'Error running query: {query} on {self.database}!')
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+        # with closing(connection) as con:
+        with connection.cursor(as_dict=True) as cur:
+            try:
+                cur.execute(query)
+                result = cur.fetchall()
+                if result:
                     response = Response(
-                        RESPONSE_TYPE.ERROR,
-                        error_message=str(e)
+                        RESPONSE_TYPE.TABLE,
+                        data_frame=pd.DataFrame(
+                            result,
+                            columns=[x[0] for x in cur.description]
+                        )
                     )
+                else:
+                    response = Response(RESPONSE_TYPE.OK)
+            except Exception as e:
+                log.error(f'Error running query: {query} on {self.database}!')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(e)
+                )
+
+        if need_to_close is True:
+            self.disconnect()
+
         return response
 
     def query(self, query: ASTNode) -> Response:

@@ -39,7 +39,8 @@ class BaseHandler:
 
         Should switch self.is_connected.
         """
-        raise NotImplementedError()
+        self.is_connected = False
+        return
 
     def check_connection(self) -> HandlerStatusResponse:
         """ Cehck connection to the handler

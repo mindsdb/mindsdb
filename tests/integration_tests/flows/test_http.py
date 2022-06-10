@@ -14,7 +14,7 @@ from common import (
     make_test_csv,
     run_environment
 )
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 rand = randint(0, pow(10, 12))
 ds_name = f'hr_ds_{rand}'
@@ -402,6 +402,8 @@ class HTTPTest(unittest.TestCase):
         print(f'\nExecuting {inspect.stack()[0].function}')
         created_db_names = []
         for db_type, db_creds in self.sql_db_creds.items():
+            if db_type not in ['postgres', 'mysql', 'mariadb']:
+                continue
             queries = [
                 {
                     'create': 'CREATE DATASOURCE',

@@ -16,13 +16,14 @@ from lightwood import __version__ as lightwood_version
 
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
-from mindsdb.interfaces.storage.db import session, Predictor, Dataset
-from mindsdb.interfaces.datastore.datastore import DataStore
+from mindsdb.interfaces.storage.db import Integration, session, Predictor
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.log import log
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 ctx = mp.get_context('spawn')
@@ -167,7 +168,7 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
 
 @mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
-              delete_ds_on_fail: Optional[bool] = False, json_ai_override: dict = None) -> None:
+              json_ai_override: dict = None) -> None:
     if json_ai_override is None:
         json_ai_override = {}
     try:
@@ -175,15 +176,6 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
         run_fit(predictor_id, df)
     except Exception as e:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
-        if delete_ds_on_fail is True:
-            linked_db_ds = Dataset.query.filter_by(id=predictor_record.dataset_id).first()
-            if linked_db_ds is not None:
-                predictors_with_ds = Predictor.query.filter(
-                    (Predictor.id != predictor_id) & (Predictor.dataset_id == linked_db_ds.id)
-                ).all()
-                if len(predictors_with_ds) == 0:
-                    session.delete(linked_db_ds)
-                    predictor_record.dataset_id = None
 
         try:
             exception_type, _exception_object, exception_traceback = sys.exc_info()
@@ -203,26 +195,20 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
 
 
 @mark_process(name='learn')
-def run_update(name: str, company_id: int):
+def run_update(name: str, df: DataFrame, company_id: int):
     original_name = name
     name = f'{company_id}@@@@@{name}'
 
     fs_store = FsStore()
     config = Config()
-    data_store = WithKWArgsWrapper(DataStore(), company_id=company_id)
 
     try:
         predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
         assert predictor_record is not None
-
         predictor_record.update_status = 'updating'
-
         session.commit()
-        ds = data_store.get_datasource_obj(None, raw=False, id=predictor_record.dataset_id)
-        df = ds.df
 
         problem_definition = predictor_record.learn_args
-
         problem_definition['target'] = predictor_record.to_predict[0]
 
         if 'join_learn_process' in problem_definition:

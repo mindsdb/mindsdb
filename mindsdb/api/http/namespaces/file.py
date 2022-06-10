@@ -17,7 +17,7 @@ class FilesList(Resource):
     @ns_conf.doc('get_files_list')
     def get(self):
         '''List all files'''
-        return request.default_store.get_files()
+        return request.file_controller.get_files()
 
 
 @ns_conf.route('/<name>')
@@ -97,7 +97,7 @@ class File(Resource):
                 os.rmdir(temp_dir_path)
                 return http_error(400, 'Wrong content.', 'Archive must contain data file in root.')
 
-        request.default_store.save_file(mindsdb_file_name, file_path, file_name=original_file_name)
+        request.file_controller.save_file(mindsdb_file_name, file_path, file_name=original_file_name)
 
         os.rmdir(temp_dir_path)
 
@@ -108,7 +108,7 @@ class File(Resource):
         '''delete file'''
 
         try:
-            request.default_store.delete_file(name)
+            request.file_controller.delete_file(name)
         except Exception as e:
             log.error(e)
             return http_error(

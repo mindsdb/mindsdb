@@ -18,7 +18,6 @@ from lightwood import __version__ as lightwood_version
 import numpy as np
 import pandas as pd
 from pandas.core.frame import DataFrame
-import mindsdb_datasources
 
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
@@ -28,8 +27,9 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess, LearnRemoteProcess
-from mindsdb.interfaces.datastore.datastore import DataStore
-from mindsdb.interfaces.datastore.datastore import QueryDS
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 
 IS_PY36 = sys.version_info[1] <= 6
@@ -85,16 +85,19 @@ class ModelController():
         finally:
             self._unlock_predictor(id)
 
-    def _get_from_data_df(self, from_data: dict) -> DataFrame:
-        if from_data['class'] == 'QueryDS':
-            ds = QueryDS(*from_data['args'], **from_data['kwargs'])
-        else:
-            ds_cls = getattr(mindsdb_datasources, from_data['class'])
-            ds = ds_cls(*from_data['args'], **from_data['kwargs'])
-        return ds.df
+    # def _get_from_data_df(self, from_data: dict) -> DataFrame:
+    #     if from_data['class'] == 'QueryDS':
+    #         ds = QueryDS(*from_data['args'], **from_data['kwargs'])
+    #     else:
+    #         ds_cls = getattr(mindsdb_datasources, from_data['class'])
+    #         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
+    #     return ds.df
 
+    # def _unpack_old_args(
+    #     self, from_data: dict, kwargs: dict, to_predict: Optional[Union[str, list]] = None
+    # ) -> Tuple[pd.DataFrame, ProblemDefinition, bool]:
     def _unpack_old_args(
-        self, from_data: dict, kwargs: dict, to_predict: Optional[Union[str, list]] = None
+        self, kwargs: dict, to_predict: Optional[Union[str, list]] = None
     ) -> Tuple[pd.DataFrame, ProblemDefinition, bool]:
         problem_definition = kwargs or {}
         if isinstance(to_predict, str):
@@ -143,21 +146,23 @@ class ModelController():
         ):
             problem_definition['ignore_features'] = [problem_definition['ignore_features']]
 
-        if from_data is not None:
-            df = self._get_from_data_df(from_data)
-        else:
-            df = None
+        # if from_data is not None:
+        #     df = self._get_from_data_df(from_data)
+        # else:
+        #     df = None
 
-        return df, problem_definition, join_learn_process, json_ai_override
+        # return df, problem_definition, join_learn_process, json_ai_override
+        return problem_definition, join_learn_process, json_ai_override
 
     @mark_process(name='learn')
-    def learn(self, name: str, from_data: dict, to_predict: str, dataset_id: int, kwargs: dict,
-              company_id: int, delete_ds_on_fail: Optional[bool] = False, user_class=0) -> None:
+    def learn(self, name: str, training_data: DataFrame, to_predict: str,
+              integration_id: int = None, fetch_data_query: str = None,
+              kwargs: dict = {}, company_id: int = None, user_class: int = 0) -> None:
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         if predictor_record is not None:
             raise Exception('Predictor name must be unique.')
 
-        df, problem_definition, join_learn_process, json_ai_override = self._unpack_old_args(from_data, kwargs, to_predict)
+        problem_definition, join_learn_process, json_ai_override = self._unpack_old_args(kwargs, to_predict)
 
         is_cloud = self.config.get('cloud', False)
         if is_cloud is True:
@@ -174,7 +179,7 @@ class ModelController():
                         count += 1
                 if count == 2:
                     raise Exception('You can train no more than 2 models at the same time')
-            if user_class != 1 and len(df) > 10000:
+            if user_class != 1 and len(training_data) > 10000:
                 raise Exception('Datasets are limited to 10,000 rows on free accounts')
 
         if 'url' in problem_definition:
@@ -186,7 +191,7 @@ class ModelController():
             predictor_record = db.Predictor(
                 company_id=company_id,
                 name=name,
-                dataset_id=dataset_id,
+                # dataset_id=dataset_id,
                 mindsdb_version=mindsdb_version,
                 lightwood_version=lightwood_version,
                 to_predict=problem_definition['target'],
@@ -201,7 +206,7 @@ class ModelController():
             db.session.add(predictor_record)
             db.session.commit()
             if train_url is not None:
-                p = LearnRemoteProcess(df, predictor_record.id)
+                p = LearnRemoteProcess(training_data, predictor_record.id)
                 p.start()
                 if join_learn_process:
                     p.join()
@@ -215,7 +220,8 @@ class ModelController():
         predictor_record = db.Predictor(
             company_id=company_id,
             name=name,
-            dataset_id=dataset_id,
+            integration_id=integration_id,
+            fetch_data_query=fetch_data_query,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,
@@ -227,7 +233,7 @@ class ModelController():
         db.session.commit()
         predictor_id = predictor_record.id
 
-        p = LearnProcess(df, problem_definition, predictor_id, delete_ds_on_fail, json_ai_override)
+        p = LearnProcess(training_data, problem_definition, predictor_id, json_ai_override)
         p.start()
         if join_learn_process:
             p.join()
@@ -244,13 +250,9 @@ class ModelController():
         assert predictor_record is not None
         predictor_data = self.get_model_data(name, company_id)
 
-        if isinstance(when_data, dict) and 'kwargs' in when_data and 'args' in when_data:
-            ds_cls = getattr(mindsdb_datasources, when_data['class'])
-            df = ds_cls(*when_data['args'], **when_data['kwargs']).df
-        else:
-            if isinstance(when_data, dict):
-                when_data = [when_data]
-            df = pd.DataFrame(when_data)
+        if isinstance(when_data, dict):
+            when_data = [when_data]
+        df = pd.DataFrame(when_data)
 
         if predictor_record.is_custom:
             if predictor_data['format'] == 'mlflow':
@@ -363,9 +365,7 @@ class ModelController():
             return predictions
 
     @mark_process(name='analyse')
-    def analyse_dataset(self, ds: dict, company_id: int) -> lightwood.DataAnalysis:
-        ds_cls = getattr(mindsdb_datasources, ds['class'])
-        df = ds_cls(*ds['args'], **ds['kwargs']).df
+    def analyse_dataset(self, df: DataFrame, company_id: int) -> lightwood.DataAnalysis:
         analysis = lightwood.analyze_dataset(df)
         return analysis.to_dict()  # type: ignore
 
@@ -382,7 +382,7 @@ class ModelController():
         if predictor_record is None:
             raise Exception(f"Model does not exists: {original_name}")
 
-        linked_dataset = db.session.query(db.Dataset).get(predictor_record.dataset_id)
+        # linked_dataset = db.session.query(db.Dataset).get(predictor_record.dataset_id)
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -394,7 +394,7 @@ class ModelController():
         data['name'] = predictor_record.name
         data['code'] = predictor_record.code
         data['json_ai'] = predictor_record.json_ai
-        data['data_source_name'] = linked_dataset.name if linked_dataset else None
+        # data['data_source_name'] = linked_dataset.name if linked_dataset else None !!!!!
         data['problem_definition'] = predictor_record.learn_args
 
         # assume older models are complete, only temporary
@@ -435,7 +435,7 @@ class ModelController():
         model_description['column_importances'] = model_data['column_importances']
         model_description['outputs'] = [model_data['predict']]
         model_description['inputs'] = [col for col in model_data['dtype_dict'] if col not in model_description['outputs']]
-        model_description['datasource'] = model_data['data_source_name']
+        model_description['datasource'] = model_data.get('data_source_name')
         model_description['model'] = ' --> '.join(str(k) for k in model_data['json_ai'])
 
         return model_description
@@ -483,16 +483,6 @@ class ModelController():
             raise Exception('You are unable to delete models currently in progress, please wait before trying again')
 
         db.session.delete(db_p)
-        if db_p.dataset_id is not None:
-            try:
-                dataset_record = db.Datasource.query.get(db_p.dataset_id)
-                if (
-                    isinstance(dataset_record.data, str)
-                    and json.loads(dataset_record.data).get('source_type') != 'file'
-                ):
-                    DataStore().delete_datasource(dataset_record.name, company_id)
-            except Exception:
-                pass
         db.session.commit()
 
         # delete from s3
@@ -513,7 +503,17 @@ class ModelController():
         predictor_record.update_status = 'updating'
         db.session.commit()
 
-        p = UpdateProcess(name, company_id)
+        integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
+        integration_record = db.Integration.query.get(predictor_record.integration_id)
+        if integration_record is None:
+            raise Exception(f"There is no integration for predictor '{name}'")
+        integration_handler = integration_controller.get_handler(integration_record.name)
+
+        response = integration_handler.native_query(predictor_record.fetch_data_query)
+        if response['type'] != RESPONSE_TYPE.TABLE:
+            raise Exception("Can't fetch data for predictor training")
+
+        p = UpdateProcess(name, response['data_frame'], company_id)
         p.start()
         return 'Updated in progress'
 
@@ -531,7 +531,7 @@ class ModelController():
         predictor_record = db.Predictor(
             company_id=company_id,
             name=name,
-            dataset_id=dataset_id,
+            # dataset_id=dataset_id,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,
@@ -580,16 +580,18 @@ class ModelController():
 
     @mark_process(name='learn')
     def fit_predictor(self, name: str, from_data: dict, join_learn_process: bool, company_id: int) -> None:
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-        assert predictor_record is not None
+        # TODO
+        pass
+        # predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+        # assert predictor_record is not None
 
-        df = self._get_from_data_df(from_data)
-        p = FitProcess(predictor_record.id, df)
-        p.start()
-        if join_learn_process:
-            p.join()
-            if not IS_PY36:
-                p.close()
+        # df = self._get_from_data_df(from_data)
+        # p = FitProcess(predictor_record.id, df)
+        # p.start()
+        # if join_learn_process:
+        #     p.join()
+        #     if not IS_PY36:
+        #         p.close()
 
     def export_predictor(self, name: str, company_id: int) -> json:
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()

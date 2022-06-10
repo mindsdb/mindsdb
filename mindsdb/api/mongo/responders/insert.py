@@ -1,6 +1,7 @@
-from mindsdb.api.mongo.classes import Responder
-from mindsdb.interfaces.storage.db import session, Dataset
 import mindsdb.api.mongo.functions as helpers
+from mindsdb.api.mongo.classes import Responder
+from mindsdb.interfaces.storage.db import session
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 class Responce(Responder):
@@ -64,7 +65,7 @@ class Responce(Responder):
 
             kwargs = doc.get('training_options', {})
 
-            integrations = mindsdb_env['datasource_controller'].get_all().keys()
+            integrations = mindsdb_env['integration_controller'].get_all().keys()
             connection = doc.get('connection')
             if connection is None:
                 if 'default_mongodb' in integrations:
@@ -78,33 +79,25 @@ class Responce(Responder):
             if connection is None:
                 raise Exception("Can't find connection for data source")
 
-            ds_name = mindsdb_env['data_store'].get_vacant_name(doc['name'])
+            handler = mindsdb_env['integration_controller'].get_handler(connection)
+            result = handler.native_query(select_data_query)
 
-            select_data_query = select_data_query if isinstance(select_data_query, dict) else {'query': select_data_query}
-            ds = mindsdb_env['data_store'].save_datasource(
-                name=ds_name,
-                source_type=connection,
-                source=select_data_query
-            )
+            if result.type != RESPONSE_TYPE.TABLE:
+                raise Exception(f'Error during query: {result.error_message}')
+
+            ds_data_df = result.data_frame
+            ds_column_names = list(ds_data_df.columns)
 
             predict = doc['predict']
             if not isinstance(predict, list):
                 predict = [x.strip() for x in predict.split(',')]
 
-            ds_columns = [x['name'] for x in mindsdb_env['data_store'].get_datasource(ds_name)['columns']]
             for col in predict:
-                if col not in ds_columns:
-                    mindsdb_env['data_store'].delete_datasource(ds_name)
+                if col not in ds_column_names:
                     raise Exception(f"Column '{col}' not exists")
 
-            datasource_record = session.query(Dataset).filter_by(company_id=mindsdb_env['company_id'], name=ds_name).first()
             mindsdb_env['model_interface'].learn(
-                doc['name'],
-                ds,
-                predict,
-                datasource_record.id,
-                kwargs=dict(kwargs),
-                delete_ds_on_fail=True,
+                doc['name'], ds_data_df, predict, kwargs=dict(kwargs),
                 user_class=mindsdb_env.get('user_class', 0)
             )
 

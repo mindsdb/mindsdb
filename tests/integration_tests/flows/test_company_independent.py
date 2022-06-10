@@ -14,7 +14,6 @@ from common import (
 
 from http_test_helpers import (
     get_predictors_names_list,
-    get_datasources_names,
     get_integrations_names
 )
 
@@ -45,12 +44,6 @@ class CompanyIndependentTest(unittest.TestCase):
 
     def test_1_initial_state_http(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
-
-        # is no ds
-        datasources_a = get_datasources_names(company_id=CID_A)
-        datasources_b = get_datasources_names(company_id=CID_B)
-        self.assertTrue(len(datasources_a) == 0)
-        self.assertTrue(len(datasources_b) == 0)
 
         # is no predictors
         predictors_a = get_predictors_names_list(company_id=CID_A)
@@ -100,10 +93,8 @@ class CompanyIndependentTest(unittest.TestCase):
     def test_4_add_predictors_http(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
         params = {
-            'from': {
-                'datasource': 'test_integration_a',
-                'query': 'select * from test_data.home_rentals limit 50'
-            },
+            'integration': 'test_integration_a',
+            'query': 'select * from test_data.home_rentals limit 50',
             'to_predict': 'rental_price',
             'kwargs': {
                 'time_aim': 5,
@@ -125,10 +116,8 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(len(mongo_predictors_b) == 0)
 
         params = {
-            'from': {
-                'datasource': 'test_integration_a',
-                'query': 'select * from test_data.home_rentals limit 50'
-            },
+            'integration': 'test_integration_a',
+            'query': 'select * from test_data.home_rentals limit 50',
             'to_predict': 'rental_price',
             'kwargs': {
                 'time_aim': 5,
@@ -151,10 +140,8 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(len(mongo_predictors_b) == 0)
 
         params = {
-            'from': {
-                'datasource': 'test_integration_b',
-                'query': 'select * from test_data.home_rentals limit 50'
-            },
+            'integration': 'test_integration_b',
+            'query': 'select * from test_data.home_rentals limit 50',
             'to_predict': 'rental_price',
             'kwargs': {
                 'time_aim': 5,

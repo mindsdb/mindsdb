@@ -4,7 +4,8 @@ from flask_restx import Resource
 from flask import request
 
 from mindsdb.api.http.namespaces.configs.sql import ns_conf
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import FakeMysqlProxy, RESPONSE_TYPE as SQL_RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 import mindsdb.utilities.hooks as hooks
 
 
@@ -52,6 +53,7 @@ class Query(Resource):
                 'error_message': str(e)
             }
             error_traceback = traceback.format_exc()
+            print(error_traceback)
 
         if query_response.get('type') == SQL_RESPONSE_TYPE.ERROR:
             error_type = 'expected'

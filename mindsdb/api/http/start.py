@@ -9,13 +9,13 @@ from waitress import serve
 from flask import send_from_directory, request, current_app
 from flask_compress import Compress
 
-from mindsdb.api.http.namespaces.datasource import ns_conf as datasource_ns
 from mindsdb.api.http.namespaces.predictor import ns_conf as predictor_ns
 from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
+from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
@@ -56,13 +56,13 @@ def start(verbose, no_studio, with_nlp):
         else:
             return send_from_directory(static_root, 'index.html')
 
-    api.add_namespace(datasource_ns)
     api.add_namespace(predictor_ns)
     api.add_namespace(stream_ns)
     api.add_namespace(utils_ns)
     api.add_namespace(conf_ns)
     api.add_namespace(file_ns)
     api.add_namespace(sql_ns)
+    api.add_namespace(analysis_ns)
     if with_nlp:
         api.add_namespace(nlp_ns)
 
@@ -103,11 +103,6 @@ def start(verbose, no_studio, with_nlp):
         request.company_id = company_id
         request.user_class = user_class
 
-        request.default_store = WithKWArgsWrapper(
-            current_app.original_data_store,
-            company_id=company_id
-        )
-
         request.model_interface = WithKWArgsWrapper(
             current_app.original_model_interface,
             company_id=company_id
@@ -115,6 +110,11 @@ def start(verbose, no_studio, with_nlp):
 
         request.integration_controller = WithKWArgsWrapper(
             current_app.original_integration_controller,
+            company_id=company_id
+        )
+
+        request.file_controller = WithKWArgsWrapper(
+            current_app.original_file_controller,
             company_id=company_id
         )
 

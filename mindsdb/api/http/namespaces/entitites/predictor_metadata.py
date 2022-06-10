@@ -1,6 +1,4 @@
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
-from mindsdb.api.http.namespaces.entitites.data_preparation_metadata import data_preparation_metadata, EXAMPLE as PREPARATION_METADATA_EXAMPLE
-from mindsdb.api.http.namespaces.entitites.target_column_metadata import target_column_metadata  # , EXAMPLES as TARGET_COLUMN_METADATA_EXAMPLES
 from flask_restx import fields
 from collections import OrderedDict
 

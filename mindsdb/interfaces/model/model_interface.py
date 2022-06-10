@@ -57,6 +57,7 @@ class ModelInterface():
     def import_predictor(self, *args, **kwargs):
         return self.controller.import_predictor(*args, **kwargs)
 
+
 ray_based = False
 
 '''

@@ -34,7 +34,10 @@ class QueryAnalysis(Resource):
             ast.limit = Constant(limit)
             query = str(ast)
 
-        mysql_proxy = FakeMysqlProxy(company_id=request.company_id)
+        mysql_proxy = FakeMysqlProxy(
+            company_id=request.company_id,
+            user_class=request.user_class
+        )
         mysql_proxy.set_context(context)
 
         try:

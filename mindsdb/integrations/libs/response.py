@@ -2,10 +2,11 @@ from pandas import DataFrame
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
+from mindsdb_sql.parser.ast import ASTNode
 
 class HandlerResponse:
     def __init__(self, resp_type: RESPONSE_TYPE, data_frame: DataFrame = None,
-                 query: str = 0, error_code: int = 0, error_message: str = None) -> None:
+                 query: ASTNode = 0, error_code: int = 0, error_message: str = None) -> None:
         self.resp_type = resp_type
         self.query = query
         self.data_frame = data_frame

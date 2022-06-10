@@ -122,6 +122,8 @@ class IntegrationDataNode(DataNode):
 
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
+        if result.type == RESPONSE_TYPE.QUERY:
+            return result.query, None
         if result.type == RESPONSE_TYPE.OK:
             return
 

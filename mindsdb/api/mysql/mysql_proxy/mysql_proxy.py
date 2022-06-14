@@ -9,61 +9,24 @@
  *******************************************************
 """
 
-
 import os
 import sys
 import socketserver as SocketServer
 import ssl
 import traceback
-import json
 import atexit
 import tempfile
-import datetime
 import socket
 import struct
 from functools import partial
 import select
 import base64
-from typing import List, Dict, Optional
+from typing import List, Dict
 
-import pandas as pd
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import (
-    RollbackTransaction,
-    CommitTransaction,
-    StartTransaction,
-    BinaryOperation,
-    DropDatabase,
-    NullConstant,
-    CreateTable,
-    TableColumn,
-    Identifier,
-    DropTables,
-    Parameter,
-    Operation,
-    Describe,
-    Constant,
-    Function,
-    Explain,
-    Delete,
-    Insert,
-    Select,
-    Star,
-    Show,
-    Set,
-    Use
-)
-from mindsdb_sql.parser.dialects.mysql import Variable
-from mindsdb_sql.parser.dialects.mindsdb import (
-    CreateDatasource,
-    RetrainPredictor,
-    CreatePredictor,
-    DropDatasource,
-    DropPredictor,
-    CreateView
-)
+from numpy import dtype as np_dtype
+from pandas.api import types as pd_types
+from lightwood.api import dtype
 
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
@@ -72,34 +35,21 @@ from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapab
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.mysql.mysql_proxy.utilities import log
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    SqlApiException,
-    ErBadDbError,
-    ErBadTableError,
-    ErKeyColumnDoesNotExist,
-    ErTableExistError,
-    ErDubFieldName,
-    ErDbDropDelete,
-    ErNonInsertableTable,
-    ErNotSupportedYet,
-)
-from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
+
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
-    SQLQuery,
-)
+
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     getConstName,
     CHARSET_NUMBERS,
     ERR,
     COMMANDS,
     TYPES,
-    SERVER_VARIABLES,
     DEFAULT_AUTH_METHOD,
     SERVER_STATUS,
-    FIELD_FLAG,
     CAPABILITIES
 )
+
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     ErrPacket,
     HandshakePacket,
@@ -117,11 +67,12 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     STMTPrepareHeaderPacket,
     BinaryResultsetRowPacket
 )
-from mindsdb.interfaces.datastore.datastore import DataStore
+
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
-from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
+from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
+import mindsdb.utilities.hooks as hooks
 
 
 def empty_fn():
@@ -145,12 +96,13 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         integration = None
         integration_type = None
         extracted_username = username
-        integrations_names = IntegrationController().get_all(company_id).keys()
+        integration_controller = IntegrationController()
+        integrations_names = integration_controller.get_all(company_id).keys()
         for integration_name in integrations_names:
             if username == f'{hardcoded_user}_{integration_name}':
                 extracted_username = hardcoded_user
                 integration = integration_name
-                integration_type = IntegrationController().get(integration, company_id)['type']
+                integration_type = integration_controller.get(integration, company_id)['type']
 
         if extracted_username != hardcoded_user:
             log.warning(f'Check auth, user={username}: user mismatch')
@@ -177,16 +129,6 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         log.error(traceback.format_exc())
 
 
-class RESPONSE_TYPE:
-    __slots__ = ()
-    OK = 'ok'
-    TABLE = 'table'
-    ERROR = 'error'
-
-
-RESPONSE_TYPE = RESPONSE_TYPE()
-
-
 class SQLAnswer:
     def __init__(self, resp_type: RESPONSE_TYPE, columns: List[Dict] = None, data: List[Dict] = None,
                  status: int = None, state_track: List[List] = None, error_code: int = None, error_message: str = None):
@@ -207,8 +149,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     """
     The Main Server controller class
     """
-
-    predictor_attrs = ("model", "features", "ensemble")
 
     @staticmethod
     def server_close(srv):
@@ -375,1295 +315,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         string = b''.join([x.accum() for x in packages])
         self.socket.sendall(string)
 
-    def insert_predictor_answer(self, insert):
-        ''' Start learn new predictor.
-            Parameters:
-             - insert - dict with keys as columns of mindsb.predictors table.
-        '''
-        model_interface = self.session.model_interface
-        data_store = self.session.data_store
-
-        select_data_query = insert.get('select_data_query')
-        if isinstance(select_data_query, str) is False or len(select_data_query) == 0:
-            return SQLAnswer(
-                RESPONSE_TYPE.ERROR,
-                error_code=ERR.ER_WRONG_ARGUMENTS,
-                error_message="'select_data_query' should not be empty"
-            )
-
-        models = model_interface.get_models()
-        if insert['name'] in [x['name'] for x in models]:
-            return SQLAnswer(
-                RESPONSE_TYPE.ERROR,
-                error_code=ERR.ER_WRONG_ARGUMENTS,
-                error_message=f"predictor with name '{insert['name']}'' already exists"
-            )
-
-        kwargs = {}
-        if isinstance(insert.get('training_options'), str) \
-                and len(insert['training_options']) > 0:
-            try:
-                kwargs = json.loads(insert['training_options'])
-            except Exception:
-                return SQLAnswer(
-                    RESPONSE_TYPE.ERROR,
-                    error_code=ERR.ER_WRONG_ARGUMENTS,
-                    error_message='training_options should be in valid JSON string'
-                )
-
-        integration = self.session.integration
-        if isinstance(integration, str) is False or len(integration) == 0:
-            return SQLAnswer(
-                RESPONSE_TYPE.ERROR,
-                error_code=ERR.ER_WRONG_ARGUMENTS,
-                error_message='select_data_query can be used only in query from database'
-            )
-        insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-        ds_name = data_store.get_vacant_name(insert['name'])
-        ds = data_store.save_datasource(ds_name, integration, {'query': insert['select_data_query']})
-
-        insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
-
-        ds_data = data_store.get_datasource(ds_name)
-        if ds_data is None:
-            raise ErBadDbError(f"DataSource '{ds_name}' does not exists")
-        ds_columns = [x['name'] for x in ds_data['columns']]
-        for col in insert['predict']:
-            if col not in ds_columns:
-                data_store.delete_datasource(ds_name)
-                raise ErKeyColumnDoesNotExist(f"Column '{col}' not exists")
-
-        try:
-            insert['predict'] = self._check_predict_columns(insert['predict'], ds_columns)
-        except Exception:
-            data_store.delete_datasource(ds_name)
-            raise
-
-        model_interface.learn(
-            insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True
-        )
-
-        return SQLAnswer(RESPONSE_TYPE.OK)
-
-    def _check_predict_columns(self, predict_column_names, ds_column_names):
-        ''' validate 'predict' column names
-
-            predict_column_names: list of 'predict' columns
-            ds_column_names: list of all datasource columns
-        '''
-        cleaned_predict_column_names = []
-        for predict_column_name in predict_column_names:
-            candidate = None
-            for column_name in ds_column_names:
-                if column_name == predict_column_name:
-                    if candidate is not None:
-                        raise ErKeyColumnDoesNotExist("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
-                    candidate = column_name
-            if candidate is None:
-                for column_name in ds_column_names:
-                    if column_name.lower() == predict_column_name.lower():
-                        if candidate is not None:
-                            raise ErKeyColumnDoesNotExist("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
-                        candidate = column_name
-            if candidate is None:
-                raise ErKeyColumnDoesNotExist(f"Datasource has not column with name '{predict_column_name}'")
-            cleaned_predict_column_names.append(candidate)
-
-        if len(cleaned_predict_column_names) != len(set(cleaned_predict_column_names)):
-            raise ErDubFieldName("'predict' column name is duplicated")
-
-        return cleaned_predict_column_names
-
-    def _get_model_info(self, data):
-        models_data = data.get("submodel_data", [])
-        if models_data == []:
-            raise ErBadTableError("predictor doesn't contain enough data to generate 'model' attribute")
-        data = []
-        for model in models_data:
-            m_data = []
-            m_data.append(model["name"])
-            m_data.append(model["accuracy"])
-            m_data.append(model.get("training_time", "unknown"))
-            m_data.append(1 if model["is_best"] else 0)
-            data.append(m_data)
-        return data
-
-    def _get_features_info(self, data):
-        ai_info = data.get('json_ai', {})
-        if ai_info == {}:
-            raise ErBadTableError("predictor doesn't contain enough data to generate 'feature' attribute.")
-        data = []
-        dtype_dict = ai_info["dtype_dict"]
-        for column in dtype_dict:
-            c_data = []
-            c_data.append(column)
-            c_data.append(dtype_dict[column])
-            c_data.append(ai_info["encoders"][column]["module"])
-            if ai_info["encoders"][column]["args"].get("is_target", "False") == "True":
-                c_data.append("target")
-            else:
-                c_data.append("feature")
-            data.append(c_data)
-        return data
-
-    def _get_ensemble_data(self, data):
-        ai_info = data.get('json_ai', {})
-        if ai_info == {}:
-            raise ErBadTableError("predictor doesn't contain enough data to generate 'ensamble' attribute. Please wait until predictor is complete.")
-        ai_info_str = json.dumps(ai_info, indent=2)
-        return [[ai_info_str]]
-
-    def answer_describe_predictor(self, predictor_value):
-        predictor_attr = None
-        if isinstance(predictor_value, (list, tuple)):
-            predictor_name = predictor_value[0]
-            predictor_attr = predictor_value[1]
-        else:
-            predictor_name = predictor_value
-        model_interface = self.session.model_interface
-        models = model_interface.get_models()
-        if predictor_name not in [x['name'] for x in models]:
-            raise ErBadTableError(f"Can't describe predictor. There is no predictor with name '{predictor_name}'")
-        description = model_interface.get_model_description(predictor_name)
-
-        if predictor_attr is None:
-            columns = [{
-                'table_name': '',
-                'name': 'accuracies',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'column_importances',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': "outputs",
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'inputs',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'datasource',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'model',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }]
-            description = [
-                description['accuracies'],
-                description['column_importances'],
-                description['outputs'],
-                description['inputs'],
-                description['datasource'],
-                description['model']
-            ]
-            data = [description]
-        else:
-            data = model_interface.get_model_data(predictor_name)
-            if predictor_attr == "features":
-                data = self._get_features_info(data)
-                columns = [{
-                    'table_name': '',
-                    'name': 'column',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'type',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': "encoder",
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'role',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }]
-            elif predictor_attr == "model":
-                data = self._get_model_info(data)
-                columns = [{
-                    'table_name': '',
-                    'name': 'name',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'performance',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'training_time',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': "selected",
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }]
-            elif predictor_attr == "ensemble":
-                data = self._get_ensemble_data(data)
-                columns = [{
-                    'table_name': '',
-                    'name': 'ensemble',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }]
-            else:
-                raise ErNotSupportedYet("DESCRIBE '%s' predictor attribute is not supported yet" % predictor_attr)
-
-        return SQLAnswer(
-            resp_type=RESPONSE_TYPE.TABLE,
-            columns=columns,
-            data=data
-        )
-
-    def answer_retrain_predictor(self, predictor_name):
-        model_interface = self.session.model_interface
-        models = model_interface.get_models()
-        if predictor_name not in [x['name'] for x in models]:
-            raise ErBadTableError(f"Can't retrain predictor. There is no predictor with name '{predictor_name}'")
-        model_interface.update_model(predictor_name)
-        return SQLAnswer(RESPONSE_TYPE.OK)
-
-    def answer_create_datasource(self, struct: dict):
-        ''' create new datasource (integration in old terms)
-            Args:
-                struct: data for creating integration
-        '''
-        datasource_name = struct['datasource_name']
-        database_type = struct['database_type']
-        connection_args = struct['connection_args']
-        connection_args['type'] = database_type
-
-        # we have connection checkers not for any db. So do nothing if fail
-        # TODO return rich error message
-        connection_success = True
-        try:
-            checker_class = DB_CONNECTION_CHECKERS.get(database_type, None)
-            if checker_class is not None:
-                checker = checker_class(**connection_args)
-                connection_success = checker.check_connection()
-        except Exception:
-            pass
-        if connection_success is False:
-            raise SqlApiException("Can't connect to db")
-
-        integration = self.session.integration_controller.get(datasource_name)
-        if integration is not None:
-            raise SqlApiException(f"Database '{datasource_name}' already exists.")
-        self.session.integration_controller.add(datasource_name, connection_args)
-        return SQLAnswer(RESPONSE_TYPE.OK)
-
-    def answer_drop_tables(self, statement):
-        """ answer on 'drop table [if exists] {name}'
-            Args:
-                statement: ast
-        """
-        if statement.if_exists is False:
-            for table in statement.tables:
-                if len(table.parts) > 1:
-                    db_name = table.parts[0]
-                else:
-                    db_name = self.session.database
-                if db_name not in ['files', 'mindsdb']:
-                    raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
-                table_name = table.parts[-1]
-                dn = self.session.datahub[db_name]
-                if dn.has_table(table_name) is False:
-                    raise SqlApiException(f"Cannot delete a table from database '{db_name}': table does not exists")
-
-        for table in statement.tables:
-            if len(table.parts) > 1:
-                db_name = table.parts[0]
-            else:
-                db_name = self.session.database
-            if db_name not in ['files', 'mindsdb']:
-                raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
-            table_name = table.parts[-1]
-            dn = self.session.datahub[db_name]
-            if dn.has_table(table_name):
-                if db_name == 'mindsdb':
-                    self.session.datahub['mindsdb'].delete_predictor(table_name)
-                elif db_name == 'files':
-                    self.session.data_store.delete_file(table_name)
-        return SQLAnswer(RESPONSE_TYPE.OK)
-
-    def answer_drop_datasource(self, ds_name):
-        try:
-            ds = self.session.integration_controller.get(ds_name)
-            self.session.integration_controller.delete(ds['database_name'])
-        except Exception:
-            raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
-        return SQLAnswer(RESPONSE_TYPE.OK)
-
-    def answer_create_view(self, statement):
-        name = statement.name
-        query = str(statement.query_str)
-        datasource_name = statement.from_table.parts[-1]
-
-        self.session.view_interface.add(name, query, datasource_name)
-        return SQLAnswer(RESPONSE_TYPE.OK)
-
-    def answer_create_predictor(self, statement):
-        integration_name = None
-        struct = {
-            'predictor_name': statement.name.parts[-1],
-            'select': statement.query_str,
-            'predict': [x.parts[-1] for x in statement.targets]
-        }
-
-        if len(struct['predict']) > 1:
-            raise SqlApiException("Only one field can be in 'PREDICT'")
-        if isinstance(statement.integration_name, Identifier):
-            struct['integration_name'] = statement.integration_name.parts[-1]
-        if statement.using is not None:
-            struct['using'] = statement.using
-        if statement.datasource_name is not None:
-            struct['datasource_name'] = statement.datasource_name.parts[-1]
-        if statement.order_by is not None:
-            struct['order_by'] = [x.field.parts[-1] for x in statement.order_by]
-            if len(struct['order_by']) > 1:
-                raise SqlApiException("Only one field can be in 'ORDER BY'")
-        if statement.group_by is not None:
-            struct['group_by'] = [x.parts[-1] for x in statement.group_by]
-        if statement.window is not None:
-            struct['window'] = statement.window
-        if statement.horizon is not None:
-            struct['horizon'] = statement.horizon
-
-        model_interface = self.session.model_interface
-        data_store = self.session.data_store
-
-        models = model_interface.get_models()
-        model_names = [x['name'] for x in models]
-        if struct['predictor_name'] in model_names:
-            raise SqlApiException(f"Predictor with name '{struct['predictor_name']}' already exists. Each predictor must have unique name.")
-
-        predictor_name = struct['predictor_name']
-        integration_name = struct.get('integration_name')
-
-        if integration_name is not None:
-            if integration_name.lower().startswith('datasource.'):
-                ds_name = integration_name[integration_name.find('.') + 1:]
-                ds = data_store.get_datasource_obj(ds_name, raw=True)
-                ds_data = data_store.get_datasource(ds_name)
-            else:
-                if (
-                    self.session.integration_controller.get(integration_name) is None
-                    and integration_name not in ('views', 'files')
-                ):
-                    raise ErBadDbError(f"Unknown datasource: {integration_name}")
-
-                ds_name = struct.get('datasource_name')
-                if ds_name is None:
-                    ds_name = data_store.get_vacant_name(predictor_name)
-
-                ds_kwargs = {'query': struct['select']}
-                if integration_name in ('views', 'files'):
-                    parsed = parse_sql(struct['select'])
-                    query_table = parsed.from_table.parts[-1]
-                    if integration_name == 'files':
-                        ds_kwargs['mindsdb_file_name'] = query_table
-                    else:
-                        ds_kwargs['source'] = query_table
-                ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)
-                ds_data = data_store.get_datasource(ds_name)
-                ds_id = ds_data['id']
-
-            ds_column_names = [x['name'] for x in ds_data['columns']]
-            try:
-                predict = self._check_predict_columns(struct['predict'], ds_column_names)
-            except Exception as e:
-                data_store.delete_datasource(ds_name)
-                raise e
-
-            for i, p in enumerate(predict):
-                predict[i] = get_column_in_case(ds_column_names, p)
-        else:
-            ds = None
-            ds_id = None
-            predict = struct['predict']
-
-        timeseries_settings = {}
-        for w in ['order_by', 'group_by', 'window', 'horizon']:
-            if w in struct:
-                timeseries_settings[w] = struct.get(w)
-
-        kwargs = struct.get('using', {})
-        if len(timeseries_settings) > 0:
-            if 'timeseries_settings' not in kwargs:
-                kwargs['timeseries_settings'] = timeseries_settings
-            else:
-                if isinstance(kwargs.get('timeseries_settings'), str):
-                    kwargs['timeseries_settings'] = json.loads(kwargs['timeseries_settings'])
-                kwargs['timeseries_settings'].update(timeseries_settings)
-
-        # Cast all column names to same case
-        if isinstance(kwargs.get('timeseries_settings'), dict):
-            order_by = kwargs['timeseries_settings'].get('order_by')
-            if order_by is not None:
-                for i, col in enumerate(order_by):
-                    new_name = get_column_in_case(ds_column_names, col)
-                    if new_name is None:
-                        raise Exception(
-                            f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
-                        )
-                    kwargs['timeseries_settings']['order_by'][i] = new_name
-            group_by = kwargs['timeseries_settings'].get('group_by')
-            if group_by is not None:
-                for i, col in enumerate(group_by):
-                    new_name = get_column_in_case(ds_column_names, col)
-                    kwargs['timeseries_settings']['group_by'][i] = new_name
-                    if new_name is None:
-                        raise Exception(
-                            f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
-                        )
-
-        model_interface.learn(predictor_name, ds, predict, ds_id, kwargs=kwargs, delete_ds_on_fail=True)
-
-        return SQLAnswer(RESPONSE_TYPE.OK)
-
-    def delete_predictor_query(self, query):
-
-        query2 = Select(targets=[Identifier('name')],
-                        from_table=query.table,
-                        where=query.where)
-        # fake_sql = sql.strip(' ')
-        # fake_sql = 'select name ' + fake_sql[len('delete '):]
-        sqlquery = SQLQuery(
-            query2.to_string(),
-            session=self.session
-        )
-
-        result = sqlquery.fetch(
-            self.session.datahub
-        )
-
-        if result['success'] is False:
-            self.packet(
-                ErrPacket,
-                err_code=result['error_code'],
-                msg=result['msg']
-            ).send()
-            return
-
-        predictors_names = [x[0] for x in result['result']]
-
-        if len(predictors_names) == 0:
-            raise SqlApiException('nothing to delete')
-
-        for predictor_name in predictors_names:
-            self.session.datahub['mindsdb'].delete_predictor(predictor_name)
-
-    def handle_custom_command(self, command):
-        command = command.strip(' ;').split()
-
-        if command[0].lower() == 'delete' and command[1].lower() == 'predictor':
-            if len(command) != 3:
-                return SQLAnswer(
-                    RESPONSE_TYPE.ERROR,
-                    error_code=ERR.ER_SYNTAX_ERROR,
-                    error_message="wrong syntax of 'DELETE PREDICTOR {NAME}' command"
-                )
-            predictor_name = command[2]
-            self.delete_predictor_query(parse_sql(
-                f"delete from mindsdb.predictors where name = '{predictor_name}'",
-                'mindsdb'
-            ))
-            return SQLAnswer(RESPONSE_TYPE.OK)
-
-        return SQLAnswer(
-            RESPONSE_TYPE.ERROR,
-            error_code=ERR.ER_SYNTAX_ERROR,
-            error_message="at this moment only 'delete predictor' command supported"
-        )
-
-    def to_mysql_type(self, type_name):
-        if type_name == 'str':
-            return TYPES.MYSQL_TYPE_VAR_STRING
-
-        # unknown
-        return TYPES.MYSQL_TYPE_VAR_STRING
-
-    def answer_stmt_prepare(self, sql):
-        sqlquery = SQLQuery(
-            sql,
-            session=self.session,
-            execute=False
-        )
-
-        stmt_id = self.session.register_stmt(sqlquery)
-        prepared_stmt = self.session.prepared_stmts[stmt_id]
-
-        sqlquery.prepare_query()
-        parameters = sqlquery.parameters
-        columns_def = sqlquery.columns
-
-        statement = sqlquery.query
-        if isinstance(statement, Insert):
-            prepared_stmt['type'] = 'insert'
-
-            # ???
-            if (
-                len(statement.table.parts) > 1 and statement.table.parts[0].lower() != 'mindsdb'
-                or len(statement.table.parts) == 1 and self.session.database != 'mindsdb'
-            ):
-                raise ErNonInsertableTable("Only parametrized insert into table from 'mindsdb' database supported at this moment")
-            table_name = statement.table.parts[-1]
-            if table_name != 'predictors':
-                raise ErNonInsertableTable("Only parametrized insert into 'predictors' supported at this moment")
-
-            # new_statement = Select(
-            #     targets=statement.columns,
-            #     from_table=Identifier(parts=['mindsdb', table_name]),
-            #     limit=Constant(0)
-            # )
-
-            # parameters = []
-            # for row in statement.values:
-            #     for item in row:
-            #         if type(item) == Parameter:
-            #             num_params = num_params + 1
-            # num_columns = len(query.columns) - num_params
-
-            # ???
-            # if len(sqlquery.columns) != len(sqlquery.parameters):
-            #     raise ErNonInsertableTable("At this moment supported only insert where all values is parameters.")
-
-            columns_def = []
-            for col in sqlquery.columns:
-                col = col.copy()
-                col['charset'] = CHARSET_NUMBERS['binary']
-                columns_def.append(col)
-
-        elif isinstance(statement, Select) and statement.mode == 'FOR UPDATE':
-            # postgres when execute "delete from mindsdb.predictors where name = 'x'" sends for it prepare statement:
-            # 'select name from mindsdb.predictors where name = 'x' FOR UPDATE;'
-            # and after it send prepare for delete query.
-            prepared_stmt['type'] = 'lock'
-
-            # statement.cut_from_tail('for update')
-            # query = SQLQuery(statement.sql, session=self.session)
-            # num_columns = len(query.columns)
-            # parameters = []
-            for col in columns_def:
-                col['charset'] = CHARSET_NUMBERS['utf8_general_ci']
-
-        elif isinstance(statement, Delete):
-            prepared_stmt['type'] = 'delete'
-            #
-            # fake_sql = sql.replace('?', '"?"')
-            # fake_sql = 'select name ' + fake_sql[len('delete '):]
-            # query = SQLQuery(fake_sql, session=self.session)
-            # num_columns = 0
-            # num_params = sql.count('?')
-            columns_def = []
-            for col in sqlquery.parameters:
-                columns_def.append(dict(
-                    database='',
-                    table_alias='',
-                    table_name='',
-                    alias=col.name,
-                    name='',
-                    type=TYPES.MYSQL_TYPE_VAR_STRING,
-                    charset=CHARSET_NUMBERS['utf8_general_ci'],
-                    flags=sum([FIELD_FLAG.BINARY_COLLATION])
-                ))
-        # elif statement.keyword == 'select' and 'connection_id()' in sql.lower():
-        #     prepared_stmt['type'] = 'select'
-        #     num_columns = 1
-        #     parameters = []
-        #     columns_def = [{
-        #         'database': '',
-        #         'table_name': '',
-        #         'name': 'conn_id',
-        #         'alias': 'conn_id',
-        #         'type': TYPES.MYSQL_TYPE_LONG,
-        #         'charset': CHARSET_NUMBERS['binary']
-        #     }]
-        elif isinstance(statement, Select):
-            prepared_stmt['type'] = 'select'
-        #     query = SQLQuery(sql, session=self.session)
-        #     num_columns = len(query.columns)
-        #     parameters = []
-        #     columns_def = query.columns
-        elif isinstance(statement, Show) and statement.category in (
-            'variables', 'session variables', 'show session status'
-        ):
-            prepared_stmt['type'] = 'show variables'
-            num_columns = 2
-            parameters = []
-            columns_def = [{
-                'table_name': '',
-                'name': 'Variable_name',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }, {
-                'table_name': '',
-                'name': 'Value',
-                'type': TYPES.MYSQL_TYPE_VAR_STRING
-            }]
-        else:
-            raise SqlApiException(f"Only 'SELECT' and 'INSERT' statements supported. Got: {sql}")
-
-        packages = [
-            self.packet(
-                STMTPrepareHeaderPacket,
-                stmt_id=stmt_id,
-                num_columns=len(columns_def),
-                num_params=len(parameters)
-            )
-        ]
-
-        parameters_def = sqlquery.to_mysql_columns(parameters)
-        if len(parameters_def) > 0:
-            packages.extend(
-                self._get_column_defenition_packets(parameters_def)
-            )
-            if self.client_capabilities.DEPRECATE_EOF is False:
-                status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
-                packages.append(self.packet(EofPacket, status=status))
-
-        if len(columns_def) > 0:
-            packages.extend(
-                self._get_column_defenition_packets(columns_def)
-            )
-
-            if self.client_capabilities.DEPRECATE_EOF is False:
-                status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
-                packages.append(self.packet(EofPacket, status=status))
-
-        self.send_package_group(packages)
-
-    def answer_stmt_execute(self, stmt_id, parameters):
-        prepared_stmt = self.session.prepared_stmts[stmt_id]
-
-        sqlquery = prepared_stmt['statement']
-        sqlquery.execute_query(parameters)
-        query = sqlquery.query
-        if prepared_stmt['type'] == 'select':
-            # sql = prepared_stmt['statement'].sql
-
-            # +++
-
-            if query == Select(targets=[Function(op='connection_id', args=())]):
-                result = self.answer_connection_id()
-                self.send_query_answer(result)
-                return
-            # ---
-
-            # +++
-            # if "SELECT `table_name`, `column_name`" in sql:
-            #     # TABLEAU
-            #     # SELECT `table_name`, `column_name`
-            #     # FROM `information_schema`.`columns`
-            #     # WHERE `data_type`='enum' AND `table_schema`='mindsdb'
-            #     packages = self.get_tabel_packets(
-            #         columns=[{
-            #             'table_name': '',
-            #             'name': 'TABLE_NAME',
-            #             'type': TYPES.MYSQL_TYPE_VAR_STRING
-            #         }, {
-            #             'table_name': '',
-            #             'name': 'COLUMN_NAME',
-            #             'type': TYPES.MYSQL_TYPE_VAR_STRING
-            #         }],
-            #         data=[]
-            #     )
-            #     if self.client_capabilities.DEPRECATE_EOF is True:
-            #         packages.append(self.packet(OkPacket, eof=True))
-            #     else:
-            #         packages.append(self.packet(EofPacket))
-            #     self.send_package_group(packages)
-            #     return
-            # # ---
-
-            columns = sqlquery.columns
-            packages = [self.packet(ColumnCountPacket, count=len(columns))]
-            packages.extend(self._get_column_defenition_packets(columns))
-
-            packages.append(self.last_packet(status=0x0062))
-            self.send_package_group(packages)
-        elif prepared_stmt['type'] == 'insert':
-            # statement = parse_sql(prepared_stmt['statement'].sql, dialect='mindsdb')
-            # parameter_index = 0
-            # for row in query.values:
-            #     for item_index, item in enumerate(row):
-            #         if type(item) == Parameter:
-            #             row[item_index] = Constant(parameters[parameter_index])
-            #             parameter_index += 1
-            result = self.process_insert(query)
-            self.send_query_answer(result)
-            return
-        elif prepared_stmt['type'] == 'lock':
-            # sql = prepared_stmt['statement'].sql
-            # query = SQLQuery(sql, session=self.session)
-
-            columns = sqlquery.columns
-            packages = [self.packet(ColumnCountPacket, count=len(columns))]
-            packages.extend(self._get_column_defenition_packets(columns))
-
-            status = sum([
-                SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
-                SERVER_STATUS.SERVER_STATUS_CURSOR_EXISTS,
-            ])
-
-            packages.append(self.last_packet(status=status))
-            self.send_package_group(packages)
-        elif prepared_stmt['type'] == 'delete':
-            if len(parameters) == 0:
-                raise SqlApiException("Delete statement must content 'where' filter")
-            # sql = prepared_stmt['statement'].sql
-            # sql = sql[:sql.find('?')] + f"'{parameters[0]}'"
-            self.delete_predictor_query(query)
-            self.packet(OkPacket, affected_rows=1).send()
-        elif prepared_stmt['type'] == 'show variables':
-            # sql = prepared_stmt['statement'].sql
-
-            packages = []
-            packages += self.get_tabel_packets(
-                columns=[{
-                    'table_name': 'session_variables',
-                    'name': 'Variable_name',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': 'session_variables',
-                    'name': 'Value',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }],
-                data=[]
-            )
-
-            packages.append(self.last_packet())
-            self.send_package_group(packages)
-            return
-        else:
-            raise ErNotSupportedYet(f"Unknown statement type: {prepared_stmt['type']}")
-
-    def answer_stmt_fetch(self, stmt_id, limit=100000):
-        prepared_stmt = self.session.prepared_stmts[stmt_id]
-        # sql = prepared_stmt['statement'].sql
-        fetched = prepared_stmt['fetched']
-        # query = SQLQuery(sql, session=self.session)
-        sqlquery = prepared_stmt['statement']
-
-        result = sqlquery.fetch(
-            self.session.datahub
-        )
-
-        if result['success'] is False:
-            self.packet(
-                ErrPacket,
-                err_code=result['error_code'],
-                msg=result['msg']
-            ).send()
-            return
-
-        packages = []
-        columns = sqlquery.columns
-        for row in sqlquery.result[fetched:limit]:
-            packages.append(
-                self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
-            )
-
-        prepared_stmt['fetched'] += len(sqlquery.result[fetched:limit])
-
-        if len(sqlquery.result) <= limit:
-            status = sum([
-                SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
-                SERVER_STATUS.SERVER_STATUS_LAST_ROW_SENT,
-            ])
-        else:
-            status = sum([
-                SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
-                SERVER_STATUS.SERVER_STATUS_CURSOR_EXISTS,
-            ])
-
-        packages.append(self.last_packet(status=status))
-        self.send_package_group(packages)
-
     def answer_stmt_close(self, stmt_id):
         self.session.unregister_stmt(stmt_id)
-
-    def process_insert(self, statement):
-        db_name = self.session.database
-        if len(statement.table.parts) == 2:
-            db_name = statement.table.parts[0].lower()
-        table_name = statement.table.parts[-1].lower()
-        if db_name != 'mindsdb' or table_name != 'predictors':
-            raise ErNonInsertableTable("At this moment only insert to 'mindsdb.predictors' is possible")
-        column_names = []
-        for column_identifier in statement.columns:
-            if isinstance(column_identifier, Identifier):
-                if len(column_identifier.parts) != 1:
-                    raise ErKeyColumnDoesNotExist(f'Incorrect column name: {column_identifier}')
-                column_name = column_identifier.parts[0].lower()
-                column_names.append(column_name)
-            elif isinstance(column_identifier, TableColumn):
-                column_names.append(column_identifier.name)
-            else:
-                raise ErKeyColumnDoesNotExist(f'Incorrect column name: {column_identifier}')
-        if len(statement.values) > 1:
-            raise SqlApiException('At this moment only 1 row can be inserted.')
-        for row in statement.values:
-            values = []
-            for value in row:
-                values.append(value.value)
-            insert_dict = dict(zip(column_names, values))
-        return self.insert_predictor_answer(insert_dict)
-
-    def process_query(self, sql):
-        sql_lower = sql.lower()
-        sql_lower = sql_lower.replace('`', '')
-
-        # TODO
-        if sql_lower == "set names 'utf8mb4' collate 'utf8mb4_general_ci'":
-            return SQLAnswer(RESPONSE_TYPE.OK)
-        if sql_lower.startswith('alter table') and (sql_lower.endswith('disable keys') or sql_lower.endswith('enable keys')):
-            return SQLAnswer(RESPONSE_TYPE.OK)
-
-        try:
-            try:
-                statement = parse_sql(sql, dialect='mindsdb')
-            except Exception:
-                statement = parse_sql(sql, dialect='mysql')
-        except Exception as e:
-            # not all statemts are parse by parse_sql
-            log.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
-            lower_sql = sql.lower().replace('\t', ' ')
-
-            sql_list = [x for x in lower_sql.split(' ') if x not in ('', ' ')]
-            if len(sql_list) > 1 and sql_list[0] == "show":
-                raise SqlApiException(f"unknown command: {sql}")
-            if len(sql_list) > 2 and " ".join(sql_list[:2]) == "create predictor":
-                if 'predict' not in sql_list:
-                    raise SqlApiException(f"'predict' field is mandatory: {sql}")
-                # analyze predictor name
-                if not sql_list[2][0].isalpha():
-                    raise SqlApiException(f"predictor name must start from letter character: {sql}")
-
-            raise SqlApiException(f'SQL statement cannot be parsed by mindsdb_sql - {sql}: {e}') from e
-
-        if type(statement) == CreateDatasource:
-            struct = {
-                'datasource_name': statement.name,
-                'database_type': statement.engine.lower(),
-                'connection_args': statement.parameters
-            }
-            return self.answer_create_datasource(struct)
-        elif type(statement) == DropPredictor:
-            predictor_name = statement.name.parts[-1]
-            self.session.datahub['mindsdb'].delete_predictor(predictor_name)
-            return SQLAnswer(RESPONSE_TYPE.OK)
-        elif type(statement) == DropTables:
-            return self.answer_drop_tables(statement)
-        elif type(statement) == DropDatasource or type(statement) == DropDatabase:
-            ds_name = statement.name.parts[-1]
-            return self.answer_drop_datasource(ds_name)
-        elif type(statement) == Describe:
-            # NOTE in sql 'describe table' is same as 'show columns'
-            if statement.value.parts[-1] in self.predictor_attrs:
-                return self.answer_describe_predictor(statement.value.parts[-2:])
-            else:
-                return self.answer_describe_predictor(statement.value.parts[-1])
-        elif type(statement) == RetrainPredictor:
-            return self.answer_retrain_predictor(statement.name.parts[-1])
-        elif type(statement) == Show:
-            sql_category = statement.category.lower()
-            if sql_category == 'predictors':
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-                new_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors']),
-                    where=where
-                )
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
-            elif sql_category == 'columns':
-                return self.answer_show_columns(statement.from_table, statement.where, statement.like)
-            elif sql_category == 'views':
-                where = BinaryOperation('and', args=[
-                    BinaryOperation('=', args=[Identifier('table_schema'), Constant('views')]),
-                    BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
-                ])
-                if statement.where is not None:
-                    where = BinaryOperation('and', args=[where, statement.where])
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('View'), Constant(statement.like)])
-                    where = BinaryOperation('and', args=[where, like])
-
-                new_statement = Select(
-                    targets=[Identifier(parts=['table_name'], alias=Identifier('View'))],
-                    from_table=Identifier(parts=['information_schema', 'TABLES']),
-                    where=where
-                )
-
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
-            elif sql_category == 'plugins':
-                if statement.where is not None or statement.like:
-                    raise SqlApiException("'SHOW PLUGINS' query should be used without filters")
-                new_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(parts=['information_schema', 'PLUGINS'])
-                )
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
-            elif sql_category in ('databases', 'schemas'):
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('Database'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-
-                new_statement = Select(
-                    targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
-                    from_table=Identifier(parts=['information_schema', 'SCHEMATA']),
-                    where=where
-                )
-                if statement.where is not None:
-                    new_statement.where = statement.where
-
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
-            elif sql_category == 'datasources':
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-                new_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(parts=['mindsdb', 'datasources']),
-                    where=where
-                )
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
-            elif sql_category in ('tables', 'full tables'):
-                schema = self.session.database or 'mindsdb'
-                if statement.from_table is not None:
-                    schema = statement.from_table.parts[-1]
-                where = BinaryOperation('and', args=[
-                    BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
-                    BinaryOperation('or', args=[
-                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')]),
-                        BinaryOperation('like', args=[Identifier('table_type'), Constant('SYSTEM VIEW')])
-                    ])
-                ])
-                if statement.where is not None:
-                    where = BinaryOperation('and', args=[statement.where, where])
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier(f'Tables_in_{schema}'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-
-                new_statement = Select(
-                    targets=[Identifier(parts=['table_name'], alias=Identifier(f'Tables_in_{schema}'))],
-                    from_table=Identifier(parts=['information_schema', 'TABLES']),
-                    where=where
-                )
-
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
-            elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('Variable_name'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-
-                new_statement = Select(
-                    targets=[Identifier(parts=['Variable_name']), Identifier(parts=['Value'])],
-                    from_table=Identifier(parts=['dataframe']),
-                    where=where
-                )
-
-                data = {}
-                is_session = 'session' in sql_category
-                for var_name, var_data in SERVER_VARIABLES.items():
-                    var_name = var_name.replace('@@', '')
-                    if is_session and var_name.startswith('session.') is False:
-                        continue
-                    if var_name.startswith('session.') or var_name.startswith('GLOBAL.'):
-                        name = var_name.replace('session.', '').replace('GLOBAL.', '')
-                        data[name] = var_data[0]
-                    elif var_name not in data:
-                        data[var_name] = var_data[0]
-
-                df = pd.DataFrame(data.items(), columns=['Variable_name', 'Value'])
-                data = query_df(df, new_statement)
-                data = data.values.tolist()
-
-                columns = [{
-                    'table_name': 'session_variables',
-                    'name': 'Variable_name',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': 'session_variables',
-                    'name': 'Value',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }]
-
-                return SQLAnswer(
-                    resp_type=RESPONSE_TYPE.TABLE,
-                    columns=columns,
-                    data=data
-                )
-            elif "show status like 'ssl_version'" in sql_lower:
-                return SQLAnswer(
-                    resp_type=RESPONSE_TYPE.TABLE,
-                    columns=[{
-                        'table_name': 'session_variables',
-                        'name': 'Variable_name',
-                        'type': TYPES.MYSQL_TYPE_VAR_STRING
-                    }, {
-                        'table_name': 'session_variables',
-                        'name': 'Value',
-                        'type': TYPES.MYSQL_TYPE_VAR_STRING
-                    }],
-                    data=[['Ssl_version', 'TLSv1.1']]
-                )
-            elif sql_category in ('function status', 'procedure status'):
-                # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB';
-                # SHOW PROCEDURE STATUS WHERE Db = 'MINDSDB'
-                # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB' AND Name LIKE '%';
-                return self.answer_function_status()
-            elif sql_category == 'index':
-                new_statement = Select(
-                    targets=[
-                        Identifier('TABLE_NAME', alias=Identifier('Table')),
-                        Identifier('NON_UNIQUE', alias=Identifier('Non_unique')),
-                        Identifier('INDEX_NAME', alias=Identifier('Key_name')),
-                        Identifier('SEQ_IN_INDEX', alias=Identifier('Seq_in_index')),
-                        Identifier('COLUMN_NAME', alias=Identifier('Column_name')),
-                        Identifier('COLLATION', alias=Identifier('Collation')),
-                        Identifier('CARDINALITY', alias=Identifier('Cardinality')),
-                        Identifier('SUB_PART', alias=Identifier('Sub_part')),
-                        Identifier('PACKED', alias=Identifier('Packed')),
-                        Identifier('NULLABLE', alias=Identifier('Null')),
-                        Identifier('INDEX_TYPE', alias=Identifier('Index_type')),
-                        Identifier('COMMENT', alias=Identifier('Comment')),
-                        Identifier('INDEX_COMMENT', alias=Identifier('Index_comment')),
-                        Identifier('IS_VISIBLE', alias=Identifier('Visible')),
-                        Identifier('EXPRESSION', alias=Identifier('Expression'))
-                    ],
-                    from_table=Identifier(parts=['information_schema', 'STATISTICS']),
-                    where=statement.where
-                )
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
-            # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
-            elif 'show create table' in sql_lower:
-                # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
-                return self.answer_show_create_table(table)
-            elif sql_category in ('character set', 'charset'):
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('CHARACTER_SET_NAME'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-                new_statement = Select(
-                    targets=[
-                        Identifier('CHARACTER_SET_NAME', alias=Identifier('Charset')),
-                        Identifier('DEFAULT_COLLATE_NAME', alias=Identifier('Description')),
-                        Identifier('DESCRIPTION', alias=Identifier('Default collation')),
-                        Identifier('MAXLEN', alias=Identifier('Maxlen'))
-                    ],
-                    from_table=Identifier(parts=['INFORMATION_SCHEMA', 'CHARACTER_SETS']),
-                    where=where
-                )
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
-            elif sql_category == 'warnings':
-                return self.answer_show_warnings()
-            elif sql_category == 'engines':
-                new_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(parts=['information_schema', 'ENGINES'])
-                )
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
-            elif sql_category == 'collation':
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('Collation'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-                new_statement = Select(
-                    targets=[
-                        Identifier('COLLATION_NAME', alias=Identifier('Collation')),
-                        Identifier('CHARACTER_SET_NAME', alias=Identifier('Charset')),
-                        Identifier('ID', alias=Identifier('Id')),
-                        Identifier('IS_DEFAULT', alias=Identifier('Default')),
-                        Identifier('IS_COMPILED', alias=Identifier('Compiled')),
-                        Identifier('SORTLEN', alias=Identifier('Sortlen')),
-                        Identifier('PAD_ATTRIBUTE', alias=Identifier('Pad_attribute'))
-                    ],
-                    from_table=Identifier(parts=['INFORMATION_SCHEMA', 'COLLATIONS']),
-                    where=where
-                )
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
-            elif sql_category == 'table status':
-                # TODO improve it
-                # SHOW TABLE STATUS LIKE 'table'
-                table_name = None
-                if statement.like is not None:
-                    table_name = statement.like
-                # elif condition == 'from' and type(expression) == Identifier:
-                #     table_name = expression.parts[-1]
-                if table_name is None:
-                    err_str = f"Can't determine table name in query: {sql}"
-                    log.warning(err_str)
-                    raise ErTableExistError(err_str)
-                return self.answer_show_table_status(table_name)
-            else:
-                raise ErNotSupportedYet(f'Statement not implemented: {sql}')
-        elif type(statement) in (StartTransaction, CommitTransaction, RollbackTransaction):
-            return SQLAnswer(RESPONSE_TYPE.OK)
-        elif type(statement) == Set:
-            category = (statement.category or '').lower()
-            if category == '' and type(statement.arg) == BinaryOperation:
-                return SQLAnswer(RESPONSE_TYPE.OK)
-            elif category == 'autocommit':
-                return SQLAnswer(RESPONSE_TYPE.OK)
-            elif category == 'names':
-                # set names utf8;
-                charsets = {
-                    'utf8': CHARSET_NUMBERS['utf8_general_ci'],
-                    'utf8mb4': CHARSET_NUMBERS['utf8mb4_general_ci']
-                }
-                self.charset = statement.arg.parts[0]
-                self.charset_text_type = charsets.get(self.charset)
-                if self.charset_text_type is None:
-                    log.warning(f"Unknown charset: {self.charset}. Setting up 'utf8_general_ci' as charset text type.")
-                    self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
-                return SQLAnswer(
-                    RESPONSE_TYPE.OK,
-                    state_track=[
-                        ['character_set_client', self.charset],
-                        ['character_set_connection', self.charset],
-                        ['character_set_results', self.charset]
-                    ]
-                )
-            else:
-                log.warning(f'SQL statement is not processable, return OK package: {sql}')
-                return SQLAnswer(RESPONSE_TYPE.OK)
-        elif type(statement) == Use:
-            db_name = statement.value.parts[-1]
-            self.change_default_db(db_name)
-            return SQLAnswer(RESPONSE_TYPE.OK)
-        elif type(statement) == CreatePredictor:
-            return self.answer_create_predictor(statement)
-        elif type(statement) == CreateView:
-            return self.answer_create_view(statement)
-        elif type(statement) == Delete:
-            if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
-                raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
-            if statement.table.parts[-1] != 'predictors':
-                raise ErBadTableError("Only 'DELETE' from table 'mindsdb.predictors' is possible at this moment")
-            self.delete_predictor_query(statement)
-            return SQLAnswer(RESPONSE_TYPE.OK)
-        elif type(statement) == Insert:
-            return self.process_insert(statement)
-        elif type(statement) == Select:
-            if statement.from_table is None:
-                return self.answer_single_row_select(statement)
-            if "table_name,table_comment,if(table_type='base table', 'table', table_type)" in sql_lower:
-                # TABLEAU
-                # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA LIKE 'mindsdb' AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
-                # SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' )  ORDER BY TABLE_SCHEMA, TABLE_NAME
-                if "table_schema like 'mindsdb'" in sql_lower:
-                    data = [
-                        ['predictors', '', 'TABLE', 'mindsdb']
-                    ]
-                else:
-                    data = []
-                columns = [{
-                    'table_name': '',
-                    'name': 'TABLE_NAME',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'TABLE_COMMENT',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': "IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE)",
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'TABLE_SCHEMA',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }]
-                return SQLAnswer(
-                    resp_type=RESPONSE_TYPE.TABLE,
-                    columns=columns,
-                    data=[data]
-                )
-
-            query = SQLQuery(
-                sql,
-                session=self.session
-            )
-            return self.answer_select(query)
-        elif type(statement) == Explain:
-            # It target 'table' then same as 'show columns'
-            return self.answer_show_columns(statement.target)
-        elif type(statement) == CreateTable:
-            # TODO
-            return self.answer_apply_predictor(statement)
-        else:
-            log.warning(f'Unknown SQL statement: {sql}')
-            raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
 
     def send_query_answer(self, answer: SQLAnswer):
         if answer.type == RESPONSE_TYPE.TABLE:
@@ -1686,441 +339,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 msg=answer.error_message
             ).send()
 
-    def answer_show_columns(self, target: Identifier, where: Optional[Operation], like: Optional[str]) -> SQLAnswer:
-        if len(target.parts) > 1:
-            db = target.parts[0]
-        elif isinstance(self.session.database, str) and len(self.session.database) > 0:
-            db = self.session.database
-        else:
-            db = 'mindsdb'
-        table_name = target.parts[-1]
-
-        new_where = BinaryOperation('and', args=[
-            BinaryOperation('=', args=[Identifier('TABLE_SCHEMA'), Constant(db)]),
-            BinaryOperation('=', args=[Identifier('TABLE_NAME'), Constant(table_name)])
-        ])
-        if where is not None:
-            new_where = BinaryOperation('and', args=[new_where, where])
-        if like is not None:
-            like = BinaryOperation('like', args=[Identifier('View'), Constant(like)])
-            new_where = BinaryOperation('and', args=[new_where, like])
-
-        new_statement = Select(
-            targets=[
-                Identifier('COLUMN_NAME', alias=Identifier('Field')),
-                Identifier('COLUMN_TYPE', alias=Identifier('Type')),
-                Identifier('IS_NULLABLE', alias=Identifier('Null')),
-                Identifier('COLUMN_KEY', alias=Identifier('Key')),
-                Identifier('COLUMN_DEFAULT', alias=Identifier('Default')),
-                Identifier('EXTRA', alias=Identifier('Extra'))
-            ],
-            from_table=Identifier(parts=['information_schema', 'COLUMNS']),
-            where=new_where
-        )
-
-        query = SQLQuery(
-            new_statement,
-            session=self.session
-        )
-        return self.answer_select(query)
-
-    def answer_single_row_select(self, statement):
-        columns = []
-        data = []
-        for target in statement.targets:
-            target_type = type(target)
-            if target_type == Variable:
-                var_name = target.value
-                column_name = f'@@{var_name}'
-                column_alias = target.alias or column_name
-                result = SERVER_VARIABLES.get(column_name)
-                if result is None:
-                    log.warning(f'Unknown variable: {column_name}')
-                    result = ''
-                else:
-                    result = result[0]
-            elif target_type == Function:
-                functions_results = {
-                    'connection_id': self.connection_id,
-                    'database': self.session.database,
-                    'current_user': self.session.username,
-                    'user': self.session.username,
-                    'version': '8.0.17'
-                }
-                function_name = target.op.lower()
-                column_name = f'{target.op}()'
-                column_alias = target.alias or column_name
-                result = functions_results[function_name]
-            elif target_type == Constant:
-                result = target.value
-                column_name = str(result)
-                column_alias = '.'.join(target.alias.parts) if type(target.alias) == Identifier else column_name
-            elif target_type == NullConstant:
-                result = None
-                column_name = 'NULL'
-                column_alias = 'NULL'
-            elif target_type == Identifier:
-                result = '.'.join(target.parts)
-                column_name = str(result)
-                column_alias = '.'.join(target.alias.parts) if type(target.alias) == Identifier else column_name
-            else:
-                raise Exception(f'Unknown constant type: {target_type}')
-
-            columns.append({
-                'table_name': '',
-                'name': column_name,
-                'alias': column_alias,
-                'type': TYPES.MYSQL_TYPE_VAR_STRING if isinstance(result, str) else TYPES.MYSQL_TYPE_LONG,
-                'charset': self.charset_text_type if isinstance(result, str) else CHARSET_NUMBERS['binary']
-            })
-            data.append(result)
-
-        return SQLAnswer(
-            resp_type=RESPONSE_TYPE.TABLE,
-            columns=columns,
-            data=[data]
-        )
-
-    def answer_show_create_table(self, table):
-        columns = [{
-            'table_name': '',
-            'name': 'Table',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING
-        }, {
-            'table_name': '',
-            'name': 'Create Table',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING
-        }]
-        return SQLAnswer(
-            resp_type=RESPONSE_TYPE.TABLE,
-            columns=columns,
-            data=[[table, f'create table {table} ()']]
-        )
-
-    def answer_function_status(self):
-        columns = [{
-            'database': 'mysql',
-            'table_name': 'schemata',
-            'table_alias': 'ROUTINES',
-            'name': 'Db',
-            'alias': 'Db',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'name',
-            'alias': 'name',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'Type',
-            'alias': 'Type',
-            'type': TYPES.MYSQL_TYPE_STRING,
-            'charset': CHARSET_NUMBERS['utf8_bin']
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'Definer',
-            'alias': 'Definer',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': CHARSET_NUMBERS['utf8_bin']
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'Modified',
-            'alias': 'Modified',
-            'type': TYPES.MYSQL_TYPE_TIMESTAMP,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'Created',
-            'alias': 'Created',
-            'type': TYPES.MYSQL_TYPE_TIMESTAMP,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'Security_type',
-            'alias': 'Security_type',
-            'type': TYPES.MYSQL_TYPE_STRING,
-            'charset': CHARSET_NUMBERS['utf8_bin']
-        }, {
-            'database': 'mysql',
-            'table_name': 'routines',
-            'table_alias': 'ROUTINES',
-            'name': 'Comment',
-            'alias': 'Comment',
-            'type': TYPES.MYSQL_TYPE_BLOB,
-            'charset': CHARSET_NUMBERS['utf8_bin']
-        }, {
-            'database': 'mysql',
-            'table_name': 'character_sets',
-            'table_alias': 'ROUTINES',
-            'name': 'character_set_client',
-            'alias': 'character_set_client',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': 'mysql',
-            'table_name': 'collations',
-            'table_alias': 'ROUTINES',
-            'name': 'collation_connection',
-            'alias': 'collation_connection',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': 'mysql',
-            'table_name': 'collations',
-            'table_alias': 'ROUTINES',
-            'name': 'Database Collation',
-            'alias': 'Database Collation',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }]
-        return SQLAnswer(
-            resp_type=RESPONSE_TYPE.TABLE,
-            columns=columns,
-            data=[]
-        )
-
-    def answer_show_table_status(self, table_name):
-        # NOTE at this moment parsed statement only like `SHOW TABLE STATUS LIKE 'table'`.
-        # NOTE some columns has {'database': 'mysql'}, other not. That correct. This is how real DB sends messages.
-        columns = [{
-            'database': 'mysql',
-            'table_name': 'tables',
-            'name': 'Name',
-            'alias': 'Name',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Engine',
-            'alias': 'Engine',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Version',
-            'alias': 'Version',
-            'type': TYPES.MYSQL_TYPE_LONGLONG,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': 'mysql',
-            'table_name': 'tables',
-            'name': 'Row_format',
-            'alias': 'Row_format',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Rows',
-            'alias': 'Rows',
-            'type': TYPES.MYSQL_TYPE_LONGLONG,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Avg_row_length',
-            'alias': 'Avg_row_length',
-            'type': TYPES.MYSQL_TYPE_LONGLONG,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Data_length',
-            'alias': 'Data_length',
-            'type': TYPES.MYSQL_TYPE_LONGLONG,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Max_data_length',
-            'alias': 'Max_data_length',
-            'type': TYPES.MYSQL_TYPE_LONGLONG,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Index_length',
-            'alias': 'Index_length',
-            'type': TYPES.MYSQL_TYPE_LONGLONG,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Data_free',
-            'alias': 'Data_free',
-            'type': TYPES.MYSQL_TYPE_LONGLONG,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Auto_increment',
-            'alias': 'Auto_increment',
-            'type': TYPES.MYSQL_TYPE_LONGLONG,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Create_time',
-            'alias': 'Create_time',
-            'type': TYPES.MYSQL_TYPE_TIMESTAMP,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Update_time',
-            'alias': 'Update_time',
-            'type': TYPES.MYSQL_TYPE_TIMESTAMP,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Check_time',
-            'alias': 'Check_time',
-            'type': TYPES.MYSQL_TYPE_TIMESTAMP,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': 'mysql',
-            'table_name': 'tables',
-            'name': 'Collation',
-            'alias': 'Collation',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Checksum',
-            'alias': 'Checksum',
-            'type': TYPES.MYSQL_TYPE_LONGLONG,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Create_options',
-            'alias': 'Create_options',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': '',
-            'table_name': 'tables',
-            'name': 'Comment',
-            'alias': 'Comment',
-            'type': TYPES.MYSQL_TYPE_BLOB,
-            'charset': self.charset_text_type
-        }]
-        data = [[
-            table_name,     # Name
-            'InnoDB',       # Engine
-            10,             # Version
-            'Dynamic',      # Row_format
-            1,              # Rows
-            16384,          # Avg_row_length
-            16384,          # Data_length
-            0,              # Max_data_length
-            0,              # Index_length
-            0,              # Data_free
-            None,           # Auto_increment
-            datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),  # Create_time
-            datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),  # Update_time
-            None,           # Check_time
-            'utf8mb4_0900_ai_ci',   # Collation
-            None,           # Checksum
-            '',             # Create_options
-            ''              # Comment
-        ]]
-        return SQLAnswer(
-            resp_type=RESPONSE_TYPE.TABLE,
-            columns=columns,
-            data=data
-        )
-
-    def answer_show_warnings(self):
-        columns = [{
-            'database': '',
-            'table_name': '',
-            'name': 'Level',
-            'alias': 'Level',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }, {
-            'database': '',
-            'table_name': '',
-            'name': 'Code',
-            'alias': 'Code',
-            'type': TYPES.MYSQL_TYPE_LONG,
-            'charset': CHARSET_NUMBERS['binary']
-        }, {
-            'database': '',
-            'table_name': '',
-            'name': 'Message',
-            'alias': 'Message',
-            'type': TYPES.MYSQL_TYPE_VAR_STRING,
-            'charset': self.charset_text_type
-        }]
-        return SQLAnswer(
-            resp_type=RESPONSE_TYPE.TABLE,
-            columns=columns,
-            data=[]
-        )
-
-    def answer_connection_id(self):
-        columns = [{
-            'database': '',
-            'table_name': '',
-            'name': 'conn_id',
-            'alias': 'conn_id',
-            'type': TYPES.MYSQL_TYPE_LONG,
-            'charset': CHARSET_NUMBERS['binary']
-        }]
-        data = [[self.connection_id]]
-        return SQLAnswer(
-            resp_type=RESPONSE_TYPE.TABLE,
-            columns=columns,
-            data=data
-        )
-
-    def answer_apply_predictor(self, statement):
-        SQLQuery(
-            statement,
-            session=self.session,
-            execute=True
-        )
-        return SQLAnswer(RESPONSE_TYPE.OK)
-
-    def answer_select(self, query):
-        result = query.fetch(
-            self.session.datahub
-        )
-
-        if result['success'] is False:
-            return SQLAnswer(
-                RESPONSE_TYPE.ERROR,
-                error_code=result['error_code'],
-                error_message=result['msg']
-            )
-
-        return SQLAnswer(
-            resp_type=RESPONSE_TYPE.TABLE,
-            columns=query.columns,
-            data=query.result
-        )
-
-    def _get_column_defenition_packets(self, columns, data=[]):
+    def _get_column_defenition_packets(self, columns, data=None):
+        if data is None:
+            data = []
         packets = []
         for i, column in enumerate(columns):
             table_name = column.get('table_name', 'table_name')
@@ -2187,14 +408,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             connection. '0000' selected because in real mysql connection it should be lenght of package,
             and it can not be 0.
         '''
-        if sys.platform != 'linux':
+        config = Config()
+        is_cloud = config.get('cloud', False)
+
+        if sys.platform != 'linux' or is_cloud is False:
             return {
                 'is_cloud': False
             }
 
         read_poller = select.poll()
         read_poller.register(self.request, select.POLLIN)
-        events = read_poller.poll(0)
+        events = read_poller.poll(7)
 
         if len(events) == 0:
             return {
@@ -2210,6 +434,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             company_id = self.request.recv(4)
             company_id = struct.unpack('I', company_id)[0]
 
+            user_class = self.request.recv(1)
+            user_class = struct.unpack('B', user_class)[0]
+
             database_name_len = self.request.recv(2)
             database_name_len = struct.unpack('H', database_name_len)[0]
 
@@ -2221,6 +448,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'is_cloud': True,
                 'client_capabilities': client_capabilities,
                 'company_id': company_id,
+                'user_class': user_class,
                 'database': database_name
             }
 
@@ -2228,31 +456,202 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'is_cloud': False
         }
 
-    def is_db_exists(self, db_name):
-        sql_statement = Select(
-            targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
-            from_table=Identifier(parts=['information_schema', 'SCHEMATA']),
-            where=BinaryOperation('=', args=[Identifier('schema_name'), Constant(db_name)])
-        )
-        query = SQLQuery(
-            sql_statement,
-            session=self.session
-        )
-        result = query.fetch(
-            self.session.datahub
-        )
-        if result.get('success') is True and len(result.get('result')) > 0:
-            return True
-        return False
+    # --------------
 
-    def change_default_db(self, db_name):
-        # That fix for bug in mssql: it keeps connection for a long time, but after some time mssql can
-        # send packet with COM_INIT_DB=null. In this case keep old database name as default.
-        if db_name != 'null':
-            if self.is_db_exists(db_name):
-                self.session.database = db_name
-            else:
-                raise ErBadDbError(f"Database {db_name} does not exists")
+    def to_mysql_columns(self, columns_list):
+
+        result = []
+
+        database = None if self.session.database == '' else self.session.database.lower()
+        for column_record in columns_list:
+
+            field_type = column_record.type
+
+            column_type = TYPES.MYSQL_TYPE_VAR_STRING
+            # is already in mysql protocol type?
+            if isinstance(field_type, int):
+                column_type = field_type
+            # pandas checks
+            elif isinstance(field_type, np_dtype):
+                if pd_types.is_integer_dtype(field_type):
+                    column_type = TYPES.MYSQL_TYPE_LONG
+                elif pd_types.is_numeric_dtype(field_type):
+                    column_type = TYPES.MYSQL_TYPE_DOUBLE
+                elif pd_types.is_datetime64_any_dtype(field_type):
+                    column_type = TYPES.MYSQL_TYPE_DATETIME
+            # lightwood checks
+            elif field_type == dtype.date:
+                column_type = TYPES.MYSQL_TYPE_DATE
+            elif field_type == dtype.datetime:
+                column_type = TYPES.MYSQL_TYPE_DATETIME
+            elif field_type == dtype.float:
+                column_type = TYPES.MYSQL_TYPE_DOUBLE
+            elif field_type == dtype.integer:
+                column_type = TYPES.MYSQL_TYPE_LONG
+
+            result.append({
+                'database': column_record.database or database,
+                #  TODO add 'original_table'
+                'table_name': column_record.table_name,
+                'name': column_record.name,
+                'alias': column_record.alias or column_record.name,
+                # NOTE all work with text-type, but if/when wanted change types to real,
+                # it will need to check all types casts in BinaryResultsetRowPacket
+                'type': column_type
+            })
+        return result
+
+    def process_query(self, sql):
+        executor = Executor(
+            session=self.session,
+            sqlserver=self
+        )
+
+        executor.query_execute(sql)
+
+        if executor.error is not None:
+            resp = SQLAnswer(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_code=executor.error['code'],
+                error_message=executor.error['message']
+            )
+        elif executor.data is None:
+            resp = SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=executor.state_track,
+            )
+        else:
+            resp = SQLAnswer(
+                resp_type=RESPONSE_TYPE.TABLE,
+                state_track=executor.state_track,
+                columns=self.to_mysql_columns(executor.columns),
+                data=executor.data,
+                status=executor.server_status
+            )
+        return resp
+
+    def answer_stmt_prepare(self, sql):
+        executor = Executor(
+            session=self.session,
+            sqlserver=self
+        )
+        stmt_id = self.session.register_stmt(executor)
+
+        executor.stmt_prepare(sql)
+
+        packages = [
+            self.packet(
+                STMTPrepareHeaderPacket,
+                stmt_id=stmt_id,
+                num_columns=len(executor.columns),
+                num_params=len(executor.params)
+            )
+        ]
+
+        if len(executor.params) > 0:
+            parameters_def = self.to_mysql_columns(executor.params)
+            packages.extend(
+                self._get_column_defenition_packets(parameters_def)
+            )
+            if self.client_capabilities.DEPRECATE_EOF is False:
+                status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
+                packages.append(self.packet(EofPacket, status=status))
+
+        if len(executor.columns) > 0:
+            columns_def = self.to_mysql_columns(executor.columns)
+            packages.extend(
+                self._get_column_defenition_packets(columns_def)
+            )
+
+            if self.client_capabilities.DEPRECATE_EOF is False:
+                status = sum([SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT])
+                packages.append(self.packet(EofPacket, status=status))
+
+        self.send_package_group(packages)
+
+    def answer_stmt_execute(self, stmt_id, parameters):
+        prepared_stmt = self.session.prepared_stmts[stmt_id]
+        executor = prepared_stmt['statement']
+
+        executor.stmt_execute(parameters)
+
+        if executor.error is not None:
+            resp = SQLAnswer(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_code=executor.error['code'],
+                error_message=executor.error['message']
+            )
+            return self.send_query_answer(resp)
+
+        elif executor.data is None:
+            resp = SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=executor.state_track
+            )
+            return self.send_query_answer(resp)
+
+        # TODO prepared_stmt['type'] == 'lock' is not used but it works
+        columns_def = self.to_mysql_columns(executor.columns)
+        packages = [self.packet(ColumnCountPacket, count=len(columns_def))]
+
+        packages.extend(self._get_column_defenition_packets(columns_def))
+
+        if self.client_capabilities.DEPRECATE_EOF is False:
+            packages.append(self.packet(EofPacket, status=0x0062))
+        else:
+            # send all
+            for row in executor.data:
+                packages.append(
+                    self.packet(BinaryResultsetRowPacket, data=row, columns=columns_def)
+                )
+
+            server_status = executor.server_status or 0x0002
+            packages.append(self.last_packet(status=server_status))
+            prepared_stmt['fetched'] += len(executor.data)
+
+        return self.send_package_group(packages)
+
+    def answer_stmt_fetch(self, stmt_id, limit):
+        prepared_stmt = self.session.prepared_stmts[stmt_id]
+        executor = prepared_stmt['statement']
+        fetched = prepared_stmt['fetched']
+
+        if executor.error is not None:
+            resp = SQLAnswer(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_code=executor.error['code'],
+                error_message=executor.error['message']
+            )
+            return self.send_query_answer(resp)
+        elif executor.data is None:
+            resp = SQLAnswer(
+                resp_type=RESPONSE_TYPE.OK,
+                state_track=executor.state_track
+            )
+            return self.send_query_answer(resp)
+
+        packages = []
+        columns = self.to_mysql_columns(executor.columns)
+        for row in executor.data[fetched:limit]:
+            packages.append(
+                self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
+            )
+
+        prepared_stmt['fetched'] += len(executor.data[fetched:limit])
+
+        if len(executor.data) <= limit + fetched:
+            status = sum([
+                SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
+                SERVER_STATUS.SERVER_STATUS_LAST_ROW_SENT,
+            ])
+        else:
+            status = sum([
+                SERVER_STATUS.SERVER_STATUS_AUTOCOMMIT,
+                SERVER_STATUS.SERVER_STATUS_CURSOR_EXISTS,
+            ])
+
+        packages.append(self.last_packet(status=status))
+        self.send_package_group(packages)
 
     def handle(self):
         """
@@ -2271,6 +670,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
             self.session.database = cloud_connection['database']
             self.session.username = 'cloud'
+            self.session.user_class = cloud_connection['user_class']
             self.session.auth = True
             self.session.integration = None
             self.session.integration_type = None
@@ -2293,18 +693,33 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             log.debug('Command TYPE: {type}'.format(
                 type=getConstName(COMMANDS, p.type.value)))
 
+            command_names = {
+                COMMANDS.COM_QUERY: 'COM_QUERY',
+                COMMANDS.COM_STMT_PREPARE: 'COM_STMT_PREPARE',
+                COMMANDS.COM_STMT_EXECUTE: 'COM_STMT_EXECUTE',
+                COMMANDS.COM_STMT_FETCH: 'COM_STMT_FETCH',
+                COMMANDS.COM_STMT_CLOSE: 'COM_STMT_CLOSE',
+                COMMANDS.COM_QUIT: 'COM_QUIT',
+                COMMANDS.COM_INIT_DB: 'COM_INIT_DB',
+                COMMANDS.COM_FIELD_LIST: 'COM_FIELD_LIST'
+            }
+
+            command_name = command_names.get(p.type.value, f'UNKNOWN {p.type.value}')
+            sql = None
+            response = None
+            error_type = None
+            error_code = None
+            error_text = None
+            error_traceback = None
+
             try:
                 if p.type.value == COMMANDS.COM_QUERY:
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser.clear_sql(sql)
                     log.debug(f'COM_QUERY: {sql}')
-                    result = self.process_query(sql)
-                    self.send_query_answer(result)
+                    response = self.process_query(sql)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
-                    # https://dev.mysql.com/doc/internals/en/com-stmt-prepare.html
                     sql = self.decode_utf(p.sql.value)
-                    # statement = SqlStatementParser(sql)
-                    # log.debug(f'COM_STMT_PREPARE: {statement.sql}')
                     self.answer_stmt_prepare(sql)
                 elif p.type.value == COMMANDS.COM_STMT_EXECUTE:
                     self.answer_stmt_execute(p.stmt_id.value, p.parameters)
@@ -2318,40 +733,58 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     break
                 elif p.type.value == COMMANDS.COM_INIT_DB:
                     new_database = p.database.value.decode()
-                    self.change_default_db(new_database)
-                    self.packet(OkPacket).send()
+
+                    executor = Executor(
+                        session=self.session,
+                        sqlserver=self
+                    )
+                    executor.command_executor.change_default_db(new_database)
+
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
                 elif p.type.value == COMMANDS.COM_FIELD_LIST:
                     # this command is deprecated, but console client still use it.
-                    self.packet(OkPacket).send()
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
                 else:
                     log.warning('Command has no specific handler, return OK msg')
                     log.debug(str(p))
                     # p.pprintPacket() TODO: Make a version of print packet
-                    # that sends it to debug isntead
-                    self.packet(OkPacket).send()
+                    # that sends it to debug instead
+                    response = SQLAnswer(RESPONSE_TYPE.OK)
 
-            except SqlApiException as e:
-                log.error(
-                    f'ERROR while executing query\n'
-                    f'{traceback.format_exc()}\n'
-                    f'{e}'
-                )
-                self.packet(
-                    ErrPacket,
-                    err_code=e.err_code,
-                    msg=str(e)
-                ).send()
             except Exception as e:
+                error_type = 'unexpected'
+                error_traceback = traceback.format_exc()
                 log.error(
                     f'ERROR while executing query\n'
-                    f'{traceback.format_exc()}\n'
+                    f'{error_traceback}\n'
                     f'{e}'
                 )
-                self.packet(
-                    ErrPacket,
-                    err_code=ERR.ER_SYNTAX_ERROR,
-                    msg=str(e)
-                ).send()
+                error_code = ERR.ER_SYNTAX_ERROR
+                if hasattr(e, 'err_code'):
+                    error_code = e.err_code
+                response = SQLAnswer(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_code=error_code,
+                    error_message=str(e)
+                )
+
+            if response is not None:
+                self.send_query_answer(response)
+                if response.type == RESPONSE_TYPE.ERROR:
+                    error_text = response.error_message
+                    error_code = response.error_code
+                    error_type = error_type or 'expected'
+
+            hooks.after_api_query(
+                company_id=self.session.company_id,
+                api='mysql',
+                command=command_name,
+                payload=sql,
+                error_type=error_type,
+                error_code=error_code,
+                error_text=error_text,
+                traceback=error_traceback
+            )
 
     def packet(self, packetClass=Packet, **kwargs):
         """
@@ -2420,7 +853,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.hook_before_handle = empty_fn
 
         server.original_model_interface = ModelInterface()
-        server.original_data_store = DataStore()
         server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
 
@@ -2430,39 +862,3 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # interrupt the program with Ctrl-C
         log.info('Waiting for incoming connections...')
         server.serve_forever()
-
-
-class Dummy:
-    pass
-
-
-class FakeMysqlProxy(MysqlProxy):
-    def __init__(self, company_id):
-        request = Dummy()
-        client_address = ['', '']
-        server = Dummy()
-        server.connection_id = 0
-        server.hook_before_handle = empty_fn
-        server.original_model_interface = ModelInterface()
-        server.original_data_store = DataStore()
-        server.original_integration_controller = IntegrationController()
-        server.original_view_controller = ViewController()
-
-        self.charset = 'utf8'
-        self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
-        self.client_capabilities = None
-
-        self.request = request
-        self.client_address = client_address
-        self.server = server
-
-        self.session = SessionController(
-            server=self.server,
-            company_id=company_id
-        )
-        self.session.database = 'mindsdb'
-
-    def is_cloud_connection(self):
-        return {
-            'is_cloud': False
-        }

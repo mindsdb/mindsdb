@@ -1,8 +1,11 @@
 from bson.int64 import Int64
 from collections import OrderedDict
+
 from lightwood.api import dtype
-from mindsdb.api.mongo.classes import Responder
+
 import mindsdb.api.mongo.functions as helpers
+from mindsdb.api.mongo.classes import Responder
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 class Responce(Responder):
@@ -50,7 +53,7 @@ class Responce(Responder):
 
             datasource = where_data
             if 'select_data_query' in where_data:
-                integrations = mindsdb_env['datasource_controller'].get_all().keys()
+                integrations = mindsdb_env['integration_controller'].get_all().keys()
                 connection = where_data.get('connection')
                 if connection is None:
                     if 'default_mongodb' in integrations:
@@ -64,22 +67,17 @@ class Responce(Responder):
                 if connection is None:
                     raise Exception("Can't find connection from which fetch data")
 
-                ds_name = mindsdb_env['data_store'].get_vacant_name('temp')
+                handler = mindsdb_env['integration_controller'].get_handler(connection)
+                result = handler.native_query(where_data['select_data_query'])
 
-                mindsdb_env['data_store'].save_datasource(
-                    name=ds_name,
-                    source_type=connection,
-                    source=where_data['select_data_query']
-                )
-                datasource = mindsdb_env['data_store'].get_datasource_obj(ds_name, raw=True)
+                if result.get('type') != RESPONSE_TYPE.TABLE:
+                    raise Exception(f'Error during query: {result.get("error_message")}')
 
+                datasource = result['data_frame']
             if isinstance(datasource, OrderedDict):
                 datasource = dict(datasource)
 
             pred_dict_arr, explanations = mindsdb_env['model_interface'].predict(table, datasource, 'dict&explain')
-
-            if 'select_data_query' in where_data:
-                mindsdb_env['data_store'].delete_datasource(ds_name)
 
             predicted_columns = model['predict']
             if not isinstance(predicted_columns, list):

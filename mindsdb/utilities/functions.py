@@ -10,6 +10,7 @@ def args_parse():
     parser = argparse.ArgumentParser(description='CL argument for mindsdb server')
     parser.add_argument('--api', type=str, default=None)
     parser.add_argument('--config', type=str, default=None)
+    parser.add_argument('--install-handlers', type=str, default=None)
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--no_studio', action='store_true')
     parser.add_argument('-v', '--version', action='store_true')

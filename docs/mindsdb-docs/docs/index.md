@@ -1,4 +1,4 @@
-# Quickstart Guide
+# Quickstart
 
 Follow the following steps to start predicting in SQL straight away. Check out our [Getting Started Guide](/getting-started/) for trying MindsDB with your data or model.
 ## 1. Create an Account
@@ -6,7 +6,7 @@ Follow the following steps to start predicting in SQL straight away. Check out o
 Create your [free MindsDB Cloud account](https://cloud.mindsdb.com/register).
 
 ???+ Tip "Local Installation" 
-    Follow our [Docker instructions](/deployment/docker). if you  prefer to proceed with a local installation.
+    Follow our [Docker instructions](setup/self-hosted/docker/). if you  prefer to proceed with a local installation.
 
 ---
 ## 2. Connect MindsDB to a MySQL Client
@@ -30,9 +30,10 @@ You can use the MindsDB SQL Editor or open your preferred MySQL client and conne
 
 ---
 
-## 3. Connecting a Database [`#!sql CREATE DATABASE`](/sql/api/databases/)
+## 3. Connecting a Database [`#!sql CREATE DATABASE`](/sql/create/databases/)
 
-For this quickstart, we have already prepared some example data for you.  To add it to your account, use the [`#!sql CREATE DATABASE`](/sql/api/databases/) syntax by copying and pasting this command into your SQL client:
+For this quickstart, we have already prepared some example data for you.  To add it to your account, use the [`#!sql CREATE DATABASE`](/sql/create/databases/) syntax by copying and pasting this command into your SQL client:
+
 
 ```sql
 CREATE DATABASE example_data
@@ -81,14 +82,13 @@ On execution, you should get:
 | 0.0             | 1.0                 | 298  | great    | 9              | 2104          | south_side   | 2104         |
 | 2.0             | 1.0                 | 878  | great    | 8              | 3861          | south_side   | 3861         |
 +-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
-10 rows in set (0.36 sec)
 ```
 
 ---
 
-## 5. Creating a Predictor [`#!sql CREATE PREDICTOR`](/sql/api/predictor/)
+## 5. Creating a Predictor [`#!sql CREATE PREDICTOR`](/sql/create/predictor/)
 
-Now you are ready to create your first predictor. Use the [`#!sql CREATE PREDICTOR`](/sql/api/predictor/) syntax by copying and pasting this command into your SQL client:
+Now you are ready to create your first predictor. Use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor/) syntax by copying and pasting this command into your SQL client:
 
 ```sql 
 CREATE PREDICTOR mindsdb.home_rentals_predictor
@@ -121,7 +121,6 @@ On execution, you should get:
 +----------+
 | training |
 +----------+
-1 row in set (0.19 sec)
 ```
 Or:
 
@@ -131,7 +130,6 @@ Or:
 +----------+
 | complete |
 +----------+
-1 row in set (0.31 sec)
 ```
 
 !!! attention "Predictor Status Must be 'complete' Before Making a Prediction"
@@ -156,7 +154,6 @@ On execution, you should get:
 +--------------+
 | 1130         |
 +--------------+
-1 row in set (0.38 sec)
 ```
 
 !!! done "Congratulations"

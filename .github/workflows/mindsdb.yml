@@ -51,11 +51,10 @@ jobs:
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-    # TEMP DISABLE
-    # - name: Install lightwood/staging if it's not mindsdb/stable
-    #   if: ${{ github.ref != 'refs/heads/stable' }}
-    #   run: |
-    #       pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+    - name: Install lightwood/staging if it's not mindsdb/stable
+      if: ${{ github.ref != 'refs/heads/stable' }}
+      run: |
+          pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
@@ -72,14 +71,10 @@ jobs:
           # MySQL API
           echo -e "\n===============\ntest MySQL API\n===============\n"
           python tests/integration_tests/flows/test_mysql_api.py
-
-          # # Kafka Stream
-          # echo -e "\n===============\ntest Kafka Stream\n===============\n"
-          # python tests/integration_tests/flows/test_kafka.py
-
-          # Redis Stream
-          echo -e "\n===============\ntest Redis Stream\n===============\n"
-          python tests/integration_tests/flows/test_redis.py
+        
+          # MySQL binary API
+          echo -e "\n===============\ntest MySQL binary API\n===============\n"
+          python tests/integration_tests/flows/test_mysql_bin_api.py
 
           # Company independent
           echo -e "\n===============\ntest company independent\n===============\n"
@@ -93,9 +88,13 @@ jobs:
           echo -e "\n===============\ntest user flow 1\n===============\n"
           python tests/integration_tests/flows/test_user_flow_1.py
 
-          # flow with mistakes
-          echo -e "\n===============\nflow with mistakes\n===============\n"
-          python tests/integration_tests/flows/test_mistakes.py
+          # # Kafka Stream
+          # echo -e "\n===============\ntest Kafka Stream\n===============\n"
+          # python tests/integration_tests/flows/test_kafka.py
+
+          # # Redis Stream
+          # echo -e "\n===============\ntest Redis Stream\n===============\n"
+          # python tests/integration_tests/flows/test_redis.py
         fi
       shell: bash
       env:

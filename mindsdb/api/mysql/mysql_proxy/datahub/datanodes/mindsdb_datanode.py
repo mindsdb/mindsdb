@@ -12,6 +12,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -35,21 +36,24 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, model_interface, data_store, integration_controller):
+    def __init__(self, model_interface, integration_controller):
         self.config = Config()
         self.model_interface = model_interface
-        self.data_store = data_store
         self.integration_controller = integration_controller
 
     def get_tables(self):
         models = self.model_interface.get_models()
-        models = [x['name'] for x in models if x['status'] == 'complete']
-        models += ['predictors', 'databases']
+        tables = []
+        for model in models:
+            tables.append(TablesRow(TABLE_NAME=model['name']))
+        tables.append(TablesRow(TABLE_NAME='predictors'))
+        tables.append(TablesRow(TABLE_NAME='databases'))
 
-        return models
+        return tables
 
     def has_table(self, table):
-        return table in self.get_tables()
+        names = [table.TABLE_NAME for table in self.get_tables()]
+        return table in names
 
     def _get_model_columns(self, table_name):
         model = self.model_interface.get_model_data(name=table_name)
@@ -63,7 +67,7 @@ class MindsDBDataNode(DataNode):
             predict = [predict]
         columns += [f'{x}_original' for x in predict]
         for col in predict:
-            if dtype_dict[col] in (dtype.integer, dtype.float):
+            if dtype_dict.get(col) in (dtype.integer, dtype.float):
                 columns += [f"{col}_min", f"{col}_max"]
             columns += [f"{col}_confidence"]
             columns += [f"{col}_explain"]
@@ -140,7 +144,7 @@ class MindsDBDataNode(DataNode):
             return [], []
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
-    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, integration_name=None, integration_type=None):
+    def query(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, integration_name=None, integration_type=None):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
         if table == 'predictors':
@@ -178,8 +182,8 @@ class MindsDBDataNode(DataNode):
         if isinstance(where_data, dict):
             where_data = [where_data]
 
-        model_names = self.get_tables()
-        if table not in model_names:
+        models_sql_meta = self.get_tables()
+        if table not in [x.TABLE_NAME for x in models_sql_meta]:
             raise SqlApiException(f"Predictor '{table}' does not exists'")
 
         model = self.model_interface.get_model_data(name=table)
@@ -196,7 +200,7 @@ class MindsDBDataNode(DataNode):
             row = where_data[0]
             col_name_map = {}
             for i, col_name in enumerate(row):
-                if col_name in ('__mindsdb_row_id', '__mdb_make_predictions'):
+                if col_name in ('__mindsdb_row_id', '__mdb_forecast_offset'):
                     continue
                 new_col_name = get_column_in_case(columns, col_name)
                 if new_col_name is not None and col_name != new_col_name:
@@ -237,7 +241,7 @@ class MindsDBDataNode(DataNode):
         timeseries_settings = model['problem_definition']['timeseries_settings']
 
         if timeseries_settings['is_timeseries'] is True:
-            __mdb_make_predictions = set([row.get('__mdb_make_predictions', True) for row in where_data]) == {True}
+            __no_forecast_offset = set([row.get('__mdb_forecast_offset', None) for row in where_data]) == {None}
 
             predict = model['predict']
             group_by = timeseries_settings['group_by'] or []
@@ -298,7 +302,7 @@ class MindsDBDataNode(DataNode):
                     if horizon > 1:
                         new_row[predict] = new_row[predict][i]
                         new_row[order_by_column] = new_row[order_by_column][i]
-                    if '__mindsdb_row_id' in new_row and (i > 0 or __mdb_make_predictions is False):
+                    if '__mindsdb_row_id' in new_row and (i > 0 or __no_forecast_offset):
                         new_row['__mindsdb_row_id'] = None
                     rows.append(new_row)
 
@@ -333,7 +337,7 @@ class MindsDBDataNode(DataNode):
         keys = [x for x in pred_dicts[0] if x in columns]
         min_max_keys = []
         for col in predicted_columns:
-            if model['dtype_dict'][col] in (dtype.integer, dtype.float):
+            if model['dtype_dict'][col] in (dtype.integer, dtype.float, dtype.num_tsarray):
                 min_max_keys.append(col)
 
         data = []

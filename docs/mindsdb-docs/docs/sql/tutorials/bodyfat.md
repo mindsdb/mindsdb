@@ -1,15 +1,20 @@
-# Pre-requisites
-Before you start make sure that you've:
-
-- Visited [Getting Started Guide](/info)
-- Visited [Getting Started with Cloud](/deployment/cloud)
-- Downloaded the dataset. The dataset being used for this tutorial. Get it from [Kaggle](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset).
-
 # Determining Body Fat Percentage
+
+*Dataset: [Body fat prediction](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset)*
+
+*Communtiy Author: [Contip](https://github.com/contip)*
 
 Machine Learning powered data analysis can be performed quickly and efficiently by MindsDB to enable individuals to make accurate predictions for certain metrics based on a variety of associated values. MindsDB enables you to make predictions automatically using just SQL commands, all the ML workflow is automated, and abstracted as virtual “AI tables” in your database so you may start getting insights from forecasts right away. In this tutorial, we'll be using MindsDB and a MySQL database to predict body fat percentage based on several body part measurement criteria.
 
+# Pre-requisites
+Before you start make sure that you've:
+
+- Visted [Getting Started Guide](/info)
+- Visited [Getting Started with Cloud](/setup/cloud)
+- Downloaded the dataset. The dataset being used for this tutorial. Get it from [Kaggle](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset).
+
 ### Data Overview
+
 For this tutorial, we'll be using the Body Fat Prediction dataset available at [Kaggle](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset).  Each row represents one person and we'll train an ML model to help us predict an individual's body fat percentage using MindsDB.  Below is a short description of each feature of the data:
 
 - Density: Individual's body density as determined by underwater weighing (float)
@@ -28,45 +33,66 @@ For this tutorial, we'll be using the Body Fat Prediction dataset available at [
 - Forearm: Circumference of the individual's forearm in cm (float)
 - Wrist: Circumference of the individual's wrist in cm (float)
 
-## Upload a file
+## Add data to MindsDB GUI
 
-1. Click on **Files** icon to go to datasets page
-2. Click on **FILE UPLOAD** button to upload file into MindsDB
+MindsDB has a functionality to uploud your data file directly via the GUI where you can immediately query the data and create a machine learning model.
+
+The following is the steps to upload your data directly to MindsDB:
+
+- Access the MindsDB GUI via cloud or local via the URL 127.0.0.1:47334/.
+- Select the button `Add data` or select the plug icon on the left side bar.
+- The page will navigate to 'Select your data source'. Select the option 'Files'.
+
+![uploadfile](/assets/sql/tutorials/bodyfat/upload_file.png)
 
 
-## Connect to MindsDB SQL Sever
-1. 
+- Select the tab under 'Import a file'. Please note the dataset files should not exceed the maximum size limit which is 10MB.
+- Provide a name for the data file which will be saved as a table.
+
+Once you have successfully uploaded the file, you can query the data from the files table to ensure the information pulls through.
+
+Run the following syntax:
+
 ```sql
-mysql -h cloud.mindsdb.com --port 3306 -u username@email.com -p
-```
-2. 
-```sql
-USE mindsdb;
+SELECT * FROM files.bodyfat LIMIT 10;
 ```
 
-## Create a predictor
+![selectdate](/assets/sql/tutorials/bodyfat/selectdata.png)
 
-Now, we have to create a predictor based on the following syntax:
+Once you have confirmed the file has successfully uploaded and the data can be retrieved, we can move on to creating a predictor.
+
+## Create and train a machine learning model.
+
+With the CREATE PREDICTOR statement, we can create a machine learning model:
 
 ```sql
 CREATE PREDICTOR mindsdb.predictor_name
 FROM files 
-(SELECT column_name, column_name2 FROM file_name) as ds_name
-PREDICT column_name as column_alias;
+(SELECT column_name, column_name2 FROM file_name)
+PREDICT column_name;
 ```
 
-For our case, we'll enter the following command:
+The required values that we need to provide are:
+​
+- predictor_name (string): The name of the model
+- integration_name (string): The name of the connection to your database.
+- column_name (string): The feature you want to predict.
+
+For our case, we'll enter the following syntax:
+
 ```sql
-CREATE PREDICTOR mindsdb.bodyfat_predictor
+CREATE PREDICTOR bodyfat_predictor
 FROM files (
         SELECT * FROM bodyfat
 ) PREDICT Bodyfat;
 ```
 
+Select the `Run` button or select Shift+Enter to run the syntax. Once is is successful you will receive a message in the console 'Query successfully completed'.
+
 You should see output similar to the following:
-```console
-Query OK, 0 rows affected (3.077 sec)
-```
+
+
+![create](/assets/sql/tutorials/bodyfat/create.png)
 
 At this point, the predictor will immediately begin training.  Check the status of the training by entering the command:
 
@@ -76,18 +102,12 @@ SELECT * FROM mindsdb.predictors WHERE name='bodyfat_predictor';
 
 When complete, you should see output similar to the following:
 
-```console
-+-------------------+----------+--------------------+---------+-------------------+------------------+
-| name              | status   | accuracy           | predict | select_data_query | training_options |
-+-------------------+----------+--------------------+---------+-------------------+------------------+
-| bodyfat_predictor | complete | 0.9909730079130395 | BodyFat |                   |                  |
-+-------------------+----------+--------------------+---------+-------------------+------------------+
-1 row in set (0.101 sec)
-```
+![status](/assets/sql/tutorials/bodyfat/status.png)
 
-As you can see, the predictor training has completed with an accuracy of approximately 99%.  At this point, you have successfully trained an ML model for our Body Fat Prediction dataset!
+As you can see, the predictor training has been completed with an accuracy of approximately 99%.  At this point, you have successfully trained an ML model for our Body Fat Prediction dataset!
 
 ## Using SQL Commands to Make Predictions
+
 Now, we can query the model and make predictions based on our input data by using SQL statements.  
 
 Let's imagine an individual aged 25, with a body density of 1.08, a weight of 170lb, a height of 70in, a neck circumference of 38.1cm, a chest circumference of 103.5cm, an abdomen circumference of 85.4cm, a hip circumference of 102.2cm, a thigh circumference of 63.0cm, a knee circumference of 39.4cm, an ankle circumference of 22.8cm, a biceps circumference of 33.3cm, a forearm circumference of 28.7cm, and a wrist circumference of 18.3cm.  We can predict this person's body fat percentage by issuing the following command:
@@ -100,22 +120,16 @@ WHERE Density=1.08 AND Age=25 AND Weight=170 AND Height=70 AND Neck=38.1 AND Che
 
 This should return output similar to:
 
-```console
-+-------------------+--------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| BodyFat           | BodyFat_confidence | Info                                                                                                                                                                                  |
-+-------------------+--------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| 8.968581383955318 | 0.99               | {"predicted_value": 8.968581383955318, "confidence": 0.99, "confidence_lower_bound": 5.758912817402102, "confidence_upper_bound": 12.178249950508533, "anomaly": null, "truth": null} |
-+-------------------+--------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-1 row in set (0.464 sec)
-
-```
+![prediction](/assets/sql/tutorials/bodyfat/prediction.png)
 
 As you can see, with around 99% confidence, MindsDB predicted the body fat percentage for this individual at 8.97%.  You can at this point feel free to alter the prospective individual's bodypart measurement parameters and make additional prediction queries if you'd like.  
 
-### Making Batch Predictions using the JOIN Command
+### Making Batch Predictions using the JOIN syntax
+
 The above example showed how to make predictions for a single individual's bodyfat, but what if you had a table of bodypart measurements for a number of individuals, and wanted to make predictions for them all?  This is possible using the [JOIN command](https://docs.mindsdb.com/sql/api/join/), which allows for the combining of rows from a database table and the prediction model table on a related column.  
 
-The basic syntax to use the JOIN command is:
+The basic syntax to use the JOIN syntax is:
+
 ```sql
 SELECT t.column_name1, t.column_name2, FROM integration_name.table AS t 
 JOIN mindsdb.predictor_name AS p WHERE t.column_name IN (value1, value2, ...);
@@ -130,18 +144,8 @@ LIMIT 5;
 ```
 
 This should return an output table similar to the following:
-```console
-+------+---------+--------+--------+------+-------+---------+-------+---------+--------------------+
-| Age  | Density | Weight | Height | Neck | Chest | Abdomen | Hip   | BodyFat | predicted_BodyFat  |
-+------+---------+--------+--------+------+-------+---------+-------+---------+--------------------+
-| 23   | 1.0708  | 154.25 | 67.75  | 36.2 | 93.1  | 85.2    | 94.5  | 12.3    | 12.475132275112655 |
-| 22   | 1.0853  | 173.25 | 72.25  | 38.5 | 93.6  | 83.0    | 98.7  | 6.1     | 6.07133439184195   |
-| 22   | 1.0414  | 154.0  | 66.25  | 34.0 | 95.8  | 87.9    | 99.2  | 25.3    | 25.156538398443754 |
-| 26   | 1.0751  | 184.75 | 72.25  | 37.4 | 101.8 | 86.4    | 101.2 | 10.4    | 10.696461885516461 |
-| 24   | 1.034   | 184.25 | 71.25  | 34.4 | 97.3  | 100.0   | 101.9 | 28.7    | 28.498772660802427 |
-+------+---------+--------+--------+------+-------+---------+-------+---------+--------------------+
-5 rows in set (1.091 sec)
-```
+
+![join](/assets/sql/tutorials/bodyfat/join.png)
 
 As you can see, a prediction has been generated for each row in the input table.  Additionally, our predicted bodyfat percentages align closely with the original values!  Note that even though we chose only to display the Age, Density, Weight, Height, Neck, Chest, Abdomen, and Hip measurements in this example, the predicted_BodyFat field was determined by taking into consideration all of the data fields in the original bodyfat table (as this table was JOINed with the bodyfat_predictor table, from which we selected the specified fields).  In order to make predictions based ONLY on the specified fields, we would have to create a new table containing only those fields, and JOIN that with the bodyfat_predictor table!
 

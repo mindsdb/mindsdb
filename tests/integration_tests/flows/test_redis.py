@@ -69,7 +69,7 @@ class RedisTest(unittest.TestCase):
         self.assertEqual(len(list(stream.read())), 2)
         self.assertEqual(len(list(stream.read())), 0)
 
-    def upload_ds(self, name):
+    def upload_file(self, name):
         df = pd.DataFrame({
             'group': ["A" for _ in range(100, 210)] + ["B" for _ in range(100, 210)],
             'order': [x for x in range(100, 210)] + [x for x in range(200, 310)],
@@ -80,19 +80,17 @@ class RedisTest(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False) as f:
             df.to_csv(f, index=False)
             f.flush()
-            url = f'{HTTP_API_ROOT}/datasources/{name}'
+            url = f'{HTTP_API_ROOT}/files/{name}'
             data = {
-                "source_type": (None, 'file'),
-                "file": (f.name, f, 'text/csv'),
-                "source": (None, f.name.split('/')[-1]),
-                "name": (None, name)
+                "file": (f.name, f, 'text/csv')
             }
             res = requests.put(url, files=data)
             res.raise_for_status()
 
     def train_predictor(self, ds_name, predictor_name):
         params = {
-            'data_source_name': ds_name,
+            'integration': 'files',
+            'query': f'select * from {ds_name}',
             'to_predict': 'y',
             'kwargs': {
                 'time_aim': 20,
@@ -115,7 +113,9 @@ class RedisTest(unittest.TestCase):
         else:
             ts_settings["group_by"] = []
         params = {
-            'data_source_name': ds_name,
+            'integration': 'files',
+            'query': f'select * from {ds_name}',
+            # 'data_source_name': ds_name,
             'to_predict': 'y',
             'kwargs': {
                 'use_gpu': False,
@@ -141,7 +141,7 @@ class RedisTest(unittest.TestCase):
 
     def test_2_create_redis_stream(self):
         print(f"\nExecuting {self._testMethodName}")
-        self.upload_ds(DS_NAME)
+        self.upload_file(DS_NAME)
         self.train_predictor(DS_NAME, DEFAULT_PREDICTOR)
 
         url = f'{HTTP_API_ROOT}/streams/{NORMAL_STREAM_NAME}'
@@ -169,7 +169,7 @@ class RedisTest(unittest.TestCase):
 
     def test_4_create_redis_ts_stream(self):
         print(f"\nExecuting {self._testMethodName}")
-        self.upload_ds(TS_DS_NAME)
+        self.upload_file(TS_DS_NAME)
         self.train_ts_predictor(TS_DS_NAME, TS_PREDICTOR)
 
         url = f'{HTTP_API_ROOT}/streams/ts_stream_{STREAM_SUFFIX}'

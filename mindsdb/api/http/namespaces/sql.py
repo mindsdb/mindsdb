@@ -1,8 +1,12 @@
+import traceback
+
 from flask_restx import Resource
 from flask import request
 
 from mindsdb.api.http.namespaces.configs.sql import ns_conf
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import FakeMysqlProxy, RESPONSE_TYPE as SQL_RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
+import mindsdb.utilities.hooks as hooks
 
 
 @ns_conf.route('/query')
@@ -13,38 +17,65 @@ class Query(Resource):
         query = request.json['query']
         context = request.json.get('context', {})
 
-        mysql_proxy = FakeMysqlProxy(company_id=request.company_id)
+        error_type = None
+        error_code = None
+        error_text = None
+        error_traceback = None
+
+        mysql_proxy = FakeMysqlProxy(
+            company_id=request.company_id,
+            user_class=request.user_class
+        )
         mysql_proxy.set_context(context)
         try:
             result = mysql_proxy.process_query(query)
             if result.type == SQL_RESPONSE_TYPE.ERROR:
-                listing_query_response = {
-                    'type': 'error',
+                query_response = {
+                    'type': SQL_RESPONSE_TYPE.ERROR,
                     'error_code': result.error_code,
                     'error_message': result.error_message
                 }
             elif result.type == SQL_RESPONSE_TYPE.OK:
-                listing_query_response = {
-                    'type': 'ok'
+                query_response = {
+                    'type': SQL_RESPONSE_TYPE.OK
                 }
             elif result.type == SQL_RESPONSE_TYPE.TABLE:
-                listing_query_response = {
-                    'type': 'table',
+                query_response = {
+                    'type': SQL_RESPONSE_TYPE.TABLE,
                     'data': result.data,
                     'column_names': [x['alias'] or x['name'] if 'alias' in x else x['name'] for x in result.columns]
                 }
         except Exception as e:
-            listing_query_response = {
-                'type': 'error',
+            error_type = 'unexpected'
+            query_response = {
+                'type': SQL_RESPONSE_TYPE.ERROR,
                 'error_code': 0,
                 'error_message': str(e)
             }
+            error_traceback = traceback.format_exc()
+            print(error_traceback)
+
+        if query_response.get('type') == SQL_RESPONSE_TYPE.ERROR:
+            error_type = 'expected'
+            error_code = query_response.get('error_code')
+            error_text = query_response.get('error_message')
 
         context = mysql_proxy.get_context(context)
 
-        listing_query_response['context'] = context
+        query_response['context'] = context
 
-        return listing_query_response, 200
+        hooks.after_api_query(
+            company_id=request.company_id,
+            api='http',
+            command=None,
+            payload=query,
+            error_type=error_type,
+            error_code=error_code,
+            error_text=error_text,
+            traceback=error_traceback
+        )
+
+        return query_response, 200
 
 
 @ns_conf.route('/list_databases')

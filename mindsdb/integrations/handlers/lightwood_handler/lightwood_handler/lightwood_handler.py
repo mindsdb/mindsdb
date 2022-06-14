@@ -4,16 +4,16 @@ from typing import Dict, List, Optional
 
 import sqlalchemy
 
-from utils import unpack_jsonai_old_args, get_aliased_columns, _recur_get_conditionals, load_predictor
+from utils import unpack_jsonai_old_args, get_aliased_columns, load_predictor
 
 import lightwood
 from lightwood.api.types import JsonAI
 from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition
 
-from utils import unpack_jsonai_old_args, get_aliased_columns, _recur_get_conditionals, load_predictor
-from utils import default_train_data_gather
+from utils import unpack_jsonai_old_args, load_predictor
 from join_utils import get_ts_join_input, get_join_input
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
+from mindsdb.integrations.libs.utils import recur_get_conditionals, get_aliased_columns, get_join_input, default_data_gather, get_model_name
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.interfaces.model.learn_process import brack_to_mod, rep_recur
@@ -64,7 +64,7 @@ class LightwoodHandler(PredictiveHandler):
 
     def connect(self, **kwargs) -> Dict[str, int]:
         """ Setup storage handler and check lightwood version """  # noqa
-        self.storage = SqliteStorageHandler(context=self.name, config=kwargs['config'])  # TODO non-KV storage handler
+        self.storage = SqliteStorageHandler(context=self.name, config=kwargs['config'])  # TODO non-KV storage handler?
         return self.check_status()
 
     def check_status(self) -> Dict[str, int]:
@@ -116,7 +116,7 @@ class LightwoodHandler(PredictiveHandler):
             # get training data from other integration
             handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]  # TODO import from mindsdb init
             handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
-            df = default_train_data_gather(handler, handler_query)
+            df = default_data_gather(handler, handler_query)
 
             json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
             json_ai = json_ai_from_problem(df, ProblemDefinition.from_dict(params)).to_dict()
@@ -152,7 +152,7 @@ class LightwoodHandler(PredictiveHandler):
 
             handler = MDB_CURRENT_HANDLERS[str(original_stmt.integration_name)]  # TODO import from mindsdb init
             handler_query = self.parser(original_stmt.query_str, dialect=self.handler_dialect)
-            df = default_train_data_gather(handler, handler_query)
+            df = default_data_gather(handler, handler_query)
 
             predictor = load_predictor(all_models[model_name], model_name)
             predictor.adjust(df)
@@ -169,7 +169,7 @@ class LightwoodHandler(PredictiveHandler):
             raise Exception(f"Query type {type(statement)} not supported")
 
     def query(self, query) -> dict:
-        model_name, _, _ = self._get_model_name(query)
+        model_name, _, _ = get_model_name(query)
         model = self._get_model(model_name)
         values = _recur_get_conditionals(query.where.args, {})
         df = pd.DataFrame.from_dict(values)
@@ -180,7 +180,7 @@ class LightwoodHandler(PredictiveHandler):
         """
         Batch prediction using the output of a query passed to a data handler as input for the model.
         """  # noqa
-        model_name, model_alias, model_side = self._get_model_name(stmt)
+        model_name, model_alias, model_side = get_model_name(stmt)
         data_side = 'right' if model_side == 'left' else 'left'
         model = self._get_model(model_name)
         is_ts = model.problem_definition.timeseries_settings.is_timeseries
@@ -209,25 +209,6 @@ class LightwoodHandler(PredictiveHandler):
                 print("Error when trying to store the JOIN output in data handler.")
 
         return predictions
-
-    def _get_model_name(self, stmt):
-        side = None
-        models = self.get_tables()
-        if type(stmt.from_table) == Join:
-            model_name = stmt.from_table.right.parts[-1]
-            side = 'right'
-            if model_name not in models:
-                model_name = stmt.from_table.left.parts[-1]
-                side = 'left'
-            alias = str(getattr(stmt.from_table, side).alias)
-        else:
-            model_name = stmt.from_table.parts[-1]
-            alias = None  # todo: fix this
-
-        if model_name not in models:
-            raise Exception("Error, not found. Please create this predictor first.")
-
-        return model_name, alias, side
 
     def _get_model(self, model_name):
         predictor_dict = self._get_model_info(model_name)

@@ -224,7 +224,7 @@ mark {
 }
 
 .md-content__button{
-	color: #e0e0e0 !important;
+	display: None !important;
 }
 
 .md-content__button :hover{ 

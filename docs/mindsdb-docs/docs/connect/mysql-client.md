@@ -2,6 +2,8 @@
 
 MindsDB provides a powerful MySQL API that allows users to connect to it using the [MySQL Command-Line Client](https://dev.mysql.com/doc/refman/8.0/en/mysql.html). Connecting to MySQL API is the same as connecting to a MySQL database:
 
+## How to Connect
+
 ```bash
 mysql -h [hostname] --port [TCP/IP port number] -u [user] -p [password]
 ```
@@ -30,23 +32,22 @@ Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
 MySQL [(none)]>
 ```
+## Example
 
-??? example "Example"
+``` bash
+mysql -h cloud.mindsdb.com --port 3306 -u zoran@mindsdb.com -p
+```
 
-    ``` bash
-    ~$ mysql -h cloud.mindsdb.com --port 3306 -u zoran@mindsdb.com -p
-    ```
+```bash
+Enter password:
 
-    ```bash
-    Enter password:
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Server version: 5.7.1-MindsDB-1.0 (MindsDB)
 
-    Welcome to the MariaDB monitor.  Commands end with ; or \g.
-    Server version: 5.7.1-MindsDB-1.0 (MindsDB)
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
-    Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
-
-    MySQL [(none)]>
-    ```
+MySQL [(none)]>
+```
 
 !!! tip "What is next?"
-    We recommend you to follow one of our tutorials or jump more into detail understanding the [MindsDB Database](/sql/description/mindsdb_database)
+    We recommend you to follow one of our tutorials or jump more into detail understanding the [MindsDB Database](/sql/table-structure/)

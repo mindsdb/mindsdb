@@ -13,13 +13,13 @@ You can either connect locally or to a MindsDB Cloud instance, depending on the 
 === "Self-Hosted Local Deployment"
 
     ```bash
-      mysql -h 127.0.0.1 --port 47335 -u mindsdb
+    mysql -h 127.0.0.1 --port 47335 -u mindsdb
     ```
 
 === "MindsDB Cloud"
 
     ```bash
-      mysql -h cloud.mindsdb.com --port 3307 -u [mindsdb_cloud_email] -p [mindsdb_cloud_password]
+    mysql -h cloud.mindsdb.com --port 3307 -u [mindsdb_cloud_email] -p [mindsdb_cloud_password]
     ```
 
 On execution, you should get:

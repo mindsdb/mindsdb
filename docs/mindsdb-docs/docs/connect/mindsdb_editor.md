@@ -7,7 +7,7 @@ MindsDB provides a SQL Editor so you don't need to download additional SQL clien
     After any of the Self-Hosted Setups - [Linux](/setup/self-hosted/pip/linux), [Windows](/setup/self-hosted/pip/windows), [MacOs](/setup/self-hosted/pip/macos) or directly from [source code](/setup/self-hosted/pip/source) - go to your terminal and execute: 
 
     ```bash
-      python -m mindsdb 
+    python -m mindsdb 
     ```
 
     On execution, you should get:
@@ -17,7 +17,7 @@ MindsDB provides a SQL Editor so you don't need to download additional SQL clien
     2022-05-06 14:07:04,599 - INFO -  - GUI available at http://127.0.0.1:47334/
     ...
     ```
-    
+
     Immediately after, your browser will automatically open the MindsDB SQL Editor. In case it doesn't, just visit the URL [`http://127.0.0.1:47334/`](http://127.0.0.1:47334/){:target="_blank"} in your browser of preference. 
 
 === "MindsDB Cloud"

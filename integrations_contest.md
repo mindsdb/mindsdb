@@ -45,7 +45,7 @@ The `TOP-3` authors who submit ideas before `June 17th, 2022` will get SWAG and 
 * MindsDB team will review the ideas and label them `accepted`. Once the idea is accepted it will be moved to the `Integrations ideas` [project](https://github.com/mindsdb/mindsdb/projects/9). 
 * People will start voting on the proposed ideas and discuss further implementation. 
 * The top 3 authors whose ideas will get the highest number of upvotes 👍 will be the winners. If multiple ideas have the same number of votes the first one posted wins. Please, feel free to submit as many ideas as you like, however, we will not sum up upvotes from multiple issues from a single author and will take just one that has the highest number of votes. 
-* Make sure you complete all the steps above to be considered for a prize. After the deadline is finished, the ideas issues will be moved to the `Implementation ideas` step, and the number of votes till the deadline will be added as a comment. 
+* Make sure you complete all the steps above to be considered for a prize. After the deadline is finished, the ideas issues will be moved to the `Implementation ideas` step, and the number of votes till the deadline will be added as a comment. Note that we only count the votes from the accounts created 1 month before the contest started to avoid vote-rigging.
 
 📣 We will announce the winners on our [Community Slack](https://mindsdb.com/joincommunity) during the first couple of days after the submission deadline. 
 

@@ -74,7 +74,7 @@ nav:
       - pip:
         - Windows via pip: setup/self-hosted/pip/windows.md
         - Linux via pip: setup/self-hosted/pip/linux.md
-        - MacOs via pip: setup/self-hosted/pip/macos.md
+        - MacOS via pip: setup/self-hosted/pip/macos.md
         - Sourcecode via pip: setup/self-hosted/pip/source.md
     - MindsDB Cloud: setup/cloud.md
   - Connect to MindsDB:

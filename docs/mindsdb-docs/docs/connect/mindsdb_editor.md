@@ -17,12 +17,12 @@ MindsDB provides a SQL Editor so you don't need to download additional SQL clien
     2022-05-06 14:07:04,599 - INFO -  - GUI available at http://127.0.0.1:47334/
     ...
     ```
-
-    Immediately after, your browser will automatically open the MindsDB SQL Editor. In case it doesn't, just visit the URL ```http://127.0.0.1:47334/``` in your browser of preference. 
+    
+    Immediately after, your browser will automatically open the MindsDB SQL Editor. In case it doesn't, just visit the URL [`http://127.0.0.1:47334/`](http://127.0.0.1:47334/){:target="_blank"} in your browser of preference. 
 
 === "MindsDB Cloud"
 
-    1. Go to [MindsDB Cloud](https://cloud.mindsdb.com )
+    1. Go to [MindsDB Cloud](https://cloud.mindsdb.com)
 
     2. Just log in to your account, and you will be automatically directed to the Editor.
 
@@ -32,4 +32,4 @@ MindsDB provides a SQL Editor so you don't need to download additional SQL clien
 </figure>
 
 !!! tip "What is next?"
-    We recommend you to follow one of our tutorials or jump more into detail understanding the [MindsDB Database](/sql/description/mindsdb_database)
+    We recommend you to follow one of our tutorials or jump more into detail understanding the [MindsDB Database](/sql/table-structure/)

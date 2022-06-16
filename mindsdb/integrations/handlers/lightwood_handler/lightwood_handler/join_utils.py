@@ -2,32 +2,10 @@ import copy
 from itertools import product
 import pandas as pd
 
-from ts_utils import validate_ts_where_condition, find_time_filter, add_order_not_null, replace_time_filter, find_and_remove_time_filter, get_time_selects
+from .ts_utils import validate_ts_where_condition, find_time_filter, add_order_not_null, replace_time_filter, find_and_remove_time_filter, get_time_selects
 
 from mindsdb_sql.parser.ast import Identifier, Constant, Operation, Select, BinaryOperation, BetweenOperation
 from mindsdb_sql.parser.ast import OrderBy
-
-
-def get_join_input(query, model, data_handler, data_side):
-    data_handler_table = getattr(query.from_table, data_side).parts[-1]
-    data_handler_cols = list(set([t.parts[-1] for t in query.targets]))
-
-    data_query = Select(
-        targets=[Identifier(col) for col in data_handler_cols],
-        from_table=Identifier(data_handler_table),
-        where=query.where,
-        group_by=query.group_by,
-        having=query.having,
-        order_by=query.order_by,
-        offset=query.offset,
-        limit=query.limit
-    )
-
-    model_input = pd.DataFrame.from_records(
-        data_handler.query(data_query)['data_frame']
-    )
-
-    return model_input
 
 
 def get_ts_join_input(query, model, data_handler, data_side):
@@ -69,12 +47,12 @@ def get_ts_join_input(query, model, data_handler, data_side):
     if len(gby_cols) == 0:
         # no groups - one or multistep
         if len(time_selects) == 1:
-            model_input = pd.DataFrame.from_records(data_handler.query(time_selects[0])['data_frame'])
+            model_input = pd.DataFrame.from_records(data_handler.query(time_selects[0]).data_frame)
         else:
             dfs = []
             for step in time_selects:
                 # TODO: correctness if we have a double cutoff?
-                dfs.append(pd.DataFrame.from_records(data_handler.query(step)['data_frame']))
+                dfs.append(pd.DataFrame.from_records(data_handler.query(step).data_frame))
             model_input = pd.concat(dfs)
     else:
         # grouped - multiple partitions
@@ -86,7 +64,7 @@ def get_ts_join_input(query, model, data_handler, data_side):
                 distinct=True,
                 from_table=Identifier(data_handler_table),
             )
-            groups[gcol] = list(data_handler.query(groups_query)['data_frame'].squeeze().values)
+            groups[gcol] = list(data_handler.query(groups_query).data_frame.squeeze().values)
 
         partition_keys = list(groups.keys())
         all_partitions = list(product(*[v for k, v in groups.items()]))  # TODO: check for better retrival then project?
@@ -123,7 +101,7 @@ def get_ts_join_input(query, model, data_handler, data_side):
                 # TODO: this doesn't cover intersection case...
                 time_select.where = BinaryOperation(op='and', args=[time_select.where, filters])
 
-                df = data_handler.query(time_select)['data_frame']
+                df = data_handler.query(time_select).data_frame
                 # TODO: maybe order and limit df instead of SELECT to hedge against badly defined dtypes in the DB?
                 dfs.append(df)
 

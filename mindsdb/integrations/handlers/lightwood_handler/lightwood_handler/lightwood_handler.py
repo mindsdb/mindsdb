@@ -4,18 +4,17 @@ from typing import Dict, List, Optional
 
 import sqlalchemy
 
-from utils import unpack_jsonai_old_args, get_aliased_columns, load_predictor
+from .utils import unpack_jsonai_old_args, load_predictor
 
 import lightwood
 from lightwood.api.types import JsonAI
 from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition
 
-from utils import unpack_jsonai_old_args, load_predictor
-from join_utils import get_ts_join_input, get_join_input
+from .join_utils import get_ts_join_input
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.utils import recur_get_conditionals, get_aliased_columns, get_join_input, default_data_gather, get_model_name
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
-from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
+from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.interfaces.model.learn_process import brack_to_mod, rep_recur
 from mindsdb.utilities.config import Config
 
@@ -26,6 +25,18 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreatePredictor,
     DropPredictor
 )
+
+
+MDB_CURRENT_HANDLERS = {
+    'test_handler': MySQLHandler('test_handler', **{"connection_data": {
+        "host": "localhost",
+        "port": "3306",
+        "user": "root",
+        "password": "root",
+        "database": "test",
+        "ssl": False
+    }})
+}  # TODO: remove once hooked to mindsdb handler controller
 
 
 class LightwoodHandler(PredictiveHandler):
@@ -65,9 +76,9 @@ class LightwoodHandler(PredictiveHandler):
     def connect(self, **kwargs) -> Dict[str, int]:
         """ Setup storage handler and check lightwood version """  # noqa
         self.storage = SqliteStorageHandler(context=self.name, config=kwargs['config'])  # TODO non-KV storage handler?
-        return self.check_status()
+        return self.check_connection()
 
-    def check_status(self) -> Dict[str, int]:
+    def check_connection(self) -> Dict[str, int]:
         try:
             import lightwood
             year, major, minor, hotfix = lightwood.__version__.split('.')
@@ -88,7 +99,7 @@ class LightwoodHandler(PredictiveHandler):
         if table_name not in self.get_tables():
             print("Table not found.")
             return {}
-        return self.storage.get('models')[model_name]['jsonai']
+        return self.storage.get('models')[table_name]['jsonai']
 
     def native_query(self, query: str) -> Optional[object]:
         statement = self.parser(query, dialect=self.dialect)
@@ -169,9 +180,9 @@ class LightwoodHandler(PredictiveHandler):
             raise Exception(f"Query type {type(statement)} not supported")
 
     def query(self, query) -> dict:
-        model_name, _, _ = get_model_name(query)
+        model_name, _, _ = get_model_name(self, query)
         model = self._get_model(model_name)
-        values = _recur_get_conditionals(query.where.args, {})
+        values = recur_get_conditionals(query.where.args, {})
         df = pd.DataFrame.from_dict(values)
         df = self._call_predictor(df, model)
         return {'data_frame': df}
@@ -180,13 +191,13 @@ class LightwoodHandler(PredictiveHandler):
         """
         Batch prediction using the output of a query passed to a data handler as input for the model.
         """  # noqa
-        model_name, model_alias, model_side = get_model_name(stmt)
+        model_name, model_alias, model_side = get_model_name(self, stmt)
         data_side = 'right' if model_side == 'left' else 'left'
         model = self._get_model(model_name)
         is_ts = model.problem_definition.timeseries_settings.is_timeseries
 
         if not is_ts:
-            model_input = get_join_input(stmt, model, data_handler, data_side)
+            model_input = get_join_input(stmt, model, [model_name, model_alias], data_handler, data_side)
         else:
             model_input = get_ts_join_input(stmt, model, data_handler, data_side)
 

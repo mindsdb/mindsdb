@@ -87,7 +87,7 @@ class MySQLHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection.is_connected()
         except Exception as e:
-            log.error(f'Error connecting to MySQL {self.database}, {e}!')
+            log.error(f'Error connecting to MySQL: {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:

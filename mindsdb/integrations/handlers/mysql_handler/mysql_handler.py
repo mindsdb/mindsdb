@@ -72,6 +72,7 @@ class MySQLHandler(DatabaseHandler):
         if self.is_connected is False:
             return
         self.connection.close()
+        self.is_connected = False
         return
 
     def check_connection(self) -> StatusResponse:

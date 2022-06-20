@@ -10,7 +10,7 @@ Follow these steps to create, train and query a machine learning model (predicto
 
 There are a couple of ways you can get the data to follow trough this tutorial.
 
-=== "Connectiong as a database via `#!sql CREATE DATABASE`"
+=== "Connecting as a database via `#!sql CREATE DATABASE`"
 
     We have prepared a demo database you can connect to that contains the data to be used `#!sql example_db.demo_data.home_rentals` 
 
@@ -56,7 +56,7 @@ There are a couple of ways you can get the data to follow trough this tutorial.
     ```
 
 
-!!! Warning "From now ownwards we will use the table `#!sql example_db.demo_data.home_rentals` make sure you replace it for `files.home_rentals` if you are connecting the data as a file."
+!!! Warning "From now onwards we will use the table `#!sql example_db.demo_data.home_rentals` make sure you replace it for `files.home_rentals` if you are connecting the data as a file."
 
 ### Understanding the Data
 
@@ -77,8 +77,8 @@ Where:
 | Column                | Description                                                                                  | Data Type           | Usage   |
 | :-------------------- | :------------------------------------------------------------------------------------------- | ------------------- | ------- |
 | `number_of_rooms`     | Number of rooms of a given house `[0,1,2,3]`                                                 | `integer`           | Feature |
-| `number_of_bathrooms` | Numbmer of bathrooms on a given house `[1,2]`                                                | `integer`           | Feature |
-| `sqft`                | Area of a given house in squared feet                                                        | `integer`           | Feature |
+| `number_of_bathrooms` | Number of bathrooms on a given house `[1,2]`                                                 | `integer`           | Feature |
+| `sqft`                | Area of a given house in square feet                                                         | `integer`           | Feature |
 | `location`            | Rating of the location of a given house `[poor, great, good]`                                | `character varying` | Feature |
 | `days_on_market`      | Number of days a given house has been open to be rented                                      | `integer`           | Feature |
 | `neighborhood`        | Neighborhood a given house is in `[alcatraz_ave, westbrae, ..., south_side, thowsand_oaks ]` | `character varying` | Feature |
@@ -89,7 +89,7 @@ Where:
     A **label** is the thing we're predicting—the y variable in simple linear regression ...
     A **feature** is an input variable—the x variable in simple linear regression ..
 
-## Traning a Predictor Via [`#!sql CREATE PREDICTOR`](/sql/create/predictor)
+## Training a Predictor Via [`#!sql CREATE PREDICTOR`](/sql/create/predictor)
 
 Let's create and train your first machine learning predictor. For that we are going to use the `#!sql CREATE PREDICTOR` syntax, where we specify what sub-query to train `#!sql FROM` (features) and what we want to learn to `#!sql PREDICT` (labels):
 

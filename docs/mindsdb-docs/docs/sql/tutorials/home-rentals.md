@@ -55,7 +55,6 @@ There are a couple of ways you can get the data to follow trough this tutorial.
     LIMIT 10;
     ```
 
-
 !!! Warning "From now onwards we will use the table `#!sql example_db.demo_data.home_rentals` make sure you replace it for `files.home_rentals` if you are connecting the data as a file."
 
 ### Understanding the Data
@@ -91,7 +90,7 @@ Where:
 
 ## Training a Predictor Via [`#!sql CREATE PREDICTOR`](/sql/create/predictor)
 
-Let's create and train your first machine learning predictor. For that we are going to use the `#!sql CREATE PREDICTOR` syntax, where we specify what sub-query to train `#!sql FROM` (features) and what we want to learn to `#!sql PREDICT` (labels):
+Let's create and train your first machine learning predictor. For that we are going to use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) syntax, where we specify what sub-query to train `#!sql FROM` (features) and what we want to learn to `#!sql PREDICT` (labels):
 
 ```sql
 CREATE PREDICTOR mindsdb.home_rentals_model
@@ -100,13 +99,11 @@ FROM example_db
 PREDICT rental_price;
 ```
 
-
 ## Checking the Status of a Predictor
 
 A predictor may take a couple of minutes for the training to complete. You can monitor the status of your predictor by copying and pasting this command into your SQL client:
 
-
-```sql 
+```sql
 SELECT status
 FROM mindsdb.predictors
 WHERE name='home_rentals_predictor';
@@ -121,6 +118,7 @@ Here we are selecting the status from the table called mindsdb.predictors and us
 | training |
 +----------+
 ```
+
 Or after a the model has been trained:
 
 ```sql
@@ -131,7 +129,6 @@ Or after a the model has been trained:
 +----------+
 ```
 
-
 ## Making Predictions
 
 !!! attention "Predictor Status Must be 'complete' Before Making a Prediction"
@@ -141,8 +138,7 @@ Or after a the model has been trained:
 Once the predictor's status is complete. You can make predictions by querying the predictor as if it was a normal table:
 The [`SELECT`](/sql/api/select/) syntax will allow you to make a prediction based on features.
 
-
-```sql 
+```sql
 SELECT rental_price,
        rental_price_explain
 FROM mindsdb.home_rentals_model
@@ -174,7 +170,7 @@ FROM example_db.demo_data.home_rentals as t
 JOIN mindsdb.home_rentals_model as m limit 100
 ```
 
-```sql 
+```sql
 +------------+-----------------+-----------------+---------------------+------+----------+----------------+
 | real_price | predicted_price | number_of_rooms | number_of_bathrooms | sqft | location | days_on_market |
 +------------+-----------------+-----------------+---------------------+------+----------+----------------+

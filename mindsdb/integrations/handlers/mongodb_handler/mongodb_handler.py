@@ -1,6 +1,6 @@
 import re
-import certifi
 
+import certifi
 import pandas as pd
 from pymongo import MongoClient
 
@@ -25,12 +25,12 @@ class MongoDBHandler(DatabaseHandler):
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
-
-        self.host = kwargs.get("host")
-        self.port = int(kwargs.get("port") or 27017)
-        self.user = kwargs.get("username")
-        self.password = kwargs.get("password")
-        self.database = kwargs.get('database')
+        connection_data = kwargs['connection_data']
+        self.host = connection_data.get("host")
+        self.port = int(connection_data.get("port") or 27017)
+        self.user = connection_data.get("username")
+        self.password = connection_data.get("password")
+        self.database = connection_data.get('database')
 
         self.connection = None
         self.is_connected = False
@@ -125,9 +125,9 @@ class MongoDBHandler(DatabaseHandler):
 
             cursor = con[self.database][collection]
 
-            for method, args in call:
-                fnc = getattr(cursor, method)
-                cursor = fnc(*args)
+            for step in call:
+                fnc = getattr(cursor, step['method'])
+                cursor = fnc(*step['args'])
 
             result = []
             for row in cursor:

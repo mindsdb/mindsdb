@@ -32,11 +32,13 @@ class MongoToAst:
         else:
             targets = [Star()]
 
-        where = self.convert_filter(filter)
+        where = None
+        if filter is not None:
+            where = self.convert_filter(filter)
 
         node = Select(
             targets=targets,
-            from_table=Identifier(parts=[collection]),
+            from_table=Identifier(path_str=collection),
             where=where,
             order_by=order_by,
         )

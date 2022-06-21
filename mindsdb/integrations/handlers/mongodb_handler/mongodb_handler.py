@@ -101,10 +101,13 @@ class MongoDBHandler(DatabaseHandler):
         return result
 
 
-    def native_query(self, collection, call) -> Response:
+    def native_query(self, query) -> Response:
+
         """
-        call is sequence of methods
-            call = [
+        query = {
+            'database': 'db_test', // optional
+            'collection': 'fish', 
+            'call' = [   // call is sequence of methods
                 {
                     'method': 'find',
                     'args': [{a:1}, {b:2}]
@@ -114,16 +117,22 @@ class MongoDBHandler(DatabaseHandler):
                     'args': [{c:3}]
                 },
             ]
-        is the mongo query:
-            db.collection.find({a:1}, {b:2}).sort({c:3})
+        }        
+      
+        is the the same as mongo query:
+            db_test.fish.find({a:1}, {b:2}).sort({c:3})
 
         returns the records from the current recordset
         """
+        collection = query['collection']
+        database = query.get('database', self.database)
+        call = query['call']
+
         con = self.connect()
 
         try:
 
-            cursor = con[self.database][collection]
+            cursor = con[database][collection]
 
             for step in call:
                 fnc = getattr(cursor, step['method'])
@@ -177,7 +186,11 @@ class MongoDBHandler(DatabaseHandler):
         """
         renderer = MongodbRender()
         res = renderer.render(query)
-        return self.native_query(res['collection'], res['call'])
+        return self.native_query({
+            'collection': res['collection'],
+            'call': res['call']
+        })
+
 
     def get_tables(self) -> Response:
         """

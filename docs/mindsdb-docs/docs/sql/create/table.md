@@ -1,5 +1,7 @@
 # `#!sql CREATE TABLE` Statement
 
+## Description
+
 The `#!sql CREATE TABLE` is used to create a table and fill it with the result of a subselect, usually used to materialize predictions into tables.
 
 ## Syntax

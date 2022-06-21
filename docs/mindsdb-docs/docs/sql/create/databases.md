@@ -15,7 +15,7 @@ WITH
     parameters={
             "key":"value",
             ...
-        };
+    };
 ```
 
 On execution, you should get:
@@ -65,7 +65,7 @@ SHOW DATABASES;
 
 On execution:
 
-```sql 
+```sql
 +--------------------+
 | Database           |
 +--------------------+
@@ -131,6 +131,7 @@ WITH
             "database": "singlestore"
     };
 ```
+
 ### MySQL
 
 ```sql

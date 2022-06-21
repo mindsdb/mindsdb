@@ -76,8 +76,7 @@ LIMIT 100
 Having a time series predictor trained via:
 
 ```sql
-CREATE PREDICTOR 
-  mindsdb.house_sales_model
+CREATE PREDICTOR mindsdb.house_sales_model
 FROM example_db
   (SELECT * FROM demo_data.house_sales)
 PREDICT MA
@@ -88,9 +87,9 @@ WINDOW 8
 HORIZON 4;  
 ```
 
-You can query it and get the forecast predictions like: 
+You can query it and get the forecast predictions like:
 
-```sql 
+```sql
 SELECT m.saledate as date,
     m.ma as forecast
 FROM mindsdb.house_sales_model as m 
@@ -98,4 +97,3 @@ JOIN example_db.demo_data.house_sales as t
 WHERE t.saledate > LATEST AND t.type = 'house'
 LIMIT 4;
 ```
-

@@ -74,7 +74,7 @@ On execution:
 +-----------------+-------------+---------------+----------+
 | name            | performance | training_time | selected |
 +-----------------+-------------+---------------+----------+
-| candidate_model | performace  | training_time | selected |
+| candidate_model | performance  | training_time | selected |
 +-----------------+-------------+---------------+----------+
 ```
 

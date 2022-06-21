@@ -1,5 +1,7 @@
 # INSERT INTO Statement
 
+## Description
+
 The `#!sql INSERT INTO` statement is used to fill a table with the result of subselect. commonly used to persist predictions into the database
 
 ## Syntax
@@ -38,9 +40,9 @@ In order to achive the desired result we could execute the following query:
 
 ```sql
 INSERT INTO int1.tbl1 (
-    SELECT * FROM int2.tbl2 AS ta
+    SELECT *
+    FROM int2.tbl2 AS ta
     JOIN mindsdb.predictor_name AS tb
     WHERE ta.date > '2015-12-31'
 )
 ```
- 

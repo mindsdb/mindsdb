@@ -2,7 +2,7 @@
 
 ## Description
 
-In MindsDB, an **AI Table** is a virtual table based on the result-set of the SQL Statement that `#!sql JOIN`s a table data with the predictions of a model. An **AI Table** can be created using the `#!sql CREATE VIEW mindsdb.[ai_table_name]` statement.
+In MindsDB, an **AI Table** is a virtual table based on the result-set of the SQL Statement that `#!sql JOIN`s a table data with the predictions of a model. An **AI Table** can be created using the `#!sql CREATE VIEW` statement.
 
 ## Syntax
 
@@ -31,19 +31,16 @@ Where:
 
 ## Example
 
-We will use the Home Rentals dataset to create an AI Table.
-
-{{ read_csv('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/home_rentals/dataset/train.csv', nrows=2) }}
-
-The first step is to execute a SQL query for creating a `home_rentals_model` that learns to predict the `rental_price` value given other features of a real estate listing:
+Having executed a SQL query for training a `home_rentals_model` that learns to predict the `rental_price` value given other features of a real estate listing:
 
 ```sql
 CREATE PREDICTOR mindsdb.home_rentals_model
-FROM integration_name (SELECT * FROM house_rentals_data) as rentals
+FROM integration_name
+    (SELECT * FROM house_rentals_data) as rentals
 PREDICT rental_price as price;
 ```
 
-Once trained, we can `JOIN` any input data with the trained model and store the results as an AI Table.
+Once trained, we can [`#!sql JOIN`](/sql/api/join/) any input data with the trained model and store the results as an AI Table using the `#!sql CREATE VIEW` syntax.
 
 Let's pass some of the expected input columns (in this case, `sqft`, `number_of_bathrooms`, `location`) to the model and join the predicted `rental_price` values:
 

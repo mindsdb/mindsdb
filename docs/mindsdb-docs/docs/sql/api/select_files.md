@@ -2,10 +2,10 @@
 
 ## Description
 
-The `#!sql SELECT from files.[file]` statement is used to select a `#!sql [file]` as a datasource. The main use is to,, create a predictor from a file that has been uploaded to MindsDB.
+The `#!sql SELECT from files.[file]` statement is used to select a `#!sql [file]` as a datasource. The main use is to create a predictor from a file that has been uploaded to MindsDB via the [MindsDB Editor](/connect/mindsdb_editor/).
 
 !!! warning "Before using the `#!sql SELECT files.[file]`"
-    Make sure to upload the [file] via the MindsDB Editor
+    Make sure to [upload the file via the MindsDB Editor](#upload-file-to-mindsdb-editor)
 
 ## Syntax
 
@@ -27,7 +27,8 @@ Where:
 
 |               | Description                                       |
 | ------------- | ------------------------------------------------- |
-| `[file_name]` | Name of file uploaded to mindsDB                  |
+| `[file_name]` | Name of file uploaded to mindsDB via the [MindsDB SQL Editor
+](/connect/mindsdb_editor/)   |
 | column        | Name of the column depending on the file uploaded |
 | value         | Value depending on the file uploaded              |
 
@@ -37,21 +38,20 @@ This example will show how to upload a file to MindsDB Cloud and use it to creat
 
 ### Upload file to MindsDB Editor
 
-1. Connect to the MindsDB Editor 
+1. Connect to the MindsDB Editor
 2. Navigate to `Add Data` located on the right navigation bar identified by a plug icon.
 3. Click on the tab `Files` and the card `Import File`
-    <figure markdown> 
-        ![Add File](/assets/sql/add-file-data.png){ width="800", loading=lazy  }
-        <figcaption></figcaption>
+
+    <figure markdown>
+        ![Add File](/assets/sql/add-file-data.png){ width="800", loading=lazy}
     </figure>
+
 4. Name your file in `Table name`.
 5. Click on `Save and Continue`.
 
-<figure markdown> 
-    ![Upload Status](/assets/sql/file.png){ width="800", loading=lazy  }
-    <figcaption></figcaption>
-</figure>
-
+    <figure markdown>
+        ![Upload Status](/assets/sql/file.png){ width="800", loading=lazy  }
+    </figure>
 
 ### Select the file as datasource
 

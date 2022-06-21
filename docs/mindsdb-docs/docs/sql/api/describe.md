@@ -1,14 +1,16 @@
-# `#!sql DESCRIBE` statement
+# `#!sql DESCRIBE` Statement
 
 ## Description
 
 The `DESCRIBE` statement is used to display the attributes of an existing model.
 
-## DESCRIBE FEATURES
+## `#!sql DESCRIBE ... FEATURES` Statement
+
+### `#!sql DESCRIBE ... FEATURES` Description
 
 The `DESCRIBE mindsdb.[name_of_your_predictor].features` statement is used to display the way that the model encoded the data prior to training.
 
-### Syntax
+### `#!sql DESCRIBE ... FEATURES` Syntax
 
 ```sql
 DESCRIBE mindsdb.[name_of_your_predictor].features;
@@ -34,7 +36,7 @@ Where:
 | encoder                    | Encoder used                                          |
 | role                       | Role for that column, it can be `feature` or `target` |
 
-### Example
+### `#!sql DESCRIBE ... FEATURES` Example
 
 ```sql
 DESCRIBE mindsdb.home_rentals_model.features;
@@ -56,11 +58,11 @@ On execution:
 +---------------------+-------------+----------------+---------+
 ```
 
-## DESCRIBE MODEL
+## `#!sql DESCRIBE ... MODEL` Statement
 
 The `DESCRIBE mindsdb.[name_of_your_predictor].model` statement is used to display the performance of the candidate models.
 
-### Syntax
+### `#!sql DESCRIBE ... MODEL` Syntax
 
 ```sql
 DESCRIBE mindsdb.[name_of_your_predictor].model;
@@ -86,7 +88,7 @@ Where:
 | training_time              | Time elapsed for the model training to be completed    |
 | selected                   | `1` for the best performing model `0` for the rest     |
 
-### Example
+### `#!sql DESCRIBE ... MODEL` Example
 
 ```sql
 DESCRIBE mindsdb.home_rentals_model.model;
@@ -104,9 +106,9 @@ On execution:
 +------------+--------------------+----------------------+----------+
 ```
 
-## DESCRIBE MODEL
+## `#!sql DESCRIBE ... ENSEMBLE`
 
-### Syntax
+### `#!sql DESCRIBE ... ENSEMBLE` Syntax
 
 ```sql
 DESCRIBE mindsdb.[name_of_your_predictor].ensemble;
@@ -128,9 +130,9 @@ Where:
 | -------- | ------------------------------------------------------------------------------ |
 | ensemble | JSON type object describing the parameters used to select best model candidate |
 
-### Example
+### `#!sql DESCRIBE ... ENSEMBLE` Example
 
-```sql 
+```sql
 DESCRIBE mindsdb.home_rentals_model.ensemble;
 ```
 
@@ -253,5 +255,5 @@ On execution:
 +----------------------------------------------------------------------+
 ```
 
-!!! TIP "Unsure what it all means?" 
+!!! TIP "Unsure what it all means?"
     If you're unsure on how to `#!sql DESCRIBE` your model or understand the results feel free to ask us how to do it on the community [Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).

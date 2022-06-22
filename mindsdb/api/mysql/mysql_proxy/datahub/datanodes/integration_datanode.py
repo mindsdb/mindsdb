@@ -75,7 +75,9 @@ class IntegrationDataNode(DataNode):
                 tables=[Identifier(parts=table_name_parts)],
                 if_exists=True
             )
-            self.integration_handler.query(drop_ast)
+            result = self.integration_handler.query(drop_ast)
+            if result.type == RESPONSE_TYPE.ERROR:
+                raise Exception(result.error_message)
             is_create = True
 
         if is_create:
@@ -85,7 +87,9 @@ class IntegrationDataNode(DataNode):
                 is_replace=True
             )
 
-            self.integration_handler.query(create_table_ast)
+            result = self.integration_handler.query(create_table_ast)
+            if result.type == RESPONSE_TYPE.ERROR:
+                raise Exception(result.error_message)
 
         insert_columns = [Identifier(parts=[x['name'][-1]]) for x in table_columns_meta]
         formatted_data = []
@@ -112,7 +116,10 @@ class IntegrationDataNode(DataNode):
             values=formatted_data
         )
 
-        self.integration_handler.query(insert_ast)
+        result = self.integration_handler.query(insert_ast)
+        if result.type == RESPONSE_TYPE.ERROR:
+            raise Exception(result.error_message)
+
 
     def query(self, query):
         result = self.integration_handler.query(query)

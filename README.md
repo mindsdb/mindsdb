@@ -111,7 +111,6 @@ Check our [docs](https://docs.mindsdb.com/?utm_medium=community&utm_source=githu
 * Model explainability analysis 
 * GPU support for models’ training
 * Open JSON-AI syntax to build models and bring your own ML blocks in a declarative way 
-* REST API available as well
 
 
 ## Database Integrations
@@ -147,7 +146,6 @@ Feel free to browse [documentation](https://docs.mindsdb.com?utm_medium=communit
 ## Documentation
 
 You can find the complete documentation of MindsDB at [docs.mindsdb.com](https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
-Documentation for our HTTP API can be found at [apidocs.mindsdb.com](https://apidocs.mindsdb.com/).
 
 ## Support
 

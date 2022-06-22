@@ -27,7 +27,7 @@ class MongoToAst:
             for col in projection:
                 # it is only identifiers
                 targets.append(
-                    Identifier(parts=[col])
+                    Identifier(path_str=col)
                 )
         else:
             targets = [Star()]

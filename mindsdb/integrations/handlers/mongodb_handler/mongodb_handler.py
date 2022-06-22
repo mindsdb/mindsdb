@@ -107,7 +107,7 @@ class MongoDBHandler(DatabaseHandler):
         query = {
             'database': 'db_test', // optional
             'collection': 'fish', 
-            'call' = [   // call is sequence of methods
+            'call': [   // call is sequence of methods
                 {
                     'method': 'find',
                     'args': [{a:1}, {b:2}]

@@ -29,6 +29,7 @@ class MySQLHandler(DatabaseHandler):
         self.parser = parse_sql
         self.dialect = 'mysql'
         self.connection_data = kwargs.get('connection_data')
+        self.database = self.connection_data.get('database')
 
         self.connection = None
         self.is_connected = False
@@ -71,6 +72,7 @@ class MySQLHandler(DatabaseHandler):
         if self.is_connected is False:
             return
         self.connection.close()
+        self.is_connected = False
         return
 
     def check_connection(self) -> StatusResponse:

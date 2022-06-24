@@ -213,10 +213,10 @@ class ExecuteCommands:
                 where = BinaryOperation('and', args=[
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
                     BinaryOperation('or', args=[
-                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')]),
+                        BinaryOperation('=', args=[Identifier('table_type'), Constant('BASE TABLE')]),
                         BinaryOperation('or', args=[
-                            BinaryOperation('like', args=[Identifier('table_type'), Constant('SYSTEM VIEW')]),
-                            BinaryOperation('like', args=[Identifier('table_type'), Constant('VIEW')])
+                            BinaryOperation('=', args=[Identifier('table_type'), Constant('SYSTEM VIEW')]),
+                            BinaryOperation('=', args=[Identifier('table_type'), Constant('VIEW')])
                         ])
                     ])
                 ])

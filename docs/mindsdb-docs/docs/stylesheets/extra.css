@@ -140,11 +140,11 @@ h3 ~ p {
 }
 
 p a {
-	font-weight: 500;
+	font-weight: 700;
 }
 
 p a:hover {
-	font-weight: 500;
+	font-weight: 700;
 	color: #00A587 !important;
 }
 

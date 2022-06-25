@@ -5,7 +5,7 @@
 
 Bitcoin is a digital currency that uses blockchain technology, Bitcoin can be sent from user to user on the peer-to-peer Bitcoin network without the need for intermediaries. Note that this is just a task for fun so use it at your own risk.
 
-In this tutorial, you will learn how to forecast Bitcoin using MindsDB. And all you need to know is just SQL. Behind the scenes, MindsDB will create the complete machine learning workflow, like determine, normalize & encode the data, train & test the model, etc. But we don’t need to bother with all this complexity. Of course, if you want to, you can tune things manually inside MindsDB with a declarative syntax caled JSON-AI, but we will not cover it in this article.
+In this tutorial, you will learn how to forecast Bitcoin using MindsDB. And all you need to know is just SQL. Behind the scenes, MindsDB will create the complete machine learning workflow, like determine, normalize & encode the data, train & test the model, etc. But we don’t need to bother with all this complexity. Of course, if you want to, you can tune things manually inside MindsDB with a declarative syntax called JSON-AI, but we will not cover it in this article.
 
 DISCLAIMER: Please note that predicting Bitcoin price is just an example for showing MindsDB technology and you are solely responsible for any results you may get in real life, if you use this information for real trading purposes. Please note, that you can also follow this tutorial with other data you have.
 

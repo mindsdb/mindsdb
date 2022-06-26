@@ -36,7 +36,7 @@ Where:
 | `int2`           | Database to be used as a source in the inner `#!sql SELECT` |
 | `tbl2`           | Table to be used as a source.                               |
 
-In order to achive the desired result we could execute the following query:
+In order to achieve the desired result we could execute the following query:
 
 ```sql
 INSERT INTO int1.tbl1 (

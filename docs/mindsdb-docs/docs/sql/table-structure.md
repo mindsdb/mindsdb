@@ -33,15 +33,15 @@ The `predictors` columns contains information about each model as:
 | `status`            | Training status(training, complete, error).  |
 | `predict`           | The name of the target variable column.      |
 | `accuracy`          | The model accuracy.                          |
-| `update_status`     | Trainig update status(up_to_date, updating). |
+| `update_status`     | Training update status(up_to_date, updating). |
 | `mindsdb_version`   | The mindsdb version used.                    |
-| `error`             | Error message info in case of an errror.     |
+| `error`             | Error message info in case of an error.     |
 | `select_data_query` | SQL select query to create the datasource.   |
 | `training options`  | Additional training parameters.              |
 
 ## The datasource TABLE
 
-!!! warning "This is a work in progess" 
+!!! warning "This is a work in progress" 
 
 ## The `[integration_name]` TABLE
 

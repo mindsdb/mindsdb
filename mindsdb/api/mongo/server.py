@@ -2,6 +2,7 @@ import socketserver as SocketServer
 import socket
 import struct
 import bson
+import traceback
 from bson import codec_options
 from collections import OrderedDict
 from abc import abstractmethod
@@ -141,8 +142,11 @@ class OpMsgResponder(OperationResponder):
 
         return documents
 
-    def to_bytes(self, response, request_id):
-        flags = struct.pack("<I", 0)  # TODO
+    def to_bytes(self, response, request_id, is_error=False):
+        if is_error:
+            flags = struct.pack("<I", 2)
+        else:
+            flags = struct.pack("<I", 0)  # TODO
         payload_type = struct.pack("<b", 0)  # TODO
         payload_data = bson.BSON.encode(response)
         data = b''.join([flags, payload_type, payload_data])
@@ -261,9 +265,19 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             raise NotImplementedError(f'Unknown opcode {opcode}')
         responder = self.server.operationsHandlersMap[opcode]
         assert responder is not None, 'error'
-        response = responder.handle(msg_bytes, request_id, self.session.mindsdb_env, self.session)
-        if response is None:
-            return None
+        try:
+            response = responder.handle(msg_bytes, request_id, self.session.mindsdb_env, self.session)
+            if response is None:
+                return None
+        except Exception as e:
+            response = {
+                '$err': {
+                    'title': str(e),
+                    'info': traceback.format_exc()
+                }
+            }
+            return responder.to_bytes(response, request_id, is_error=True)
+
         return responder.to_bytes(response, request_id)
 
     def _read_bytes(self, length):

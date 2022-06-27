@@ -116,7 +116,7 @@ class FileController():
     def get_file_path(self, name, company_id):
         file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
         if file_record is None:
-            raise Exception("File '{name}' does not exists")
+            raise Exception(f"File '{name}' does not exists")
         file_dir = f'file_{company_id}_{file_record.id}'
         self.fs_store.get(file_dir, file_dir, self.dir)
         return str(Path(self.dir).joinpath(file_dir).joinpath(Path(file_record.source_file_path).name))

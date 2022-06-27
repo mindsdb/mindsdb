@@ -1189,7 +1189,7 @@ class SQLQuery():
             types = step_data.get('types', {})
             data = {
                 'tables': [appropriate_table],
-                'columns': columns,
+                'columns': {appropriate_table: columns},
                 'values': values,
                 'types': types  # copy
             }

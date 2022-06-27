@@ -11,7 +11,7 @@ class MongodbRender:
     def select(self, node):
         # collection
         if not isinstance(node.from_table, Identifier):
-            raise Exception(f'Not supported from {node.from_table}')
+            raise NotImplementedError(f'Not supported from {node.from_table}')
 
         collection = node.from_table.to_string()
 
@@ -60,13 +60,12 @@ class MongodbRender:
             # TODO
             ...
 
-        # is dict of dicts for pymongo
-        sort = []
+        sort = {}
         if node.order_by is not None:
             for col in node.order_by:
                 name = col.field.parts[-1]
                 direction = 1 if col.direction.upper() == 'ASC' else -1
-                sort.append([name, direction])
+                sort[name] = direction
 
         # compose mongo query
 
@@ -105,8 +104,9 @@ class MongodbRender:
     def handle_where(self, node):
         # todo UnaryOperation, function
         if not type(node) in [BinaryOperation]:
-            raise Exception(f'Not supported type {type(node)}')
+            raise NotImplementedError(f'Not supported type {type(node)}')
 
+        # logic operation
         op = node.op.lower()
         arg1, arg2 = node.args
 
@@ -121,81 +121,80 @@ class MongodbRender:
             query = {ops[op]: [query1, query2]}
             return query
 
-        if isinstance(arg1, Constant):
-            # swap
-            arg1, arg2 = arg2, arg1
-
-            # change operator
-            ops = {
-                '>=': '<=',
-                '>': '<',
-                '<': '>',
-                '<=': '>=',
-            }
-            op = ops.get(op, op)
-
-            if isinstance(arg1, Constant):
-                #  both constants
-                if op == '=':
-                    op = '=='
-                # they are swapped
-                return {"$where": f"{repr(arg2.value)} {op} {repr(arg1.value)}"}
+        ops_map = {
+            '>=': '$ge',
+            '>': '$gt',
+            '<': '$lt',
+            '<=': '$le',
+            '<>': '$ne',
+            '!=': '$ne',
+            '=': '$eq',
+            '==': '$eq',
+            'is': '$eq',
+            'is not': '$ne',
+        }
 
         if isinstance(arg1, Identifier):
             var_name = arg1.parts[-1]
+            # is simple operation
+            if isinstance(arg2, Constant):
+                # identifier and constant
 
-            if isinstance(arg2, Identifier):
-                # both identifiers: {"$where" : "this.city > this.city"}
-                var1 = f'this.{var_name}'
-                var2 = f'this.{arg2.parts[-1]}'
-                return {"$where": f"{var1} {op} {var2}"}
+                val = arg2.value
+                if op in ('=', '=='):
+                    pass
+                elif op in ops_map:
+                    op2 = ops_map[op]
+                    val = {op2: val}
+                else:
+                    raise NotImplementedError(f'Not supported operator {op}')
 
-            if isinstance(arg2, Latest):
-                var1 = f'this.{var_name}'
-                var2 = 'latest'
-                return {"$where": f"{var1} {op} {var2}"}
+                return {var_name: val}
 
+            # is IN condition
             elif isinstance(arg2, Tuple):
-                # there is no swap: args doesn't content Constant
-
                 # it should be IN, NOT IN
                 ops = {
                     'in': '$in',
                     'not in': '$nin'
                 }
+                # must be list of Constants
                 values = [
                     i.value
                     for i in arg2.items
                 ]
 
                 if op in ops:
-                    op2 = ops.get(node.op)
+                    op2 = ops[op]
                     cond = {op2: values}
                 else:
-                    raise Exception(f'Not supported operator {op}')
+                    raise NotImplementedError(f'Not supported operator {op}')
 
                 return {var_name: cond}
 
-            elif isinstance(arg2, Constant):
-                # identifier and constant
-                ops = {
-                    '>=': '$ge',
-                    '>': '$gt',
-                    '<': '$lt',
-                    '<=': '$le',
-                    '<>': '$ne',
-                    '!=': '$ne',
-                }
-                val = arg2.value
-                if op in ('=', '=='):
-                    pass
-                elif op in ops:
-                    op2 = ops.get(node.op)
-                    val = {op2: val}
-                else:
-                    raise Exception(f'Not supported operator {op}')
+        # try to make expression
 
-                return {var_name: val}
+        val1 = self.where_element_convert(arg1)
+        val2 = self.where_element_convert(arg2)
 
-        raise Exception(f'Not supported expression {node.to_string()}')
+        if op in ops_map:
+            op2 = ops_map[op]
+        else:
+            raise NotImplementedError(f'Not supported operator {op}')
+
+        return {
+            '$expr': {
+                op2: [val1, val2]
+            }
+        }
+
+    def where_element_convert(self, node):
+        if isinstance(node, Identifier):
+            return f'${node.parts[-1]}'
+        elif isinstance(node, Latest):
+            return f'LATEST'
+        elif isinstance(node, Constant):
+            return node.value
+        else:
+            raise NotImplementedError(f'Unknown where element {node}')
 

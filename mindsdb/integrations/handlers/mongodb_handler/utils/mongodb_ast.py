@@ -75,7 +75,7 @@ class MongoToAst:
                     arg1 = BinaryOperation(op=op, args=[arg1, node])
 
                 return arg1
-            if k == '$where':
+            if k in ('$where', '$expr'):
                 # try to parse simple expresion like 'this.saledate > this.latest'
                 return MongoWhereParser(v).to_ast()
 

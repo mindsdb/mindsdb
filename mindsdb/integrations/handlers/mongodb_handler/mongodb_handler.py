@@ -162,15 +162,18 @@ class MongoDBHandler(DatabaseHandler):
 
         return response
 
-    def flatten(self, row, levels=2):
+    def flatten(self, row, level=0):
         # move sub-keys to upper level
-        # TODO do we need it?
+        # TODO is disabled now
+
+        if level <= 0:
+            return row
 
         add = {}
         del_keys = []
         for k, v in row.items():
-            if isinstance(v, dict) and levels > 0:
-                for k2, v2 in self.flatten(v, levels=levels - 1).items():
+            if isinstance(v, dict):
+                for k2, v2 in self.flatten(v, level=level - 1).items():
                     add[f'{k}.{k2}'] = v2
                 del_keys.append(k)
         if add:

@@ -24,7 +24,7 @@ Where:
 | Expressions                                     | Description                                                                   |
 | ----------------------------------------------- | ----------------------------------------------------------------------------- |
 | `[predictor_name]`                              | Name of the model to be created                                               |
-| `[integration_name]`                            | is the name of the intergration created via [`#!sql CREATE DATABASE`](/sql/create/databases/) or [file upload](/sql/api/select_files/)              |
+| `[integration_name]`                            | is the name of the integration created via [`#!sql CREATE DATABASE`](/sql/create/databases/) or [file upload](/sql/api/select_files/)              |
 | `(SELECT [column_name, ...] FROM [table_name])` | SELECT statement for selecting the data to be used for training and validation |
 | `PREDICT [target_column]`                       | where `target_column` is the column name of the target variable.              |
 
@@ -158,7 +158,7 @@ Where:
 | ----------------------------- | ----------------------------------------------------------------------------- |
 | `[predictor_name]`            | Name of the model to be created                                               |
 | `[file_name]`                 | Name of the file uploaded via the MindsDB editor                              |
-| `(SELECT * FROM [file_name])` | SELECT statement for selecting the data to be used for traning and validation |
+| `(SELECT * FROM [file_name])` | SELECT statement for selecting the data to be used for training and validation|
 | `target_variable`             | `target_column` is the column name of the target variable.                    |
 
 On execution,
@@ -190,7 +190,7 @@ FROM [integration_name]
 (SELECT [sequential_column], [partition_column], [other_column], [target_column] FROM [table_name])
 PREDICT [target_column]
 
-ORDER BY [sequantial_column]
+ORDER BY [sequential_column]
 GROUP BY [partition_column]
 
 WINDOW [int]
@@ -201,7 +201,7 @@ Where:
 
 | Expressions                              | Description                                                                                                                                                                                                                  |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ORDER BY [sequantial_column]`           | Defines the column that the time series will be order by. These can be a date, or anything that defines the sequence of events.                                                                                              |
+| `ORDER BY [sequential_column]`           | Defines the column that the time series will be order by. These can be a date, or anything that defines the sequence of events.                                                                                              |
 | `GROUP BY [partition_column]` (optional) | Groups the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series.              |
 | `WINDOW [int]`                           | Specifies the number `[int]` of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be interpreted like "Always use the previous 10 rows". |
 | `HORIZON [int]` (optional)               | keyword specifies the number of future predictions, default value is 1                                                                                                                                                       |

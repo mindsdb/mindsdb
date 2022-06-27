@@ -37,7 +37,7 @@ Empty set (0.026 sec)
 
 ## Example
 
-The following SQL statement drops the model table called `home_rentals_model`. Given the followig query to list all predictors by name
+The following SQL statement drops the model table called `home_rentals_model`. Given the following query to list all predictors by name
 
 ```sql
 SELECT name FROM mindsdb.predictors;

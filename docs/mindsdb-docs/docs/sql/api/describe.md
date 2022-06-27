@@ -32,7 +32,7 @@ Where:
 | -------------------------- | ----------------------------------------------------- |
 | `[name_of_your_predictor]` | Name of the model to be described                     |
 | column                     | Columns used                                          |
-| type                       | Type of data infered                                  |
+| type                       | Type of data inferred                                  |
 | encoder                    | Encoder used                                          |
 | role                       | Role for that column, it can be `feature` or `target` |
 
@@ -74,7 +74,7 @@ On execution:
 +-----------------+-------------+---------------+----------+
 | name            | performance | training_time | selected |
 +-----------------+-------------+---------------+----------+
-| candidate_model | performace  | training_time | selected |
+| candidate_model | performance  | training_time | selected |
 +-----------------+-------------+---------------+----------+
 ```
 

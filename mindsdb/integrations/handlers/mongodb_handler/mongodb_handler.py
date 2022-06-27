@@ -201,7 +201,10 @@ class MongoDBHandler(DatabaseHandler):
         """
         con = self.connect()
         collections = con[self.database].list_collection_names()
-        df = pd.DataFrame([collections], columns=['table_name'])
+        collections_ar = [
+            [i] for i in collections
+        ]
+        df = pd.DataFrame(collections_ar, columns=['table_name'])
 
         response = Response(
             RESPONSE_TYPE.TABLE,

@@ -16,6 +16,7 @@ from mindsdb.utilities.config import Config
 from mindsdb_sql.parser.ast import Join, Select, Identifier, Constant, Star
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.integrations.libs.utils import get_join_input, recur_get_conditionals, get_aliased_columns, default_data_gather
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler, DatabaseHandler
 from mindsdb.integrations.libs.response import (
@@ -127,7 +128,7 @@ class LudwigHandler(PredictiveHandler):
             # get training data from other integration
             handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]  # TODO import from mindsdb init
             handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
-            df = default_train_data_gather(handler, handler_query)
+            df = default_data_gather(handler, handler_query)
 
             grace_period = 72
             time_budget = 120
@@ -151,23 +152,8 @@ class LudwigHandler(PredictiveHandler):
             self.storage.set('models', all_models)
 
         elif type(statement) == RetrainPredictor:
+            log.warning('Warning: retraining Ludwig models is not yet supported!')  # TODO: restore this
             return r
-            # TODO: restore this
-            # model_name = statement.name.parts[-1]
-            # if model_name not in self.get_tables():
-            #     raise Exception("Error: this model does not exist, so it can't be retrained. Train a model first.")
-            #
-            # all_models = self.storage.get('models')
-            # original_stmt = all_models[model_name]['stmt']
-            #
-            # handler = MDB_CURRENT_HANDLERS[str(original_stmt.integration_name)]  # TODO import from mindsdb init
-            # handler_query = self.parser(original_stmt.query_str, dialect=self.handler_dialect)
-            # df = default_train_data_gather(handler, handler_query)
-            #
-            # model = dill.loads(all_models[model_name])
-            # model.train_online(df)
-            # all_models[model_name]['model'] = dill.dumps(model)
-            # self.storage.set('models', all_models)
 
         elif type(statement) == DropPredictor:
             to_drop = statement.name.parts[-1]
@@ -184,7 +170,7 @@ class LudwigHandler(PredictiveHandler):
         return r
 
     def query(self, query: ASTNode) -> HandlerResponse:
-        values = _recur_get_conditionals(query.where.args, {})
+        values = recur_get_conditionals(query.where.args, {})
         model_name, _, _ = self._get_model_name(query)
         model = self._get_model(model_name)
         df = pd.DataFrame.from_dict(values)
@@ -236,85 +222,3 @@ class LudwigHandler(PredictiveHandler):
         predictions.columns = ['prediction']
         joined = df.join(predictions)
         return joined
-
-
-def _recur_get_conditionals(args: list, values):
-    """Gets all the specified data from an arbitrary amount of AND clauses inside the WHERE statement"""  # noqa
-    # TODO: move to common utils for PredictiveHandler
-    if isinstance(args[0], Identifier) and isinstance(args[1], Constant):
-        values[args[0].parts[0]] = [args[1].value]
-    else:
-        for op in args:
-            values = {**values, **_recur_get_conditionals([*op.args], {})}
-    return values
-
-
-def get_aliased_columns(aliased_columns, model_alias, targets, mode=None):
-    """ This method assumes mdb_sql will alert if there are two columns with the same alias """
-    # TODO: move to common utils for PredictiveHandler
-    for col in targets:
-        if mode == 'input':
-            if str(col.parts[0]) != model_alias and col.alias is not None:
-                aliased_columns[aliased_columns.index(col.parts[-1])] = str(col.alias)
-
-        if mode == 'output':
-            if str(col.parts[0]) == model_alias and col.alias is not None:
-                aliased_columns[aliased_columns.index('prediction')] = str(col.alias)
-
-    return aliased_columns
-
-
-def default_train_data_gather(handler, query):
-    # TODO: move to common utils for PredictiveHandler
-    records = handler.query(query).data_frame
-    df = pd.DataFrame.from_records(records)
-    return df
-
-
-def get_join_input(query, model, model_aliases, data_handler, data_side):
-    # TODO: move to common join utils for PredictiveHandler
-    target_cols = set()
-    for t in query.targets:
-        if t.parts[0] not in model_aliases:
-            if t.parts[-1] == Star():
-                target_cols = [Star()]
-                break
-            else:
-                target_cols.add(t.parts[-1])
-
-    if target_cols != [Star()]:
-        target_cols = [Identifier(col) for col in target_cols]
-
-    data_handler_table = getattr(query.from_table, data_side).parts[-1]
-    data_query = Select(
-        targets=target_cols,
-        from_table=Identifier(data_handler_table),
-        where=query.where,
-        group_by=query.group_by,
-        having=query.having,
-        order_by=query.order_by,
-        offset=query.offset,
-        limit=query.limit
-    )
-
-    model_input = pd.DataFrame.from_records(
-        data_handler.query(data_query).data_frame
-    )
-
-    return model_input
-
-
-# todo: handler CRUD should be done at mindsdb top-level, this is here only for testing purposes
-from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
-MDB_CURRENT_HANDLERS = {
-         'test_handler': MySQLHandler('test_handler', **{
-             "connection_data": {
-                 "host": "localhost",
-                 "port": "3306",
-                 "user": "root",
-                 "password": "root",
-                 "database": "test",
-                 "ssl": False
-             }
-         })
-     }

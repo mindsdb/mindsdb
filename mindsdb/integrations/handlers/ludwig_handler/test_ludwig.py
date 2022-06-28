@@ -72,6 +72,7 @@ class LudwigHandlerTest(unittest.TestCase):
         parsed = self.handler.parser(query, dialect=self.handler.dialect)
         predicted = self.handler.join(parsed, self.data_handler, into=into_table)
 
+        # TODO: restore
         # q = f"SELECT * FROM {into_table}"
         # qp = self.handler.parser(q, dialect='mysql')
         # assert len(self.data_handler.query(qp)) > 0

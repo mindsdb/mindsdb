@@ -1,6 +1,7 @@
 from typing import Optional, Any
 
 import pandas as pd
+from mindsdb_sql.parser.ast import Join
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
 
@@ -126,3 +127,23 @@ class PredictiveHandler(BaseHandler):
         `into`: if provided, the resulting output will be stored in the specified data handler table via `handler.select_into()`. 
         """
         raise NotImplementedError()
+
+    def _get_model_name(self, stmt):
+        """ Discern between joined entities to retrieve model name, alias and the clause side it is on. """
+        side = None
+        models = self.get_tables().data_frame['model_name'].values
+        if type(stmt.from_table) == Join:
+            model_name = stmt.from_table.right.parts[-1]
+            side = 'right'
+            if model_name not in models:
+                model_name = stmt.from_table.left.parts[-1]
+                side = 'left'
+            alias = str(getattr(stmt.from_table, side).alias)
+        else:
+            model_name = stmt.from_table.parts[-1]
+            alias = None  # todo: fix this
+
+        if model_name not in models:
+            raise Exception("Error, not found. Please create this predictor first.")
+
+        return model_name, alias, side

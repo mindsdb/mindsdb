@@ -20,6 +20,9 @@ import pandas as pd
 
 
 class MLflowHandler(PredictiveHandler):
+
+    type = 'mlflow'
+
     def __init__(self, name):
         """
         An MLflow integration needs to have a working connection to work. For this:

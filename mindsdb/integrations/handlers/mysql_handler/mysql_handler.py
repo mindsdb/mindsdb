@@ -88,7 +88,7 @@ class MySQLHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection.is_connected()
         except Exception as e:
-            log.error(f'Error connecting to MySQL: {e}!')
+            log.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -123,7 +123,7 @@ class MySQLHandler(DatabaseHandler):
                 else:
                     response = Response(RESPONSE_TYPE.OK)
             except Exception as e:
-                log.error(f'Error running query: {query} on {self.database}!')
+                log.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

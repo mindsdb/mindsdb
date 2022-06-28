@@ -40,6 +40,9 @@ MDB_CURRENT_HANDLERS = {
 
 
 class LightwoodHandler(PredictiveHandler):
+
+    type = 'lightwood'
+
     def __init__(self, name):
         """ Lightwood AutoML integration """  # noqa
         super().__init__(name)

@@ -31,6 +31,9 @@ from mindsdb_sql.parser.dialects.mindsdb import (
 
 
 class LudwigHandler(PredictiveHandler):
+
+    type = 'ludwig'
+
     def __init__(self, name):
         """
         Handler to create and use Ludwig AutoML models from MindsDB.

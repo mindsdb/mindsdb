@@ -2,6 +2,7 @@ from contextlib import closing
 
 import pandas as pd
 import mysql.connector
+from sqlalchemy import create_engine
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -71,6 +72,7 @@ class MySQLHandler(DatabaseHandler):
         if self.is_connected is False:
             return
         self.connection.close()
+        self.is_connected = False
         return
 
     def check_connection(self) -> StatusResponse:
@@ -86,7 +88,7 @@ class MySQLHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection.is_connected()
         except Exception as e:
-            log.error(f'Error connecting to MySQL {self.database}, {e}!')
+            log.error(f'Error connecting to MySQL: {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -157,3 +159,15 @@ class MySQLHandler(DatabaseHandler):
         q = f"DESCRIBE {table_name};"
         result = self.native_query(q)
         return result
+
+    def select_into(self, table, dataframe: pd.DataFrame, dtypes=None):
+        """
+        TODO: Update this
+        """
+        try:
+            con = create_engine(f'mysql://{self.host}:{self.port}/{self.database}', echo=False)
+            dataframe.to_sql(table, con=con, if_exists='append', index=False, dtype=dtypes)
+            return True
+        except Exception as e:
+            print(e)
+            raise Exception(f"Could not select into table {table}, aborting.")

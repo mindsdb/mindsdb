@@ -34,7 +34,7 @@ Where:
     ```sql
     SELECT *
     FROM mindsdb.predictors
-    WHE RE name='[predictor_name]';
+    WHERE name='[predictor_name]';
     ```
 
 ## Example

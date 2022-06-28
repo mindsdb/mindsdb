@@ -128,6 +128,7 @@ class FileHandler(DatabaseHandler):
         else:
             file_list_data = file_data
 
+        header = [x.strip() for x in header]
         col_map = dict((col, col) for col in header)
         return pd.DataFrame(file_list_data, columns=header), col_map
 
@@ -287,7 +288,7 @@ class FileHandler(DatabaseHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame([
                 {
-                    'Field': x,
+                    'Field': x.strip(),
                     'Type': 'str'
                 } for x in file_meta['columns']
             ])

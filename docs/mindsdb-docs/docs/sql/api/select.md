@@ -9,7 +9,8 @@ The `#!sql SELECT` statement is used to get a predictions from the model table. 
 ```sql
 SELECT [target_variable], [target_variable]_explain
 FROM mindsdb.[predictor_name]
-    WHERE [column]=[value] AND [column]=[value];
+WHERE [column]=[value] 
+    AND [column]=[value];
 ```
 
 !!! warning "Grammar matters"
@@ -42,9 +43,9 @@ The following SQL statement selects a `rental_price` prediction from the `home_r
 SELECT location, neighborhood, days_on_market, rental_price, rental_price_explain
 FROM mindsdb.home_rentals_model1
     WHERE sqft = 823
-        AND location='good'
-        AND neighborhood='downtown'
-        AND days_on_market=10;
+    AND location='good'
+    AND neighborhood='downtown'
+    AND days_on_market=10;
 ```
 
 On execution,
@@ -56,6 +57,7 @@ On execution,
 | good     | downtown     | 10             | 4394         | {"predicted_value": 4394, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 4313, "confidence_upper_bound": 4475} |
 +----------+--------------+----------------+--------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
 ```
+
 !!! tip "Bulk predictions"
     You can also make bulk predictions by joining a table with your model:
 
@@ -66,4 +68,3 @@ On execution,
     FROM example_db.demo_data.home_rentals as t
     JOIN mindsdb.home_rentals_model as m limit 100
     ```
-

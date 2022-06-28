@@ -28,19 +28,19 @@ if not is_ray_worker:
     # ---- CHECK SYSTEM ----
     if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 6):
         print("""
-    MindsDB server requires Python >= 3.6 to run
+    MindsDB server requires Python >= 3.7 to run
 
-    Once you have Python 3.6 installed you can tun mindsdb as follows:
+    Once you have Python 3.7 installed you can tun mindsdb as follows:
 
     1. create and activate venv:
-    python3.6 -m venv venv
+    python3.7 -m venv venv
     source venv/bin/activate
 
     2. install MindsDB:
     pip3 install mindsdb
 
     3. Run MindsDB
-    python3.6 -m mindsdb
+    python3.7 -m mindsdb
 
     More instructions in https://docs.mindsdb.com
         """)

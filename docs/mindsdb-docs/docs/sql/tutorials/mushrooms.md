@@ -55,16 +55,18 @@ First, we need to connect MindsDB to the database where the Mushrooms data is st
 ![db](/assets/sql/tutorials/Mushrooms/database.png)
 
 - Once you have selected the database type,the page will automatically navigate to the SQL Editor where the syntax to create a database connection will automatically populate for you to enter the required parameters.
-​
+
+
 The required parameters are:
-CREATE DATABASE display_name  --- display name for database. 
-WITH ENGINE = "postgres",     --- name of the mindsdb handler 
-PARAMETERS = {
-    "user": " ",              --- Your database user.
-    "password": " ",          --- Your password.
-    "host": " ",              --- host, it can be an ip or an url. 
-    "port": "5432",           --- common port is 5432.
-    "database": " "           --- The name of your database *optional.
+
+- CREATE DATABASE display_name  --- display name for database. 
+- WITH ENGINE = "postgres",     --- name of the mindsdb handler 
+- PARAMETERS = {
+    - "user": " ",              --- Your database user.
+    - "password": " ",          --- Your password.
+    - "host": " ",              --- host, it can be an ip or an url. 
+    - "port": "5432",           --- common port is 5432.
+    - "database": " "           --- The name of your database *optional.
 }
 
 ![integration](/assets/sql/tutorials/Mushrooms/dbintegration.png)
@@ -113,7 +115,7 @@ The required values that we need to provide are:
 Use the following query to create a predictor that will predict the `target_class` for the specific field parameters.
 
 ```sql
-mysql>CREATE PREDICTOR mushroom_predictor
+CREATE PREDICTOR mushroom_predictor
 FROM mindsdb_predictions ( SELECT * FROM mushrooms)
 PREDICT class;
 ```
@@ -125,7 +127,7 @@ Select the `Run` button or Shift+Enter to execute the syntax. Once the predictor
 The predictor was created successfully and has started training. To check the status of the model, use the below query.
 
 ```sql
-mysql> SELECT * FROM mindsdb.predictors WHERE name='mushroom_predictor';
+SELECT * FROM mindsdb.predictors WHERE name='mushroom_predictor';
 ```
 
 After the predictor has finished training, you will see a similar output. Note that MindsDB does model testing for you automatically, so you will immediately see if the predictor is accurate enough.

@@ -24,13 +24,18 @@ Where:
 | Expressions                                     | Description                                                                   |
 | ----------------------------------------------- | ----------------------------------------------------------------------------- |
 | `[predictor_name]`                              | Name of the model to be created                                               |
-| `[integration_name]`                            | is the name of the [datasource](/connect/#create-new-datasource)              |
+| `[integration_name]`                            | is the name of the integration created via [`#!sql CREATE DATABASE`](/sql/create/databases/) or [file upload](/sql/api/select_files/)              |
 | `(SELECT [column_name, ...] FROM [table_name])` | SELECT statement for selecting the data to be used for training and validation |
 | `PREDICT [target_column]`                       | where `target_column` is the column name of the target variable.              |
 
 !!! TIP "Checking the status of the model"
-After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training model, by selecting from the [`#!sql mindsdb.predictors`](/sql/table-structure/#the-predictors-table)
-`#!sql SELECT * FROM mindsdb.predictors WHERE name='[predictor_name]';`
+    After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training model, by selecting from the `#!sql mindsdb.predictors`
+
+    ```sql
+    SELECT *
+    FROM mindsdb.predictors
+    WHE RE name='[predictor_name]';
+    ```
 
 ## Example
 
@@ -64,13 +69,13 @@ On execution,
 +-----------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
 ```
 
-## `#!sql USING` Statement
+## `#!sql ... USING` Statement
 
-### Description
+### `#!sql ... USING`Description
 
 In MindsDB, the underlying AutoML models are based on Lightwood. This library generates models automatically based on the data and a declarative problem definition, but the default configuration can be overridden. The `#!sql USING ...` statement provides the option to configure a model to be trained with specific options.
 
-### `#!sql USING` Statement Syntax
+### `#!sql ... USING` Statement Syntax
 
 ```sql
 CREATE PREDICTOR mindsdb.[predictor_name]
@@ -109,7 +114,7 @@ model.args='{"key": value}'
 ;
 ```
 
-### `#!sql USING` Example
+### `#!sql ... USING` Example
 
 We will use the home rentals dataset, specifying particular encoders for some of the columns and a LightGBM model.
 
@@ -134,11 +139,11 @@ USING
 
 ## `#!sql CREATE PREDICTOR` From file
 
-### Description
+### `#!sql CREATE PREDICTOR` Description
 
 To train a model using a file:
 
-### Syntax
+### `#!sql CREATE PREDICTOR` Syntax
 
 ```sql
 CREATE PREDICTOR mindsdb.[predictor_name]
@@ -153,7 +158,7 @@ Where:
 | ----------------------------- | ----------------------------------------------------------------------------- |
 | `[predictor_name]`            | Name of the model to be created                                               |
 | `[file_name]`                 | Name of the file uploaded via the MindsDB editor                              |
-| `(SELECT * FROM [file_name])` | SELECT statement for selecting the data to be used for traning and validation |
+| `(SELECT * FROM [file_name])` | SELECT statement for selecting the data to be used for training and validation|
 | `target_variable`             | `target_column` is the column name of the target variable.                    |
 
 On execution,
@@ -162,7 +167,7 @@ On execution,
 Query OK, 0 rows affected (8.878 sec)
 ```
 
-### Example
+### `#!sql CREATE PREDICTOR` Example
 
 ```sql
 CREATE PREDICTOR mindsdb.home_rentals_model
@@ -173,11 +178,11 @@ PREDICT rental_price;
 
 ## `#!sql CREATE PREDICTOR` For Time Series Models
 
-### Description
+### `#!sql CREATE PREDICTOR` For Time Series Models Description
 
 To train a timeseries model, MindsDB provides additional statements.
 
-### Syntax
+### `#!sql CREATE PREDICTOR` For Time Series Models Syntax
 
 ```sql
 CREATE PREDICTOR mindsdb.[predictor_name]
@@ -185,7 +190,7 @@ FROM [integration_name]
 (SELECT [sequential_column], [partition_column], [other_column], [target_column] FROM [table_name])
 PREDICT [target_column]
 
-ORDER BY [sequantial_column]
+ORDER BY [sequential_column]
 GROUP BY [partition_column]
 
 WINDOW [int]
@@ -196,7 +201,7 @@ Where:
 
 | Expressions                              | Description                                                                                                                                                                                                                  |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ORDER BY [sequantial_column]`           | Defines the column that the time series will be order by. These can be a date, or anything that defines the sequence of events.                                                                                              |
+| `ORDER BY [sequential_column]`           | Defines the column that the time series will be order by. These can be a date, or anything that defines the sequence of events.                                                                                              |
 | `GROUP BY [partition_column]` (optional) | Groups the rows that make a partition, for example, if you want to forecast inventory for all items in a store, you can partition the data by product_id, meaning that each product_id has its own time series.              |
 | `WINDOW [int]`                           | Specifies the number `[int]` of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be interpreted like "Always use the previous 10 rows". |
 | `HORIZON [int]` (optional)               | keyword specifies the number of future predictions, default value is 1                                                                                                                                                       |
@@ -210,7 +215,7 @@ Query OK, 0 rows affected (8.878 sec)
 !!! warning "Getting a prediction of a Time Series model"
     Due to the nature of Time Series Forecasting you will need to use the [`#!sql JOIN`](/sql/api/join) statement to get results.
 
-### Example
+### `#!sql CREATE PREDICTOR` For Time Series Models Example
 
 ```sql
 CREATE PREDICTOR mindsdb.inventory_model

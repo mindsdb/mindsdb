@@ -146,6 +146,8 @@ class MySQLHandler(DatabaseHandler):
         """
         q = "SHOW TABLES;"
         result = self.native_query(q)
+        df = result.data_frame
+        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
         return result
 
     def get_columns(self, table_name) -> Response:

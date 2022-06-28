@@ -13,7 +13,7 @@ class MongodbRender:
         if not isinstance(node.from_table, Identifier):
             raise NotImplementedError(f'Not supported from {node.from_table}')
 
-        collection = node.from_table.to_string()
+        collection = node.from_table.parts[-1]
 
         # filter
         filters = {}
@@ -22,7 +22,7 @@ class MongodbRender:
             filters = self.handle_where(node.where)
 
         group = {}
-        project = {}
+        project = {'_id': 0}
         if node.distinct:
             # is group by distinct fields
             group = {'_id': {}}
@@ -55,6 +55,7 @@ class MongodbRender:
                     else:
                         alias = col.alias.parts[-1]
                     project[alias] = val
+
 
         if node.group_by is not None:
             # TODO

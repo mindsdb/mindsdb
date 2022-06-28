@@ -70,6 +70,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
 )
 
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
+from mindsdb.integrations.libs.response import HandlerStatusResponse
 
 
 class ExecuteCommands:
@@ -593,10 +594,9 @@ class ExecuteCommands:
 
         # we have connection checkers not for any db. So do nothing if fail
         # TODO return rich error message
-        status = {
-            'success': False,
-            'error': 'unknon'
-        }
+
+        status = HandlerStatusResponse(success=False)
+
         try:
             handler = self.session.integration_controller.create_handler(
                 handler_type=database_type,
@@ -604,7 +604,7 @@ class ExecuteCommands:
             )
             status = handler.check_connection()
         except Exception as e:
-            status['error'] = str(e)
+            status.error_message = str(e)
 
         if status.success is False:
             raise SqlApiException(f"Can't connect to db: {status.error_message}")

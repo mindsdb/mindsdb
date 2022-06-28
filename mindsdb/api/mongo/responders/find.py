@@ -13,6 +13,23 @@ class Responce(Responder):
     when = {'find': helpers.is_true}
 
     def result(self, query, request_env, mindsdb_env, session):
+        # system queries
+        if query['find'] == 'system.version':
+            # For studio3t
+            data = [{
+                "_id" : "featureCompatibilityVersion",
+                "version" : "3.6"
+            }]
+            cursor = {
+                'id': Int64(0),
+                'ns': f"system.version.$cmd.{query['find']}",
+                'firstBatch': data
+            }
+            return {
+                'cursor': cursor,
+                'ok': 1
+            }
+
 
         mongoToAst = MongoToAst()
 
@@ -77,7 +94,10 @@ class Responce(Responder):
             sql_session.datahub
         )
 
-        column_names = [c.name for c in sql_query.columns_list]
+        column_names = [
+            c.name is c.alias is None or c.alias
+            for c in sql_query.columns_list
+        ]
 
         data = []
         for row in result['result']:

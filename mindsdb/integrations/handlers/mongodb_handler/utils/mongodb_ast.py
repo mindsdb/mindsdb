@@ -24,10 +24,14 @@ class MongoToAst:
 
         if projection is not None:
             targets = []
-            for col in projection:
+            for col, alias in projection.items():
                 # it is only identifiers
+                if isinstance(alias, str):
+                    alias = Identifier(parts=[alias])
+                else:
+                    alias = None
                 targets.append(
-                    Identifier(path_str=col)
+                    Identifier(path_str=col, alias=alias)
                 )
         else:
             targets = [Star()]
@@ -45,7 +49,7 @@ class MongoToAst:
         if limit is not None:
             node.limit = Constant(value=limit)
 
-        if skip is not None:
+        if skip is not None and skip != 0:
             node.offset = Constant(value=skip)
 
         return node
@@ -124,7 +128,6 @@ class MongoToAst:
             value = value
             return op, value
 
-
 class MongoWhereParser:
     def __init__(self, query):
         self.query = query
@@ -142,9 +145,13 @@ class MongoWhereParser:
         if isinstance(node, py_ast.BoolOp):
             # is AND or OR
             op = node.op.__class__.__name__
+            # values can be more than 2
             arg1 = self.process(node.values[0])
-            arg2 = self.process(node.values[1])
-            return BinaryOperation(op=op, args=[arg1, arg2])
+            for val1 in node.values[1:]:
+                arg2 = self.process(val1)
+                arg1 = BinaryOperation(op=op, args=[arg1, arg2])
+
+            return arg1
 
         if isinstance(node, py_ast.Compare):
             # it is

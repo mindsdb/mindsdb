@@ -1,5 +1,6 @@
 import re
 
+from bson import ObjectId
 import certifi
 import pandas as pd
 from pymongo import MongoClient
@@ -100,7 +101,6 @@ class MongoDBHandler(DatabaseHandler):
 
         return result
 
-
     def native_query(self, query) -> Response:
 
         """
@@ -164,22 +164,26 @@ class MongoDBHandler(DatabaseHandler):
 
     def flatten(self, row, level=0):
         # move sub-keys to upper level
-        # TODO is disabled now
-
-        if level <= 0:
-            return row
+        # TODO flattening is disabled now
 
         add = {}
         del_keys = []
+        edit_keys = {}
         for k, v in row.items():
-            if isinstance(v, dict):
-                for k2, v2 in self.flatten(v, level=level - 1).items():
-                    add[f'{k}.{k2}'] = v2
-                del_keys.append(k)
+            # convert objectId to string
+            if isinstance(v, ObjectId):
+                edit_keys[k] = str(v)
+            if level > 0:
+                if isinstance(v, dict):
+                    for k2, v2 in self.flatten(v, level=level - 1).items():
+                        add[f'{k}.{k2}'] = v2
+                    del_keys.append(k)
         if add:
             row.update(add)
         for key in del_keys:
             del row[key]
+        if edit_keys:
+            row.update(edit_keys)
 
         return row
 

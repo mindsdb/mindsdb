@@ -295,7 +295,7 @@ class IntegrationController:
                     },
                     'version': handler_module.version
                 }
-                for attr in ('connection_args_example', 'description', 'name', 'type'):
+                for attr in ('connection_args_example', 'description', 'name', 'type', 'title'):
                     if hasattr(handler_module, attr):
                         self.handlers_import_status[handler_name][attr] = getattr(handler_module, attr)
                 if 'name' not in self.handlers_import_status:

@@ -40,9 +40,6 @@ class HandlersList(Resource):
         handlers = request.integration_controller.get_handlers_import_status()
         result = []
         for handler_type, handler_meta in handlers.items():
-            # pass not-data handlers
-            if handler_type in ('file', 'view', 'ludwig', 'lightwood', 'mlflow'):
-                continue
             row = {'name': handler_type}
             row.update(handler_meta)
             result.append(row)

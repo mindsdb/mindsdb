@@ -327,5 +327,10 @@ class IntegrationController:
                         }
             # endregion
 
+            if self.handlers_import_status[handler_name].get('name') in ('file', 'view', 'lightwood'):
+                self.handlers_import_status[handler_name]['permanent'] = True
+            else:
+                self.handlers_import_status[handler_name]['permanent'] = False
+
     def get_handlers_import_status(self):
         return self.handlers_import_status

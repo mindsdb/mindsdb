@@ -6,7 +6,7 @@ class QuestDBHandler(PostgresHandler):
     This handler handles connection and execution of the QuestDB statements. 
     TODO: check the dialect for questdb
     """
-    type = 'questdb'
+    name = 'questdb'
 
     def __init__(self, name, **kwargs):
         super().__init__(name, **kwargs)

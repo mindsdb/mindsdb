@@ -107,6 +107,8 @@ class DatabaseHandler(BaseHandler):
     """
     Base class for handlers associated to data storage systems (e.g. databases, data warehouses, streaming services, etc.)
     """
+    type = 'data'
+
     def __init__(self, name):
         super().__init__(name)
 
@@ -115,6 +117,8 @@ class PredictiveHandler(BaseHandler):
     """
     Base class for handlers associated to predictive systems.
     """
+    type = 'ml'
+
     def __init__(self, name):
         super().__init__(name)
 

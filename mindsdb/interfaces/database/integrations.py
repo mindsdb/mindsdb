@@ -309,6 +309,7 @@ class IntegrationController:
                         'dependencies': dependencies
                     }
                 }
+            # region icon
             for file_name in hanlder_dir.iterdir():
                 if file_name.name.lower() == 'icon.svg':
                     with open(str(file_name), 'rt') as icon_file:
@@ -324,6 +325,7 @@ class IntegrationController:
                             'type': file_name.name[file_name.name.rfind('.') + 1:],
                             'data': base64.b64encode(icon_file.read()).decode('utf-8')
                         }
+            # endregion
 
     def get_handlers_import_status(self):
         return self.handlers_import_status

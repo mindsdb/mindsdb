@@ -43,7 +43,7 @@ class HandlersList(Resource):
             # pass not-data handlers
             if handler_type in ('file', 'view', 'ludwig', 'lightwood', 'mlflow'):
                 continue
-            row = {'type': handler_type}
+            row = {'name': handler_type}
             row.update(handler_meta)
             result.append(row)
         return result

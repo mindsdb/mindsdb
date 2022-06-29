@@ -4,6 +4,7 @@ import tempfile
 import importlib
 from pathlib import Path
 from copy import deepcopy
+import base64
 
 from sqlalchemy import func
 
@@ -271,28 +272,58 @@ class IntegrationController:
         self.handler_modules = {}
         self.handlers_import_status = {}
         for hanlder_dir in handlers_path.iterdir():
-            if hanlder_dir.is_dir() is False:
+            if hanlder_dir.is_dir() is False or hanlder_dir.name.startswith('__'):
                 continue
             handler_folder_name = str(hanlder_dir.name)
+            handler_name = handler_folder_name
+            if handler_name.endswith('_handler'):
+                handler_name = handler_name[:-8]
             dependencies = []
             requirements_txt = hanlder_dir.joinpath('requirements.txt')
             if requirements_txt.is_file():
                 with open(str(requirements_txt), 'rt') as f:
-                    dependencies = [x.strip(' \t') for x in f.readlines()]
+                    dependencies = [x.strip(' \t\n') for x in f.readlines()]
                     dependencies = [x for x in dependencies if len(x) > 0]
             try:
                 handler_module = importlib.import_module(f'mindsdb.integrations.handlers.{handler_folder_name}')
-                self.handler_modules[handler_module.Handler.type] = handler_module
-                self.handlers_import_status[handler_folder_name] = {
-                    'success': True,
-                    'dependencies': dependencies
+                self.handler_modules[handler_module.name] = handler_module
+                self.handlers_import_status[handler_name] = {
+                    'import': {
+                        'success': True,
+                        'folder': handler_folder_name,
+                        'dependencies': dependencies
+                    },
+                    'version': handler_module.version
                 }
+                for attr in ('connection_args_example', 'description', 'name', 'type'):
+                    if hasattr(handler_module, attr):
+                        self.handlers_import_status[handler_name][attr] = getattr(handler_module, attr)
+                if 'name' not in self.handlers_import_status:
+                    self.handlers_import_status[handler_name]['name'] = handler_name
             except Exception as e:
-                self.handlers_import_status[handler_folder_name] = {
-                    'success': False,
-                    'error_message': str(e),
-                    'dependencies': dependencies
+                self.handlers_import_status[handler_name] = {
+                    'import': {
+                        'success': False,
+                        'error_message': str(e),
+                        'folder': handler_folder_name,
+                        'dependencies': dependencies
+                    }
                 }
+            for file_name in hanlder_dir.iterdir():
+                if file_name.name.lower() == 'icon.svg':
+                    with open(str(file_name), 'rt') as icon_file:
+                        self.handlers_import_status[handler_name]['icon'] = {
+                            'name': str(file_name.name),
+                            'type': file_name.name[file_name.name.rfind('.') + 1:],
+                            'data': icon_file.read()
+                        }
+                elif file_name.name.lower() in ('icon.jpg', 'icon.png'):
+                    with open(str(file_name), 'rb') as icon_file:
+                        self.handlers_import_status[handler_name]['icon'] = {
+                            'name': str(file_name.name),
+                            'type': file_name.name[file_name.name.rfind('.') + 1:],
+                            'data': base64.b64encode(icon_file.read()).decode('utf-8')
+                        }
 
     def get_handlers_import_status(self):
         return self.handlers_import_status

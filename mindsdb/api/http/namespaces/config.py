@@ -226,7 +226,7 @@ class Vars(Resource):
 @ns_conf.param('dependency_list', 'Install dependencies')
 class InstallDependenciesList(Resource):
     def get(self):
-        return self.request.integration_controller.get_handlers_import_status()
+        return request.integration_controller.get_handlers_import_status()
 
 
 @ns_conf.route('/install/<dependency>')

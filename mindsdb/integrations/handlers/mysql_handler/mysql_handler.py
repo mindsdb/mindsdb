@@ -1,4 +1,4 @@
-from contextlib import closing
+from collections import OrderedDict
 
 import pandas as pd
 import mysql.connector
@@ -22,7 +22,7 @@ class MySQLHandler(DatabaseHandler):
     This handler handles connection and execution of the MySQL statements.
     """
 
-    type = 'mysql'
+    name = 'mysql'
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
@@ -171,3 +171,12 @@ class MySQLHandler(DatabaseHandler):
         except Exception as e:
             print(e)
             raise Exception(f"Could not select into table {table}, aborting.")
+
+
+connection_args_example = OrderedDict(
+    host='127.0.0.1',
+    port=3306,
+    user='root',
+    password='password',
+    database='database'
+)

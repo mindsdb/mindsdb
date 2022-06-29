@@ -22,7 +22,7 @@ class MongoDBHandler(DatabaseHandler):
     This handler handles connection and execution of the MongoDB statements.
     """
 
-    type = 'mongodb'
+    name = 'mongodb'
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
@@ -39,7 +39,6 @@ class MongoDBHandler(DatabaseHandler):
     def __del__(self):
         if self.is_connected is True:
             self.disconnect()
-
 
     def connect(self):
         kwargs = {}
@@ -59,7 +58,6 @@ class MongoDBHandler(DatabaseHandler):
             kwargs['tlsCAFile'] = certifi.where()
             if kwargs.get('tls', None) is None:
                 kwargs['tls'] = True
-
 
         connection = MongoClient(
             self.host,
@@ -117,8 +115,8 @@ class MongoDBHandler(DatabaseHandler):
                     'args': [{c:3}]
                 },
             ]
-        }        
-      
+        }
+
         is the the same as mongo query:
             db_test.fish.find({a:1}, {b:2}).sort({c:3})
 
@@ -197,7 +195,6 @@ class MongoDBHandler(DatabaseHandler):
             'collection': res['collection'],
             'call': res['call']
         })
-
 
     def get_tables(self) -> Response:
         """

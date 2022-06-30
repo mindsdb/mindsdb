@@ -21,14 +21,11 @@ class BaseHandler:
         self.is_connected: bool = False
         self.name = name
 
-    def connect(self, **kwargs) -> HandlerStatusResponse:
+    def connect(self) -> HandlerStatusResponse:
         """ Set up any connections required by the handler
 
         Should return output of check_connection() method after attempting
         connection. Should switch self.is_connected.
-
-        Args:
-            **kwargs: Arbitrary keyword arguments.
 
         Returns:
             HandlerStatusResponse
@@ -107,9 +104,7 @@ class DatabaseHandler(BaseHandler):
     """
     Base class for handlers associated to data storage systems (e.g. databases, data warehouses, streaming services, etc.)
     """
-    type = 'data'
-
-    def __init__(self, name):
+    def __init__(self, name: str):
         super().__init__(name)
 
 
@@ -117,9 +112,7 @@ class PredictiveHandler(BaseHandler):
     """
     Base class for handlers associated to predictive systems.
     """
-    type = 'ml'
-
-    def __init__(self, name):
+    def __init__(self, name: str):
         super().__init__(name)
 
     def join(self, stmt, data_handler, into: Optional[str]) -> pd.DataFrame:

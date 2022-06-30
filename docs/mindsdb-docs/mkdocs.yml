@@ -127,7 +127,14 @@ nav:
       - Email spam: sql/tutorials/spam_emails_tutorial.md
       - Mushrooms Hunting: sql/tutorials/mushrooms.md
       - Heart Disease: sql/tutorials/heart-disease.md
-  - Contribution and Community:
+  - Contributing Guide:
+      - Installing for development: contribute/install.md
+      - Bug reports and Feature requests: contribute/issues.md
+      - Building a new integration: contribute/integrations.md
+      - Writing documentation: contribute/docs.md
+      - Testing and improving test coverage: contribute/tests.md
+      - Writing tutorials: contribute/tutorials.md
+  - Community:
       - How to contribute: contribute.md
       - Join our community: community.md
 extra_css:

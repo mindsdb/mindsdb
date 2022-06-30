@@ -25,11 +25,6 @@ After you find the issue that you want to contribute to, follow the `fork-and-pu
 
 Pull Request reviews are done on a regular basis. Please make sure you respond to our feedback/questions and sign our CLA.
 
-## Report issue :loudspeaker:
-
-We use [GitHub issues](https://github.com/mindsdb/mindsdb/issues) to track bugs and features. Report them by opening a new issue and complete out all of the required inputs: `Your Python version`, `MindsDB version`, `Describe the bug` and `Steps to reproduce`.
-
-![Github Issue](/assets/report-issue.gif)
 
 ## Documentation :book:
 

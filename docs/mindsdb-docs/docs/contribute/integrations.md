@@ -41,25 +41,50 @@ Each integration needs 7 core methods:
 7. `get_columns` – Column info for a specific table entity
 8. `join` – Call other handlers to merge data with predictions. Predictive handlers only
 
-Bellow, you can find examples of each methods that uses the `BaseHandler` methods as an example.
 
-#### Step 1: Implement `connect`
+Bellow, you can find list of entitiles required to create database handler. As an exemple of database handler, please use `mysql_handler`.
+
+### Step 1: Create `Handler` class:
+
+Inherite it from `DatabaseHandler`
+
+#### Set class property `name`:
+
+It will be used inside MindsDB as name of handler. For example, it use as `ENGINE` in command
+
+```sql
+    CREATE DATABASE integration_name WITH ENGINE='postgres', PARAMETERS={'host': '127.0.0.1', 'user': 'root', 'password': 'password'}
+```
+
+#### Step 1.1: Implement `__init__`
+
+Method should initialize the handler. `connection_data` - will contain `PARAMETERS` from `CREATE DATABASE` statement
+
+```py
+    def __init__(self, name: str, connection_data: Optional[dict], **kwargs)
+        """ Initialize the handler
+        Args:
+            name (str): name of particular handler instance
+            connection_data (dict): parameters for connecting to the database
+            **kwargs: arbitrary keyword arguments.
+        """
+```
+
+#### Step 1.2: Implement `connect`
 
 The connect method should set up the connection as:
 
 ```py
-    def connect(self, **kwargs) -> HandlerStatusResponse:
+    def connect(self) -> HandlerStatusResponse:
         """ Set up any connections required by the handler
         Should return output of check_connection() method after attempting
         connection. Should switch self.is_connected.
-        Args:
-            **kwargs: Arbitrary keyword arguments.
         Returns:
             HandlerStatusResponse
         """
 ```
 
-#### Step 2: Implement `disconnect`
+#### Step 1.3: Implement `disconnect`
 
 The disconnect method should close the existing connection as:
 
@@ -73,7 +98,7 @@ The disconnect method should close the existing connection as:
 
 ```
 
-#### Step 3: Implement `check_connection`
+#### Step 1.4: Implement `check_connection`
 
 The check_connection method is used to perform the health check for the connection:
 
@@ -85,12 +110,12 @@ def check_connection(self) -> HandlerStatusResponse:
         """
 ```
 
-#### Step 4: Implement `native_query`
+#### Step 1.5: Implement `native_query`
 
-The native_query method is used to run a raw SQL command:
+The native_query method is used to run command on native database language:
 
 ```py
-def native_query(self) -> HandlerStatusResponse:
+def native_query(self, query: Any) -> HandlerStatusResponse:
         """Receive raw query and act upon it somehow.
         Args:
             query (Any): query in native format (str for sql databases,
@@ -100,12 +125,12 @@ def native_query(self) -> HandlerStatusResponse:
         """
 ```
 
-#### Step 5: Implement `query`
+#### Step 1.6: Implement `query`
 
 The query method is used to run parsed SQL command:
 
 ```py
-def query(self) -> HandlerStatusResponse:
+def query(self, query: ASTNode) -> HandlerStatusResponse:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
             query (ASTNode): sql query represented as AST. May be any kind
@@ -116,7 +141,7 @@ def query(self) -> HandlerStatusResponse:
 ```
 
 
-#### Step 6: Implement `get_tables`
+#### Step 1.7: Implement `get_tables`
 
 The get_tables method is used to list tables:
 
@@ -131,12 +156,12 @@ def get_tables(self) -> HandlerStatusResponse:
         """
 ```
 
-#### Step 7: Implement `get_columns`
+#### Step 1.8: Implement `get_columns`
 
 The get_tables method is used to list tables:
 
 ```py
-def get_tables(self) -> HandlerStatusResponse:
+def get_columns(self, table_name: str) -> HandlerStatusResponse:
       """ Returns a list of entity columns
         Args:
             table_name (str): name of one of tables returned by self.get_tables()
@@ -148,3 +173,26 @@ def get_tables(self) -> HandlerStatusResponse:
                 python data types (by default it str).
         """
 ```
+
+### Step 2: Create `connection_args` dict:
+
+Dict should contain possible arguments to establish connection.
+
+### Step 3: Create `connection_args_example` dict:
+
+Dict should example of connection arguments.
+
+
+### Step 4: Export all required entities:
+
+Module should export:
+`Handler` - handler class
+`version` - version of handler
+`name` - name of the handler (same as Handler.name)
+`type` - type of the handler (is it DATA of ML handler)
+`icon_path` - path to file with database icon
+`title` - short description of handler
+`description` - description of handler
+`connection_args` - dict with connection args
+`connection_args_example` - example of connection args
+`import_error` - error message, in case if is not possible to import `Handler` class

@@ -11,8 +11,9 @@ except Exception as e:
 title = 'PostgreSQL'
 name = 'postgres'
 type = HANDLER_TYPE.DATA
+icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title',
-    'description', 'import_error'
+    'description', 'import_error', 'icon_path'
 ]

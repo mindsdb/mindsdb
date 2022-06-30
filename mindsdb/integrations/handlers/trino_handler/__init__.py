@@ -12,7 +12,8 @@ from .__about__ import __version__ as version, __description__ as description
 title = 'Trino'
 name = 'trino'
 type = HANDLER_TYPE.DATA
+icon_path = 'icon.png'
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description'
+    'Handler', 'version', 'name', 'type', 'title', 'description', 'icon_path'
 ]

@@ -28,8 +28,7 @@ integrations                           # Contains integrations source code
 
 ### New integration steps
 
-If you are adding new data integration you need to extend the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base_handler.py#L106). In a case of adding a predictive framework
-integration extend [`PredictiveHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base_handler.py#L114). 
+If you are adding new data integration you need to extend the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base_handler.py#L106). In a case of adding a predictive framework integration extend [`PredictiveHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base_handler.py#L114). 
 Each integration needs 7 core methods:
 
 1. `connect` – Setup storage and connection
@@ -42,23 +41,24 @@ Each integration needs 7 core methods:
 8. `join` – Call other handlers to merge data with predictions. Predictive handlers only
 
 
-Bellow, you can find list of entitiles required to create database handler. As an exemple of database handler, please use `mysql_handler`.
+Bellow, you can find list of entitiles required to create database handler.
 
 ### Step 1: Create `Handler` class:
 
-Inherite it from `DatabaseHandler`
+Each DatabaseHandler should inherit from `DatabaseHandler` class.
 
 #### Set class property `name`:
 
-It will be used inside MindsDB as name of handler. For example, it use as `ENGINE` in command
+It will be used inside MindsDB as name of handler. For example, the name is used use an `ENGINE` in `CREATE DATABASE` statement:
 
 ```sql
-    CREATE DATABASE integration_name WITH ENGINE='postgres', PARAMETERS={'host': '127.0.0.1', 'user': 'root', 'password': 'password'}
+    CREATE DATABASE integration_name WITH ENGINE='postgres', +
+    PARAMETERS={'host': '127.0.0.1', 'user': 'root', 'password': 'password'}
 ```
 
 #### Step 1.1: Implement `__init__`
 
-Method should initialize the handler. `connection_data` - will contain `PARAMETERS` from `CREATE DATABASE` statement
+This method should initialize the handler. the `connection_data` argument will contain `PARAMETERS` from `CREATE DATABASE` statement as `user`, `password` etc.
 
 ```py
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs)
@@ -176,23 +176,41 @@ def get_columns(self, table_name: str) -> HandlerStatusResponse:
 
 ### Step 2: Create `connection_args` dict:
 
-Dict should contain possible arguments to establish connection.
+The `connection_arg` dictinonary should contain all required arguments to establish the connection.
 
 ### Step 3: Create `connection_args_example` dict:
 
-Dict should example of connection arguments.
+The `connection_args_example` dictinonary should contain an example of all required arguments to establish the connection.
 
 
-### Step 4: Export all required entities:
+### Step 4: Export all required variables:
 
-Module should export:
-`Handler` - handler class
-`version` - version of handler
-`name` - name of the handler (same as Handler.name)
-`type` - type of the handler (is it DATA of ML handler)
-`icon_path` - path to file with database icon
-`title` - short description of handler
-`description` - description of handler
-`connection_args` - dict with connection args
-`connection_args_example` - example of connection args
-`import_error` - error message, in case if is not possible to import `Handler` class
+In `__init__` file export:
+
+* `Handler` - handler class
+* `version` - version of handler
+* `name` - name of the handler (same as Handler.name)
+* `type` - type of the handler (is it DATA of ML handler)
+* `icon_path` - path to file with database icon
+* `title` - short description of handler
+* `description` - description of handler
+* `connection_args` - dict with connection args
+* `connection_args_example` - example of connection args
+* `import_error` - error message, in case if is not possible to import `Handler` class
+
+E.g:
+
+```py
+title = 'Trino'
+version = 0.1
+description = 'Integration for connection to TrinoDB'
+name = 'trino'
+type = HANDLER_TYPE.DATA
+icon_path = 'icon.png'
+
+__all__ = [
+    'Handler', 'version', 'name', 'type', 'title',
+    'description', 'connection_args_example'
+    'Handler', 'version', 'name', 'type', 'title', 'description', 'icon_path'
+]
+```

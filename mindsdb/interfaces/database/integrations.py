@@ -332,7 +332,7 @@ class IntegrationController:
                     'name': handler_name
                 }
 
-            if handler_meta.get('name') in ('file', 'view', 'lightwood'):
+            if handler_meta.get('name') in ('files', 'views', 'lightwood'):
                 handler_meta['permanent'] = True
             else:
                 handler_meta['permanent'] = False

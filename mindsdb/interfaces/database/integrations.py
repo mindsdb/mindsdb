@@ -287,19 +287,40 @@ class IntegrationController:
             try:
                 handler_module = importlib.import_module(f'mindsdb.integrations.handlers.{handler_folder_name}')
                 self.handler_modules[handler_module.name] = handler_module
+                import_error = None
+                if hasattr(handler_module, 'import_error'):
+                    import_error = handler_module.import_error
                 self.handlers_import_status[handler_name] = {
                     'import': {
-                        'success': True,
+                        'success': import_error is None,
                         'folder': handler_folder_name,
                         'dependencies': dependencies
                     },
                     'version': handler_module.version
                 }
-                for attr in ('connection_args_example', 'description', 'name', 'type', 'title'):
+                if import_error is not None:
+                    self.handlers_import_status[handler_name]['import']['error_message'] = str(import_error)
+
+                for attr in ('connection_args_example', 'connection_args', 'description', 'name', 'type', 'title'):
                     if hasattr(handler_module, attr):
                         self.handlers_import_status[handler_name][attr] = getattr(handler_module, attr)
                 if 'name' not in self.handlers_import_status:
                     self.handlers_import_status[handler_name]['name'] = handler_name
+
+                # region icon
+                if hasattr(handler_module, 'icon_path'):
+                    icon_path = hanlder_dir.joinpath(handler_module.icon_path)
+                    self.handlers_import_status[handler_name]['icon'] = {
+                        'name': icon_path.name,
+                        'type': icon_path.name[icon_path.name.rfind('.') + 1:].lower()
+                    }
+                    if self.handlers_import_status[handler_name]['icon']['type'] == 'svg':
+                        with open(str(icon_path), 'rt') as f:
+                            self.handlers_import_status[handler_name]['icon']['data'] = f.read()
+                    else:
+                        with open(str(icon_path), 'rb') as f:
+                            self.handlers_import_status[handler_name]['icon']['data'] = base64.b64encode(f.read()).decode('utf-8')
+                # endregion
             except Exception as e:
                 self.handlers_import_status[handler_name] = {
                     'import': {
@@ -309,23 +330,6 @@ class IntegrationController:
                         'dependencies': dependencies
                     }
                 }
-            # region icon
-            for file_name in hanlder_dir.iterdir():
-                if file_name.name.lower() == 'icon.svg':
-                    with open(str(file_name), 'rt') as icon_file:
-                        self.handlers_import_status[handler_name]['icon'] = {
-                            'name': str(file_name.name),
-                            'type': file_name.name[file_name.name.rfind('.') + 1:],
-                            'data': icon_file.read()
-                        }
-                elif file_name.name.lower() in ('icon.jpg', 'icon.png'):
-                    with open(str(file_name), 'rb') as icon_file:
-                        self.handlers_import_status[handler_name]['icon'] = {
-                            'name': str(file_name.name),
-                            'type': file_name.name[file_name.name.rfind('.') + 1:],
-                            'data': base64.b64encode(icon_file.read()).decode('utf-8')
-                        }
-            # endregion
 
             if self.handlers_import_status[handler_name].get('name') in ('file', 'view', 'lightwood'):
                 self.handlers_import_status[handler_name]['permanent'] = True

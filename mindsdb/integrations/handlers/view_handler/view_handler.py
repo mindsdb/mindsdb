@@ -16,7 +16,8 @@ class ViewHandler(DatabaseHandler):
     """
     This handler handles views
     """
-    type = 'views'
+
+    name = 'views'
 
     def __init__(self, name=None, **kwargs):
         self.view_controller = kwargs['view_controller']

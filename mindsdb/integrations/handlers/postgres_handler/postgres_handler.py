@@ -19,7 +19,7 @@ class PostgresHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the PostgreSQL statements.
     """
-    type = 'postgres'
+    name = 'postgres'
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name)

@@ -72,15 +72,15 @@ For every integration created, you will win `$200 USD` and [SWAG](https://mindsd
 
 1. Comment on the integration you want to start implementing, so the MindsDB team can assign that issue to you.
 > If you didn't commit anything in 5 days, the issue can be assigned to someone else.
-2. Fork MindsDB repository and start working.
+2. [Fork MindsDB repository](https://github.com/mindsdb/mindsdb/fork) and start coding.
 3. Check the [Build new integration docs](https://docs.mindsdb.com/contribute/integrations/)
 3. Join our [Community Slack](https://mindsdb.com/joincommunity) to discuss/ask questions.
 
 ### Rules 🚥
 
-For implementation to be accepted it needs:
-* Fully working integration
-* Tests to demonstrate the integration works
+For implementation to be accepted it needs to have:
+* Fully working integration.
+* Tests to demonstrate that integration works.
 * Documentation(README)
 	* Description
 	* Required configuration

@@ -1,5 +1,5 @@
 <h1 align="center">
-	<img width="1500" src="/assets/dev_contest.png" alt="MindsDB">
+	<img width="1500" src="/assets/dev_contest.svg" alt="MindsDB">
 	<br>
 </h1>
 

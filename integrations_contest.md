@@ -1,5 +1,5 @@
 <h1 align="center">
-	<img width="1500" src="/assets/dev_contest.svg" alt="MindsDB">
+	<img width="1500" src="/assets/ideas_contest.png" alt="MindsDB">
 	<br>
 </h1>
 
@@ -60,7 +60,7 @@ The `TOP-3` authors who submit ideas before `June 17th, 2022` will get SWAG and 
 </details>
 
 
-## Dev challenge 👩‍💻 👨‍💻 
+## Implementations challenge (July 1st) 👩‍💻 👨‍💻 
 
 From the `Ideas challenge` MindsDB community members have shared 53 ideas. In this challenge we will start implementing them. To participate check out the [ideas dashboard](https://github.com/mindsdb/mindsdb/projects/9) and follow the rules. If you want to work on an integration that is not included in the list, feel free to [open new issue](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=integration%2Cenhancement&template=integrations_contest.yaml&title=%5BNew+Integration%5D%3A+) and we can assign it to you.
 
@@ -73,6 +73,7 @@ For every integration created, you will win `$200 USD` and [SWAG](https://mindsd
 1. Comment on the integration you want to start implementing, so the MindsDB team can assign that issue to you.
 > If you didn't commit anything in 5 days, the issue can be assigned to someone else.
 2. Fork MindsDB repository and start working.
+3. Check the [Build new integration docs](https://docs.mindsdb.com/contribute/integrations/)
 3. Join our [Community Slack](https://mindsdb.com/joincommunity) to discuss/ask questions.
 
 ### Rules 🚥

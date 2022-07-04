@@ -50,7 +50,7 @@ While on the editor, you can [add your data](https://cloud.mindsdb.com/data) via
 
 On the "Select your data source" screen, click on "Files" next to "Databaes" and you should see the screen below:
 
-[import your file](mindsdb/docs/mindsdb-docs/docs/contribute/tutorials/screen1.png)
+![import your file](mindsdb/docs/mindsdb-docs/docs/contribute/tutorials/screen1.png)
 
 Click on the "Import File" icon and select your .csv file. 
 
@@ -58,7 +58,7 @@ Give your table a name and hit the "Save and Con"tinue" button. **NOTE: Use snak
 
 If you do all things well, you should see a result like this:
 
-[View your first 10 rows](mindsdb/docs/mindsdb-docs/docs/contribute/tutorials/screen2.png)
+![View your first 10 rows](mindsdb/docs/mindsdb-docs/docs/contribute/tutorials/screen2.png)
 
 Now that you have loaded your dataset, you are now to...
 
@@ -74,7 +74,7 @@ FROM files (
 
 If all is successfull, you should see this screen below:
 
-[Query successfully completed](mindsdb/docs/mindsdb-docs/docs/contribute/tutorials/screen3.png)
+![Query successfully completed](mindsdb/docs/mindsdb-docs/docs/contribute/tutorials/screen3.png)
 
 To confirm this and view details of your model like the accuracy, use the following code:
 
@@ -84,7 +84,7 @@ SELECT * FROM mindsdb.predictors WHERE name='loanPredictor';
 
 and you can see details of your model...
 
-[Model details](mindsdb/docs/mindsdb-docs/docs/contribute/tutorials/screen4.png)
+![Model details](mindsdb/docs/mindsdb-docs/docs/contribute/tutorials/screen4.png)
 
 **PS: You can see the accuracy is low, this is probably due to low data...**
 
@@ -107,7 +107,7 @@ bank_name_clients='UBA';
 
 and viola! you just made a prediction!
 
-[Prediction!](mindsdb/docs/mindsdb-docs/docs/contribute/tutorials/screen5.png)
+![Prediction!](mindsdb/docs/mindsdb-docs/docs/contribute/tutorials/screen5.png)
 
 ## Conclusion
 And that's it you shining rockstar! you are now an ML Wizard making predictions straight from the data! This is a taste of the awesome power of MindsDB.

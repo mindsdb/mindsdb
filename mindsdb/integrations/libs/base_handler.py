@@ -65,7 +65,7 @@ class BaseHandler:
 
         Args:
             query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
+                of query: SELECT, INSERT, DELETE, etc
 
         Returns:
             HandlerResponse

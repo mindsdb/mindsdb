@@ -76,7 +76,7 @@ class FileHandler(DatabaseHandler):
             return Response(RESPONSE_TYPE.OK)
         elif type(query) == Select:
             table_name = query.from_table.parts[-1]
-            file_path = self.file_controller.get_file_path(table_name, company_id=None)
+            file_path = self.file_controller.get_file_path(table_name)
             df, _columns = self._handle_source(file_path, self.clean_rows, self.custom_parser)
             result_df = query_df(df, query)
             return Response(

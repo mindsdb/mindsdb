@@ -10,7 +10,7 @@
 """
 
 import re
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import datetime
 import time
 
@@ -43,6 +43,7 @@ from mindsdb_sql.planner.steps import (
     MultipleSteps,
     ProjectStep,
     SaveToTable,
+    InsertToTable,
     FilterStep,
     UnionStep,
     JoinStep,
@@ -62,7 +63,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErKeyColumnDoesNotExist,
     ErNotSupportedYet,
 )
-
+from mindsdb_sql.parser.ast.base import ASTNode
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -76,12 +77,18 @@ def get_preditor_alias(step, mindsdb_database):
 
 def get_table_alias(table_obj, default_db_name):
     # (database, table, alias)
-    if len(table_obj.parts) > 2:
-        raise SqlApiException(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
-    elif len(table_obj.parts) == 1:
-        name = (default_db_name, table_obj.parts[0])
+    if isinstance(table_obj, Identifier):
+        if len(table_obj.parts) > 2:
+            raise SqlApiException(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
+        elif len(table_obj.parts) == 1:
+            name = (default_db_name, table_obj.parts[0])
+        else:
+            name = tuple(table_obj.parts)
     else:
-        name = tuple(table_obj.parts)
+        # it is subquery
+        name = table_obj.alias.parts[0] or 't'
+        name = (default_db_name, name)
+
     if table_obj.alias is not None:
         name = name + ('.'.join(table_obj.alias.parts),)
     else:
@@ -313,9 +320,14 @@ class SQLQuery():
         table_alias = get_table_alias(step.query.from_table, self.database)
         # TODO for information_schema we have 'database' = 'mindsdb'
 
-        data, columns_info = dn.select(
+        data, columns_info = dn.query(
             query=query
         )
+
+        # if this is query: execute it
+        if isinstance(data, ASTNode):
+            subquery = SQLQuery(data, session=self.session)
+            return subquery.fetched_data
 
         columns = [(column['name'], column['name']) for column in columns_info]
         columns.append(('__mindsdb_row_id', '__mindsdb_row_id'))
@@ -571,19 +583,20 @@ class SQLQuery():
             # if there was no 'ProjectStep', then get columns list from last step:
             if self.columns_list is None:
                 self.columns_list = []
-                for table_name in self.fetched_data['columns']:
-                    col_types = self.fetched_data['types'].get(table_name, {})
-                    for column in self.fetched_data['columns'][table_name]:
-                        self.columns_list.append(
-                            Column(
-                                database=table_name[0],
-                                table_name=table_name[1],
-                                table_alias=table_name[2],
-                                name=column[0],
-                                alias=column[1],
-                                type=col_types.get(column[0])
+                if self.fetched_data is not None:
+                    for table_name in self.fetched_data['columns']:
+                        col_types = self.fetched_data.get('types', {}).get(table_name, {})
+                        for column in self.fetched_data['columns'][table_name]:
+                            self.columns_list.append(
+                                Column(
+                                    database=table_name[0],
+                                    table_name=table_name[1],
+                                    table_alias=table_name[2],
+                                    name=column[0],
+                                    alias=column[1],
+                                    type=col_types.get(column[0])
+                                )
                             )
-                        )
 
             self.columns_list = [x for x in self.columns_list if x.name != '__mindsdb_row_id']
         except Exception as e:
@@ -608,21 +621,15 @@ class SQLQuery():
             table = step.table
             dn = self.datahub.get(step.namespace)
             ds_query = Select(from_table=Identifier(table), targets=[Star()])
-            dso, _ = dn.data_store.create_datasource(dn.integration_name, {'query': ds_query.to_string()})
 
-            columns = dso.get_columns()
-            cols = []
-            for col in columns:
-                if not isinstance(col, dict):
-                    col = {'name': col, 'type': 'str'}
-                cols.append(col)
+            data, columns_info = dn.query(ds_query)
 
             table_alias = (self.database, table, table)
 
             data = {
                 'values': [],
                 'columns': {
-                    table_alias: cols
+                    table_alias: columns_info
                 },
                 'tables': [table_alias]
             }
@@ -691,7 +698,7 @@ class SQLQuery():
                 dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
 
-                data = dn.select(
+                data = dn.query(
                     table=predictor,
                     columns=None,
                     where_data=where_data,
@@ -738,15 +745,20 @@ class SQLQuery():
                 where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
 
                 is_timeseries = self.planner.predictor_metadata[predictor]['timeseries']
-                _mdb_make_predictions = None
+                _mdb_forecast_offset = None
                 if is_timeseries:
-                    if 'LATEST' in self.query_str:
-                        _mdb_make_predictions = False
+                    if '> LATEST' in self.query_str:
+                        # stream mode -- if > LATEST, forecast starts on inferred next timestamp
+                        _mdb_forecast_offset = 1
+                    elif '= LATEST' in self.query_str:
+                        # override: when = LATEST, forecast starts on last provided timestamp instead of inferred next time
+                        _mdb_forecast_offset = 0
                     else:
-                        _mdb_make_predictions = True
+                        # normal mode -- emit a forecast ($HORIZON data points on each) for each provided timestamp
+                        _mdb_forecast_offset = None
                     for row in where_data:
-                        if '__mdb_make_predictions' not in row:
-                            row['__mdb_make_predictions'] = _mdb_make_predictions
+                        if '__mdb_forecast_offset' not in row:
+                            row['__mdb_forecast_offset'] = _mdb_forecast_offset
 
                 for row in where_data:
                     for key in row:
@@ -761,7 +773,7 @@ class SQLQuery():
                     columns[table_name] = [(c, c) for c in cols]
                     values = []
                 else:
-                    data = dn.select(
+                    data = dn.query(
                         table=predictor,
                         columns=None,
                         where_data=where_data,
@@ -769,20 +781,7 @@ class SQLQuery():
                         integration_type=self.session.integration_type
                     )
 
-                    if isinstance(self.query, CreateTable):
-                        new_data = []
-                        for row in data:
-                            new_row = {}
-                            for key, value in row.items():
-                                if key not in ('__mindsdb_row_id', '__mdb_make_predictions'):
-                                    new_key = f'predictor.{key}'
-                                else:
-                                    new_key = key
-                                new_row[(new_key, new_key)] = value
-                            new_data.append(new_row)
-                        data = new_data
-                    else:
-                        data = [{(key, key): value for key, value in row.items()} for row in data]
+                    data = [{(key, key): value for key, value in row.items()} for row in data]
 
                     values = [{table_name: x} for x in data]
 
@@ -925,16 +924,100 @@ class SQLQuery():
                 raise SqlApiException(f'error in join step: {e}') from e
 
         elif type(step) == FilterStep:
-            raise ErNotSupportedYet('FilterStep is not implemented')
-        # elif type(step) == ApplyTimeseriesPredictorStep:
-        #     raise Exception('ApplyTimeseriesPredictorStep is not implemented')
+            step_data = steps_data[step.dataframe.step_num]
+
+            # dicts to look up column and table
+            column_idx = {}
+            tables_idx = {}
+            col_table_idx = {}
+
+            # prepare columns for dataframe. column name contains table name
+            cols = set()
+            for table, col_list in step_data['columns'].items():
+                _, t_name, t_alias = table
+
+                tables_idx[t_name] = t_name
+                tables_idx[t_alias] = t_name
+                for column in col_list:
+                    # table_column
+                    c_name, c_alias = column
+
+                    col_name = f'{t_name}^{c_name}'
+                    cols.add(col_name)
+
+                    col_table_idx[col_name] = (table, column)
+                    column_idx[c_name] = t_name
+
+            # prepare dict for dataframe
+            result = []
+            for row in step_data['values']:
+                data_row = {}
+                for table, col_list in step_data['columns'].items():
+                    for col in col_list:
+                        col_name = f'{table[1]}^{col[0]}'
+                        data_row[col_name] = row[table][col]
+                result.append(data_row)
+
+            df = pd.DataFrame(result, columns=list(cols))
+
+            # analyze condition and change name of columns
+            def check_fields(node, is_table=None, **kwargs):
+                if is_table:
+                    raise ErNotSupportedYet('Subqueries is not supported in WHERE')
+                if isinstance(node, Identifier):
+                    # only column name
+                    col_name = node.parts[-1]
+
+                    if len(node.parts) == 1:
+                        if col_name not in column_idx:
+                            raise ErKeyColumnDoesNotExist(f'Table not found for column: {col_name}')
+                        table_name = column_idx[col_name]
+                    else:
+                        table_name = node.parts[-2]
+
+                        # maybe it is alias
+                        table_name = tables_idx[table_name]
+
+                    new_name = f'{table_name}^{col_name}'
+                    return Identifier(parts=[new_name])
+
+            where_query = step.query
+            query_traversal(where_query, check_fields)
+
+            query = Select(targets=[Star()], from_table=Identifier('df'), where=where_query)
+
+            res = query_df(df, query)
+
+            resp_dict = res.to_dict(orient='records')
+
+            # convert result to dict-dict structure
+            values = []
+            for row in resp_dict:
+                value = {}
+                for key, v in row.items():
+                    # find original table and col
+                    table, column = col_table_idx[key]
+                    if table not in value:
+                        value[table] = {}
+                    value[table][column] = v
+
+                values.append(value)
+
+            data = {
+                'tables': step_data['tables'],
+                'columns': step_data['columns'],
+                'values': values,
+                'types': step_data.get('types', {})
+            }
+
         elif type(step) == LimitOffsetStep:
             try:
                 step_data = steps_data[step.dataframe.step_num]
                 data = {
                     'values': step_data['values'].copy(),
                     'columns': step_data['columns'].copy(),
-                    'tables': step_data['tables'].copy()
+                    'tables': step_data['tables'].copy(),
+                    'types': step_data.get('types', {}).copy(),
                 }
                 if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
                     data['values'] = data['values'][step.offset.value:]
@@ -945,20 +1028,20 @@ class SQLQuery():
         elif type(step) == ProjectStep:
             try:
                 step_data = steps_data[step.dataframe.step_num]
-                columns_list = []
+
+                columns = defaultdict(list)
                 for column_identifier in step.columns:
-                    table_name = None
+
                     if type(column_identifier) == Star:
                         for table_name, table_columns_list in step_data['columns'].items():
                             for column in table_columns_list:
-                                columns_list.append(
-                                    Column(database=table_name[0],
-                                           table_name=table_name[1],
-                                           table_alias=table_name[2],
-                                           name=column[0],
-                                           alias=column[1])
-                                )
+
+                                columns[table_name].append(column)
+
                     elif type(column_identifier) == Identifier:
+                        appropriate_table = None
+                        columns_to_copy = None
+
                         column_name_parts = column_identifier.parts
                         column_alias = column_identifier.parts[-1] if column_identifier.alias is None else '.'.join(
                             column_identifier.alias.parts)
@@ -968,101 +1051,83 @@ class SQLQuery():
                         elif len(column_name_parts) == 1:
                             column_name = column_name_parts[0]
 
-                            appropriate_table = None
-                            if len(step_data['tables']) == 1:
-                                appropriate_table = step_data['tables'][0]
-                            else:
-                                for table_name, table_columns in step_data['columns'].items():
-                                    table_column_names_list = [x[1] or x[0] for x in table_columns]
-                                    column_exists = get_column_in_case(table_column_names_list, column_name)
-                                    if column_exists:
-                                        if appropriate_table is not None and not step.ignore_doubles:
-                                            raise Exception(
-                                                f'Found multiple appropriate tables for column {column_name}')
-                                        else:
-                                            appropriate_table = table_name
+                            for table_name, table_columns in step_data['columns'].items():
+                                table_col_idx = {}
+                                for x in table_columns:
+                                    name = x[1] or x[0]
+                                    table_col_idx[name] = x
+
+                                column_exists = get_column_in_case(list(table_col_idx.keys()), column_name)
+                                if column_exists:
+                                    if appropriate_table is not None and not step.ignore_doubles:
+                                        raise Exception(
+                                            f'Found multiple appropriate tables for column {column_name}')
+                                    else:
+                                        appropriate_table = table_name
+                                        new_col = (column_name, column_alias)
+                                        cur_col = table_col_idx[column_exists]
+
+                                        columns[appropriate_table].append(new_col)
+                                        if cur_col != new_col:
+                                            columns_to_copy = cur_col, new_col
+                                        break
+
                             if appropriate_table is None:
-                                # it is probably constaint
-                                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/133
-                                # column_name = column_name.strip("'")
-                                # name_or_alias = column_alias or column_name
-                                # column_alias = name_or_alias
-                                # for row in step_data['values']:
-                                #     for table in row:
-                                #         row[table][(column_name, name_or_alias)] = row[table][(column_name, column_name)]
-                                # appropriate_table = step_data['tables'][0]
-                                # FIXME: must be exception
-                                columns_list.append(
-                                    Column(database=appropriate_table[0],
-                                           table_name=appropriate_table[1],
-                                           table_alias=appropriate_table[2],
-                                           name=column_alias)
-                                )
-                            else:
-                                columns_list.append(
-                                    Column(database=appropriate_table[0],
-                                           table_name=appropriate_table[1],
-                                           table_alias=appropriate_table[2],
-                                           name=column_name,
-                                           alias=column_alias))  # column_name
+                                raise SqlApiException(f'Can not find appropriate table for column {column_name}')
+
                         elif len(column_name_parts) == 2:
                             table_name_or_alias = column_name_parts[0]
                             column_name = column_name_parts[1]
 
-                            appropriate_table = None
                             for table_name, table_columns in step_data['columns'].items():
-                                table_column_names_list = [x[1] or x[0] for x in table_columns]
-                                checkig_table_name_or_alias = table_name[2] or table_name[1]
-                                if table_name_or_alias.lower() == checkig_table_name_or_alias.lower():
-                                    column_exists = get_column_in_case(table_column_names_list, column_name)
+                                checking_table_name_or_alias = table_name[2] or table_name[1]
+                                if table_name_or_alias.lower() == checking_table_name_or_alias.lower():
+                                    # support select table.*
+                                    if isinstance(column_name, Star):
+                                        # add all by table
+                                        appropriate_table = table_name
+                                        for column in step_data['columns'][appropriate_table]:
+                                            columns[appropriate_table].append(column)
+                                        break
+
+                                    table_col_idx = {}
+                                    for x in table_columns:
+                                        name = x[1] or x[0]
+                                        table_col_idx[name] = x
+
+                                    column_exists = get_column_in_case(list(table_col_idx.keys()), column_name)
                                     if column_exists:
                                         appropriate_table = table_name
+                                        new_col = (column_name, column_alias)
+                                        cur_col = table_col_idx[column_exists]
+
+                                        columns[appropriate_table].append(new_col)
+                                        if cur_col != new_col:
+                                            columns_to_copy = cur_col, new_col
+
                                         break
                                     else:
                                         raise Exception(f'Can not find column "{column_name}" in table "{table_name}"')
                             if appropriate_table is None:
                                 raise SqlApiException(f'Can not find appropriate table for column {column_name}')
-
-                            columns_to_copy = None
-                            table_column_names_list = [x[1] or x[0] for x in table_columns]
-                            checking_name = get_column_in_case(table_column_names_list, column_name)
-                            for column in step_data['columns'][appropriate_table]:
-                                if column[0] == checking_name and (column[1] is None or column[1] == checking_name):
-                                    columns_to_copy = column
-                                    break
-                            else:
-                                raise ErKeyColumnDoesNotExist(
-                                    f'Can not find appropriate column in data: {(column_name, column_alias)}')
-
-                            for row in step_data['values']:
-                                row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][
-                                    columns_to_copy]
-
-                            columns_list.append(
-                                Column(database=appropriate_table[0],
-                                       table_name=appropriate_table[1],
-                                       table_alias=appropriate_table[2],
-                                       name=column_name,
-                                       alias=column_alias)
-                            )
                         else:
                             raise SqlApiException('Undefined column name')
 
-                        # if column not exists in result - copy value to it
-                        if (column_name, column_alias) not in step_data['columns'][appropriate_table]:
-                            step_data['columns'][appropriate_table].append((column_name, column_alias))
+                        if columns_to_copy is not None:
+                            col_from, col_to = columns_to_copy
                             for row in step_data['values']:
-                                if (column_name, column_alias) not in row[appropriate_table]:
-                                    try:
-                                        row[appropriate_table][(column_name, column_alias)] = row[appropriate_table][(column_name, column_name)]
-                                    except KeyError:
-                                        raise ErKeyColumnDoesNotExist(f'Unknown column: {column_name}')
+                                row[appropriate_table][col_to] = row[appropriate_table][col_from]
+                            # TODO copy types?
 
                     else:
                         raise ErKeyColumnDoesNotExist(f'Unknown column type: {column_identifier}')
 
-                self.columns_list = columns_list
-                data = step_data
+                data = {
+                    'tables': step_data['tables'],
+                    'columns': columns,
+                    'values': step_data['values'],  # TODO keep values only for columns
+                    'types': step_data.get('types', {})
+                }
             except Exception as e:
                 if isinstance(e, SqlApiException):
                     raise e
@@ -1121,13 +1186,24 @@ class SQLQuery():
 
             # columns are changed
             self.columns_list = columns_list
+            types = step_data.get('types', {})
             data = {
                 'tables': [appropriate_table],
-                'columns': columns,
-                'values': values
+                'columns': {appropriate_table: columns},
+                'values': values,
+                'types': types  # copy
             }
 
-        elif type(step) == SaveToTable:
+        elif type(step) == SaveToTable or type(step) == InsertToTable:
+            is_replace = False
+            is_create = False
+
+            if type(step) == SaveToTable:
+                is_create = True
+
+                if step.is_replace:
+                    is_replace = True
+
             step_data = step.dataframe.result_data
             integration_name = step.table.parts[0]
             table_name_parts = step.table.parts[1:]
@@ -1141,24 +1217,53 @@ class SQLQuery():
             for table in step_data['columns']:
                 new_table_columns = []
                 for column in step_data['columns'][table]:
-                    if column[-1] not in ('__mindsdb_row_id', '__mdb_make_predictions'):
+                    if column[-1] not in ('__mindsdb_row_id', '__mdb_forecast_offset'):
                         new_table_columns.append(column)
                 step_data['columns'][table] = new_table_columns
             # endregion
 
             # region del columns filtered at projection step
-            filtered_column_names = [x.name for x in self.columns_list]
-            for table in step_data['columns']:
-                new_table_columns = []
-                for column in step_data['columns'][table]:
-                    if column[0].startswith('predictor.'):
-                        new_table_columns.append(column)
-                    elif column[0] in filtered_column_names:
-                        new_table_columns.append(column)
-                step_data['columns'][table] = new_table_columns
+            if self.columns_list is not None:
+                filtered_column_names = [x.name for x in self.columns_list]
+                for table in step_data['columns']:
+                    new_table_columns = []
+                    for column in step_data['columns'][table]:
+                        if column[0].startswith('predictor.'):
+                            new_table_columns.append(column)
+                        elif column[0] in filtered_column_names:
+                            new_table_columns.append(column)
+                    step_data['columns'][table] = new_table_columns
             # endregion
 
-            dn.create_table(table_name_parts=table_name_parts, columns=step_data['columns'], data=step_data['values'])
+            # drop double names
+            if len(step_data['tables']) > 1:
+                # set prefixes for all tables except first one
+                for table in step_data['tables'][1:]:
+                    table_name = table[1]
+                    col_map = []
+                    col_list = []
+                    for column in step_data['columns'][table]:
+                        column_new = (f'{table_name}.{column[0]}', f'{table_name}.{column[1]}')
+                        col_list.append(column_new)
+                        col_map.append([column, column_new])
+
+                    # replace columns
+                    step_data['columns'][table] = col_list
+
+                    # replace in values
+                    for row in step_data['values']:
+                        table_row = row[table]
+
+                        for column, column_new in col_map:
+                            table_row[column_new] = table_row.pop(column)
+
+            dn.create_table(
+                table_name_parts=table_name_parts,
+                columns=step_data['columns'],
+                data=step_data['values'],
+                is_replace=is_replace,
+                is_create=is_create
+            )
             data = None
         else:
             raise SqlApiException(F'Unknown planner step: {step}')

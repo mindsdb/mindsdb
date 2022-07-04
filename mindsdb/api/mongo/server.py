@@ -2,6 +2,7 @@ import socketserver as SocketServer
 import socket
 import struct
 import bson
+import traceback
 from bson import codec_options
 from collections import OrderedDict
 from abc import abstractmethod
@@ -12,9 +13,9 @@ from mindsdb.api.mongo.responders import responders
 from mindsdb.api.mongo.utilities import log
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.storage.db import session as db_session
-from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.views import ViewController
 
 OP_REPLY = 1
 OP_UPDATE = 2001
@@ -141,8 +142,11 @@ class OpMsgResponder(OperationResponder):
 
         return documents
 
-    def to_bytes(self, response, request_id):
-        flags = struct.pack("<I", 0)  # TODO
+    def to_bytes(self, response, request_id, is_error=False):
+        if is_error:
+            flags = struct.pack("<I", 2)
+        else:
+            flags = struct.pack("<I", 0)  # TODO
         payload_type = struct.pack("<b", 0)  # TODO
         payload_data = bson.BSON.encode(response)
         data = b''.join([flags, payload_type, payload_data])
@@ -261,9 +265,19 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             raise NotImplementedError(f'Unknown opcode {opcode}')
         responder = self.server.operationsHandlersMap[opcode]
         assert responder is not None, 'error'
-        response = responder.handle(msg_bytes, request_id, self.session.mindsdb_env, self.session)
-        if response is None:
-            return None
+        try:
+            response = responder.handle(msg_bytes, request_id, self.session.mindsdb_env, self.session)
+            if response is None:
+                return None
+        except Exception as e:
+            response = {
+                '$err': {
+                    'title': str(e),
+                    'info': traceback.format_exc()
+                }
+            }
+            return responder.to_bytes(response, request_id, is_error=True)
+
         return responder.to_bytes(response, request_id)
 
     def _read_bytes(self, length):
@@ -291,20 +305,16 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         self.mindsdb_env = {
             'config': config,
-            'origin_data_store': DataStore(),
             'origin_model_interface': ModelInterface(),
-            'origin_datasource_controller': IntegrationController(),
+            'origin_integration_controller': IntegrationController(),
+            'origin_view_controller': ViewController()
         }
         self.mindsdb_env['model_interface'] = WithKWArgsWrapper(
             self.mindsdb_env['origin_model_interface'],
             company_id=None
         )
-        self.mindsdb_env['data_store'] = WithKWArgsWrapper(
-            self.mindsdb_env['origin_data_store'],
-            company_id=None
-        )
-        self.mindsdb_env['datasource_controller'] = WithKWArgsWrapper(
-            self.mindsdb_env['origin_datasource_controller'],
+        self.mindsdb_env['integration_controller'] = WithKWArgsWrapper(
+            self.mindsdb_env['origin_integration_controller'],
             company_id=None
         )
 

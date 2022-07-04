@@ -23,6 +23,8 @@ import select
 import base64
 from typing import List, Dict
 
+from numpy import dtype as np_dtype
+from pandas.api import types as pd_types
 from lightwood.api import dtype
 
 from mindsdb.utilities.wizards import make_ssl_cert
@@ -36,16 +38,15 @@ from mindsdb.api.mysql.mysql_proxy.utilities import log
 
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     getConstName,
     CHARSET_NUMBERS,
     ERR,
     COMMANDS,
     TYPES,
-    SERVER_VARIABLES,
     DEFAULT_AUTH_METHOD,
     SERVER_STATUS,
-    FIELD_FLAG,
     CAPABILITIES
 )
 
@@ -67,17 +68,11 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     BinaryResultsetRowPacket
 )
 
-from numpy import dtype as np_dtype
-from pandas.api import types as pd_types
-
-from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
-
-import mindsdb.utilities.hooks as hooks
-
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
+import mindsdb.utilities.hooks as hooks
 
 
 def empty_fn():
@@ -101,12 +96,13 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         integration = None
         integration_type = None
         extracted_username = username
-        integrations_names = IntegrationController().get_all(company_id).keys()
+        integration_controller = IntegrationController()
+        integrations_names = integration_controller.get_all(company_id).keys()
         for integration_name in integrations_names:
             if username == f'{hardcoded_user}_{integration_name}':
                 extracted_username = hardcoded_user
                 integration = integration_name
-                integration_type = IntegrationController().get(integration, company_id)['type']
+                integration_type = integration_controller.get(integration, company_id)['type']
 
         if extracted_username != hardcoded_user:
             log.warning(f'Check auth, user={username}: user mismatch')
@@ -131,16 +127,6 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         log.error(f'Check auth, user={username}: ERROR')
         log.error(e)
         log.error(traceback.format_exc())
-
-
-class RESPONSE_TYPE:
-    __slots__ = ()
-    OK = 'ok'
-    TABLE = 'table'
-    ERROR = 'error'
-
-
-RESPONSE_TYPE = RESPONSE_TYPE()
 
 
 class SQLAnswer:
@@ -422,14 +408,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             connection. '0000' selected because in real mysql connection it should be lenght of package,
             and it can not be 0.
         '''
-        if sys.platform != 'linux':
+        config = Config()
+        is_cloud = config.get('cloud', False)
+
+        if sys.platform != 'linux' or is_cloud is False:
             return {
                 'is_cloud': False
             }
 
         read_poller = select.poll()
         read_poller.register(self.request, select.POLLIN)
-        events = read_poller.poll(0)
+        events = read_poller.poll(30)
 
         if len(events) == 0:
             return {
@@ -445,6 +434,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             company_id = self.request.recv(4)
             company_id = struct.unpack('I', company_id)[0]
 
+            user_class = self.request.recv(1)
+            user_class = struct.unpack('B', user_class)[0]
+
             database_name_len = self.request.recv(2)
             database_name_len = struct.unpack('H', database_name_len)[0]
 
@@ -456,6 +448,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'is_cloud': True,
                 'client_capabilities': client_capabilities,
                 'company_id': company_id,
+                'user_class': user_class,
                 'database': database_name
             }
 
@@ -528,7 +521,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 state_track=executor.state_track,
             )
         else:
-
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
@@ -678,6 +670,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
             self.session.database = cloud_connection['database']
             self.session.username = 'cloud'
+            self.session.user_class = cloud_connection['user_class']
             self.session.auth = True
             self.session.integration = None
             self.session.integration_type = None
@@ -860,7 +853,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.hook_before_handle = empty_fn
 
         server.original_model_interface = ModelInterface()
-        server.original_data_store = DataStore()
         server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
 
@@ -870,39 +862,3 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # interrupt the program with Ctrl-C
         log.info('Waiting for incoming connections...')
         server.serve_forever()
-
-
-class Dummy:
-    pass
-
-
-class FakeMysqlProxy(MysqlProxy):
-    def __init__(self, company_id):
-        request = Dummy()
-        client_address = ['', '']
-        server = Dummy()
-        server.connection_id = 0
-        server.hook_before_handle = empty_fn
-        server.original_model_interface = ModelInterface()
-        server.original_data_store = DataStore()
-        server.original_integration_controller = IntegrationController()
-        server.original_view_controller = ViewController()
-
-        self.charset = 'utf8'
-        self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
-        self.client_capabilities = None
-
-        self.request = request
-        self.client_address = client_address
-        self.server = server
-
-        self.session = SessionController(
-            server=self.server,
-            company_id=company_id
-        )
-        self.session.database = 'mindsdb'
-
-    def is_cloud_connection(self):
-        return {
-            'is_cloud': False
-        }

@@ -11,8 +11,11 @@ Our MindsDB SQL API supports creating a database connection by passing any crede
 ```sql
 CREATE DATABASE [datasource_name]
 WITH
-        engine=[engine_string],
-        parameters={"key":"value", ...};
+    engine=[engine_string],
+    parameters={
+            "key":"value",
+            ...
+    };
 ```
 
 On execution, you should get:
@@ -27,7 +30,7 @@ Where:
 | ------------------- | ---------------------------------------------------------------- |
 | `[datasource_name]` | Identifier for the datasource to be created                      |
 | `[engine_string]`   | Engine to be selected depending on the database connection       |
-| `parameters`   | `#!json {"key":"value"}` object with the conection parametes especific for each engine  |
+| `parameters`   | `#!json {"key":"value"}` object with the connection parameters specific for each engine  |
 
 ## Example
 
@@ -52,9 +55,48 @@ On execution:
 Query OK, 0 rows affected (8.878 sec)
 ```
 
-##  Example configurations
+## Listing Linked DATABASES
 
-Click on each section to expand the example query for specific connection.
+You can list linked databases as follows:
+
+```sql
+SHOW DATABASES;
+```
+
+On execution:
+
+```sql
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mindsdb            |
+| files              |
+| views              |
+| example_db         |
++--------------------+
+```
+
+## Getting Linked DATABASES Metadata
+
+You can also get metadata about the linked databases in `mindsdb.datasources`:
+
+```sql
+SELECT * FROM mindsdb.datasources;
+```
+
+On execution:
+
+```sql
+
++------------+---------------+--------------+------+-----------+
+| name       | database_type | host         | port | user      |
++------------+---------------+--------------+------+-----------+
+| example_db | postgres      | 3.220.66.106 | 5432 | demo_user |
++------------+---------------+--------------+------+-----------+
+```
+
+## Supported Integrations
 
 ### Snowflake
 
@@ -89,6 +131,7 @@ WITH
             "database": "singlestore"
     };
 ```
+
 ### MySQL
 
 ```sql
@@ -194,21 +237,6 @@ WITH
     };
 ```
 
-### Scylladb
-
-```sql
-CREATE DATABASE scylladb_datasource
-WITH
-    engine='scylladb',
-    parameters={
-            "user":"scylladb",
-            "port": 9042,
-            "password": "Mimzo3i-mxt@9CpThpBj",
-            "host": "127.0.0.1",
-            "database": "scylladb"
-    };
-```
-
 ### Trino
 
 ```sql
@@ -240,46 +268,5 @@ WITH
     };
 ```
 
-## Listing Linked DATABASES
-
-You can list linked databases as follows:
-
-```sql
-SHOW DATABASES;
-```
-
-On execution:
-
-```sql 
-+--------------------+
-| Database           |
-+--------------------+
-| information_schema |
-| mindsdb            |
-| files              |
-| views              |
-| example_db         |
-+--------------------+
-```
-
-## Getting Linked DATABASES Metadata
-
-You can also get metadata about the linked databases in in `mindsdb.datasources`:.
-
-```sql
-select * from mindsdb.datasources;
-```
-
-On execution:
-
-```sql
-
-+------------+---------------+--------------+------+-----------+
-| name       | database_type | host         | port | user      |
-+------------+---------------+--------------+------+-----------+
-| example_db | postgres      | 3.220.66.106 | 5432 | demo_user |
-+------------+---------------+--------------+------+-----------+
-```
-
 !!! info "Work in progress"
-Note this feature is in beta version. If you have additional questions about other supported datasources or you expirience some issues [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or open GitHub issue.
+Note this feature is in beta version. If you have additional questions about other supported datasources or you experience some issues [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or open GitHub issue.

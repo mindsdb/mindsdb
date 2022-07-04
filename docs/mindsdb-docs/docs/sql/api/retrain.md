@@ -1,36 +1,92 @@
-# RETRAIN PREDICTOR Statement
+# `#!sql RETRAIN` Statement
 
-The `RETRAIN` statement is used to retrain old predictors. The basic syntax for retraining the predictors is:
+## Description
+
+The `#!sql RETRAIN` statement is used to retrain old predictors.
+The predictor is updated to leverage any new data in optimizing its predictive capabilities, without necessarily taking as long to train as starting from scratch. The basic syntax for retraining the predictors is:
+
+## Syntax
 
 ```sql
-RETRAIN predictor_name;
+RETRAIN mindsdb.[predictor_name];
 ```
-The predictor is updated to leverage any new data in optimizing its predictive capabilities, without necessarily taking as long to train as starting from scratch.
 
-### RETRAIN Predictor example
+On execution:
 
-This example shows how you can retrain the predictor called `home_rentals_model`.
+```sql
+Query OK, 0 rows affected (0.058 sec)
+```
+
+## Validation
+
+```sql
+SELECT name, update_status FROM mindsdb.predictors
+    WHERE name = '[predictor_name]';
+```
+
+On execution:
+
+```sql
++------------------+---------------+
+| name             | update_status |
++------------------+---------------+
+| [predictor_name] | up_to_date    |
++------------------+---------------+
+```
+
+Where:
+
+|                    | Description                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| `[predictor_name]` | Name of the model to be retrained                                                        |
+| `update_status`    | Column from `#!sql mindsdb.predictors` that informs if the model can be retrained or not |
+
+## Example
+
+### Validating Prior Status
+
+```sql
+SELECT name, update_status FROM mindsdb.predictors
+    WHERE name = 'home_rentals_model';
+```
+
+On execution:
+
+```sql
++--------------------+---------------+
+| name               | update_status |
++--------------------+---------------+
+| home_rentals_model | available     |
++--------------------+---------------+
+```
+
+Note the value for `update_status` is `available`
+
+### Retraining model
 
 ```sql
 RETRAIN home_rentals_model;
 ```
 
-### SELECT Predictor status
-
-To check if the status of the predictor is outdated you can `SELECT` from predictors table:
+On execution:
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='predictor_name';
+Query OK, 0 rows affected (0.058 sec)
 ```
 
-### SELECT Predictor example
-
-To check the status of the `home_rentals_model` run:
+### Validating Resulting Status
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='home_rentals_model';
+SELECT  name, update_status FROM mindsdb.predictors
+    WHERE name = 'home_rentals_model';
 ```
 
-![Model Sttus](/assets/sql/status.png)
+On execution:
 
-If the status is `OUTDATED` you can retrain the predictor.
+```sql
++--------------------+---------------+
+| name               | update_status |
++--------------------+---------------+
+| home_rentals_model | up_to_date    |
++--------------------+---------------+
+```

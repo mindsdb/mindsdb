@@ -1,12 +1,12 @@
 # SQL Alchemy and MindsDB
 
-Note: MidnsDB has a working integration with SQL Alchemy.
+Note: MindsDB has a working integration with SQL Alchemy.
 
-To connecto to MindsDB, please proceed as you would if you were connecting to a standard MySQL Database.
+To connect to MindsDB, please proceed as you would if you were connecting to a standard MySQL Database.
 
-## Connect to mindsDB cloud
+## Connect to MindsDB cloud
 
-If you have a mindsdb cloud, please use the following information:
+If you have a MindsDB cloud, please use the following information:
 
 1. Hostname:
     * cloud.mindsdb.com 

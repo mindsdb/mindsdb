@@ -16,14 +16,17 @@ from packaging import version
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.utilities.config import Config, STOP_THREADS_EVENT
+from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.stream.stream import StreamController
+from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
 from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface
+from mindsdb.interfaces.database.integrations import IntegrationController
 import mindsdb.interfaces.storage.db as db
+from mindsdb.integrations.utilities.install import install_dependencies
 
 
 COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
@@ -70,6 +73,24 @@ if __name__ == '__main__':
         # Figure this one out later
         pass
 
+    integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
+    if args.install_handlers is not None:
+        handlers_list = [s.strip() for s in args.install_handlers.split(',')]
+        # import_meta = handler_meta.get('import', {})
+        for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
+            if handler_name not in handlers_list:
+                continue
+            import_meta = handler_meta.get('import', {})
+            if import_meta.get('success') is True:
+                print(f"{'{0: <18}'.format(handler_name)} - already installed")
+                continue
+            result = install_dependencies(import_meta.get('dependencies', []))
+            if result.get('success') is True:
+                print(f"{'{0: <18}'.format(handler_name)} - successfully installed")
+            else:
+                print(f"{'{0: <18}'.format(handler_name)} - error during dependencies installation: {result.get('error_message', 'unknown error')}")
+        sys.exit(0)
+
     os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
     os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
 
@@ -83,9 +104,13 @@ if __name__ == '__main__':
     print(f"Storage path:\n   {config['paths']['root']}")
 
     # @TODO Backwards compatibiltiy for tests, remove later
-    from mindsdb.interfaces.database.integrations import IntegrationController
     model_interface = WithKWArgsWrapper(ModelInterface(), company_id=COMPANY_ID)
     integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
+    for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
+        import_meta = handler_meta.get('import', {})
+        if import_meta.get('success', False) is not True:
+            print(f"Can't import handler '{handler_name}': {import_meta.get('error_message', 'unknown error')}")
+
     raw_model_data_arr = model_interface.get_models()
     model_data_arr = []
     for model in raw_model_data_arr:
@@ -97,30 +122,17 @@ if __name__ == '__main__':
                 pass
 
     if not is_cloud:
-        # region migrate files from datsources
-        datasets_records = db.session.query(db.Dataset).filter(db.Dataset.ds_class == 'FileDS').all()
-        file_records = db.session.query(db.File).all()
-        storage_dir = config['paths']['storage']
-        for ds_record in datasets_records:
-            ds_path = os.path.join(storage_dir, f'datasource_{ds_record.company_id}_{ds_record.id}')
-            if os.path.exists(ds_path):
-                try:
-                    ds_data = json.loads(ds_record.data)
-                    mindsdb_file_name = ds_data.get('source', {}).get('mindsdb_file_name')
-                    if mindsdb_file_name is not None:
-                        file_record = db.session.query(db.File).filter(
-                            db.File.company_id == ds_record.company_id,
-                            db.File.name == mindsdb_file_name
-                        ).first()
-                        if file_record is None:
-                            continue
-                        file_path = os.path.join(storage_dir, f'file_{file_record.company_id}_{file_record.id}')
-                        if not os.path.exists(file_path):
-                            shutil.move(ds_path, file_path)
-                        else:
-                            shutil.rmtree(ds_path)
-                except Exception:
-                    pass
+        # region creating permanent integrations
+        for integration_name in ['files', 'views']:
+            integration_meta = integration_controller.get(name=integration_name)
+            if integration_meta is None:
+                integration_record = db.Integration(
+                    name=integration_name,
+                    data={},
+                    company_id=None
+                )
+                db.session.add(integration_record)
+                db.session.commit()
         # endregion
 
         # region Mark old predictors as outdated

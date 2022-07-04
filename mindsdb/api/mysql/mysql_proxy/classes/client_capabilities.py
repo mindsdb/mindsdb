@@ -1,10 +1,12 @@
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CAPABILITIES
 
+
 class ClentCapabilities():
     _capabilities = 0
+
     def __init__(self, capabilities):
         self._capabilities = capabilities
-    
+
     def has(self, cap):
         return cap & self._capabilities > 0
 
@@ -22,31 +24,31 @@ class ClentCapabilities():
     @property
     def FOUND_ROWS(self):
         return self.has(CAPABILITIES.CLIENT_FOUND_ROWS)
-    
+
     @property
     def LONG_FLAG(self):
         return self.has(CAPABILITIES.CLIENT_LONG_FLAG)
-    
+
     @property
     def CONNECT_WITH_DB(self):
         return self.has(CAPABILITIES.CLIENT_CONNECT_WITH_DB)
-    
+
     @property
     def NO_SCHEMA(self):
         return self.has(CAPABILITIES.CLIENT_NO_SCHEMA)
-    
+
     @property
     def COMPRESS(self):
         return self.has(CAPABILITIES.CLIENT_COMPRESS)
-    
+
     @property
     def ODBC(self):
         return self.has(CAPABILITIES.CLIENT_ODBC)
-    
+
     @property
     def LOCAL_FILES(self):
         return self.has(CAPABILITIES.CLIENT_LOCAL_FILES)
-    
+
     @property
     def IGNORE_SPACE(self):
         return self.has(CAPABILITIES.CLIENT_IGNORE_SPACE)
@@ -126,4 +128,3 @@ class ClentCapabilities():
     @property
     def SECURE_CONNECTION(self):
         return self.has(CAPABILITIES.CLIENT_SECURE_CONNECTION)
-

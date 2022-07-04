@@ -25,6 +25,8 @@
     <a href="https://github.com/mindsdb/mindsdb/projects">Contribute</a>
     <span> | </span>
     <a href="https://cloud.mindsdb.com">Demo</a>
+    <span> | </span>
+    <a href="https://github.com/mindsdb/mindsdb/blob/staging/integrations_contest.md">Integrations Contest</a>
   </h3>
   
 </div>
@@ -35,6 +37,8 @@
 * Developers can quickly add AI capabilities to your applications.
 * Data Scientists can streamline MLOps by deploying ML models as AI Tables.
 * Data Analysts can easily make forecasts on complex data (like multivariate time-series with high cardinality) and visualize them in BI tools like Tableau.
+
+**NEW!** Check-out the new MindsDB [ideation 💡 challenge](https://github.com/mindsdb/mindsdb/blob/staging/integrations_contest.md) (and the cash:dollar: prizes) for democratizing machine learning!
 
 If you like our project then we would really appreciate **a Star ⭐!**
 
@@ -47,12 +51,14 @@ Also, check-out the [rewards and community programs.](https://mindsdb.com/commun
 ----------------------------
 
 <h2 align="center">
-   Machine Learning using SQL
+   Machine Learning using SQL 
    <br/>
    <br/>
   <img width="600" src="https://docs.mindsdb.com/assets/mdb_image.png" alt="MindsDB">	
 
 </h2>
+
+<img width="1222" alt="image" src="https://user-images.githubusercontent.com/5898506/172740218-61db5eec-1bcf-4832-99d9-308709a426a7.png">
 
 ## Demo
 
@@ -105,7 +111,6 @@ Check our [docs](https://docs.mindsdb.com/?utm_medium=community&utm_source=githu
 * Model explainability analysis 
 * GPU support for models’ training
 * Open JSON-AI syntax to build models and bring your own ML blocks in a declarative way 
-* REST API available as well
 
 
 ## Database Integrations
@@ -141,7 +146,6 @@ Feel free to browse [documentation](https://docs.mindsdb.com?utm_medium=communit
 ## Documentation
 
 You can find the complete documentation of MindsDB at [docs.mindsdb.com](https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
-Documentation for our HTTP API can be found at [apidocs.mindsdb.com](https://apidocs.mindsdb.com/).
 
 ## Support
 

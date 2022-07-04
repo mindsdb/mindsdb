@@ -1,12 +1,8 @@
 import os
 import json
 from copy import deepcopy
-from threading import Event
 
 from mindsdb.utilities.fs import create_directory
-
-
-STOP_THREADS_EVENT = Event()
 
 
 def _merge_key_recursive(target_dict, source_dict, key):

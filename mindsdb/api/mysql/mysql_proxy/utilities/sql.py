@@ -1,21 +1,17 @@
 import copy
+
 import duckdb
 import numpy as np
+
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner.utils import query_traversal
-from mindsdb_sql.parser.ast import Select, Identifier,\
-    BinaryOperation, OrderBy, Function, Constant
+from mindsdb_sql.parser.ast import (
+    Select, Identifier,
+    Function, Constant
+)
 
 from mindsdb.utilities.log import log
-
-#
-# def _remove_table_name(root):
-#     if isinstance(root, BinaryOperation):
-#         _remove_table_name(root.args[0])
-#         _remove_table_name(root.args[1])
-#     elif isinstance(root, Identifier):
-#         root.parts = [root.parts[-1]]
 
 
 def query_df(df, query, session=None):
@@ -34,8 +30,11 @@ def query_df(df, query, session=None):
     else:
         query_ast = copy.deepcopy(query)
 
-    if isinstance(query_ast, Select) is False or isinstance(query_ast.from_table, Identifier) is False:
-        raise Exception("Only 'SELECT from TABLE' statements supported for internal query")
+    if isinstance(query_ast, Select) is False \
+       or isinstance(query_ast.from_table, Identifier) is False:
+        raise Exception(
+            "Only 'SELECT from TABLE' statements supported for internal query"
+        )
 
     query_ast.from_table.parts = ['df_table']
 
@@ -56,20 +55,13 @@ def query_df(df, query, session=None):
 
     query_traversal(query_ast, adapt_query)
 
-    # for identifier in query_ast.targets:
-    #     if isinstance(identifier, Identifier):
-    #         identifier.parts = [identifier.parts[-1]]
-    # if isinstance(query_ast.order_by, list):
-    #     for orderby in query_ast.order_by:
-    #         if isinstance(orderby, OrderBy) and isinstance(orderby.field, Identifier):
-    #             orderby.field.parts = [orderby.field.parts[-1]]
-    # _remove_table_name(query_ast.where)
-
     render = SqlalchemyRender('postgres')
     try:
         query_str = render.get_string(query_ast, with_failback=False)
     except Exception as e:
-        log.error(f"Exception during query casting to 'postgres' dialect. Query: {str(query)}. Error: {e}")
+        log.error(
+            f"Exception during query casting to 'postgres' dialect. Query: {str(query)}. Error: {e}"
+        )
         query_str = render.get_string(query_ast, with_failback=True)
 
     res = duckdb.query_df(df, 'df_table', query_str)

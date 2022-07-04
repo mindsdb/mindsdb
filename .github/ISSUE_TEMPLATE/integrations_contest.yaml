@@ -1,0 +1,47 @@
+name: Integrations Contest
+description: Propose a new integration idea
+title: "[New Integration]: "
+labels: [integration, enhancement]
+assignees: 
+- 
+body:
+- type: markdown
+  attributes:
+    value: |
+      Thanks for taking the time to share the new integration! Please fill out the form in English!
+- type: checkboxes
+  attributes:
+    label: Is there an existing integration?
+    description: Please search to see if MindsDB already supports this integration.A list with supported integrations can be found [here](https://github.com/mindsdb/mindsdb#database-integrations).
+    options:
+    - label: I have searched the existing integrations.
+      required: true
+- type: textarea
+  attributes:
+    label: Use Case
+    description: Which use-cases does this solve? 
+    placeholder: |
+      Why this integration will be usefull to users? What is the value of having this integration?
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Motivation
+    description: How will we know that this has succeeded?
+    placeholder: |
+      Explain the proposed integration as though it was already implemented and you were explaining it to a user.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Implementation
+    description: Describe how this integration will work, with code, pseudo-code, mock-ups, text, or add diagrams
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Anything else?
+    description: |
+      Links? References? Anything that will give more context about this integration!
+  validations:
+    required: false

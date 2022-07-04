@@ -1,5 +1,5 @@
-from mindsdb.integrations.redis.redisdb import Redis
-from mindsdb.integrations.kafka.kafkadb import Kafka
+from mindsdb.interfaces.stream.redis.redisdb import Redis
+from mindsdb.interfaces.stream.kafka.kafkadb import Kafka
 from mindsdb.utilities.log import log as logger
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.database.integrations import IntegrationController

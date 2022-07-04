@@ -6,10 +6,12 @@ from flask import request
 from flask_restx import Resource
 import tempfile
 import multipart
+import requests
 
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.files import ns_conf
+from mindsdb.utilities.config import Config
 
 
 @ns_conf.route('/')
@@ -74,7 +76,44 @@ class File(Resource):
         else:
             data = request.json
 
-        # mindsdb_file_name = data['name'] if 'name' in data else name # !!!!
+        if data.get('source_type') == 'url':
+            url = data['source']
+            data['file'] = data['name']
+
+            config = Config()
+            is_cloud = config.get('cloud', False)
+            if is_cloud is True and request.user_class != 1:
+                info = requests.head(url)
+                file_size = info.headers.get('Content-Length')
+                try:
+                    file_size = int(file_size)
+                except Exception:
+                    pass
+
+                if file_size is None:
+                    return http_error(
+                        400,
+                        "Error getting file info",
+                        "Сan't determine remote file size"
+                    )
+                if file_size > 1024 * 1024 * 100:
+                    return http_error(
+                        400,
+                        "File is too big",
+                        "Upload limit for file is 100Mb"
+                    )
+            with requests.get(url, stream=True) as r:
+                if r.status_code != 200:
+                    return http_error(
+                        400,
+                        "Error getting file",
+                        f"Got status code: {r.status_code}"
+                    )
+                file_path = os.path.join(temp_dir_path, data['file'])
+                with open(file_path, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+
         original_file_name = data.get('original_file_name')
 
         file_path = os.path.join(temp_dir_path, data['file'])

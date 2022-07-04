@@ -27,8 +27,7 @@ Where:
 
 |               | Description                                       |
 | ------------- | ------------------------------------------------- |
-| `[file_name]` | Name of file uploaded to mindsDB via the [MindsDB SQL Editor
-](/connect/mindsdb_editor/)   |
+| `[file_name]` | Name of file uploaded to mindsDB via the [MindsDB SQL Editor](/connect/mindsdb_editor/)   |
 | column        | Name of the column depending on the file uploaded |
 | value         | Value depending on the file uploaded              |
 

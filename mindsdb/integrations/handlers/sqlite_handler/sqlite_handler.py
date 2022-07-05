@@ -26,7 +26,7 @@ class SQLiteHandler(DatabaseHandler):
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
-        Initialize the handler
+        Initialize the handler.
         Args:
             name (str): name of particular handler instance
             connection_data (dict): parameters for connecting to the database
@@ -46,7 +46,7 @@ class SQLiteHandler(DatabaseHandler):
 
     def connect(self) -> StatusResponse:
         """
-        Set up the connection required by the handler
+        Set up the connection required by the handler.
         Returns:
             HandlerStatusResponse
         """
@@ -61,7 +61,7 @@ class SQLiteHandler(DatabaseHandler):
 
     def disconnect(self):
         """
-        Close any existing connections
+        Close any existing connections.
         """
 
         if self.is_connected is False:
@@ -73,7 +73,7 @@ class SQLiteHandler(DatabaseHandler):
 
     def check_connection(self) -> StatusResponse:
         """
-        Check connection to the handler
+        Check connection to the handler.
         Returns:
             HandlerStatusResponse
         """
@@ -136,7 +136,8 @@ class SQLiteHandler(DatabaseHandler):
         return response
 
     def query(self, query: ASTNode) -> StatusResponse:
-        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+        """
+        Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
             query (ASTNode): sql query represented as AST. May be any kind
                 of query: SELECT, INTSERT, DELETE, etc
@@ -148,24 +149,28 @@ class SQLiteHandler(DatabaseHandler):
         return self.native_query(query_str)
 
     def get_tables(self) -> StatusResponse:
-        """ Return list of entities
-         Return list of entities that will be accesible as tables.
-         Returns:
-             HandlerResponse: shoud have same columns as information_schema.tables
-                 (https://dev.mysql.com/doc/refman/8.0/en/information-schema-tables-table.html)
-                 Column 'TABLE_NAME' is mandatory, other is optional.
-         """
-        pass
+        """
+        Return list of entities that will be accessible as tables.
+        Returns:
+            HandlerResponse
+        """
+
+        query = "SELECT name from sqlite_master where type= 'table'"
+        result = self.native_query(query)
+        df = result.data_frame
+        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        return result
 
     def get_columns(self, table_name: str) -> StatusResponse:
-        """ Returns a list of entity columns
-          Args:
-              table_name (str): name of one of tables returned by self.get_tables()
-          Returns:
-              HandlerResponse: shoud have same columns as information_schema.columns
-                  (https://dev.mysql.com/doc/refman/8.0/en/information-schema-columns-table.html)
-                  Column 'COLUMN_NAME' is mandatory, other is optional. Hightly
-                  recomended to define also 'DATA_TYPE': it should be one of
-                  python data types (by default it str).
-          """
+        """
+        Returns a list of entity columns.
+        Args:
+            table_name (str): name of one of tables returned by self.get_tables()
+        Returns:
+          HandlerResponse: should have same columns as information_schema.columns
+            (https://dev.mysql.com/doc/refman/8.0/en/information-schema-columns-table.html)
+            Column 'COLUMN_NAME' is mandatory, other is optional. Hightly
+            recomended to define also 'DATA_TYPE': it should be one of
+            python data types (by default it str).
+        """
         pass

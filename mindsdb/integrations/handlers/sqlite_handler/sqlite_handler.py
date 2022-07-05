@@ -4,6 +4,7 @@ import pandas as pd
 import sqlite3
 
 from mindsdb_sql import parse_sql
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -45,9 +46,7 @@ class SQLiteHandler(DatabaseHandler):
 
     def connect(self) -> StatusResponse:
         """
-        Set up any connections required by the handler
-        Should return output of check_connection() method after attempting
-        connection. Should switch self.is_connected.
+        Set up the connection required by the handler
         Returns:
             HandlerStatusResponse
         """
@@ -63,7 +62,6 @@ class SQLiteHandler(DatabaseHandler):
     def disconnect(self):
         """
         Close any existing connections
-        Should switch self.is_connected.
         """
 
         if self.is_connected is False:
@@ -75,7 +73,7 @@ class SQLiteHandler(DatabaseHandler):
 
     def check_connection(self) -> StatusResponse:
         """
-        Cehck connection to the handler
+        Check connection to the handler
         Returns:
             HandlerStatusResponse
         """
@@ -87,8 +85,7 @@ class SQLiteHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection.is_connected()
         except Exception as e:
-            # TODO: change self.connection_data["database"]
-            log.error(f'Error connecting to SQLite {self.connection_data["database"]}, {e}!')
+            log.error(f'Error connecting to SQLite {self.connection_data["db_file"]}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -126,8 +123,7 @@ class SQLiteHandler(DatabaseHandler):
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            # TODO: change self.connection_data["database"]
-            log.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+            log.error(f'Error running query: {query} on {self.connection_data["db_file"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
@@ -147,7 +143,9 @@ class SQLiteHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        pass
+        renderer = SqlalchemyRender('sqlite')
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
 
     def get_tables(self) -> StatusResponse:
         """ Return list of entities

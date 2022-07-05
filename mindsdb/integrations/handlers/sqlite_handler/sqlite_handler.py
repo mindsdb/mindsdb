@@ -7,6 +7,7 @@ from mindsdb.integrations.libs.base_handler import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
 
+from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -49,6 +50,7 @@ class SQLiteHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
+
         if self.is_connected is True:
             return self.connection
 
@@ -62,6 +64,7 @@ class SQLiteHandler(DatabaseHandler):
         Close any existing connections
         Should switch self.is_connected.
         """
+
         if self.is_connected is False:
             return
 
@@ -74,7 +77,23 @@ class SQLiteHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
-        pass
+
+        result = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
+        try:
+            connection = self.connect()
+            result.success = connection.is_connected()
+        except Exception as e:
+            log.error(f'Error connecting to SQLite {self.connection_data["database"]}, {e}!')
+            result.error_message = str(e)
+
+        if result.success is True and need_to_close:
+            self.disconnect()
+        if result.success is False and self.is_connected is True:
+            self.is_connected = False
+
+        return result
 
     def native_query(self, query: Any) -> StatusResponse:
         """Receive raw query and act upon it somehow.

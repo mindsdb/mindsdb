@@ -121,6 +121,7 @@ class SQLiteHandler(DatabaseHandler):
                     )
                 )
             else:
+                connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
             log.error(f'Error running query: {query} on {self.connection_data["db_file"]}!')

@@ -155,7 +155,7 @@ class SQLiteHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        query = "SELECT name from sqlite_master where type= 'table'"
+        query = "SELECT name from sqlite_master where type= 'table';"
         result = self.native_query(query)
         df = result.data_frame
         result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
@@ -167,10 +167,11 @@ class SQLiteHandler(DatabaseHandler):
         Args:
             table_name (str): name of one of tables returned by self.get_tables()
         Returns:
-          HandlerResponse: should have same columns as information_schema.columns
-            (https://dev.mysql.com/doc/refman/8.0/en/information-schema-columns-table.html)
-            Column 'COLUMN_NAME' is mandatory, other is optional. Hightly
-            recomended to define also 'DATA_TYPE': it should be one of
-            python data types (by default it str).
+          HandlerResponse
         """
-        pass
+
+        query = f"PRAGMA table_info([{table_name}]);"
+        result = self.native_query(query)
+        df = result.data_frame
+        result.data_frame = df.rename(columns={'name': 'column_name', 'type': 'data_type'})
+        return result

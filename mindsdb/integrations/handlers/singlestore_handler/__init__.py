@@ -13,9 +13,8 @@ title = 'SingleStore'
 name = 'singlestore'
 version = 0.1
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',
-    'import_error', 'icon_path'
+    'import_error'
 ]

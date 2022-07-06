@@ -190,5 +190,5 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    db_file='example.db'
+    db_file='chinook.db'
 )

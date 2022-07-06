@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.sqlite_handler.sqlite_handler import SQLiteHandler
+from mindsdb.integrations.handlers.sqlite_handler.sqlite_handler import SQLiteHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
@@ -17,12 +17,16 @@ class SQLiteHandlerTest(unittest.TestCase):
     def test_1_native_query_select(self):
         query = "SELECT * FROM customers"
         result = self.handler.native_query(query)
-        assert result['type'] is RESPONSE_TYPE.TABLE
+        assert result.type is RESPONSE_TYPE.TABLE
 
     def test_2_get_tables(self):
         tables = self.handler.get_tables()
-        assert tables['type'] is not RESPONSE_TYPE.ERROR
+        assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_4_get_columns(self):
         columns = self.handler.get_columns('customers')
-        assert columns['type'] is not RESPONSE_TYPE.ERROR
+        assert columns.type is not RESPONSE_TYPE.ERROR
+
+
+if __name__ == '__main__':
+    unittest.main()

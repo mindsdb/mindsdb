@@ -71,9 +71,9 @@ On execution,
 
 ## `#!sql ... USING` Statement
 
-### `#!sql ... USING`Description
+### `#!sql ... USING` Description
 
-In MindsDB, the underlying AutoML models are based on Lightwood. This library generates models automatically based on the data and a declarative problem definition, but the default configuration can be overridden. The `#!sql USING ...` statement provides the option to configure a model to be trained with specific options.
+In MindsDB, the underlying AutoML models are based on [Lightwood](https://lightwood.io/). This library generates models automatically based on the data and a declarative problem definition, but the default configuration can be overridden. The `#!sql USING ...` statement provides the option to configure a model to be trained with specific options.
 
 ### `#!sql ... USING` Statement Syntax
 
@@ -120,7 +120,7 @@ Module options:
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [**BaseMixer**](https://lightwood.io/mixer.html#mixer.BaseMixer)         | Base class for all mixers.                                                                                                                                                                                                                                                |
 | [**LightGBM**](https://lightwood.io/mixer.html#mixer.LightGBM)           | This mixer configures and uses LightGBM for regression or classification tasks depending on the problem definition.                                                                                                                                                       |
-| [**LightGBMArray**](https://lightwood.io/mixer.html#mixer.LightGBMArray) | This mixer is composed of several LightGBM mixers in regression mode aimed at time series forecasting tasks.tasks.                                                                                                                                                                                                            |
+| [**LightGBMArray**](https://lightwood.io/mixer.html#mixer.LightGBMArray) | This mixer is composed of several LightGBM mixers in regression mode aimed at time series forecasting tasks.                                                                                                                                                              |
 | [**NHitsMixer**](https://lightwood.io/mixer.html#mixer.NHitsMixer)       | Wrapper around a MQN-HITS deep learning model.                                                                                                                                                                                                                            |
 | [**Neural**](https://lightwood.io/mixer.html#mixer.Neural)               | The Neural mixer trains a fully connected dense network from concatenated encoded outputs of each of the features in the dataset to predicted the encoded output.                                                                                                         |
 | [**ProphetMixer**](https://lightwood.io/mixer.html#mixer.ProphetMixer)   | This mixer is a wrapper around the popular time series library sktime.                                                                                                                                                                                                    |
@@ -128,8 +128,7 @@ Module options:
 | [**SkTime**](https://lightwood.io/mixer.html#mixer.SkTime)               | This mixer is a wrapper around the popular time series library sktime.                                                                                                                                                                                                    |
 | [**Unit**](https://lightwood.io/mixer.html#mixer.Unit)                   | Special mixer that passes along whatever prediction is made by the target encoder without modifications. This is useful for single-column predictive scenarios that may involve complex and/or expensive encoders (e.g. free-form text classification with transformers). |
 
-To learn more about all the model options, go [here](https://lightwood.io/mixer.html).
-Lightwood is ...
+To learn more about all the model options, please refer to [Lightwood's documentation here.](https://lightwood.io/mixer.html)
 
 ### `#!sql ... USING` Example
 

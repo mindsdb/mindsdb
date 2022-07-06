@@ -38,6 +38,7 @@ class SQLiteHandler(DatabaseHandler):
         self.parser = parse_sql
         self.dialect = 'sqlite'
         self.connection_data = connection_data
+        self.kwargs = kwargs
 
         self.connection = None
         self.is_connected = False

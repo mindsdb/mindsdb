@@ -101,7 +101,7 @@ class MongoDBHandler(DatabaseHandler):
 
         return result
 
-    def native_query(self, query: [str, MongoQuery]) -> Response:
+    def native_query(self, query: [str, MongoQuery, dict]) -> Response:
 
         """
         input str or MongoQuery
@@ -110,6 +110,19 @@ class MongoDBHandler(DatabaseHandler):
         """
         if isinstance(query, str):
             query = MongodbParser().from_string(query)
+
+        if isinstance(query, dict):
+            # failback for previous api
+
+            mquery = MongoQuery(query['collection'])
+
+            for c in  query['call']:
+                mquery.add_step({
+                    'method': c['method'],
+                    'args': c['args']
+                })
+
+            query = mquery
 
         collection = query.collection
         database = self.database

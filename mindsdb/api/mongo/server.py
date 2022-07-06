@@ -6,6 +6,10 @@ import traceback
 from bson import codec_options
 from collections import OrderedDict
 from abc import abstractmethod
+from bson.codec_options import CodecOptions
+from bson.codec_options import TypeCodec
+from bson.codec_options import TypeRegistry
+import numpy as np
 
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import RespondersCollection, Session
@@ -30,6 +34,20 @@ BYTE = '<b'
 INT = '<i'
 UINT = '<I'
 LONG = '<q'
+
+
+class NPIntCodec(TypeCodec):
+    python_type = np.int64
+    bson_type = bson.int64.Int64
+
+    def transform_python(self, value):
+        return bson.int64.Int64(value)
+
+    def transform_bson(self, value):
+        return np.int(value)
+
+
+type_registry = TypeRegistry([NPIntCodec()])
 
 
 def unpack(format, buffer, start=0):
@@ -148,7 +166,9 @@ class OpMsgResponder(OperationResponder):
         else:
             flags = struct.pack("<I", 0)  # TODO
         payload_type = struct.pack("<b", 0)  # TODO
-        payload_data = bson.BSON.encode(response)
+
+        codec_options = CodecOptions(type_registry=type_registry)
+        payload_data = bson.BSON.encode(response, codec_options=codec_options)
         data = b''.join([flags, payload_type, payload_data])
 
         reply_id = 0  # TODO add seq here
@@ -270,6 +290,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             if response is None:
                 return None
         except Exception as e:
+            log.error(e)
             response = {
                 '$err': {
                     'title': str(e),

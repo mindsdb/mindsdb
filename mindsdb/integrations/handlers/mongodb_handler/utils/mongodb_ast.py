@@ -2,8 +2,31 @@ import re
 import ast as py_ast
 from mindsdb_sql.parser.ast import *
 
+from .mongodb_query import MongoQuery
+
 
 class MongoToAst:
+
+    def from_mongoqeury(self, query: MongoQuery):
+        collection = query.collection
+
+        filter, projection = None, None
+        sort, limit, skip = None, None, None
+        for step in query.pipeline:
+            if step['method'] == 'find':
+                filter = step['args'][0]
+                if len(step) > 1:
+                    projection = step['args'][1]
+            elif step['method'] == 'sort':
+                sort = step['args'][0]
+            elif step['method'] == 'limit':
+                limit = step['args'][0]
+            elif step['method'] == 'skip':
+                skip = step['args'][0]
+
+        return self.find(collection, filter=filter,
+             sort=sort, projection=projection,
+             limit=limit, skip=skip)
 
     def find(self, collection, filter=None,
              sort=None, projection=None,
@@ -60,6 +83,7 @@ class MongoToAst:
             '$or': 'or',
         }
 
+        ast_filter = None
         for k, v in filter.items():
             if k in ('$or', '$and'):
                 # suppose it is one key in dict
@@ -88,7 +112,15 @@ class MongoToAst:
 
             op, value = self.handle_filter(v)
             arg2 = Constant(value=value)
-            return BinaryOperation(op=op, args=[arg1, arg2])
+            ast_com = BinaryOperation(op=op, args=[arg1, arg2])
+            if ast_filter is None:
+                ast_filter = ast_com
+            else:
+                ast_filter = BinaryOperation(op='and', args=[
+                    ast_filter,
+                    ast_com
+                ])
+        return ast_filter
 
     def handle_filter(self, value):
         ops = {
@@ -176,6 +208,8 @@ class MongoWhereParser:
             if node.value.id != 'this':
                 raise NotImplementedError(f'Unknown variable {node.value.id}')
             return Identifier(parts=[node.attr])
+
+        raise NotImplementedError(f'Unknown node {node}')
 
     def compare_op(self, op):
 

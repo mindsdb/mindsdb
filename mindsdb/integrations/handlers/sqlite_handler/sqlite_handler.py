@@ -81,22 +81,22 @@ class SQLiteHandler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        result = StatusResponse(False)
+        response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
         try:
-            connection = self.connect()
-            result.success = connection.is_connected()
+            self.connect()
+            response.success = True
         except Exception as e:
-            log.error(f'Error connecting to SQLite {self.connection_data["db_file"]}, {e}!')
-            result.error_message = str(e)
+            log.error(f'Error connecting to SQLite {self.database}, {e}!')
+            response.error_message = str(e)
+        finally:
+            if response.success is True and need_to_close:
+                self.disconnect()
+            if response.success is False and self.is_connected is True:
+                self.is_connected = False
 
-        if result.success is True and need_to_close:
-            self.disconnect()
-        if result.success is False and self.is_connected is True:
-            self.is_connected = False
-
-        return result
+        return response
 
     def native_query(self, query: str) -> StatusResponse:
         """

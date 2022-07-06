@@ -247,6 +247,8 @@ class IntegrationController:
                     (Integration.company_id == company_id)
                     & (func.lower(Integration.name) == func.lower(name))
                 ).first()
+            if integration_record is None:
+                raise Exception(f'Unknown integration: {name}')
             integration_data = self._get_integration_record_data(integration_record, True)
 
         integration_type = integration_data.get('type')

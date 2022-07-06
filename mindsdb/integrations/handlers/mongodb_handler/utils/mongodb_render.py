@@ -1,9 +1,12 @@
+
 from mindsdb_sql.parser.ast import *
+
+from .mongodb_query import MongoQuery
 
 
 class MongodbRender:
 
-    def render(self, node):
+    def to_mongo_query(self, node):
         if isinstance(node, Select):
             return self.select(node)
         raise NotImplementedError(f'Unknown statement: {node.__name__}')
@@ -59,7 +62,7 @@ class MongodbRender:
 
         if node.group_by is not None:
             # TODO
-            ...
+            raise NotImplementedError(f'Group {node.group_by}')
 
         sort = {}
         if node.order_by is not None:
@@ -70,7 +73,7 @@ class MongodbRender:
 
         # compose mongo query
 
-        call = []
+        mquery = MongoQuery(collection)
 
         method = 'aggregate'
         arg = []
@@ -92,15 +95,12 @@ class MongodbRender:
         if node.limit is not None:
             arg.append({"$limit": int(node.limit.value)})
 
-        call.append({
+        mquery.add_step({
             'method': method,
             'args': [arg]
         })
 
-        return {
-            'collection': collection,
-            'call': call
-        }
+        return mquery
 
     def handle_where(self, node):
         # todo UnaryOperation, function
@@ -123,10 +123,10 @@ class MongodbRender:
             return query
 
         ops_map = {
-            '>=': '$ge',
+            '>=': '$gte',
             '>': '$gt',
             '<': '$lt',
-            '<=': '$le',
+            '<=': '$lte',
             '<>': '$ne',
             '!=': '$ne',
             '=': '$eq',

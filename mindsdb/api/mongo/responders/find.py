@@ -52,6 +52,7 @@ class Responce(Responder):
                 collection=collection,
                 filter=filter,
             )
+            table_select.parentheses = True
 
             # convert to join
             predictor = ast_query.from_table

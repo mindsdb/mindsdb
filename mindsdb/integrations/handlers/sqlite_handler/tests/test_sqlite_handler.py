@@ -15,7 +15,7 @@ class SQLiteHandlerTest(unittest.TestCase):
         assert self.handler.check_connection()
 
     def test_1_native_query_select(self):
-        query = "SELECT * FROM employees"
+        query = "SELECT * FROM customers"
         result = self.handler.native_query(query)
         assert result['type'] is RESPONSE_TYPE.TABLE
 
@@ -24,5 +24,5 @@ class SQLiteHandlerTest(unittest.TestCase):
         assert tables['type'] is not RESPONSE_TYPE.ERROR
 
     def test_4_get_columns(self):
-        columns = self.handler.get_columns('employees')
+        columns = self.handler.get_columns('customers')
         assert columns['type'] is not RESPONSE_TYPE.ERROR

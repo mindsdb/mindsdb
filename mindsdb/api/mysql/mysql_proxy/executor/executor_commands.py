@@ -915,8 +915,8 @@ class ExecuteCommands:
                 column_alias = target.alias or column_name
                 result = SERVER_VARIABLES.get(column_name)
                 if result is None:
-                    log.warning(f'Unknown variable: {column_name}')
-                    result = ''
+                    log.error(f'Unknown variable: {column_name}')
+                    raise Exception(f"Unknown variable '{var_name}'")
                 else:
                     result = result[0]
             elif target_type == Function:
@@ -945,8 +945,7 @@ class ExecuteCommands:
                 column_alias = 'NULL'
             elif target_type == Identifier:
                 result = '.'.join(target.parts)
-                column_name = str(result)
-                column_alias = '.'.join(target.alias.parts) if type(target.alias) == Identifier else column_name
+                raise Exception(f"Unknown column '{result}'")
             else:
                 raise Exception(f'Unknown constant type: {target_type}')
 

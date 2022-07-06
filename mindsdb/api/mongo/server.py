@@ -270,6 +270,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             if response is None:
                 return None
         except Exception as e:
+            log.error(e)
             response = {
                 '$err': {
                     'title': str(e),

@@ -24,7 +24,7 @@ class MongoDBHandler(DatabaseHandler):
     This handler handles connection and execution of the MongoDB statements.
     """
 
-    type = 'mongodb'
+    name = 'mongodb'
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
@@ -41,7 +41,6 @@ class MongoDBHandler(DatabaseHandler):
     def __del__(self):
         if self.is_connected is True:
             self.disconnect()
-
 
     def connect(self):
         kwargs = {}
@@ -61,7 +60,6 @@ class MongoDBHandler(DatabaseHandler):
             kwargs['tlsCAFile'] = certifi.where()
             if kwargs.get('tls', None) is None:
                 kwargs['tls'] = True
-
 
         connection = MongoClient(
             self.host,
@@ -182,7 +180,6 @@ class MongoDBHandler(DatabaseHandler):
         renderer = MongodbRender()
         mquery = renderer.to_mongo_query(query)
         return self.native_query(mquery)
-
 
     def get_tables(self) -> Response:
         """

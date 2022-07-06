@@ -4,6 +4,7 @@ import tempfile
 import importlib
 from pathlib import Path
 from copy import deepcopy
+import base64
 
 from sqlalchemy import func
 
@@ -273,28 +274,72 @@ class IntegrationController:
         self.handler_modules = {}
         self.handlers_import_status = {}
         for hanlder_dir in handlers_path.iterdir():
-            if hanlder_dir.is_dir() is False:
+            if hanlder_dir.is_dir() is False or hanlder_dir.name.startswith('__'):
                 continue
             handler_folder_name = str(hanlder_dir.name)
+            handler_name = handler_folder_name
+            if handler_name.endswith('_handler'):
+                handler_name = handler_name[:-8]
             dependencies = []
             requirements_txt = hanlder_dir.joinpath('requirements.txt')
             if requirements_txt.is_file():
                 with open(str(requirements_txt), 'rt') as f:
-                    dependencies = [x.strip(' \t') for x in f.readlines()]
+                    dependencies = [x.strip(' \t\n') for x in f.readlines()]
                     dependencies = [x for x in dependencies if len(x) > 0]
             try:
                 handler_module = importlib.import_module(f'mindsdb.integrations.handlers.{handler_folder_name}')
-                self.handler_modules[handler_module.Handler.type] = handler_module
-                self.handlers_import_status[handler_folder_name] = {
-                    'success': True,
-                    'dependencies': dependencies
+                self.handler_modules[handler_module.name] = handler_module
+                import_error = None
+                if hasattr(handler_module, 'import_error'):
+                    import_error = handler_module.import_error
+                handler_meta = {
+                    'import': {
+                        'success': import_error is None,
+                        'folder': handler_folder_name,
+                        'dependencies': dependencies
+                    },
+                    'version': handler_module.version
                 }
+                if import_error is not None:
+                    handler_meta['import']['error_message'] = str(import_error)
+
+                for attr in ('connection_args_example', 'connection_args', 'description', 'name', 'type', 'title'):
+                    if hasattr(handler_module, attr):
+                        handler_meta[attr] = getattr(handler_module, attr)
+                if 'name' not in handler_meta:
+                    handler_meta['name'] = handler_name
+
+                # region icon
+                if hasattr(handler_module, 'icon_path'):
+                    icon_path = hanlder_dir.joinpath(handler_module.icon_path)
+                    handler_meta['icon'] = {
+                        'name': icon_path.name,
+                        'type': icon_path.name[icon_path.name.rfind('.') + 1:].lower()
+                    }
+                    if handler_meta['icon']['type'] == 'svg':
+                        with open(str(icon_path), 'rt') as f:
+                            handler_meta['icon']['data'] = f.read()
+                    else:
+                        with open(str(icon_path), 'rb') as f:
+                            handler_meta['icon']['data'] = base64.b64encode(f.read()).decode('utf-8')
+                # endregion
             except Exception as e:
-                self.handlers_import_status[handler_folder_name] = {
-                    'success': False,
-                    'error_message': str(e),
-                    'dependencies': dependencies
+                handler_meta = {
+                    'import': {
+                        'success': False,
+                        'error_message': str(e),
+                        'folder': handler_folder_name,
+                        'dependencies': dependencies
+                    },
+                    'name': handler_name
                 }
+
+            if handler_meta.get('name') in ('files', 'views', 'lightwood'):
+                handler_meta['permanent'] = True
+            else:
+                handler_meta['permanent'] = False
+
+            self.handlers_import_status[handler_meta['name']] = handler_meta
 
     def get_handlers_import_status(self):
         return self.handlers_import_status

@@ -215,8 +215,8 @@ class InformationSchemaDataNode(DataNode):
             ['def', 'information_schema', 'utf8', 'utf8_general_ci', None]
         ]
 
-        for database_name in self.persis_datanodes:
-            data.append(['def', database_name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
+        # permanent databases
+        data.append(['def', 'mindsdb', 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
 
         integration_names = self.integration_controller.get_all().keys()
         for database_name in integration_names:

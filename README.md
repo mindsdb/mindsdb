@@ -6,7 +6,7 @@
 <div align="center">
 	<a href="https://github.com/mindsdb/mindsdb/actions"><img src="https://github.com/mindsdb/mindsdb/workflows/MindsDB%20workflow/badge.svg" alt="MindsDB workflow"></a>
 
-  <a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.6%20|%203.7|%203.8-brightgreen.svg" alt="Python supported"></a>
+  <a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.7.x%20|%203.8.x|%203.9.x-brightgreen.svg" alt="Python supported"></a>
    <a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a>
 <img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">  <a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
   <a href="https://www.mindsdb.com/"><img src="https://img.shields.io/website?url=https%3A%2F%2Fwww.mindsdb.com%2F" alt="MindsDB Website"></a>	
@@ -38,7 +38,7 @@
 * Data Scientists can streamline MLOps by deploying ML models as AI Tables.
 * Data Analysts can easily make forecasts on complex data (like multivariate time-series with high cardinality) and visualize them in BI tools like Tableau.
 
-**NEW!** Check-out the new MindsDB [ideation 💡 challenge](https://github.com/mindsdb/mindsdb/blob/staging/integrations_contest.md) (and the cash:dollar: prizes) for democratizing machine learning!
+**NEW!** Check-out the new MindsDB [Dev 💡 challenge](https://github.com/mindsdb/mindsdb/blob/staging/integrations_contest.md) (and the cash:dollar: prizes) for democratizing machine learning!
 
 If you like our project then we would really appreciate **a Star ⭐!**
 

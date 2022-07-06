@@ -20,7 +20,7 @@ class SqlServerHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Microsoft SQL Server statements. 
     """
-    type = 'mssql'
+    name = 'mssql'
 
     def __init__(self, name, **kwargs):
         super().__init__(name)

@@ -38,7 +38,7 @@ class FileHandler(DatabaseHandler):
     """
     Handler for files
     """
-    type = 'files'
+    name = 'files'
 
     def __init__(self, name=None, db_store=None, fs_store=None, connection_data=None, file_controller=None):
         super().__init__(name)
@@ -76,7 +76,7 @@ class FileHandler(DatabaseHandler):
             return Response(RESPONSE_TYPE.OK)
         elif type(query) == Select:
             table_name = query.from_table.parts[-1]
-            file_path = self.file_controller.get_file_path(table_name, company_id=None)
+            file_path = self.file_controller.get_file_path(table_name)
             df, _columns = self._handle_source(file_path, self.clean_rows, self.custom_parser)
             result_df = query_df(df, query)
             return Response(
@@ -128,6 +128,7 @@ class FileHandler(DatabaseHandler):
         else:
             file_list_data = file_data
 
+        header = [x.strip() for x in header]
         col_map = dict((col, col) for col in header)
         return pd.DataFrame(file_list_data, columns=header), col_map
 
@@ -287,7 +288,7 @@ class FileHandler(DatabaseHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame([
                 {
-                    'Field': x,
+                    'Field': x.strip(),
                     'Type': 'str'
                 } for x in file_meta['columns']
             ])

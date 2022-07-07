@@ -12,8 +12,8 @@ class CkanHandlerTest(unittest.TestCase):
         #cls.config = Config()
 
     def test_connect(self):
-        kwargs = {"url": "https://www.data.qld.gov.au/"}
+        kwargs = {"url": "https://demo.ckan.org/"}
         self.handler.connect(**kwargs)
 
     def test_query(self):
-        self.handler.query("ok")
+        self.handler.query("SELECT * from 'b53c9e72-6b59-4cda-8c0c-7d6a51dad12a'")

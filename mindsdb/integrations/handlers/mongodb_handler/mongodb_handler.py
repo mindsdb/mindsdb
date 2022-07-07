@@ -15,6 +15,8 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from .utils.mongodb_render import MongodbRender
+from .utils.mongodb_query import MongoQuery
+from .utils.mongodb_parser import MongodbParser
 
 
 class MongoDBHandler(DatabaseHandler):
@@ -99,32 +101,31 @@ class MongoDBHandler(DatabaseHandler):
 
         return result
 
-    def native_query(self, query) -> Response:
+    def native_query(self, query: [str, MongoQuery, dict]) -> Response:
 
         """
-        query = {
-            'database': 'db_test', // optional
-            'collection': 'fish', 
-            'call': [   // call is sequence of methods
-                {
-                    'method': 'find',
-                    'args': [{a:1}, {b:2}]
-                },
-                {
-                    'method': 'sort',
-                    'args': [{c:3}]
-                },
-            ]
-        }
-
-        is the the same as mongo query:
-            db_test.fish.find({a:1}, {b:2}).sort({c:3})
+        input str or MongoQuery
 
         returns the records from the current recordset
         """
-        collection = query['collection']
-        database = query.get('database', self.database)
-        call = query['call']
+        if isinstance(query, str):
+            query = MongodbParser().from_string(query)
+
+        if isinstance(query, dict):
+            # failback for previous api
+
+            mquery = MongoQuery(query['collection'])
+
+            for c in  query['call']:
+                mquery.add_step({
+                    'method': c['method'],
+                    'args': c['args']
+                })
+
+            query = mquery
+
+        collection = query.collection
+        database = self.database
 
         con = self.connect()
 
@@ -132,7 +133,7 @@ class MongoDBHandler(DatabaseHandler):
 
             cursor = con[database][collection]
 
-            for step in call:
+            for step in query.pipeline:
                 fnc = getattr(cursor, step['method'])
                 cursor = fnc(*step['args'])
 
@@ -152,7 +153,7 @@ class MongoDBHandler(DatabaseHandler):
             )
 
         except Exception as e:
-            log.error(f'Error running query: {call} on {self.database}.{collection}!')
+            log.error(f'Error running query: {query} on {self.database}.{collection}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
@@ -190,11 +191,8 @@ class MongoDBHandler(DatabaseHandler):
         Retrieve the data from the SQL statement.
         """
         renderer = MongodbRender()
-        res = renderer.render(query)
-        return self.native_query({
-            'collection': res['collection'],
-            'call': res['call']
-        })
+        mquery = renderer.to_mongo_query(query)
+        return self.native_query(mquery)
 
     def get_tables(self) -> Response:
         """

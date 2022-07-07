@@ -13,10 +13,11 @@ if sys.argv[0].endswith('ray/workers/default_worker.py'):
     is_ray_worker = True
 
 is_alembic = os.path.basename(sys.argv[0]).split('.')[0] == 'alembic'
+is_pytest = os.path.basename(sys.argv[0]).split('.')[0] == 'pytest'
 
 if not is_ray_worker:
     try:
-        if not is_notebook() and not is_alembic:
+        if not is_notebook() and not is_alembic and not is_pytest:
 
             args = args_parse()
         else:

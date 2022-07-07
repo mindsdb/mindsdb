@@ -21,15 +21,15 @@ Query OK, 0 rows affected (x.xxx sec)
 
 Where:
 
-| Expressions                                     | Description                                                                   |
-| ----------------------------------------------- | ----------------------------------------------------------------------------- |
-| `[predictor_name]`                              | Name of the model to be created                                               |
-| `[integration_name]`                            | is the name of the integration created via [`#!sql CREATE DATABASE`](/sql/create/databases/) or [file upload](/sql/api/select_files/)              |
-| `(SELECT [column_name, ...] FROM [table_name])` | SELECT statement for selecting the data to be used for training and validation |
-| `PREDICT [target_column]`                       | where `target_column` is the column name of the target variable.              |
+| Expressions                                     | Description                                                                                                                           |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `[predictor_name]`                              | Name of the model to be created                                                                                                       |
+| `[integration_name]`                            | is the name of the integration created via [`#!sql CREATE DATABASE`](/sql/create/databases/) or [file upload](/sql/api/select_files/) |
+| `(SELECT [column_name, ...] FROM [table_name])` | SELECT statement for selecting the data to be used for training and validation                                                        |
+| `PREDICT [target_column]`                       | where `target_column` is the column name of the target variable.                                                                      |
 
 !!! TIP "Checking the status of the model"
-    After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training model, by selecting from the `#!sql mindsdb.predictors`
+After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training model, by selecting from the `#!sql mindsdb.predictors`
 
     ```sql
     SELECT *
@@ -71,9 +71,9 @@ On execution,
 
 ## `#!sql ... USING` Statement
 
-### `#!sql ... USING`Description
+### `#!sql ... USING` Description
 
-In MindsDB, the underlying AutoML models are based on Lightwood. This library generates models automatically based on the data and a declarative problem definition, but the default configuration can be overridden. The `#!sql USING ...` statement provides the option to configure a model to be trained with specific options.
+In MindsDB, the underlying AutoML models are based on [Lightwood](https://lightwood.io/). This library generates models automatically based on the data and a declarative problem definition, but the default configuration can be overridden. The `#!sql USING ...` statement provides the option to configure a model to be trained with specific options.
 
 ### `#!sql ... USING` Statement Syntax
 
@@ -105,7 +105,7 @@ encoders.[column_name].module='value';
 
 ### `#!sql ... USING model` Key
 
-Allows you to specify what type of Machine Learning algorithm to learn from the encoder data. To learn more about all the model options, go [here](https://lightwood.io/mixer.html)
+Allows you to specify what type of Machine Learning algorithm to learn from the encoder data.
 
 ```sql
 ...
@@ -113,6 +113,22 @@ USING
 model.args='{"key": value}'
 ;
 ```
+
+Module options:
+
+| Module                                                                   | Description                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**BaseMixer**](https://lightwood.io/mixer.html#mixer.BaseMixer)         | Base class for all mixers.                                                                                                                                                                                                                                                |
+| [**LightGBM**](https://lightwood.io/mixer.html#mixer.LightGBM)           | This mixer configures and uses LightGBM for regression or classification tasks depending on the problem definition.                                                                                                                                                       |
+| [**LightGBMArray**](https://lightwood.io/mixer.html#mixer.LightGBMArray) | This mixer is composed of several LightGBM mixers in regression mode aimed at time series forecasting tasks.                                                                                                                                                              |
+| [**NHitsMixer**](https://lightwood.io/mixer.html#mixer.NHitsMixer)       | Wrapper around a MQN-HITS deep learning model.                                                                                                                                                                                                                            |
+| [**Neural**](https://lightwood.io/mixer.html#mixer.Neural)               | The Neural mixer trains a fully connected dense network from concatenated encoded outputs of each of the features in the dataset to predicted the encoded output.                                                                                                         |
+| [**ProphetMixer**](https://lightwood.io/mixer.html#mixer.ProphetMixer)   | This mixer is a wrapper around the popular time series library sktime.                                                                                                                                                                                                    |
+| [**Regression**](https://lightwood.io/mixer.html#mixer.Regression)       | The Regression mixer inherits from [scikit-learn’s Ridge class](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Ridge.html)                                                                                                                        |
+| [**SkTime**](https://lightwood.io/mixer.html#mixer.SkTime)               | This mixer is a wrapper around the popular time series library sktime.                                                                                                                                                                                                    |
+| [**Unit**](https://lightwood.io/mixer.html#mixer.Unit)                   | Special mixer that passes along whatever prediction is made by the target encoder without modifications. This is useful for single-column predictive scenarios that may involve complex and/or expensive encoders (e.g. free-form text classification with transformers). |
+
+To learn more about all the model options, please refer to [Lightwood's documentation here.](https://lightwood.io/mixer.html)
 
 ### `#!sql ... USING` Example
 
@@ -154,12 +170,12 @@ PREDICT target_variable;
 
 Where:
 
-|                               | Description                                                                   |
-| ----------------------------- | ----------------------------------------------------------------------------- |
-| `[predictor_name]`            | Name of the model to be created                                               |
-| `[file_name]`                 | Name of the file uploaded via the MindsDB editor                              |
-| `(SELECT * FROM [file_name])` | SELECT statement for selecting the data to be used for training and validation|
-| `target_variable`             | `target_column` is the column name of the target variable.                    |
+|                               | Description                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| `[predictor_name]`            | Name of the model to be created                                                |
+| `[file_name]`                 | Name of the file uploaded via the MindsDB editor                               |
+| `(SELECT * FROM [file_name])` | SELECT statement for selecting the data to be used for training and validation |
+| `target_variable`             | `target_column` is the column name of the target variable.                     |
 
 On execution,
 
@@ -213,7 +229,7 @@ Query OK, 0 rows affected (8.878 sec)
 ```
 
 !!! warning "Getting a prediction of a Time Series model"
-    Due to the nature of Time Series Forecasting you will need to use the [`#!sql JOIN`](/sql/api/join) statement to get results.
+Due to the nature of Time Series Forecasting you will need to use the [`#!sql JOIN`](/sql/api/join) statement to get results.
 
 ### `#!sql CREATE PREDICTOR` For Time Series Models Example
 

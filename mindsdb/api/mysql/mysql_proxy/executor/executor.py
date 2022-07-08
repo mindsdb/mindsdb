@@ -144,7 +144,7 @@ class Executor:
             except mindsdb_sql.exceptions.ParsingException:
                 pass
 
-            result, column_info = datanode.select(sql)
+            result, column_info = datanode.query(sql)
             columns = [
                 Column(name=col['name'], type=col['type'])
                 for col in column_info

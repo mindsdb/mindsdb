@@ -14,9 +14,9 @@ from flask.json import dumps
 from flask_restx import Api
 
 from mindsdb.__about__ import __version__ as mindsdb_version
-from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.config import Config
@@ -140,11 +140,11 @@ def download_gui(destignation, version):
     except Exception as e:
         log.error(f'Error during downloading files from s3: {e}')
         return False
-    
+
     static_folder = destignation
     static_folder.mkdir(mode=0o777, exist_ok=True, parents=True)
     ZipFile(dist_zip_path).extractall(static_folder)
-    
+
     if static_folder.joinpath('dist').is_dir():
         shutil.move(str(destignation.joinpath('dist').joinpath('index.html')), static_folder)
         shutil.move(str(destignation.joinpath('dist').joinpath('assets')), static_folder)
@@ -272,9 +272,9 @@ def initialize_flask(config, init_static_thread, no_studio):
 
 
 def initialize_interfaces(app):
-    app.original_data_store = DataStore()
     app.original_model_interface = ModelInterface()
     app.original_integration_controller = IntegrationController()
+    app.original_file_controller = FileController()
     config = Config()
     app.config_obj = config
 

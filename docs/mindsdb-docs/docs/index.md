@@ -6,9 +6,8 @@ Follow the following steps to start predicting in SQL straight away. Check out o
 Create your [free MindsDB Cloud account](https://cloud.mindsdb.com/register).
 
 ???+ Tip "Local Installation" 
-    Follow our [Docker instructions](/deployment/docker). if you  prefer to proceed with a local installation.
+    Follow our [Docker instructions](setup/self-hosted/docker/). if you  prefer to proceed with a local installation.
 
----
 ## 2. Connect MindsDB to a MySQL Client
 
 You can use the MindsDB SQL Editor or open your preferred MySQL client and connect it to MindsDB.
@@ -28,11 +27,10 @@ You can use the MindsDB SQL Editor or open your preferred MySQL client and conne
     !!! Tip ""
         If you do not already have a preferred SQL client, we recommend [DBeaver Community Edition](https://dbeaver.io/download/).
 
----
+## 3. Connecting a Database [`#!sql CREATE DATABASE`](/sql/create/databases/)
 
-## 3. Connecting a Database [`#!sql CREATE DATABASE`](/sql/api/databases/)
+For this quickstart, we have already prepared some example data for you.  To add it to your account, use the [`#!sql CREATE DATABASE`](/sql/create/databases/) syntax by copying and pasting this command into your SQL client:
 
-For this quickstart, we have already prepared some example data for you.  To add it to your account, use the [`#!sql CREATE DATABASE`](/sql/api/databases/) syntax by copying and pasting this command into your SQL client:
 
 ```sql
 CREATE DATABASE example_data
@@ -52,13 +50,11 @@ On execution, you should get:
 Query OK, 0 rows affected (3.22 sec)
 ```
 
----
-
 ## 4. Previewing Available Data
 
 You can now preview the available data with a standard `#!sql SELECT`. To preview the Home Rentals dataset, copy and paste this command into your SQL client:
 
-```sql 
+```sql
 SELECT * 
 FROM example_data.demo_data.home_rentals
 LIMIT 10;
@@ -83,11 +79,9 @@ On execution, you should get:
 +-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
 ```
 
----
+## 5. Creating a Predictor [`#!sql CREATE PREDICTOR`](/sql/create/predictor/)
 
-## 5. Creating a Predictor [`#!sql CREATE PREDICTOR`](/sql/api/predictor/)
-
-Now you are ready to create your first predictor. Use the [`#!sql CREATE PREDICTOR`](/sql/api/predictor/) syntax by copying and pasting this command into your SQL client:
+Now you are ready to create your first predictor. Use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor/) syntax by copying and pasting this command into your SQL client:
 
 ```sql 
 CREATE PREDICTOR mindsdb.home_rentals_predictor
@@ -99,8 +93,6 @@ PREDICT rental_price;
 ```sql
 Query OK, 0 rows affected (9.79 sec)
 ```
-
----
 
 ## 6. Checking the Status of a Predictor
 
@@ -132,8 +124,6 @@ Or:
 ```
 
 !!! attention "Predictor Status Must be 'complete' Before Making a Prediction"
-
----
 
 ## 7. Making a Prediction via [`#!sql SELECT`](/sql/api/select/)
 

@@ -42,6 +42,7 @@ from mindsdb_sql.parser.ast import (
     Identifier,
     DropTables,
     Operation,
+    ASTNode,
 )
 
 from mindsdb.api.mysql.mysql_proxy.utilities import (
@@ -63,6 +64,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery, Column
 )
 
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
     ERR,
@@ -70,9 +72,8 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     SERVER_VARIABLES,
 )
 
-from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
-
-from mindsdb.api.mysql.mysql_proxy.executor.data_types import *
+from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
+from mindsdb.integrations.libs.response import HandlerStatusResponse
 
 
 class ExecuteCommands:
@@ -80,13 +81,19 @@ class ExecuteCommands:
     def __init__(self, session, executor):
         self.session = session
         self.executor = executor
-        self.sql_lower = executor.sql_lower
-        self.sql = executor.sql
 
         self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
         self.datahub = session.datahub
 
     def execute_command(self, statement):
+        sql = None
+        if self.executor is None:
+            if isinstance(statement, ASTNode):
+                sql = statement.to_string()
+            sql_lower = sql.lower()
+        else:
+            sql = self.executor.sql
+            sql_lower = self.executor.sql_lower
 
         if type(statement) == CreateDatasource:
             struct = {
@@ -102,6 +109,7 @@ class ExecuteCommands:
             except Exception as e:
                 if not statement.if_exists:
                     raise e
+            return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == DropTables:
             return self.answer_drop_tables(statement)
         elif type(statement) == DropDatasource or type(statement) == DropDatabase:
@@ -217,8 +225,11 @@ class ExecuteCommands:
                 where = BinaryOperation('and', args=[
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
                     BinaryOperation('or', args=[
-                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')]),
-                        BinaryOperation('like', args=[Identifier('table_type'), Constant('SYSTEM VIEW')])
+                        BinaryOperation('=', args=[Identifier('table_type'), Constant('BASE TABLE')]),
+                        BinaryOperation('or', args=[
+                            BinaryOperation('=', args=[Identifier('table_type'), Constant('SYSTEM VIEW')]),
+                            BinaryOperation('=', args=[Identifier('table_type'), Constant('VIEW')])
+                        ])
                     ])
                 ])
                 if statement.where is not None:
@@ -235,6 +246,14 @@ class ExecuteCommands:
                     from_table=Identifier(parts=['information_schema', 'TABLES']),
                     where=where
                 )
+
+                if statement.modes is not None:
+                    modes = [m.upper() for m in statement.modes]
+                    # show full tables. show always 'BASE TABLE'
+                    if 'FULL' in modes:
+                        new_statement.targets.append(
+                            Constant(value='BASE TABLE', alias=Identifier('Table_type'))
+                        )
 
                 query = SQLQuery(
                     new_statement,
@@ -282,7 +301,7 @@ class ExecuteCommands:
                     columns=columns,
                     data=data
                 )
-            elif "show status like 'ssl_version'" in self.sql_lower:
+            elif "show status like 'ssl_version'" in sql_lower:
                 return ExecuteAnswer(
                     answer_type=ANSWER_TYPE.TABLE,
                     columns=[
@@ -326,9 +345,9 @@ class ExecuteCommands:
                 )
                 return self.answer_select(query)
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
-            elif 'show create table' in self.sql_lower:
+            elif 'show create table' in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = self.sql[self.sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
+                table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
                 return self.answer_show_create_table(table)
             elif sql_category in ('character set', 'charset'):
                 where = statement.where
@@ -400,7 +419,7 @@ class ExecuteCommands:
                 # elif condition == 'from' and type(expression) == Identifier:
                 #     table_name = expression.parts[-1]
                 if table_name is None:
-                    err_str = f"Can't determine table name in query: {self.sql}"
+                    err_str = f"Can't determine table name in query: {sql}"
                     log.warning(err_str)
                     raise ErTableExistError(err_str)
                 return self.answer_show_table_status(table_name)
@@ -408,7 +427,7 @@ class ExecuteCommands:
                 is_full = statement.modes is not None and 'full' in statement.modes
                 return self.answer_show_columns(statement.from_table, statement.where, statement.like, is_full=is_full)
             else:
-                raise ErNotSupportedYet(f'Statement not implemented: {self.sql}')
+                raise ErNotSupportedYet(f'Statement not implemented: {sql}')
         elif type(statement) in (StartTransaction, CommitTransaction, RollbackTransaction):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Set:
@@ -437,7 +456,7 @@ class ExecuteCommands:
                     ]
                 )
             else:
-                log.warning(f'SQL statement is not processable, return OK package: {self.sql}')
+                log.warning(f'SQL statement is not processable, return OK package: {sql}')
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Use:
             db_name = statement.value.parts[-1]
@@ -467,7 +486,7 @@ class ExecuteCommands:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
             raise ErNotSupportedYet('Update is not implemented')
-        elif type(statement) == Alter and ('disable keys' in self.sql_lower) or ('enable keys' in self.sql_lower):
+        elif type(statement) == Alter and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Select:
             if statement.from_table is None:
@@ -484,9 +503,8 @@ class ExecuteCommands:
             # TODO
             return self.answer_apply_predictor(statement)
         else:
-            log.warning(f'Unknown SQL statement: {self.sql}')
-            raise ErNotSupportedYet(f'Unknown SQL statement: {self.sql}')
-
+            log.warning(f'Unknown SQL statement: {sql}')
+            raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
 
     def answer_describe_predictor(self, predictor_value):
         predictor_attr = None
@@ -595,16 +613,20 @@ class ExecuteCommands:
 
         # we have connection checkers not for any db. So do nothing if fail
         # TODO return rich error message
-        connection_success = True
+
+        status = HandlerStatusResponse(success=False)
+
         try:
-            checker_class = DB_CONNECTION_CHECKERS.get(database_type, None)
-            if checker_class is not None:
-                checker = checker_class(**connection_args)
-                connection_success = checker.check_connection()
-        except Exception:
-            pass
-        if connection_success is False:
-            raise SqlApiException("Can't connect to db")
+            handler = self.session.integration_controller.create_handler(
+                handler_type=database_type,
+                connection_data=connection_args
+            )
+            status = handler.check_connection()
+        except Exception as e:
+            status.error_message = str(e)
+
+        if status.success is False:
+            raise SqlApiException(f"Can't connect to db: {status.error_message}")
 
         integration = self.session.integration_controller.get(datasource_name)
         if integration is not None:
@@ -619,7 +641,6 @@ class ExecuteCommands:
         except Exception:
             raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
-
 
     def answer_drop_tables(self, statement):
         """ answer on 'drop table [if exists] {name}'
@@ -652,16 +673,17 @@ class ExecuteCommands:
                 if db_name == 'mindsdb':
                     self.session.datahub['mindsdb'].delete_predictor(table_name)
                 elif db_name == 'files':
-                    self.session.data_store.delete_file(table_name)
+                    self.session.datahub['files'].query(
+                        DropTables(tables=[Identifier(table_name)])
+                    )
         return ExecuteAnswer(ANSWER_TYPE.OK)
-
 
     def answer_create_view(self, statement):
         name = statement.name
         query = str(statement.query_str)
-        if statement.from_table is None:
-            raise SqlApiException('Integration has to me set')
-        datasource_name = statement.from_table.parts[-1]
+        datasource_name = None
+        if statement.from_table is not None:
+            datasource_name = statement.from_table.parts[-1]
 
         self.session.view_interface.add(name, query, datasource_name)
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
@@ -694,7 +716,6 @@ class ExecuteCommands:
             struct['horizon'] = statement.horizon
 
         model_interface = self.session.model_interface
-        data_store = self.session.data_store
 
         models = model_interface.get_models()
         model_names = [x['name'] for x in models]
@@ -704,46 +725,30 @@ class ExecuteCommands:
         predictor_name = struct['predictor_name']
         integration_name = struct.get('integration_name')
 
+        integration_id = None
+        fetch_data_query = None
         if integration_name is not None:
-            if integration_name.lower().startswith('datasource.'):
-                ds_name = integration_name[integration_name.find('.') + 1:]
-                ds = data_store.get_datasource_obj(ds_name, raw=True)
-                ds_data = data_store.get_datasource(ds_name)
-            else:
-                if (
-                    self.session.integration_controller.get(integration_name) is None
-                    and integration_name not in ('views', 'files')
-                ):
-                    raise ErBadDbError(f"Unknown datasource: {integration_name}")
+            handler = self.session.integration_controller.get_handler(integration_name)
+            integration_meta = self.session.integration_controller.get(integration_name)
+            if integration_meta is None:
+                raise SqlApiException(f"Integration '{integration_meta}' does not exists.")
+            integration_id = integration_meta.get('id')
+            # TODO
+            # raise ErBadDbError(f"Unknown datasource: {integration_name}")
+            result = handler.native_query(struct['select'])
+            fetch_data_query = struct['select']
 
-                ds_name = struct.get('datasource_name')
-                if ds_name is None:
-                    ds_name = data_store.get_vacant_name(predictor_name)
+            if result.type != RESPONSE_TYPE.TABLE:
+                raise Exception(f'Error during query: {result.error_message}')
 
-                ds_kwargs = {'query': struct['select']}
-                if integration_name in ('views', 'files'):
-                    parsed = parse_sql(struct['select'])
-                    query_table = parsed.from_table.parts[-1]
-                    if integration_name == 'files':
-                        ds_kwargs['mindsdb_file_name'] = query_table
-                    else:
-                        ds_kwargs['source'] = query_table
-                ds = data_store.save_datasource(ds_name, integration_name, ds_kwargs)
-                ds_data = data_store.get_datasource(ds_name)
-                ds_id = ds_data['id']
+            ds_data_df = result.data_frame
+            ds_column_names = list(ds_data_df.columns)
 
-            ds_column_names = [x['name'] for x in ds_data['columns']]
-            try:
-                predict = self._check_predict_columns(struct['predict'], ds_column_names)
-            except Exception as e:
-                data_store.delete_datasource(ds_name)
-                raise e
+            predict = self._check_predict_columns(struct['predict'], ds_column_names)
 
             for i, p in enumerate(predict):
                 predict[i] = get_column_in_case(ds_column_names, p)
         else:
-            ds = None
-            ds_id = None
             predict = struct['predict']
 
         timeseries_settings = {}
@@ -781,7 +786,10 @@ class ExecuteCommands:
                             f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
                         )
 
-        model_interface.learn(predictor_name, ds, predict, ds_id, kwargs=kwargs, delete_ds_on_fail=True)
+        model_interface.learn(
+            predictor_name, ds_data_df, predict, integration_id=integration_id,
+            fetch_data_query=fetch_data_query, kwargs=kwargs, user_class=self.session.user_class
+        )
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -901,7 +909,6 @@ class ExecuteCommands:
         )
         return self.answer_select(query)
 
-
     def answer_single_row_select(self, statement):
         columns = []
         data = []
@@ -913,8 +920,8 @@ class ExecuteCommands:
                 column_alias = target.alias or column_name
                 result = SERVER_VARIABLES.get(column_name)
                 if result is None:
-                    log.warning(f'Unknown variable: {column_name}')
-                    result = ''
+                    log.error(f'Unknown variable: {column_name}')
+                    raise Exception(f"Unknown variable '{var_name}'")
                 else:
                     result = result[0]
             elif target_type == Function:
@@ -943,8 +950,7 @@ class ExecuteCommands:
                 column_alias = 'NULL'
             elif target_type == Identifier:
                 result = '.'.join(target.parts)
-                column_name = str(result)
-                column_alias = '.'.join(target.alias.parts) if type(target.alias) == Identifier else column_name
+                raise Exception(f"Unknown column '{result}'")
             else:
                 raise ErSqlWrongArguments(f'Unknown constant type: {target_type}')
 
@@ -1248,7 +1254,6 @@ class ExecuteCommands:
             data=query.result,
         )
 
-
     def is_db_exists(self, db_name):
         sql_statement = Select(
             targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
@@ -1281,7 +1286,7 @@ class ExecuteCommands:
              - insert - dict with keys as columns of mindsb.predictors table.
         '''
         model_interface = self.session.model_interface
-        data_store = self.session.data_store
+        integration_controller = self.session.integration_controller
 
         select_data_query = insert.get('select_data_query')
         if isinstance(select_data_query, str) is False or len(select_data_query) == 0:
@@ -1304,28 +1309,27 @@ class ExecuteCommands:
             raise ErSqlWrongArguments('select_data_query can be used only in query from database')
 
         insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-        ds_name = data_store.get_vacant_name(insert['name'])
-        ds = data_store.save_datasource(ds_name, integration, {'query': insert['select_data_query']})
+
+        integration_handler = integration_controller.get_handler(integration)
+        result = integration_handler.native_query(insert['select_data_query'])
+        ds_data_df = result['data_frame']
+        ds_column_names = list(ds_data_df.columns)
 
         insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
 
-        ds_data = data_store.get_datasource(ds_name)
-        if ds_data is None:
-            raise ErBadDbError(f"DataSource '{ds_name}' does not exists")
-        ds_columns = [x['name'] for x in ds_data['columns']]
         for col in insert['predict']:
-            if col not in ds_columns:
-                data_store.delete_datasource(ds_name)
+            if col not in ds_column_names:
                 raise ErKeyColumnDoesNotExist(f"Column '{col}' not exists")
 
-        try:
-            insert['predict'] = self._check_predict_columns(insert['predict'], ds_columns)
-        except Exception:
-            data_store.delete_datasource(ds_name)
-            raise
+        insert['predict'] = self._check_predict_columns(insert['predict'], ds_column_names)
+
+        integration_meta = integration_controller.get(integration)
+        integration_id = integration_meta.get('id')
+        fetch_data_query = insert['select_data_query']
 
         model_interface.learn(
-            insert['name'], ds, insert['predict'], ds_data['id'], kwargs=kwargs, delete_ds_on_fail=True
+            insert['name'], ds_data_df, insert['predict'], integration_id=integration_id,
+            fetch_data_query=fetch_data_query, kwargs=kwargs, user_class=self.session.user_class
         )
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -1377,7 +1381,6 @@ class ExecuteCommands:
             data.append(c_data)
         return data
 
-
     def _get_model_info(self, data):
         models_data = data.get("submodel_data", [])
         if models_data == []:
@@ -1391,7 +1394,6 @@ class ExecuteCommands:
             m_data.append(1 if model["is_best"] else 0)
             data.append(m_data)
         return data
-
 
     def _get_ensemble_data(self, data):
         ai_info = data.get('json_ai', {})

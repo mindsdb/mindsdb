@@ -15,7 +15,7 @@ WITH
     parameters={
             "key":"value",
             ...
-        };
+    };
 ```
 
 On execution, you should get:
@@ -30,7 +30,7 @@ Where:
 | ------------------- | ---------------------------------------------------------------- |
 | `[datasource_name]` | Identifier for the datasource to be created                      |
 | `[engine_string]`   | Engine to be selected depending on the database connection       |
-| `parameters`   | `#!json {"key":"value"}` object with the conection parametes especific for each engine  |
+| `parameters`   | `#!json {"key":"value"}` object with the connection parameters specific for each engine  |
 
 ## Example
 
@@ -65,7 +65,7 @@ SHOW DATABASES;
 
 On execution:
 
-```sql 
+```sql
 +--------------------+
 | Database           |
 +--------------------+
@@ -96,7 +96,7 @@ On execution:
 +------------+---------------+--------------+------+-----------+
 ```
 
-## Example configurations
+## Supported Integrations
 
 ### Snowflake
 
@@ -131,6 +131,7 @@ WITH
             "database": "singlestore"
     };
 ```
+
 ### MySQL
 
 ```sql
@@ -236,21 +237,6 @@ WITH
     };
 ```
 
-### Scylladb
-
-```sql
-CREATE DATABASE scylladb_datasource
-WITH
-    engine='scylladb',
-    parameters={
-            "user":"scylladb",
-            "port": 9042,
-            "password": "Mimzo3i-mxt@9CpThpBj",
-            "host": "127.0.0.1",
-            "database": "scylladb"
-    };
-```
-
 ### Trino
 
 ```sql
@@ -283,4 +269,4 @@ WITH
 ```
 
 !!! info "Work in progress"
-Note this feature is in beta version. If you have additional questions about other supported datasources or you expirience some issues [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or open GitHub issue.
+Note this feature is in beta version. If you have additional questions about other supported datasources or you experience some issues [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or open GitHub issue.

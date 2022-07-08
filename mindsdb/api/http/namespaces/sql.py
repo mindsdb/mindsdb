@@ -4,7 +4,8 @@ from flask_restx import Resource
 from flask import request
 
 from mindsdb.api.http.namespaces.configs.sql import ns_conf
-from mindsdb.api.mysql.mysql_proxy.mysql_proxy import FakeMysqlProxy, RESPONSE_TYPE as SQL_RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     SqlApiUnknownError
@@ -25,7 +26,10 @@ class Query(Resource):
         error_text = None
         error_traceback = None
 
-        mysql_proxy = FakeMysqlProxy(company_id=request.company_id)
+        mysql_proxy = FakeMysqlProxy(
+            company_id=request.company_id,
+            user_class=request.user_class
+        )
         mysql_proxy.set_context(context)
         try:
             result = mysql_proxy.process_query(query)
@@ -66,6 +70,7 @@ class Query(Resource):
                 'error_message': str(e)
             }
             error_traceback = traceback.format_exc()
+            print(error_traceback)
 
         if query_response.get('type') == SQL_RESPONSE_TYPE.ERROR:
             error_type = 'expected'

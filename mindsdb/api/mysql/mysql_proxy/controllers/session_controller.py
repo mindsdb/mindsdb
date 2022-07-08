@@ -20,13 +20,14 @@ class SessionController():
     This class manages the server session
     '''
 
-    def __init__(self, server, company_id=None) -> object:
+    def __init__(self, server, company_id: int = None, user_class: int = None) -> object:
         """
         Initialize the session
         :param company_id:
         """
 
         self.username = None
+        self.user_class = user_class
         self.auth = False
         self.company_id = company_id
         self.logging = log
@@ -37,10 +38,6 @@ class SessionController():
 
         self.config = Config()
 
-        self.data_store = WithKWArgsWrapper(
-            server.original_data_store,
-            company_id=company_id
-        )
         self.model_interface = WithKWArgsWrapper(
             server.original_model_interface,
             company_id=company_id

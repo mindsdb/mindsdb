@@ -1,9 +1,7 @@
 import copy
 import datetime
 from dateutil.parser import parse as parse_datetime
-import subprocess
 import os
-import sys
 import tempfile
 import shutil
 from pathlib import Path
@@ -16,8 +14,6 @@ from dateutil.tz import tzlocal
 from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.log import get_logs
-from mindsdb.integrations import CHECKERS
-from mindsdb.api.http.utils import http_error
 from mindsdb.interfaces.stream.stream import StreamController
 
 
@@ -99,14 +95,16 @@ class Integration(Resource):
         is_test = params.get('test', False)
         if is_test:
             del params['test']
+
             db_type = params.get('type')
-            checker_class = CHECKERS.get(db_type, None)
-            if checker_class is None:
-                abort(400, f"Unknown integration type: {db_type}")
-            checker = checker_class(**params)
+            handler = request.integration_controller.create_handler(
+                handler_type=db_type,
+                connection_data=params
+            )
+            status = handler.check_connection()
             if temp_dir is not None:
                 shutil.rmtree(temp_dir)
-            return {'success': checker.check_connection()}, 200
+            return status, 200
 
         integration = request.integration_controller.get(name, sensitive_info=False)
         if integration is not None:
@@ -220,59 +218,3 @@ class Vars(Resource):
             'cloud': cloud,
             'timezone': local_timezone,
         }
-
-
-@ns_conf.route('/install_options')
-@ns_conf.param('dependency_list', 'Install dependencies')
-class InstallDependenciesList(Resource):
-    def get(self):
-        return {'dependencies': ['snowflake', 'athena', 'google', 's3', 'lightgbm_gpu', 'mssql', 'cassandra', 'scylladb']}
-
-
-@ns_conf.route('/install/<dependency>')
-@ns_conf.param('dependency', 'Install dependencies')
-class InstallDependencies(Resource):
-    def get(self, dependency):
-        if dependency == 'snowflake':
-            dependency = ['snowflake-connector-python[pandas]', 'asn1crypto==1.3.0']
-        elif dependency == 'athena':
-            dependency = ['PyAthena >= 2.0.0']
-        elif dependency == 'google':
-            dependency = ['google-cloud-storage', 'google-auth']
-        elif dependency == 's3':
-            dependency = ['boto3 >= 1.9.0']
-        elif dependency == 'lightgbm_gpu':
-            dependency = ['lightgbm', '--install-option=--gpu', '--upgrade']
-        elif dependency == 'mssql':
-            dependency = ['pymssql >= 2.1.4']
-        elif dependency == 'cassandra':
-            dependency = ['cassandra-driver']
-        elif dependency == 'scylladb':
-            dependency = ['scylla-driver']
-        else:
-            return f'Unkown dependency: {dependency}', 400
-
-        outs = b''
-        errs = b''
-        try:
-            sp = subprocess.Popen(
-                [sys.executable, '-m', 'pip', 'install', *dependency],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-            code = sp.wait()
-            outs, errs = sp.communicate(timeout=1)
-        except Exception as e:
-            return http_error(500, 'Failed to install dependency', str(e))
-
-        if code != 0:
-            output = ''
-            if isinstance(outs, bytes) and len(outs) > 0:
-                output = output + 'Output: ' + outs.decode()
-            if isinstance(errs, bytes) and len(errs) > 0:
-                if len(output) > 0:
-                    output = output + '\n'
-                output = output + 'Errors: ' + errs.decode()
-            return http_error(500, 'Failed to install dependency', output)
-
-        return 'Installed', 200

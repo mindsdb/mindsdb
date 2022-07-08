@@ -1,15 +1,9 @@
 [
     {
-        "runs_on": "ubuntu-latest",
-        "python-version": 3.6,
-        "runOn": "always"
-    },
-    {
       "runs_on": "ubuntu-latest",
       "python-version": 3.7,
       "runOn": "always"
     },
-
     {
       "runs_on": "macos-latest",
       "python-version": 3.8,
@@ -20,4 +14,4 @@
       "python-version": 3.8,
       "runOn": "always"
     }
-  ]
+]

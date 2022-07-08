@@ -33,16 +33,29 @@ The `predictors` columns contains information about each model as:
 | `status`            | Training status(training, complete, error).  |
 | `predict`           | The name of the target variable column.      |
 | `accuracy`          | The model accuracy.                          |
-| `update_status`     | Trainig update status(up_to_date, updating). |
+| `update_status`     | Training update status(up_to_date, updating). |
 | `mindsdb_version`   | The mindsdb version used.                    |
-| `error`             | Error message info in case of an errror.     |
+| `error`             | Error message info in case of an error.     |
 | `select_data_query` | SQL select query to create the datasource.   |
 | `training options`  | Additional training parameters.              |
 
 ## The datasource TABLE
 
-!!! warning "This is a work in progess" 
+!!! warning "This is a work in progress" 
 
 ## The `[integration_name]` TABLE
 
 !!! warning "This is a work in progress" 
+
+## The model table
+
+!!! warning "This is a work in progress" 
+
+The below list contains the column names of the model table. Note that `target_variable_` will be the name of the target variable column.
+
+- target_variable_original - The original value of the target variable.
+- target_variable_min - Lower bound of the predicted value.
+- target_variable_max - Upper bound of the predicted value.
+- target_variable_confidence - Model confidence score.
+- target_variable_explain - JSON object that contains additional information as `confidence_lower_bound`, `confidence_upper_bound`, `anomaly`, `truth`.
+- select_data_query - SQL select query to create the datasource.

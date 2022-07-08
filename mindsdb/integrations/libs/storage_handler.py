@@ -8,7 +8,7 @@ import redis
 import sqlite3
 
 
-class StorageHandler:
+class KVStorageHandler:
     """ 
     Simple key-value store. Instances of this handler shall store any information required by other handlers.
     Context should store anything relevant to the storage handler, e.g. CompanyID, UserID, parent handler name, among others. 
@@ -40,7 +40,7 @@ class StorageHandler:
         raise NotImplementedError()
 
 
-class SqliteStorageHandler(StorageHandler):
+class SqliteStorageHandler(KVStorageHandler):
     """ StorageHandler that uses SQLite as backend. """  # noqa
     def __init__(self, context: Dict, config=None):
         super().__init__(context, config)
@@ -70,7 +70,7 @@ class SqliteStorageHandler(StorageHandler):
         self.connection.commit()
 
 
-class RedisStorageHandler(StorageHandler):
+class RedisStorageHandler(KVStorageHandler):
     """ StorageHandler that uses Redis as backend. """  # noqa
     def __init__(self, context: Dict, config=None):
         super().__init__(context, config)

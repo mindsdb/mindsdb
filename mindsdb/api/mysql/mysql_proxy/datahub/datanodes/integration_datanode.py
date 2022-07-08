@@ -2,27 +2,36 @@ import pandas as pd
 from sqlalchemy.types import (
     Integer, Float, Text
 )
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast import Insert, Identifier, Constant, CreateTable, TableColumn, DropTables
+from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn, DropTables
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
-from mindsdb.utilities.log import log
+
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 
 
 class IntegrationDataNode(DataNode):
     type = 'integration'
 
-    def __init__(self, integration_name, data_store, ds_type):
+    def __init__(self, integration_name, ds_type, integration_controller):
         self.integration_name = integration_name
-        self.data_store = data_store
         self.ds_type = ds_type
+        self.integration_controller = integration_controller
+        self.integration_handler = self.integration_controller.get_handler(self.integration_name)
 
     def get_type(self):
         return self.type
 
     def get_tables(self):
-        return []
+        response = self.integration_handler.get_tables()
+        if response.type is RESPONSE_TYPE.TABLE:
+            result_dict = response.data_frame.to_dict(orient='records')
+            result = []
+            for row in result_dict:
+                result.append(TablesRow.from_dict(row))
+            return result
+        else:
+            raise Exception(f"Can't get tables: {response.error_message}")
 
     def has_table(self, tableName):
         return True
@@ -34,18 +43,6 @@ class IntegrationDataNode(DataNode):
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
-
-        dso, _creation_info = self.data_store.create_datasource(self.integration_name, {'query': 'select 1'})
-        if hasattr(dso, 'execute') is False:
-            raise exc.ErBadTableError(f"Cant create table in {self.integration_name}")
-        if self.ds_type not in ('postgres', 'mysql', 'mariadb'):
-            raise exc.ErNotSupportedYet(f'At this moment is no possible to create table in "{self.ds_type}"')
-
-        if self.ds_type in ('mysql', 'mariadb'):
-            dialect = 'mysql'
-        elif self.ds_type == 'postgres':
-            dialect = 'postgres'
-        renderer = SqlalchemyRender(dialect)
 
         table_columns_meta = []
         table_columns = []
@@ -79,22 +76,17 @@ class IntegrationDataNode(DataNode):
                 tables=[Identifier(parts=table_name_parts)],
                 if_exists=True
             )
-
-            drop_query_str = renderer.get_string(drop_ast, with_failback=False)
-            dso.execute(drop_query_str)
-
+            self.integration_handler.query(drop_ast)
             is_create = True
 
         if is_create:
-
             create_table_ast = CreateTable(
                 name=Identifier(parts=table_name_parts),
                 columns=table_columns,
                 is_replace=True
             )
 
-            create_query_str = renderer.get_string(create_table_ast, with_failback=False)
-            dso.execute(create_query_str)
+            self.integration_handler.query(create_table_ast)
 
         insert_columns = [Identifier(parts=[x['name'][-1]]) for x in table_columns_meta]
         formatted_data = []
@@ -121,43 +113,25 @@ class IntegrationDataNode(DataNode):
             values=formatted_data
         )
 
-        query_str = renderer.get_string(insert_ast, with_failback=False)
-        dso.execute(query_str)
+        self.integration_handler.query(insert_ast)
 
-    def select(self, query):
-        if isinstance(query, str):
-            query_str = query
-        else:
-            if self.ds_type in ('postgres', 'snowflake'):
-                dialect = 'postgres'
-            else:
-                dialect = 'mysql'
-            render = SqlalchemyRender(dialect)
-            try:
-                query_str = render.get_string(query, with_failback=False)
-            except Exception as e:
-                log.error(f"Exception during query casting to '{dialect}' dialect. Query: {query}. Error: {e}")
-                query_str = render.get_string(query, with_failback=True)
+    def query(self, query):
+        result = self.integration_handler.query(query)
 
-        dso, _creation_info = self.data_store.create_datasource(self.integration_name, {'query': query_str})
-        data = dso.df.to_dict(orient='records')
-        column_names = list(dso.df.columns)
+        if result.type == RESPONSE_TYPE.ERROR:
+            raise Exception(result.error_message)
+        if result.type == RESPONSE_TYPE.QUERY:
+            return result.query, None
+        if result.type == RESPONSE_TYPE.OK:
+            return
 
-        for column_name in column_names:
-            if pd.core.dtypes.common.is_datetime_or_timedelta_dtype(dso.df[column_name]):
-                pass_data = dso.df[column_name].dt.to_pydatetime()
-                for i, rec in enumerate(data):
-                    rec[column_name] = pass_data[i].timestamp()
-
-        if len(column_names) == 0:
-            column_names = ['dataframe_is_empty']
-
+        df = result.data_frame
         columns_info = [
             {
                 'name': k,
                 'type': v
             }
-            for k, v in dso.df.dtypes.items()
+            for k, v in df.dtypes.items()
         ]
-
+        data = df.to_dict(orient='records')
         return data, columns_info

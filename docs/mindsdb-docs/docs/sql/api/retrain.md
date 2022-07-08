@@ -1,8 +1,8 @@
-# `#!sql RETRAIN PREDICTOR` Statement
+# `#!sql RETRAIN` Statement
 
 ## Description
 
-The `RETRAIN` statement is used to retrain old predictors.
+The `#!sql RETRAIN` statement is used to retrain old predictors.
 The predictor is updated to leverage any new data in optimizing its predictive capabilities, without necessarily taking as long to train as starting from scratch. The basic syntax for retraining the predictors is:
 
 ## Syntax
@@ -16,6 +16,7 @@ On execution:
 ```sql
 Query OK, 0 rows affected (0.058 sec)
 ```
+
 ## Validation
 
 ```sql

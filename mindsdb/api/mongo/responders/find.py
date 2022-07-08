@@ -1,13 +1,12 @@
 from bson.int64 import Int64
-from collections import OrderedDict
 
-from lightwood.api import dtype
 from mindsdb_sql.parser.ast import *
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_ast import MongoToAst
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+
+from mindsdb.api.mongo.classes.query_sql import run_sql_command
+
 
 class Responce(Responder):
     when = {'find': helpers.is_true}
@@ -75,34 +74,7 @@ class Responce(Responder):
                 skip=query.get('skip'),
             )
 
-        session.original_integration_controller = mindsdb_env['origin_integration_controller']
-        session.original_model_interface = mindsdb_env['origin_model_interface']
-        session.original_view_controller = mindsdb_env['origin_view_controller']
-
-        sql_session = SessionController(
-            server=session,
-            company_id=mindsdb_env['company_id']
-        )
-
-        sql_session.database = 'mindsdb'
-
-        sql_query = SQLQuery(
-            ast_query,
-            session=sql_session
-        )
-        #
-        result = sql_query.fetch(
-            sql_session.datahub
-        )
-
-        column_names = [
-            c.name is c.alias is None or c.alias
-            for c in sql_query.columns_list
-        ]
-
-        data = []
-        for row in result['result']:
-            data.append(dict(zip(column_names, row)))
+        data = run_sql_command(mindsdb_env, ast_query)
 
         db = mindsdb_env['config']['api']['mongodb']['database']
 

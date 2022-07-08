@@ -108,10 +108,12 @@ class MindsDBDataNode(DataNode):
 
     def _select_integrations(self):
         integrations = self.integration_controller.get_all()
-        result = [
-            [ds_name, ds_meta.get('type'), ds_meta.get('host'), ds_meta.get('port'), ds_meta.get('user')]
-            for ds_name, ds_meta in integrations.items()
-        ]
+        result = []
+        for ds_name, ds_meta in integrations.items():
+            connection_data = ds_meta.get('connection_data', {})
+            result.append([
+                ds_name, ds_meta.get('engine'), connection_data.get('host'), connection_data.get('port'), connection_data.get('user')
+            ])
         return pd.DataFrame(
             result,
             columns=['name', 'database_type', 'host', 'port', 'user']

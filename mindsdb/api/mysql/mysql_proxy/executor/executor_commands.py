@@ -617,8 +617,8 @@ class ExecuteCommands:
 
     def answer_drop_datasource(self, ds_name):
         try:
-            ds = self.session.integration_controller.get(ds_name)
-            self.session.integration_controller.delete(ds['database_name'])
+            integration = self.session.integration_controller.get(ds_name)
+            self.session.integration_controller.delete(integration['name'])
         except Exception:
             raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)

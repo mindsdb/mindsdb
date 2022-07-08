@@ -1,7 +1,8 @@
-from contextlib import closing
+from collections import OrderedDict
 
 import pandas as pd
 import mysql.connector
+from sqlalchemy import create_engine
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -14,6 +15,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 
 class MySQLHandler(DatabaseHandler):
@@ -21,7 +23,7 @@ class MySQLHandler(DatabaseHandler):
     This handler handles connection and execution of the MySQL statements.
     """
 
-    type = 'mysql'
+    name = 'mysql'
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
@@ -88,7 +90,7 @@ class MySQLHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection.is_connected()
         except Exception as e:
-            log.error(f'Error connecting to MySQL {self.database}, {e}!')
+            log.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -124,7 +126,7 @@ class MySQLHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
             except Exception as e:
-                log.error(f'Error running query: {query} on {self.database}!')
+                log.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)
@@ -150,6 +152,8 @@ class MySQLHandler(DatabaseHandler):
         """
         q = "SHOW TABLES;"
         result = self.native_query(q)
+        df = result.data_frame
+        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
         return result
 
     def get_columns(self, table_name) -> Response:
@@ -159,3 +163,47 @@ class MySQLHandler(DatabaseHandler):
         q = f"DESCRIBE {table_name};"
         result = self.native_query(q)
         return result
+
+    def select_into(self, table, dataframe: pd.DataFrame, dtypes=None):
+        """
+        TODO: Update this
+        """
+        try:
+            con = create_engine(f'mysql://{self.host}:{self.port}/{self.database}', echo=False)
+            dataframe.to_sql(table, con=con, if_exists='append', index=False, dtype=dtypes)
+            return True
+        except Exception as e:
+            print(e)
+            raise Exception(f"Could not select into table {table}, aborting.")
+
+
+connection_args = OrderedDict(
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the MySQL server.'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the MySQL server.'
+    },
+    database={
+        'type': ARG_TYPE.STR,
+        'description': 'The database name to use when connecting with the MySQL server.'
+    },
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the MySQL server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.'
+    },
+    port={
+        'type': ARG_TYPE.INT,
+        'description': 'The TCP/IP port of the MySQL server. Must be an integer.'
+    }
+)
+
+connection_args_example = OrderedDict(
+    host='127.0.0.1',
+    port=3306,
+    user='root',
+    password='password',
+    database='database'
+)

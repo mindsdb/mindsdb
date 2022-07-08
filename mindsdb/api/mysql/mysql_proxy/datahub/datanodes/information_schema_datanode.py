@@ -2,6 +2,9 @@ from functools import partial
 
 import pandas as pd
 
+from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.parser.ast import BinaryOperation, Select, Identifier, Constant
+
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
@@ -106,19 +109,35 @@ class InformationSchemaDataNode(DataNode):
             if x not in ('files', 'views')
         ]
 
-    def _get_tables(self):
+    def _get_tables(self, query: ASTNode = None):
         columns = self.information_schema['TABLES']
+
+        target_table = None
+        if type(query) == Select and type(query.where) == BinaryOperation and query.where.op == 'and':
+            for arg in query.where.args:
+                if (
+                    type(arg) == BinaryOperation and arg.op == '='
+                    and type(arg.args[0]) == Identifier
+                    and arg.args[0].parts[0].upper() == 'TABLES'
+                    and arg.args[0].parts[1].upper() == 'TABLE_SCHEMA'
+                    and type(arg.args[1]) == Constant
+                ):
+                    target_table = arg.args[1].value
+                    break
 
         data = []
         for name in self.information_schema.keys():
+            if target_table is not None and target_table != name:
+                continue
             row = TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.SYSTEM_VIEW, TABLE_NAME=name)
             data.append(row.to_list())
 
         for ds_name, ds in self.persis_datanodes.items():
+            if target_table is not None and target_table != ds_name:
+                continue
             ds_tables = ds.get_tables()
-            # TODO fixme
             if len(ds_tables) == 0:
-                pass
+                continue
             elif isinstance(ds_tables[0], dict):
                 ds_tables = [TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.BASE_TABLE, TABLE_NAME=x['name']) for x in ds_tables]
             elif isinstance(ds_tables, list) and len(ds_tables) > 0 and isinstance(ds_tables[0], str):
@@ -128,6 +147,8 @@ class InformationSchemaDataNode(DataNode):
                 data.append(row.to_list())
 
         for ds_name in self.get_integrations_names():
+            if target_table is not None and target_table != ds_name:
+                continue
             try:
                 ds = self.get(ds_name)
                 ds_tables = ds.get_tables()
@@ -140,7 +161,7 @@ class InformationSchemaDataNode(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def _get_columns(self):
+    def _get_columns(self, query: ASTNode = None):
         columns = self.information_schema['COLUMNS']
 
         # NOTE there is a lot of types in mysql, but listed below should be enough for our purposes
@@ -188,14 +209,14 @@ class InformationSchemaDataNode(DataNode):
         df = pd.DataFrame(result, columns=columns)
         return df
 
-    def _get_schemata(self):
+    def _get_schemata(self, query: ASTNode = None):
         columns = self.information_schema['SCHEMATA']
         data = [
             ['def', 'information_schema', 'utf8', 'utf8_general_ci', None]
         ]
 
-        for database_name in self.persis_datanodes:
-            data.append(['def', database_name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
+        # permanent databases
+        data.append(['def', 'mindsdb', 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
 
         integration_names = self.integration_controller.get_all().keys()
         for database_name in integration_names:
@@ -204,14 +225,14 @@ class InformationSchemaDataNode(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def _get_engines(self):
+    def _get_engines(self, query: ASTNode = None):
         columns = self.information_schema['ENGINES']
         data = [['InnoDB', 'DEFAULT', 'Supports transactions, row-level locking, and foreign keys', 'YES', 'YES', 'YES']]
 
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def _get_charsets(self):
+    def _get_charsets(self, query: ASTNode = None):
         columns = self.information_schema['CHARACTER_SETS']
         data = [
             ['utf8', 'UTF-8 Unicode', 'utf8_general_ci', 3],
@@ -222,7 +243,7 @@ class InformationSchemaDataNode(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def _get_collations(self):
+    def _get_collations(self, query: ASTNode = None):
         columns = self.information_schema['COLLATIONS']
         data = [
             ['utf8_general_ci', 'utf8', 33, 'Yes', 'Yes', 1, 'PAD SPACE'],
@@ -232,14 +253,14 @@ class InformationSchemaDataNode(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def _get_empty_table(self, table_name):
+    def _get_empty_table(self, table_name, query: ASTNode = None):
         columns = self.information_schema[table_name]
         data = []
 
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def query(self, query):
+    def query(self, query: ASTNode):
         query_tables = get_all_tables(query)
 
         if len(query_tables) != 1:
@@ -250,7 +271,7 @@ class InformationSchemaDataNode(DataNode):
         if table_name not in self.get_dataframe_funcs:
             raise Exception('Information schema: Not implemented.')
 
-        dataframe = self.get_dataframe_funcs[table_name]()
+        dataframe = self.get_dataframe_funcs[table_name](query=query)
 
         try:
             data = query_df(dataframe, query, session=self.session)

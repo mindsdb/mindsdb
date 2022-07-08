@@ -76,13 +76,15 @@ if __name__ == '__main__':
     integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
     if args.install_handlers is not None:
         handlers_list = [s.strip() for s in args.install_handlers.split(',')]
-        for handler_name, handler_status in integration_controller.get_handlers_import_status().items():
+        # import_meta = handler_meta.get('import', {})
+        for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
             if handler_name not in handlers_list:
                 continue
-            if handler_status.get('success') is True:
+            import_meta = handler_meta.get('import', {})
+            if import_meta.get('success') is True:
                 print(f"{'{0: <18}'.format(handler_name)} - already installed")
                 continue
-            result = install_dependencies(handler_status.get('dependencies', []))
+            result = install_dependencies(import_meta.get('dependencies', []))
             if result.get('success') is True:
                 print(f"{'{0: <18}'.format(handler_name)} - successfully installed")
             else:
@@ -104,9 +106,10 @@ if __name__ == '__main__':
     # @TODO Backwards compatibiltiy for tests, remove later
     model_interface = WithKWArgsWrapper(ModelInterface(), company_id=COMPANY_ID)
     integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
-    for handler_name, handler_status in integration_controller.get_handlers_import_status().items():
-        if handler_status.get('success', False) is not True:
-            print(f"Can't import handler '{handler_name}': {handler_status.get('error_message', 'unknown error')}")
+    for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
+        import_meta = handler_meta.get('import', {})
+        if import_meta.get('success', False) is not True:
+            print(f"Can't import handler '{handler_name}': {import_meta.get('error_message', 'unknown error')}")
 
     raw_model_data_arr = model_interface.get_models()
     model_data_arr = []

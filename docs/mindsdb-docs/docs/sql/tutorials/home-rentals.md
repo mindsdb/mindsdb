@@ -35,7 +35,7 @@ There are a couple of ways you can get the data to follow trough this tutorial.
     ```
 
 === "Connecting as a file"
-    You can download **[the source file as a `.CSV` here]()** and then upload via [MindsDB SQL Editor](connect/mindsdb_editor/)
+    You can download **[the source file as a `.CSV` here](https://mindsdb-test-file-dataset.s3.amazonaws.com/home_rentals.csv)** and then upload via [MindsDB SQL Editor](connect/mindsdb_editor/)
 
     <figure markdown> 
         ![log-in](/assets/cloud/import_file.png){ width="600", loading=lazy }

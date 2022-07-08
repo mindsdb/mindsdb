@@ -1,6 +1,7 @@
 from typing import Optional, Any
 
 import pandas as pd
+from mindsdb_sql.parser.ast import Join
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
 
@@ -20,14 +21,11 @@ class BaseHandler:
         self.is_connected: bool = False
         self.name = name
 
-    def connect(self, **kwargs) -> HandlerStatusResponse:
+    def connect(self) -> HandlerStatusResponse:
         """ Set up any connections required by the handler
 
         Should return output of check_connection() method after attempting
         connection. Should switch self.is_connected.
-
-        Args:
-            **kwargs: Arbitrary keyword arguments.
 
         Returns:
             HandlerStatusResponse
@@ -67,7 +65,7 @@ class BaseHandler:
 
         Args:
             query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
+                of query: SELECT, INSERT, DELETE, etc
 
         Returns:
             HandlerResponse
@@ -106,7 +104,7 @@ class DatabaseHandler(BaseHandler):
     """
     Base class for handlers associated to data storage systems (e.g. databases, data warehouses, streaming services, etc.)
     """
-    def __init__(self, name):
+    def __init__(self, name: str):
         super().__init__(name)
 
 
@@ -114,7 +112,7 @@ class PredictiveHandler(BaseHandler):
     """
     Base class for handlers associated to predictive systems.
     """
-    def __init__(self, name):
+    def __init__(self, name: str):
         super().__init__(name)
 
     def join(self, stmt, data_handler, into: Optional[str]) -> pd.DataFrame:
@@ -126,3 +124,23 @@ class PredictiveHandler(BaseHandler):
         `into`: if provided, the resulting output will be stored in the specified data handler table via `handler.select_into()`. 
         """
         raise NotImplementedError()
+
+    def _get_model_name(self, stmt):
+        """ Discern between joined entities to retrieve model name, alias and the clause side it is on. """
+        side = None
+        models = self.get_tables().data_frame['model_name'].values
+        if type(stmt.from_table) == Join:
+            model_name = stmt.from_table.right.parts[-1]
+            side = 'right'
+            if model_name not in models:
+                model_name = stmt.from_table.left.parts[-1]
+                side = 'left'
+            alias = str(getattr(stmt.from_table, side).alias)
+        else:
+            model_name = stmt.from_table.parts[-1]
+            alias = None  # todo: fix this
+
+        if model_name not in models:
+            raise Exception("Error, not found. Please create this predictor first.")
+
+        return model_name, alias, side

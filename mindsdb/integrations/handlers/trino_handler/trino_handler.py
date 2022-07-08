@@ -21,6 +21,8 @@ class TrinoHandler(DatabaseHandler):
     using kerberos authentication
     """
 
+    name = 'trino'
+
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.parser = parse_sql

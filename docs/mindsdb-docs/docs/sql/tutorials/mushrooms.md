@@ -48,8 +48,9 @@ Attribute Information: (classes: edible=e, poisonous=p)
 To establish a database connection we will access MindsDB's GUI. MindsDB has a SQL Editor on Cloud and local via the URL 127.0.0.1:47334/.
 
 First, we need to connect MindsDB to the database where the Mushrooms data is stored:
+
 - Access MindsDB GUI on either cloud or the URL 127.0.0.1:47334/
-- On the default page, select the button `Add Data` or alternatively select the plug icon on the left sidebar.
+- On the default page, select the button `Add Data` or alternatively select the plug icon on the left sidebar
 - The 'Select your data source' page will populate for you to choose your database type. For this tutorial we will be selecting the postgres database button.
 
 ![db](/assets/sql/tutorials/Mushrooms/database.png)

@@ -13,10 +13,11 @@ if sys.argv[0].endswith('ray/workers/default_worker.py'):
     is_ray_worker = True
 
 is_alembic = os.path.basename(sys.argv[0]).split('.')[0] == 'alembic'
+is_pytest = os.path.basename(sys.argv[0]).split('.')[0] == 'pytest'
 
 if not is_ray_worker:
     try:
-        if not is_notebook() and not is_alembic:
+        if not is_notebook() and not is_alembic and not is_pytest:
 
             args = args_parse()
         else:
@@ -28,19 +29,19 @@ if not is_ray_worker:
     # ---- CHECK SYSTEM ----
     if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 6):
         print("""
-    MindsDB server requires Python >= 3.6 to run
+    MindsDB server requires Python >= 3.7 to run
 
-    Once you have Python 3.6 installed you can tun mindsdb as follows:
+    Once you have Python 3.7 installed you can tun mindsdb as follows:
 
     1. create and activate venv:
-    python3.6 -m venv venv
+    python3.7 -m venv venv
     source venv/bin/activate
 
     2. install MindsDB:
     pip3 install mindsdb
 
     3. Run MindsDB
-    python3.6 -m mindsdb
+    python3.7 -m mindsdb
 
     More instructions in https://docs.mindsdb.com
         """)

@@ -70,6 +70,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
 )
 
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
+from mindsdb.integrations.libs.response import HandlerStatusResponse
 
 
 class ExecuteCommands:
@@ -213,10 +214,10 @@ class ExecuteCommands:
                 where = BinaryOperation('and', args=[
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
                     BinaryOperation('or', args=[
-                        BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')]),
+                        BinaryOperation('=', args=[Identifier('table_type'), Constant('BASE TABLE')]),
                         BinaryOperation('or', args=[
-                            BinaryOperation('like', args=[Identifier('table_type'), Constant('SYSTEM VIEW')]),
-                            BinaryOperation('like', args=[Identifier('table_type'), Constant('VIEW')])
+                            BinaryOperation('=', args=[Identifier('table_type'), Constant('SYSTEM VIEW')]),
+                            BinaryOperation('=', args=[Identifier('table_type'), Constant('VIEW')])
                         ])
                     ])
                 ])
@@ -234,6 +235,14 @@ class ExecuteCommands:
                     from_table=Identifier(parts=['information_schema', 'TABLES']),
                     where=where
                 )
+
+                if statement.modes is not None:
+                    modes = [m.upper() for m in statement.modes]
+                    # show full tables. show always 'BASE TABLE'
+                    if 'FULL' in modes:
+                        new_statement.targets.append(
+                            Constant(value='BASE TABLE', alias=Identifier('Table_type'))
+                        )
 
                 query = SQLQuery(
                     new_statement,
@@ -593,10 +602,9 @@ class ExecuteCommands:
 
         # we have connection checkers not for any db. So do nothing if fail
         # TODO return rich error message
-        status = {
-            'success': False,
-            'error': 'unknon'
-        }
+
+        status = HandlerStatusResponse(success=False)
+
         try:
             handler = self.session.integration_controller.create_handler(
                 handler_type=database_type,
@@ -604,7 +612,7 @@ class ExecuteCommands:
             )
             status = handler.check_connection()
         except Exception as e:
-            status['error'] = str(e)
+            status.error_message = str(e)
 
         if status.success is False:
             raise SqlApiException(f"Can't connect to db: {status.error_message}")
@@ -915,8 +923,8 @@ class ExecuteCommands:
                 column_alias = target.alias or column_name
                 result = SERVER_VARIABLES.get(column_name)
                 if result is None:
-                    log.warning(f'Unknown variable: {column_name}')
-                    result = ''
+                    log.error(f'Unknown variable: {column_name}')
+                    raise Exception(f"Unknown variable '{var_name}'")
                 else:
                     result = result[0]
             elif target_type == Function:
@@ -945,8 +953,7 @@ class ExecuteCommands:
                 column_alias = 'NULL'
             elif target_type == Identifier:
                 result = '.'.join(target.parts)
-                column_name = str(result)
-                column_alias = '.'.join(target.alias.parts) if type(target.alias) == Identifier else column_name
+                raise Exception(f"Unknown column '{result}'")
             else:
                 raise Exception(f'Unknown constant type: {target_type}')
 

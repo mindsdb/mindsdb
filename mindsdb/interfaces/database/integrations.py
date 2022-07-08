@@ -26,14 +26,9 @@ class IntegrationController:
     def __init__(self):
         self._load_handler_modules()
 
-    def add(self, name, data, company_id=None):
-        if 'database_name' not in data:
-            data['database_name'] = name
-        if 'publish' not in data:
-            data['publish'] = True
-
+    def add(self, name, engine, data, company_id=None):
         bundle_path = data.get('secure_connect_bundle')
-        if data.get('type') in ('cassandra', 'scylla') and self._is_not_empty_str(bundle_path):
+        if engine in ('cassandra', 'scylla') and self._is_not_empty_str(bundle_path):
             if os.path.isfile(bundle_path) is False:
                 raise Exception(f'Can not get access to file: {bundle_path}')
             integrations_dir = Config()['paths']['integrations']
@@ -56,7 +51,7 @@ class IntegrationController:
                 integration_dir,
                 integrations_dir
             )
-        elif data.get('type') in ('mysql', 'mariadb'):
+        elif engine in ('mysql', 'mariadb'):
             ssl = data.get('ssl')
             files = {}
             temp_dir = None
@@ -96,7 +91,12 @@ class IntegrationController:
                     integrations_dir
                 )
         else:
-            integration_record = Integration(name=name, data=data, company_id=company_id)
+            integration_record = Integration(
+                name=name,
+                engine=engine,
+                data=data,
+                company_id=company_id
+            )
             session.add(integration_record)
             session.commit()
 

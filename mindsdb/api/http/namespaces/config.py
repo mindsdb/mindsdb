@@ -73,14 +73,6 @@ class Integration(Resource):
         if len(params) == 0:
             abort(400, "type of 'params' must be dict")
 
-        # params from FormData will be as text
-        for key in ('publish', 'test', 'enabled'):
-            if key in params:
-                if isinstance(params[key], str) and params[key].lower() in ('false', '0'):
-                    params[key] = False
-                else:
-                    params[key] = bool(params[key])
-
         files = request.files
         temp_dir = None
         if files is not None:
@@ -113,10 +105,10 @@ class Integration(Resource):
             abort(400, f"Integration with name '{name}' already exists")
 
         try:
-            if 'enabled' in params:
-                params['publish'] = params['enabled']
-                del params['enabled']
-            request.integration_controller.add(name, params)
+            engine = params['type']
+            if engine is not None:
+                del params['type']
+            request.integration_controller.add(name, engine, params)
 
             model_data_arr = []
             for model in request.model_interface.get_models():

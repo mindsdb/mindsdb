@@ -129,6 +129,7 @@ if __name__ == '__main__':
                 integration_record = db.Integration(
                     name=integration_name,
                     data={},
+                    engine=integration_name,
                     company_id=None
                 )
                 db.session.add(integration_record)
@@ -163,7 +164,11 @@ if __name__ == '__main__':
                 if it is not None:
                     integration_controller.delete(integration_name)
                 print(f'Adding: {integration_name}')
-                integration_controller.add(integration_name, config['integrations'][integration_name])
+                integration_data = config['integrations'][integration_name]
+                engine = integration_data.get('type')
+                if engine is not None:
+                    del integration_data['type']
+                integration_controller.add(integration_name, engine, integration_data)
             except Exception as e:
                 log.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 

@@ -1,10 +1,11 @@
+import pandas as pd
 from sqlalchemy.types import (
     Integer, Float, Text
 )
 from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn, DropTables
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.utilities.log import log
+
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 

@@ -1,8 +1,8 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
-from .__about__ import __version__ as version, __description__ as description
+from mindsdb.integrations.handlers.ckan_handler.__about__ import __version__ as version, __description__ as description
 try:
-    from .ckan_handler import CkanHandler as Handler
+    from mindsdb.integrations.handlers.ckan_handler import CkanHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None

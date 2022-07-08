@@ -12,12 +12,14 @@ class Responce(Responder):
     when = {'find': helpers.is_true}
 
     def result(self, query, request_env, mindsdb_env, session):
+        database = request_env['database']
+
         # system queries
         if query['find'] == 'system.version':
             # For studio3t
             data = [{
-                "_id" : "featureCompatibilityVersion",
-                "version" : "3.6"
+                "_id": "featureCompatibilityVersion",
+                "version": "3.6"
             }]
             cursor = {
                 'id': Int64(0),
@@ -29,15 +31,16 @@ class Responce(Responder):
                 'ok': 1
             }
 
-
         mongoToAst = MongoToAst()
 
+        collection = [database, query['find']]
+
         if not query.get('singleBatch') and 'collection' in query.get('filter'):
-            # convert to join
+            # JOIN mode
 
             # upper query
             ast_query = mongoToAst.find(
-                collection=query['find'],
+                collection=collection,
                 projection=query.get('projection'),
                 sort=query.get('sort'),
                 limit=query.get('limit'),
@@ -54,11 +57,11 @@ class Responce(Responder):
             table_select.parentheses = True
 
             # convert to join
-            predictor = ast_query.from_table
+            right_table = ast_query.from_table
 
             ast_join = Join(
                 left=table_select,
-                right=predictor,
+                right=right_table,
                 join_type='join'
             )
             ast_query.from_table = ast_join
@@ -66,7 +69,7 @@ class Responce(Responder):
         else:
             # is single table
             ast_query = mongoToAst.find(
-                collection=query['find'],
+                collection=collection,
                 filter=query.get('filter'),
                 projection=query.get('projection'),
                 sort=query.get('sort'),

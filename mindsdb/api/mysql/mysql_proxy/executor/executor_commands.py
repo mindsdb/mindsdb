@@ -236,6 +236,14 @@ class ExecuteCommands:
                     where=where
                 )
 
+                if statement.modes is not None:
+                    modes = [m.upper() for m in statement.modes]
+                    # show full tables. show always 'BASE TABLE'
+                    if 'FULL' in modes:
+                        new_statement.targets.append(
+                            Constant(value='BASE TABLE', alias=Identifier('Table_type'))
+                        )
+
                 query = SQLQuery(
                     new_statement,
                     session=self.session

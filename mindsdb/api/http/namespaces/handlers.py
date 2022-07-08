@@ -1,35 +1,9 @@
-import json
-from dateutil.parser import parse as parse_datetime
 from flask import request
-from flask_restx import Resource, abort
-from mindsdb.utilities.log import log
+from flask_restx import Resource
+
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.handlers import ns_conf
-
-
-# [{
-#     name: 'postgres',
-#     icon: {base64 string},
-#     dependencies: ['psycopg', 'somethingelse>=1.0'],
-#     import: {
-#         success: True|False,
-#         error_message: 'module xxx is not found'    // only if success=False
-#     },
-#     version: '0.1',
-#     connection_example: {
-#         'host': '127.0.0.1'.
-#         'password': '1234',
-#         'username': 'admin'
-#     },
-#     // to add in future?
-#     description: 'connection to postgres',
-#     connection_args: [{
-#         name: 'host',
-#         type: 'string',
-#         example: '127.0.0.1',
-#         description: 'host connect to'
-#     }, ...]
-# }]
+from mindsdb.integrations.utilities.install import install_dependencies
 
 
 @ns_conf.route('/')
@@ -44,3 +18,31 @@ class HandlersList(Resource):
             row.update(handler_meta)
             result.append(row)
         return result
+
+
+@ns_conf.route('/<handler_name>/install')
+class InstallDependencies(Resource):
+    @ns_conf.param('handler_name', 'Handler name')
+    def post(self, handler_name):
+        handler_import_status = self.request.integration_controller.get_handlers_import_status()
+        if handler_name not in handler_import_status:
+            return f'Unkown handler: {handler_name}', 400
+
+        if handler_import_status[handler_name].get('import', {}).get('success', False) is True:
+            return 'Installed', 200
+
+        handler_meta = handler_import_status[handler_name]
+
+        dependencies = handler_meta['import']['dependencies']
+        if len(dependencies) == 0:
+            return 'Installed', 200
+
+        result = install_dependencies(dependencies)
+        if result.get('success') is True:
+            self.request.integration_controller._load_handler_modules()
+            return 'Installed', 200
+        return http_error(
+            500,
+            'Failed to install dependency',
+            result.get('error_message', 'unknown error')
+        )

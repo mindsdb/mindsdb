@@ -21,15 +21,7 @@ class SnowflakeHandler(DatabaseHandler):
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
-        self.host = kwargs.get('host')
-        self.user = kwargs.get('user')
-        self.password = kwargs.get('password')
-        self.account = kwargs.get('account')
-        self.warehouse = kwargs.get('warehouse')
-        self.database = kwargs.get('database')
-        self.schema = kwargs.get('schema')
-        self.protocol = kwargs.get('protocol')
-        self.port = kwargs.get('port')
+        self.connection_data = kwargs.get('connection_data')
         self.is_connected = False
         self.connection = None
 
@@ -38,15 +30,15 @@ class SnowflakeHandler(DatabaseHandler):
             return self.connection
 
         con = connector.connect(
-            host=self.host,
-            user=self.user,
-            password=self.password,
-            account=self.account,
-            warehouse=self.warehouse,
-            database=self.database,
-            schema=self.schema,
-            protocol=self.protocol,
-            port=self.port,
+            host=self.connection_data('host'),
+            user=self.connection_data('user'),
+            password=self.connection_data('password'),
+            account=self.connection_data('account'),
+            warehouse=self.connection_data('warehouse'),
+            database=self.connection_data('database'),
+            schema=self.connection_data('schema'),
+            protocol=self.connection_data('protocol'),
+            port=self.connection_data('port'),
             application='MindsDB'
         )
 
@@ -74,7 +66,7 @@ class SnowflakeHandler(DatabaseHandler):
                 cur.execute('select 1;')
             response.success = True
         except connector.errors.ProgrammingError as e:
-            log.error(f'Error connecting to Snowflake {self.database}, {e}!')
+            log.error(f'Error connecting to Snowflake {self.connection_data("database")}, {e}!')
             response.error_message = e
 
         if response.success is False and self.is_connected is True:
@@ -105,7 +97,7 @@ class SnowflakeHandler(DatabaseHandler):
                 else:
                     response = Response(RESPONSE_TYPE.OK)
             except Exception as e:
-                log.error(f'Error running query: {query} on {self.database}!')
+                log.error(f'Error running query: {query} on {self.connection_data("database")}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

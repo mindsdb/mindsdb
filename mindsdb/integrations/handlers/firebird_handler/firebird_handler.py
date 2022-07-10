@@ -239,3 +239,30 @@ class FirebirdHandler(DatabaseHandler):
         df = result.data_frame
         result.data_frame = df.rename(columns={'FIELD_NAME': 'column_name', 'FIELD_TYPE': 'data_type'})
         return result
+
+
+connection_args = OrderedDict(
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the Firebird server.'
+    },
+    database={
+        'type': ARG_TYPE.STR,
+        'description': 'The database name to use when connecting with the Firebird server.'
+    },
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the Firebird server.'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the Firebird server.'
+    }
+)
+
+connection_args_example = OrderedDict(
+    host='localhost',
+    database='/temp/test.db',
+    user='sysdba',
+    password='password'
+)

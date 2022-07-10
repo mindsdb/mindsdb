@@ -104,3 +104,57 @@ class FirebirdHandler(DatabaseHandler):
                 self.is_connected = False
 
         return response
+
+    def native_query(self, query: str) -> StatusResponse:
+        """
+        Receive raw query and act upon it somehow.
+        Args:
+            query (str): query in native format
+        Returns:
+            HandlerResponse
+        """
+
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+        cursor = connection.cursor()
+
+        try:
+            cursor.execute(query)
+            result = cursor.fetchall()
+            if result:
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.DataFrame(
+                        result,
+                        columns=[x[0] for x in cursor.description]
+                    )
+                )
+            else:
+                connection.commit()
+                response = Response(RESPONSE_TYPE.OK)
+        except Exception as e:
+            log.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+
+        cursor.close()
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
+
+    def query(self, query: ASTNode) -> StatusResponse:
+        """
+        Receive query as AST (abstract syntax tree) and act upon it somehow.
+        Args:
+            query (ASTNode): sql query represented as AST. May be any kind
+                of query: SELECT, INTSERT, DELETE, etc
+        Returns:
+            HandlerResponse
+        """
+        renderer = SqlalchemyRender('firebird')
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)

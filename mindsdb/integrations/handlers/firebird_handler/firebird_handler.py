@@ -19,7 +19,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 # TODO: fix self.database in SQLite handler
-
+# TODO: mention database path string
 
 class FirebirdHandler(DatabaseHandler):
     """

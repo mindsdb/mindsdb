@@ -3,15 +3,14 @@ from mindsdb.integrations.handlers.firebird_handler.firebird_handler import Fire
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
-#TODO: change password and database
 class FirebirdHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
             "host": "localhost",
-            "database": r"C:\Users\minurap\Documents\open_source\mindsdb\test.fdb",
+            "database": r"C:\Users\minura\Documents\mindsdb\test.fdb",
             "user": "sysdba",
-            "password": "Geronimo@1721"
+            "password": "password"
         }
         cls.handler = FirebirdHandler('test_firebird_handler', cls.kwargs)
 

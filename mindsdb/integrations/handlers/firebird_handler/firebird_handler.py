@@ -18,8 +18,6 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
-# TODO: fix self.database in SQLite handler
-# TODO: mention database path string
 
 class FirebirdHandler(DatabaseHandler):
     """
@@ -248,7 +246,10 @@ connection_args = OrderedDict(
     },
     database={
         'type': ARG_TYPE.STR,
-        'description': 'The database name to use when connecting with the Firebird server.'
+        'description': """
+            The database name to use when connecting with the Firebird server. NOTE: use double backslashes (\\) for the 
+            database path on a Windows machine.
+        """
     },
     user={
         'type': ARG_TYPE.STR,

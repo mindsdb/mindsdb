@@ -51,11 +51,38 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(len(predictors_a) == 0)
         self.assertTrue(len(predictors_b) == 0)
 
+        # add permanent integrations
+        res = requests.put(
+            f'{HTTP_API_ROOT}/config/integrations/files',
+            json={'params': {'type': 'files'}},
+            headers={'company-id': f'{CID_A}'}
+        )
+        self.assertTrue(res.status_code == 200)
+        res = requests.put(
+            f'{HTTP_API_ROOT}/config/integrations/views',
+            json={'params': {'type': 'views'}},
+            headers={'company-id': f'{CID_A}'}
+        )
+        self.assertTrue(res.status_code == 200)
+
+        res = requests.put(
+            f'{HTTP_API_ROOT}/config/integrations/files',
+            json={'params': {'type': 'files'}},
+            headers={'company-id': f'{CID_B}'}
+        )
+        self.assertTrue(res.status_code == 200)
+        res = requests.put(
+            f'{HTTP_API_ROOT}/config/integrations/views',
+            json={'params': {'type': 'views'}},
+            headers={'company-id': f'{CID_B}'}
+        )
+        self.assertTrue(res.status_code == 200)
+
         # is no integrations
         integrations_a = get_integrations_names(company_id=CID_A)
         integrations_b = get_integrations_names(company_id=CID_B)
-        self.assertTrue(len(integrations_a) == 0)
-        self.assertTrue(len(integrations_b) == 0)
+        self.assertTrue(len(integrations_a) == 2)
+        self.assertTrue(len(integrations_b) == 2)
 
     def test_2_add_integration_http(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
@@ -72,9 +99,11 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(res.status_code == 200)
 
         integrations_a = get_integrations_names(company_id=CID_A)
+        integrations_a = [x for x in integrations_a if x not in ('files', 'views')]
         self.assertTrue(len(integrations_a) == 1 and integrations_a[0] == 'test_integration_a')
 
         integrations_b = get_integrations_names(company_id=CID_B)
+        integrations_b = [x for x in integrations_b if x not in ('files', 'views')]
         self.assertTrue(len(integrations_b) == 0)
 
         res = requests.put(
@@ -85,9 +114,11 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(res.status_code == 200)
 
         integrations_a = get_integrations_names(company_id=CID_A)
+        integrations_a = [x for x in integrations_a if x not in ('files', 'views')]
         self.assertTrue(len(integrations_a) == 1 and integrations_a[0] == 'test_integration_a')
 
         integrations_b = get_integrations_names(company_id=CID_B)
+        integrations_b = [x for x in integrations_b if x not in ('files', 'views')]
         self.assertTrue(len(integrations_b) == 1 and integrations_b[0] == 'test_integration_b')
 
     def test_4_add_predictors_http(self):

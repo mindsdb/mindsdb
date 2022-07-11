@@ -71,9 +71,9 @@ class UserFlowTest_1(unittest.TestCase):
         res = requests.get(f'{HTTP_API_ROOT}/config/integrations/{TEST_INTEGRATION}')
         assert res.status_code == 200
         test_integration = res.json()
-        assert test_integration['password'] is None
+        assert test_integration['connection_data']['password'] is None
         for key in ['user', 'port', 'host', 'publish']:
-            assert test_integration[key] == test_integration_data[key]
+            assert test_integration['connection_data'][key] == test_integration_data[key]
 
     def test_2_create_and_query_predictors(self):
         '''

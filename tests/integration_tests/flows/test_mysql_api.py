@@ -83,10 +83,13 @@ class TestScenario:
         threshold = time.time() + timeout
         res = ''
         while time.time() < threshold:
-            _query = "SELECT status FROM predictors WHERE name='{}';".format(predictor_name)
+            _query = "SELECT status, error FROM predictors WHERE name='{}';".format(predictor_name)
             res = self.query(_query)
-            if 'status' in res and res.get_record('status', 'complete'):
-                break
+            if 'status' in res:
+                if res.get_record('status', 'complete'):
+                    break
+                elif res.get_record('status', 'error'):
+                    raise Exception(res[0]['error'])
             time.sleep(2)
         self.assertTrue('status' in res and res.get_record('status', 'complete'),
                         f"predictor {predictor_name} is not complete after {timeout} seconds")

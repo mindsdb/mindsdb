@@ -14,6 +14,7 @@
 # Installing the Chart
 
 ```bash
+###FIRST CLONE THE WHOLE REPO cd helm/mindsdb   and then run this command   (namespace is option you can add it or if you remove it than it goes default)
 helm upgrade -i \
   mindsdb mindsdb \
   --namespace mindsdb \

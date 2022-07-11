@@ -49,6 +49,8 @@ from mindsdb_sql.planner.steps import (
     JoinStep,
     GroupByStep
 )
+
+from mindsdb_sql.exceptions import PlanningException
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
@@ -62,6 +64,9 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErKeyColumnDoesNotExist,
     ErNotSupportedYet,
+    SqlApiUnknownError,
+    ErLogicError,
+    ErSqlWrongArguments
 )
 from mindsdb_sql.parser.ast.base import ASTNode
 
@@ -79,7 +84,7 @@ def get_table_alias(table_obj, default_db_name):
     # (database, table, alias)
     if isinstance(table_obj, Identifier):
         if len(table_obj.parts) > 2:
-            raise SqlApiException(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
+            raise ErSqlWrongArguments(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
         elif len(table_obj.parts) == 1:
             name = (default_db_name, table_obj.parts[0])
         else:
@@ -303,10 +308,12 @@ class SQLQuery():
 
         if view == 'list':
             self.result = self._make_list_result_view(data)
-        elif view == 'dict':
-            self.result = self._make_dict_result_view(data)
-        else:
-            raise ErNotSupportedYet('Only "list" and "dict" views supported atm')
+
+        # this is not used
+        # elif view == 'dict':
+        #     self.result = self._make_dict_result_view(data)
+        # else:
+        #     raise ErNotSupportedYet('Only "list" and "dict" views supported atm')
 
         return {
             'success': True,
@@ -364,7 +371,7 @@ class SQLQuery():
 
     def _multiple_steps_reduce(self, step, vars):
         if step.reduce != 'union':
-            raise SqlApiException(f'Unknown MultipleSteps type: {step.reduce}')
+            raise ErLogicError(f'Unknown MultipleSteps type: {step.reduce}')
 
         data = {
             'values': [],
@@ -375,7 +382,7 @@ class SQLQuery():
         for var_group in vars:
             for substep in step.steps:
                 if isinstance(substep, FetchDataframeStep) is False:
-                    raise Exception(f'Wrong step type for MultipleSteps: {step}')
+                    raise ErLogicError(f'Wrong step type for MultipleSteps: {step}')
                 markQueryVar(substep.query.where)
             for name, value in var_group.items():
                 for substep in step.steps:
@@ -467,10 +474,13 @@ class SQLQuery():
         if prepare:
             # it is prepared statement call
             steps_data = []
-            for step in self.planner.prepare_steps(self.query):
-                data = self.execute_step(step, steps_data)
-                step.set_result(data)
-                steps_data.append(data)
+            try:
+                for step in self.planner.prepare_steps(self.query):
+                    data = self.execute_step(step, steps_data)
+                    step.set_result(data)
+                    steps_data.append(data)
+            except PlanningException as e:
+                raise ErLogicError(e)
 
             statement_info = self.planner.get_statement_info()
 
@@ -502,10 +512,13 @@ class SQLQuery():
             return
 
         steps_data = []
-        for step in self.planner.execute_steps(params):
-            data = self.execute_step(step, steps_data)
-            step.set_result(data)
-            steps_data.append(data)
+        try:
+            for step in self.planner.execute_steps(params):
+                data = self.execute_step(step, steps_data)
+                step.set_result(data)
+                steps_data.append(data)
+        except PlanningException as e:
+            raise ErLogicError(e)
 
         # save updated query
         self.query = self.planner.query
@@ -561,7 +574,7 @@ class SQLQuery():
             else:
                 self.fetched_data = steps_data[-1]
         except Exception as e:
-            raise SqlApiException("error in preparing result quiery step") from e
+            raise SqlApiUnknownError("error in preparing result quiery step") from e
 
         try:
             if hasattr(self, 'columns_list') is False:
@@ -600,7 +613,7 @@ class SQLQuery():
 
             self.columns_list = [x for x in self.columns_list if x.name != '__mindsdb_row_id']
         except Exception as e:
-            raise SqlApiException("error in column list step") from e
+            raise SqlApiUnknownError("error in column list step") from e
 
     def execute_step(self, step, steps_data):
         if type(step) == GetPredictorColumns:
@@ -644,7 +657,7 @@ class SQLQuery():
         elif type(step) == MapReduceStep:
             try:
                 if step.reduce != 'union':
-                    raise Exception(f'Unknown MapReduceStep type: {step.reduce}')
+                    raise ErLogicError(f'Unknown MapReduceStep type: {step.reduce}')
 
                 step_data = steps_data[step.values.step_num]
                 vars = []
@@ -679,12 +692,12 @@ class SQLQuery():
                 elif type(substep) == MultipleSteps:
                     data = self._multiple_steps_reduce(substep, vars)
                 else:
-                    raise Exception(f'Unknown step type: {step.step}')
+                    raise ErLogicError(f'Unknown step type: {step.step}')
             except Exception as e:
-                raise SqlApiException(f'error in map reduce step: {e}') from e
+                raise SqlApiUnknownError(f'error in map reduce step: {e}') from e
         elif type(step) == MultipleSteps:
             if step.reduce != 'union':
-                raise Exception(f"Only MultipleSteps with type = 'union' is supported. Got '{step.type}'")
+                raise ErNotSupportedYet(f"Only MultipleSteps with type = 'union' is supported. Got '{step.type}'")
             data = None
             for substep in step.steps:
                 subdata = self.execute_step(substep, steps_data)
@@ -722,10 +735,10 @@ class SQLQuery():
                     'tables': [table_name]
                 }
             except Exception as e:
-                if type(e) == SqlApiException:
+                if isinstance(e, SqlApiException):
                     raise e
                 else:
-                    raise SqlApiException(f'error in apply predictor row step: {e}') from e
+                    raise SqlApiUnknownError(f'error in apply predictor row step: {e}') from e
         elif type(step) in (ApplyPredictorStep, ApplyTimeseriesPredictorStep):
             try:
                 dn = self.datahub.get(self.mindsdb_database_name)
@@ -736,7 +749,7 @@ class SQLQuery():
                     for table_name in row:
                         keys_intersection = set(new_row) & set(row[table_name])
                         if len(keys_intersection) > 0:
-                            raise Exception(
+                            raise ErLogicError(
                                 f'The predictor got two identical keys from different datasources: {keys_intersection}'
                             )
                         new_row.update(row[table_name])
@@ -797,7 +810,7 @@ class SQLQuery():
                     'types': {table_name: self.model_types}
                 }
             except Exception as e:
-                raise SqlApiException(f'error in apply predictor step: {e}') from e
+                raise SqlApiUnknownError(f'error in apply predictor step: {e}') from e
         elif type(step) == JoinStep:
             try:
                 left_data = steps_data[step.left.step_num]
@@ -811,14 +824,14 @@ class SQLQuery():
                 #     is_timeseries = True
 
                 if step.query.condition is not None:
-                    raise Exception('At this moment supported only JOIN without condition')
+                    raise ErNotSupportedYet('At this moment supported only JOIN without condition')
                 if step.query.join_type.upper() not in ('LEFT JOIN', 'JOIN'):
-                    raise Exception('At this moment supported only JOIN and LEFT JOIN')
+                    raise ErNotSupportedYet('At this moment supported only JOIN and LEFT JOIN')
                 if (
                         len(left_data['tables']) != 1 or len(right_data['tables']) != 1
                         or left_data['tables'][0] == right_data['tables'][0]
                 ):
-                    raise Exception('At this moment supported only JOIN of two different tables')
+                    raise ErNotSupportedYet('At this moment supported only JOIN of two different tables')
 
                 data = {
                     'values': [],
@@ -921,7 +934,7 @@ class SQLQuery():
                 #                     break
                 #     data['values'] = data_values
             except Exception as e:
-                raise SqlApiException(f'error in join step: {e}') from e
+                raise SqlApiUnknownError(f'error in join step: {e}') from e
 
         elif type(step) == FilterStep:
             step_data = steps_data[step.dataframe.step_num]
@@ -1024,7 +1037,7 @@ class SQLQuery():
                 if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
                     data['values'] = data['values'][:step.limit.value]
             except Exception as e:
-                raise SqlApiException(f'error in limit offset step: {e}') from e
+                raise SqlApiUnknownError(f'error in limit offset step: {e}') from e
         elif type(step) == ProjectStep:
             try:
                 step_data = steps_data[step.dataframe.step_num]
@@ -1046,7 +1059,7 @@ class SQLQuery():
                         column_alias = column_identifier.parts[-1] if column_identifier.alias is None else '.'.join(
                             column_identifier.alias.parts)
                         if len(column_name_parts) > 2:
-                            raise Exception(
+                            raise ErSqlWrongArguments(
                                 f'Column name must contain no more than 2 parts. Got name: {column_identifier}')
                         elif len(column_name_parts) == 1:
                             column_name = column_name_parts[0]
@@ -1060,7 +1073,7 @@ class SQLQuery():
                                 column_exists = get_column_in_case(list(table_col_idx.keys()), column_name)
                                 if column_exists:
                                     if appropriate_table is not None and not step.ignore_doubles:
-                                        raise Exception(
+                                        raise ErLogicError(
                                             f'Found multiple appropriate tables for column {column_name}')
                                     else:
                                         appropriate_table = table_name
@@ -1107,11 +1120,11 @@ class SQLQuery():
 
                                         break
                                     else:
-                                        raise Exception(f'Can not find column "{column_name}" in table "{table_name}"')
+                                        raise ErLogicError(f'Can not find column "{column_name}" in table "{table_name}"')
                             if appropriate_table is None:
-                                raise SqlApiException(f'Can not find appropriate table for column {column_name}')
+                                raise ErLogicError(f'Can not find appropriate table for column {column_name}')
                         else:
-                            raise SqlApiException('Undefined column name')
+                            raise ErSqlWrongArguments('Undefined column name')
 
                         if columns_to_copy is not None:
                             col_from, col_to = columns_to_copy
@@ -1131,7 +1144,7 @@ class SQLQuery():
             except Exception as e:
                 if isinstance(e, SqlApiException):
                     raise e
-                raise SqlApiException(f'error on project step: {e} ') from e
+                raise SqlApiUnknownError(f'error on project step: {e} ') from e
         elif type(step) == GroupByStep:
             step_data = steps_data[step.dataframe.step_num]
 
@@ -1211,7 +1224,7 @@ class SQLQuery():
             dn = self.datahub.get(integration_name)
 
             if hasattr(dn, 'create_table') is False:
-                raise Exception(f"Creating table in '{integration_name}' is not supporting")
+                raise ErNotSupportedYet(f"Creating table in '{integration_name}' is not supporting")
 
             # region del 'service' columns
             for table in step_data['columns']:
@@ -1266,24 +1279,25 @@ class SQLQuery():
             )
             data = None
         else:
-            raise SqlApiException(F'Unknown planner step: {step}')
+            raise ErLogicError(F'Unknown planner step: {step}')
         return data
 
-    def _apply_where_filter(self, row, where):
-        if isinstance(where, Identifier):
-            return row[where.value]
-        elif isinstance(where, Constant):
-            return where.value
-        elif not isinstance(where, (UnaryOperation, BinaryOperation)):
-            SqlApiException(f'Unknown operation type: {where}')
-
-        op_fn = operator_map.get(where.op)
-        if op_fn is None:
-            raise SqlApiException(f'unknown operator {where.op}')
-
-        args = [self._apply_where_filter(row, arg) for arg in where.args]
-        result = op_fn(*args)
-        return result
+    # Is not used
+    # def _apply_where_filter(self, row, where):
+    #     if isinstance(where, Identifier):
+    #         return row[where.value]
+    #     elif isinstance(where, Constant):
+    #         return where.value
+    #     elif not isinstance(where, (UnaryOperation, BinaryOperation)):
+    #         raise SqlApiException(f'Unknown operation type: {where}')
+    #
+    #     op_fn = operator_map.get(where.op)
+    #     if op_fn is None:
+    #         raise SqlApiException(f'unknown operator {where.op}')
+    #
+    #     args = [self._apply_where_filter(row, arg) for arg in where.args]
+    #     result = op_fn(*args)
+    #     return result
 
     def _make_list_result_view(self, data):
         if self.outer_query is not None:
@@ -1310,7 +1324,3 @@ class SQLQuery():
                 data_row.update(row[table_name])
             result.append(data_row)
         return result
-
-    @property
-    def columns(self):
-        raise Exception('this method must not use')

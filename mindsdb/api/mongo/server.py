@@ -13,7 +13,6 @@ import numpy as np
 
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import RespondersCollection, Session
-from mindsdb.api.mongo.responders import responders
 from mindsdb.api.mongo.utilities import log
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.storage.db import session as db_session
@@ -375,6 +374,7 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         )
         # OpMSG=OrderedDict([('ismaster', 1), ('$db', 'admin'), ('$clusterTime', OrderedDict([('clusterTime', Timestamp(1599749031, 1)), ('signature', OrderedDict([('hash', b'6\x87\xd5Y\xa7\xc7\xcf$\xab\x1e\xa2{\xe5B\xe5\x99\xdbl\x8d\xf4'), ('keyId', 6870854312365391875)]))])), ('$client', OrderedDict([('application', OrderedDict([('name', 'MongoDB Shell')])), ('driver', OrderedDict([('name', 'MongoDB Internal Client'), ('version', '3.6.3')])), ('os', OrderedDict([('type', 'Linux'), ('name', 'Ubuntu'), ('architecture', 'x86_64'), ('version', '18.04')])), ('mongos', OrderedDict([('host', 'maxs-comp:27103'), ('client', '127.0.0.1:52148'), ('version', '3.6.3')]))])), ('$configServerState', OrderedDict([('opTime', OrderedDict([('ts', Timestamp(1599749031, 1)), ('t', 1)]))]))])
 
+        from mindsdb.api.mongo.responders import responders
         respondersCollection.responders += responders
 
 

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 import json
 import requests
+import traceback
 
 import pandas as pd
 from pandas.core.frame import DataFrame
@@ -176,6 +177,7 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
         run_fit(predictor_id, df)
     except Exception as e:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
+        print(traceback.format_exc())
 
         try:
             exception_type, _exception_object, exception_traceback = sys.exc_info()

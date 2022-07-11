@@ -26,14 +26,9 @@ class IntegrationController:
     def __init__(self):
         self._load_handler_modules()
 
-    def add(self, name, data, company_id=None):
-        if 'database_name' not in data:
-            data['database_name'] = name
-        if 'publish' not in data:
-            data['publish'] = True
-
+    def add(self, name, engine, data, company_id=None):
         bundle_path = data.get('secure_connect_bundle')
-        if data.get('type') in ('cassandra', 'scylla') and self._is_not_empty_str(bundle_path):
+        if engine in ('cassandra', 'scylla') and self._is_not_empty_str(bundle_path):
             if os.path.isfile(bundle_path) is False:
                 raise Exception(f'Can not get access to file: {bundle_path}')
             integrations_dir = Config()['paths']['integrations']
@@ -41,7 +36,12 @@ class IntegrationController:
             p = Path(bundle_path)
             data['secure_connect_bundle'] = p.name
 
-            integration_record = Integration(name=name, data=data, company_id=company_id)
+            integration_record = Integration(
+                name=name,
+                engine=engine,
+                data=data,
+                company_id=company_id
+            )
             session.add(integration_record)
             session.commit()
             integration_id = integration_record.id
@@ -56,7 +56,7 @@ class IntegrationController:
                 integration_dir,
                 integrations_dir
             )
-        elif data.get('type') in ('mysql', 'mariadb'):
+        elif engine in ('mysql', 'mariadb'):
             ssl = data.get('ssl')
             files = {}
             temp_dir = None
@@ -77,7 +77,12 @@ class IntegrationController:
                     files[key] = data[key]
                     p = Path(data[key])
                     data[key] = p.name
-            integration_record = Integration(name=name, data=data, company_id=company_id)
+            integration_record = Integration(
+                name=name,
+                engine=engine,
+                data=data,
+                company_id=company_id
+            )
             session.add(integration_record)
             session.commit()
             integration_id = integration_record.id
@@ -96,7 +101,12 @@ class IntegrationController:
                     integrations_dir
                 )
         else:
-            integration_record = Integration(name=name, data=data, company_id=company_id)
+            integration_record = Integration(
+                name=name,
+                engine=engine,
+                data=data,
+                company_id=company_id
+            )
             session.add(integration_record)
             session.commit()
 
@@ -130,7 +140,6 @@ class IntegrationController:
         data = deepcopy(integration_record.data)
         if data.get('password', None) is None:
             data['password'] = ''
-        data['date_last_update'] = deepcopy(integration_record.updated_at)
 
         bundle_path = data.get('secure_connect_bundle')
         mysql_ssl_ca = data.get('ssl_ca')
@@ -166,14 +175,13 @@ class IntegrationController:
             ):
                 data['connection'] = None
 
-        data['id'] = integration_record.id
-        data['name'] = integration_record.name
-
-        return data
-
-    def get_by_id(self, id, company_id=None, sensitive_info=True):
-        integration_record = session.query(Integration).filter_by(company_id=company_id, id=id).first()
-        return self._get_integration_record_data(integration_record, sensitive_info)
+        return {
+            'id': integration_record.id,
+            'name': integration_record.name,
+            'engine': integration_record.engine,
+            'date_last_update': deepcopy(integration_record.updated_at),
+            'connection_data': data
+        }
 
     def get(self, name, company_id=None, sensitive_info=True, case_sensitive=False):
         if case_sensitive:
@@ -198,8 +206,8 @@ class IntegrationController:
         connections = {}
         for integration_name, integration_meta in self.get_all().items():
             handler = self.create_handler(
-                handler_type=integration_meta.get('type'),
-                connection_data=integration_meta
+                handler_type=integration_meta['engine'],
+                connection_data=integration_meta['connection_data']
             )
             status = handler.check_connection()
             connections[integration_name] = status.get('success', False)
@@ -230,39 +238,27 @@ class IntegrationController:
         return self.handler_modules[handler_type].Handler(**handler_ars)
 
     def get_handler(self, name, company_id=None, case_sensitive=False):
-        if name.lower() == 'files':
-            integration_data = {
-                'type': 'files',
-                'name': 'files'
-            }
-        elif name.lower() == 'views':
-            integration_data = {
-                'type': 'views',
-                'name': 'views'
-            }
+        if case_sensitive:
+            integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
         else:
-            if case_sensitive:
-                integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
-            else:
-                integration_record = session.query(Integration).filter(
-                    (Integration.company_id == company_id)
-                    & (func.lower(Integration.name) == func.lower(name))
-                ).first()
-            if integration_record is None:
-                raise Exception(f'Unknown integration: {name}')
-            integration_data = self._get_integration_record_data(integration_record, True)
+            integration_record = session.query(Integration).filter(
+                (Integration.company_id == company_id)
+                & (func.lower(Integration.name) == func.lower(name))
+            ).first()
+        if integration_record is None:
+            raise Exception(f'Unknown integration: {name}')
+        integration_meta = self._get_integration_record_data(integration_record, True)
 
-        integration_type = integration_data.get('type')
-        integration_name = integration_data.get('name')
-        del integration_data['name']
+        integration_engine = integration_meta['engine']
+        integration_name = integration_meta['name']
 
-        if integration_type not in self.handler_modules:
-            raise Exception(f"Cant find handler for '{integration_name}' ({integration_type})")
+        if integration_engine not in self.handler_modules:
+            raise Exception(f"Cant find handler for '{integration_name}' ({integration_engine})")
 
         handler = self.create_handler(
             name=integration_name,
-            handler_type=integration_type,
-            connection_data=integration_data,
+            handler_type=integration_engine,
+            connection_data=integration_meta['connection_data'],
             company_id=company_id
         )
 

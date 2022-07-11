@@ -83,7 +83,7 @@ class InformationSchemaDataNode(DataNode):
                 datasource = self.integration_controller.get(name=integration_name)
                 return IntegrationDataNode(
                     integration_name,
-                    ds_type=datasource['type'],
+                    ds_type=datasource['engine'],
                     integration_controller=self.session.integration_controller
                 )
 

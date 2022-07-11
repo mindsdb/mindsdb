@@ -28,8 +28,8 @@ class MongoToAst:
              sort=sort, projection=projection,
              limit=limit, skip=skip)
 
-    def find(self, collection, filter=None,
-             sort=None, projection=None,
+    def find(self, collection: [list, str],
+             filter=None, sort=None, projection=None,
              limit=None, skip=None, **kwargs):
         # https://www.mongodb.com/docs/v4.2/reference/method/db.collection.find/
 
@@ -63,9 +63,16 @@ class MongoToAst:
         if filter is not None:
             where = self.convert_filter(filter)
 
+        # convert to AST node
+        #   collection can be string or list
+        if isinstance(collection, list):
+            collection = Identifier(parts=collection)
+        else:
+            collection = Identifier(path_str=collection)
+
         node = Select(
             targets=targets,
-            from_table=Identifier(path_str=collection),
+            from_table=collection,
             where=where,
             order_by=order_by,
         )

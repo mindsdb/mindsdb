@@ -124,12 +124,14 @@ class MySQLHandler(DatabaseHandler):
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
+                connection.commit()
             except Exception as e:
                 log.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)
                 )
+                connection.rollback()
 
         if need_to_close is True:
             self.disconnect()

@@ -106,6 +106,7 @@ class PostgresHandler(DatabaseHandler):
                             columns=[x.name for x in cur.description]
                         )
                     )
+                connection.commit()
             except Exception as e:
                 log.error(f'Error running query: {query} on {self.database}!')
                 response = Response(
@@ -113,6 +114,7 @@ class PostgresHandler(DatabaseHandler):
                     error_code=0,
                     error_message=str(e)
                 )
+                connection.rollback()
 
         if need_to_close is True:
             self.disconnect()

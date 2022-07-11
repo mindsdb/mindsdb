@@ -36,7 +36,6 @@ class Executor:
         self.params = []
         self.data = None
         self.state_track = None
-        self.error = None
         self.server_status = None
 
         self.is_executed = False
@@ -227,9 +226,5 @@ class Executor:
         self.server_status = ret.status
         if ret.columns is not None:
             self.columns = ret.columns
-        if ret.error_code is not None:
-            self.error = dict(
-                code=ret.error_code,
-                message=ret.error_message
-            )
+
         self.state_track = ret.state_track

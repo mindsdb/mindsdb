@@ -13,6 +13,7 @@ from pyparsing import (
     Literal,
     SkipTo
 )
+from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 
 RE_INT = re.compile(r'^[-+]?([1-9]\d*|0)$')
 RE_FLOAT = re.compile(r'^[-+]?([1-9]\d*\.\d*|0\.|0\.\d*)$')
@@ -119,7 +120,7 @@ class SqlStatementParser():
         keyword = '_'.join(r.get('keyword', [])).lower()
 
         if keyword == 0:
-            raise Exception('Cant get keyword from statement')
+            raise exc.ErSqlSyntaxError('Cant get keyword from statement')
 
         return keyword
 

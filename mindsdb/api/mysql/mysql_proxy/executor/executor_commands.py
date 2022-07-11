@@ -42,6 +42,7 @@ from mindsdb_sql.parser.ast import (
     Identifier,
     DropTables,
     Operation,
+    ASTNode,
 )
 
 from mindsdb.api.mysql.mysql_proxy.utilities import (
@@ -54,6 +55,8 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErDbDropDelete,
     ErNonInsertableTable,
     ErNotSupportedYet,
+    ErSqlSyntaxError,
+    ErSqlWrongArguments,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 
@@ -83,6 +86,14 @@ class ExecuteCommands:
         self.datahub = session.datahub
 
     def execute_command(self, statement):
+        sql = None
+        if self.executor is None:
+            if isinstance(statement, ASTNode):
+                sql = statement.to_string()
+            sql_lower = sql.lower()
+        else:
+            sql = self.executor.sql
+            sql_lower = self.executor.sql_lower
 
         if type(statement) == CreateDatasource:
             struct = {
@@ -236,6 +247,14 @@ class ExecuteCommands:
                     where=where
                 )
 
+                if statement.modes is not None:
+                    modes = [m.upper() for m in statement.modes]
+                    # show full tables. show always 'BASE TABLE'
+                    if 'FULL' in modes:
+                        new_statement.targets.append(
+                            Constant(value='BASE TABLE', alias=Identifier('Table_type'))
+                        )
+
                 query = SQLQuery(
                     new_statement,
                     session=self.session
@@ -282,7 +301,7 @@ class ExecuteCommands:
                     columns=columns,
                     data=data
                 )
-            elif "show status like 'ssl_version'" in self.executor.sql_lower:
+            elif "show status like 'ssl_version'" in sql_lower:
                 return ExecuteAnswer(
                     answer_type=ANSWER_TYPE.TABLE,
                     columns=[
@@ -326,9 +345,9 @@ class ExecuteCommands:
                 )
                 return self.answer_select(query)
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
-            elif 'show create table' in self.executor.sql_lower:
+            elif 'show create table' in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = self.executor.sql[self.executor.sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
+                table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
                 return self.answer_show_create_table(table)
             elif sql_category in ('character set', 'charset'):
                 where = statement.where
@@ -400,7 +419,7 @@ class ExecuteCommands:
                 # elif condition == 'from' and type(expression) == Identifier:
                 #     table_name = expression.parts[-1]
                 if table_name is None:
-                    err_str = f"Can't determine table name in query: {self.executor.sql}"
+                    err_str = f"Can't determine table name in query: {sql}"
                     log.warning(err_str)
                     raise ErTableExistError(err_str)
                 return self.answer_show_table_status(table_name)
@@ -408,7 +427,7 @@ class ExecuteCommands:
                 is_full = statement.modes is not None and 'full' in statement.modes
                 return self.answer_show_columns(statement.from_table, statement.where, statement.like, is_full=is_full)
             else:
-                raise ErNotSupportedYet(f'Statement not implemented: {self.executor.sql}')
+                raise ErNotSupportedYet(f'Statement not implemented: {sql}')
         elif type(statement) in (StartTransaction, CommitTransaction, RollbackTransaction):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Set:
@@ -437,7 +456,7 @@ class ExecuteCommands:
                     ]
                 )
             else:
-                log.warning(f'SQL statement is not processable, return OK package: {self.executor.sql}')
+                log.warning(f'SQL statement is not processable, return OK package: {sql}')
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Use:
             db_name = statement.value.parts[-1]
@@ -467,7 +486,7 @@ class ExecuteCommands:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
             raise ErNotSupportedYet('Update is not implemented')
-        elif type(statement) == Alter and ('disable keys' in self.executor.sql_lower) or ('enable keys' in self.executor.sql_lower):
+        elif type(statement) == Alter and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Select:
             if statement.from_table is None:
@@ -484,8 +503,8 @@ class ExecuteCommands:
             # TODO
             return self.answer_apply_predictor(statement)
         else:
-            log.warning(f'Unknown SQL statement: {self.executor.sql}')
-            raise ErNotSupportedYet(f'Unknown SQL statement: {self.executor.sql}')
+            log.warning(f'Unknown SQL statement: {sql}')
+            raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
 
     def answer_describe_predictor(self, predictor_value):
         predictor_attr = None
@@ -753,7 +772,7 @@ class ExecuteCommands:
                 for i, col in enumerate(order_by):
                     new_name = get_column_in_case(ds_column_names, col)
                     if new_name is None:
-                        raise Exception(
+                        raise ErSqlWrongArguments(
                             f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
                         )
                     kwargs['timeseries_settings']['order_by'][i] = new_name
@@ -763,7 +782,7 @@ class ExecuteCommands:
                     new_name = get_column_in_case(ds_column_names, col)
                     kwargs['timeseries_settings']['group_by'][i] = new_name
                     if new_name is None:
-                        raise Exception(
+                        raise ErSqlWrongArguments(
                             f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
                         )
 
@@ -790,13 +809,6 @@ class ExecuteCommands:
             self.session.datahub
         )
 
-        if result['success'] is False:
-            return ExecuteAnswer(
-                ANSWER_TYPE.ERROR,
-                error_code=result['error_code'],
-                error_message=result['msg']
-            )
-
         predictors_names = [x[0] for x in result['result']]
 
         if len(predictors_names) == 0:
@@ -810,11 +822,8 @@ class ExecuteCommands:
 
         if command[0].lower() == 'delete' and command[1].lower() == 'predictor':
             if len(command) != 3:
-                return ExecuteAnswer(
-                    ANSWER_TYPE.ERROR,
-                    error_code=ERR.ER_SYNTAX_ERROR,
-                    error_message="wrong syntax of 'DELETE PREDICTOR {NAME}' command"
-                )
+                raise ErSqlSyntaxError("wrong syntax of 'DELETE PREDICTOR {NAME}' command")
+
             predictor_name = command[2]
             self.delete_predictor_query(parse_sql(
                 f"delete from mindsdb.predictors where name = '{predictor_name}'",
@@ -822,11 +831,7 @@ class ExecuteCommands:
             ))
             return ExecuteAnswer(ANSWER_TYPE.OK)
 
-        return ExecuteAnswer(
-            ANSWER_TYPE.ERROR,
-            error_code=ERR.ER_SYNTAX_ERROR,
-            error_message="at this moment only 'delete predictor' command supported"
-        )
+        raise ErSqlSyntaxError("at this moment only 'delete predictor' command supported")
 
     def process_insert(self, statement):
         db_name = self.session.database
@@ -947,7 +952,7 @@ class ExecuteCommands:
                 result = '.'.join(target.parts)
                 raise Exception(f"Unknown column '{result}'")
             else:
-                raise Exception(f'Unknown constant type: {target_type}')
+                raise ErSqlWrongArguments(f'Unknown constant type: {target_type}')
 
             columns.append(
                 Column(
@@ -1239,16 +1244,9 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_select(self, query):
-        result = query.fetch(
+        query.fetch(
             self.session.datahub
         )
-
-        if result['success'] is False:
-            return ExecuteAnswer(
-                ANSWER_TYPE.ERROR,
-                error_code=result['error_code'],
-                error_message=result['msg']
-            )
 
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
@@ -1292,39 +1290,24 @@ class ExecuteCommands:
 
         select_data_query = insert.get('select_data_query')
         if isinstance(select_data_query, str) is False or len(select_data_query) == 0:
-            return ExecuteAnswer(
-                ANSWER_TYPE.ERROR,
-                error_code=ERR.ER_WRONG_ARGUMENTS,
-                error_message="'select_data_query' should not be empty"
-            )
+            raise ErSqlWrongArguments("'select_data_query' should not be empty")
 
         models = model_interface.get_models()
         if insert['name'] in [x['name'] for x in models]:
-            return ExecuteAnswer(
-                ANSWER_TYPE.ERROR,
-                error_code=ERR.ER_WRONG_ARGUMENTS,
-                error_message=f"predictor with name '{insert['name']}'' already exists"
-            )
+            raise ErSqlWrongArguments(f"predictor with name '{insert['name']}'' already exists")
 
         kwargs = {}
         if isinstance(insert.get('training_options'), str) \
                 and len(insert['training_options']) > 0:
             try:
                 kwargs = json.loads(insert['training_options'])
-            except Exception:
-                return ExecuteAnswer(
-                    ANSWER_TYPE.ERROR,
-                    error_code=ERR.ER_WRONG_ARGUMENTS,
-                    error_message='training_options should be in valid JSON string'
-                )
+            except json.JSONDecodeError:
+                raise ErSqlWrongArguments('training_options should be in valid JSON string')
 
         integration = self.session.integration
         if isinstance(integration, str) is False or len(integration) == 0:
-            return ExecuteAnswer(
-                ANSWER_TYPE.ERROR,
-                error_code=ERR.ER_WRONG_ARGUMENTS,
-                error_message='select_data_query can be used only in query from database'
-            )
+            raise ErSqlWrongArguments('select_data_query can be used only in query from database')
+
         insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
 
         integration_handler = integration_controller.get_handler(integration)

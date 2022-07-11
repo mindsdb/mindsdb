@@ -11,7 +11,7 @@ The Democratize Machine learning on ... CONTEST.  is a competition for data prof
 
 Contribute to our project with this open brainstorming session where you tell us where you would connect MindsDB to generate predictions. (We currently do it on most of SQL databases out there) 
 
-## ~~Ideas Challenge~~ 💡 (Finished 17th July)
+## ~~Ideas Challenge~~ 💡 (Finished 17th June)
 
 <details>
   <summary> Check out the details and winners (Click to expand!)</summary>

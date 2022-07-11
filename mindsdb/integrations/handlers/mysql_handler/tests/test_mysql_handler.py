@@ -1,6 +1,6 @@
 import unittest
 
-from mindsdb.integrations.mysql_handler.mysql_handler import MySQLHandler
+from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 

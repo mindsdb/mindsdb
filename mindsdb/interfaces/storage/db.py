@@ -116,6 +116,7 @@ class Integration(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
+    engine = Column(String, nullable=False)
     data = Column(Json)
     company_id = Column(Integer)
     uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')

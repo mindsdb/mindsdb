@@ -1,6 +1,6 @@
 import unittest
 import pandas as pd
-from mindsdb.integrations.mariadb_handler.mariadb_handler import MariaDBHandler
+from mindsdb.integrations.handlers.mariadb_handler.mariadb_handler import MariaDBHandler
 
 
 class MariaDBHandlerTest(unittest.TestCase):

@@ -14,9 +14,7 @@ from dateutil.tz import tzlocal
 from mindsdb.utilities.log import log
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.log import get_logs
-from mindsdb.api.http.utils import http_error
 from mindsdb.interfaces.stream.stream import StreamController
-from mindsdb.integrations.utilities.install import install_dependencies
 
 
 @ns_conf.route('/logs')
@@ -73,14 +71,6 @@ class Integration(Resource):
         if len(params) == 0:
             abort(400, "type of 'params' must be dict")
 
-        # params from FormData will be as text
-        for key in ('publish', 'test', 'enabled'):
-            if key in params:
-                if isinstance(params[key], str) and params[key].lower() in ('false', '0'):
-                    params[key] = False
-                else:
-                    params[key] = bool(params[key])
-
         files = request.files
         temp_dir = None
         if files is not None:
@@ -113,10 +103,10 @@ class Integration(Resource):
             abort(400, f"Integration with name '{name}' already exists")
 
         try:
-            if 'enabled' in params:
-                params['publish'] = params['enabled']
-                del params['enabled']
-            request.integration_controller.add(name, params)
+            engine = params['type']
+            if engine is not None:
+                del params['type']
+            request.integration_controller.add(name, engine, params)
 
             model_data_arr = []
             for model in request.model_interface.get_models():
@@ -220,35 +210,3 @@ class Vars(Resource):
             'cloud': cloud,
             'timezone': local_timezone,
         }
-
-
-@ns_conf.route('/install_options')
-@ns_conf.param('dependency_list', 'Install dependencies')
-class InstallDependenciesList(Resource):
-    def get(self):
-        return request.integration_controller.get_handlers_import_status()
-
-
-@ns_conf.route('/install/<dependency>')
-@ns_conf.param('dependency', 'Install dependencies')
-class InstallDependencies(Resource):
-    def get(self, dependency):
-        handler_import_status = self.request.integration_controller.get_handlers_import_status()
-        if dependency not in handler_import_status:
-            return f'Unkown dependency: {dependency}', 400
-
-        if handler_import_status[dependency].get('success', False) is True:
-            return 'Installed', 200
-
-        dependencies = handler_import_status[dependency]['dependencies']
-        if len(dependencies) == 0:
-            return 'Installed', 200
-
-        result = install_dependencies(dependencies)
-        if result.get('success') is True:
-            return 'Installed', 200
-        return http_error(
-            500,
-            'Failed to install dependency',
-            result.get('error_message', 'unknown error')
-        )

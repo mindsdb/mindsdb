@@ -128,6 +128,7 @@ class TrinoHandler(DatabaseHandler):
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)
+            connection.commit()
         except Exception as e:
             log.error(f'Error connecting to Trino {self.schema}, {e}!')
             response = Response(
@@ -138,7 +139,7 @@ class TrinoHandler(DatabaseHandler):
             cur.close()
             if need_to_close is True:
                 self.disconnect()
-
+            connection.rollback()
         return response
 
     # TODO: complete the implementations

@@ -88,7 +88,7 @@ class SQLiteHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.error(f'Error connecting to SQLite {self.database}, {e}!')
+            log.error(f'Error connecting to SQLite {self.connection_data["db_file"]}, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:

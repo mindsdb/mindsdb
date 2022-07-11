@@ -1,24 +1,25 @@
 from bson.int64 import Int64
-from collections import OrderedDict
 
-from lightwood.api import dtype
 from mindsdb_sql.parser.ast import *
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_ast import MongoToAst
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+
+from mindsdb.api.mongo.classes.query_sql import run_sql_command
+
 
 class Responce(Responder):
     when = {'find': helpers.is_true}
 
     def result(self, query, request_env, mindsdb_env, session):
+        database = request_env['database']
+
         # system queries
         if query['find'] == 'system.version':
             # For studio3t
             data = [{
-                "_id" : "featureCompatibilityVersion",
-                "version" : "3.6"
+                "_id": "featureCompatibilityVersion",
+                "version": "3.6"
             }]
             cursor = {
                 'id': Int64(0),
@@ -30,15 +31,16 @@ class Responce(Responder):
                 'ok': 1
             }
 
-
         mongoToAst = MongoToAst()
 
+        collection = [database, query['find']]
+
         if not query.get('singleBatch') and 'collection' in query.get('filter'):
-            # convert to join
+            # JOIN mode
 
             # upper query
             ast_query = mongoToAst.find(
-                collection=query['find'],
+                collection=collection,
                 projection=query.get('projection'),
                 sort=query.get('sort'),
                 limit=query.get('limit'),
@@ -55,11 +57,11 @@ class Responce(Responder):
             table_select.parentheses = True
 
             # convert to join
-            predictor = ast_query.from_table
+            right_table = ast_query.from_table
 
             ast_join = Join(
                 left=table_select,
-                right=predictor,
+                right=right_table,
                 join_type='join'
             )
             ast_query.from_table = ast_join
@@ -67,7 +69,7 @@ class Responce(Responder):
         else:
             # is single table
             ast_query = mongoToAst.find(
-                collection=query['find'],
+                collection=collection,
                 filter=query.get('filter'),
                 projection=query.get('projection'),
                 sort=query.get('sort'),
@@ -75,34 +77,7 @@ class Responce(Responder):
                 skip=query.get('skip'),
             )
 
-        session.original_integration_controller = mindsdb_env['origin_integration_controller']
-        session.original_model_interface = mindsdb_env['origin_model_interface']
-        session.original_view_controller = mindsdb_env['origin_view_controller']
-
-        sql_session = SessionController(
-            server=session,
-            company_id=mindsdb_env['company_id']
-        )
-
-        sql_session.database = 'mindsdb'
-
-        sql_query = SQLQuery(
-            ast_query,
-            session=sql_session
-        )
-        #
-        result = sql_query.fetch(
-            sql_session.datahub
-        )
-
-        column_names = [
-            c.name is c.alias is None or c.alias
-            for c in sql_query.columns_list
-        ]
-
-        data = []
-        for row in result['result']:
-            data.append(dict(zip(column_names, row)))
+        data = run_sql_command(mindsdb_env, ast_query)
 
         db = mindsdb_env['config']['api']['mongodb']['database']
 

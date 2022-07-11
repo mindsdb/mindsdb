@@ -85,7 +85,6 @@ class TestScenario:
         while time.time() < threshold:
             _query = "SELECT status FROM predictors WHERE name='{}';".format(predictor_name)
             res = self.query(_query)
-            res = self.query(_query)
             if 'status' in res and res.get_record('status', 'complete'):
                 break
             time.sleep(2)

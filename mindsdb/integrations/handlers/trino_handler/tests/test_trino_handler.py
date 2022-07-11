@@ -1,7 +1,7 @@
 import unittest
 
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import RESPONSE_TYPE
-from mindsdb.integrations.trino_handler.trino_handler import TrinoHandler
+from mindsdb.integrations.handlers.trino_handler.trino_handler import TrinoHandler
 
 
 class TrinoHandlerTest(unittest.TestCase):

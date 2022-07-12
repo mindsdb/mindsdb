@@ -53,8 +53,7 @@ class Responce(Responder):
                     raise Exception(f"Database '{doc['name']}' already exists.")
 
             for doc in query['documents']:
-                doc['connection_args']['type'] = doc['engine']
-                mindsdb_env['integration_controller'].add(doc['name'], doc['connection_args'])
+                mindsdb_env['integration_controller'].add(doc['name'], doc['engine'], doc['connection_args'])
 
             result = {
                 "n": len(query['documents']),
@@ -98,6 +97,12 @@ class Responce(Responder):
                     raise Exception("'select_data_query' must be in query")
 
                 kwargs = doc.get('training_options', {})
+                if 'timeseries_settings' in kwargs:
+                    # mongo shell client sends int as float. need to convert it to int
+                    for key in ('window', 'horizon'):
+                        val = kwargs['timeseries_settings'].get(key)
+                        if val is not None:
+                            kwargs['timeseries_settings'][key] = int(val)
 
                 integrations = mindsdb_env['integration_controller'].get_all().keys()
                 connection = doc.get('connection')

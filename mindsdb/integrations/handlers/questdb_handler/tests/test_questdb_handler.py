@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.questdb_handler.questdb_handler import QuestDBHandler
+from mindsdb.integrations.handlers.questdb_handler.questdb_handler import QuestDBHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 

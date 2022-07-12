@@ -1,4 +1,4 @@
-# Build From Source Using `pip`
+# Build From Source Using pip
 
 This section describes how to deploy MindsDB from the source code. It is the preferred way to use MindsDB if you want to contribute to our code or debug MindsDB.
 
@@ -7,11 +7,6 @@ This section describes how to deploy MindsDB from the source code. It is the pre
 
 ???+ warning "Suggestions"
     Install MindsDB in a virtual environment when using **pip** to avoid dependency issues. Make sure your **Python>=3.7** and **pip>=19.3**.
-## Prerequisite
-
-* [Python](https://www.python.org/downloads/)>=3.7 (64-bit) and pip version >= 19.3.
-* [Pip](https://pip.pypa.io/en/stable/installing/)(is usually pre-installed with the latest Python versions).
-* [Git](https://git-scm.com/).
 
 ## Installation
 
@@ -23,7 +18,7 @@ We recommend installing MindsDB inside a virtual environment to avoid dependency
     git clone git@github.com:mindsdb/mindsdb.git
     ```
 
-1. Create new virtual environment called mindsdb-venv:
+2. Create new virtual environment called mindsdb-venv:
 
     ```bash
     python -m venv mindsdb-venv
@@ -69,31 +64,22 @@ We recommend installing MindsDB inside a virtual environment to avoid dependency
         ```bash
         mysql -h 127.0.0.1 --port 3306 -u mindsdb -p
         ```
-## Troubleshooting
 
-If the installation fails, check for common error messages and solutions below. 
+## Troubleshooting
 
 ### Common Issues
 
-```bash
 !!! failure "No module named mindsdb"
     If you get this error, make sure that your virtual environment is activated.
-```
 
-```bash
 !!! failure "ImportError: No module named {dependency name}"
     This type of error can occur if you skipped the 3rd step. Make sure that you install all of the MindsDB requirements.
-```
 
-```bash
 !!! failure "This site can’t be reached. 127.0.0.1 refused to connect."
-    Please check the MindsDB server console in case the server is still in the `starting` phase. If the server has started and there is an error displayed, please report it on our [GitHub](https://github.com/mindsdb/mindsdb/issues).
-```
+    Please check the MindsDB server console in case the server is still in the `starting` phase. If the server has started and there is an error displayed, please report it on our [GitHub](https://github.com/mindsdb/mindsdb/issues)
 
 ### Still Having problems?
-If your error is not addressed in the `Common Issues`
-1) Replicate the issue using using the official [docker setup](/deployment/docker/).
 
-2) Create an issue with the installation errors you receive on our [Github repository](https://github.com/mindsdb/mindsdb/issues). 
+Don't worry! Try to replicate the issue using the official [docker setup](/setup/self-hosted/docker/), and please create an issue on our [Github repository](https://github.com/mindsdb/mindsdb/issues) as detailed as possible.
 
-We'll try to review it and give you a response within a few hours.
+We'll review it and give you a response within a few hours.

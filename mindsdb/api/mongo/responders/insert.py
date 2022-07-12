@@ -1,7 +1,9 @@
-from mindsdb.api.mongo.classes import Responder
-from mindsdb.interfaces.storage.db import session, Dataset
 import mindsdb.api.mongo.functions as helpers
-
+from mindsdb.api.mongo.classes import Responder
+from mindsdb.interfaces.storage.db import session
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.mongo.utilities import log
+from mindsdb.integrations.libs.response import HandlerStatusResponse
 
 class Responce(Responder):
     when = {'insert': helpers.is_true}
@@ -10,6 +12,7 @@ class Responce(Responder):
         try:
             res = self._result(query, request_env, mindsdb_env)
         except Exception as e:
+            log.error(e)
             res = {
                 'n': 0,
                 'writeErrors': [{
@@ -23,95 +26,126 @@ class Responce(Responder):
 
     def _result(self, query, request_env, mindsdb_env):
         table = query['insert']
-        if table != 'predictors':
-            raise Exception("Only insert to 'predictors' table allowed")
 
-        predictors_columns = [
-            'name',
-            'status',
-            'accuracy',
-            'predict',
-            'select_data_query',
-            'training_options',
-            'connection'
-        ]
+        if table == 'databases':
+            for doc in query['documents']:
+                if '_id' in doc:
+                    del doc['_id']
+                for field in ('name', 'engine', 'connection_args'):
+                    if field not in doc:
+                        raise Exception(f"'{field}' must be specified")
 
-        models = mindsdb_env['model_interface'].get_models()
+                status = HandlerStatusResponse(success=False)
+                try:
+                    handler = mindsdb_env['integration_controller'].create_handler(
+                        handler_type=doc['engine'],
+                        connection_data=doc['connection_args']
+                    )
+                    status = handler.check_connection()
+                except Exception as e:
+                    status.error_message = str(e)
 
-        if len(query['documents']) != 1:
-            raise Exception("Must be inserted just one predictor at time")
+                if status.success is False:
+                    raise Exception(f"Can't connect to db: {status.error_message}")
 
-        for doc in query['documents']:
-            if '_id' in doc:
-                del doc['_id']
+                integration = mindsdb_env['integration_controller'].get(doc['name'])
+                if integration is not None:
+                    raise Exception(f"Database '{doc['name']}' already exists.")
 
-            bad_columns = [x for x in doc if x not in predictors_columns]
-            if len(bad_columns) > 0:
-                raise Exception(f"Is no possible insert this columns to 'predictors' collection: {', '.join(bad_columns)}")
+            for doc in query['documents']:
+                mindsdb_env['integration_controller'].add(doc['name'], doc['engine'], doc['connection_args'])
 
-            if 'name' not in doc:
-                raise Exception("Please, specify 'name' field")
+            result = {
+                "n": len(query['documents']),
+                "ok": 1
+            }
+        elif table == 'predictors':
+            predictors_columns = [
+                'name',
+                'status',
+                'accuracy',
+                'predict',
+                'select_data_query',
+                'training_options',
+                'connection'
+            ]
 
-            if 'predict' not in doc:
-                raise Exception("Please, specify 'predict' field")
+            models = mindsdb_env['model_interface'].get_models()
 
-            if doc['name'] in [x['name'] for x in models]:
-                raise Exception(f"Predictor with name '{doc['name']}' already exists")
+            if len(query['documents']) != 1:
+                raise Exception("Must be inserted just one predictor at time")
 
-            select_data_query = doc.get('select_data_query')
-            if select_data_query is None:
-                raise Exception("'select_data_query' must be in query")
+            for doc in query['documents']:
+                if '_id' in doc:
+                    del doc['_id']
 
-            kwargs = doc.get('training_options', {})
+                bad_columns = [x for x in doc if x not in predictors_columns]
+                if len(bad_columns) > 0:
+                    raise Exception(f"Is no possible insert this columns to 'predictors' collection: {', '.join(bad_columns)}")
 
-            integrations = mindsdb_env['datasource_controller'].get_all().keys()
-            connection = doc.get('connection')
-            if connection is None:
-                if 'default_mongodb' in integrations:
-                    connection = 'default_mongodb'
-                else:
-                    for integration in integrations:
-                        if integration.startswith('mongodb_'):
-                            connection = integration
-                            break
+                if 'name' not in doc:
+                    raise Exception("Please, specify 'name' field")
 
-            if connection is None:
-                raise Exception("Can't find connection for data source")
+                if 'predict' not in doc:
+                    raise Exception("Please, specify 'predict' field")
 
-            ds_name = mindsdb_env['data_store'].get_vacant_name(doc['name'])
+                if doc['name'] in [x['name'] for x in models]:
+                    raise Exception(f"Predictor with name '{doc['name']}' already exists")
 
-            select_data_query = select_data_query if isinstance(select_data_query, dict) else {'query': select_data_query}
-            ds = mindsdb_env['data_store'].save_datasource(
-                name=ds_name,
-                source_type=connection,
-                source=select_data_query
-            )
+                select_data_query = doc.get('select_data_query')
+                if select_data_query is None:
+                    raise Exception("'select_data_query' must be in query")
 
-            predict = doc['predict']
-            if not isinstance(predict, list):
-                predict = [x.strip() for x in predict.split(',')]
+                kwargs = doc.get('training_options', {})
+                if 'timeseries_settings' in kwargs:
+                    # mongo shell client sends int as float. need to convert it to int
+                    for key in ('window', 'horizon'):
+                        val = kwargs['timeseries_settings'].get(key)
+                        if val is not None:
+                            kwargs['timeseries_settings'][key] = int(val)
 
-            ds_columns = [x['name'] for x in mindsdb_env['data_store'].get_datasource(ds_name)['columns']]
-            for col in predict:
-                if col not in ds_columns:
-                    mindsdb_env['data_store'].delete_datasource(ds_name)
-                    raise Exception(f"Column '{col}' not exists")
+                integrations = mindsdb_env['integration_controller'].get_all().keys()
+                connection = doc.get('connection')
+                if connection is None:
+                    if 'default_mongodb' in integrations:
+                        connection = 'default_mongodb'
+                    else:
+                        for integration in integrations:
+                            if integration.startswith('mongodb_'):
+                                connection = integration
+                                break
 
-            datasource_record = session.query(Dataset).filter_by(company_id=mindsdb_env['company_id'], name=ds_name).first()
-            mindsdb_env['model_interface'].learn(
-                doc['name'],
-                ds,
-                predict,
-                datasource_record.id,
-                kwargs=dict(kwargs),
-                delete_ds_on_fail=True,
-                user_class=mindsdb_env.get('user_class', 0)
-            )
+                if connection is None:
+                    raise Exception("Can't find connection for data source")
 
-        result = {
-            "n": len(query['documents']),
-            "ok": 1
-        }
+                handler = mindsdb_env['integration_controller'].get_handler(connection)
+                result = handler.native_query(select_data_query)
+
+                if result.type != RESPONSE_TYPE.TABLE:
+                    raise Exception(f'Error during query: {result.error_message}')
+
+                ds_data_df = result.data_frame
+                ds_column_names = list(ds_data_df.columns)
+
+                predict = doc['predict']
+                if not isinstance(predict, list):
+                    predict = [x.strip() for x in predict.split(',')]
+
+                for col in predict:
+                    if col not in ds_column_names:
+                        raise Exception(f"Column '{col}' not exists")
+
+                mindsdb_env['model_interface'].learn(
+                    doc['name'], ds_data_df, predict, kwargs=dict(kwargs),
+                    user_class=mindsdb_env.get('user_class', 0)
+                )
+
+            result = {
+                "n": len(query['documents']),
+                "ok": 1
+            }
+        else:
+            raise Exception("Only insert to 'predictors' or 'databases' allowed")
 
         return result
 

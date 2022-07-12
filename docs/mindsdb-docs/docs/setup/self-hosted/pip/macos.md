@@ -1,4 +1,4 @@
-# Setup for MacOs via pip
+# Setup for MacOS via pip
 
 ???+ warning "Python 3.9"
     Currently, some of our dependencies have issues with the latest versions of Python 3.9.x. For now, our suggestion is to use **Python 3.7.x, or 3.8.x versions**.
@@ -52,8 +52,8 @@
 You will need [Anaconda](https://www.anaconda.com/products/individual) or [Conda](https://conda.io/projects/conda/en/latest/index.html)
 installed and Python 64-bit version.
 
-1. Open Anaconda Prompt and create new virtual environment 
-    
+1. Open Anaconda Prompt and create new virtual environment
+
     ```bash
     conda create -n mindsdb
     ```
@@ -93,8 +93,7 @@ installed and Python 64-bit version.
 
 ## Troubleshooting
 
-If the installation fails, don't worry; follow the below instruction, which should fix most issues. If none of this works, try using the [docker setup](/deployment/docker/) and create an issue with the installation errors you got on our [Github repository](https://github.com/mindsdb/mindsdb/issues). We'll try to review it and give you a response within a few hours.
-
+### Common Issues
 
 !!! failure "Installation fail"
     Note that **Python 64** bit version is required.
@@ -110,3 +109,9 @@ If the installation fails, don't worry; follow the below instruction, which shou
 
 !!! failure "numpy.distutils.system_info.NotFoundError: No lapack/blas resources found. Note: Accelerate is no longer supported."
     Some of MindsDB's dependencies are not working with **Python 3.9**, so please downgrade to older versions for now. We are working on this, and **Python 3.9** will be supported soon.
+
+### Still Having problems?
+
+Don't worry! Try to replicate the issue using the official [docker setup](/setup/self-hosted/docker/), and please create an issue on our [Github repository](https://github.com/mindsdb/mindsdb/issues) as detailed as possible.
+
+We'll review it and give you a response within a few hours.

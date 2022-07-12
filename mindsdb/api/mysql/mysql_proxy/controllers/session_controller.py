@@ -38,10 +38,6 @@ class SessionController():
 
         self.config = Config()
 
-        self.data_store = WithKWArgsWrapper(
-            server.original_data_store,
-            company_id=company_id
-        )
         self.model_interface = WithKWArgsWrapper(
             server.original_model_interface,
             company_id=company_id

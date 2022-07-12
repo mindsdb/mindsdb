@@ -36,8 +36,15 @@ from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_cap
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 
+from mindsdb.api.mysql.mysql_proxy.utilities import (
+    SqlApiException,
+    ErWrongCharset,
+    SqlApiUnknownError
+)
+
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     getConstName,
     CHARSET_NUMBERS,
@@ -67,14 +74,11 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     BinaryResultsetRowPacket
 )
 
-from mindsdb.interfaces.datastore.datastore import DataStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
-
-import mindsdb.utilities.hooks as hooks
-
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
+import mindsdb.utilities.hooks as hooks
 
 
 def empty_fn():
@@ -98,12 +102,13 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         integration = None
         integration_type = None
         extracted_username = username
-        integrations_names = IntegrationController().get_all(company_id).keys()
+        integration_controller = IntegrationController()
+        integrations_names = integration_controller.get_all(company_id).keys()
         for integration_name in integrations_names:
             if username == f'{hardcoded_user}_{integration_name}':
                 extracted_username = hardcoded_user
                 integration = integration_name
-                integration_type = IntegrationController().get(integration, company_id)['type']
+                integration_type = integration_controller.get(integration, company_id)['engine']
 
         if extracted_username != hardcoded_user:
             log.warning(f'Check auth, user={username}: user mismatch')
@@ -128,16 +133,6 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         log.error(f'Check auth, user={username}: ERROR')
         log.error(e)
         log.error(traceback.format_exc())
-
-
-class RESPONSE_TYPE:
-    __slots__ = ()
-    OK = 'ok'
-    TABLE = 'table'
-    ERROR = 'error'
-
-
-RESPONSE_TYPE = RESPONSE_TYPE()
 
 
 class SQLAnswer:
@@ -404,13 +399,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         try:
             return text.decode('utf-8')
         except Exception as e:
-            log.error(f'SQL contains non utf-8 values: {text}')
-            self.packet(
-                ErrPacket,
-                err_code=ERR.ER_SYNTAX_ERROR,
-                msg=str(e)
-            ).send()
-            raise
+            raise ErWrongCharset(f'SQL contains non utf-8 values: {text}')
 
     def is_cloud_connection(self):
         ''' Determine source of connection. Must be call before handshake.
@@ -429,7 +418,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         read_poller = select.poll()
         read_poller.register(self.request, select.POLLIN)
-        events = read_poller.poll(7)
+        events = read_poller.poll(30)
 
         if len(events) == 0:
             return {
@@ -520,19 +509,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         executor.query_execute(sql)
 
-        if executor.error is not None:
-            resp = SQLAnswer(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_code=executor.error['code'],
-                error_message=executor.error['message']
-            )
-        elif executor.data is None:
+        if executor.data is None:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.OK,
                 state_track=executor.state_track,
             )
         else:
-
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
@@ -587,15 +569,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         executor.stmt_execute(parameters)
 
-        if executor.error is not None:
-            resp = SQLAnswer(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_code=executor.error['code'],
-                error_message=executor.error['message']
-            )
-            return self.send_query_answer(resp)
-
-        elif executor.data is None:
+        if executor.data is None:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.OK,
                 state_track=executor.state_track
@@ -628,14 +602,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         executor = prepared_stmt['statement']
         fetched = prepared_stmt['fetched']
 
-        if executor.error is not None:
-            resp = SQLAnswer(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_code=executor.error['code'],
-                error_message=executor.error['message']
-            )
-            return self.send_query_answer(resp)
-        elif executor.data is None:
+        if executor.data is None:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.OK,
                 state_track=executor.state_track
@@ -763,7 +730,28 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     # that sends it to debug instead
                     response = SQLAnswer(RESPONSE_TYPE.OK)
 
+            except SqlApiException as e:
+                # classified error
+                error_type = 'expected'
+
+                response = SQLAnswer(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_code=e.err_code,
+                    error_message=str(e)
+                )
+
+            except SqlApiUnknownError as e:
+                # unclassified
+                error_type = 'unexpected'
+
+                response = SQLAnswer(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_code=e.err_code,
+                    error_message=str(e)
+                )
+
             except Exception as e:
+                # any other exception
                 error_type = 'unexpected'
                 error_traceback = traceback.format_exc()
                 log.error(
@@ -772,8 +760,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     f'{e}'
                 )
                 error_code = ERR.ER_SYNTAX_ERROR
-                if hasattr(e, 'err_code'):
-                    error_code = e.err_code
                 response = SQLAnswer(
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_code=error_code,
@@ -865,7 +851,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.hook_before_handle = empty_fn
 
         server.original_model_interface = ModelInterface()
-        server.original_data_store = DataStore()
         server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
 
@@ -875,40 +860,3 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         # interrupt the program with Ctrl-C
         log.info('Waiting for incoming connections...')
         server.serve_forever()
-
-
-class Dummy:
-    pass
-
-
-class FakeMysqlProxy(MysqlProxy):
-    def __init__(self, company_id: int, user_class: int = 0):
-        request = Dummy()
-        client_address = ['', '']
-        server = Dummy()
-        server.connection_id = 0
-        server.hook_before_handle = empty_fn
-        server.original_model_interface = ModelInterface()
-        server.original_data_store = DataStore()
-        server.original_integration_controller = IntegrationController()
-        server.original_view_controller = ViewController()
-
-        self.charset = 'utf8'
-        self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
-        self.client_capabilities = None
-
-        self.request = request
-        self.client_address = client_address
-        self.server = server
-
-        self.session = SessionController(
-            server=self.server,
-            company_id=company_id,
-            user_class=user_class
-        )
-        self.session.database = 'mindsdb'
-
-    def is_cloud_connection(self):
-        return {
-            'is_cloud': False
-        }

@@ -1,8 +1,10 @@
 import os
 import shutil
 import tempfile
+import importlib
 from pathlib import Path
 from copy import deepcopy
+import base64
 
 from sqlalchemy import func
 
@@ -10,7 +12,10 @@ from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.fs import create_directory
-from mindsdb.integrations import CHECKERS as DB_CONNECTION_CHECKERS
+
+from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.interfaces.database.views import ViewController
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 
 
 class IntegrationController:
@@ -18,14 +23,12 @@ class IntegrationController:
     def _is_not_empty_str(s):
         return isinstance(s, str) and len(s) > 0
 
-    def add(self, name, data, company_id=None):
-        if 'database_name' not in data:
-            data['database_name'] = name
-        if 'publish' not in data:
-            data['publish'] = True
+    def __init__(self):
+        self._load_handler_modules()
 
+    def add(self, name, engine, data, company_id=None):
         bundle_path = data.get('secure_connect_bundle')
-        if data.get('type') in ('cassandra', 'scylla') and self._is_not_empty_str(bundle_path):
+        if engine in ('cassandra', 'scylla') and self._is_not_empty_str(bundle_path):
             if os.path.isfile(bundle_path) is False:
                 raise Exception(f'Can not get access to file: {bundle_path}')
             integrations_dir = Config()['paths']['integrations']
@@ -33,7 +36,12 @@ class IntegrationController:
             p = Path(bundle_path)
             data['secure_connect_bundle'] = p.name
 
-            integration_record = Integration(name=name, data=data, company_id=company_id)
+            integration_record = Integration(
+                name=name,
+                engine=engine,
+                data=data,
+                company_id=company_id
+            )
             session.add(integration_record)
             session.commit()
             integration_id = integration_record.id
@@ -48,7 +56,7 @@ class IntegrationController:
                 integration_dir,
                 integrations_dir
             )
-        elif data.get('type') in ('mysql', 'mariadb'):
+        elif engine in ('mysql', 'mariadb'):
             ssl = data.get('ssl')
             files = {}
             temp_dir = None
@@ -69,7 +77,12 @@ class IntegrationController:
                     files[key] = data[key]
                     p = Path(data[key])
                     data[key] = p.name
-            integration_record = Integration(name=name, data=data, company_id=company_id)
+            integration_record = Integration(
+                name=name,
+                engine=engine,
+                data=data,
+                company_id=company_id
+            )
             session.add(integration_record)
             session.commit()
             integration_id = integration_record.id
@@ -88,7 +101,12 @@ class IntegrationController:
                     integrations_dir
                 )
         else:
-            integration_record = Integration(name=name, data=data, company_id=company_id)
+            integration_record = Integration(
+                name=name,
+                engine=engine,
+                data=data,
+                company_id=company_id
+            )
             session.add(integration_record)
             session.commit()
 
@@ -122,7 +140,6 @@ class IntegrationController:
         data = deepcopy(integration_record.data)
         if data.get('password', None) is None:
             data['password'] = ''
-        data['date_last_update'] = deepcopy(integration_record.updated_at)
 
         bundle_path = data.get('secure_connect_bundle')
         mysql_ssl_ca = data.get('ssl_ca')
@@ -158,14 +175,13 @@ class IntegrationController:
             ):
                 data['connection'] = None
 
-        data['id'] = integration_record.id
-        data['name'] = integration_record.name
-
-        return data
-
-    def get_by_id(self, id, company_id=None, sensitive_info=True):
-        integration_record = session.query(Integration).filter_by(company_id=company_id, id=id).first()
-        return self._get_integration_record_data(integration_record, sensitive_info)
+        return {
+            'id': integration_record.id,
+            'name': integration_record.name,
+            'engine': integration_record.engine,
+            'date_last_update': deepcopy(integration_record.updated_at),
+            'connection_data': data
+        }
 
     def get(self, name, company_id=None, sensitive_info=True, case_sensitive=False):
         if case_sensitive:
@@ -189,11 +205,137 @@ class IntegrationController:
     def check_connections(self):
         connections = {}
         for integration_name, integration_meta in self.get_all().items():
-            connection_checker = DB_CONNECTION_CHECKERS.get(integration_meta.get('type'))
-            if connection_checker is not None:
-                status = connection_checker(**integration_meta).check_connection()
-                connections[integration_name] = status
-            else:
-                connections[integration_name] = True
-
+            handler = self.create_handler(
+                handler_type=integration_meta['engine'],
+                connection_data=integration_meta['connection_data']
+            )
+            status = handler.check_connection()
+            connections[integration_name] = status.get('success', False)
         return connections
+
+    def create_handler(self, name: str = None, handler_type: str = None,
+                       connection_data: dict = {}, company_id: int = None):
+        fs_store = FsStore()
+
+        handler_ars = dict(
+            name=name,
+            db_store=None,
+            fs_store=fs_store,
+            connection_data=connection_data
+        )
+
+        if handler_type == 'files':
+            handler_ars['file_controller'] = WithKWArgsWrapper(
+                FileController(),
+                company_id=company_id
+            )
+        elif handler_type == 'views':
+            handler_ars['view_controller'] = WithKWArgsWrapper(
+                ViewController(),
+                company_id=company_id
+            )
+
+        return self.handler_modules[handler_type].Handler(**handler_ars)
+
+    def get_handler(self, name, company_id=None, case_sensitive=False):
+        if case_sensitive:
+            integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+        else:
+            integration_record = session.query(Integration).filter(
+                (Integration.company_id == company_id)
+                & (func.lower(Integration.name) == func.lower(name))
+            ).first()
+        if integration_record is None:
+            raise Exception(f'Unknown integration: {name}')
+        integration_meta = self._get_integration_record_data(integration_record, True)
+
+        integration_engine = integration_meta['engine']
+        integration_name = integration_meta['name']
+
+        if integration_engine not in self.handler_modules:
+            raise Exception(f"Cant find handler for '{integration_name}' ({integration_engine})")
+
+        handler = self.create_handler(
+            name=integration_name,
+            handler_type=integration_engine,
+            connection_data=integration_meta['connection_data'],
+            company_id=company_id
+        )
+
+        return handler
+
+    def _load_handler_modules(self):
+        mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent
+        handlers_path = mindsdb_path.joinpath('integrations/handlers')
+        self.handler_modules = {}
+        self.handlers_import_status = {}
+        for hanlder_dir in handlers_path.iterdir():
+            if hanlder_dir.is_dir() is False or hanlder_dir.name.startswith('__'):
+                continue
+            handler_folder_name = str(hanlder_dir.name)
+            handler_name = handler_folder_name
+            if handler_name.endswith('_handler'):
+                handler_name = handler_name[:-8]
+            dependencies = []
+            requirements_txt = hanlder_dir.joinpath('requirements.txt')
+            if requirements_txt.is_file():
+                with open(str(requirements_txt), 'rt') as f:
+                    dependencies = [x.strip(' \t\n') for x in f.readlines()]
+                    dependencies = [x for x in dependencies if len(x) > 0]
+            try:
+                handler_module = importlib.import_module(f'mindsdb.integrations.handlers.{handler_folder_name}')
+                self.handler_modules[handler_module.name] = handler_module
+                import_error = None
+                if hasattr(handler_module, 'import_error'):
+                    import_error = handler_module.import_error
+                handler_meta = {
+                    'import': {
+                        'success': import_error is None,
+                        'folder': handler_folder_name,
+                        'dependencies': dependencies
+                    },
+                    'version': handler_module.version
+                }
+                if import_error is not None:
+                    handler_meta['import']['error_message'] = str(import_error)
+
+                for attr in ('connection_args_example', 'connection_args', 'description', 'name', 'type', 'title'):
+                    if hasattr(handler_module, attr):
+                        handler_meta[attr] = getattr(handler_module, attr)
+                if 'name' not in handler_meta:
+                    handler_meta['name'] = handler_name
+
+                # region icon
+                if hasattr(handler_module, 'icon_path'):
+                    icon_path = hanlder_dir.joinpath(handler_module.icon_path)
+                    handler_meta['icon'] = {
+                        'name': icon_path.name,
+                        'type': icon_path.name[icon_path.name.rfind('.') + 1:].lower()
+                    }
+                    if handler_meta['icon']['type'] == 'svg':
+                        with open(str(icon_path), 'rt') as f:
+                            handler_meta['icon']['data'] = f.read()
+                    else:
+                        with open(str(icon_path), 'rb') as f:
+                            handler_meta['icon']['data'] = base64.b64encode(f.read()).decode('utf-8')
+                # endregion
+            except Exception as e:
+                handler_meta = {
+                    'import': {
+                        'success': False,
+                        'error_message': str(e),
+                        'folder': handler_folder_name,
+                        'dependencies': dependencies
+                    },
+                    'name': handler_name
+                }
+
+            if handler_meta.get('name') in ('files', 'views', 'lightwood'):
+                handler_meta['permanent'] = True
+            else:
+                handler_meta['permanent'] = False
+
+            self.handlers_import_status[handler_meta['name']] = handler_meta
+
+    def get_handlers_import_status(self):
+        return self.handlers_import_status

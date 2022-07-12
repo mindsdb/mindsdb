@@ -12,6 +12,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -35,21 +36,24 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, model_interface, data_store, integration_controller):
+    def __init__(self, model_interface, integration_controller):
         self.config = Config()
         self.model_interface = model_interface
-        self.data_store = data_store
         self.integration_controller = integration_controller
 
     def get_tables(self):
         models = self.model_interface.get_models()
-        models = [x['name'] for x in models if x['status'] == 'complete']
-        models += ['predictors', 'databases']
+        tables = []
+        for model in models:
+            tables.append(TablesRow(TABLE_NAME=model['name']))
+        tables.append(TablesRow(TABLE_NAME='predictors'))
+        tables.append(TablesRow(TABLE_NAME='databases'))
 
-        return models
+        return tables
 
     def has_table(self, table):
-        return table in self.get_tables()
+        names = [table.TABLE_NAME for table in self.get_tables()]
+        return table in names
 
     def _get_model_columns(self, table_name):
         model = self.model_interface.get_model_data(name=table_name)
@@ -104,10 +108,12 @@ class MindsDBDataNode(DataNode):
 
     def _select_integrations(self):
         integrations = self.integration_controller.get_all()
-        result = [
-            [ds_name, ds_meta.get('type'), ds_meta.get('host'), ds_meta.get('port'), ds_meta.get('user')]
-            for ds_name, ds_meta in integrations.items()
-        ]
+        result = []
+        for ds_name, ds_meta in integrations.items():
+            connection_data = ds_meta.get('connection_data', {})
+            result.append([
+                ds_name, ds_meta.get('engine'), connection_data.get('host'), connection_data.get('port'), connection_data.get('user')
+            ])
         return pd.DataFrame(
             result,
             columns=['name', 'database_type', 'host', 'port', 'user']
@@ -140,7 +146,7 @@ class MindsDBDataNode(DataNode):
             return [], []
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
-    def select(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, integration_name=None, integration_type=None):
+    def query(self, table, columns=None, where=None, where_data=None, order_by=None, group_by=None, integration_name=None, integration_type=None):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
         if table == 'predictors':
@@ -178,8 +184,8 @@ class MindsDBDataNode(DataNode):
         if isinstance(where_data, dict):
             where_data = [where_data]
 
-        model_names = self.get_tables()
-        if table not in model_names:
+        models_sql_meta = self.get_tables()
+        if table not in [x.TABLE_NAME for x in models_sql_meta]:
             raise SqlApiException(f"Predictor '{table}' does not exists'")
 
         model = self.model_interface.get_model_data(name=table)

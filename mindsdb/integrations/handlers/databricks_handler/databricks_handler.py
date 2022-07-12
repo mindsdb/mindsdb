@@ -24,7 +24,7 @@ class DatabricksHandler(DatabaseHandler):
     This handler handles connection and execution of the Firebird statements.
     """
 
-    name = 'firebird'
+    name = 'databricks'
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -67,3 +67,39 @@ class DatabricksHandler(DatabaseHandler):
         self.is_connected = True
 
         return self.connection
+
+    def disconnect(self):
+        """
+        Close any existing connections.
+        """
+
+        if self.is_connected is False:
+            return
+
+        self.connection.close()
+        self.is_connected = False
+        return self.is_connected
+
+    def check_connection(self) -> StatusResponse:
+        """
+        Check connection to the handler.
+        Returns:
+            HandlerStatusResponse
+        """
+
+        response = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
+        try:
+            self.connect()
+            response.success = True
+        except Exception as e:
+            log.error(f'Error connecting to Databricks {self.connection_data["schema"]}, {e}!')
+            response.error_message = str(e)
+        finally:
+            if response.success is True and need_to_close:
+                self.disconnect()
+            if response.success is False and self.is_connected is True:
+                self.is_connected = False
+
+        return response

@@ -12,7 +12,8 @@ RUN apt update && \
 ENV PYTHONUNBUFFERED=1
 
 RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 && \
-    pip install --prefer-binary --no-cache-dir wheel==0.37.1
+    pip install --prefer-binary --no-cache-dir wheel==0.37.1 && \
+    pip install --prefer-binary --no-cache-dir cassandra-driver mysql-connector-python pymssql>=2.1.4 psycopg[binary]>=1.15.3 pymongo certifi snowflake-connector-python>=2.7.6 trino~=0.313.0
 
 ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}

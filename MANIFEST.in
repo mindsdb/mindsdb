@@ -1,2 +1,3 @@
 include requirements.txt
 include mindsdb/migrations/alembic.ini
+recursive-include mindsdb/integrations/handlers *.txt *.png *.svg *.jpg

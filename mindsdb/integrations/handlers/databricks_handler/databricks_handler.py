@@ -155,3 +155,37 @@ class DatabricksHandler(DatabaseHandler):
         renderer = SqlalchemyRender('databricks')
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
+
+    def get_tables(self) -> StatusResponse:
+        """
+        Return list of entities that will be accessible as tables.
+        Returns:
+            HandlerResponse
+        """
+
+        query = """
+            SHOW TABLES;
+        """
+        result = self.native_query(query)
+        df = result.data_frame
+        result.data_frame = df.rename(columns={'tableName': 'table_name'})
+        return result
+
+    def get_columns(self, table_name: str) -> StatusResponse:
+        """
+        Returns a list of entity columns.
+        Args:
+            table_name (str): name of one of tables returned by self.get_tables()
+        Returns:
+            HandlerResponse
+        """
+
+        query = f"SHOW COLUMNS IN {table_name};"
+        result = self.native_query(query)
+        df = result.data_frame
+
+        drop_row = df[df['col_name'] == ''].index.tolist()[0]
+        df = df.iloc[:drop_row + 1]
+
+        result.data_frame = df.rename(columns={'col_name': 'column_name'})
+        return result

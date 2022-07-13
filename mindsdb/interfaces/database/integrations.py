@@ -264,6 +264,9 @@ class IntegrationController:
 
         return handler
 
+    def reload_handler_module(self, handler_name):
+        importlib.reload(self.handler_modules[handler_name])
+
     def _load_handler_modules(self):
         mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent
         handlers_path = mindsdb_path.joinpath('integrations/handlers')

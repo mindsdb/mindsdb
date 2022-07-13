@@ -21,7 +21,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 class DatabricksHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Firebird statements.
+    This handler handles connection and execution of the Databricks statements.
     """
 
     name = 'databricks'
@@ -126,6 +126,7 @@ class DatabricksHandler(DatabaseHandler):
         connection = self.connect()
         with connection.cursor() as cursor:
             try:
+                cursor.execute(query)
                 result = cursor.fetchall()
                 if result:
                     response = Response(
@@ -188,7 +189,7 @@ class DatabricksHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        query = f"SHOW COLUMNS IN {table_name};"
+        query = f"DESCRIBE {table_name};"
         result = self.native_query(query)
         df = result.data_frame
 
@@ -213,11 +214,11 @@ connection_args = OrderedDict(
         'description': 'A Databricks personal access token for the workspace for the cluster or SQL warehouse.'
     },
     session_configuration={
-        'type': ARG_TYPE.DICT,
+        'type': ARG_TYPE.STR,
         'description': 'A dictionary of Spark session configuration parameters. This parameter is optional.'
     },
     http_headers={
-        'type': ARG_TYPE.LIST,
+        'type': ARG_TYPE.STR,
         'description': 'Additional (key, value) pairs to set in HTTP headers on every RPC request the client makes.'
                        ' This parameter is optional.'
     },
@@ -226,7 +227,7 @@ connection_args = OrderedDict(
         'description': 'Catalog to use for the connection. This parameter is optional.'
     },
     schema={
-        'type': ARG_TYPE.INT,
+        'type': ARG_TYPE.STR,
         'description': 'Schema (database) to use for the connection. This parameter is optional.'
     }
 )

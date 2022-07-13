@@ -42,8 +42,7 @@ class InstallDependencies(Resource):
         # reload it if any result, so we can get new error message
         request.integration_controller.reload_handler_module(handler_name)
         if result.get('success') is True:
-            request.integration_controller._load_handler_modules()
-            return 'Installed', 200
+            return '', 200
         return http_error(
             500,
             'Failed to install dependency',

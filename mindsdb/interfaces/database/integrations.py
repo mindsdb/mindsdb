@@ -266,63 +266,97 @@ class IntegrationController:
 
     def reload_handler_module(self, handler_name):
         importlib.reload(self.handler_modules[handler_name])
+        try:
+            handler_meta = self._get_handler_meta(self.handler_modules[handler_name])
+        except Exception as e:
+            handler_meta = {
+                'import': {
+                    'success': False,
+                    'error_message': str(e),
+                    'dependencies': []
+                },
+                'name': handler_name
+            }
+
+        self.handlers_import_status[handler_meta['name']] = handler_meta
+
+    def _read_dependencies(self, path):
+        dependencies = []
+        requirements_txt = Path(path).joinpath('requirements.txt')
+        if requirements_txt.is_file():
+            with open(str(requirements_txt), 'rt') as f:
+                dependencies = [x.strip(' \t\n') for x in f.readlines()]
+                dependencies = [x for x in dependencies if len(x) > 0]
+        return dependencies
+
+    def _get_handler_meta(self, module):
+        handler_dir = Path(module.__path__[0])
+        handler_folder_name = handler_dir.name
+        handler_name = handler_folder_name
+        if handler_name.endswith('_handler'):
+            handler_name = handler_name[:-8]
+
+        dependencies = self._read_dependencies(handler_dir)
+
+        self.handler_modules[module.name] = module
+        import_error = None
+        if hasattr(module, 'import_error'):
+            import_error = module.import_error
+        handler_meta = {
+            'import': {
+                'success': import_error is None,
+                'folder': handler_folder_name,
+                'dependencies': dependencies
+            },
+            'version': module.version
+        }
+        if import_error is not None:
+            handler_meta['import']['error_message'] = str(import_error)
+
+        for attr in ('connection_args_example', 'connection_args', 'description', 'name', 'type', 'title'):
+            if hasattr(module, attr):
+                handler_meta[attr] = getattr(module, attr)
+
+        # region icon
+        if hasattr(module, 'icon_path'):
+            icon_path = handler_dir.joinpath(module.icon_path)
+            handler_meta['icon'] = {
+                'name': icon_path.name,
+                'type': icon_path.name[icon_path.name.rfind('.') + 1:].lower()
+            }
+            if handler_meta['icon']['type'] == 'svg':
+                with open(str(icon_path), 'rt') as f:
+                    handler_meta['icon']['data'] = f.read()
+            else:
+                with open(str(icon_path), 'rb') as f:
+                    handler_meta['icon']['data'] = base64.b64encode(f.read()).decode('utf-8')
+        # endregion
+
+        if handler_meta.get('name') in ('files', 'views', 'lightwood'):
+            handler_meta['permanent'] = True
+        else:
+            handler_meta['permanent'] = False
+
+        return handler_meta
 
     def _load_handler_modules(self):
         mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent
         handlers_path = mindsdb_path.joinpath('integrations/handlers')
         self.handler_modules = {}
         self.handlers_import_status = {}
-        for hanlder_dir in handlers_path.iterdir():
-            if hanlder_dir.is_dir() is False or hanlder_dir.name.startswith('__'):
+        for handler_dir in handlers_path.iterdir():
+            if handler_dir.is_dir() is False or handler_dir.name.startswith('__'):
                 continue
-            handler_folder_name = str(hanlder_dir.name)
-            handler_name = handler_folder_name
-            if handler_name.endswith('_handler'):
-                handler_name = handler_name[:-8]
-            dependencies = []
-            requirements_txt = hanlder_dir.joinpath('requirements.txt')
-            if requirements_txt.is_file():
-                with open(str(requirements_txt), 'rt') as f:
-                    dependencies = [x.strip(' \t\n') for x in f.readlines()]
-                    dependencies = [x for x in dependencies if len(x) > 0]
+            handler_folder_name = str(handler_dir.name)
+
             try:
                 handler_module = importlib.import_module(f'mindsdb.integrations.handlers.{handler_folder_name}')
-                self.handler_modules[handler_module.name] = handler_module
-                import_error = None
-                if hasattr(handler_module, 'import_error'):
-                    import_error = handler_module.import_error
-                handler_meta = {
-                    'import': {
-                        'success': import_error is None,
-                        'folder': handler_folder_name,
-                        'dependencies': dependencies
-                    },
-                    'version': handler_module.version
-                }
-                if import_error is not None:
-                    handler_meta['import']['error_message'] = str(import_error)
-
-                for attr in ('connection_args_example', 'connection_args', 'description', 'name', 'type', 'title'):
-                    if hasattr(handler_module, attr):
-                        handler_meta[attr] = getattr(handler_module, attr)
-                if 'name' not in handler_meta:
-                    handler_meta['name'] = handler_name
-
-                # region icon
-                if hasattr(handler_module, 'icon_path'):
-                    icon_path = hanlder_dir.joinpath(handler_module.icon_path)
-                    handler_meta['icon'] = {
-                        'name': icon_path.name,
-                        'type': icon_path.name[icon_path.name.rfind('.') + 1:].lower()
-                    }
-                    if handler_meta['icon']['type'] == 'svg':
-                        with open(str(icon_path), 'rt') as f:
-                            handler_meta['icon']['data'] = f.read()
-                    else:
-                        with open(str(icon_path), 'rb') as f:
-                            handler_meta['icon']['data'] = base64.b64encode(f.read()).decode('utf-8')
-                # endregion
+                handler_meta = self._get_handler_meta(handler_module)
             except Exception as e:
+                handler_name = handler_folder_name
+                if handler_name.endswith('_handler'):
+                    handler_name = handler_name[:-8]
+                dependencies = self._read_dependencies(handler_dir)
                 handler_meta = {
                     'import': {
                         'success': False,
@@ -332,11 +366,6 @@ class IntegrationController:
                     },
                     'name': handler_name
                 }
-
-            if handler_meta.get('name') in ('files', 'views', 'lightwood'):
-                handler_meta['permanent'] = True
-            else:
-                handler_meta['permanent'] = False
 
             self.handlers_import_status[handler_meta['name']] = handler_meta
 

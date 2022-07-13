@@ -1,3 +1,4 @@
+import datetime as dt
 import threading
 import unittest
 from unittest.mock import patch
@@ -144,7 +145,7 @@ class TestMongoDBServer(unittest.TestCase):
                 ast = mock_sqlquery.call_args.args[0]
 
                 expected_sql = '''
-                  SELECT * FROM fish_model1
+                  SELECT * FROM mindsdb.fish_model1
                   where length1=10 and type='a'
                 '''
                 assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
@@ -164,7 +165,7 @@ class TestMongoDBServer(unittest.TestCase):
                 expected_sql = '''
                   SELECT * FROM 
                      (SELECT * FROM mongo.fish WHERE Species = 'Pike')
-                     JOIN fish_model1
+                     JOIN mindsdb.fish_model1
                 '''
                 assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
 
@@ -195,9 +196,22 @@ class TestMongoDBServer(unittest.TestCase):
                         WHERE saledate > latest
                        and type = 'house' and bedrooms=2
                      )
-                     JOIN house_sales_model_h1w4
+                     JOIN mindsdb.house_sales_model_h1w4
                 '''
                 assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+
+                # ==== test datetime ===
+
+                mock_sqlquery.reset_mock()
+
+                res = client_con.mongo.house_sales.find({'saledate': {'$gt': dt.datetime.fromisoformat("2018-03-31T00:00:00")}})
+                res = list(res)
+
+                ast = mock_sqlquery.call_args.args[0]
+
+                expected_sql = "SELECT * FROM mongo.house_sales WHERE saledate > '2018-03-31 00:00:00'"
+                assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+
             except Exception as e:
                 raise e
             finally:

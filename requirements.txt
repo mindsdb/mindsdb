@@ -18,7 +18,7 @@ walrus==0.8.2
 flask-compress >= 1.0.0
 kafka-python >= 2.0.0
 appdirs >= 1.0.0
-mindsdb-sql >= 0.3.8, < 0.4.0
+mindsdb-sql >= 0.3.9, < 0.4.0
 checksumdir >= 1.2.0
 mindsdb-streams == 0.0.5
 duckdb == 0.3.1

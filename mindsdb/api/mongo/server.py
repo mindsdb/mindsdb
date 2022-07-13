@@ -10,6 +10,7 @@ from bson.codec_options import CodecOptions
 from bson.codec_options import TypeCodec
 from bson.codec_options import TypeRegistry
 import numpy as np
+import datetime as dt
 
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import RespondersCollection, Session
@@ -46,7 +47,17 @@ class NPIntCodec(TypeCodec):
         return np.int(value)
 
 
-type_registry = TypeRegistry([NPIntCodec()])
+class DateCodec(TypeCodec):
+    python_type = dt.date
+    bson_type = bson.datetime.datetime
+
+    def transform_python(self, value):
+        return dt.datetime(value.year, value.month, value.day)
+
+    def transform_bson(self, value):
+        return dt.datetime(value.year, value.month, value.day)
+
+type_registry = TypeRegistry([NPIntCodec(), DateCodec()])
 
 
 def unpack(format, buffer, start=0):

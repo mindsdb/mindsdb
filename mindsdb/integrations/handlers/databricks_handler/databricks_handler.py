@@ -37,6 +37,12 @@ class DatabricksHandler(DatabaseHandler):
         super().__init__(name)
         self.parser = parse_sql
         self.dialect = 'databricks'
+
+        optional_parameters = ['session_configuration', 'http_headers', 'catalog', 'schema']
+        for parameter in optional_parameters:
+            if parameter not in connection_data:
+                connection_data[parameter] = None
+
         self.connection_data = connection_data
         self.kwargs = kwargs
 
@@ -61,6 +67,8 @@ class DatabricksHandler(DatabaseHandler):
             server_hostname=self.connection_data['server_hostname'],
             http_path=self.connection_data['http_path'],
             access_token=self.connection_data['access_token'],
+            session_configuration=self.connection_data['session_configuration'],
+            http_headers=self.connection_data['http_headers'],
             catalog=self.connection_data['catalog'],
             schema=self.connection_data['schema']
         )
@@ -189,3 +197,43 @@ class DatabricksHandler(DatabaseHandler):
 
         result.data_frame = df.rename(columns={'col_name': 'column_name'})
         return result
+
+
+connection_args = OrderedDict(
+    server_hostname={
+        'type': ARG_TYPE.STR,
+        'description': 'The server hostname for the cluster or SQL warehouse.'
+    },
+    http_path={
+        'type': ARG_TYPE.STR,
+        'description': 'The HTTP path of the cluster or SQL warehouse.'
+    },
+    access_token={
+        'type': ARG_TYPE.STR,
+        'description': 'A Databricks personal access token for the workspace for the cluster or SQL warehouse.'
+    },
+    session_configuration={
+        'type': ARG_TYPE.DICT,
+        'description': 'A dictionary of Spark session configuration parameters. This parameter is optional.'
+    },
+    http_headers={
+        'type': ARG_TYPE.LIST,
+        'description': 'Additional (key, value) pairs to set in HTTP headers on every RPC request the client makes.'
+                       ' This parameter is optional.'
+    },
+    catalog={
+        'type': ARG_TYPE.STR,
+        'description': 'Catalog to use for the connection. This parameter is optional.'
+    },
+    schema={
+        'type': ARG_TYPE.INT,
+        'description': 'Schema (database) to use for the connection. This parameter is optional.'
+    }
+)
+
+connection_args_example = OrderedDict(
+    server_hostname='adb-1234567890123456.7.azuredatabricks.net',
+    http_path='sql/protocolv1/o/1234567890123456/1234-567890-test123',
+    access_token='dapi1234567890ab1cde2f3ab456c7d89efa',
+    schema='sales'
+)

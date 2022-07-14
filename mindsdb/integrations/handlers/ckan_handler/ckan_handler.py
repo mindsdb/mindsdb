@@ -54,7 +54,8 @@ class CkanHandler(DatabaseHandler):
                 """
                 response.message = 'CKAN datastore is not enabled'
                 response.status = False
-                self.is_connected = True
+                self.is_connected = False
+                return response
 
         except Exception as e:
             log.error(f'Error connecting to CKAN: {e}!')

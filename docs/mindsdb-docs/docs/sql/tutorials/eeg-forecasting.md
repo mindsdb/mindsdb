@@ -31,9 +31,11 @@ FROM files
   (SELECT * FROM EEGEye)
 PREDICT eyeDetection
 ORDER BY Timestamps
-WINDOW 50  -- roughly 400 ms
-HORIZON 10;  -- roughly 80 ms
+WINDOW 50
+HORIZON 10;
 ```
+
+As the sampling frequency is 8 ms, this predictor will use be trained using a historical context of roughly `(50 * 8) = 400 [ms]` to predict the following `(10 * 8) = 80 [ms]`.
 
 You can check the status of the predictor:
 
@@ -46,11 +48,11 @@ SELECT * FROM mindsdb.predictors WHERE name='eeg_eye_forecast';
 Once the predictor has been successfully trained, you can query it to get predictions for the next `HORIZON` timesteps into the future, which in this case is roughly 80 miliseconds. Usually, in forecasting scenarios you'll want to know what happens right after the latest data measurement, for which we have a special bit of syntax, the "LATEST" key word:
 
 ```
-SELECT m.Timestamps as timestamp,
+SELECT m.Timestamps as timestamps,
        m.eyeDetection as eye_status
 FROM files.EEGEye as t
 JOIN mindsdb.eeg_eye_forecast as m  
-WHERE t.timestamp > LATEST
+WHERE t.timestamps > LATEST
 LIMIT 10;
 ```
 

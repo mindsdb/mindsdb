@@ -523,10 +523,10 @@ class ModelController():
         integration_handler = integration_controller.get_handler(integration_record.name)
 
         response = integration_handler.native_query(predictor_record.fetch_data_query)
-        if response['type'] != RESPONSE_TYPE.TABLE:
-            raise Exception("Can't fetch data for predictor training")
+        if response.type != RESPONSE_TYPE.TABLE:
+            raise Exception(f"Can't fetch data for predictor training: {response.error_message}")
 
-        p = UpdateProcess(name, response['data_frame'], company_id)
+        p = UpdateProcess(name, response.data_frame, company_id)
         p.start()
         return 'Updated in progress'
 

@@ -24,7 +24,7 @@ class HandlersList(Resource):
 class InstallDependencies(Resource):
     @ns_conf.param('handler_name', 'Handler name')
     def post(self, handler_name):
-        handler_import_status = self.request.integration_controller.get_handlers_import_status()
+        handler_import_status = request.integration_controller.get_handlers_import_status()
         if handler_name not in handler_import_status:
             return f'Unkown handler: {handler_name}', 400
 
@@ -38,9 +38,11 @@ class InstallDependencies(Resource):
             return 'Installed', 200
 
         result = install_dependencies(dependencies)
+
+        # reload it if any result, so we can get new error message
+        request.integration_controller.reload_handler_module(handler_name)
         if result.get('success') is True:
-            self.request.integration_controller._load_handler_modules()
-            return 'Installed', 200
+            return '', 200
         return http_error(
             500,
             'Failed to install dependency',

@@ -6,6 +6,7 @@ from databricks import sql
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from sqlalchemy_databricks import DatabricksDialect
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -161,7 +162,7 @@ class DatabricksHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        renderer = SqlalchemyRender('databricks')
+        renderer = SqlalchemyRender(DatabricksDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 

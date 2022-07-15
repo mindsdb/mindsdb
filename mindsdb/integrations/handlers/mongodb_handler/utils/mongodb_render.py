@@ -26,11 +26,10 @@ class MongodbRender:
             filters = self.handle_where(node.where)
 
         group = {}
-        project = {'_id': 0}
+        project = {'_id': 0}   # hide _id
         if node.distinct:
             # is group by distinct fields
             group = {'_id': {}}
-            # project = {'_id': 0} #  hide _id
 
         if node.targets is not None:
             for col in node.targets:
@@ -189,7 +188,6 @@ class MongodbRender:
                 op2: [val1, val2]
             }
         }
-
 
     def where_element_convert(self, node):
         if isinstance(node, Identifier):

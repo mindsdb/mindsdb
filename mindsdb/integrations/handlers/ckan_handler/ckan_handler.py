@@ -90,4 +90,10 @@ class CkanHandler(DatabaseHandler):
             response = HandlerResponse(RESPONSE_TYPE.TABLE, None)
         return response
 
-
+    def get_tables(self) -> HandlerResponse:
+        if not self.ckan:
+            self.connect()
+        result = self.ckan.action.datastore_search(resource_id='_table_metadata')
+        df = pd.DataFrame(result['records'])
+        response = HandlerResponse(RESPONSE_TYPE.TABLE, df)
+        return response

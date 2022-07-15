@@ -240,6 +240,8 @@ class ModelController():
             to_predict=problem_definition.target,
             learn_args=problem_definition.to_dict(),
             data={'name': name},
+            training_data_columns_count=len(training_data.columns),
+            training_data_rows_count=len(training_data)
         )
 
         db.session.add(predictor_record)

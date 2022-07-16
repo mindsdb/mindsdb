@@ -1,4 +1,4 @@
-lightwood >= 22.6.1.2, < 22.6.2.0
+lightwood >= 22.7.2.2, < 22.7.3.0
 markupsafe == 2.0.1
 flask-restx >= 0.2.0
 flask >= 1.0, < 2.0
@@ -23,3 +23,4 @@ checksumdir >= 1.2.0
 mindsdb-streams == 0.0.5
 duckdb == 0.3.1
 requests >= 2.0.0
+mysql-connector-python

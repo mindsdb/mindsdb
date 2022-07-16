@@ -366,7 +366,7 @@ class HTTPTest(unittest.TestCase):
                 print(f'Error in query: {query}')
                 raise
 
-        # show databaes should be same as show schemas
+        # show database should be same as show schemas
         try:
             query = 'show databases'
             resp = self.sql_via_http(query, RESPONSE_TYPE.TABLE)

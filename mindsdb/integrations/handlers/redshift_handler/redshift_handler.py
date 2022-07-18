@@ -197,3 +197,35 @@ class RedshiftHandler(DatabaseHandler):
         """
         result = self.native_query(query)
         return result
+
+
+connection_args = OrderedDict(
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the Redshift server.'
+    },
+    port={
+        'type': ARG_TYPE.STR,
+        'description': 'The port to use when connecting with the Redshift server.'
+    },
+    database={
+        'type': ARG_TYPE.STR,
+        'description': 'The database name to use when connecting with the Redshift server.'
+    },
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the Redshift server.'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the Redshift server.'
+    }
+)
+
+connection_args_example = OrderedDict(
+    host='examplecluster.abc123xyz789.us-west-1.redshift.amazonaws.com',
+    port='5439',
+    database='dev',
+    user='awsuser',
+    password='my_password'
+)

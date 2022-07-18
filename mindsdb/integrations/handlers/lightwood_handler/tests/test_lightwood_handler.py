@@ -68,13 +68,52 @@ class LightwoodHandlerTest(unittest.TestCase):
             pass
 
     def test_21_train_predictor(self):
+        query = f"CREATE PREDICTOR {self.test_model_name_1} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1}"
         if self.test_model_name_1 not in self.handler.get_tables():
-            query = f"CREATE PREDICTOR {self.test_model_name_1} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1}"
+            self.handler.native_query(query)
+        else:
+            self.handler.native_query(f"DROP PREDICTOR {self.test_model_name_1 }")
             self.handler.native_query(query)
 
     def test_22_retrain_predictor(self):
-        query = f"RETRAIN {self.test_model_name_1}"
-        self.handler.native_query(query)
+        retrain_query = f"RETRAIN {self.test_model_name_1}"
+        if self.test_model_name_1 in self.handler.get_tables():
+            self.handler.native_query(retrain_query)
+        else:
+            train_query = f"CREATE PREDICTOR {self.test_model_name_1} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1}"
+            self.handler.native_query(train_query)
+            self.handler.native_query(retrain_query)
+
+    def test_23_train_predictor_custom_jsonai(self):
+        using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
+        query = f'CREATE PREDICTOR {self.test_model_name_1b} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1} USING {using_str}'
+        if self.test_model_name_1b not in self.handler.get_tables():
+            self.handler.native_query(query)
+        else:
+            self.handler.native_query(f"DROP PREDICTOR {self.test_model_name_1b}")
+            self.handler.native_query(query)
+
+        m = load_predictor(self.handler.storage.get('models')[self.test_model_name_1b], self.test_model_name_1b)
+        assert len(m.ensemble.mixers) == 1
+        assert isinstance(m.ensemble.mixers[0], LightGBM)
+
+    def test_24_train_ts_predictor(self):
+        target = 'Traffic'
+        oby = 'T'
+        gby = 'Country'
+        window = 8
+        horizon = 4
+
+        query = f'CREATE PREDICTOR {self.test_model_name_2} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_2}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
+        if self.test_model_name_2 not in self.handler.get_tables():
+            self.handler.native_query(query)
+        else:
+            self.handler.native_query(f"DROP PREDICTOR {self.test_model_name_2}")
+            self.handler.native_query(query)
+
+        p = self.handler.storage.get('models')
+        m = load_predictor(p[self.test_model_name_2], self.test_model_name_2)
+        assert m.problem_definition.timeseries_settings.is_timeseries
 
     def test_31_list_tables(self):
         print(self.handler.get_tables())
@@ -102,31 +141,6 @@ class LightwoodHandlerTest(unittest.TestCase):
         q = f"SELECT * FROM {into_table}"
         qp = self.handler.parser(q, dialect='mysql')
         assert len(self.data_handler.query(qp).data_frame) > 0
-
-    def test_23_train_predictor_custom_jsonai(self):
-        if self.test_model_name_1b not in self.handler.get_tables():
-            using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
-            query = f'CREATE PREDICTOR {self.test_model_name_1b} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1} USING {using_str}'
-            self.handler.native_query(query)
-
-        m = load_predictor(self.handler.storage.get('models')[self.test_model_name_1b], self.test_model_name_1b)
-        assert len(m.ensemble.mixers) == 1
-        assert isinstance(m.ensemble.mixers[0], LightGBM)
-
-    def test_24_train_ts_predictor(self):
-        target = 'Traffic'
-        oby = 'T'
-        gby = 'Country'
-        window = 8
-        horizon = 4
-
-        if self.test_model_name_2 not in self.handler.get_tables():
-            query = f'CREATE PREDICTOR {self.test_model_name_2} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_2}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
-            self.handler.native_query(query)
-
-        p = self.handler.storage.get('models')
-        m = load_predictor(p[self.test_model_name_2], self.test_model_name_2)
-        assert m.problem_definition.timeseries_settings.is_timeseries
 
     def test_52_join_predictor_ts_into(self):
         self.connect_handler()

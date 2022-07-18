@@ -202,23 +202,23 @@ class RedshiftHandler(DatabaseHandler):
 connection_args = OrderedDict(
     host={
         'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the Redshift server.'
+        'description': 'The host name or IP address of the Redshift cluster.'
     },
     port={
         'type': ARG_TYPE.INT,
-        'description': 'The port to use when connecting with the Redshift server.'
+        'description': 'The port to use when connecting with the Redshift cluster.'
     },
     database={
         'type': ARG_TYPE.STR,
-        'description': 'The database name to use when connecting with the Redshift server.'
+        'description': 'The database name to use when connecting with the Redshift cluster.'
     },
     user={
         'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the Redshift server.'
+        'description': 'The user name used to authenticate with the Redshift cluster.'
     },
     password={
         'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Redshift server.'
+        'description': 'The password to authenticate the user with the Redshift cluster.'
     }
 )
 

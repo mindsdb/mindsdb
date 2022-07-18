@@ -7,7 +7,7 @@ The `#!sql CREATE TABLE` is used to create a table and fill it with the result o
 ## Syntax
 
 ```sql
-CREATE [{REPLACE}] TABLE [integration_name].[table_name]
+CREATE [OR REPLACE] TABLE [integration_name].[table_name]
     [SELECT ...]
 ```
 

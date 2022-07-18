@@ -1,2 +1,40 @@
-lightwood >= 22.4.1.0
+lightwood[all_extras] >= 22.7.2.2
 mindsdb>=22.7.4.0
+pymongo[tls, srv] >= 3.10.1, < 4.0
+importlib_resources
+importlib_metadata
+marshmallow_enum
+huggingface_hub
+mypy_extensions
+tokenizers<0.11
+typing_inspect
+threadpoolctl
+pytorch_ranger
+torchmetrics
+marshmallow
+tensorboard
+sacremoses
+packaging
+deprecate
+networkx
+pmdarima
+llvmlite
+hyperopt
+filelock
+absl-py
+gensim
+future
+fsspec
+joblib
+pyyaml
+patsy
+regex
+redis
+cmaes
+numba==0.54.1
+pytz
+mako
+tqdm
+py4j
+six
+sly

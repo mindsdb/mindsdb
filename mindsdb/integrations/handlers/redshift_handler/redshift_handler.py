@@ -157,3 +157,43 @@ class RedshiftHandler(DatabaseHandler):
         renderer = SqlalchemyRender(RedshiftDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
+
+    def get_tables(self) -> StatusResponse:
+        """
+        Return list of entities that will be accessible as tables.
+        Returns:
+            HandlerResponse
+        """
+
+        query = """
+            SELECT DISTINCT tablename
+            FROM PG_TABLE_DEF
+            WHERE schemaname = 'public';;
+        """
+        result = self.native_query(query)
+        df = result.data_frame
+        result.data_frame = df.rename(columns={'tablename': 'table_name'})
+        return result
+
+    def get_columns(self, table_name: str) -> StatusResponse:
+        """
+        Returns a list of entity columns.
+        Args:
+            table_name (str): name of one of tables returned by self.get_tables()
+        Returns:
+            HandlerResponse
+        """
+
+        query = f"""
+            SELECT column_name,
+               data_type,
+               CASE WHEN character_maximum_length IS NOT NULL
+                    THEN character_maximum_length
+                    ELSE numeric_precision end as max_length,
+               is_nullable,
+               column_default as default_value
+            FROM information_schema.columns
+            WHERE table_name = {table_name} AND table_schema = 'public';
+        """
+        result = self.native_query(query)
+        return result

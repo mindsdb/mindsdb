@@ -4,11 +4,6 @@ EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 EXPOSE 47336/tcp
 
-######### temporal fix for prophet (because it's dumb) ##########
-RUN apt update && \
-    apt-get install --yes --no-install-recommends build-essential
-#################################################################
-
 ENV PYTHONUNBUFFERED=1
 
 RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 && \

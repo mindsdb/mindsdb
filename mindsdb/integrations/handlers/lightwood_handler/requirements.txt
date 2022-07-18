@@ -1,1 +1,2 @@
 lightwood >= 22.4.1.0
+mindsdb>=22.7.4.0

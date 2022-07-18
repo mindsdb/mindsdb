@@ -247,7 +247,7 @@ class MindsDBDataNode(DataNode):
 
             predict = model['predict']
             group_by = timeseries_settings['group_by'] or []
-            order_by_column = timeseries_settings['order_by'][0]
+            order_by_column = timeseries_settings['order_by']
             horizon = timeseries_settings['horizon']
 
             groups = set()

@@ -5,7 +5,7 @@ from mindsdb_sql.parser.ast import Identifier, Operation, BinaryOperation, Betwe
 
 def get_time_selects(time_filter, table, window, order_by, preparation_where):
     # TODO: add tests for all these cases
-    time_col = str(order_by[0].field)
+    time_col = str(order_by.field)
     if isinstance(time_filter, BetweenOperation):
         between_from = time_filter.args[1]
         preparation_time_filter = BinaryOperation('<', args=[Identifier(time_col), between_from])

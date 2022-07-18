@@ -109,7 +109,7 @@ class KafkaTest(unittest.TestCase):
                 'join_learn_process': True,
                 'ignore_columns': None,
                 'timeseries_settings': {
-                    "order_by": ["order"],
+                    "order_by": "order",
                     "group_by": ["group"],
                     "horizon": 1,
                     "use_previous_target": True,

@@ -103,7 +103,7 @@ class RedisTest(unittest.TestCase):
 
     def train_ts_predictor(self, ds_name, predictor_name, with_gb=True):
         ts_settings = {
-            "order_by": ["order"],
+            "order_by": "order",
             "horizon": 1,
             "use_previous_target": True,
             "window": 10}

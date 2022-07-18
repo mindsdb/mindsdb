@@ -49,7 +49,7 @@ db.predictors.insert({
     },
     'training_options': { 
         "timeseries_settings": {                
-                "order_by": list of fields,                
+                "order_by": single field,                
                 "group_by": list of fields,    #optional            
                 "horizon": int,         #optional       
                 "use_previous_target": Boolean,                

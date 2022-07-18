@@ -27,7 +27,7 @@ def get_ts_join_input(query, model, data_handler, data_side):
     data_handler_cols = list(set([t.parts[-1] for t in query.targets if t.parts[0] == str(data_handler_alias)]))
 
     window = model.problem_definition.timeseries_settings.window
-    oby_col = model.problem_definition.timeseries_settings.order_by[0]
+    oby_col = model.problem_definition.timeseries_settings.order_by
     gby_cols = model.problem_definition.timeseries_settings.group_by
 
     allowed_columns = [oby_col.lower()]

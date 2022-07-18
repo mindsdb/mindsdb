@@ -37,5 +37,5 @@ parameters={
 
 Now, you can use this established connection to query your database as follows,
 ~~~~sql
-SELECT * FROM sqlite_datasource.example_tbl
+SELECT * FROM redshift_datasource.example_tbl
 ~~~~

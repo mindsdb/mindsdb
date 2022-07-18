@@ -1,6 +1,6 @@
-# SQLite Handler
+# ClickHouse Handler
 
-This is the implementation of the SQLite handler for MindsDB.
+This is the implementation of the ClickHouse handler for MindsDB.
 
 ## ClickHouse
 

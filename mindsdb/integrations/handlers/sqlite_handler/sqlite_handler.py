@@ -127,6 +127,9 @@ class SQLiteHandler(DatabaseHandler):
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
+            if 'no such table' in e:
+                parts = query.split('FROM')
+
             log.error(f'Error running query: {query} on {self.connection_data["db_file"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,

@@ -27,29 +27,18 @@ from mindsdb_sql.parser.dialects.mindsdb import (
 )
 
 
-MDB_CURRENT_HANDLERS = {
-    'test_handler': MySQLHandler('test_handler', **{"connection_data": {
-        "host": "localhost",
-        "port": "3306",
-        "user": "root",
-        "password": "root",
-        "database": "test",
-        "ssl": False
-    }})
-}  # TODO: remove once hooked to mindsdb handler controller
-
-
 class LightwoodHandler(PredictiveHandler):
 
     name = 'lightwood'
 
-    def __init__(self, name):
+    def __init__(self, name, handler_list=None):
         """ Lightwood AutoML integration """  # noqa
         super().__init__(name)
         self.storage = None
         self.parser = parse_sql
         self.dialect = 'mindsdb'
         self.handler_dialect = 'mysql'
+        self.handler_list = handler_list   # TODO: this should be the global handler list managed by outer controller
 
         self.lw_dtypes_to_sql = {
             "integer": sqlalchemy.Integer,
@@ -118,7 +107,7 @@ class LightwoodHandler(PredictiveHandler):
             if statement.order_by:
                 params['timeseries_settings'] = {
                     'is_timeseries': True,
-                    'order_by': [str(col) for col in statement.order_by],
+                    'order_by': str(statement.order_by[0]),
                     'group_by': [str(col) for col in statement.group_by],
                     'window': int(statement.window),
                     'horizon': int(statement.horizon),
@@ -128,7 +117,7 @@ class LightwoodHandler(PredictiveHandler):
             unpack_jsonai_old_args(json_ai_override)
 
             # get training data from other integration
-            handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]  # TODO import from mindsdb init
+            handler = self.handler_list[str(statement.integration_name)]
             handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
             df = default_data_gather(handler, handler_query)
 
@@ -164,7 +153,7 @@ class LightwoodHandler(PredictiveHandler):
             all_models = self.storage.get('models')
             original_stmt = all_models[model_name]['stmt']
 
-            handler = MDB_CURRENT_HANDLERS[str(original_stmt.integration_name)]  # TODO import from mindsdb init
+            handler = self.handler_list[str(original_stmt.integration_name)]
             handler_query = self.parser(original_stmt.query_str, dialect=self.handler_dialect)
             df = default_data_gather(handler, handler_query)
 
@@ -194,6 +183,7 @@ class LightwoodHandler(PredictiveHandler):
         """
         Batch prediction using the output of a query passed to a data handler as input for the model.
         """  # noqa
+        # TODO: enforce syntax: data on the left, predictor on the right
         model_name, model_alias, model_side = get_model_name(self, stmt)
         data_side = 'right' if model_side == 'left' else 'left'
         model = self._get_model(model_name)

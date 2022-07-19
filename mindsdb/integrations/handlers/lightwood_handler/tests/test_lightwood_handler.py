@@ -1,55 +1,68 @@
+import os
+import csv
 import unittest
+import pandas as pd
+from sqlalchemy import create_engine
 
 from lightwood.mixer import LightGBM
 
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import LightwoodHandler
 from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.utils import load_predictor
-from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
+from mindsdb.integrations.handlers.sqlite_handler.sqlite_handler import SQLiteHandler
+
+
+def insert_table(sqlite_handler, df, table_name):
+    cols = ",".join(df.columns)
+    q = f"CREATE TABLE {table_name} ({cols});"
+    sqlite_handler.native_query(q)
+    vals = ','.join(['?' for _ in range(len(df.columns))])
+
+    for record in df.to_records(index=False):
+        q = f'INSERT INTO {table_name} ({cols}) VALUES {record};'
+        sqlite_handler.native_query(q)
 
 
 # TODO: bring all train+predict queries in mindsdb_sql test suite
-# TODO: drop all models and tables when closing tests
 class LightwoodHandlerTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.handler = LightwoodHandler('test_ludwig_handler')
+        # setup data handler (todo: connect to global state instead)
+        data_handler_db_name = 'test.db'
+        data_handler_db_path = f'./{data_handler_db_name}'
+        if os.path.isfile(data_handler_db_path):
+            os.remove(data_handler_db_path)
+        engine = create_engine(f'sqlite:///{data_handler_db_path}', echo=False)
+        cls.sql_handler_name = 'test_handler'
+        cls.MDB_CURRENT_HANDLERS = {
+            cls.sql_handler_name: SQLiteHandler(
+                cls.sql_handler_name,
+                **{"connection_data": {"db_file": data_handler_db_path}})
+        }
+        cls.data_handler = cls.MDB_CURRENT_HANDLERS[cls.sql_handler_name]
+        cls.data_table_name_1 = 'home_rentals_subset'
+        cls.data_table_name_2 = 'arrivals'
+
+        arrivals = pd.read_csv('https://raw.githubusercontent.com/mindsdb/lightwood/staging/tests/data/arrivals.csv')
+        home_rentals = pd.read_csv('https://raw.githubusercontent.com/mindsdb/mindsdb-examples/master/classics/home_rentals/dataset/train.csv')
+        arrivals.to_csv('./arrivals.csv', index=False)
+        home_rentals.to_csv('./home_rentals_subset.csv', index=False)
+        insert_table(cls.data_handler, home_rentals, cls.data_table_name_1)
+        insert_table(cls.data_handler, arrivals, cls.data_table_name_2)
+
+        # setup lightwood handler
+        cls.handler = LightwoodHandler('test_lightwood_handler', cls.MDB_CURRENT_HANDLERS)
         cls.config = Config()
 
-        kwargs = {"connection_data": {
-            "host": "localhost",
-            "port": "3306",
-            "user": "root",
-            "password": "root",
-            "database": "test",
-            "ssl": False
-        }}
-        cls.sql_handler_name = 'test_handler'
-        cls.data_handler = MySQLHandler(cls.sql_handler_name, **kwargs)
-
         cls.target_1 = 'rental_price'
-        cls.data_table_name_1 = 'home_rentals_subset'
         cls.test_model_name_1 = 'test_lightwood_home_rentals'
         cls.test_model_name_1b = 'test_lightwood_home_rentals_custom'
 
         cls.target_2 = 'Traffic'
-        cls.data_table_name_2 = 'arrival'
         cls.test_model_name_2 = 'test_lightwood_arrivals'
         cls.model_2_into_table = 'test_join_tsmodel_into_lw'
 
-        # todo: connect to global state instead
-        cls.MDB_CURRENT_HANDLERS = {
-            cls.sql_handler_name: MySQLHandler(cls.sql_handler_name, **{"connection_data": {
-                "host": "localhost",
-                "port": "3306",
-                "user": "root",
-                "password": "root",
-                "database": "test",
-                "ssl": False
-            }})
-        }
-        cls.data_handler = cls.MDB_CURRENT_HANDLERS[cls.sql_handler_name]
 
     def connect_handler(self):
         config = Config()
@@ -68,7 +81,7 @@ class LightwoodHandlerTest(unittest.TestCase):
             pass
 
     def test_21_train_predictor(self):
-        query = f"CREATE PREDICTOR {self.test_model_name_1} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1}"
+        query = f"CREATE PREDICTOR {self.test_model_name_1} FROM {self.sql_handler_name} (SELECT * FROM {self.data_table_name_1}) PREDICT {self.target_1}"
         if self.test_model_name_1 not in self.handler.get_tables():
             self.handler.native_query(query)
         else:
@@ -80,13 +93,13 @@ class LightwoodHandlerTest(unittest.TestCase):
         if self.test_model_name_1 in self.handler.get_tables():
             self.handler.native_query(retrain_query)
         else:
-            train_query = f"CREATE PREDICTOR {self.test_model_name_1} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1}"
+            train_query = f"CREATE PREDICTOR {self.test_model_name_1} FROM {self.sql_handler_name} (SELECT * FROM {self.data_table_name_1}) PREDICT {self.target_1}"
             self.handler.native_query(train_query)
             self.handler.native_query(retrain_query)
 
     def test_23_train_predictor_custom_jsonai(self):
         using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
-        query = f'CREATE PREDICTOR {self.test_model_name_1b} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1} USING {using_str}'
+        query = f'CREATE PREDICTOR {self.test_model_name_1b} FROM {self.sql_handler_name} (SELECT * FROM {self.data_table_name_1}) PREDICT {self.target_1} USING {using_str}'
         if self.test_model_name_1b not in self.handler.get_tables():
             self.handler.native_query(query)
         else:
@@ -104,7 +117,7 @@ class LightwoodHandlerTest(unittest.TestCase):
         window = 8
         horizon = 4
 
-        query = f'CREATE PREDICTOR {self.test_model_name_2} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_2}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
+        query = f'CREATE PREDICTOR {self.test_model_name_2} FROM {self.sql_handler_name} (SELECT * FROM {self.data_table_name_2}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
         if self.test_model_name_2 not in self.handler.get_tables():
             self.handler.native_query(query)
         else:

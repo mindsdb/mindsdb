@@ -6,7 +6,7 @@ import redshift_connector
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-# from sqlalchemy_redshift import RedshiftDialect
+from sqlalchemy_redshift import RedshiftDialect
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -145,18 +145,18 @@ class RedshiftHandler(DatabaseHandler):
 
         return response
 
-    # def query(self, query: ASTNode) -> StatusResponse:
-    #     """
-    #     Receive query as AST (abstract syntax tree) and act upon it somehow.
-    #     Args:
-    #         query (ASTNode): sql query represented as AST. May be any kind
-    #             of query: SELECT, INTSERT, DELETE, etc
-    #     Returns:
-    #         HandlerResponse
-    #     """
-    #     renderer = SqlalchemyRender(RedshiftDialect)
-    #     query_str = renderer.get_string(query, with_failback=True)
-    #     return self.native_query(query_str)
+    def query(self, query: ASTNode) -> StatusResponse:
+        """
+        Receive query as AST (abstract syntax tree) and act upon it somehow.
+        Args:
+            query (ASTNode): sql query represented as AST. May be any kind
+                of query: SELECT, INTSERT, DELETE, etc
+        Returns:
+            HandlerResponse
+        """
+        renderer = SqlalchemyRender(RedshiftDialect)
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
 
     def get_tables(self) -> StatusResponse:
         """

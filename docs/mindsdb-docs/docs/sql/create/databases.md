@@ -268,5 +268,20 @@ WITH
     };
 ```
 
+### TiDB
+
+```sql
+CREATE DATABASE tidb_datasource
+WITH
+    engine='tidb',
+    parameters={
+            "user":"root",
+            "port": 4000,
+            "password": "Mimzo3i-mxt@9CpThpBj",
+            "host": "127.0.0.1",
+            "database": "tidb"
+    };
+```
+
 !!! info "Work in progress"
 Note this feature is in beta version. If you have additional questions about other supported datasources or you experience some issues [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or open GitHub issue.

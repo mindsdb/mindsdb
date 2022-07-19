@@ -103,7 +103,7 @@ if __name__ == '__main__':
     print(f'Configuration file:\n   {config.config_path}')
     print(f"Storage path:\n   {config['paths']['root']}")
 
-    # @TODO Backwards compatibiltiy for tests, remove later
+    # @TODO Backwards compatibility for tests, remove later
     model_interface = WithKWArgsWrapper(ModelInterface(), company_id=COMPANY_ID)
     integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
     for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
@@ -183,7 +183,7 @@ if __name__ == '__main__':
         del stream_controller
 
     del model_interface
-    # @TODO Backwards compatibiltiy for tests, remove later
+    # @TODO Backwards compatibility for tests, remove later
 
     if args.api is None:
         api_arr = ['http', 'mysql']

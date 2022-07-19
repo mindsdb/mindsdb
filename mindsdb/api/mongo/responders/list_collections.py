@@ -41,7 +41,7 @@ class Responce(Responder):
             })
 
         cursor = {
-            'id': Int64(0),  # should we save id somethere?
+            'id': Int64(0),  # should we save id somewhere?
             'ns': 'qwe.$cmd.listCollections',
             'firstBatch': tables
         }

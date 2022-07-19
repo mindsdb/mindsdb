@@ -67,7 +67,7 @@ def get_ts_join_input(query, model, data_handler, data_side):
             groups[gcol] = list(data_handler.query(groups_query).data_frame.squeeze().values)
 
         partition_keys = list(groups.keys())
-        all_partitions = list(product(*[v for k, v in groups.items()]))  # TODO: check for better retrival then project?
+        all_partitions = list(product(*[v for k, v in groups.items()]))  # TODO: check for better retrieval then project?
 
         for group in all_partitions:
             group_time_selects = copy.deepcopy(time_selects)

@@ -432,7 +432,7 @@ conda_env = {
 }
 ```
 
-Finally, to actually store the model you need to provide the wrapper class that will 1) load all produced artifacts into an accesible "context" and 2) implement all required inference logic:
+Finally, to actually store the model you need to provide the wrapper class that will 1) load all produced artifacts into an accessible "context" and 2) implement all required inference logic:
 
 ```python
 class Model(mlflow.pyfunc.PythonModel):

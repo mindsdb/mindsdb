@@ -21,7 +21,7 @@ There are several optional arguments that can be used as well,
 * `schema`: schema (database) to use for the connection. If left blank, the default schema `default` will be used
 
 ## Usage
-In order to make use of this handler and connect to a Firebird server in MindsDB, the following syntax can be used,
+In order to make use of this handler and connect to Databricks in MindsDB, the following syntax can be used,
 ~~~~sql
 CREATE DATABASE databricks_datasource
 WITH

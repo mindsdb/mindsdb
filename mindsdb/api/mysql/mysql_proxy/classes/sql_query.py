@@ -1248,34 +1248,17 @@ class SQLQuery():
                     step_data['columns'][table] = new_table_columns
             # endregion
 
-            # drop double names
-            col_names = set()
             if len(step_data['tables']) > 1:
-                # set prefixes for column if it doubled
-
+                # check double names
+                col_names = set()
                 for table in step_data['tables']:
-                    table_name = table[1]
-                    col_map = []
-                    col_list = []
+
                     for column in step_data['columns'][table]:
                         alias = column[1]
-                        if alias not in col_names:
-                            col_names.add(alias)
-                            col_list.append(column)
+                        if alias in col_names:
+                            raise ErSqlWrongArguments(f'Double column name: {alias}')
                         else:
-                            column_new = (f'{table_name}.{column[0]}', f'{table_name}.{column[1]}')
-                            col_list.append(column_new)
-                            col_map.append([column, column_new])
-
-                    # replace columns
-                    step_data['columns'][table] = col_list
-
-                    # replace in values
-                    for row in step_data['values']:
-                        table_row = row[table]
-
-                        for column, column_new in col_map:
-                            table_row[column_new] = table_row.pop(column)
+                            col_names.add(alias)
 
             dn.create_table(
                 table_name_parts=table_name_parts,

@@ -607,9 +607,8 @@ class ExecuteCommands:
                 struct: data for creating integration
         '''
         datasource_name = struct['datasource_name']
-        database_type = struct['database_type']
+        engine = struct['database_type']
         connection_args = struct['connection_args']
-        connection_args['type'] = database_type
 
         # we have connection checkers not for any db. So do nothing if fail
         # TODO return rich error message
@@ -618,7 +617,7 @@ class ExecuteCommands:
 
         try:
             handler = self.session.integration_controller.create_handler(
-                handler_type=database_type,
+                handler_type=engine,
                 connection_data=connection_args
             )
             status = handler.check_connection()
@@ -631,13 +630,14 @@ class ExecuteCommands:
         integration = self.session.integration_controller.get(datasource_name)
         if integration is not None:
             raise SqlApiException(f"Database '{datasource_name}' already exists.")
-        self.session.integration_controller.add(datasource_name, connection_args)
+
+        self.session.integration_controller.add(datasource_name, engine, connection_args)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_datasource(self, ds_name):
         try:
-            ds = self.session.integration_controller.get(ds_name)
-            self.session.integration_controller.delete(ds['database_name'])
+            integration = self.session.integration_controller.get(ds_name)
+            self.session.integration_controller.delete(integration['name'])
         except Exception:
             raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)

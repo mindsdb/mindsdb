@@ -7,8 +7,23 @@ This section will walk you through adding a new integration to MindsDB as data l
 
 Make sure you have cloned and installed the latest staging version of MindsDB repository locally. 
 
+## What are handlers?
 
-### Structure
+At the heart of the MindsDB philosophy lies the belief that predictive insights are best leveraged when produced as close as possible to the data layer. Usually, this "layer" is a SQL-compatible database, but it could also be a non-SQL database, data stream, or any other tool that interacts with data stored somewhere else.
+
+The above description fits an enormous set of tools that people use across the software industry. The complexity increases further by bringing Machine Learning into the equation, as the set of popular ML tools is similarly huge. We aim to support most technology stacks, requiring a simple integration procedure so that anyone is able to easily contribute the necessary "glue" to enable any predictive system for usage within data layers.
+
+This motivates the concept of _handlers_, which is an abstraction for the two types of entities mentioned above: data layers and predictive systems. Handlers are meant to enforce a common and sufficient set of behaviors that all MindsDB-compatible entities should support. By creating a handler, the target system is effectively integrated into the wider MindsDB ecosystem.
+
+## Structure of a handler
+
+Technically speaking, a handler is a self-contained Python package that will have everything required for MindsDB to interact with it, including aspects like dependencies, unit tests, and continuous integration logic. It is up to the author to determine the nature of the package (e.g. close or open source, version control, etc.), although we encourage opening pull requests to expand the default set of supported tools.
+
+The entrypoint is a class definition that should inherit from either `integrations.libs.base_handler.DatabaseHandler` or `integrations.libs.base_handler.PredictiveHandler` depending on the type of system that is integrated. `integrations.libs.base_handler.BaseHandler` defines all the common methods that have to be overwritten in order to achieve a functional implementation.
+
+Apart from the above, structure is not enforced and the package can be built arranged into whatever design is preferred by the author.
+
+### Structure within the MindsDB repository
 
 The code for integrations is located in the main MindsDB repository under [/integrations](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations) directory.
 
@@ -26,10 +41,50 @@ integrations                           # Contains integrations source code
 │  ├─ install.py                       # Installs all handlers dependencies
 ```
 
-### New integration steps
+### Core methods
 
-If you are adding new data integration you need to extend the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base_handler.py#L106). In a case of adding a predictive framework integration extend [`PredictiveHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base_handler.py#L114). 
-Each integration needs 7 core methods:
+Apart from `__init__()`, there are seven core methods that the handler class has to implement, these are: `connect(), disconnect(), check_connection(), native_query(), query(), get_tables(), get_columns()`. It is recommended to check actual examples in the codebase to get an idea of what may go into each of these methods, as they can change a bit depending on the nature of the system being integrated. Respectively, their main purpose is:
+
+1. `connect`: perform any necessary steps to connect to the underlying system
+2. `disconnect`: if needed, gracefully close connections established in `connect`
+3. `check_connection`: evaluate if the connection is alive and healthy. Will be frequently called.
+4. `native_query`: should parse any _native_ statement string and act upon it (e.g. raw SQL-like commands).
+5. `query`: takes a parsed SQL-like command (in the form of an abstract syntax tree) and executes it. An example would be a `CREATE PREDICTOR` statement for predictive handlers, which is _not_ native syntax as databases have no notion of a `PREDICTOR` entity.
+6. `get_tables`: All available `tables`s should be listed and returned. Each handler should decide what a `table` will mean for the underlying system when interacting with it from the data layer. Typically, this means actual tables for data handlers, and machine learning models (or predictive handlers.
+7. `get_columns`: Each table registered in the handler will have one or more columns (with their respective data types) that will be returned when calling this method.
+
+As stated in the above section, authors can opt for adding private methods, new files, folders, or any combination of these to structure all the necessary work that will enable the methods above to work as intended.
+
+### Predictor-specific behavior
+
+For predictive handlers, there is an additional method that is fundamental:
+
+* `join()`: triggers a specific model to generate predictions given some input data. This behavior manifests in the SQL API when doing any type of `JOIN` operation between tables from a predictive and data handler.
+
+### Parsing SQL
+
+Whenever a string that contains SQL needs to be parsed, it is heavily recommended to opt for using the `mindsdb_sql` package, which contains its own parser that fully supports the MindsDB SQL dialect and partially supports the common SQL dialect. There is also a "render" feature to map other dialects into the already supported ones.
+
+### Storing internal state
+
+Most handlers need to store internal metadata, ranging from a list of registered tables to implementation-specific details that will greatly vary from one case to another.
+
+The recommendation for storing these bits of information is to opt for storage handlers (located in `integrations.libs.storage_handler`). We currently support two options, either a Sqlite or a Redis backend. In both cases, the premise is the same: a key-value store system is setup so that interfaces are kept simple and clean, exposing only `get()` and `set()` methods for usage within the data and predictive handlers.
+
+> Note: for ML frameworks, opt for storing the path to your model weights inside the KV storage, saving weights in optimized formats preferred by the system, like `.h5`)
+
+### Formatting output
+
+When it comes to building the response of the public methods, the output should be wrapped by the `HandlerResponse` and `HandlerStatusResponse` classes (located in `mindsdb.integrations.libs.response`), which are used by MindsDB executioner to orchestrate and coordinate multiple handler instances in parallel.
+
+## Other common methods
+
+Under `mindsdb.integrations.libs.utils`, contributors can find various methods that may be useful while implementing new handlers, with a focus on predictive handlers.
+
+## How to write a handler
+
+We wrap up this page by going through all the above information step by step. Remember, if you are adding new data integration you need to extend the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base_handler.py#L106). In a case of adding a predictive framework integration extend [`PredictiveHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base_handler.py#L114). 
+In both cases we need 7 core methods:
 
 1. `connect` – Setup storage and connection
 2. `disconnect` – Terminate connection
@@ -38,10 +93,11 @@ Each integration needs 7 core methods:
 5. `query` – Act upon a parsed SQL-like command
 6. `get_tables` – List all accessible entities within handler
 7. `get_columns` – Column info for a specific table entity
-8. `join` – Call other handlers to merge data with predictions. Predictive handlers only
 
+And additionally for predictive handlers:
+8. `join` – Call other handlers to merge data with predictions. 
 
-Bellow, you can find list of entitiles required to create database handler.
+Below, you can find a list of entities required to create a database handler.
 
 ### Step 1: Create `Handler` class:
 
@@ -214,3 +270,9 @@ __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description', 'icon_path'
 ]
 ```
+
+For real examples, we encourage you to inspect the following handlers inside the MindsDB repository:
+* MySQL
+* Postgres
+* MLflow
+* Lightwood

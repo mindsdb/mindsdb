@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.mssql_handler.mssql_handler import SqlServerHandler
+from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 

@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.postgres_handler.postgres_handler import PostgresHandler
+from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 

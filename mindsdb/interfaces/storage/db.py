@@ -90,6 +90,8 @@ class Predictor(Base):
     is_custom = Column(Boolean)
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')
+    training_data_columns_count = Column(Integer)
+    training_data_rows_count = Column(Integer)
 
     json_ai = Column(Json, nullable=True)
     code = Column(String, nullable=True)
@@ -116,6 +118,7 @@ class Integration(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
+    engine = Column(String, nullable=False)
     data = Column(Json)
     company_id = Column(Integer)
     uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')

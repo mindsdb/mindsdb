@@ -1,7 +1,7 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 try:
-    from .trino_handler import PostgresHandler as Handler
+    from .trino_handler import TrinoHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None

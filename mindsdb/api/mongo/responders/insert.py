@@ -53,8 +53,7 @@ class Responce(Responder):
                     raise Exception(f"Database '{doc['name']}' already exists.")
 
             for doc in query['documents']:
-                doc['connection_args']['type'] = doc['engine']
-                mindsdb_env['integration_controller'].add(doc['name'], doc['connection_args'])
+                mindsdb_env['integration_controller'].add(doc['name'], doc['engine'], doc['connection_args'])
 
             result = {
                 "n": len(query['documents']),

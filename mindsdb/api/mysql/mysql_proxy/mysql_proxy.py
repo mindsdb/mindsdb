@@ -108,7 +108,7 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
             if username == f'{hardcoded_user}_{integration_name}':
                 extracted_username = hardcoded_user
                 integration = integration_name
-                integration_type = integration_controller.get(integration, company_id)['type']
+                integration_type = integration_controller.get(integration, company_id)['engine']
 
         if extracted_username != hardcoded_user:
             log.warning(f'Check auth, user={username}: user mismatch')

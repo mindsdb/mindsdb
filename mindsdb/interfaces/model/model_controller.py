@@ -240,6 +240,8 @@ class ModelController():
             to_predict=problem_definition.target,
             learn_args=problem_definition.to_dict(),
             data={'name': name},
+            training_data_columns_count=len(training_data.columns),
+            training_data_rows_count=len(training_data)
         )
 
         db.session.add(predictor_record)
@@ -437,7 +439,7 @@ class ModelController():
         """
         Similar to `get_model_data` but meant to be seen directly by the user, rather than parsed by something like the Studio predictor view.
 
-        Uses `get_model_data` to compose this, but in the future we might want to make this independent if we deprected `get_model_data`
+        Uses `get_model_data` to compose this, but in the future we might want to make this independent if we deprecated `get_model_data`
 
         :returns: Dictionary of the analysis (meant to be foramtted by the APIs and displayed as json/yml/whatever)
         """ # noqa
@@ -523,10 +525,10 @@ class ModelController():
         integration_handler = integration_controller.get_handler(integration_record.name)
 
         response = integration_handler.native_query(predictor_record.fetch_data_query)
-        if response['type'] != RESPONSE_TYPE.TABLE:
-            raise Exception("Can't fetch data for predictor training")
+        if response.type != RESPONSE_TYPE.TABLE:
+            raise Exception(f"Can't fetch data for predictor training: {response.error_message}")
 
-        p = UpdateProcess(name, response['data_frame'], company_id)
+        p = UpdateProcess(name, response.data_frame, company_id)
         p.start()
         return 'Updated in progress'
 

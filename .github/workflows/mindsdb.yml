@@ -5,9 +5,9 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**.md'
-  pull_request_target:
+  # pull_request_target:
   pull_request:
-    branches: [stable]
+    branches: [stable, staging]
     paths-ignore:
       - 'docs/**'
       - 'README.md'
@@ -121,6 +121,7 @@ jobs:
         python-version: '3.7'
     - name: Install dependencies
       run: |
+        echo ${{ github.ref }}
         python -m pip install --upgrade pip
         pip install setuptools wheel twine
     - name: Build and publish

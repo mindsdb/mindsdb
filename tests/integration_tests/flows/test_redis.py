@@ -132,9 +132,12 @@ class RedisTest(unittest.TestCase):
         print(f"\nExecuting {self._testMethodName}")
         url = f'{HTTP_API_ROOT}/config/integrations/{INTEGRATION_NAME}'
 
-        params = {"type": "redis",
-                  "connection": CONNECTION_PARAMS,
-                  "control_stream": CONTROL_STREAM}
+        params = {
+            "type": "redis",
+            "publish": True,
+            "connection": CONNECTION_PARAMS,
+            "control_stream": CONTROL_STREAM
+        }
 
         res = requests.put(url, json={"params": params})
         self.assertEqual(res.status_code, 200)

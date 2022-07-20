@@ -7,7 +7,7 @@ on:
       - '**.md'
   # pull_request_target:
   pull_request:
-    branches: [stable]
+    branches: [stable, staging]
     paths-ignore:
       - 'docs/**'
       - 'README.md'
@@ -55,10 +55,10 @@ jobs:
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-    - name: Install lightwood/staging if it's not mindsdb/stable
-      if: ${{ github.ref != 'refs/heads/stable' }}
-      run: |
-          pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+    # - name: Install lightwood/staging if it's not mindsdb/stable
+    #   if: ${{ github.ref != 'refs/heads/stable' }}
+    #   run: |
+    #       pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
@@ -96,9 +96,9 @@ jobs:
           # echo -e "\n===============\ntest Kafka Stream\n===============\n"
           # python tests/integration_tests/flows/test_kafka.py
 
-          # # Redis Stream
-          # echo -e "\n===============\ntest Redis Stream\n===============\n"
-          # python tests/integration_tests/flows/test_redis.py
+          # Redis Stream
+          echo -e "\n===============\ntest Redis Stream\n===============\n"
+          python tests/integration_tests/flows/test_redis.py
         fi
       shell: bash
       env:

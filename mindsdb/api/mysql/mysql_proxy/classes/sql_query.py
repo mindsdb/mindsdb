@@ -1249,16 +1249,23 @@ class SQLQuery():
             # endregion
 
             # drop double names
+            col_names = set()
             if len(step_data['tables']) > 1:
-                # set prefixes for all tables except first one
-                for table in step_data['tables'][1:]:
+                # set prefixes for column if it doubled
+
+                for table in step_data['tables']:
                     table_name = table[1]
                     col_map = []
                     col_list = []
                     for column in step_data['columns'][table]:
-                        column_new = (f'{table_name}.{column[0]}', f'{table_name}.{column[1]}')
-                        col_list.append(column_new)
-                        col_map.append([column, column_new])
+                        alias = column[1]
+                        if alias not in col_names:
+                            col_names.add(alias)
+                            col_list.append(column)
+                        else:
+                            column_new = (f'{table_name}.{column[0]}', f'{table_name}.{column[1]}')
+                            col_list.append(column_new)
+                            col_map.append([column, column_new])
 
                     # replace columns
                     step_data['columns'][table] = col_list

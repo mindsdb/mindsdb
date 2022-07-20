@@ -6,7 +6,7 @@ import redshift_connector
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from sqlalchemy_redshift import RedshiftDialect
+from redshift_sqlalchemy import dialect
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -154,7 +154,7 @@ class RedshiftHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        renderer = SqlalchemyRender(RedshiftDialect)
+        renderer = SqlalchemyRender(dialect.RedshiftDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 

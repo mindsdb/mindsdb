@@ -25,12 +25,13 @@ class RedisConnectionChecker:
 
 class Redis(StreamIntegration, RedisConnectionChecker):
     def __init__(self, config, name, db_info):
-        self.connection_info = db_info['connection']
+        connection_data = db_info['connection_data']
+        self.connection_info = connection_data['connection']
 
         # Back compatibility with initial API version
-        self.control_stream = db_info.get('control_stream') or db_info.get('stream') or None
-        if 'advanced' in db_info:
-            self.connection_info['advanced'] = db_info['advanced']
+        self.control_stream = connection_data.get('control_stream') or connection_data.get('stream') or None
+        if 'advanced' in connection_data:
+            self.connection_info['advanced'] = connection_data['advanced']
 
         StreamIntegration.__init__(
             self,

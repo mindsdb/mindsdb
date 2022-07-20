@@ -181,3 +181,13 @@ JOIN mindsdb.home_rentals_model as m limit 100
 | 4774       | 4748            | 3               | 2                   | 1066 | good     | 13             |
 +------------+-----------------+-----------------+---------------------+------+----------+----------------+
 ```
+
+## What's Next?
+
+Have fun while trying it out yourself!
+
+* Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
+* Sign up for a free [MindsDB account](https://cloud.mindsdb.com/?_gl=1*16uh9sn*_ga*ODkzODkzMDc2LjE2NTYwMTgwNjY.*_ga_7LGFPGV6XV*MTY1ODMyNjU0Ni44LjEuMTY1ODMyNjYxMy4w&_ga=2.127186189.1258054943.1658158446-893893076.1656018066).
+* Engage with the MindsDB community on [Slack](https://mindsdb.com/joincommunity) or [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and share your ideas and thoughts.
+
+If this tutorial was helpful, please give us a GitHub star [here](https://github.com/mindsdb/mindsdb).

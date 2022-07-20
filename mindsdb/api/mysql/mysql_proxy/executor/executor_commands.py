@@ -707,7 +707,8 @@ class ExecuteCommands:
         if statement.order_by is not None:
             struct['order_by'] = [x.field.parts[-1] for x in statement.order_by]
             if len(struct['order_by']) > 1:
-                raise SqlApiException("Only one field can be in 'OPRDER BY'")
+                raise SqlApiException("Only one field can be in 'ORDER BY'")
+            struct['order_by'] = struct['order_by'][0]
         if statement.group_by is not None:
             struct['group_by'] = [x.parts[-1] for x in statement.group_by]
         if statement.window is not None:
@@ -769,13 +770,12 @@ class ExecuteCommands:
         if isinstance(kwargs.get('timeseries_settings'), dict):
             order_by = kwargs['timeseries_settings'].get('order_by')
             if order_by is not None:
-                for i, col in enumerate(order_by):
-                    new_name = get_column_in_case(ds_column_names, col)
-                    if new_name is None:
-                        raise ErSqlWrongArguments(
-                            f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
-                        )
-                    kwargs['timeseries_settings']['order_by'][i] = new_name
+                new_name = get_column_in_case(ds_column_names, order_by)
+                if new_name is None:
+                    raise ErSqlWrongArguments(
+                        f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {order_by}'
+                    )
+                kwargs['timeseries_settings']['order_by'] = new_name
             group_by = kwargs['timeseries_settings'].get('group_by')
             if group_by is not None:
                 for i, col in enumerate(group_by):

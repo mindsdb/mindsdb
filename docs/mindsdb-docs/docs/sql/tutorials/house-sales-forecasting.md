@@ -61,7 +61,7 @@ Now, try changing `type` to unit or `bedrooms` to any number between 1 to 5, and
 Have fun while trying it out yourself!
 
 * Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
-* Sign up for a free [MindsDB account](https://cloud.mindsdb.com/?_gl=1*16uh9sn*_ga*ODkzODkzMDc2LjE2NTYwMTgwNjY.*_ga_7LGFPGV6XV*MTY1ODMyNjU0Ni44LjEuMTY1ODMyNjYxMy4w&_ga=2.127186189.1258054943.1658158446-893893076.1656018066).
+* Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
 * Engage with the MindsDB community on [Slack](https://mindsdb.com/joincommunity) or [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and share your ideas and thoughts.
 
 If this tutorial was helpful, please give us a GitHub star [here](https://github.com/mindsdb/mindsdb).

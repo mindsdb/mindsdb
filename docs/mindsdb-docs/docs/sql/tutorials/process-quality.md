@@ -158,8 +158,12 @@ As you can see below, the predictor has made multiple predictions for each data 
 +-----------+-------------+-------------+------------+---------------+-------------+------------------+------------+------------------------------+
 ```
 
-You are now done with the tutorial! 🎉
+## What's Next?
 
-Please feel free to try it yourself. Sign up for a [free MindsDB account](https://cloud.mindsdb.com/signup?utm_medium=community&utm_source=ext.%20blogs&utm_campaign=blog-manufacturing-process-quality) to get up and running in 5 minutes, and if you need any help, feel free to ask in [Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or [Github](https://github.com/mindsdb/mindsdb/discussions).
+Have fun while trying it out yourself!
 
-For more tutorials like this, check out [MindsDB documentation](https://docs.mindsdb.com/).
+* Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
+* Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
+* Engage with the MindsDB community on [Slack](https://mindsdb.com/joincommunity) or [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and share your ideas and thoughts.
+
+If this tutorial was helpful, please give us a GitHub star [here](https://github.com/mindsdb/mindsdb).

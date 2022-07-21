@@ -56,6 +56,12 @@ LIMIT 4;
 
 Now, try changing `type` to unit or `bedrooms` to any number between 1 to 5, and check how the forecast varies. This is because MindsDB recognizes each grouping as being its own different time series.
 
-## Next steps
+## What's Next?
 
-We invite you to try this tutorial with your own time series data. If you have any questions or feedback, be sure to join our slack community or make an issue in the github repository!
+Have fun while trying it out yourself!
+
+* Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
+* Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
+* Engage with the MindsDB community on [Slack](https://mindsdb.com/joincommunity) or [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and share your ideas and thoughts.
+
+If this tutorial was helpful, please give us a GitHub star [here](https://github.com/mindsdb/mindsdb).

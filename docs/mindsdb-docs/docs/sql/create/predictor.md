@@ -155,6 +155,8 @@ USING
 
 ## `#!sql CREATE PREDICTOR` From file
 
+In order to create a predictor from a file, you should first upload a file to MindsDB. Follow [this guide](https://docs.mindsdb.com/sql/create/file/) to see how to do that.
+
 ### `#!sql CREATE PREDICTOR` Description
 
 To train a model using a file:

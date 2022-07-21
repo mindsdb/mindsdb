@@ -87,6 +87,7 @@ nav:
       - Kafka: connect/kafka.md 
       - Tableau: connect/tableau.md
   - Plug data to MindsDB: sql/create/databases.md
+  - Uploading a File to MindsDB: sql/create/file.md
   - Train a Predictor: sql/create/predictor.md
   - Get a Prediction: sql/api/select.md
   - SQL API:

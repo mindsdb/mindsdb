@@ -21,18 +21,11 @@ The first step will be to log into [Mindsdb Cloud](https://docs.mindsdb.com/depl
 
 ### Upload a data file to MindsDB Cloud
 
-The datafile can be uploaded directly to Mindsdb Cloud for you to query. 
+In this tutorial, we use the customer churn data file. You can download it [here](https://github.com/mindsdb/mindsdb-examples/blob/master/classics/customer_churn/raw_data/WA_Fn-UseC_-Telco-Customer-Churn.csv).
 
-1. Navigate to **+Upload file** and select the option.
-2. Select **Upload file** to upsert a file from your local files or drag the file onto the 'Upload a file' section.
-3. Once the file has been uploaded,name the file you as a table name.
-4. Save and continue.
+And [this guide](https://docs.mindsdb.com/sql/create/file/) explains how to upload a file to MindsDB.
 
-The file will be stored as a table in your files table.
-
-![Upload file](/assets/sql/tutorials/customer_churn/upload.png)
-
-You can query the file you have uploaded as a table, eg.
+Now, you can query the uploaded file as if it were a table.
 
 ```sql
 SELECT * FROM files.churn

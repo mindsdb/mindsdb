@@ -13,7 +13,9 @@ class Responce(Responder):
         db = query['$db']
         collection = query['collStats']
 
-        if db == 'mindsdb' and collection == 'predictors':
+        scale = query.get('scale')
+
+        if db != 'mindsdb' or collection == 'predictors' or scale is None:
             # old behavior
             # NOTE real answer is huge, i removed most data from it.
             res = {
@@ -35,9 +37,10 @@ class Responce(Responder):
                 'ok': 1
             }
 
-            res['count'] = len(mindsdb_env['model_interface'].get_models())
+            res['ns'] = f"{db}.{collection}"
+            if db == 'mindsdb' and collection == 'predictors':
+                res['count'] = len(mindsdb_env['model_interface'].get_models())
         else:
-            scale = query.get('scale')
 
             ident_parts = [collection]
             if scale is not None:

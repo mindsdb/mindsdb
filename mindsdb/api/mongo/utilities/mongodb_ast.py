@@ -2,8 +2,6 @@ import re
 import ast as py_ast
 from mindsdb_sql.parser.ast import *
 
-from .mongodb_query import MongoQuery
-
 
 class MongoToAst:
 
@@ -11,7 +9,7 @@ class MongoToAst:
       Converts query mongo to AST format
     """
 
-    def from_mongoqeury(self, query: MongoQuery):
+    def from_mongoqeury(self, query):
         # IS NOT USED YET AND NOT FINISHED
 
         collection = query.collection

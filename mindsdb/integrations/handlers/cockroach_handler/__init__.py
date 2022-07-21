@@ -9,7 +9,7 @@ except Exception as e:
     import_error = e
 
 title = 'CockroachDB'
-name = 'cockroach'
+name = 'cockroachdb'
 type = HANDLER_TYPE.DATA
 
 __all__ = [

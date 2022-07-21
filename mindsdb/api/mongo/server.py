@@ -288,7 +288,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             if answer is not None:
                 self.request.send(answer)
 
-        db_session.close()
+            db_session.close()
 
     def get_answer(self, request_id, opcode, msg_bytes):
         if opcode not in self.server.operationsHandlersMap:

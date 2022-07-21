@@ -105,10 +105,11 @@ class LightwoodHandler(PredictiveHandler):
             target = statement.targets[0].parts[-1]
             params = { 'target': target }
             if statement.order_by:
+                gby = None if not statement.group_by else [str(col) for col in statement.group_by]
                 params['timeseries_settings'] = {
                     'is_timeseries': True,
                     'order_by': str(statement.order_by[0]),
-                    'group_by': [str(col) for col in statement.group_by],
+                    'group_by': gby,
                     'window': int(statement.window),
                     'horizon': int(statement.horizon),
                 }

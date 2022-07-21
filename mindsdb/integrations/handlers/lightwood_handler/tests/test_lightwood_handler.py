@@ -61,7 +61,10 @@ class LightwoodHandlerTest(unittest.TestCase):
         cls.model_1_into_table = 'test_join_into_lw'
 
         cls.target_2 = 'Traffic'
-        cls.test_model_name_2 = 'test_lightwood_arrivals'
+        cls.test_tsmodel_name_1 = 'test_lightwood_arrivals'
+        cls.test_tsmodel_name_2 = 'test_lightwood_arrivals2'
+        cls.test_tsmodel_name_3 = 'test_lightwood_arrivals3'
+        cls.test_tsmodel_name_4 = 'test_lightwood_arrivals4'
         cls.model_2_into_table = 'test_join_tsmodel_into_lw'
 
 
@@ -111,22 +114,74 @@ class LightwoodHandlerTest(unittest.TestCase):
         assert len(m.ensemble.mixers) == 1
         assert isinstance(m.ensemble.mixers[0], LightGBM)
 
-    def test_24_train_ts_predictor(self):
+    def test_24_train_ts_predictor_gby_hor4(self):
         target = 'Traffic'
         oby = 'T'
         gby = 'Country'
         window = 8
         horizon = 4
 
-        query = f'CREATE PREDICTOR {self.test_model_name_2} FROM {self.sql_handler_name} (SELECT * FROM {self.data_table_name_2}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
-        if self.test_model_name_2 not in self.handler.get_tables():
+        query = f'CREATE PREDICTOR {self.test_tsmodel_name_1} FROM {self.sql_handler_name} (SELECT * FROM {self.data_table_name_2}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
+        if self.test_tsmodel_name_1 not in self.handler.get_tables():
             self.handler.native_query(query)
         else:
-            self.handler.native_query(f"DROP PREDICTOR {self.test_model_name_2}")
+            self.handler.native_query(f"DROP PREDICTOR {self.test_tsmodel_name_1}")
             self.handler.native_query(query)
 
         p = self.handler.storage.get('models')
-        m = load_predictor(p[self.test_model_name_2], self.test_model_name_2)
+        m = load_predictor(p[self.test_tsmodel_name_1], self.test_tsmodel_name_1)
+        assert m.problem_definition.timeseries_settings.is_timeseries
+
+    def test_25_train_ts_predictor_gby_hor1(self):
+        target = 'Traffic'
+        oby = 'T'
+        gby = 'Country'
+        window = 4
+        horizon = 1
+
+        query = f'CREATE PREDICTOR {self.test_tsmodel_name_2} FROM {self.sql_handler_name} (SELECT * FROM {self.data_table_name_2}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
+        if self.test_tsmodel_name_2 not in self.handler.get_tables():
+            self.handler.native_query(query)
+        else:
+            self.handler.native_query(f"DROP PREDICTOR {self.test_tsmodel_name_2}")
+            self.handler.native_query(query)
+
+        p = self.handler.storage.get('models')
+        m = load_predictor(p[self.test_tsmodel_name_2], self.test_tsmodel_name_2)
+        assert m.problem_definition.timeseries_settings.is_timeseries
+
+    def test_26_train_ts_predictor_no_gby_hor1(self):
+        target = 'Traffic'
+        oby = 'T'
+        window = 8
+        horizon = 4
+
+        query = f'CREATE PREDICTOR {self.test_tsmodel_name_3} FROM {self.sql_handler_name} (SELECT * FROM {self.data_table_name_2} WHERE Country = "Japan") PREDICT {target} ORDER BY {oby} WINDOW {window} HORIZON {horizon}'
+        if self.test_tsmodel_name_3 not in self.handler.get_tables():
+            self.handler.native_query(query)
+        else:
+            self.handler.native_query(f"DROP PREDICTOR {self.test_tsmodel_name_3}")
+            self.handler.native_query(query)
+
+        p = self.handler.storage.get('models')
+        m = load_predictor(p[self.test_tsmodel_name_3], self.test_tsmodel_name_3)
+        assert m.problem_definition.timeseries_settings.is_timeseries
+
+    def test_27_train_ts_predictor_no_gby_hor4(self):
+        target = 'Traffic'
+        oby = 'T'
+        window = 8
+        horizon = 4
+
+        query = f'CREATE PREDICTOR {self.test_tsmodel_name_4} FROM {self.sql_handler_name} (SELECT * FROM {self.data_table_name_2} WHERE Country = "US") PREDICT {target} ORDER BY {oby} WINDOW {window} HORIZON {horizon}'
+        if self.test_tsmodel_name_4 not in self.handler.get_tables():
+            self.handler.native_query(query)
+        else:
+            self.handler.native_query(f"DROP PREDICTOR {self.test_tsmodel_name_4}")
+            self.handler.native_query(query)
+
+        p = self.handler.storage.get('models')
+        m = load_predictor(p[self.test_tsmodel_name_4], self.test_tsmodel_name_4)
         assert m.problem_definition.timeseries_settings.is_timeseries
 
     def test_31_list_tables(self):
@@ -160,7 +215,7 @@ class LightwoodHandlerTest(unittest.TestCase):
         self.connect_handler()
         target = 'Traffic'
         oby = 'T'
-        query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {self.sql_handler_name}.{self.data_table_name_2} AS ta JOIN mindsdb.{self.test_model_name_2} AS tb ON 1=1 WHERE ta.{oby} > LATEST LIMIT 10"
+        query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {self.sql_handler_name}.{self.data_table_name_2} AS ta JOIN mindsdb.{self.test_tsmodel_name_1} AS tb ON 1=1 WHERE ta.{oby} > LATEST LIMIT 10"
         parsed = self.handler.parser(query, dialect=self.handler.dialect)
         predicted = self.handler.join(parsed, self.data_handler)  # , into=self.model_2_into_table) # TODO: restore when we add support for SQLite and other handlers for `into`
 

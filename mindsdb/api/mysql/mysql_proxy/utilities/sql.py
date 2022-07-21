@@ -64,12 +64,15 @@ def query_df(df, query, session=None):
         )
         query_str = render.get_string(query_ast, with_failback=True)
 
-    res = duckdb.query_df(df, 'df_table', query_str)
-    result_df = res.df()
-    result_df = result_df.replace({np.nan: None})
+    con = duckdb.connect(database=':memory:')
+    con.register('df_table', df)
+    result_df = con.execute(query_str).fetchdf()
+    description = con.description
+    con.unregister('df_table')
+    con.close()
 
     new_column_names = {}
-    real_column_names = [x[0] for x in res.description()]
+    real_column_names = [x[0] for x in description]
     for i, duck_column_name in enumerate(result_df.columns):
         new_column_names[duck_column_name] = real_column_names[i]
     result_df = result_df.rename(

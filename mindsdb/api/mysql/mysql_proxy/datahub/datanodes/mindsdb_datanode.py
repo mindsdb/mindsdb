@@ -247,7 +247,9 @@ class MindsDBDataNode(DataNode):
 
             predict = model['predict']
             group_by = timeseries_settings['group_by'] or []
-            order_by_column = timeseries_settings['order_by'][0]
+            order_by_column = timeseries_settings['order_by']
+            if isinstance(order_by_column, list):
+                order_by_column = order_by_column[0]
             horizon = timeseries_settings['horizon']
 
             groups = set()
@@ -292,7 +294,8 @@ class MindsDBDataNode(DataNode):
                 for i in range(len(rows) - 1):
                     if horizon > 1:
                         rows[i][predict] = rows[i][predict][0]
-                        rows[i][order_by_column] = rows[i][order_by_column][0]
+                        if isinstance(rows[i][order_by_column], list):
+                            rows[i][order_by_column] = rows[i][order_by_column][0]
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
                         if horizon > 1:
                             explanations[i][predict][col] = explanations[i][predict][col][0]
@@ -303,7 +306,8 @@ class MindsDBDataNode(DataNode):
                     new_row = copy.deepcopy(last_row)
                     if horizon > 1:
                         new_row[predict] = new_row[predict][i]
-                        new_row[order_by_column] = new_row[order_by_column][i]
+                        if isinstance(new_row[order_by_column], list):
+                            new_row[order_by_column] = new_row[order_by_column][i]
                     if '__mindsdb_row_id' in new_row and (i > 0 or __no_forecast_offset):
                         new_row['__mindsdb_row_id'] = None
                     rows.append(new_row)

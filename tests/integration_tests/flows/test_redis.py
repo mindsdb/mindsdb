@@ -103,7 +103,7 @@ class RedisTest(unittest.TestCase):
 
     def train_ts_predictor(self, ds_name, predictor_name, with_gb=True):
         ts_settings = {
-            "order_by": ["order"],
+            "order_by": 'order',
             "horizon": 1,
             "use_previous_target": True,
             "window": 10}
@@ -282,7 +282,7 @@ class RedisTest(unittest.TestCase):
         stream_out = RedisStream(STREAM_OUT, CONNECTION_PARAMS)
 
         for x in range(210, 221):
-            stream_in.write({'x1': x, 'x2': 2*x, 'order': x, 'y': 3 * x})
+            stream_in.write({'x1': x, 'x2': 2 * x, 'order': x, 'y': 3 * x})
             time.sleep(5)
 
         self.assertEqual(len(list(stream_out.read())), 2)

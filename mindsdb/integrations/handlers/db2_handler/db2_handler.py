@@ -11,7 +11,6 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 import pandas as pd
-import ibm_db
 import ibm_db_dbi as love
 
 

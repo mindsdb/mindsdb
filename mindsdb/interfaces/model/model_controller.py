@@ -439,7 +439,7 @@ class ModelController():
         """
         Similar to `get_model_data` but meant to be seen directly by the user, rather than parsed by something like the Studio predictor view.
 
-        Uses `get_model_data` to compose this, but in the future we might want to make this independent if we deprected `get_model_data`
+        Uses `get_model_data` to compose this, but in the future we might want to make this independent if we deprecated `get_model_data`
 
         :returns: Dictionary of the analysis (meant to be foramtted by the APIs and displayed as json/yml/whatever)
         """ # noqa

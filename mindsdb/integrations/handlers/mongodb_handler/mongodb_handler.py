@@ -34,6 +34,7 @@ class MongoDBHandler(DatabaseHandler):
         self.user = connection_data.get("username")
         self.password = connection_data.get("password")
         self.database = connection_data.get('database')
+        self.flatten_level = connection_data.get('flatten_level', 0)
 
         self.connection = None
         self.is_connected = False
@@ -139,7 +140,7 @@ class MongoDBHandler(DatabaseHandler):
 
             result = []
             for row in cursor:
-                result.append(self.flatten(row))
+                result.append(self.flatten(row, level=self.flatten_level))
 
             if len(result) > 0:
                 df = pd.DataFrame(result)
@@ -163,7 +164,6 @@ class MongoDBHandler(DatabaseHandler):
 
     def flatten(self, row, level=0):
         # move sub-keys to upper level
-        # TODO flattening is disabled now
 
         add = {}
         del_keys = []

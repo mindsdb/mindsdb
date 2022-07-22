@@ -56,7 +56,7 @@ class Stream(Resource):
             if integration is None:
                 return abort(404, 'Integration "{}" doesn\'t exist'.format(params['integration']))
 
-            if integration['type'] not in STREAM_INTEGRATION_TYPES:
+            if integration['engine'] not in STREAM_INTEGRATION_TYPES:
                 return abort(400, 'Integration "{}" is not of type [{}]'.format(
                     params['integration'],
                     '/'.join(STREAM_INTEGRATION_TYPES)
@@ -64,8 +64,8 @@ class Stream(Resource):
 
         else:
             # cloud
-            if 'type' not in params_keys:
-                return abort(404, "'type' parameter is required in case of cloud.")
+            if 'engine' not in params_keys:
+                return abort(404, "'engine' parameter is required in case of cloud.")
             # because '_' is not allowed in pod name - replace it.
             name = name.replace('_', '-')
 
@@ -83,7 +83,7 @@ class Stream(Resource):
             stream_in=params['stream_in'],
             stream_out=params['stream_out'],
             anomaly_stream=params.get('anomaly_stream'),
-            type=params.get('type'),
+            type=params.get('engine'),
             connection_info=params.get('connection'),
             learning_params=params.get('learning_params', {}),
             learning_threshold=params.get('learning_threshold', 0)

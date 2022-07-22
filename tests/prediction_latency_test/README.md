@@ -7,7 +7,7 @@
     - `database` - db connection info (required)
     - `datasets` - datasets info:
         - `target` - prediction column (required)
-        - `handler_file` - .py file with initial data hanlder. Some data may require it, to add/remove some data. handler is a function with next signature `handler(df) where df is a pandas.DataFrame` (optional)
+        - `handler_file` - .py file with initial data handler. Some data may require it, to add/remove some data. handler is a function with next signature `handler(df) where df is a pandas.DataFrame` (optional)
 
 - `schemal.py` - describes dataset table structures
 - `prepare.py` - all code to create/train models and to set up test environment (launch docker with db, create tables, upload data to db, launch mindsdb)

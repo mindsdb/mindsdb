@@ -79,7 +79,6 @@ class ScyllaHandler(DatabaseHandler):
         :return: returns the records from the current recordset
         """
         session = self.connect()
-        print('OOOOOOOOOO ', query)
         try:
             resp = session.execute(query).all()
             if resp:
@@ -105,7 +104,6 @@ class ScyllaHandler(DatabaseHandler):
         """
         renderer = SqlalchemyRender('mysql')
         query_str = renderer.get_string(query, with_failback=True)
-        print('OOOOOOOOOO2222222 ', query)
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:

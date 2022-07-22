@@ -86,8 +86,8 @@ nav:
       - DBT: connect/dbt.md
       - Kafka: connect/kafka.md 
       - Tableau: connect/tableau.md
-  - Plug data to MindsDB: sql/create/databases.md
-  - Uploading a File to MindsDB: sql/create/file.md
+  - Data Setup in MindsDB: sql/create/databases.md
+  - Upload a File to MindsDB: sql/create/file.md
   - Train a Predictor: sql/create/predictor.md
   - Get a Prediction: sql/api/select.md
   - SQL API:
@@ -112,7 +112,6 @@ nav:
   - Tutorials:
     - Regression:
       - Home Rentals: sql/tutorials/home-rentals.md
-      - Process Quality: sql/tutorials/process-quality.md
     - Classification:
       - Customer Churn: sql/tutorials/customer-churn.md
     - Time Series:
@@ -122,6 +121,7 @@ nav:
     - Regression:
       - Insurance Cost: sql/tutorials/insurance-cost-prediction.md
       - Body Fat Prediction: sql/tutorials/bodyfat.md
+      - Process Quality: sql/tutorials/process-quality.md
     - Classification:
       - Crop Recommendation: sql/tutorials/crop-prediction.md
       - Diabetes: sql/tutorials/diabetes.md

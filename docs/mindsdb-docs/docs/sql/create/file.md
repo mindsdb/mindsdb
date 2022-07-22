@@ -17,3 +17,6 @@ Follow the steps below to upload a file to MindsDB.
         ![Upload Status](/assets/sql/file.png){ width="800", loading=lazy  }
     </figure>
     
+## What's Next?
+
+Now, you are ready to create a predictor from file. Make sure to check out [this guide](https://docs.mindsdb.com/sql/create/predictor/#create-predictor-from-file) on how to do that.

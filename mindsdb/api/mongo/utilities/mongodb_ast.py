@@ -2,12 +2,16 @@ import re
 import ast as py_ast
 from mindsdb_sql.parser.ast import *
 
-from .mongodb_query import MongoQuery
-
 
 class MongoToAst:
 
-    def from_mongoqeury(self, query: MongoQuery):
+    """
+      Converts query mongo to AST format
+    """
+
+    def from_mongoqeury(self, query):
+        # IS NOT USED YET AND NOT FINISHED
+
         collection = query.collection
 
         filter, projection = None, None
@@ -111,7 +115,7 @@ class MongoToAst:
 
                 return arg1
             if k in ('$where', '$expr'):
-                # try to parse simple expresion like 'this.saledate > this.latest'
+                # try to parse simple expression like 'this.saledate > this.latest'
                 return MongoWhereParser(v).to_ast()
 
             # is filter
@@ -166,6 +170,7 @@ class MongoToAst:
             op = '='
             value = value
             return op, value
+
 
 class MongoWhereParser:
     def __init__(self, query):
@@ -232,7 +237,7 @@ class MongoWhereParser:
             'GtE': '>=',
             'LtE': '<=',
         }
-        if not opname in ops:
+        if opname not in ops:
             raise NotImplementedError(f'Unknown $where op: {opname}')
         return ops[opname]
 

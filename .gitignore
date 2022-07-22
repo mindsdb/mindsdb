@@ -22,7 +22,7 @@ tests/prediction_latency_test/*.csv
 storage_dir
 docker/dist/*
 .directory
-
+MindsDB.egg-info/*
 # VisualStudioCode
 .vscode
 .vscode/*

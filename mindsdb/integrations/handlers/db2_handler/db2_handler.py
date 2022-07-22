@@ -10,8 +10,10 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-
+import pandas as pd
 import ibm_db
+import ibm_db_dbi as love
+
 
 
 
@@ -22,11 +24,25 @@ class DB2Handler(DatabaseHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
+        
         self.connection_args = kwargs
+        self.driver = "{IBM DB2 ODBC DRIVER}"
         self.dbName = kwargs.get('dbName')
         self.userID = kwargs.get('userID')
         self.passWord = kwargs.get('password')
-        self.dbConnection = None
+        self.schemaName = kwargs.get('schemaName')
+        self.host = kwargs.get('host')
+        self.port = kwargs.get('port')
+        self.connString = (
+    "DRIVER={0};"
+    "DATABASE={1};"
+    "HOSTNAME={2};"
+    "PORT={3};"
+    "PROTOCOL={4};"
+    "UID={5};"
+    "PWD={6};").format(self.driver, self.dbName, self.host, self.port,"TCPIP" , self.userID, self.passWord)
+
+        self.dbConnection = None 
         self.is_connected = False
         
         
@@ -34,18 +50,18 @@ class DB2Handler(DatabaseHandler):
         
     
 
-    def connect(self) -> HandlerStatusResponse:
+    def connect(self):
         if self.dbConnection is not None:
             return self.check_connection()
 
-        connString = "ATTACH=FALSE"              
-        connString += ";DATABASE=" + self.dbName           
-        connString += ";PROTOCOL=TCPIP"
-        connString += ";UID=" + self.userID
-        connString += ";PWD=" + self.passWord
+        try:
+            self.dbConnection = love.connect(self.connString,'','')
+            self.is_connected= True
+        except Exception as e:
+            log.error(f"Error while connecting to {self.dbName}, {e}")
 
-        self.dbConnection = ibm_db.pconnect(connString, '', '')
-        self.is_connected= True
+        
+        
         return self.check_connection()
 
 
@@ -53,7 +69,7 @@ class DB2Handler(DatabaseHandler):
 
     def disconnect(self):
         if self.dbConnection is not None:
-            returnCode = ibm_db.close(self.dbConnection)
+            returnCode = self.dbConnection.close()
             if(returnCode):
                 self.is_connected=False
                 return self.is_connected
@@ -63,7 +79,7 @@ class DB2Handler(DatabaseHandler):
     
 
 
-    def check_connection(self) -> HandlerStatusResponse:
+    def check_connection(self) -> StatusResponse:
         responseCode = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -71,7 +87,7 @@ class DB2Handler(DatabaseHandler):
             self.connect()
             responseCode.success = True
         except Exception as e:
-            log.error(f'Error connecting to SQL Server {self.dbName}, {e}!')
+            log.error(f'Error connecting to database {self.dbName}, {e}!')
             responseCode.error_message = str(e)
         finally:
             if responseCode.success is True and need_to_close:
@@ -84,23 +100,79 @@ class DB2Handler(DatabaseHandler):
 
 
 
-    def native_query(self, query: Any) -> HandlerStatusResponse:
-        pass
+    def native_query(self, query: Any) -> StatusResponse:
+
+        need_to_close = self.is_connected is False
+
+        self.dbconnection = self.connect()
+        # with closing(connection) as con:
+        with self.dbconnection.cursor() as cur:
+            try:
+                cur.execute(query)
+                result = cur.fetchall()
+                if result:
+                    response = Response(
+                        RESPONSE_TYPE.TABLE,
+                        data_frame=pd.DataFrame(
+                            result,
+                            columns=[x[0] for x in cur.description]
+                        )
+                    )
+                else:
+                    response = Response(RESPONSE_TYPE.OK)
+                self.dbconnection.commit()
+            except Exception as e:
+                log.error(f'Error running query: {query} on {self.database}!')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(e)
+                )
+                self.dbconnection.rollback()
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
+
+    
+    def query(self, query: ASTNode) -> StatusResponse:
+        """
+        TODO: Help to finish this
+        """
+
+
+        renderer = SqlalchemyRender('mysql')
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
+
+    
+
+
+    def get_tables(self) -> StatusResponse:
+        q = f"""select tabname as table_name
+            from syscat.tables
+            where tabschema = '{self.schemaName}' 
+            and type = 'T'
+            order by tabname"""
+
+        return self.native_query(q)
+
 
 
 
     
-    def query(self, query: ASTNode) -> HandlerStatusResponse:
-        pass
+    def get_columns(self, table_name: str) -> StatusResponse:
+        
 
-    
+        q = f"""
+            SELECT 
+            colname as column_name,
+            typename as data_type,
+            length,
+            scale,
+            from syscat.columns 
+            WHERE 
+              tabname = '{table_name.upper()}'
+        """
 
-
-    def get_tables(self) -> HandlerStatusResponse:
-        pass
-
-
-
-    
-    def get_columns(self, table_name: str) -> HandlerStatusResponse:
-        pass
+        return self.native_query(q)

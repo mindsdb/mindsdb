@@ -21,7 +21,7 @@ The first step will be to log into [Mindsdb Cloud](https://docs.mindsdb.com/depl
 
 ### Upload a data file to MindsDB Cloud
 
-In this tutorial, we use the customer churn data file. You can download it [here](https://github.com/mindsdb/mindsdb-examples/blob/master/classics/customer_churn/raw_data/WA_Fn-UseC_-Telco-Customer-Churn.csv).
+In this tutorial, we use the customer churn dataset. You can download it [here](https://github.com/mindsdb/mindsdb-examples/blob/master/classics/customer_churn/raw_data/WA_Fn-UseC_-Telco-Customer-Churn.csv).
 
 And [this guide](https://docs.mindsdb.com/sql/create/file/) explains how to upload a file to MindsDB.
 

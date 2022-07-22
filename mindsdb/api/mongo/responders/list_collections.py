@@ -36,13 +36,13 @@ class Responce(Responder):
                         '_id': 1
                     },
                     'name': '_id_',
-                    'ns': f'qwe.{name}'
+                    'ns': f'{database}.{name}'
                 }
             })
 
         cursor = {
             'id': Int64(0),  # should we save id somewhere?
-            'ns': 'qwe.$cmd.listCollections',
+            'ns': f'{database}.$cmd.listCollections',
             'firstBatch': tables
         }
 

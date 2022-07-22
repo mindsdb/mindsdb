@@ -8,11 +8,11 @@ Follow these steps to create, train and query a machine learning model (predicto
 
 ### Connecting the data
 
-There are a couple of ways you can get the data to follow trough this tutorial.
+There are a couple of ways you can get the data to follow through with this tutorial.
 
 === "Connecting as a database via `#!sql CREATE DATABASE`"
 
-    We have prepared a demo database you can connect to that contains the data to be used `#!sql example_db.demo_data.home_rentals` 
+    You can connect to a demo database that we've prepared for you. It contains the data used throughout this tutorial which is the `#!sql example_db.demo_data.home_rentals` table.
 
     ```sql
     CREATE DATABASE example_db
@@ -26,7 +26,7 @@ There are a couple of ways you can get the data to follow trough this tutorial.
     }
     ```
 
-    Now you can run queries directly on the demo database. Let's start by previewing the data we will use to train our predictor:
+    Now you can run queries directly on the demo database. Let's preview the data that we'll use to train our predictor.
 
     ```sql
     SELECT * 
@@ -35,19 +35,12 @@ There are a couple of ways you can get the data to follow trough this tutorial.
     ```
 
 === "Connecting as a file"
-    You can download **[the source file as a `.CSV` here](https://mindsdb-test-file-dataset.s3.amazonaws.com/home_rentals.csv)** and then upload via [MindsDB SQL Editor](connect/mindsdb_editor/)
 
-    <figure markdown> 
-        ![log-in](/assets/cloud/import_file.png){ width="600", loading=lazy }
-        <figcaption>Navigate to the Upload a file button.</figcaption>
-    </figure>
+    You can download [the source file as a `.CSV` here](https://mindsdb-test-file-dataset.s3.amazonaws.com/home_rentals.csv) and then upload it via [MindsDB SQL Editor](https://docs.mindsdb.com/connect/mindsdb_editor/).
 
-    <figure markdown> 
-        ![log-in](/assets/cloud/import_file_2.png){ width="600", loading=lazy }
-        <figcaption>Import the file and name it home_rentals</figcaption>
-    </figure>
+    Follow [this guide](https://docs.mindsdb.com/sql/create/file/) to find out how to upload a file to MindsDB.
 
-    Now you can run queries directly on the demo file as if it was a database. Let's start by previewing the data we will use to train our predictor:
+    Now you can run queries directly on the file as if it were a table. Let's preview the data that we'll use to train our predictor.
 
     ```sql
     SELECT *
@@ -55,9 +48,11 @@ There are a couple of ways you can get the data to follow trough this tutorial.
     LIMIT 10;
     ```
 
-!!! Warning "From now onwards we will use the table `#!sql example_db.demo_data.home_rentals` make sure you replace it for `files.home_rentals` if you are connecting the data as a file."
+!!! Warning "From now on, we will use the `#!sql example_db.demo_data.home_rentals` table. Make sure you replace it with `files.home_rentals` if you connect the data as a file."
 
 ### Understanding the Data
+
+Below is the sample data stored in the `#!sql example_db.demo_data.home_rentals` table.
 
 ```sql
 +-----------------+---------------------+------+----------+----------------+----------------+--------------+
@@ -85,8 +80,8 @@ Where:
 
 !!!Info "Labels and Features"
 
-    A **label** is the thing we're predicting—the y variable in simple linear regression ...
-    A **feature** is an input variable—the x variable in simple linear regression ..
+    A **label** is the thing we're predicting — the y variable in simple linear regression.
+    A **feature** is an input variable — the x variable in simple linear regression.
 
 ## Training a Predictor Via [`#!sql CREATE PREDICTOR`](/sql/create/predictor)
 

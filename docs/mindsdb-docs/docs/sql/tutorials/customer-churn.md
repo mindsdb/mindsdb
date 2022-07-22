@@ -1,3 +1,4 @@
+## Introduction
 
 MindsDB as a Machine Learning framework can help marketing, sales, and customer retention teams determine the best incentive and the right time to make an offer to minimize customer turnover.
 
@@ -13,30 +14,57 @@ Using SQL to perform machine learning at the data layer will bring you many bene
 
 ## Pre-requisites
 
-First, you can log into MindsDB Cloud or make sure you have successfully installed MindsDB. Check out the installation guide for [Docker](/deployment/docker/) or [PyPi](/deployment/source/) install. Second, you will need to have mysql-client or DBeaver, MySQL WOrkbench etc installed locally to connect to MySQL API.
+First, log into MindsDB Cloud or make sure you have successfully installed MindsDB. Check out the installation guide for [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [PyPi](https://docs.mindsdb.com/setup/self-hosted/pip/source/). Then, you will need mysql-client, DBeaver, MySQL WOrkbench, etc. installed locally to connect to MySQL API.
 
 ## Log into Mindsdb Cloud
 
-The first step will be to log into [Mindsdb Cloud](https://docs.mindsdb.com/deployment/cloud/) , where we will gain access to the MySQL editor to execute SQL syntax. The Upload file feature and the MySQL Editor will make it easy to upload a file, create a predictor and make a prediction.
+The first step is to log in to [Mindsdb Cloud](https://docs.mindsdb.com/deployment/cloud/) where we will gain access to the MySQL editor to execute SQL syntax. The Upload File feature and the MySQL Editor make it easy to upload a file, create a predictor, and make a prediction.
 
-### Upload a data file to MindsDB Cloud
+## The Data
 
-In this tutorial, we use the customer churn dataset. You can download it [here](https://github.com/mindsdb/mindsdb-examples/blob/master/classics/customer_churn/raw_data/WA_Fn-UseC_-Telco-Customer-Churn.csv).
+### Connecting the data
 
-And [this guide](https://docs.mindsdb.com/sql/create/file/) explains how to upload a file to MindsDB.
+There are a couple of ways you can get the data to follow through with this tutorial.
 
-Now, you can query the uploaded file as if it were a table.
+=== "Connecting as a database via `#!sql CREATE DATABASE`"
+
+    ---This section will be done soon---
+
+=== "Connecting as a file"
+
+    In this tutorial, we use the customer churn dataset. You can download it [here](https://github.com/mindsdb/mindsdb-examples/blob/master/classics/customer_churn/raw_data/WA_Fn-UseC_-Telco-Customer-Churn.csv).
+
+    And [this guide](https://docs.mindsdb.com/sql/create/file/) explains how to upload a file to MindsDB.
+
+    Now, you can query the uploaded file as if it were a table.
+
+    ```sql
+    SELECT *
+    FROM files.churn
+    ```
+
+### Understanding the Data
+
+We will use the customer churn dataset where each row represents one customer. We will train a machine learning model to help us predict if the customer is going to stop using the company products.
+
+Below is the sample data stored in the customer churn dataset.
 
 ```sql
-SELECT * FROM files.churn
++----------+------+-------------+-------+----------+------+------------+----------------+---------------+--------------+------------+----------------+-----------+-----------+---------------+--------------+----------------+-------------------------+--------------+------------+-----+
+|customerID|gender|SeniorCitizen|Partner|Dependents|tenure|PhoneService|MultipleLines   |InternetService|OnlineSecurity|OnlineBackup|DeviceProtection|TechSupport|StreamingTV|StreamingMovies|Contract      |PaperlessBilling|PaymentMethod            |MonthlyCharges|TotalCharges|Churn|
++----------+------+-------------+-------+----------+------+------------+----------------+---------------+--------------+------------+----------------+-----------+-----------+---------------+--------------+----------------+-------------------------+--------------+------------+-----+
+|7590-VHVEG|Female|0            |Yes    |No        |1     |No          |No phone service|DSL            |No            |Yes         |No              |No         |No         |No             |Month-to-month|Yes             |Electronic check         |29.85         |29.85       |No   |
+|5575-GNVDE|Male  |0            |No     |No        |34    |Yes         |No              |DSL            |Yes           |No          |Yes             |No         |No         |No             |One year      |No              |Mailed check             |56.95         |1889.5      |No   |
+|3668-QPYBK|Male  |0            |No     |No        |2     |Yes         |No              |DSL            |Yes           |Yes         |No              |No         |No         |No             |Month-to-month|Yes             |Mailed check             |53.85         |108.15      |Yes  |
+|7795-CFOCW|Male  |0            |No     |No        |45    |No          |No phone service|DSL            |Yes           |No          |Yes             |Yes        |No         |No             |One year      |No              |Bank transfer (automatic)|42.3          |1840.75     |No   |
+|9237-HQITU|Female|0            |No     |No        |2     |Yes         |No              |Fiber optic    |No            |No          |No              |No         |No         |No             |Month-to-month|Yes             |Electronic check         |70.7          |151.65      |Yes  |
++----------+------+-------------+-------+----------+------+------------+----------------+---------------+--------------+------------+----------------+-----------+-----------+---------------+--------------+----------------+-------------------------+--------------+------------+-----+
 ```
 
-### Data Overview
+Where:
 
-In this tutorial, we will use the customer churn data-set . Each row represents a customer and we will train a machine learning model to help us predict if the customer is going to stop using the company products. Below is a short description of each feature inside the data.
-
-- CustomerId - Customer ID
-- Gender - Male or Female customer
+-  CustomerId - Customer ID
+-  Gender - Male or Female customer
 -  SeniorCitizen - Whether the customer is a senior citizen or not (1, 0)
 -  Partner - Whether the customer has a partner or not (Yes, No)
 -  Dependents - Whether the customer has dependents or not (Yes, No)
@@ -57,8 +85,7 @@ In this tutorial, we will use the customer churn data-set . Each row represents 
 -  TotalCharges - The total amount charged to the customer
 -  Churn - Whether the customer churned or not (Yes or No). This is what we want to predict.
 
-
-### Create a predictor
+## Training a Predictor Via [`#!sql CREATE PREDICTOR`](/sql/create/predictor)
 
 We will create a machine learning model with the relevant parameters in order for it to train.
 
@@ -88,7 +115,9 @@ PREDICT Churn;
 
 ![Create predictor](/assets/sql/tutorials/customer_churn/create_churn.png)
 
-What we did here was to create a predictor called customer_churn to predict the Churn and also ignore the gender column as an irrelevant column for the model.The model training has started. 
+What we did here was to create a predictor called customer_churn to predict the Churn and also ignore the gender column as an irrelevant column for the model.The model training has started.
+
+## Checking the Status of a Predictor
 
 You can check the predictors status and will be able to make a prediction once the status shows complete:
 
@@ -97,6 +126,8 @@ SELECT * FROM mindsdb.predictors where name='customer_churn';
 ```
 
 ![select](/assets/sql/tutorials/customer_churn/select.png)
+
+## Making Predictions
 
 The next steps would be to query the model and predict the customer churn. Let’s be creative and imagine a customer. Customer will use only DSL service, no phone service and multiple lines, she was with the company for 1 month and has a partner. Add all of this information to the WHERE clause.
 

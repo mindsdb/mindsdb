@@ -1,3 +1,5 @@
+from mindsdb.api.mongo.utilities import log
+
 from .responder import Responder
 
 
@@ -9,7 +11,21 @@ class RespondersCollection():
         for r in self.responders:
             if r.match(query):
                 return r
-        raise Exception(f'Is not responder for query: {query}')
+
+        msg = f'Is not responder for query: {query}'
+
+        class ErrorResponder(Responder):
+            when = {}
+
+            result = {
+                "ok": 0.0,
+                "errmsg": msg,
+                "code": 59,
+                "codeName": "CommandNotFound"
+            }
+
+        log.error(msg)
+        return ErrorResponder()
 
     def add(self, when, result):
         self.responders.append(

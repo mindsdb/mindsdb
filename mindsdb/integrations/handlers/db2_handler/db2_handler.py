@@ -1,5 +1,4 @@
-from operator import truediv
-from mindsdb_sql import parse_sql
+
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
@@ -99,7 +98,7 @@ class DB2Handler(DatabaseHandler):
 
 
 
-    def native_query(self, query: Any) -> StatusResponse:
+    def native_query(self, query: str) -> StatusResponse:
 
         need_to_close = self.is_connected is False
 

@@ -1,9 +1,9 @@
 import unittest
-from mindsdb.integrations.handlers.db2_handler.db2_handler import Db2Handler
+from mindsdb.integrations.handlers.db2_handler.db2_handler import DB2Handler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
-class SqlServerHandlerTest(unittest.TestCase):
+class DB2HandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
@@ -14,7 +14,7 @@ class SqlServerHandlerTest(unittest.TestCase):
             "dbName": "master",
             "schemaName": "SchemaName"
         }
-        cls.handler = Db2Handler('test_db2_handler', **cls.kwargs)
+        cls.handler = DB2Handler('test_db2_handler', **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()

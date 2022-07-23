@@ -60,7 +60,7 @@ class DB2Handler(DatabaseHandler):
 
         
         
-        return self.check_connection()
+        return self.dbConnection
 
 
     

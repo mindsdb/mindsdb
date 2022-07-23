@@ -7,12 +7,12 @@ class DB2HandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": "localhost",
-            "port": "25000",
-            "userID": "db2admin",
-            "passWord": "1234",
-            "dbName": "master",
-            "schemaName": "SchemaName"
+            host: "localhost",
+            port: "25000",
+            userID: "db2admin",
+            passWord: "1234",
+            dbName: "master",
+            schemaName: "db2admin"
         }
         cls.handler = DB2Handler('test_db2_handler', **cls.kwargs)
 

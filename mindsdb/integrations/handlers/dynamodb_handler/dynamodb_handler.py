@@ -100,3 +100,78 @@ class DyanmoDBHandler(DatabaseHandler):
                 self.is_connected = False
 
         return response
+
+    def native_query(self, query: str) -> StatusResponse:
+        """
+        Receive raw query and act upon it somehow.
+        Args:
+            query (str): query in native format
+        Returns:
+            HandlerResponse
+        """
+
+        pass
+
+    def query(self, query: ASTNode) -> StatusResponse:
+        """
+        Receive query as AST (abstract syntax tree) and act upon it somehow.
+        Args:
+            query (ASTNode): sql query represented as AST. May be any kind
+                of query: SELECT, INTSERT, DELETE, etc
+        Returns:
+            HandlerResponse
+        """
+
+        pass
+
+    def get_tables(self) -> StatusResponse:
+        """
+        Return list of entities that will be accessible as tables.
+        Returns:
+            HandlerResponse
+        """
+
+        result = self.connection.list_tables()
+
+        df = pd.DataFrame(
+            data=result['TableNames'],
+            columns=['table_name']
+        )
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            df
+        )
+
+        return response
+
+    def get_columns(self, table_name: str) -> StatusResponse:
+        """
+        Returns a list of entity columns.
+        Args:
+            table_name (str): name of one of tables returned by self.get_tables()
+        Returns:
+            HandlerResponse
+        """
+
+        result = self.connection.describe_table(
+            TableName=table_name
+        )
+
+        df = pd.DataFrame(
+            result['Table']['AttributeDefinitions']
+        )
+
+        df = df.rename(
+            columns={
+                'AttributeName': 'column_name',
+                'AttributeType': 'data_type'
+            }
+        )
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            df
+        )
+
+        return response

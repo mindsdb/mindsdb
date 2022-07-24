@@ -136,7 +136,7 @@ class DB2Handler(DatabaseHandler):
     
     def query(self, query: ASTNode) -> StatusResponse:
         """
-        TODO: Help to finish this
+        TODO: Check this method 
         """
 
 

@@ -11,6 +11,7 @@ from mindsdb.integrations.libs.response import (
 )
 import pandas as pd
 import ibm_db_dbi as love
+import ibm_db_sa.ibm_db.DB2Dialect_ibm_db as DB2Dialect
 
 
 
@@ -139,7 +140,7 @@ class DB2Handler(DatabaseHandler):
         """
 
 
-        renderer = SqlalchemyRender('mysql')
+        renderer = SqlalchemyRender(DB2Dialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 

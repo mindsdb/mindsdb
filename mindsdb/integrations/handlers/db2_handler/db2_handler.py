@@ -11,7 +11,8 @@ from mindsdb.integrations.libs.response import (
 )
 import pandas as pd
 import ibm_db_dbi as love
-import ibm_db_sa.ibm_db.DB2Dialect_ibm_db as DB2Dialect
+
+from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as DB2Dialect
 
 
 
@@ -26,20 +27,21 @@ class DB2Handler(DatabaseHandler):
         
         self.connection_args = kwargs
         self.driver = "{IBM DB2 ODBC DRIVER}"
-        self.dbName = kwargs.get('dbName')
-        self.userID = kwargs.get('userID')
-        self.passWord = kwargs.get('password')
+        self.database = kwargs.get('database')
+        self.user = kwargs.get('user')
+        self.password = kwargs.get('password')
         self.schemaName = kwargs.get('schemaName')
         self.host = kwargs.get('host')
         self.port = kwargs.get('port')
         self.connString = (
     "DRIVER={0};"
     "DATABASE={1};"
-    "HOSTNAME={2};"
+    "HOST={2};"
     "PORT={3};"
     "PROTOCOL={4};"
     "UID={5};"
-    "PWD={6};").format(self.driver, self.dbName, self.host, self.port,"TCPIP" , self.userID, self.passWord)
+    "PWD={6};").format(self.driver, self.database, self.host, self.port,"TCPIP" , self.user, self.password)
+        
 
         self.dbConnection = None 
         self.is_connected = False
@@ -50,30 +52,31 @@ class DB2Handler(DatabaseHandler):
     
 
     def connect(self):
-        if self.dbConnection is not None:
-            return self.check_connection()
+        if self.is_connected is True:
+            return self.dbConnection
 
         try:
-            self.dbConnection = love.connect(self.connString,'','')
+            self.dbConnection = love.pconnect(self.connString,'','')
+  
             self.is_connected= True
         except Exception as e:
-            log.error(f"Error while connecting to {self.dbName}, {e}")
+            log.error(f"Error while connecting to {self.database}, {e}")
 
-        
-        
+
         return self.dbConnection
 
 
     
 
     def disconnect(self):
-        if self.dbConnection is not None:
-            returnCode = self.dbConnection.close()
-            if(returnCode):
-                self.is_connected=False
-                return self.is_connected
-            
-        return self.is_connected
+        if self.is_connected is False:
+            return
+        try:
+            self.dbConnection.close()
+        except Exception as e:
+            log.error(f"Error while disconnecting to {self.database}, {e}")
+
+        return 
 
     
 
@@ -86,7 +89,7 @@ class DB2Handler(DatabaseHandler):
             self.connect()
             responseCode.success = True
         except Exception as e:
-            log.error(f'Error connecting to database {self.dbName}, {e}!')
+            log.error(f'Error connecting to database {self.database}, {e}!')
             responseCode.error_message = str(e)
         finally:
             if responseCode.success is True and need_to_close:
@@ -100,12 +103,10 @@ class DB2Handler(DatabaseHandler):
 
 
     def native_query(self, query: str) -> StatusResponse:
-
         need_to_close = self.is_connected is False
-
-        self.dbconnection = self.connect()
-        # with closing(connection) as con:
-        with self.dbconnection.cursor() as cur:
+        
+        self.connect()
+        with self.dbConnection.cursor() as cur:
             try:
                 cur.execute(query)
                 result = cur.fetchall()
@@ -119,14 +120,14 @@ class DB2Handler(DatabaseHandler):
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
-                self.dbconnection.commit()
+                self.dbConnection.commit()
             except Exception as e:
                 log.error(f'Error running query: {query} on {self.database}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)
                 )
-                self.dbconnection.rollback()
+                self.dbConnection.rollback()
 
         if need_to_close is True:
             self.disconnect()

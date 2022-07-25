@@ -33,24 +33,7 @@ Where:
 
 ## Example
 
-This example will show how to upload a file to MindsDB Cloud and use it to create a predictor.
-
-### Upload file to MindsDB Editor
-
-1. Connect to the MindsDB Editor
-2. Navigate to `Add Data` located on the right navigation bar identified by a plug icon.
-3. Click on the tab `Files` and the card `Import File`
-
-    <figure markdown>
-        ![Add File](/assets/sql/add-file-data.png){ width="800", loading=lazy}
-    </figure>
-
-4. Name your file in `Table name`.
-5. Click on `Save and Continue`.
-
-    <figure markdown>
-        ![Upload Status](/assets/sql/file.png){ width="800", loading=lazy  }
-    </figure>
+This example shows how to use an uploaded file and create a predictor. But first, follow [this guide](https://docs.mindsdb.com/sql/create/file/) to upload a file to MindsDB Cloud.
 
 ### Select the file as datasource
 

@@ -275,7 +275,9 @@ class SQLQuery():
                 ts_settings = p.learn_args.get('timeseries_settings', {})
                 if ts_settings.get('is_timeseries') is True:
                     window = ts_settings.get('window')
-                    order_by = ts_settings.get('order_by')[0]
+                    order_by = ts_settings.get('order_by')
+                    if isinstance(order_by, list):
+                        order_by = order_by[0]
                     group_by = ts_settings.get('group_by')
                     if isinstance(group_by, list) is False and group_by is not None:
                         group_by = [group_by]

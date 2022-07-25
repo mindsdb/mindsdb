@@ -1,3 +1,4 @@
+import os
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -38,11 +39,21 @@ class ScyllaHandler(DatabaseHandler):
         )
 
         connection_props = {
-            'auth_provider': auth_provider,
-            'contact_points': [self.connection_args['host']],
-            'port': int(self.connection_args['port']),
-            'protocol_version': self.connection_args['protocol_version']
+            'auth_provider': auth_provider
         }
+
+        if self.connection_args['protocol_version'] is not None:
+            connection_props['protocol_version'] = self.connection_args['protocol_version']
+
+        if self.connection_args['secure_connect_bundle'] is not None:
+            if os.path.isfile(self.secure_connect_bundle) is False:
+                raise Exception("Secure_connect_bundle' must be path to the file")
+            connection_props['cloud'] = {
+                'secure_connect_bundle': self.secure_connect_bundle
+            }
+        else:
+            connection_props['contact_points'] = [self.host]
+            connection_props['port'] = int(self.port)
 
         cluster = Cluster(**connection_props)
         session = cluster.connect(self.connection_args['keyspace'])

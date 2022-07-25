@@ -9,9 +9,9 @@ class DB2HandlerTest(unittest.TestCase):
         cls.kwargs = {
             "host": "127.0.0.1",
             "port": "25000",
-            "userID": "db2admin",
+            "user": "db2admin",
             "password": "1234",
-            "dbName": "Books",
+            "database": "Books",
             "schemaName": "db2admin"
         }
         cls.handler = DB2Handler('test_db2_handler', **cls.kwargs)

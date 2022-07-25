@@ -1,6 +1,6 @@
+from collections import OrderedDict
 
 from mindsdb_sql.parser.ast.base import ASTNode
-
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.utilities.log import log
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -9,6 +9,10 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
+
+
 import pandas as pd
 import ibm_db_dbi as love
 
@@ -43,7 +47,7 @@ class DB2Handler(DatabaseHandler):
     "PWD={6};").format(self.driver, self.database, self.host, self.port,"TCPIP" , self.user, self.password)
         
 
-        self.dbConnection = d 
+        self.connection = None
         self.is_connected = False
         
         
@@ -53,17 +57,17 @@ class DB2Handler(DatabaseHandler):
 
     def connect(self):
         if self.is_connected is True:
-            return self.dbConnection
+            return self.connection
 
         try:
-            self.dbConnection = love.pconnect(self.connString,'','')
+            self.connection = love.pconnect(self.connString,'','')
   
             self.is_connected= True
         except Exception as e:
             log.error(f"Error while connecting to {self.database}, {e}")
 
 
-        return self.dbConnection
+        return self.connection
 
 
     
@@ -72,7 +76,7 @@ class DB2Handler(DatabaseHandler):
         if self.is_connected is False:
             return
         try:
-            self.dbConnection.close()
+            self.connection.close()
         except Exception as e:
             log.error(f"Error while disconnecting to {self.database}, {e}")
 
@@ -106,7 +110,7 @@ class DB2Handler(DatabaseHandler):
         need_to_close = self.is_connected is False
         
         self.connect()
-        with self.dbConnection.cursor() as cur:
+        with self.connection.cursor() as cur:
             try:
                 cur.execute(query)
                 result = cur.fetchall()
@@ -120,14 +124,14 @@ class DB2Handler(DatabaseHandler):
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
-                self.dbConnection.commit()
+                self.connection.commit()
             except Exception as e:
                 log.error(f'Error running query: {query} on {self.database}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)
                 )
-                self.dbConnection.rollback()
+                self.connection.rollback()
 
         if need_to_close is True:
             self.disconnect()
@@ -176,3 +180,46 @@ class DB2Handler(DatabaseHandler):
         """
 
         return self.native_query(q)
+
+
+
+
+
+connection_args = OrderedDict(
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the DB2 server/database.'
+    },
+    database={
+        'type': ARG_TYPE.STR,
+        'description': """
+            The database name to use when connecting with the DB2 server.
+        """
+    },
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the DB2 server.'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the DB2 server.'
+    },
+    port={
+        'type': ARG_TYPE.INT,
+        'description': 'Specify port to connect DB2 through TCP/IP'
+    },
+    schemaName={
+        'type': ARG_TYPE.STR,
+        'description': 'Specify the schema name '
+    },
+
+)
+
+connection_args_example = OrderedDict(
+    host='127.0.0.1',
+    port='25000',
+    password='1234',
+    user='db2admin',
+    schemaName="db2admin",
+    database="BOOKS",
+)

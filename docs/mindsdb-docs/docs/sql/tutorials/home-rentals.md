@@ -70,13 +70,13 @@ Where:
 
 | Column                | Description                                                                                  | Data Type           | Usage   |
 | :-------------------- | :------------------------------------------------------------------------------------------- | ------------------- | ------- |
-| `number_of_rooms`     | Number of rooms of a given house `[0,1,2,3]`                                                 | `integer`           | Feature |
-| `number_of_bathrooms` | Number of bathrooms on a given house `[1,2]`                                                 | `integer`           | Feature |
+| `number_of_rooms`     | Number of rooms in a given house `[0,1,2,3]`                                                 | `integer`           | Feature |
+| `number_of_bathrooms` | Number of bathrooms in a given house `[1,2]`                                                 | `integer`           | Feature |
 | `sqft`                | Area of a given house in square feet                                                         | `integer`           | Feature |
 | `location`            | Rating of the location of a given house `[poor, great, good]`                                | `character varying` | Feature |
 | `days_on_market`      | Number of days a given house has been open to be rented                                      | `integer`           | Feature |
 | `neighborhood`        | Neighborhood a given house is in `[alcatraz_ave, westbrae, ..., south_side, thowsand_oaks ]` | `character varying` | Feature |
-| `rental_price`        | Price for renting a given house in dollars                                                   | `integer`           | Label   |
+| `rental_price`        | Rental price of a given house in dollars                                                     | `integer`           | Label   |
 
 !!!Info "Labels and Features"
 

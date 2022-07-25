@@ -12,11 +12,11 @@ Using SQL to perform machine learning at the data layer will bring you many bene
 
 > Note: You can follow up this tutorial by connecting to your own database and using different data - the same workflow applies to most machine learning use cases.
 
-## Pre-requisites
+### Pre-requisites
 
 First, log into MindsDB Cloud or make sure you have successfully installed MindsDB. Check out the installation guide for [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [PyPi](https://docs.mindsdb.com/setup/self-hosted/pip/source/). Then, you will need mysql-client, DBeaver, MySQL WOrkbench, etc. installed locally to connect to MySQL API.
 
-## Log into Mindsdb Cloud
+### Log into Mindsdb Cloud
 
 The first step is to log in to [Mindsdb Cloud](https://docs.mindsdb.com/deployment/cloud/) where we will gain access to the MySQL editor to execute SQL syntax. The Upload File feature and the MySQL Editor make it easy to upload a file, create a predictor, and make a prediction.
 
@@ -63,6 +63,8 @@ There are a couple of ways you can get the data to follow through with this tuto
     FROM files.churn
     ```
 
+!!! Warning "From now on, we will use the `files.churn` file as a table. Make sure you replace it with `#!sql example_db.demo_data.customer_churn` if you use the demo database."
+
 ### Understanding the Data
 
 We will use the customer churn dataset where each row represents one customer. We will train a machine learning model to help us predict if the customer is going to stop using the company products.
@@ -83,27 +85,34 @@ Below is the sample data stored in the customer churn dataset.
 
 Where:
 
--  CustomerId - Customer ID
--  Gender - Male or Female customer
--  SeniorCitizen - Whether the customer is a senior citizen or not (1, 0)
--  Partner - Whether the customer has a partner or not (Yes, No)
--  Dependents - Whether the customer has dependents or not (Yes, No)
--  Tenure - Number of months the customer has stayed with the company
--  PhoneService - Whether the customer has a phone service or not (Yes, No)
--  MultipleLines - Whether the customer has multiple lines or not (Yes, No, No phone service)
--  InternetService - Customer’s internet service provider (DSL, Fiber optic, No)
--  OnlineSecurity - Whether the customer has online security or not (Yes, No, No internet service)
--  OnlineBackup - Whether the customer has online backup or not (Yes, No, No internet service)
--  DeviceProtection - Whether the customer has device protection or not (Yes, No, No internet service)
--  TechSupport - Whether the customer has tech support or not (Yes, No, No internet service)
--  StreamingTv - Whether the customer has streaming TV or not (Yes, No, No internet service)
--  StreamingMovies - Whether the customer has streaming movies or not (Yes, No, No internet service)
--  Contract - The contract term of the customer (Month-to-month, One year, Two year)
--  PaperlessBilling - Whether the customer has paperless billing or not (Yes, No)
--  PaymentMethod - The customer’s payment method (Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic))
--  MonthlyCharges - The monthly charge amount
--  TotalCharges - The total amount charged to the customer
--  Churn - Whether the customer churned or not (Yes or No). This is what we want to predict.
+| Column                | Description                                                                                                      | Data Type           | Usage   |
+| :-------------------- | :--------------------------------------------------------------------------------------------------------------- | ------------------- | ------- |
+| `CustomerId`          | The identification number per customer                                                                           | `character varying` | Feature |
+| `Gender`              | The gender of a customer                                                                                         | `character varying` | Feature |
+| `SeniorCitizen`       | It indicates whether the customer is a senior citizen (1) or not (0)                                             | `integer`           | Feature |
+| `Partner`             | It indicates whether the customer has a partner (Yes) or not (No)                                                | `character varying` | Feature |
+| `Dependents`          | It indicates whether the customer has dependents (Yes) or not (No)                                               | `character varying` | Feature |
+| `Tenure`              | Number of months the customer has stayed with the company                                                        | `integer`           | Feature |
+| `PhoneService`        | It indicates whether the customer has a phone service (Yes) or not (No)                                          | `character varying` | Feature |
+| `MultipleLines`       | It indicates whether the customer has multiple lines (Yes) or not (No, No phone service)                         | `character varying` | Feature |
+| `InternetService`     | Customer’s internet service provider (DSL, Fiber optic, No)                                                      | `character varying` | Feature |
+| `OnlineSecurity`      | It indicates whether the customer has online security (Yes) or not (No, No internet service)                     | `character varying` | Feature |
+| `OnlineBackup`        | It indicates whether the customer has online backup (Yes) or not (No, No internet service)                       | `character varying` | Feature |
+| `DeviceProtection`    | It indicates whether the customer has device protection (Yes) or not (No, No internet service)                   | `character varying` | Feature |
+| `TechSupport`         | It indicates whether the customer has tech support (Yes) or not (No, No internet service)                        | `character varying` | Feature |
+| `StreamingTv`         | It indicates whether the customer has streaming TV (Yes) or not (No, No internet service)                        | `character varying` | Feature |
+| `StreamingMovies`     | It indicates whether the customer has streaming movies (Yes) or not (No, No internet service)                    | `character varying` | Feature |
+| `Contract`            | The contract term of the customer (Month-to-month, One year, Two year)                                           | `character varying` | Feature |
+| `PaperlessBilling`    | It indicates whether the customer has paperless billinig (Yes) or not (No)                                       | `character varying` | Feature |
+| `PaymentMethod`       | Customer’s payment method (Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic))   | `character varying` | Feature |
+| `MonthlyCharges`      | The monthly charge amount                                                                                        | `money`             | Feature |
+| `TotalCharges`        | The total amount charged to the customer                                                                         | `money`             | Feature |
+| `Churn`               | It indicates whether the customer churned (Yes) or not (No)                                                      | `character varying` | Label   |
+
+!!!Info "Labels and Features"
+
+    A **label** is the thing we're predicting — the y variable in simple linear regression.
+    A **feature** is an input variable — the x variable in simple linear regression.
 
 ## Training a Predictor Via [`#!sql CREATE PREDICTOR`](/sql/create/predictor)
 

@@ -6,7 +6,7 @@ In this short example, we will produce forecasts for a multivariate time series.
 
 Make sure you have access to a working MindsDB installation - either locally or via [cloud.mindsdb.com](https://cloud.mindsdb.com/).
 
-## Data
+## The Data
 
 ### Connecting the data
 

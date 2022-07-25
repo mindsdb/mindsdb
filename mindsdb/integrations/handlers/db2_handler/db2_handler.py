@@ -43,7 +43,7 @@ class DB2Handler(DatabaseHandler):
     "PWD={6};").format(self.driver, self.database, self.host, self.port,"TCPIP" , self.user, self.password)
         
 
-        self.dbConnection = None 
+        self.dbConnection = d 
         self.is_connected = False
         
         

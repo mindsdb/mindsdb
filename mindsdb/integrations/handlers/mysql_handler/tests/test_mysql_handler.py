@@ -22,7 +22,7 @@ class MySQLHandlerTest(unittest.TestCase):
 
     def test_1_native_query_show_dbs(self):
         dbs = self.handler.native_query("SHOW DATABASES;")
-        assert dbs[' '] is not RESPONSE_TYPE.ERROR
+        assert dbs['type'] is not RESPONSE_TYPE.ERROR
 
     def test_2_get_tables(self):
         tbls = self.handler.get_tables()
@@ -49,6 +49,3 @@ class MySQLHandlerTest(unittest.TestCase):
         result = self.handler.query(query)
         assert result['type'] is RESPONSE_TYPE.TABLE
 
-
-if __name__ == '__main__':
-    unittest.main()

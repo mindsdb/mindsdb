@@ -1,2 +1,2 @@
-pymongo
+pymongo[srv] >= 4.1.1
 certifi

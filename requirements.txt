@@ -8,7 +8,7 @@ cryptography >= 2.9.2, < 3.4
 psycopg[binary] >= 1.15.3
 python-tds >= 1.10.0
 waitress >= 1.4.4
-pymongo[tls, srv] >= 3.10.1
+pymongo[srv] >= 4.1.1
 setuptools
 psutil
 sqlalchemy >= 1.3.0

@@ -28,7 +28,27 @@ There are a couple of ways you can get the data to follow through with this tuto
 
 === "Connecting as a database via `#!sql CREATE DATABASE`"
 
-    ---This section will be done soon---
+    You can connect to a demo database that we've prepared for you. It contains the data used throughout this tutorial which is the `#!sql example_db.demo_data.customer_churn` table.
+
+    ```sql
+    CREATE DATABASE example_db
+        WITH ENGINE = "postgres",
+        PARAMETERS = {
+            "user": "demo_user",
+            "password": "demo_password",
+            "host": "3.220.66.106",
+            "port": "5432",
+            "database": "demo"
+    }
+    ```
+
+    Now you can run queries directly on the demo database. Let's preview the data that we'll use to train our predictor.
+
+    ```sql
+    SELECT * 
+    FROM example_db.demo_data.customer_churn 
+    LIMIT 10;
+    ```
 
 === "Connecting as a file"
 

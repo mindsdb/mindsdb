@@ -11,6 +11,7 @@ from sqlalchemy import func
 from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
+from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.utilities.fs import create_directory
 
 from mindsdb.interfaces.file.file_controller import FileController
@@ -234,6 +235,12 @@ class IntegrationController:
                 ViewController(),
                 company_id=company_id
             )
+        elif handler_type == 'lightwood':
+            handler_ars['handler_controller'] = self
+            handler_ars['model_controller'] = WithKWArgsWrapper(
+                ModelInterface(),
+                company_id=company_id
+            )
 
         return self.handler_modules[handler_type].Handler(**handler_ars)
 
@@ -246,7 +253,16 @@ class IntegrationController:
                 & (func.lower(Integration.name) == func.lower(name))
             ).first()
         if integration_record is None:
-            raise Exception(f'Unknown integration: {name}')
+            if name == 'lightwood':
+                handler = self.create_handler(
+                    name=name,
+                    handler_type='lightwood',
+                    connection_data=None,
+                    company_id=company_id
+                )
+                return handler
+            else:
+                raise Exception(f'Unknown integration: {name}')
         integration_meta = self._get_integration_record_data(integration_record, True)
 
         integration_engine = integration_meta['engine']

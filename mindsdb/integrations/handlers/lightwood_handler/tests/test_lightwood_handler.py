@@ -1,32 +1,68 @@
+import os
 import unittest
+import tempfile
 
 from lightwood.mixer import LightGBM
+
+os.environ['MINDSDB_STORAGE_DIR'] = tempfile.mkdtemp(dir='/tmp/', prefix='lightwood_handler_test_')[1]
+os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
+
+from mindsdb.migrations import migrate
+migrate.migrate_to_head()
 
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import LightwoodHandler
 from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.utils import load_predictor
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
+from mindsdb.interfaces.storage.fs import FsStore
+from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+
+
+MYSQL_CONNECTION_DATA = {
+    "host": "localhost",
+    "port": "3306",
+    "user": "root",
+    "password": "root",
+    "database": "test",
+    "ssl": False
+}
+
+
+MYSQL_HANDLER_NAME = 'test_handler'
+
+
+class HandlerControllerMock:
+    def __init__(self):
+        self.handlers = {
+            MYSQL_HANDLER_NAME: MySQLHandler(
+                MYSQL_HANDLER_NAME,
+                **{"connection_data": MYSQL_CONNECTION_DATA}
+            )
+        }
+
+    def get_handler(self, name):
+        return self.handlers[name]
 
 
 # TODO: bring all train+predict queries in mindsdb_sql test suite
 # TODO: drop all models and tables when closing tests
 class LightwoodHandlerTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
-        cls.handler = LightwoodHandler('test_ludwig_handler')
+        handler_controller = HandlerControllerMock()
+
+        cls.handler = LightwoodHandler(
+            'lightwood',
+            handler_controller=handler_controller,
+            fs_store=WithKWArgsWrapper(FsStore(), company_id=None),
+            model_controller=WithKWArgsWrapper(ModelInterface(), company_id=None)
+        )
         cls.config = Config()
 
-        kwargs = {"connection_data": {
-            "host": "localhost",
-            "port": "3306",
-            "user": "root",
-            "password": "root",
-            "database": "test",
-            "ssl": False
-        }}
-        cls.sql_handler_name = 'test_handler'
-        cls.data_handler = MySQLHandler(cls.sql_handler_name, **kwargs)
+        # kwargs = {"connection_data": mysql_connection_data}
+        # cls.sql_handler_name = 'test_handler'
+        # cls.data_handler = MySQLHandler(cls.sql_handler_name, **kwargs)
 
         cls.target_1 = 'rental_price'
         cls.data_table_name_1 = 'home_rentals_subset'
@@ -39,38 +75,35 @@ class LightwoodHandlerTest(unittest.TestCase):
         cls.model_2_into_table = 'test_join_tsmodel_into_lw'
 
         # todo: connect to global state instead
-        cls.MDB_CURRENT_HANDLERS = {
-            cls.sql_handler_name: MySQLHandler(cls.sql_handler_name, **{"connection_data": {
-                "host": "localhost",
-                "port": "3306",
-                "user": "root",
-                "password": "root",
-                "database": "test",
-                "ssl": False
-            }})
-        }
-        cls.data_handler = cls.MDB_CURRENT_HANDLERS[cls.sql_handler_name]
+        # cls.MDB_CURRENT_HANDLERS = {
+        #     cls.sql_handler_name: MySQLHandler(cls.sql_handler_name, **{"connection_data": mysql_connection_data})
+        # }
+        # cls.data_handler = cls.MDB_CURRENT_HANDLERS[cls.sql_handler_name]
 
-    def connect_handler(self):
-        config = Config()
-        self.handler.connect(config={'path': config['paths']['root'], 'name': 'lightwood_handler.db'})
+    # def connect_handler(self):
+        # config = Config()
+        # self.handler.connect(config={'path': config['paths']['root'], 'name': 'lightwood_handler.db'})
 
-    def test_0_connect(self):
-        self.connect_handler()
+    # def test_0_connect(self):
+    #     self.connect_handler()
 
     def test_1_drop_predictor(self):
         model_name = 'lw_test_predictor'
         try:
             print('dropping predictor...')
             self.handler.native_query(f"DROP PREDICTOR {model_name}")
-        except:
-            print('failed to drop')
-            pass
+        except Exception as e:
+            print(f'failed to drop: {e}')
 
     def test_21_train_predictor(self):
-        if self.test_model_name_1 not in self.handler.get_tables():
-            query = f"CREATE PREDICTOR {self.test_model_name_1} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1}"
-            self.handler.native_query(query)
+        # if self.test_model_name_1 not in self.handler.get_tables():
+        query = f"""
+            CREATE PREDICTOR {self.test_model_name_1}
+            FROM {MYSQL_HANDLER_NAME} (SELECT * FROM test_data.home_rentals limit 50)
+            PREDICT rental_price
+        """
+        response = self.handler.native_query(query)
+        # TODO check response 
 
     def test_22_retrain_predictor(self):
         query = f"RETRAIN {self.test_model_name_1}"
@@ -94,7 +127,7 @@ class LightwoodHandlerTest(unittest.TestCase):
 
     def test_51_join_predictor_into_table(self):
         into_table = 'test_join_into_lw'
-        query = f"SELECT tb.{self.target_1} as predicted, ta.{self.target_1} as truth, ta.sqft from {self.sql_handler_name}.{self.data_table_name_1} AS ta JOIN {self.test_model_name_1} AS tb LIMIT 10"
+        query = f"SELECT tb.{self.target_1} as predicted, ta.{self.target_1} as truth, ta.sqft from {MYSQL_HANDLER_NAME}.{self.data_table_name_1} AS ta JOIN {self.test_model_name_1} AS tb LIMIT 10"
         parsed = self.handler.parser(query, dialect=self.handler.dialect)
         predicted = self.handler.join(parsed, self.data_handler, into=into_table)
 
@@ -106,7 +139,7 @@ class LightwoodHandlerTest(unittest.TestCase):
     def test_23_train_predictor_custom_jsonai(self):
         if self.test_model_name_1b not in self.handler.get_tables():
             using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
-            query = f'CREATE PREDICTOR {self.test_model_name_1b} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1} USING {using_str}'
+            query = f'CREATE PREDICTOR {self.test_model_name_1b} FROM {MYSQL_HANDLER_NAME} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1} USING {using_str}'
             self.handler.native_query(query)
 
         m = load_predictor(self.handler.storage.get('models')[self.test_model_name_1b], self.test_model_name_1b)
@@ -121,7 +154,7 @@ class LightwoodHandlerTest(unittest.TestCase):
         horizon = 4
 
         if self.test_model_name_2 not in self.handler.get_tables():
-            query = f'CREATE PREDICTOR {self.test_model_name_2} FROM {self.sql_handler_name} (SELECT * FROM test.{self.data_table_name_2}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
+            query = f'CREATE PREDICTOR {self.test_model_name_2} FROM {MYSQL_HANDLER_NAME} (SELECT * FROM test.{self.data_table_name_2}) PREDICT {target} ORDER BY {oby} GROUP BY {gby} WINDOW {window} HORIZON {horizon}'
             self.handler.native_query(query)
 
         p = self.handler.storage.get('models')
@@ -132,7 +165,10 @@ class LightwoodHandlerTest(unittest.TestCase):
         self.connect_handler()
         target = 'Traffic'
         oby = 'T'
-        query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {self.sql_handler_name}.{self.data_table_name_2} AS ta JOIN mindsdb.{self.test_model_name_2} AS tb ON 1=1 WHERE ta.{oby} > LATEST LIMIT 10"
+        query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from {MYSQL_HANDLER_NAME}.{self.data_table_name_2} AS ta JOIN mindsdb.{self.test_model_name_2} AS tb ON 1=1 WHERE ta.{oby} > LATEST LIMIT 10"
         parsed = self.handler.parser(query, dialect=self.handler.dialect)
         predicted = self.handler.join(parsed, self.data_handler, into=self.model_2_into_table)
 
+
+if __name__ == "__main__":
+    unittest.main(failfast=True)

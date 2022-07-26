@@ -241,6 +241,7 @@ class IntegrationController:
                 ModelInterface(),
                 company_id=company_id
             )
+            handler_ars['company_id'] = company_id
 
         return self.handler_modules[handler_type].Handler(**handler_ars)
 

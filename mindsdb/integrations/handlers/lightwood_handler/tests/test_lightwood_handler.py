@@ -1,10 +1,12 @@
 import os
 import unittest
 import tempfile
+import json
+from pathlib import Path
 
 from lightwood.mixer import LightGBM
 
-os.environ['MINDSDB_STORAGE_DIR'] = tempfile.mkdtemp(dir='/tmp/', prefix='lightwood_handler_test_')[1]
+os.environ['MINDSDB_STORAGE_DIR'] = tempfile.mkdtemp(dir='/tmp/', prefix='lightwood_handler_test_')
 os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
 
 from mindsdb.migrations import migrate
@@ -17,6 +19,7 @@ from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandl
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
 
 MYSQL_CONNECTION_DATA = {
@@ -28,6 +31,8 @@ MYSQL_CONNECTION_DATA = {
     "ssl": False
 }
 
+with open(str(Path.home().joinpath('.mindsdb_credentials.json')), 'rt') as f:
+    MYSQL_CONNECTION_DATA = json.loads(f.read())['mysql']
 
 MYSQL_HANDLER_NAME = 'test_handler'
 
@@ -43,6 +48,11 @@ class HandlerControllerMock:
 
     def get_handler(self, name):
         return self.handlers[name]
+
+    def get(self, name):
+        class Meta:
+            id = 0
+        return Meta()
 
 
 # TODO: bring all train+predict queries in mindsdb_sql test suite
@@ -60,10 +70,6 @@ class LightwoodHandlerTest(unittest.TestCase):
         )
         cls.config = Config()
 
-        # kwargs = {"connection_data": mysql_connection_data}
-        # cls.sql_handler_name = 'test_handler'
-        # cls.data_handler = MySQLHandler(cls.sql_handler_name, **kwargs)
-
         cls.target_1 = 'rental_price'
         cls.data_table_name_1 = 'home_rentals_subset'
         cls.test_model_name_1 = 'test_lightwood_home_rentals'
@@ -73,19 +79,6 @@ class LightwoodHandlerTest(unittest.TestCase):
         cls.data_table_name_2 = 'arrival'
         cls.test_model_name_2 = 'test_lightwood_arrivals'
         cls.model_2_into_table = 'test_join_tsmodel_into_lw'
-
-        # todo: connect to global state instead
-        # cls.MDB_CURRENT_HANDLERS = {
-        #     cls.sql_handler_name: MySQLHandler(cls.sql_handler_name, **{"connection_data": mysql_connection_data})
-        # }
-        # cls.data_handler = cls.MDB_CURRENT_HANDLERS[cls.sql_handler_name]
-
-    # def connect_handler(self):
-        # config = Config()
-        # self.handler.connect(config={'path': config['paths']['root'], 'name': 'lightwood_handler.db'})
-
-    # def test_0_connect(self):
-    #     self.connect_handler()
 
     def test_1_drop_predictor(self):
         model_name = 'lw_test_predictor'
@@ -103,7 +96,7 @@ class LightwoodHandlerTest(unittest.TestCase):
             PREDICT rental_price
         """
         response = self.handler.native_query(query)
-        # TODO check response 
+        self.assertTrue(type(response) == RESPONSE_TYPE.OK)
 
     def test_22_retrain_predictor(self):
         query = f"RETRAIN {self.test_model_name_1}"

@@ -89,7 +89,7 @@ def brack_to_mod(ovr):
 
 
 @mark_process(name='learn')
-def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None) -> int:
+def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None):
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
     if json_ai_override is None:
         json_ai_override = {}

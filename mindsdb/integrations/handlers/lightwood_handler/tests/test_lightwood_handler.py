@@ -100,7 +100,8 @@ class LightwoodHandlerTest(unittest.TestCase):
 
     def test_22_retrain_predictor(self):
         query = f"RETRAIN {self.test_model_name_1}"
-        self.handler.native_query(query)
+        response = self.handler.native_query(query)
+        self.assertTrue(type(response) == RESPONSE_TYPE.OK)
 
     def test_31_list_tables(self):
         print(self.handler.get_tables())

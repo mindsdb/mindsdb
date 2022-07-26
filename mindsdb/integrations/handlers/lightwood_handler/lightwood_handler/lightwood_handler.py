@@ -162,7 +162,7 @@ class LightwoodHandler(PredictiveHandler):
             # getting training time for each tried model. it is possible to do
             # after training only
             fit_mixers = list(predictor.runtime_log[x] for x in predictor.runtime_log
-                            if isinstance(x, tuple) and x[0] == "fit_mixer")
+                              if isinstance(x, tuple) and x[0] == "fit_mixer")
             submodel_data = predictor_record.data.get("submodel_data", [])
             # add training time to other mixers info
             if submodel_data and fit_mixers and len(submodel_data) == len(fit_mixers):
@@ -281,14 +281,28 @@ class LightwoodHandler(PredictiveHandler):
             return self._learn(statement)
         elif type(statement) == RetrainPredictor:
             model_name = statement.name.parts[-1]
-            if model_name not in self.get_tables():
-                raise Exception("Error: this model does not exist, so it can't be retrained. Train a model first.")
+            # if model_name in self._get_tables_names():
+            #     return Response(
+            #         RESPONSE_TYPE.ERROR,
+            #         error_message="Error: this model already exists!"
+            #     )
 
-            all_models = self.storage.get('models')
-            original_stmt = all_models[model_name]['stmt']
+            # all_models = self.storage.get('models')
+            # original_stmt = all_models[model_name]['stmt']
 
-            handler = self.handler_controller.get_handler(str(original_stmt.integration_name))
-            response = handler.query(original_stmt.query_str)
+            predictor_record = db.Predictor.filter_by(
+                company_id=self.company_id, name=model_name
+            ).first()
+            if predictor_record is None:
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Error: model '{model_name}' does not exists!"
+                )
+
+            handler_meta = self.handler_controller.get(predictor_record.id)
+            handler = self.handler_controller.get_handler(handler_meta['name'])
+            response = handler.query(predictor_record.fetch_data_query)
+
             if response.type == RESPONSE_TYPE.ERROR:
                 return response
             df = response.data_frame
@@ -300,6 +314,30 @@ class LightwoodHandler(PredictiveHandler):
             predictor.adjust(df)
             all_models[model_name]['predictor'] = dill.dumps(predictor)
             self.storage.set('models', all_models)
+
+
+            # predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
+            # assert predictor_record is not None
+
+            predictor_record.update_status = 'updating'
+            db.session.commit()
+
+            # integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
+            # integration_record = db.Integration.query.get(predictor_record.integration_id)
+            # if integration_record is None:
+            #     raise Exception(f"There is no integration for predictor '{name}'")
+            # integration_handler = integration_controller.get_handler(integration_record.name)
+
+            # response = integration_handler.native_query(predictor_record.fetch_data_query)
+            # if response.type != RESPONSE_TYPE.TABLE:
+            #     raise Exception(f"Can't fetch data for predictor training: {response.error_message}")
+
+            # p = UpdateProcess(name, response.data_frame, company_id)
+            # p.start()
+
+
+
+
 
         elif type(statement) == DropPredictor:
             model_name = statement.name.parts[-1]

@@ -6,8 +6,6 @@ import time
 import asyncio
 import signal
 import psutil
-import json
-import shutil
 
 import torch.multiprocessing as mp
 mp.set_start_method('spawn')
@@ -108,8 +106,10 @@ if __name__ == '__main__':
     integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
     for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
         import_meta = handler_meta.get('import', {})
+        dependencies = import_meta.get('dependencies')
         if import_meta.get('success', False) is not True:
-            print(f"Can't import handler '{handler_name}': {import_meta.get('error_message', 'unknown error')}")
+            print(f"Dependencies for the handler '{handler_name}' are not installed by default.\n",
+                  f'If you want to use "{handler_name}" please install "{dependencies}"')
 
     raw_model_data_arr = model_interface.get_models()
     model_data_arr = []

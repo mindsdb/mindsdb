@@ -12,38 +12,32 @@ from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, 
 
 from .join_utils import get_ts_join_input
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
-from mindsdb.integrations.libs.utils import recur_get_conditionals, get_aliased_columns, get_join_input, default_data_gather, get_model_name
+from mindsdb.integrations.libs.utils import recur_get_conditionals, get_aliased_columns, get_join_input, get_model_name
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.interfaces.model.learn_process import brack_to_mod, rep_recur
 from mindsdb.utilities.config import Config
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant, Select, OrderBy
+from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant, Select, OrderBy, Show
 from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
     CreatePredictor,
     DropPredictor
 )
 
-
-MDB_CURRENT_HANDLERS = {
-    'test_handler': MySQLHandler('test_handler', **{"connection_data": {
-        "host": "localhost",
-        "port": "3306",
-        "user": "root",
-        "password": "root",
-        "database": "test",
-        "ssl": False
-    }})
-}  # TODO: remove once hooked to mindsdb handler controller
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
 
 
 class LightwoodHandler(PredictiveHandler):
 
     name = 'lightwood'
 
-    def __init__(self, name):
+    def __init__(self, name, **kwargs):
         """ Lightwood AutoML integration """  # noqa
         super().__init__(name)
         self.storage = None
@@ -76,10 +70,14 @@ class LightwoodHandler(PredictiveHandler):
             'upper': sqlalchemy.Float
         }
 
-    def connect(self, **kwargs) -> Dict[str, int]:
-        """ Setup storage handler and check lightwood version """  # noqa
-        self.storage = SqliteStorageHandler(context=self.name, config=kwargs['config'])  # TODO non-KV storage handler?
-        return self.check_connection()
+        self.handler_controller = kwargs.get('handler_controller')
+        self.fs_store = kwargs.get('fs_store')
+        self.model_controller = kwargs.get('model_controller')
+
+    # def connect(self, **kwargs) -> Dict[str, int]:
+    #     """ Setup storage handler and check lightwood version """  # noqa
+    #     self.storage = SqliteStorageHandler(context=self.name, config=kwargs['config'])  # TODO non-KV storage handler?
+    #     return self.check_connection()
 
     def check_connection(self) -> Dict[str, int]:
         try:
@@ -92,10 +90,23 @@ class LightwoodHandler(PredictiveHandler):
             print("Cannot import lightwood!")
             return {'status': '503', 'error': e}
 
-    def get_tables(self) -> List:
+    def get_tables(self) -> Response:
         """ Returns list of model names (that have been succesfully linked with CREATE PREDICTOR) """  # noqa
-        models = self.storage.get('models')
-        return list(models.keys()) if models else []
+        # all_models = self.model_controller.get_models()
+        # all_models_names = [x['name'] for x in all_models]
+
+        q = "SHOW TABLES;"
+        result = self.native_query(q)
+        df = result.data_frame
+        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        return result
+        # models = self.storage.get('models')
+        # return list(models.keys()) if models else []
+
+    def _get_tables_names(self) -> List[str]:
+        response = self.get_tables()
+        data = response.data_frame.to_dict(orient='records')
+        return [x['table_name'] for x in data]
 
     def describe_table(self, table_name: str) -> Dict:
         """ For getting standard info about a table. e.g. data types """  # noqa
@@ -104,17 +115,40 @@ class LightwoodHandler(PredictiveHandler):
             return {}
         return self.storage.get('models')[table_name]['jsonai']
 
-    def native_query(self, query: str) -> Optional[object]:
+    def native_query(self, query: str) -> Response:
         statement = self.parser(query, dialect=self.dialect)
 
+        if type(statement) == Show:
+            if statement.category.lower() == 'tables':
+                all_models = self.model_controller.get_models()
+                all_models_names = [[x['name']] for x in all_models]
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    pd.DataFrame(
+                        all_models_names,
+                        columns=['table_name']
+                    )
+                )
+                return response
+            else:
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Cant determine how to show '{statement.category}'"
+                )
+            return response
         if type(statement) == CreatePredictor:
             model_name = statement.name.parts[-1]
 
-            if model_name in self.get_tables():
-                raise Exception("Error: this model already exists!")
+            if model_name in self._get_tables_names():
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message="Error: this model already exists!"
+                )
 
             target = statement.targets[0].parts[-1]
-            params = { 'target': target }
+            params = {
+                'target': target
+            }
             if statement.order_by:
                 params['timeseries_settings'] = {
                     'is_timeseries': True,
@@ -128,9 +162,13 @@ class LightwoodHandler(PredictiveHandler):
             unpack_jsonai_old_args(json_ai_override)
 
             # get training data from other integration
-            handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]  # TODO import from mindsdb init
-            handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
-            df = default_data_gather(handler, handler_query)
+            handler = self.handler_controller.get_handler(str(statement.integration_name))
+            response = handler.query(statement.query_str)
+            if response.type == RESPONSE_TYPE.ERROR:
+                return response
+            df = response.data_frame
+            # handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]  # TODO import from mindsdb init
+            # handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
 
             json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
             json_ai = json_ai_from_problem(df, ProblemDefinition.from_dict(params)).to_dict()
@@ -140,7 +178,7 @@ class LightwoodHandler(PredictiveHandler):
 
             code = code_from_json_ai(json_ai)
             predictor = predictor_from_code(code)
-            predictor.learn(df)
+            predictor.learn(df)  # !!!!
 
             all_models = self.storage.get('models')
             serialized_predictor = dill.dumps(predictor)
@@ -164,9 +202,14 @@ class LightwoodHandler(PredictiveHandler):
             all_models = self.storage.get('models')
             original_stmt = all_models[model_name]['stmt']
 
-            handler = MDB_CURRENT_HANDLERS[str(original_stmt.integration_name)]  # TODO import from mindsdb init
-            handler_query = self.parser(original_stmt.query_str, dialect=self.handler_dialect)
-            df = default_data_gather(handler, handler_query)
+            handler = self.handler_controller.get_handler(str(original_stmt.integration_name))
+            response = handler.query(original_stmt.query_str)
+            if response.type == RESPONSE_TYPE.ERROR:
+                return response
+            df = response.data_frame
+
+            # handler_query = self.parser(original_stmt.query_str, dialect=self.handler_dialect)
+            # df = default_data_gather(handler, handler_query)
 
             predictor = load_predictor(all_models[model_name], model_name)
             predictor.adjust(df)
@@ -174,11 +217,12 @@ class LightwoodHandler(PredictiveHandler):
             self.storage.set('models', all_models)
 
         elif type(statement) == DropPredictor:
-            to_drop = statement.name.parts[-1]
-            all_models = self.storage.get('models')
-            del all_models[to_drop]
-            self.storage.set('models', all_models)
-
+            model_name = statement.name.parts[-1]
+            all_models = self.model_controller.get_models()
+            all_models_names = [x['name'] for x in all_models]
+            if model_name not in all_models_names:
+                raise Exception(f"Model '{model_name}' does not exists")
+            self.model_controller.delete_model(model_name)
         else:
             raise Exception(f"Query type {type(statement)} not supported")
 

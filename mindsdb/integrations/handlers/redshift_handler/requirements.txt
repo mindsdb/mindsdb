@@ -1,0 +1,2 @@
+redshift_connector
+sqlalchemy-redshift

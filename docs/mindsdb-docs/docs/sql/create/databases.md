@@ -268,5 +268,64 @@ WITH
     };
 ```
 
+
+## Connecting Through Ngrok
+
+When connecting your local database to MindsDB Cloud and local, some local databases require establishing a database connection via a [Ngrok Tunnel](https://ngrok.com) where the host and port number is retrieved. The free tier offers all you need to get started.
+
+The installation instructions are easy to follow, head over to the [downloads page](https://ngrok.com/download) and choose your operating system. Follow the instructions for installation.
+
+Then [create a free account](https://dashboard.ngrok.com/signup) to get an auth token that you can use to config your ngrok instance.
+
+Once installed and configured, run the following command to obtain the host and port number:
+
+```bash
+ngrok tcp [port-number]
+```
+
+Example:
+
+```bash
+ngrok tcp 5431  # assuming you are running a db on the port 5432, for example, postgres
+```
+
+At this point you will see a line saying something like this:
+```bash
+Session Status                online
+Account                       myaccount (Plan: Free)
+Version                       2.3.40
+Region                        United States (us)
+Web Interface                 http://127.0.0.1:4040
+Forwarding                    tcp://4.tcp.ngrok.io:15093 -> localhost 5432
+```
+
+The forwarded address information will be required when connecting to MindsDB's GUI. We will make use of the `Forwarding` information, in this case it is tcp://4.tcp.ngrok.io:15093 where where tcp://4.tcp.ngrok.io will be used for the host parameter and 15093 as the port number.
+
+Proceed to create a database connection in the MindsDB GUI. Once you have selected a database as a datasource, you can execute the syntax with the host and port number retrieved.
+
+Example:
+
+```sql
+CREATE DATABASE psql_datasource
+WITH
+    engine='postgres',
+    parameters={
+            "user":"postgres",
+            "port": 15093,
+            "password": "Mimzo3i-mxt@9CpThpBj",
+            "host": "4.tcp.ngrok.io", 
+            "database": "postgres"
+    };
+```
+
+Please note that when the tunnel loses connection(the ngrok tunnel is stopped or cancelled), you will have to reconnect your database again. In the free tier, Ngrok changes the url each time you launch the program, so if you need to reset the connection you will have to drop the datasource using the DROP DATABASE syntax:
+
+```sql
+DROP DATABASE example_db;
+```
+
+You can go ahead and set up the connection again. Your trained predictors won't be affected, however if you have to RETRAIN the predictors please ensure the database connection has the same name you used when creating the predictor to avoid it failing to retrain.
+
+
 !!! info "Work in progress"
 Note this feature is in beta version. If you have additional questions about other supported datasources or you experience some issues [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or open GitHub issue.

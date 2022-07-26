@@ -1,7 +1,7 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 try:
-    from .scylla_handler import ScyllaHandler as Handler
+    from .cassandra_handler import CassandraHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None
@@ -9,8 +9,8 @@ except Exception as e:
 from .__about__ import __version__ as version, __description__ as description
 
 
-title = 'ScyllaDB'
-name = 'scylladb'
+title = 'Cassandra'
+name = 'cassandra'
 type = HANDLER_TYPE.DATA
 icon_path = 'logo.png'
 

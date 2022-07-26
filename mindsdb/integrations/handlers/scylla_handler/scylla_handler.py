@@ -44,16 +44,18 @@ class ScyllaHandler(DatabaseHandler):
 
         if self.connection_args['protocol_version'] is not None:
             connection_props['protocol_version'] = self.connection_args['protocol_version']
+ 
+        secure_connect_bundle = self.connection_args.get('secure_connect_bundle')
 
-        if self.connection_args['secure_connect_bundle'] is not None:
+        if secure_connect_bundle is not None:
             if os.path.isfile(self.secure_connect_bundle) is False:
                 raise Exception("Secure_connect_bundle' must be path to the file")
             connection_props['cloud'] = {
                 'secure_connect_bundle': self.secure_connect_bundle
             }
         else:
-            connection_props['contact_points'] = [self.host]
-            connection_props['port'] = int(self.port)
+            connection_props['contact_points'] = [self.connection_args['host']]
+            connection_props['port'] = int(self.connection_args['port'])
 
         cluster = Cluster(**connection_props)
         session = cluster.connect(self.connection_args['keyspace'])

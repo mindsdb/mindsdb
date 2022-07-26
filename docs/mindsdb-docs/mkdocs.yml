@@ -104,6 +104,14 @@ nav:
     - SELECT: sql/api/select.md
     - SELECT from files: sql/api/select_files.md
     - JOIN: sql/api/join.md
+  - Mongo API:
+    - Collection Structure: mongo/collection-structure.md
+    - Insert(): 
+      - Databases: mongo/database.md
+      - Predictors: mongo/insert.md
+    - Stats(): mongo/stats.md
+    - Find(): mongo/find.md
+    - Delete(): mongo/delete.md
   - Using a custom model:
     - MLFlow: custom-model/mlflow.md
     - Ray Serve: custom-model/ray-serve.md

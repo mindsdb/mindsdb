@@ -113,18 +113,14 @@ class DB2Handler(DatabaseHandler):
         with conn.cursor() as cur:
             try:
                 cur.execute(query)
-                try:
+                   
+                if cur._result_set_produced :
                     result = cur.fetchall() 
-                    c=[x[0] for x in cur.description]
-                except:
-                    result= ["QUery executed sucessfully"]
-                    c=[""]
-                if result:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame(
                             result,
-                            columns=c
+                            columns=[x[0] for x in cur.description]
                         )
                     )
                 else:

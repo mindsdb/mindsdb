@@ -22,23 +22,24 @@ class DB2HandlerTest(unittest.TestCase):
     
 
     def test_1_drop_table(self):
-        res = self.handler.native_query("DROP TABLE IF EXISTS test_mdb")
-        assert res['type'] is not RESPONSE_TYPE.ERROR 
+        res = self.handler.query("DROP TABLE IF EXISTS LOVE")
+        assert res.type is  not RESPONSE_TYPE.ERROR 
 
 
     def test_2_create_table(self):
-        res = self.handler.native_query("CREATE TABLE IF NOT EXISTS test_mdb (test_col INT)")
-        assert res['type'] is not RESPONSE_TYPE.ERROR 
+        res = self.handler.query("CREATE TABLE IF NOT EXISTS LOVE (LOVER varchar(20))")
+        assert res.type is not  RESPONSE_TYPE.ERROR 
+    
 
     def test_3_get_tables(self):
         tables = self.handler.get_tables()
-        assert tables['type'] is not RESPONSE_TYPE.ERROR
+        assert tables.type is not  RESPONSE_TYPE.ERROR
 
  
     def test_4_select_query(self):
-        query = "SELECT * FROM test_mdb"
+        query = "SELECT * FROM AUTHORS"
         result = self.handler.native_query(query)
-        assert result['type'] is RESPONSE_TYPE.TABLE
+        assert result.type is   RESPONSE_TYPE.TABLE
 
         
 if __name__ == '__main__':

@@ -56,8 +56,8 @@ class DB2Handler(DatabaseHandler):
     
 
     def connect(self):
-        if self.is_connected is True:
-            return self.connection
+        # if self.is_connected is True:
+        #     return self.connection
 
         try:
             self.connection = love.pconnect(self.connString,'','')
@@ -109,17 +109,22 @@ class DB2Handler(DatabaseHandler):
     def native_query(self, query: str) -> StatusResponse:
         need_to_close = self.is_connected is False
         
-        self.connect()
-        with self.connection.cursor() as cur:
+        conn = self.connect()
+        with conn.cursor() as cur:
             try:
                 cur.execute(query)
-                result = cur.fetchall()
+                try:
+                    result = cur.fetchall() 
+                    c=[x[0] for x in cur.description]
+                except:
+                    result= ["QUery executed sucessfully"]
+                    c=[""]
                 if result:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame(
                             result,
-                            columns=[x[0] for x in cur.description]
+                            columns=c
                         )
                     )
                 else:
@@ -153,13 +158,33 @@ class DB2Handler(DatabaseHandler):
 
 
     def get_tables(self) -> StatusResponse:
-        q = f"""select tabname as table_name
-            from syscat.tables
-            where tabschema = '{self.schemaName}' 
-            and type = 'T'
-            order by tabname"""
+        self.connect()
 
-        return self.native_query(q)
+
+        result=self.connection.tables(self.schemaName)
+        try:
+            if result:
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.DataFrame(
+                        [result[i]['TABLE_NAME'] for i in range(len(result)) ],
+                        columns=['TABLE_NAME']
+                        
+                    )
+                )
+            else:
+                response = Response(RESPONSE_TYPE.OK)
+            
+        except Exception as e:
+            log.error(f'Error running while getting table {e} on ')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+
+
+
+        return response
 
 
 
@@ -167,19 +192,35 @@ class DB2Handler(DatabaseHandler):
     
     def get_columns(self, table_name: str) -> StatusResponse:
         
+        self.connect()
 
-        q = f"""
-            SELECT 
-            colname as column_name,
-            typename as data_type,
-            length,
-            scale,
-            from syscat.columns 
-            WHERE 
-              tabname = '{table_name.upper()}'
-        """
 
-        return self.native_query(q)
+        result=self.connection.columns(table_name)
+        try:
+            if result:
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.DataFrame(
+                        [result[i]['COLUMN_NAME'] for i in range(len(result)) ],
+                        columns=['COLUMN_NAME']
+                        
+                    )
+                )
+            else:
+                response = Response(RESPONSE_TYPE.OK)
+            
+        except Exception as e:
+            log.error(f'Error running while getting table {e} on ')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+
+
+
+        return response
+
+        
 
 
 

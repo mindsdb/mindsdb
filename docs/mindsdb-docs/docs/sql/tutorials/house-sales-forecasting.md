@@ -1,10 +1,14 @@
-# Forecast Quarterly House Sales using MindsDB
+# Forecasting Quarterly House Sales with MindsDB
 
 ## Introduction
 
-In this short example, we will produce forecasts for a multivariate time series.
+In this tutorial, we'll create, train, and query a machine learning model, which, in MindsDB language, is an `AI Table` or a `predictor`. We aim to produce forecasts for a multivariate time series.
 
-Make sure you have access to a working MindsDB installation - either locally or via [cloud.mindsdb.com](https://cloud.mindsdb.com/).
+Make sure you have access to a working MindsDB installation either locally or via [cloud.mindsdb.com](https://cloud.mindsdb.com/).
+
+You can learn how to set up your account at MindsDB Cloud by following [this guide](https://docs.mindsdb.com/setup/cloud/). Another way is to set up MindsDB locally using [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [Python](https://docs.mindsdb.com/setup/self-hosted/pip/source/).
+
+Let's get started.
 
 ## The Data
 
@@ -46,14 +50,15 @@ There are a couple of ways you can get the data to follow through with this tuto
 
     ```sql
     SELECT *
-    FROM files.house_sales;
+    FROM files.house_sales
+    LIMIT 10;
     ```
 
-!!! Warning "From now on, we will use the `files.house_sales` file as a table. Make sure you replace it with `#!sql example_db.demo_data.house_sales` if you use the demo database."
+!!! Warning "From now on, we will use the `files.house_sales` file as a table. Make sure you replace it with `#!sql example_db.demo_data.house_sales` if you use the `demo` database."
 
 ### Understanding the Data
 
-We will use the house sales dataset. It tracks quarterly moving averages of house sales aggregated by type and amount of bedrooms in each listing.
+We will use the house sales dataset where each row represents one real estate (house or unit). It tracks quarterly moving averages of house sales aggregated by type and amount of bedrooms in each listing. These quarterly moving averages will be predicted in the following sections of this tutorial.
 
 Below is the sample data stored in the house sales dataset.
 
@@ -85,13 +90,10 @@ Where:
 
 ## Training a Predictor Via [`#!sql CREATE PREDICTOR`](/sql/create/predictor)
 
-Now, we can specify that we want to forecast the `MA` column, which is a moving average of the historical median price of the house or unit. However, looking at the data you can see several entries for the same date. It depends on two factors: 1. how many bedrooms the properties have, and 2. whether properties are "houses" or "units". This means that we can have up to ten different groupings here. Although, if you do some digging, you will find we only have seven of the possible ten combinations.
-
-MindsDB makes it simple so that we don't need to repeat the predictor creation process for every group there is. Instead, we can just group for both columns and the predictor will learn from all series and enable forecasts for all of them! Here is the SQL command to do so:
+Let's create and train your first machine learning predictor. For that, we are going to use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) syntax where we specify what sub-query to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
 
 ```sql
-CREATE PREDICTOR 
-  mindsdb.home_sales_model
+CREATE PREDICTOR mindsdb.house_sales_predictor
 FROM files
   (SELECT * FROM house_sales)
 PREDICT MA
@@ -102,28 +104,55 @@ WINDOW 8
 HORIZON 4;
 ```
 
+We use all of the columns as features, except for the `MA` column whose value is going to be predicted.
+
+MindsDB makes it simple so that we don't need to repeat the predictor creation process for every group, that is, for every number of bedrooms or for every type of a real estate. Instead, we just group by both the `bedrooms` and `type` columns and the predictor learns from all series and enables forecasts for all of them!
+
 ## Checking the Status of a Predictor
 
-You can check the status of the predictor by executing the folowing SQL command:
+A predictor may take a couple of minutes for the training to complete. You can monitor the status of your predictor by using this SQL command:
 
 ```sql
-SELECT * FROM mindsdb.predictors where name='home_sales_model';
+SELECT status
+FROM mindsdb.predictors
+WHERE name='house_sales_predictor';
 ```
+
+If we run it right after creating a predictor, we'll most probably get this output:
+
+```sql
++----------+
+| status   |
++----------+
+| training |
++----------+
+```
+
+But if we wait a couple of minutes, this should be the output:
+
+```sql
++----------+
+| status   |
++----------+
+| complete |
++----------+
+```
+
+Now, if the status of our predictor says `complete`, we can start making predictions!
 
 ## Making Predictions
 
-Once the predictor has been successfully trained, you can query it to get forecasts for a given period of time. Usually, you'll want to know what happens right after the latest training data point that was fed. We have a special bit of syntax for that: the `LATEST` keyword.
+You can make predictions by querying the predictor as if it were a table. The [`SELECT`](/sql/api/select/) syntax lets you make predictions for the label based on the chosen features for a given period of time. Usually, you want to know what happens right after the latest training data point that was fed. We have a special keyword for that: the `LATEST` keyword.
 
 ```sql
-SELECT m.saledate as date,
-       m.MA as forecast
-FROM mindsdb.home_sales_model as m 
+SELECT m.saledate as date, m.MA as forecast
+FROM mindsdb.house_sales_predictor as m 
 JOIN files.house_sales as t
 WHERE t.saledate > LATEST AND t.type = 'house' AND t.bedrooms = 2
 LIMIT 4;
 ```
 
-Now, try changing the `type` column value to *unit*, or the `bedrooms` column value to any number between 1 to 5, and check how the forecast varies. This is because MindsDB recognizes each grouping as being its own different time series.
+Now, try changing the `type` column value to *unit*, or the `bedrooms` column value to any number between 1 to 5, and check how the forecasts vary. This is because MindsDB recognizes each grouping as being its own different time series.
 
 ## What's Next?
 

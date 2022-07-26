@@ -2,7 +2,13 @@
 
 ## Introduction
 
-Follow these steps to create, train and query a machine learning model (predictor) using SQL that predicts the `rental_price` (label) for new properties given their attributes (features).
+In this tutorial, we'll create, train, and query a machine learning model, which, in MindsDB language, is an `AI Table` or a `predictor`. We aim to predict the `rental_price` value for new properties based on their attributes, such as the number of rooms, area, or neighborhood.
+
+Make sure you have access to a working MindsDB installation either locally or via [cloud.mindsdb.com](https://cloud.mindsdb.com/).
+
+You can learn how to set up your account at MindsDB Cloud by following [this guide](https://docs.mindsdb.com/setup/cloud/). Another way is to set up MindsDB locally using [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [Python](https://docs.mindsdb.com/setup/self-hosted/pip/source/).
+
+Let's get started.
 
 ## The Data
 
@@ -52,6 +58,8 @@ There are a couple of ways you can get the data to follow through with this tuto
 
 ### Understanding the Data
 
+We will use the home rentals dataset where each row represents one rental home. We will predict the `rental price` value for all the newly added properties in the following sections of this tutorial.
+
 Below is the sample data stored in the `#!sql example_db.demo_data.home_rentals` table.
 
 ```sql
@@ -85,18 +93,20 @@ Where:
 
 ## Training a Predictor Via [`#!sql CREATE PREDICTOR`](/sql/create/predictor)
 
-Let's create and train your first machine learning predictor. For that we are going to use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) syntax, where we specify what sub-query to train `#!sql FROM` (features) and what we want to learn to `#!sql PREDICT` (labels):
+Let's create and train your first machine learning predictor. For that, we are going to use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) syntax where we specify what sub-query to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
+CREATE PREDICTOR mindsdb.home_rentals_predictor
 FROM example_db
   (SELECT * FROM demo_data.home_rentals)
 PREDICT rental_price;
 ```
 
+We use all of the columns as features, except for the `rental_price` column whose value is going to be predicted.
+
 ## Checking the Status of a Predictor
 
-A predictor may take a couple of minutes for the training to complete. You can monitor the status of your predictor by copying and pasting this command into your SQL client:
+A predictor may take a couple of minutes for the training to complete. You can monitor the status of your predictor by using this SQL command:
 
 ```sql
 SELECT status
@@ -104,7 +114,7 @@ FROM mindsdb.predictors
 WHERE name='home_rentals_predictor';
 ```
 
-Here we are selecting the status from the table called mindsdb.predictors and using the where statement to only show the model we have just trained, On execution, you we get:
+If we run it right after creating a predictor, we'll most probably get this output:
 
 ```sql
 +----------+
@@ -114,7 +124,7 @@ Here we are selecting the status from the table called mindsdb.predictors and us
 +----------+
 ```
 
-Or after a the model has been trained:
+But if we wait a couple of minutes, this should be the output:
 
 ```sql
 +----------+
@@ -124,26 +134,21 @@ Or after a the model has been trained:
 +----------+
 ```
 
-## Making Predictions
+Now, if the status of our predictor says `complete`, we can start making predictions!
 
-!!! attention "Predictor Status Must be 'complete' Before Making a Prediction"
+## Making Predictions
 
 ### Making Predictions Via [`#!sql SELECT`](/sql/api/select)
 
-Once the predictor's status is complete. You can make predictions by querying the predictor as if it was a normal table:
-The [`SELECT`](/sql/api/select/) syntax will allow you to make a prediction based on features.
+You can make predictions by querying the predictor as if it were a table. The [`SELECT`](/sql/api/select/) syntax lets you make predictions for the label based on the chosen features.
 
 ```sql
-SELECT rental_price,
-       rental_price_explain
+SELECT rental_price, rental_price_explain
 FROM mindsdb.home_rentals_model
-WHERE sqft = 823
-AND location='good'
-AND neighborhood='downtown'
-AND days_on_market=10;
+WHERE sqft = 823 AND location='good' AND neighborhood='downtown' AND days_on_market=10;
 ```
 
-On execution, you should get:
+On execution, you get the following output:
 
 ```sql
 +--------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
@@ -155,15 +160,16 @@ On execution, you should get:
 
 ### Making Batch Predictions Via [`#!sql JOIN`](/sql/api/join)
 
-You can also make bulk predictions by joining a table with your predictor:
+Also, you can make bulk predictions by joining a table with your predictor.
 
 ```sql
-SELECT t.rental_price as real_price, 
-       m.rental_price as predicted_price,
-       t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market 
+SELECT t.rental_price as real_price, m.rental_price as predicted_price, t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market 
 FROM example_db.demo_data.home_rentals as t 
-JOIN mindsdb.home_rentals_model as m limit 100;
+JOIN mindsdb.home_rentals_model as m
+LIMIT 100;
 ```
+
+On execution, you get the following output:
 
 ```sql
 +------------+-----------------+-----------------+---------------------+------+----------+----------------+

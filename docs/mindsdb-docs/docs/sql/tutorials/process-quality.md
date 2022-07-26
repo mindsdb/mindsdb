@@ -23,12 +23,13 @@ In this tutorial you will learn how to predict the quality of a mining process u
 1. Fix headers: 
    - `sed -e 's/ /_/g' -e 's/\(.*\)/\L\1/' -e 's/%_//g' MiningProcess_Flotation_Plant_Database.csv > fixed_headers.csv` (for Linux/Unix)
    - edit headers manually: change `space` to `underscore`, upper case to lower case, remove `%` from headers (for Windows)
-2. Access MindsDB GUI either on cloud or local via URL 127.0.0.1:47334/.
-3. Select the `Add data` button or the plug icon on the left side bar.
-4. The page will navigate to the 'Select your data source' page. Select 'Files'.
-5. Under 'Import a file' select the tab 'Click here to browse local files' and select your data file.
-6. Once the file is uploaded 100%, provide a name for the data file that will be saved as a table.
-7. Select the button Save and Continue.
+2. Access MindsDB GUI on local via URL 127.0.0.1:47334/. 
+3. If you are using MindsDB Cloud, make sure to add the file to a database and create a database connection to MindsDB's GUI. Cloud has a file size limit of 10MB, therefore for this dataset it would be best to either use MindsDB local instance or if on Cloud [connect via a database.](https://docs.mindsdb.com/sql/create/databases/)
+4. Select the `Add data` button or the plug icon on the left side bar.
+5. The page will navigate to the 'Select your data source' page. Select 'Files'.
+6. Under 'Import a file' select the tab 'Click here to browse local files' and select your data file.
+7. Once the file is uploaded 100%, provide a name for the data file that will be saved as a table.
+8. Select the button Save and Continue.
 
 You can query the file that has been uploaded to see that the data does pull through.
 
@@ -66,9 +67,9 @@ FROM files (
            flotation_column_01_level, flotation_column_02_level,
            flotation_column_03_level, flotation_column_04_level,
            flotation_column_05_level, flotation_column_06_level, 
-           flotation_column_07_level, iron_concentrate, silica_concentrate from process_quality 
+           flotation_column_07_level, iron_concentrate, silica_concentrate
     FROM process_quality LIMIT 5000
-) PREDICT silica_concentrate as quality USING;
+) PREDICT silica_concentrate as quality;
 ```
 
 After creating the Predictor you should see a similar output:

@@ -23,7 +23,7 @@ There are a couple of ways you can get the data to follow through with this tuto
             "host": "3.220.66.106",
             "port": "5432",
             "database": "demo"
-    }
+    };
     ```
 
     Now you can run queries directly on the demo database. Let's preview the data that we'll use to train our predictor.
@@ -162,7 +162,7 @@ SELECT t.rental_price as real_price,
        m.rental_price as predicted_price,
        t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market 
 FROM example_db.demo_data.home_rentals as t 
-JOIN mindsdb.home_rentals_model as m limit 100
+JOIN mindsdb.home_rentals_model as m limit 100;
 ```
 
 ```sql

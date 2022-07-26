@@ -25,7 +25,7 @@ There are a couple of ways you can get the data to follow through with this tuto
             "host": "3.220.66.106",
             "port": "5432",
             "database": "demo"
-    }
+    };
     ```
 
     Now you can run queries directly on the demo database. Let's preview the data that we'll use to train our predictor.
@@ -46,7 +46,7 @@ There are a couple of ways you can get the data to follow through with this tuto
 
     ```sql
     SELECT *
-    FROM files.house_sales
+    FROM files.house_sales;
     ```
 
 !!! Warning "From now on, we will use the `files.house_sales` file as a table. Make sure you replace it with `#!sql example_db.demo_data.house_sales` if you use the demo database."
@@ -89,7 +89,7 @@ Now, we can specify that we want to forecast the `MA` column, which is a moving 
 
 MindsDB makes it simple so that we don't need to repeat the predictor creation process for every group there is. Instead, we can just group for both columns and the predictor will learn from all series and enable forecasts for all of them! Here is the SQL command to do so:
 
-```
+```sql
 CREATE PREDICTOR 
   mindsdb.home_sales_model
 FROM files
@@ -99,14 +99,14 @@ ORDER BY saledate
 GROUP BY bedrooms, type
 -- as the target is quarterly, we will look back two years to forecast the next one
 WINDOW 8
-HORIZON 4;  
+HORIZON 4;
 ```
 
 ## Checking the Status of a Predictor
 
 You can check the status of the predictor by executing the folowing SQL command:
 
-```
+```sql
 SELECT * FROM mindsdb.predictors where name='home_sales_model';
 ```
 
@@ -114,7 +114,7 @@ SELECT * FROM mindsdb.predictors where name='home_sales_model';
 
 Once the predictor has been successfully trained, you can query it to get forecasts for a given period of time. Usually, you'll want to know what happens right after the latest training data point that was fed. We have a special bit of syntax for that: the `LATEST` keyword.
 
-```
+```sql
 SELECT m.saledate as date,
        m.MA as forecast
 FROM mindsdb.home_sales_model as m 

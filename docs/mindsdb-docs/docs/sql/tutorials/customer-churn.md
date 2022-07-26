@@ -39,7 +39,7 @@ There are a couple of ways you can get the data to follow through with this tuto
             "host": "3.220.66.106",
             "port": "5432",
             "database": "demo"
-    }
+    };
     ```
 
     Now you can run queries directly on the demo database. Let's preview the data that we'll use to train our predictor.
@@ -60,7 +60,7 @@ There are a couple of ways you can get the data to follow through with this tuto
 
     ```sql
     SELECT *
-    FROM files.churn
+    FROM files.churn;
     ```
 
 !!! Warning "From now on, we will use the `files.churn` file as a table. Make sure you replace it with `#!sql example_db.demo_data.customer_churn` if you use the demo database."

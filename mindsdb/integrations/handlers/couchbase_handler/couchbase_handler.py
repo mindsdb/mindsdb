@@ -3,8 +3,6 @@ from mindsdb.integrations.libs.base_handler import DatabaseHandler
 
 from mindsdb.utilities.log import log
 from mindsdb_sql.parser.ast.base import ASTNode
-# from mindsdb_sql.planner.query_planner import QueryPlanner
-# from mindsdb_sql.planner import 
 from couchbase.n1ql import N1QLQuery
 import pandas as pd
 
@@ -47,7 +45,6 @@ class CouchbaseHandler(DatabaseHandler):
         self.scope = self.connection_data.get('scope') or '_default'
         
         self.bucket_name = self.connection_data.get('bucket')
-        # self.dialect = 'mindsdb'
         self.cluster = None
         
         self.is_connected = False
@@ -103,7 +100,6 @@ class CouchbaseHandler(DatabaseHandler):
         """
         result = StatusResponse(False)
         need_to_close = self.is_connected is False
-        # print(self.is_connected)
 
         try:
             cluster = self.connect()
@@ -144,12 +140,12 @@ class CouchbaseHandler(DatabaseHandler):
                     if isinstance(row, dict):
                         for k, v in row.items():
                             if data.get(k) is None:
-                                data[k] = data.get(k) or []
+                                data[k] = []
                             data[k].append(v)
                     else:
                         for k, v in collection.items():
                                 if data.get(k) is None: 
-                                    data[k] = data.get(k) or []
+                                    data[k] = []
                                 data[k].append(v)
             if len(data) > 0:
                 df = pd.DataFrame(data)

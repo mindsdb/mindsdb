@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mindsdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mindsdb
+      id: "0"
+  template:
+    metadata:
+      labels:
+        app: mindsdb
+        id: "0"
+    spec:
+      containers:
+      - image: mindsdb/mindsdb:latest
+        imagePullPolicy: IfNotPresent
+        name: mindsdb
+        ports:
+        - containerPort: 47334
+          name: http
+          protocol: TCP
+        - containerPort: 47335
+          name: mysql
+          protocol: TCP
+        - containerPort: 47336
+          name: mongodb
+          protocol: TCP
+        volumeMounts :
+          - name : mindsdb-config
+            mountPath : /root/mindsdb_config.json
+        resources :
+          requests :
+            memory : 500Mi
+            cpu : 100m
+      volumes :
+        - name : mindsdb-config
+          persistentVolumeClaim :
+            claimName : mindsdb-data-pvc
+

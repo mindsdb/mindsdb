@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In this tutorial, we'll create, train, and query a machine learning model, which, in MindsDB language, is an `AI Table` or a `predictor`. We aim to produce forecasts for a multivariate time series.
+In this tutorial, we'll create, train, and query a machine learning model, which, in MindsDB language, is an `AI Table` or a `predictor`. We aim to predict sales forecasts for houses using a multivariate time series strategy.
 
 Make sure you have access to a working MindsDB installation either locally or via [cloud.mindsdb.com](https://cloud.mindsdb.com/).
 
@@ -99,7 +99,8 @@ FROM files
 PREDICT MA
 ORDER BY saledate
 GROUP BY bedrooms, type
--- as the target is quarterly, we will look back two years to forecast the next one
+-- as the target is quarterly,
+-- we will look back two years to forecast the next one
 WINDOW 8
 HORIZON 4;
 ```
@@ -148,7 +149,9 @@ You can make predictions by querying the predictor as if it were a table. The [`
 SELECT m.saledate as date, m.MA as forecast
 FROM mindsdb.house_sales_predictor as m 
 JOIN files.house_sales as t
-WHERE t.saledate > LATEST AND t.type = 'house' AND t.bedrooms = 2
+WHERE t.saledate > LATEST 
+AND t.type = 'house' 
+AND t.bedrooms = 2
 LIMIT 4;
 ```
 

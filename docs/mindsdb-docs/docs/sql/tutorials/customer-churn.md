@@ -157,7 +157,13 @@ You can make predictions by querying the predictor as if it were a table. The [`
 ```sql
 SELECT Churn, Churn_confidence, Churn_explain
 FROM mindsdb.customer_churn_predictor
-WHERE SeniorCitizen=0 AND Partner='Yes' AND Dependents='No' AND tenure=1 AND PhoneService='No' AND MultipleLines='No phone service' AND InternetService='DSL';
+WHERE SeniorCitizen=0 
+AND Partner='Yes' 
+AND Dependents='No' 
+AND tenure=1 
+AND PhoneService='No' 
+AND MultipleLines='No phone service' 
+AND InternetService='DSL';
 ```
 
 On execution, you get the following output:
@@ -177,7 +183,24 @@ An important thing to check is the `important_missing_information` value, where 
 ```sql
 SELECT Churn, Churn_confidence, Churn_explain
 FROM mindsdb.customer_churn_predictor
-WHERE SeniorCitizen=0 AND Partner='Yes' AND Dependents='No' AND tenure=1 AND PhoneService='No' AND MultipleLines='No phone service' AND InternetService='DSL' AND OnlineSecurity='No' AND OnlineBackup='Yes' AND DeviceProtection='No' AND TechSupport='No' AND StreamingTV='No' AND StreamingMovies='No' AND Contract='Month-to-month' AND PaperlessBilling='Yes' AND PaymentMethod='Electronic check' AND MonthlyCharges=29.85 AND TotalCharges=29.85;
+WHERE SeniorCitizen=0 
+AND Partner='Yes' 
+AND Dependents='No' 
+AND tenure=1 
+AND PhoneService='No' 
+AND MultipleLines='No phone service' 
+AND InternetService='DSL' 
+AND OnlineSecurity='No' 
+AND OnlineBackup='Yes' 
+AND DeviceProtection='No' 
+AND TechSupport='No' 
+AND StreamingTV='No' 
+AND StreamingMovies='No' 
+AND Contract='Month-to-month' 
+AND PaperlessBilling='Yes' 
+AND PaymentMethod='Electronic check' 
+AND MonthlyCharges=29.85 
+AND TotalCharges=29.85;
 ```
 
 On execution, you get the following output:

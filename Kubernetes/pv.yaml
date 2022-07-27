@@ -1,0 +1,15 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: mindsdb-data-pv
+  labels:
+    app: mindsdb
+spec:
+  storageClassName: your-storageclass
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: path-to-the-mount/mindsdb_config.json
+  persistentVolumeReclaimPolicy: Retain

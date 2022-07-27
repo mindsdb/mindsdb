@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mindsdb-http
+  labels:
+    name: mindsdb
+spec:
+  ports :
+  - name : http
+    nodePort : 30081
+    port : 47334
+    protocol : TCP
+    targetPort : 47334
+  selector:
+    app: mindsdb
+    id: "0"
+  type: NodePort

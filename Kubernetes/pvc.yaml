@@ -1,0 +1,13 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: mindsdb-data-pvc
+  labels:
+    app: mindsdb
+spec:
+  storageClassName: your-storageclass
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi

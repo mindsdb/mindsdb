@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mindsdb-mysql
+  labels:
+    name: mindsdb
+spec:
+  ports :
+  - name : http
+    port : 47335
+    protocol : TCP
+    targetPort : 47335
+  selector:
+    app: mindsdb
+    id: "0"
+

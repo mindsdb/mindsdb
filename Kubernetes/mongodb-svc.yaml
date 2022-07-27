@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mindsdb-mongodb
+  labels:
+    name: mindsdb
+spec:
+  ports :
+  - name : http
+    port : 47336
+    protocol : TCP
+    targetPort : 47336
+  selector:
+    app: mindsdb
+    id: "0"
+

@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-minds
+spec:
+  tls:
+  - hosts:
+      - example.mindsdb.com
+    secretName: your-ssl
+  rules:
+  - host: example.mindsdb.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: mindsdb-http
+            port:
+              number: 47334

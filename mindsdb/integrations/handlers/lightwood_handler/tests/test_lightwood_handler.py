@@ -50,9 +50,10 @@ class HandlerControllerMock:
         return self.handlers[name]
 
     def get(self, name):
-        class Meta:
-            id = 0
-        return Meta()
+        return {
+            'id': 0,
+            'name': MYSQL_HANDLER_NAME
+        }
 
 
 # TODO: bring all train+predict queries in mindsdb_sql test suite
@@ -80,7 +81,7 @@ class LightwoodHandlerTest(unittest.TestCase):
         cls.test_model_name_2 = 'test_lightwood_arrivals'
         cls.model_2_into_table = 'test_join_tsmodel_into_lw'
 
-    def test_1_drop_predictor(self):
+    def test_01_drop_predictor(self):
         model_name = 'lw_test_predictor'
         try:
             print('dropping predictor...')
@@ -88,7 +89,7 @@ class LightwoodHandlerTest(unittest.TestCase):
         except Exception as e:
             print(f'failed to drop: {e}')
 
-    def test_21_train_predictor(self):
+    def test_02_train_predictor(self):
         # if self.test_model_name_1 not in self.handler.get_tables():
         query = f"""
             CREATE PREDICTOR {self.test_model_name_1}
@@ -96,28 +97,39 @@ class LightwoodHandlerTest(unittest.TestCase):
             PREDICT rental_price
         """
         response = self.handler.native_query(query)
-        self.assertTrue(type(response) == RESPONSE_TYPE.OK)
+        self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
-    def test_22_retrain_predictor(self):
+    def test_03_retrain_predictor(self):
         query = f"RETRAIN {self.test_model_name_1}"
         response = self.handler.native_query(query)
-        self.assertTrue(type(response) == RESPONSE_TYPE.OK)
+        self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
-    def test_31_list_tables(self):
-        print(self.handler.get_tables())
-
-    def test_32_describe_table(self):
-        print(self.handler.describe_table(f'{self.test_model_name_1}'))
-
-    def test_41_query_predictor_single_where_condition(self):
+    def test_04_query_predictor_single_where_condition(self):
         query = f"SELECT target from {self.test_model_name_1} WHERE sqft=100"
         parsed = self.handler.parser(query, dialect=self.handler.dialect)
         predicted = self.handler.query(parsed)['data_frame']
 
-    def test_42_query_predictor_multi_where_condition(self):
+    def test_05_query_predictor_multi_where_condition(self):
         query = f"SELECT target from {self.test_model_name_1} WHERE sqft=100 AND number_of_rooms=2 AND number_of_bathrooms=1"
         parsed = self.handler.parser(query, dialect=self.handler.dialect)
         predicted = self.handler.query(parsed)['data_frame']
+
+    def test_23_train_predictor_custom_jsonai(self):
+        if self.test_model_name_1b not in self.handler.get_tables():
+            using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
+            query = f'CREATE PREDICTOR {self.test_model_name_1b} FROM {MYSQL_HANDLER_NAME} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1} USING {using_str}'
+            self.handler.native_query(query)
+
+        m = load_predictor(self.handler.storage.get('models')[self.test_model_name_1b], self.test_model_name_1b)
+        assert len(m.ensemble.mixers) == 1
+        assert isinstance(m.ensemble.mixers[0], LightGBM)
+
+    def test_31_list_tables(self):
+        response = self.handler.get_tables()
+        print(self.handler.get_tables())
+
+    def test_32_describe_table(self):
+        print(self.handler.describe_table(f'{self.test_model_name_1}'))
 
     def test_51_join_predictor_into_table(self):
         into_table = 'test_join_into_lw'
@@ -129,16 +141,6 @@ class LightwoodHandlerTest(unittest.TestCase):
         q = f"SELECT * FROM {into_table}"
         qp = self.handler.parser(q, dialect='mysql')
         assert len(self.data_handler.query(qp).data_frame) > 0
-
-    def test_23_train_predictor_custom_jsonai(self):
-        if self.test_model_name_1b not in self.handler.get_tables():
-            using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
-            query = f'CREATE PREDICTOR {self.test_model_name_1b} FROM {MYSQL_HANDLER_NAME} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1} USING {using_str}'
-            self.handler.native_query(query)
-
-        m = load_predictor(self.handler.storage.get('models')[self.test_model_name_1b], self.test_model_name_1b)
-        assert len(m.ensemble.mixers) == 1
-        assert isinstance(m.ensemble.mixers[0], LightGBM)
 
     def test_24_train_ts_predictor(self):
         target = 'Traffic'

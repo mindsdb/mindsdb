@@ -218,7 +218,7 @@ class LightwoodHandler(PredictiveHandler):
         predictor_record = db.Predictor(
             company_id=self.company_id,
             name=model_name,
-            integration_id=integration_meta.id,
+            integration_id=integration_meta['id'],
             fetch_data_query=statement.query_str,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
@@ -258,6 +258,7 @@ class LightwoodHandler(PredictiveHandler):
 
     def native_query(self, query: str) -> Response:
         statement = self.parser(query, dialect=self.dialect)
+        config = Config()
 
         if type(statement) == Show:
             if statement.category.lower() == 'tables':
@@ -281,16 +282,8 @@ class LightwoodHandler(PredictiveHandler):
             return self._learn(statement)
         elif type(statement) == RetrainPredictor:
             model_name = statement.name.parts[-1]
-            # if model_name in self._get_tables_names():
-            #     return Response(
-            #         RESPONSE_TYPE.ERROR,
-            #         error_message="Error: this model already exists!"
-            #     )
 
-            # all_models = self.storage.get('models')
-            # original_stmt = all_models[model_name]['stmt']
-
-            predictor_record = db.Predictor.filter_by(
+            predictor_record = db.Predictor.query.filter_by(
                 company_id=self.company_id, name=model_name
             ).first()
             if predictor_record is None:
@@ -299,46 +292,47 @@ class LightwoodHandler(PredictiveHandler):
                     error_message=f"Error: model '{model_name}' does not exists!"
                 )
 
-            handler_meta = self.handler_controller.get(predictor_record.id)
-            handler = self.handler_controller.get_handler(handler_meta['name'])
-            response = handler.query(predictor_record.fetch_data_query)
-
-            if response.type == RESPONSE_TYPE.ERROR:
-                return response
-            df = response.data_frame
-
-            # handler_query = self.parser(original_stmt.query_str, dialect=self.handler_dialect)
-            # df = default_data_gather(handler, handler_query)
-
-            predictor = load_predictor(all_models[model_name], model_name)
-            predictor.adjust(df)
-            all_models[model_name]['predictor'] = dill.dumps(predictor)
-            self.storage.set('models', all_models)
-
-
-            # predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-            # assert predictor_record is not None
-
             predictor_record.update_status = 'updating'
             db.session.commit()
 
-            # integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
-            # integration_record = db.Integration.query.get(predictor_record.integration_id)
-            # if integration_record is None:
-            #     raise Exception(f"There is no integration for predictor '{name}'")
-            # integration_handler = integration_controller.get_handler(integration_record.name)
+            handler_meta = self.handler_controller.get(predictor_record.integration_id)
+            handler = self.handler_controller.get_handler(handler_meta['name'])
+            response = handler.query(predictor_record.fetch_data_query)
+            if response.type == RESPONSE_TYPE.ERROR:
+                return response
 
-            # response = integration_handler.native_query(predictor_record.fetch_data_query)
-            # if response.type != RESPONSE_TYPE.TABLE:
-            #     raise Exception(f"Can't fetch data for predictor training: {response.error_message}")
+            try:
+                problem_definition = predictor_record.learn_args
+                problem_definition['target'] = predictor_record.to_predict[0]
 
-            # p = UpdateProcess(name, response.data_frame, company_id)
-            # p.start()
+                json_ai = lightwood.json_ai_from_problem(response.data_frame, problem_definition)
+                predictor_record.json_ai = json_ai.to_dict()
+                predictor_record.code = lightwood.code_from_json_ai(json_ai)
+                predictor_record.data = {'training_log': 'training'}
+                db.session.commit()
+                predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
+                predictor.learn(response.data_frame)
 
+                fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
+                pickle_path = os.path.join(config['paths']['predictors'], fs_name)
+                predictor.save(pickle_path)
+                self.fs_store.put(fs_name, fs_name, config['paths']['predictors'])
+                predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
+                db.session.commit()
 
+                predictor_record.lightwood_version = lightwood_version
+                predictor_record.mindsdb_version = mindsdb_version
+                predictor_record.update_status = 'up_to_date'
+                db.session.commit()
+            except Exception as e:
+                predictor_record.update_status = 'update_failed'  # type: ignore
+                db.session.commit()
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(e)
+                )
 
-
-
+            return Response(RESPONSE_TYPE.OK)
         elif type(statement) == DropPredictor:
             model_name = statement.name.parts[-1]
             all_models = self.model_controller.get_models()

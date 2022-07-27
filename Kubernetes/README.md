@@ -30,18 +30,18 @@ create path-to-mount/mindsdb_config.json  (copy the file which is inside the rep
 ## Change your directory outside the configured manifest files folder and than deploy it on kubernetes through this command  
 kubectl create -f mindsdb/
 ## or you can deploy each file one by one
-kubectl create -f pv.yaml/
-kubectl create -f pvc.yaml/
-kubectl create -f ingress.yaml/
-kubectl create -f http-svc.yaml/
-kubectl create -f mongodb-svc.yaml/
-kubectl create -f mysql-svc.yaml/
-kubectl create -f mindsdb-deployment.yaml/
+kubectl create -f pv.yaml
+kubectl create -f pvc.yaml
+kubectl create -f ingress.yaml
+kubectl create -f http-svc.yaml
+kubectl create -f mongodb-svc.yaml
+kubectl create -f mysql-svc.yaml
+kubectl create -f mindsdb-deployment.yaml
 
 ```
 
 
-### mindsdbdeployment.yaml
+### mindsdb-deployment.yaml
 
 | Parameter          | Description                                                                             | Default           |
 | ------------------ | --------------------------------------------------------------------------------------- | ----------------- |
@@ -55,7 +55,8 @@ kubectl create -f mindsdb-deployment.yaml/
 | `resources.cpu`    | Add ur required cpu                                                                     | `100m`            |
 | `claimname`        | Add the generated pvc name                                                              | `mindsdb-data-pvc`|
 
-
+#### Working pod
+![alt text](https://github.com/bhaumiksonii/mindsdb/blob/staging/Kubernetes/pod.jpeg)
 
 ### ingress.yaml
 
@@ -68,6 +69,9 @@ kubectl create -f mindsdb-deployment.yaml/
 | `tls`                                | add ingress tls settings                                                    | `your-ssl`                                         |
 | `className`                          | add ingress class name. Only used in k8s 1.19+                              |                                                    |
 | `apiVersion`                         | specify APIVersion of ingress object. Mostly would only be used for argocd. | `add the desired version.`                         |
+
+#### Working ingress
+![alt text](https://github.com/bhaumiksonii/mindsdb/blob/staging/Kubernetes/ingress.jpeg)
 
 ### Service
 
@@ -104,6 +108,8 @@ kubectl create -f mindsdb-deployment.yaml/
 | `nodePort`                 | NodePort for http service                                                                                                 |             |
 | `annotations`              | MongoDB service annotations                                                                                               |             |
 
+#### Working service
+![alt text](https://github.com/bhaumiksonii/mindsdb/blob/staging/Kubernetes/services.jpeg)
 
 #### pv.yaml
 
@@ -122,9 +128,4 @@ kubectl create -f mindsdb-deployment.yaml/
 | `apiVersion`                            | specify APIVersion of ingress object. Mostly would only be used for argocd.                                  | `add the desired version.`|
 
 
-#### mindsdb-deployment.yaml
 
-| Parameter                               | Description                                                                                                  | Default                   |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------- |
-| `storageclass`                          | Enter the storageclass which is connected to the kubernetes instance                                         | `ClusterIP`               |
-| `apiVersion`                            | specify APIVersion of ingress object. Mostly would only be used for argocd.                                  | `add the desired version.`|

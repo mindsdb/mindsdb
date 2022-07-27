@@ -11,6 +11,7 @@ import lightwood
 from lightwood.api.types import JsonAI
 from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition
 from mindsdb_sql import parse_sql
+from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant, Select, OrderBy, Show
 from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
@@ -257,7 +258,11 @@ class LightwoodHandler(PredictiveHandler):
         return Response(RESPONSE_TYPE.OK)
 
     def native_query(self, query: str) -> Response:
-        statement = self.parser(query, dialect=self.dialect)
+        query_ast = self.parser(query, dialect=self.dialect)
+        return self.query(query_ast)
+
+    def query(self, query: ASTNode) -> Response:
+        statement = query
         config = Config()
 
         if type(statement) == Show:
@@ -342,14 +347,6 @@ class LightwoodHandler(PredictiveHandler):
             self.model_controller.delete_model(model_name)
         else:
             raise Exception(f"Query type {type(statement)} not supported")
-
-    def query(self, query) -> dict:
-        model_name, _, _ = get_model_name(self, query)
-        model = self._get_model(model_name)
-        values = recur_get_conditionals(query.where.args, {})
-        df = pd.DataFrame.from_dict(values)
-        df = self._call_predictor(df, model)
-        return {'data_frame': df}
 
     def join(self, stmt, data_handler: BaseHandler, into: Optional[str] = None) -> pd.DataFrame:
         """

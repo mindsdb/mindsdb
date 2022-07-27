@@ -1,7 +1,10 @@
 ---
 name: MindsDBs Team Bug Report
 about: Issues created from MindsDB team
+title: "[BUG]"
 labels: Bug
+assignees: Ricram2
+
 ---
 
 **Describe the bug**

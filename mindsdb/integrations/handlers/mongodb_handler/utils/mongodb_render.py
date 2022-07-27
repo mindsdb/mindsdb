@@ -1,3 +1,4 @@
+import datetime as dt
 
 from mindsdb_sql.parser.ast import *
 
@@ -25,11 +26,10 @@ class MongodbRender:
             filters = self.handle_where(node.where)
 
         group = {}
-        project = {'_id': 0}
+        project = {'_id': 0}   # hide _id
         if node.distinct:
             # is group by distinct fields
             group = {'_id': {}}
-            # project = {'_id': 0} #  hide _id
 
         if node.targets is not None:
             for col in node.targets:
@@ -196,6 +196,18 @@ class MongodbRender:
             return f'LATEST'
         elif isinstance(node, Constant):
             return node.value
+        elif isinstance(node, TypeCast)\
+                and node.type_name.upper() in ('DATE', 'DATETIME'):
+            formats = [
+                "%Y-%m-%d",
+                "%Y-%m-%dT%H:%M:%S.%f"
+            ]
+            for format in formats:
+                try:
+                    return dt.datetime.strptime(node.arg.value, format)
+                except ValueError:
+                    pass
+            raise RuntimeError(f'Not supported date format. Supported: {formats}')
         else:
             raise NotImplementedError(f'Unknown where element {node}')
 

@@ -225,10 +225,6 @@ def run_update(name: str, df: DataFrame, company_id: int):
         if 'join_learn_process' in problem_definition:
             del problem_definition['join_learn_process']
 
-        # Adapt kwargs to problem definition
-        if 'timeseries_settings' in problem_definition:
-            problem_definition['timeseries_settings'] = problem_definition['timeseries_settings']
-
         if 'stop_training_in_x_seconds' in problem_definition:
             problem_definition['time_aim'] = problem_definition['stop_training_in_x_seconds']
 

@@ -99,15 +99,17 @@ class LightwoodHandlerTest(unittest.TestCase):
         response = self.handler.native_query(query)
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
-    def test_03_retrain_predictor(self):
-        query = f"RETRAIN {self.test_model_name_1}"
-        response = self.handler.native_query(query)
-        self.assertTrue(response.type == RESPONSE_TYPE.OK)
+    # def test_03_retrain_predictor(self):
+    #     query = f"RETRAIN {self.test_model_name_1}"
+    #     response = self.handler.native_query(query)
+    #     self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
     def test_04_query_predictor_single_where_condition(self):
         query = f"SELECT target from {self.test_model_name_1} WHERE sqft=100"
-        parsed = self.handler.parser(query, dialect=self.handler.dialect)
-        predicted = self.handler.query(parsed)['data_frame']
+        # parsed = self.handler.parser(query, dialect=self.handler.dialect)
+        response = self.handler.native_query(query)
+        self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
+        # predicted = self.handler.query(parsed)['data_frame']
 
     def test_05_query_predictor_multi_where_condition(self):
         query = f"SELECT target from {self.test_model_name_1} WHERE sqft=100 AND number_of_rooms=2 AND number_of_bathrooms=1"

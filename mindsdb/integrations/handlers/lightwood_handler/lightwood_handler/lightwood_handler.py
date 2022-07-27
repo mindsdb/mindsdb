@@ -38,6 +38,22 @@ from .utils import unpack_jsonai_old_args, load_predictor
 from .join_utils import get_ts_join_input
 
 
+def get_where_data(where):
+    result = {}
+    if type(where) != BinaryOperation:
+        raise Exception("Wrong 'where' statement")
+    if where.op == '=':
+        if type(where.args[0]) != Identifier or type(where.args[1]) != Constant:
+            raise Exception("Wrong 'where' statement")
+        result[where.args[0].parts[-1]] = where.args[1].value
+    elif where.op == 'and':
+        result.update(get_where_data(where.args[0]))
+        result.update(get_where_data(where.args[1]))
+    else:
+        raise Exception("Wrong 'where' statement")
+    return result
+
+
 class LightwoodHandler(PredictiveHandler):
 
     name = 'lightwood'
@@ -45,6 +61,7 @@ class LightwoodHandler(PredictiveHandler):
     def __init__(self, name, **kwargs):
         """ Lightwood AutoML integration """  # noqa
         super().__init__(name)
+        self.config = Config()
         self.storage = None
         self.parser = parse_sql
         self.dialect = 'mindsdb'
@@ -143,8 +160,6 @@ class LightwoodHandler(PredictiveHandler):
             predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
             assert predictor_record is not None
 
-            config = Config()
-
             predictor_record.data = {'training_log': 'training'}
             db.session.commit()
             predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
@@ -153,10 +168,10 @@ class LightwoodHandler(PredictiveHandler):
             db.session.refresh(predictor_record)
 
             fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
-            pickle_path = os.path.join(config['paths']['predictors'], fs_name)
+            pickle_path = os.path.join(self.config['paths']['predictors'], fs_name)
             predictor.save(pickle_path)
 
-            self.fs_store.put(fs_name, fs_name, config['paths']['predictors'])
+            self.fs_store.put(fs_name, fs_name, self.config['paths']['predictors'])
 
             predictor_record.data = predictor.model_analysis.to_dict()
 
@@ -345,8 +360,75 @@ class LightwoodHandler(PredictiveHandler):
             if model_name not in all_models_names:
                 raise Exception(f"Model '{model_name}' does not exists")
             self.model_controller.delete_model(model_name)
+        elif type(statement) == Select:
+            model_name = statement.from_table.parts[-1]
+            where_data = get_where_data(statement.where)
+            prediction = self.predict(model_name, where_data)
+            return prediction
         else:
             raise Exception(f"Query type {type(statement)} not supported")
+
+    def predict(self, model_name: str, data: list) -> pd.DataFrame:
+        if isinstance(data, dict):
+            data = [data]
+        df = pd.DataFrame(data)
+        predictor_record = db.Predictor.query.filter_by(
+            company_id=self.company_id, name=model_name
+        ).first()
+        if predictor_record is None:
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Error: model '{model_name}' does not exists!"
+            )
+
+        # TODO Add predictor cache!!!
+
+        fs_name = f'predictor_{self.company_id}_{predictor_record.id}'
+        self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
+        predictor = lightwood.predictor_from_state(
+            os.path.join(self.config['paths']['predictors'], fs_name),
+            predictor_record.code
+        )
+        predictions = predictor.predict(df)
+        predictions = predictions.to_dict(orient='records')
+
+        # region format result
+        target = predictor_record.to_predict[0]
+        explain_arr = []
+        dict_arr = []
+        for i, row in enumerate(predictions):
+            obj = {
+                target: {
+                    'predicted_value': row['prediction'],
+                    'confidence': row.get('confidence', None),
+                    'anomaly': row.get('anomaly', None),
+                    'truth': row.get('truth', None)
+                }
+            }
+            if 'lower' in row:
+                obj[target]['confidence_lower_bound'] = row.get('lower', None)
+                obj[target]['confidence_upper_bound'] = row.get('upper', None)
+
+            explain_arr.append(obj)
+
+            td = {'predicted_value': row['prediction']}
+            for col in df.columns:
+                if col in row:
+                    td[col] = row[col]
+                elif f'order_{col}' in row:
+                    td[col] = row[f'order_{col}']
+                elif f'group_{col}' in row:
+                    td[col] = row[f'group_{col}']
+                else:
+                    orginal_index = row.get('original_index')
+                    if orginal_index is None:
+                        orginal_index = i
+                    td[col] = df.iloc[orginal_index][col]
+            dict_arr.append({target: td})
+        # TODO transform data!!!
+        return dict_arr
+        # return dict_arr, explain_arr
+        # endregion
 
     def join(self, stmt, data_handler: BaseHandler, into: Optional[str] = None) -> pd.DataFrame:
         """

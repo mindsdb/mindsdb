@@ -271,7 +271,7 @@ WITH
 
 ## Connecting Through Ngrok
 
-When connecting your local database to MindsDB Cloud and local, some local databases require establishing a database connection via a [Ngrok Tunnel](https://ngrok.com) where the host and port number is retrieved. The free tier offers all you need to get started.
+When connecting your local database to MindsDB Cloud, you need to expose the local database server to be publicly accessible using [Ngrok Tunnel](https://ngrok.com). The free tier offers all you need to get started.
 
 The installation instructions are easy to follow, head over to the [downloads page](https://ngrok.com/download) and choose your operating system. Follow the instructions for installation.
 

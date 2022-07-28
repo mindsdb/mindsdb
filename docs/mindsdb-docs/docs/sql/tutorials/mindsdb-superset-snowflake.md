@@ -54,6 +54,8 @@ LIMIT 100;
 
 The training data consists of the number of rides per bus route and day. For example, on 2001-07-03, there were 7354 rides on bus route 3.
 
+You can download the dataset [here](https://github.com/mindsdb/benchmarks/blob/main/benchmarks/datasets/chicago_transit_ts/CTA_2019_2020.csv) and execute the SQL commands along with the tutorial!
+
 ### Step 2: Training the Predictive Model
 
 Let’s move on to the next step, which is training the predictive model. For that, we’ll use the MINDSDB database.

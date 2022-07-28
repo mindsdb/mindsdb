@@ -8,7 +8,7 @@
 
 # Pre-requisites
 
-- Kubernetes
+- kubernetes
 - Microk8s
 - NFS
 - ssl
@@ -56,7 +56,7 @@ kubectl create -f mindsdb-deployment.yaml
 | `claimname`        | Add the generated pvc name                                                              | `mindsdb-data-pvc`|
 
 #### Working pod
-![alt text](https://github.com/bhaumiksonii/mindsdb/blob/staging/Kubernetes/pod.jpeg)
+![alt text](https://github.com/bhaumiksonii/mindsdb/blob/staging/kubernetes/pod.jpeg)
 
 ### ingress.yaml
 
@@ -71,7 +71,7 @@ kubectl create -f mindsdb-deployment.yaml
 | `apiVersion`                         | specify APIVersion of ingress object. Mostly would only be used for argocd. | `add the desired version.`                         |
 
 #### Working ingress
-![alt text](https://github.com/bhaumiksonii/mindsdb/blob/staging/Kubernetes/ingress.jpeg)
+![alt text](https://github.com/bhaumiksonii/mindsdb/blob/staging/kubernetes/ingress.jpeg)
 
 ### Service
 
@@ -79,7 +79,7 @@ kubectl create -f mindsdb-deployment.yaml
 
 | Parameter                               | Description                                                                                                  | Default     |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------- |
-| `type`                                  | Kubernetes service type for web traffic (`ClusterIP,NodePort,Loadbalancer`)                                  | `NodePort` |
+| `type`                                  | kubernetes service type for web traffic (`ClusterIP,NodePort,Loadbalancer`)                                  | `NodePort` |
 | `port`                                  | Port for web traffic                                                                                         | `47334`     |
 | `clusterIP`                             | ClusterIP setting for http autosetup for statefulset is None                                                 | `None`      |
 | `loadBalancerIP`                        | LoadBalancer Ip setting                                                                                      |             |
@@ -90,7 +90,7 @@ kubectl create -f mindsdb-deployment.yaml
 
 | Parameter                               | Description                                                                                                  | Default     |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------- |
-| `type`                     | Kubernetes service type for MySQL traffic (`ClusterIP,NodePort,Loadbalancer`)                                             | `ClusterIP` |
+| `type`                     | kubernetes service type for MySQL traffic (`ClusterIP,NodePort,Loadbalancer`)                                             | `ClusterIP` |
 | `port`                     | Port for MySQL traffic                                                                                                    | `47335`     |
 | `clusterIP`                | ClusterIP setting for MySQL autosetup for statefulset is None                                                             | `None`      |
 | `loadBalancerIP`           | LoadBalancer Ip setting                                                                                                   |             |
@@ -101,7 +101,7 @@ kubectl create -f mindsdb-deployment.yaml
 
 | Parameter                               | Description                                                                                                  | Default     |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------- |
-| `type`                     | Kubernetes service type for MongoDB traffic (`ClusterIP,NodePort,Loadbalancer`)                                           | `ClusterIP` |
+| `type`                     | kubernetes service type for MongoDB traffic (`ClusterIP,NodePort,Loadbalancer`)                                           | `ClusterIP` |
 | `port`                     | Port for MongoDB traffic                                                                                                  | `47336`     |
 | `clusterIP`                | ClusterIP setting for MongoDB autosetup for statefulset is None                                                           | `None`      |
 | `loadBalancerIP`           | LoadBalancer Ip setting                                                                                                   |             |
@@ -109,7 +109,7 @@ kubectl create -f mindsdb-deployment.yaml
 | `annotations`              | MongoDB service annotations                                                                                               |             |
 
 #### Working service
-![alt text](https://github.com/bhaumiksonii/mindsdb/blob/staging/Kubernetes/services.jpeg)
+![alt text](https://github.com/bhaumiksonii/mindsdb/blob/staging/kubernetes/services.jpeg)
 
 #### pv.yaml
 

@@ -1,6 +1,7 @@
 import os
 import sys
 import dill
+import json
 import traceback
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -19,6 +20,8 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropPredictor
 )
 from lightwood import __version__ as lightwood_version
+from lightwood.api import dtype
+import numpy as np
 
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.utils import recur_get_conditionals, get_aliased_columns, get_join_input, get_model_name
@@ -33,6 +36,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb import __version__ as mindsdb_version
+from mindsdb.utilities.functions import cast_row_types
 
 from .utils import unpack_jsonai_old_args, load_predictor
 from .join_utils import get_ts_join_input
@@ -52,6 +56,24 @@ def get_where_data(where):
     else:
         raise Exception("Wrong 'where' statement")
     return result
+
+
+class NumpyJSONEncoder(json.JSONEncoder):
+    """
+    Use this encoder to avoid
+    "TypeError: Object of type float32 is not JSON serializable"
+
+    Example:
+    x = np.float32(5)
+    json.dumps(x, cls=NumpyJSONEncoder)
+    """
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (np.float, np.float32, np.float64)):
+            return float(obj)
+        else:
+            return super().default(obj)
 
 
 class LightwoodHandler(PredictiveHandler):
@@ -115,16 +137,12 @@ class LightwoodHandler(PredictiveHandler):
 
     def get_tables(self) -> Response:
         """ Returns list of model names (that have been succesfully linked with CREATE PREDICTOR) """  # noqa
-        # all_models = self.model_controller.get_models()
-        # all_models_names = [x['name'] for x in all_models]
-
         q = "SHOW TABLES;"
         result = self.native_query(q)
-        df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        result.data_frame = result.data_frame.rename(
+            columns={result.data_frame.columns[0]: 'table_name'}
+        )
         return result
-        # models = self.storage.get('models')
-        # return list(models.keys()) if models else []
 
     def _get_tables_names(self) -> List[str]:
         response = self.get_tables()
@@ -363,8 +381,11 @@ class LightwoodHandler(PredictiveHandler):
         elif type(statement) == Select:
             model_name = statement.from_table.parts[-1]
             where_data = get_where_data(statement.where)
-            prediction = self.predict(model_name, where_data)
-            return prediction
+            predictions = self.predict(model_name, where_data)
+            return Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=pd.DataFrame(predictions)
+            )
         else:
             raise Exception(f"Query type {type(statement)} not supported")
 
@@ -395,7 +416,7 @@ class LightwoodHandler(PredictiveHandler):
         # region format result
         target = predictor_record.to_predict[0]
         explain_arr = []
-        dict_arr = []
+        pred_dicts = []
         for i, row in enumerate(predictions):
             obj = {
                 target: {
@@ -424,11 +445,64 @@ class LightwoodHandler(PredictiveHandler):
                     if orginal_index is None:
                         orginal_index = i
                     td[col] = df.iloc[orginal_index][col]
-            dict_arr.append({target: td})
+            pred_dicts.append({target: td})
+
         # TODO transform data!!!
-        return dict_arr
-        # return dict_arr, explain_arr
-        # endregion
+
+        new_pred_dicts = []
+        for row in pred_dicts:
+            new_row = {}
+            for key in row:
+                new_row.update(row[key])
+                new_row[key] = new_row['predicted_value']
+            del new_row['predicted_value']
+            new_pred_dicts.append(new_row)
+        pred_dicts = new_pred_dicts
+
+        columns = list(predictor_record.dtype_dict.keys())
+        predicted_columns = predictor_record.to_predict
+        if not isinstance(predicted_columns, list):
+            predicted_columns = [predicted_columns]
+
+        keys = [x for x in pred_dicts[0] if x in columns]
+        min_max_keys = []
+        for col in predicted_columns:
+            if predictor_record.dtype_dict[col] in (dtype.integer, dtype.float, dtype.num_tsarray):
+                min_max_keys.append(col)
+
+        data = []
+        explains = []
+        keys_to_save = [*keys, '__mindsdb_row_id', 'select_data_query', 'when_data']
+        for i, el in enumerate(pred_dicts):
+            data.append({key: el.get(key) for key in keys_to_save})
+            explains.append(explain_arr[i])
+
+        for i, row in enumerate(data):
+            cast_row_types(row, predictor_record.dtype_dict)
+
+            # for k in original_target_values:
+            #     try:
+            #         row[k] = original_target_values[k][i]
+            #     except Exception:
+            #         row[k] = None
+
+            for column_name in columns:
+                if column_name not in row:
+                    row[column_name] = None
+
+            explanation = explains[i]
+            for key in predicted_columns:
+                row[key + '_confidence'] = explanation[key]['confidence']
+                row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder, ensure_ascii=False)
+                if 'anomaly' in explanation[key]:
+                    row[key + '_anomaly'] = explanation[key]['anomaly']
+            for key in min_max_keys:
+                if 'confidence_lower_bound' in explanation[key]:
+                    row[key + '_min'] = explanation[key]['confidence_lower_bound']
+                if 'confidence_upper_bound' in explanation[key]:
+                    row[key + '_max'] = explanation[key]['confidence_upper_bound']
+
+        return data
 
     def join(self, stmt, data_handler: BaseHandler, into: Optional[str] = None) -> pd.DataFrame:
         """

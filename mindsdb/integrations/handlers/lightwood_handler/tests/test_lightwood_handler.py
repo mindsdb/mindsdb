@@ -6,7 +6,9 @@ from pathlib import Path
 
 from lightwood.mixer import LightGBM
 
-os.environ['MINDSDB_STORAGE_DIR'] = tempfile.mkdtemp(dir='/tmp/', prefix='lightwood_handler_test_')
+temp_dir = tempfile.mkdtemp(dir='/tmp/', prefix='lightwood_handler_test_')
+# temp_dir = '/tmp/lightwood_handler_test_86eueyjc'
+os.environ['MINDSDB_STORAGE_DIR'] = temp_dir
 os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
 
 from mindsdb.migrations import migrate
@@ -105,30 +107,50 @@ class LightwoodHandlerTest(unittest.TestCase):
     #     self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
     def test_04_query_predictor_single_where_condition(self):
-        query = f"SELECT target from {self.test_model_name_1} WHERE sqft=100"
-        # parsed = self.handler.parser(query, dialect=self.handler.dialect)
+        query = f"""
+            SELECT target
+            from {self.test_model_name_1}
+            WHERE sqft=100
+        """
         response = self.handler.native_query(query)
         self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
-        # predicted = self.handler.query(parsed)['data_frame']
+        self.assertTrue(len(response.data_frame) == 1)
+        self.assertTrue(response.data_frame['sqft'][0] == 100)
+        self.assertTrue(response.data_frame['rental_price'][0] is not None)
 
     def test_05_query_predictor_multi_where_condition(self):
-        query = f"SELECT target from {self.test_model_name_1} WHERE sqft=100 AND number_of_rooms=2 AND number_of_bathrooms=1"
-        parsed = self.handler.parser(query, dialect=self.handler.dialect)
-        predicted = self.handler.query(parsed)['data_frame']
+        query = f"""
+            SELECT target
+            from {self.test_model_name_1}
+            WHERE sqft=100
+                  AND number_of_rooms=2
+                  AND number_of_bathrooms=1
+        """
+        response = self.handler.native_query(query)
+        self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
+        self.assertTrue(len(response.data_frame) == 1)
+        self.assertTrue(response.data_frame['number_of_rooms'][0] == 2)
+        self.assertTrue(response.data_frame['number_of_bathrooms'][0] == 1)
 
-    def test_23_train_predictor_custom_jsonai(self):
-        if self.test_model_name_1b not in self.handler.get_tables():
-            using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
-            query = f'CREATE PREDICTOR {self.test_model_name_1b} FROM {MYSQL_HANDLER_NAME} (SELECT * FROM test.{self.data_table_name_1}) PREDICT {self.target_1} USING {using_str}'
-            self.handler.native_query(query)
-
-        m = load_predictor(self.handler.storage.get('models')[self.test_model_name_1b], self.test_model_name_1b)
-        assert len(m.ensemble.mixers) == 1
-        assert isinstance(m.ensemble.mixers[0], LightGBM)
+    def test_06_train_predictor_custom_jsonai(self):
+        using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
+        query = f"""
+            CREATE PREDICTOR {self.test_model_name_1b}
+            FROM {MYSQL_HANDLER_NAME} (SELECT * FROM test_data.home_rentals limit 50)
+            PREDICT rental_price
+            USING {using_str}
+        """
+        response = self.handler.native_query(query)
+        self.assertTrue(response.type == RESPONSE_TYPE.OK)
+        # TODO assert
+        # m = load_predictor(self.handler.storage.get('models')[self.test_model_name_1b], self.test_model_name_1b)
+        # assert len(m.ensemble.mixers) == 1
+        # assert isinstance(m.ensemble.mixers[0], LightGBM)
 
     def test_31_list_tables(self):
         response = self.handler.get_tables()
-        print(self.handler.get_tables())
+        self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
+        print(response.data_frame)
 
     def test_32_describe_table(self):
         print(self.handler.describe_table(f'{self.test_model_name_1}'))

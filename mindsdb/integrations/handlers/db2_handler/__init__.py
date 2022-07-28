@@ -1,7 +1,7 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 try:
-    from .db2_handler import SqlServerHandler as Handler
+    from .db2_handler import DB2Handler as Handler
     import_error = None
 except Exception as e:
     Handler = None

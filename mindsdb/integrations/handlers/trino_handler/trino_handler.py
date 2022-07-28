@@ -1,5 +1,4 @@
-from typing import List, Dict
-
+from typing import Dict
 import pandas as pd
 from mindsdb_sql import parse_sql, ASTNode
 from trino.auth import KerberosAuthentication, BasicAuthentication
@@ -53,19 +52,18 @@ class TrinoHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
-        print('ETEEEEEEEEEEEE')
         conn = connect(
             host=self.connection_data['host'],
             port=self.connection_data['port'],
             user=self.connection_data['user'],
             catalog=self.connection_data['catalog'],
             schema=self.connection_data['schema'],
+            # @TODO: Implement Kerberos or Basic auth
             # http_scheme='https',
             # auth=BasicAuthentication(self.connection_data['user'], self.connection_data['password'])
         )
         self.is_connected = True
         self.connection = conn
-        print('ETEEEEEEEEEEEE2', conn)
         return conn
 
     def check_connection(self) -> StatusResponse:
@@ -99,7 +97,6 @@ class TrinoHandler(DatabaseHandler):
             connection = self.connect()
             cur = connection.cursor()
             result = cur.execute(query)
-            print('ETE GO ', result)
             if result:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
@@ -120,10 +117,9 @@ class TrinoHandler(DatabaseHandler):
         return response
 
     def query(self, query: ASTNode) -> Response:
+        # @TODO: Detect to which DB is trino connected and use that dialect?
         renderer = SqlalchemyRender('mysql')
-        print('AXAAAAA ', query)
         query_str = renderer.get_string(query, with_failback=True)
-        print('AXAAAAA2 ', query_str)
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:

@@ -110,7 +110,61 @@ class DyanmoDBHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+
+        try:
+            result = connection.execute_statement(Statement=query)
+            if result['Items']:
+                records = []
+                for record in result['Items']:
+                    records.append(self.parse_record(record))
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.json_normalize(records)
+                )
+            else:
+                response = Response(RESPONSE_TYPE.OK)
+        except Exception as e:
+            log.error(f'Error running query: {query} on DynamoDB!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+
+        connection.close()
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
+
+    def parse_record(self, record):
+        data = {}
+
+        for key, val in record.items():
+            if list(val.keys())[0] == 'S' or list(val.keys())[0] == 'B' or list(val.keys())[0] == 'BOOL':
+                data[key] = list(val.values())[0]
+
+            elif list(val.keys())[0] == 'N':
+                data[key] = float(list(val.values())[0]) if '.' in list(val.values())[0] else int(list(val.values())[0])
+
+            elif list(val.keys())[0] == 'SS' or list(val.keys())[0] == 'BS':
+                data[key] = list(val.values())[0]
+
+            elif list(val.keys())[0] == 'NS':
+                data[key] = [float(item) if '.' in item else int(item) for item in list(val.values())[0]]
+
+            elif list(val.keys())[0] == 'NULL':
+                data[key] = None
+
+            elif list(val.keys())[0] == 'L':
+                pass
+
+            elif list(val.keys())[0] == 'M':
+                pass
+
+        return data
 
     def query(self, query: ASTNode) -> StatusResponse:
         """
@@ -122,7 +176,7 @@ class DyanmoDBHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        return self.native_query(query)
 
     def get_tables(self) -> StatusResponse:
         """

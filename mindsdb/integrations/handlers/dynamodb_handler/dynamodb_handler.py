@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 import pandas as pd
 import boto3
+from boto3.dynamodb.types import TypeDeserializer
 
 from mindsdb_sql import parse_sql
 
@@ -140,31 +141,8 @@ class DyanmoDBHandler(DatabaseHandler):
         return response
 
     def parse_record(self, record):
-        data = {}
-
-        for key, val in record.items():
-            if list(val.keys())[0] == 'S' or list(val.keys())[0] == 'B' or list(val.keys())[0] == 'BOOL':
-                data[key] = list(val.values())[0]
-
-            elif list(val.keys())[0] == 'N':
-                data[key] = float(list(val.values())[0]) if '.' in list(val.values())[0] else int(list(val.values())[0])
-
-            elif list(val.keys())[0] == 'SS' or list(val.keys())[0] == 'BS':
-                data[key] = list(val.values())[0]
-
-            elif list(val.keys())[0] == 'NS':
-                data[key] = [float(item) if '.' in item else int(item) for item in list(val.values())[0]]
-
-            elif list(val.keys())[0] == 'NULL':
-                data[key] = None
-
-            elif list(val.keys())[0] == 'L':
-                pass
-
-            elif list(val.keys())[0] == 'M':
-                pass
-
-        return data
+        deserializer = TypeDeserializer()
+        return {k: deserializer.deserialize(v) for k,v in record.items()}
 
     def query(self, query: ASTNode) -> StatusResponse:
         """

@@ -1,6 +1,6 @@
 ### Docker images for MindsDB
 
-* https://docs.mindsdb.com/deployment/docker/
+* https://docs.mindsdb.com/setup/self-hosted/docker/
 * https://hub.docker.com/u/mindsdb
 
 ## Building

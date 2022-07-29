@@ -67,7 +67,7 @@ class Predictor(Resource):
             name=Identifier(name),
             integration_name=Identifier(data.get('integration')),
             query_str=data.get('query'),
-            targets=[Identifier(x) for x in data.get('to_predict')],
+            targets=[Identifier(data.get('to_predict'))],
             # TODO add ts settings
         )
 

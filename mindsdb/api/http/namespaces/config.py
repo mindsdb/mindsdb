@@ -73,7 +73,7 @@ class Integration(Resource):
 
         files = request.files
         temp_dir = None
-        if files is not None:
+        if files is not None and len(files) > 0:
             temp_dir = tempfile.mkdtemp(prefix='integration_files_')
             for key, file in files.items():
                 temp_dir_path = Path(temp_dir)

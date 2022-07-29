@@ -63,11 +63,15 @@ class Predictor(Resource):
         if isinstance(kwargs, dict) is False:
             kwargs = {}
 
+        to_predict = data.get('to_predict')
+        if isinstance(to_predict, list) is False:
+            to_predict = [to_predict]
+
         ast = CreatePredictor(
             name=Identifier(name),
             integration_name=Identifier(data.get('integration')),
             query_str=data.get('query'),
-            targets=[Identifier(data.get('to_predict'))],
+            targets=[Identifier(x) for x in to_predict]
             # TODO add ts settings
         )
 

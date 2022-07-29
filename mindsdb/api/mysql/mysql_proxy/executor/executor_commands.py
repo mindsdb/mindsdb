@@ -769,13 +769,15 @@ class ExecuteCommands:
         if isinstance(kwargs.get('timeseries_settings'), dict):
             order_by = kwargs['timeseries_settings'].get('order_by')
             if order_by is not None:
-                for i, col in enumerate(order_by):
-                    new_name = get_column_in_case(ds_column_names, col)
-                    if new_name is None:
-                        raise ErSqlWrongArguments(
-                            f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
-                        )
-                    kwargs['timeseries_settings']['order_by'][i] = new_name
+                if len(order_by) != 1:
+                    raise ErSqlWrongArguments("Only one filed should be used in 'order by'")
+                order_by = order_by[0]
+                new_name = get_column_in_case(ds_column_names, order_by)
+                if new_name is None:
+                    raise ErSqlWrongArguments(
+                        f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {order_by}'
+                    )
+                kwargs['timeseries_settings']['order_by'] = new_name
             group_by = kwargs['timeseries_settings'].get('group_by')
             if group_by is not None:
                 for i, col in enumerate(group_by):

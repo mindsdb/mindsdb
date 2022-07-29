@@ -135,7 +135,7 @@ class FileHandler(DatabaseHandler):
     @staticmethod
     def _get_data_io(file_path):
         """
-        This gets a file either url or local file and defiens what the format is as well as dialect
+        This gets a file either url or local file and defines what the format is as well as dialect
         :param file: file path or url
         :return: data_io, format, dialect
         """

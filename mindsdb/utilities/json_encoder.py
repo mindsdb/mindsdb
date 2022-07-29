@@ -17,7 +17,7 @@ class CustomJSONEncoder(JSONEncoder):
             return bool(obj)
         if isinstance(obj, np.int8) or isinstance(obj, np.int16) or isinstance(obj, np.int32) or isinstance(obj, np.int64):
             return int(obj)
-        if isinstance(obj, np.float16) or isinstance(obj, np.float32) or isinstance(obj, np.float64) or isinstance(obj, np.float128) or isinstance(obj, Decimal):
+        if isinstance(obj, np.float16) or isinstance(obj, np.float32) or isinstance(obj, np.float64) or isinstance(obj, Decimal):
             return float(obj)
 
         return JSONEncoder.default(self, obj)

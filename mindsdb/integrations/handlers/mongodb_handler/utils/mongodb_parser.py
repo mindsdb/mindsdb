@@ -1,5 +1,4 @@
 
-import json
 import ast as py_ast
 
 import dateutil.parser
@@ -10,7 +9,7 @@ from .mongodb_query import MongoQuery
 
 class MongodbParser:
     '''
-        converts string into MongoQuery
+        Converts string into MongoQuery
     '''
 
     def from_string(self, call_str):
@@ -27,7 +26,7 @@ class MongodbParser:
         # keep only last name
         calls[0]['method'] = [method1[-1]]
 
-        # convert method names get first item of list
+        # convert method names: get first item of list
         for c in calls:
             mquery.add_step({
                 'method': c['method'][0],
@@ -35,11 +34,6 @@ class MongodbParser:
             })
 
         return mquery
-
-        # return {
-        #     'collection': collection,
-        #     'call': calls
-        # }
 
     def process(self, node):
         if isinstance(node, py_ast.Call):

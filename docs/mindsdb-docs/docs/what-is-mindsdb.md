@@ -93,6 +93,12 @@ FROM income_table
 PREDICT debt;
 ```
 
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
 MindsDB provides the [`#!sql CREATE PREDICTOR`](/sql/create/predictor/) statement. When we execute this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows:
 
 <figure markdown> 

@@ -7,6 +7,7 @@ from typing import Optional
 import json
 import requests
 import traceback
+from datetime import datetime
 
 import pandas as pd
 from pandas.core.frame import DataFrame
@@ -116,11 +117,11 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         config = Config()
 
         predictor_record.data = {'training_log': 'training'}
-        session.commit()
+        db.session.commit()
         predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
         predictor.learn(df)
 
-        session.refresh(predictor_record)
+        db.session.refresh(predictor_record)
 
         fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
         pickle_path = os.path.join(config['paths']['predictors'], fs_name)
@@ -142,11 +143,11 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         predictor_record.data["submodel_data"] = submodel_data
 
         predictor_record.dtype_dict = predictor.dtype_dict
-        session.commit()
+        db.session.commit()
     except Exception as e:
-        session.refresh(predictor_record)
+        db.session.refresh(predictor_record)
         predictor_record.data = {'error': f'{traceback.format_exc()}\nMain error: {e}'}
-        session.commit()
+        db.session.commit()
         raise e
 
 
@@ -172,6 +173,11 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
               json_ai_override: dict = None) -> None:
     if json_ai_override is None:
         json_ai_override = {}
+
+    predictor_record = Predictor.query.with_for_update().get(predictor_id)
+    predictor_record.training_start_at = datetime.now()
+    db.session.commit()
+
     try:
         run_generate(df, problem_definition, predictor_id, json_ai_override)
         run_fit(predictor_id, df)
@@ -188,7 +194,10 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
             error_message = str(e)
 
         predictor_record.data = {"error": error_message}
-        session.commit()
+        db.session.commit()
+
+    predictor_record.training_stop_at = datetime.now()
+    db.session.commit()
 
 
 def run_adjust(name, db_name, from_data, datasource_id, company_id):

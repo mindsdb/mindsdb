@@ -1,7 +1,11 @@
 import json
 from dateutil.parser import parse as parse_datetime
+
 from flask import request
 from flask_restx import Resource, abort
+
+from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
+
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
@@ -46,8 +50,30 @@ class Predictor(Resource):
     @ns_conf.expect(put_predictor_metadata)
     def put(self, name):
         '''Learning new predictor'''
-        # lw_handler = request.integration_controller.get_handler('lightwood')
-        return abort(410, 'Method is not available')
+        lw_handler = request.integration_controller.get_handler('lightwood')
+
+        data = request.json
+
+        try:
+            kwargs = data.get('kwargs')
+        except Exception:
+            kwargs = None
+
+        if isinstance(kwargs, dict) is False:
+            kwargs = {}
+
+        ast = CreatePredictor(
+            name=name,
+            integration_name=data.get('integration'),
+            query_str=data.get('query'),
+            targets=data.get('to_predict'),
+            # TODO add ts settings
+        )
+
+        response = lw_handler.query(ast)
+        if response.type == RESPONSE_TYPE.ERROR:
+            return http_error(400, detail=response.error_message)
+        return '', 200
 
 
 @ns_conf.route('/<name>/update')

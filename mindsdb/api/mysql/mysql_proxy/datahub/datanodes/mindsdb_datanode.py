@@ -155,21 +155,11 @@ class MindsDBDataNode(DataNode):
         if table == 'datasources':
             return self._select_datasources()
 
-        new_where = {}
-        if where_data is None:
-            for key, value in where_data.items():
-                if isinstance(value, dict) is False or len(value.keys()) != 1 or list(value.keys())[0] != '$eq':
-                    # TODO value should be just string or number
-                    raise Exception()
-                new_where[key] = value['$eq']
-
-            if len(new_where) == 0:
-                return []
-
-            where_data = [new_where]
-
         if isinstance(where_data, dict):
             where_data = [where_data]
+
+        if len(where_data) == 0:
+            return []
 
         result = self.handler.predict(table, where_data)
         return result

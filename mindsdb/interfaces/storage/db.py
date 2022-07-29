@@ -92,6 +92,8 @@ class Predictor(Base):
     update_status = Column(String, default='up_to_date')
     training_data_columns_count = Column(Integer)
     training_data_rows_count = Column(Integer)
+    training_start_at = Column(DateTime)
+    training_stop_at = Column(DateTime)
 
     json_ai = Column(Json, nullable=True)
     code = Column(String, nullable=True)

@@ -9,7 +9,6 @@ class Responce(Responder):
         )
 
     result = {
-        # 'version': f'MindsDB {mindsdb_version}',
         'version': '3.6',
         'ok': 1
     }

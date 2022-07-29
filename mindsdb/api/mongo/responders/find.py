@@ -3,7 +3,7 @@ from bson.int64 import Int64
 from mindsdb_sql.parser.ast import *
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
-from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_ast import MongoToAst
+from mindsdb.api.mongo.utilities.mongodb_ast import MongoToAst
 
 from mindsdb.api.mongo.classes.query_sql import run_sql_command
 
@@ -13,6 +13,17 @@ class Responce(Responder):
 
     def result(self, query, request_env, mindsdb_env, session):
         database = request_env['database']
+
+        if database == 'config':
+            # return nothing
+            return {
+                'cursor': {
+                    'id': Int64(0),
+                    'ns': f"{database}.$cmd.{query['find']}",
+                    'firstBatch': []
+                },
+                'ok': 1
+            }
 
         # system queries
         if query['find'] == 'system.version':

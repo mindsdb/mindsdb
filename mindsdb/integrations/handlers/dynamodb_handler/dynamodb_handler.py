@@ -176,7 +176,7 @@ class DyanmoDBHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        return self.native_query(query)
+        return self.native_query(query.to_string())
 
     def get_tables(self) -> StatusResponse:
         """

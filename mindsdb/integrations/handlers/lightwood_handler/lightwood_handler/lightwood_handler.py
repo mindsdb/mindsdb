@@ -240,7 +240,9 @@ class LightwoodHandler(PredictiveHandler):
         }
         if statement.order_by:
             order_by = statement.order_by[0].field.parts[-1]
-            group_by = [x.parts[-1] for x in statement.group_by]
+            group_by = None
+            if statement.group_by is not None:
+                group_by = [x.parts[-1] for x in statement.group_by]
 
             problem_definition_dict['timeseries_settings'] = {
                 'is_timeseries': True,

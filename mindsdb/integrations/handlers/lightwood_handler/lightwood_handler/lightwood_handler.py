@@ -1,6 +1,5 @@
 import os
 import sys
-import dill
 import json
 import traceback
 from datetime import datetime
@@ -26,7 +25,6 @@ import numpy as np
 
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.utils import recur_get_conditionals, get_aliased_columns, get_join_input, get_model_name
-from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.interfaces.model.learn_process import brack_to_mod, rep_recur
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
@@ -473,20 +471,8 @@ class LightwoodHandler(PredictiveHandler):
             original_target_values[col + '_original'] = []
             for _index, row in df.iterrows():
                 original_target_values[col + '_original'].append(row.get(col))
-            # df[]
-            # if where_data is not None:
-            #     if col in where_data:
-            #         original_target_values[col + '_original'] = list(where_data[col])
-            #     else:
-            #         original_target_values[col + '_original'] = [None] * len(where_data)
-            # else:
-            #     original_target_values[col + '_original'] = [None]
-
-
-
 
         # region transform ts predictions
-
         timeseries_settings = predictor_record.learn_args['timeseries_settings']
 
         if timeseries_settings['is_timeseries'] is True:
@@ -590,11 +576,6 @@ class LightwoodHandler(PredictiveHandler):
             explain_arr = explanations
         # endregion
 
-
-
-
-
-
         keys = [x for x in pred_dicts[0] if x in columns]
         min_max_keys = []
         for col in predicted_columns:
@@ -663,7 +644,7 @@ class LightwoodHandler(PredictiveHandler):
                         dtypes[col] = self.lw_dtypes_overrides.get(col, sqlalchemy.Text)
 
                 data_handler.select_into(into, predictions, dtypes=dtypes)
-            except Exception as e:
+            except Exception:
                 print("Error when trying to store the JOIN output in data handler.")
 
         return predictions

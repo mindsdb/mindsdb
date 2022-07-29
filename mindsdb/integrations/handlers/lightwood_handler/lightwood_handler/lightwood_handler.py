@@ -5,6 +5,7 @@ import json
 import traceback
 from datetime import datetime
 from typing import Dict, List, Optional
+import copy
 
 import sqlalchemy
 import pandas as pd
@@ -228,10 +229,13 @@ class LightwoodHandler(PredictiveHandler):
             'target': target
         }
         if statement.order_by:
+            order_by = statement.order_by[0].field.parts[-1]
+            group_by = [x.parts[-1] for x in statement.group_by]
+
             problem_definition_dict['timeseries_settings'] = {
                 'is_timeseries': True,
-                'order_by': [str(col) for col in statement.order_by],
-                'group_by': [str(col) for col in statement.group_by],
+                'order_by': order_by,
+                'group_by': group_by,
                 'window': int(statement.window),
                 'horizon': int(statement.horizon),
             }
@@ -447,8 +451,6 @@ class LightwoodHandler(PredictiveHandler):
                     td[col] = df.iloc[orginal_index][col]
             pred_dicts.append({target: td})
 
-        # TODO transform data!!!
-
         new_pred_dicts = []
         for row in pred_dicts:
             new_row = {}
@@ -463,6 +465,135 @@ class LightwoodHandler(PredictiveHandler):
         predicted_columns = predictor_record.to_predict
         if not isinstance(predicted_columns, list):
             predicted_columns = [predicted_columns]
+        # endregion
+
+        original_target_values = {}
+        for col in predicted_columns:
+            df = df.reset_index()
+            original_target_values[col + '_original'] = []
+            for _index, row in df.iterrows():
+                original_target_values[col + '_original'].append(df[col])
+            # df[]
+            # if where_data is not None:
+            #     if col in where_data:
+            #         original_target_values[col + '_original'] = list(where_data[col])
+            #     else:
+            #         original_target_values[col + '_original'] = [None] * len(where_data)
+            # else:
+            #     original_target_values[col + '_original'] = [None]
+
+
+
+
+        # region transform ts predictions
+
+        timeseries_settings = predictor_record.learn_args['timeseries_settings']
+
+        if timeseries_settings['is_timeseries'] is True:
+            __no_forecast_offset = set([row.get('__mdb_forecast_offset', None) for row in pred_dicts]) == {None}
+
+            predict = predictor_record.to_predict[0]
+            group_by = timeseries_settings['group_by'] or []
+            order_by_column = timeseries_settings['order_by']
+            if isinstance(order_by_column, list):
+                order_by_column = order_by_column[0]
+            horizon = timeseries_settings['horizon']
+
+            groups = set()
+            for row in pred_dicts:
+                groups.add(
+                    tuple([row[x] for x in group_by])
+                )
+
+            # split rows by groups
+            rows_by_groups = {}
+            for group in groups:
+                rows_by_groups[group] = {
+                    'rows': [],
+                    'explanations': []
+                }
+                for row_index, row in enumerate(pred_dicts):
+                    is_wrong_group = False
+                    for i, group_by_key in enumerate(group_by):
+                        if row[group_by_key] != group[i]:
+                            is_wrong_group = True
+                            break
+                    if not is_wrong_group:
+                        rows_by_groups[group]['rows'].append(row)
+                        rows_by_groups[group]['explanations'].append(explain_arr[row_index])
+
+            for group, data in rows_by_groups.items():
+                rows = data['rows']
+                explanations = data['explanations']
+
+                if len(rows) == 0:
+                    break
+
+                for row in rows:
+                    predictions = row[predict]
+                    if isinstance(predictions, list) is False:
+                        predictions = [predictions]
+
+                    date_values = row[order_by_column]
+                    if isinstance(date_values, list) is False:
+                        date_values = [date_values]
+
+                for i in range(len(rows) - 1):
+                    if horizon > 1:
+                        rows[i][predict] = rows[i][predict][0]
+                        if isinstance(rows[i][order_by_column], list):
+                            rows[i][order_by_column] = rows[i][order_by_column][0]
+                    for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                        if horizon > 1:
+                            explanations[i][predict][col] = explanations[i][predict][col][0]
+
+                last_row = rows.pop()
+                last_explanation = explanations.pop()
+                for i in range(horizon):
+                    new_row = copy.deepcopy(last_row)
+                    if horizon > 1:
+                        new_row[predict] = new_row[predict][i]
+                        if isinstance(new_row[order_by_column], list):
+                            new_row[order_by_column] = new_row[order_by_column][i]
+                    if '__mindsdb_row_id' in new_row and (i > 0 or __no_forecast_offset):
+                        new_row['__mindsdb_row_id'] = None
+                    rows.append(new_row)
+
+                    new_explanation = copy.deepcopy(last_explanation)
+                    for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                        if horizon > 1:
+                            new_explanation[predict][col] = new_explanation[predict][col][i]
+                    if i != 0:
+                        new_explanation[predict]['anomaly'] = None
+                        new_explanation[predict]['truth'] = None
+                    explanations.append(new_explanation)
+
+            pred_dicts = []
+            explanations = []
+            for group, data in rows_by_groups.items():
+                pred_dicts.extend(data['rows'])
+                explanations.extend(data['explanations'])
+
+            original_target_values[f'{predict}_original'] = []
+            for i in range(len(pred_dicts)):
+                original_target_values[f'{predict}_original'].append(explanations[i][predict].get('truth', None))
+
+            if predictor_record.dtype_dict[order_by_column] == dtype.date:
+                for row in pred_dicts:
+                    if isinstance(row[order_by_column], (int, float)):
+                        row[order_by_column] = str(datetime.fromtimestamp(row[order_by_column]).date())
+            elif predictor_record.dtype_dict[order_by_column] == dtype.datetime:
+                for row in pred_dicts:
+                    if isinstance(row[order_by_column], (int, float)):
+                        row[order_by_column] = str(datetime.fromtimestamp(row[order_by_column]))
+
+            explain_arr = explanations
+        # endregion
+
+
+
+
+
 
         keys = [x for x in pred_dicts[0] if x in columns]
         min_max_keys = []
@@ -480,11 +611,11 @@ class LightwoodHandler(PredictiveHandler):
         for i, row in enumerate(data):
             cast_row_types(row, predictor_record.dtype_dict)
 
-            # for k in original_target_values:
-            #     try:
-            #         row[k] = original_target_values[k][i]
-            #     except Exception:
-            #         row[k] = None
+            for k in original_target_values:
+                try:
+                    row[k] = original_target_values[k][i]
+                except Exception:
+                    row[k] = None
 
             for column_name in columns:
                 if column_name not in row:
@@ -501,7 +632,6 @@ class LightwoodHandler(PredictiveHandler):
                     row[key + '_min'] = explanation[key]['confidence_lower_bound']
                 if 'confidence_upper_bound' in explanation[key]:
                     row[key + '_max'] = explanation[key]['confidence_upper_bound']
-
         return data
 
     def join(self, stmt, data_handler: BaseHandler, into: Optional[str] = None) -> pd.DataFrame:

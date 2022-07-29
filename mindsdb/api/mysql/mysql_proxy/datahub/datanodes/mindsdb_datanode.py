@@ -40,6 +40,7 @@ class MindsDBDataNode(DataNode):
         self.config = Config()
         self.model_interface = model_interface
         self.integration_controller = integration_controller
+        self.handler = self.integration_controller.get_handler('lightwood')
 
     def get_tables(self):
         models = self.model_interface.get_models()
@@ -183,6 +184,12 @@ class MindsDBDataNode(DataNode):
 
         if isinstance(where_data, dict):
             where_data = [where_data]
+
+        try:
+            result = self.handler.predict(table, where_data)
+        except Exception as e:
+            x = 1
+        return result
 
         models_sql_meta = self.get_tables()
         if table not in [x.TABLE_NAME for x in models_sql_meta]:

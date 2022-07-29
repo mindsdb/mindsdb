@@ -5,6 +5,7 @@ from flask import request
 from flask_restx import Resource, abort
 
 from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
+from mindsdb_sql.parser.ast import Identifier
 
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
@@ -63,10 +64,10 @@ class Predictor(Resource):
             kwargs = {}
 
         ast = CreatePredictor(
-            name=name,
-            integration_name=data.get('integration'),
+            name=Identifier(name),
+            integration_name=Identifier(data.get('integration')),
             query_str=data.get('query'),
-            targets=data.get('to_predict'),
+            targets=[Identifier(x) for x in data.get('to_predict')],
             # TODO add ts settings
         )
 

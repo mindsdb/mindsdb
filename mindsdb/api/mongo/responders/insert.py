@@ -1,4 +1,5 @@
 from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
+from mindsdb_sql.parser.ast import Identifier
 
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
@@ -125,10 +126,10 @@ class Responce(Responder):
                     predict = [x.strip() for x in predict.split(',')]
 
                 create_predictor_ast = CreatePredictor(
-                    name=doc['name'],
-                    integration_name=connection,
+                    name=Identifier(doc['name']),
+                    integration_name=Identifier(connection),
                     query_str=select_data_query,
-                    targets=predict,
+                    targets=[Identifier(x) for x in predict],
                     # TODO add TS settings!!!
                 )
 

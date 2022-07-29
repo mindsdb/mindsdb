@@ -255,7 +255,7 @@ class LightwoodHandler(PredictiveHandler):
 
         integration_name = str(statement.integration_name)
         handler = self.handler_controller.get_handler(integration_name)
-        response = handler.query(statement.query_str)
+        response = handler.native_query(statement.query_str)
         if response.type == RESPONSE_TYPE.ERROR:
             return response
         training_data_df = response.data_frame

@@ -1,17 +1,12 @@
 import json
-import copy
-from datetime import datetime
 
-from lightwood.api import dtype
 import pandas as pd
 import numpy as np
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
-from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
-from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.config import Config
-from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
+from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 
 

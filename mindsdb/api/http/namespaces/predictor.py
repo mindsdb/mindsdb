@@ -46,51 +46,8 @@ class Predictor(Resource):
     @ns_conf.expect(put_predictor_metadata)
     def put(self, name):
         '''Learning new predictor'''
-        data = request.json
-        to_predict = data.get('to_predict')
-
-        try:
-            kwargs = data.get('kwargs')
-        except Exception:
-            kwargs = None
-
-        if isinstance(kwargs, dict) is False:
-            kwargs = {}
-
-        if 'equal_accuracy_for_all_output_categories' not in kwargs:
-            kwargs['equal_accuracy_for_all_output_categories'] = True
-
-        if 'advanced_args' not in kwargs:
-            kwargs['advanced_args'] = {}
-
-        if 'use_selfaware_model' not in kwargs['advanced_args']:
-            kwargs['advanced_args']['use_selfaware_model'] = False
-
-        integration_name = data.get('integration')
-        query = data.get('query')
-        if isinstance(integration_name, str) is False or isinstance(query, str) is False:
-            return http_error(400, 'Error', 'Parameters should contain integration and query')
-
-        integration_meta = request.integration_controller.get(integration_name)
-        if integration_meta is None:
-            return http_error(400, 'Error', f"Cant get integration '{integration_name}'")
-        handler = request.integration_controller.get_handler(integration_name)
-        if handler is None:
-            return http_error(400, 'Error', f"Cant get integration '{integration_name}'")
-
-        result = handler.native_query(query)
-
-        if result.type != RESPONSE_TYPE.TABLE:
-            raise Exception(f'Error during query: {result.get("error_message")}')
-
-        df = result.data_frame
-
-        request.model_interface.learn(
-            name, df, to_predict, integration_id=integration_meta['id'],
-            fetch_data_query=query, kwargs=kwargs, user_class=request.user_class
-        )
-
-        return '', 200
+        # lw_handler = request.integration_controller.get_handler('lightwood')
+        return abort(410, 'Method is not available')
 
 
 @ns_conf.route('/<name>/update')
@@ -110,25 +67,6 @@ class PredictorAdjust(Resource):
     @ns_conf.doc('post_predictor_adjust', params=predictor_query_params)
     def post(self, name):
         return abort(410, 'Method is not available')
-        # data = request.json
-
-        # ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
-        # from_data = request.default_store.get_datasource_obj(ds_name, raw=True)
-
-        # if from_data is None:
-        #     return {'message': f'Can not find datasource: {ds_name}'}, 400
-
-        # model_names = [x['name'] for x in request.model_interface.get_models()]
-        # if name not in model_names:
-        #     return abort(404, f'Predictor "{name}" doesn\'t exist',)
-
-        # request.model_interface.adjust(
-        #     name,
-        #     from_data,
-        #     request.default_store.get_datasource(ds_name)['id']
-        # )
-
-        # return '', 200
 
 
 @ns_conf.route('/<name>/predict')

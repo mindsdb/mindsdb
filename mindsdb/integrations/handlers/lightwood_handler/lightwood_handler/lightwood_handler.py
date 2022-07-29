@@ -118,11 +118,6 @@ class LightwoodHandler(PredictiveHandler):
         self.model_controller = kwargs.get('model_controller')
         self.company_id = kwargs.get('company_id')
 
-    # def connect(self, **kwargs) -> Dict[str, int]:
-    #     """ Setup storage handler and check lightwood version """  # noqa
-    #     self.storage = SqliteStorageHandler(context=self.name, config=kwargs['config'])  # TODO non-KV storage handler?
-    #     return self.check_connection()
-
     def check_connection(self) -> Dict[str, int]:
         try:
             import lightwood
@@ -148,12 +143,29 @@ class LightwoodHandler(PredictiveHandler):
         data = response.data_frame.to_dict(orient='records')
         return [x['table_name'] for x in data]
 
-    def describe_table(self, table_name: str) -> Dict:
+    def get_columns(self, table_name: str) ->  Response:
         """ For getting standard info about a table. e.g. data types """  # noqa
-        if table_name not in self.get_tables():
-            print("Table not found.")
-            return {}
-        return self.storage.get('models')[table_name]['jsonai']
+        predictor_record = db.Predictor.query.filter_by(
+            company_id=self.company_id, name=table_name
+        ).first()
+        if predictor_record is None:
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Error: model '{table_name}' does not exists!"
+            )
+
+        data = []
+        if predictor_record.dtype_dict is not None:
+            for key, value in predictor_record.dtype_dict.items():
+                data.appen(key, value)
+        result = Response(
+            RESPONSE_TYPE.TABLE,
+            pd.DataFrame(
+                data,
+                columns=['COLUMN_NAME', 'DATA_TYPE']
+            )
+        )
+        return result
 
     def _run_generate(self, df: pd.DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None):
         json_ai = lightwood.json_ai_from_problem(df, problem_definition)

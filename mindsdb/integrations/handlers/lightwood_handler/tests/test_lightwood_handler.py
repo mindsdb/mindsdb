@@ -96,10 +96,10 @@ class LightwoodHandlerTest(unittest.TestCase):
         response = self.handler.native_query(query)
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
-    # def test_03_retrain_predictor(self):
-    #     query = f"RETRAIN {self.test_model_name_1}"
-    #     response = self.handler.native_query(query)
-    #     self.assertTrue(response.type == RESPONSE_TYPE.OK)
+    def test_03_retrain_predictor(self):
+        query = f"RETRAIN {self.test_model_name_1}"
+        response = self.handler.native_query(query)
+        self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
     def test_04_query_predictor_single_where_condition(self):
         query = f"""
@@ -127,30 +127,33 @@ class LightwoodHandlerTest(unittest.TestCase):
         self.assertTrue(response.data_frame['number_of_rooms'][0] == 2)
         self.assertTrue(response.data_frame['number_of_bathrooms'][0] == 1)
 
-    # def test_06_train_predictor_custom_jsonai(self):
-    #     using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
-    #     query = f"""
-    #         CREATE PREDICTOR {self.test_model_name_1b}
-    #         FROM {PG_HANDLER_NAME} (SELECT * FROM demo_data.home_rentals limit 50)
-    #         PREDICT rental_price
-    #         USING {using_str}
-    #     """
-    #     response = self.handler.native_query(query)
-    #     self.assertTrue(response.type == RESPONSE_TYPE.OK)
-    #     # TODO assert
-    #     # m = load_predictor(self.handler.storage.get('models')[self.test_model_name_1b], self.test_model_name_1b)
-    #     # assert len(m.ensemble.mixers) == 1
-    #     # assert isinstance(m.ensemble.mixers[0], LightGBM)
+    def test_06_train_predictor_custom_jsonai(self):
+        using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
+        query = f"""
+            CREATE PREDICTOR {self.test_model_name_1b}
+            FROM {PG_HANDLER_NAME} (SELECT * FROM demo_data.home_rentals limit 50)
+            PREDICT rental_price
+            USING {using_str}
+        """
+        response = self.handler.native_query(query)
+        self.assertTrue(response.type == RESPONSE_TYPE.OK)
+        # TODO assert
+        # m = load_predictor(self.handler.storage.get('models')[self.test_model_name_1b], self.test_model_name_1b)
+        # assert len(m.ensemble.mixers) == 1
+        # assert isinstance(m.ensemble.mixers[0], LightGBM)
 
-    def test_31_list_tables(self):
+    def test_07_list_tables(self):
         response = self.handler.get_tables()
         self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
         print(response.data_frame)
 
-    # def test_32_describe_table(self):
-    #     print(self.handler.describe_table(f'{self.test_model_name_1}'))
+    def test_08_get_columns(self):
+        response = self.handler.get_columns(f'{self.test_model_name_1}')
+        self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
+        print(response.data_frame)
 
-    # def test_51_join_predictor_into_table(self):
+    # TODO
+    # def test_09_join_predictor_into_table(self):
     #     into_table = 'test_join_into_lw'
     #     query = f"SELECT tb.{self.target_1} as predicted, ta.{self.target_1} as truth, ta.sqft from {PG_HANDLER_NAME}.{self.data_table_name_1} AS ta JOIN {self.test_model_name_1} AS tb LIMIT 10"
     #     parsed = self.handler.parser(query, dialect=self.handler.dialect)
@@ -161,8 +164,7 @@ class LightwoodHandlerTest(unittest.TestCase):
     #     qp = self.handler.parser(q, dialect='mysql')
     #     assert len(self.data_handler.query(qp).data_frame) > 0
 
-    def test_24_train_ts_predictor(self):
-
+    def test_10_train_ts_predictor(self):
         try:
             print('dropping predictor...')
             self.handler.native_query(f"DROP PREDICTOR {self.test_model_name_2}")
@@ -181,23 +183,20 @@ class LightwoodHandlerTest(unittest.TestCase):
         response = self.handler.native_query(query)
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
-        # p = self.handler.storage.get('models')
-        # m = load_predictor(p[self.test_model_name_2], self.test_model_name_2)
-        # assert m.problem_definition.timeseries_settings.is_timeseries
+    # TODO
+    # def test_11_join_predictor_ts_into(self):
+    #     query = f"""
+    #         SELECT m.saledate as date,
+    #                m.ma as forecast
+    #         FROM mindsdb.{self.test_model_name_2} m JOIN {PG_HANDLER_NAME}.demo_data.house_sales t
+    #         WHERE t.saledate > LATEST
+    #               AND t.type = 'house'
+    #               AND t.bedrooms = 2
+    #         LIMIT 10
+    #     """
+    #     response = self.handler.native_query(query)
+    #     self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
 
-    def test_52_join_predictor_ts_into(self):
-        query = f"""
-            SELECT m.saledate as date,
-                   m.ma as forecast
-            FROM mindsdb.{self.test_model_name_2} m JOIN {PG_HANDLER_NAME}.demo_data.house_sales t
-            WHERE t.saledate > LATEST
-                  AND t.type = 'house'
-                  AND t.bedrooms = 2
-            LIMIT 10
-        """
-        response = self.handler.native_query(query)
-        self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
-        x = 1
 
 if __name__ == "__main__":
     unittest.main(failfast=True)

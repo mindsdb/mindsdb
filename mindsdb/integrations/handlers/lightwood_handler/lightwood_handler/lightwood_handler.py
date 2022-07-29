@@ -331,6 +331,7 @@ class LightwoodHandler(PredictiveHandler):
                 )
             return response
         if type(statement) == CreatePredictor:
+            # TODO cast columns to datasource case!
             return self._learn(statement)
         elif type(statement) == RetrainPredictor:
             model_name = statement.name.parts[-1]

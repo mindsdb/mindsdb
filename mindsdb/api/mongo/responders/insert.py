@@ -6,6 +6,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 from mindsdb.api.mongo.utilities import log
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 
+
 class Responce(Responder):
     when = {'insert': helpers.is_true}
 
@@ -132,7 +133,7 @@ class Responce(Responder):
                 )
 
                 lw_handler = mindsdb_env['integration_controller'].get_handler('lightwood')
-                result = lw_handler.native_query.query(create_predictor_ast)
+                result = lw_handler.query(create_predictor_ast)
                 if result.type == RESPONSE_TYPE.ERROR:
                     raise Exception(result.error_message)
 

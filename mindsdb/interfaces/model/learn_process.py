@@ -3,7 +3,6 @@ import sys
 import traceback
 import tempfile
 from pathlib import Path
-from typing import Optional
 import json
 import requests
 import traceback
@@ -18,14 +17,11 @@ from lightwood import __version__ as lightwood_version
 
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
-from mindsdb.interfaces.storage.db import Integration, session, Predictor
+from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.log import log
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.interfaces.database.integrations import IntegrationController
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 ctx = mp.get_context('spawn')

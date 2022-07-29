@@ -147,7 +147,7 @@ class MindsDBDataNode(DataNode):
             return [], []
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
-    def query(self, table, where_data=None, integration_name=None, integration_type=None):
+    def query(self, table, where_data=None):
         ''' NOTE WHERE statements can be just $eq joined with 'and'
         '''
         if table == 'predictors':

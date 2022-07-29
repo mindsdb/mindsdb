@@ -99,18 +99,7 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         if isinstance(password, str):
             password = password.encode()
 
-        integration = None
-        integration_type = None
-        extracted_username = username
-        integration_controller = IntegrationController()
-        integrations_names = integration_controller.get_all(company_id).keys()
-        for integration_name in integrations_names:
-            if username == f'{hardcoded_user}_{integration_name}':
-                extracted_username = hardcoded_user
-                integration = integration_name
-                integration_type = integration_controller.get(integration, company_id)['engine']
-
-        if extracted_username != hardcoded_user:
+        if username != hardcoded_user:
             log.warning(f'Check auth, user={username}: user mismatch')
             return {
                 'success': False
@@ -125,9 +114,7 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         log.info(f'Check auth, user={username}: Ok')
         return {
             'success': True,
-            'username': extracted_username,
-            'integration': integration,
-            'integration_type': integration_type
+            'username': username
         }
     except Exception as e:
         log.error(f'Check auth, user={username}: ERROR')
@@ -308,8 +295,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if auth_data['success']:
             self.session.username = auth_data['username']
             self.session.auth = True
-            self.session.integration = auth_data['integration']
-            self.session.integration_type = auth_data['integration_type']
             self.packet(OkPacket).send()
             return True
         else:
@@ -354,19 +339,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             column_name = column.get('name', 'column_name')
             column_alias = column.get('alias', column_name)
             flags = column.get('flags', 0)
-            if self.session.integration_type == 'mssql':
-                # mssql raise error if value more then this.
-                length = 0x2000
+            if len(data) == 0:
+                length = 0xffff
             else:
-                if len(data) == 0:
-                    length = 0xffff
-                else:
-                    length = 1
-                    for row in data:
-                        if isinstance(row, dict):
-                            length = max(len(str(row[column_alias])), length)
-                        else:
-                            length = max(len(str(row[i])), length)
+                length = 1
+                for row in data:
+                    if isinstance(row, dict):
+                        length = max(len(str(row[column_alias])), length)
+                    else:
+                        length = max(len(str(row[i])), length)
 
             packets.append(
                 self.packet(
@@ -651,8 +632,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.session.username = 'cloud'
             self.session.user_class = cloud_connection['user_class']
             self.session.auth = True
-            self.session.integration = None
-            self.session.integration_type = None
 
         while True:
             log.debug('Got a new packet')

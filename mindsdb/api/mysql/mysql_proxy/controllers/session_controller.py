@@ -31,9 +31,6 @@ class SessionController():
         self.auth = False
         self.company_id = company_id
         self.logging = log
-
-        self.integration = None
-        self.integration_type = None
         self.database = None
 
         self.config = Config()

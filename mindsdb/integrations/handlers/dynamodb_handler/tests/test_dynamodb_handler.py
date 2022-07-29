@@ -17,14 +17,16 @@ class DynamoDBHandlerTest(unittest.TestCase):
         assert self.handler.check_connection()
 
     def test_1_native_query_select(self):
-        pass
+        query = "SELECT * FROM TryDaxTable"
+        result = self.handler.native_query(query)
+        assert result.type is RESPONSE_TYPE.TABLE
 
     def test_2_get_tables(self):
         tables = self.handler.get_tables()
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_4_get_columns(self):
-        columns = self.handler.get_columns('example_tbl')
+        columns = self.handler.get_columns('TryDaxTable')
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 

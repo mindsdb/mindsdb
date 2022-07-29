@@ -472,7 +472,7 @@ class LightwoodHandler(PredictiveHandler):
             df = df.reset_index()
             original_target_values[col + '_original'] = []
             for _index, row in df.iterrows():
-                original_target_values[col + '_original'].append(df[col])
+                original_target_values[col + '_original'].append(row.get(col))
             # df[]
             # if where_data is not None:
             #     if col in where_data:

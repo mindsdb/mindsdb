@@ -640,7 +640,7 @@ class ExecuteCommands:
             self.session.integration_controller.delete(integration['name'])
         except Exception:
             raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+        return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):
         """ answer on 'drop table [if exists] {name}'
@@ -1287,54 +1287,11 @@ class ExecuteCommands:
             Parameters:
              - insert - dict with keys as columns of mindsb.predictors table.
         '''
-        model_interface = self.session.model_interface
-        integration_controller = self.session.integration_controller
-
-        select_data_query = insert.get('select_data_query')
-        if isinstance(select_data_query, str) is False or len(select_data_query) == 0:
-            raise ErSqlWrongArguments("'select_data_query' should not be empty")
-
-        models = model_interface.get_models()
-        if insert['name'] in [x['name'] for x in models]:
-            raise ErSqlWrongArguments(f"predictor with name '{insert['name']}'' already exists")
-
-        kwargs = {}
-        if isinstance(insert.get('training_options'), str) \
-                and len(insert['training_options']) > 0:
-            try:
-                kwargs = json.loads(insert['training_options'])
-            except json.JSONDecodeError:
-                raise ErSqlWrongArguments('training_options should be in valid JSON string')
-
-        integration = self.session.integration
-        if isinstance(integration, str) is False or len(integration) == 0:
-            raise ErSqlWrongArguments('select_data_query can be used only in query from database')
-
-        insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-
-        integration_handler = integration_controller.get_handler(integration)
-        result = integration_handler.native_query(insert['select_data_query'])
-        ds_data_df = result['data_frame']
-        ds_column_names = list(ds_data_df.columns)
-
-        insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
-
-        for col in insert['predict']:
-            if col not in ds_column_names:
-                raise ErKeyColumnDoesNotExist(f"Column '{col}' not exists")
-
-        insert['predict'] = self._check_predict_columns(insert['predict'], ds_column_names)
-
-        integration_meta = integration_controller.get(integration)
-        integration_id = integration_meta.get('id')
-        fetch_data_query = insert['select_data_query']
-
-        model_interface.learn(
-            insert['name'], ds_data_df, insert['predict'], integration_id=integration_id,
-            fetch_data_query=fetch_data_query, kwargs=kwargs, user_class=self.session.user_class
+        return ExecuteAnswer(
+            ANSWER_TYPE.ERROR,
+            error_code=0,
+            error_message='At the moment insert into predictors talbe is not supported'
         )
-
-        return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def _check_predict_columns(self, predict_column_names, ds_column_names):
         ''' validate 'predict' column names

@@ -715,7 +715,6 @@ class SQLQuery():
 
                 data = dn.query(
                     table=predictor,
-                    columns=None,
                     where_data=where_data,
                     integration_name=self.session.integration,
                     integration_type=self.session.integration_type
@@ -790,7 +789,6 @@ class SQLQuery():
                 else:
                     data = dn.query(
                         table=predictor,
-                        columns=None,
                         where_data=where_data,
                         integration_name=self.session.integration,
                         integration_type=self.session.integration_type

@@ -236,7 +236,10 @@ class IntegrationController:
                 company_id=company_id
             )
         elif handler_type == 'lightwood':
-            handler_ars['handler_controller'] = self
+            handler_ars['handler_controller'] = WithKWArgsWrapper(
+                IntegrationController(),
+                company_id=company_id
+            )
             handler_ars['model_controller'] = WithKWArgsWrapper(
                 ModelInterface(),
                 company_id=company_id

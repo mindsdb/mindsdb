@@ -49,12 +49,8 @@ class DB2Handler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
-        
-        
-
-        
+          
     
-
     def connect(self):
         # if self.is_connected is True:
         #     return self.connection
@@ -70,8 +66,6 @@ class DB2Handler(DatabaseHandler):
         return self.connection
 
 
-    
-
     def disconnect(self):
         if self.is_connected is False:
             return
@@ -81,8 +75,6 @@ class DB2Handler(DatabaseHandler):
             log.error(f"Error while disconnecting to {self.database}, {e}")
 
         return 
-
-    
 
 
     def check_connection(self) -> StatusResponse:
@@ -102,8 +94,6 @@ class DB2Handler(DatabaseHandler):
                 self.is_connected = False
 
         return responseCode
-
-
 
 
     def native_query(self, query: str) -> StatusResponse:
@@ -150,8 +140,6 @@ class DB2Handler(DatabaseHandler):
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    
-
 
     def get_tables(self) -> StatusResponse:
         self.connect()
@@ -181,9 +169,6 @@ class DB2Handler(DatabaseHandler):
 
 
         return response
-
-
-
 
     
     def get_columns(self, table_name: str) -> StatusResponse:

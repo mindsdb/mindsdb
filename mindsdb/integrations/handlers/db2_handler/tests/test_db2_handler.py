@@ -17,7 +17,7 @@ class DB2HandlerTest(unittest.TestCase):
         cls.handler = DB2Handler('test_db2_handler', **cls.kwargs)
 
     def test_0_connect(self):
-         self.handler.check_connection()
+         self.handler.connect()
 
     
 
@@ -40,6 +40,9 @@ class DB2HandlerTest(unittest.TestCase):
         query = "SELECT * FROM AUTHORS"
         result = self.handler.native_query(query)
         assert result.type is   RESPONSE_TYPE.TABLE
+
+    def test_5_check_connection(self):
+         self.handler.check_connection()
 
         
 if __name__ == '__main__':

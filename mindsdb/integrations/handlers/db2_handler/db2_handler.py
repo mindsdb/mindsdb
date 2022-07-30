@@ -191,7 +191,7 @@ class DB2Handler(DatabaseHandler):
         self.connect()
 
 
-        result=self.connection.columns(table_name)
+        result=self.connection.columns(table_name=table_name)
         try:
             if result:
                 response = Response(

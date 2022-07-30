@@ -12,7 +12,7 @@ In this tutorial, you will learn how to predict the best crop type based on fiel
 
 Before you start make sure you have:
 
-1. Access to MindsDB. In this tutorial, we will use [MindsDB Cloud GUI](https://docs.mindsdb.com/deployment/cloud/). If you want you can also deploy mindsdb on your premises, Check out the installation guide for [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPi](https://docs.mindsdb.com/deployment/pypi/). 
+1. Access to MindsDB. In this tutorial, we will use [MindsDB Cloud GUI](https://docs.mindsdb.com/setup/cloud/). If you want you can also deploy mindsdb on your premises, Check out the installation guide for [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [PyPi](https://docs.mindsdb.com/setup/self-hosted/pip/windows/). 
 
 2. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset).
 

@@ -10,7 +10,7 @@ We will explore how MindsDB's machine learning predictive model can make it easi
 
 To ensure you can complete all the steps, make sure you have access to the following tools:
 
-1. A MindsDB instance. Check out the installation guide for [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPi](https://docs.mindsdb.com/deployment/pypi/). You can also use [MindsDB Cloud](https://docs.mindsdb.com/deployment/cloud/).
+1. A MindsDB instance. Check out the installation guide for [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [PyPi](https://docs.mindsdb.com/setup/self-hosted/pip/windows/). You can also use [MindsDB Cloud](https://docs.mindsdb.com/setup/cloud/).
 2. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/uciml/mushroom-classification)
 3. Optional: Access to ngrok. You can check the installation details at the [ngrok website](https://ngrok.com/).
 

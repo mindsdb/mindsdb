@@ -1,8 +1,9 @@
 from collections import OrderedDict
-
+from typing import Optional
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.utilities.log import log
+from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -26,17 +27,19 @@ class DB2Handler(DatabaseHandler):
 
     name= 'DB2'
 
-    def __init__(self, name: str, **kwargs):
+    def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
+
         super().__init__(name)
         
-        self.connection_args = kwargs
+        self.kwargs = kwargs
+        self.parser = parse_sql
         self.driver = "{IBM DB2 ODBC DRIVER}"
-        self.database = kwargs.get('database')
-        self.user = kwargs.get('user')
-        self.password = kwargs.get('password')
-        self.schemaName = kwargs.get('schemaName')
-        self.host = kwargs.get('host')
-        self.port = kwargs.get('port')
+        self.database = connection_data['database']
+        self.user = connection_data['user']
+        self.password = connection_data['password']
+        self.schemaName = connection_data['schema_name'] 
+        self.host = connection_data['host']
+        self.port = connection_data['port']
         self.connString = (
     "DRIVER={0};"
     "DATABASE={1};"
@@ -45,6 +48,8 @@ class DB2Handler(DatabaseHandler):
     "PROTOCOL={4};"
     "UID={5};"
     "PWD={6};").format(self.driver, self.database, self.host, self.port,"TCPIP" , self.user, self.password)
+
+        
         
 
         self.connection = None
@@ -52,8 +57,8 @@ class DB2Handler(DatabaseHandler):
           
     
     def connect(self):
-        # if self.is_connected is True:
-        #     return self.connection
+        if self.is_connected is True:
+            return self.connection
 
         try:
             self.connection = love.pconnect(self.connString,'','')
@@ -98,7 +103,7 @@ class DB2Handler(DatabaseHandler):
 
     def native_query(self, query: str) -> StatusResponse:
         need_to_close = self.is_connected is False
-        
+        query=query.upper()
         conn = self.connect()
         with conn.cursor() as cur:
             try:
@@ -131,9 +136,7 @@ class DB2Handler(DatabaseHandler):
 
     
     def query(self, query: ASTNode) -> StatusResponse:
-        """
-        TODO: Check this method 
-        """
+        
 
 
         renderer = SqlalchemyRender(DB2Dialect)

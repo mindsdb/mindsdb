@@ -3,7 +3,7 @@
 ## Pre-requisites
 This tutorial will be easier to follow if you have first read:
 - [Getting Started Guide](/info)
-- [Getting Started with Cloud](/deployment/cloud)
+- [Getting Started with Cloud](/setup/cloud)
 
 And have downloaded [this](https://www.kaggle.com/datasets/yasserh/spamemailsdataset?select=Spam.csv) dataset.
 

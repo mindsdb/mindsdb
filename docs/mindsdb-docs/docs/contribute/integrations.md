@@ -160,7 +160,7 @@ The check_connection method is used to perform the health check for the connecti
 
 ```py
 def check_connection(self) -> HandlerStatusResponse:
-        """ Cehck connection to the handler
+        """ Check connection to the handler
         Returns:
             HandlerStatusResponse
         """

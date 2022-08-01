@@ -7,7 +7,7 @@ class AccessHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "db_file": 'C:\\Users\\minurap\\Documents\\Learning\\Microsoft Access\\example_db.accdb',
+            "db_file": 'C:\\Users\\minurap\\Documents\\example_db.accdb',
         }
         cls.handler = AccessHandler('test_access_handler', cls.kwargs)
 

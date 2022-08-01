@@ -12,7 +12,7 @@ DISCLAIMER: Please note that predicting Bitcoin price is just an example for sho
 ## Pre-requisites
 
 First, you need MindsDB installed. If you want to use MindsDB locally, you need to install MindsDB with
-[Docker](https://docs.mindsdb.com/deployment/docker/) or [Python](https://docs.mindsdb.com/deployment/pypi/). 
+[Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [Python](https://docs.mindsdb.com/setup/self-hosted/pip/windows/). 
 However, if you want to use MindsDB without installing it locally, you can use [Cloud Mindsdb](https://cloud.mindsdb.com/signup). 
 In this tutorial, I'm using MindsDB Cloud, because it is easy to set up in just 2 minutes and it has a great free tier.
 

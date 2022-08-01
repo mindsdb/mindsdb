@@ -12,7 +12,7 @@ Let’s see how we can use machine learning with MindsDB to optimize the number 
 
 ## Set Up MindsDB
 
-First things first! You need to connect your database to MindsDB. One of the easy ways to do so is to create a [MindsDB cloud](https://docs.mindsdb.com/deployment/cloud/) account. If you prefer to deploy MindsDB locally, please refer to installation instructions via [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPI](https://docs.mindsdb.com/deployment/pypi/).
+First things first! You need to connect your database to MindsDB. One of the easy ways to do so is to create a [MindsDB cloud](https://docs.mindsdb.com/setup/cloud/) account. If you prefer to deploy MindsDB locally, please refer to installation instructions via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [PyPI](https://docs.mindsdb.com/setup/self-hosted/pip/windows/).
 
 Once an account is created you can connect to Snowflake using standard parameters like database name (in this case the Chicago Transit Authority), host, port, username, password, etc.
 
@@ -53,6 +53,8 @@ LIMIT 100;
 ![show dbs](/assets/sql/tutorials/snowflake-superset/13-info_schema.png)
 
 The training data consists of the number of rides per bus route and day. For example, on 2001-07-03, there were 7354 rides on bus route 3.
+
+You can download the dataset [here](https://github.com/mindsdb/benchmarks/blob/main/benchmarks/datasets/chicago_transit_ts/CTA_2019_2020.csv) and execute the SQL commands along with the tutorial!
 
 ### Step 2: Training the Predictive Model
 

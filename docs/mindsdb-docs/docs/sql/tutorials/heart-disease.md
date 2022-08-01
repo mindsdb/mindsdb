@@ -14,7 +14,7 @@ You can follow this tutorial by connecting to your own database and using differ
 
 ## Pre-requisites
 
-If you want to install MindsDB locally, check out the installation guide for [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPi](https://docs.mindsdb.com/deployment/pypi/) and you can follow this tutorial.
+If you want to install MindsDB locally, check out the installation guide for [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [PyPi](https://docs.mindsdb.com/setup/self-hosted/pip/windows/) and you can follow this tutorial.
 If you are OK with using MindsDB cloud, then simply [create a free account](https://cloud.mindsdb.com/signup) and you will be up and running in just one minute. 
  
 Second, you will need to have a mysql client like DBeaver, MySQL Workbench etc. installed locally to connect to the MindsDB MySQL API. MindsDB contains a SQL Editor which can be accessed on MindsDB cloud or the URL 127.0.0.1:47334/.

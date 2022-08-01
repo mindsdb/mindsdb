@@ -1,25 +1,24 @@
-# Table Structure
+# MindsDB Database Tables Structure
 
 ## General Structure
 
-On startup the mindsdb database will contain 2 tables: `predictors` and `datasources`
+On start-up, the MindsDB database consists of 2 tables: `predictors` and `databases`.
+
+You can verify it by running the following SQL command:
 
 ```sql
 SHOW TABLES;
 ```
 
-On execution, you should get:
+On execution, we get:
 
-```sql
-
+```
 +---------------------------+
 | Tables_in_mindsdb         |
 +---------------------------+
 | predictors                |
 | databases                 |
-| integration_name          |
 +---------------------------+
-
 ```
 
 ## The predictors TABLE

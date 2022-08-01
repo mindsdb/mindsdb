@@ -91,7 +91,7 @@ nav:
   - Train a Predictor: sql/create/predictor.md
   - Get a Prediction: sql/api/select.md
   - SQL API:
-    - Table Structure (Schema): sql/table-structure.md
+    - MindsDB Tables Structure: sql/table-structure.md
     - CREATE:
       - DATABASE: sql/create/databases.md
       - PREDICTOR: sql/create/predictor.md

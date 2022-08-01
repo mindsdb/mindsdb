@@ -6,6 +6,7 @@ import pyodbc
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from sqlalchemy_access.base import AccessDialect
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -119,7 +120,7 @@ class AccessHandler(DatabaseHandler):
                 if result:
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
+                        data_frame=pd.DataFrame.from_records(
                             result,
                             columns=[x[0] for x in cursor.description]
                         )
@@ -150,7 +151,7 @@ class AccessHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        renderer = SqlalchemyRender('access')
+        renderer = SqlalchemyRender(AccessDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 

@@ -252,6 +252,21 @@ WITH
     };
 ```
 
+### TiDB
+
+```sql
+CREATE DATABASE tidb_datasource
+WITH
+    engine='tidb',
+    parameters={
+            "user":"root",
+            "port": 4000,
+            "password": "Mimzo3i-mxt@9CpThpBj",
+            "host": "127.0.0.1",
+            "database": "tidb"
+    };
+```
+
 ### Trino
 
 ```sql
@@ -265,21 +280,6 @@ WITH
             "host": "127.0.0.1",
             "catalog": "default",
             "schema": "test"
-    };
-```
-
-### TiDB
-
-```sql
-CREATE DATABASE tidb_datasource
-WITH
-    engine='tidb',
-    parameters={
-            "user":"root",
-            "port": 4000,
-            "password": "Mimzo3i-mxt@9CpThpBj",
-            "host": "127.0.0.1",
-            "database": "tidb"
     };
 ```
 

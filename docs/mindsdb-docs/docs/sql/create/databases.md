@@ -98,52 +98,18 @@ On execution:
 
 ## Supported Integrations
 
-### Snowflake
+### Cassandra
 
 ```sql
-CREATE DATABASE snowflake_datasource
+CREATE DATABASE psql_datasource
 WITH
-    engine='snowflake',
+    engine='cassandra',
     parameters={
-            "user":"user",
-            "port": 443,
-            "password": "Mimzo3i-mxt@9CpThpBj",
+            "user":"cassandra",
+            "port": 9042,
+            "password": "cassandra",
             "host": "127.0.0.1",
-            "database": "snowflake",
-            "account": "account",
-            "schema": "public",
-            "protocol": "https",
-            "warehouse": "warehouse"
-    };
-```
-
-### Singlestore
-
-```sql
-CREATE DATABASE singlestore_datasource
-WITH
-    engine='singlestore',
-    parameters={
-            "user":"root",
-            "port": 3306,
-            "password": "Mimzo3i-mxt@9CpThpBj",
-            "host": "127.0.0.1",
-            "database": "singlestore"
-    };
-```
-
-### MySQL
-
-```sql
-CREATE DATABASE mysql_datasource
-WITH
-    engine='mysql',
-    parameters={
-            "user":"root",
-            "port": 3306,
-            "password": "Mimzo3i-mxt@9CpThpBj",
-            "host": "127.0.0.1",
-            "database": "mysql"
+            "database": "keyspace"
     };
 ```
 
@@ -159,36 +125,6 @@ WITH
             "password": "Mimzo3i-mxt@9CpThpBj",
             "host": "127.0.0.1",
             "database": "default"
-    };
-```
-
-### PostgreSQL
-
-```sql
-CREATE DATABASE psql_datasource
-WITH
-    engine='postgres',
-    parameters={
-            "user":"postgres",
-            "port": 5432,
-            "password": "Mimzo3i-mxt@9CpThpBj",
-            "host": "127.0.0.1",
-            "database": "postgres"
-    };
-```
-
-### Cassandra
-
-```sql
-CREATE DATABASE psql_datasource
-WITH
-    engine='cassandra',
-    parameters={
-            "user":"cassandra",
-            "port": 9042,
-            "password": "cassandra",
-            "host": "127.0.0.1",
-            "database": "keyspace"
     };
 ```
 
@@ -222,7 +158,37 @@ WITH
     };
 ```
 
-### Scylladb
+### MySQL
+
+```sql
+CREATE DATABASE mysql_datasource
+WITH
+    engine='mysql',
+    parameters={
+            "user":"root",
+            "port": 3306,
+            "password": "Mimzo3i-mxt@9CpThpBj",
+            "host": "127.0.0.1",
+            "database": "mysql"
+    };
+```
+
+### PostgreSQL
+
+```sql
+CREATE DATABASE psql_datasource
+WITH
+    engine='postgres',
+    parameters={
+            "user":"postgres",
+            "port": 5432,
+            "password": "Mimzo3i-mxt@9CpThpBj",
+            "host": "127.0.0.1",
+            "database": "postgres"
+    };
+```
+
+### Scylla
 
 ```sql
 CREATE DATABASE scylladb_datasource
@@ -234,6 +200,55 @@ WITH
             "password": "Mimzo3i-mxt@9CpThpBj",
             "host": "127.0.0.1",
             "database": "scylladb"
+    };
+```
+
+### SingleStore
+
+```sql
+CREATE DATABASE singlestore_datasource
+WITH
+    engine='singlestore',
+    parameters={
+            "user":"root",
+            "port": 3306,
+            "password": "Mimzo3i-mxt@9CpThpBj",
+            "host": "127.0.0.1",
+            "database": "singlestore"
+    };
+```
+
+### Snowflake
+
+```sql
+CREATE DATABASE snowflake_datasource
+WITH
+    engine='snowflake',
+    parameters={
+            "user":"user",
+            "port": 443,
+            "password": "Mimzo3i-mxt@9CpThpBj",
+            "host": "127.0.0.1",
+            "database": "snowflake",
+            "account": "account",
+            "schema": "public",
+            "protocol": "https",
+            "warehouse": "warehouse"
+    };
+```
+
+### QuestDB
+
+```sql
+CREATE DATABASE questdb_datasource
+WITH
+    engine='questdb',
+    parameters={
+            "user":"admin",
+            "port": 8812,
+            "password": "quest",
+            "host": "127.0.0.1",
+            "database": "qdb"
     };
 ```
 
@@ -253,21 +268,6 @@ WITH
     };
 ```
 
-### QuestDB
-
-```sql
-CREATE DATABASE questdb_datasource
-WITH
-    engine='questdb',
-    parameters={
-            "user":"admin",
-            "port": 8812,
-            "password": "quest",
-            "host": "127.0.0.1",
-            "database": "qdb"
-    };
-```
-
 ### TiDB
 
 ```sql
@@ -282,7 +282,6 @@ WITH
             "database": "tidb"
     };
 ```
-
 
 ## Connecting Through Ngrok
 

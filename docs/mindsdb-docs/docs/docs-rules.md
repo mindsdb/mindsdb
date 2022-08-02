@@ -30,7 +30,7 @@ Follow the syntax below when documenting an SQL command and its output.
 
     On execution, we get:
 
-    ```
+    ```sql
     +---------------+---------------+
     | [column_name] | [column_name] |
     +---------------+---------------+
@@ -47,9 +47,6 @@ Follow the syntax below when documenting an SQL command and its output.
 !!! note
     If the output is not a table, remove the output table from above and place your output message there.
 
-!!! note
-    Please note that the **```sql** block is used only in the case of SQL commands/queries. For the output table/message, we use a standard block. Whereas, for the description table, we use just a table. See the examples below.
-
 ### Example 1
 
     ```sql
@@ -61,7 +58,7 @@ Follow the syntax below when documenting an SQL command and its output.
 
     On execution, we get:
 
-    ```
+    ```sql
     +---------------+---------------+
     | [column_name] | [column_name] |
     +---------------+---------------+
@@ -86,7 +83,7 @@ WHERE column_name=value_name;
 
 On execution, we get:
 
-```
+```sql
 +---------------+---------------+
 | [column_name] | [column_name] |
 +---------------+---------------+
@@ -111,7 +108,7 @@ Where:
 
     On execution, we get:
 
-    ```
+    ```sql
     OUTPUT GOES HERE
     ```
 
@@ -126,6 +123,6 @@ PREDICT target_column;
 
 On execution, we get:
 
-```
+```sql
 OUTPUT GOES HERE
 ```

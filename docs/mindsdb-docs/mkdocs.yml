@@ -90,8 +90,8 @@ nav:
   - Upload a File to MindsDB: sql/create/file.md
   - Train a Predictor: sql/create/predictor.md
   - Get a Prediction: sql/api/select.md
-  - MindsDB Tables Structure: sql/table-structure.md
   - SQL API:
+    - MindsDB Tables Structure: sql/table-structure.md
     - CREATE:
       - DATABASE: sql/create/databases.md
       - PREDICTOR: sql/create/predictor.md

@@ -12,7 +12,7 @@ SHOW tables;
 
 On execution, we get:
 
-```
+```sql
 +----------------------+
 | Tables_in_mindsdb    |
 +----------------------+
@@ -32,7 +32,7 @@ FROM mindsdb.predictors;
 
 On execution, we get:
 
-```
+```sql
 +-------+---------+-----------+----------+----------------+------------------+--------+--------------------+-------------------+
 |name   |status   |accuracy   |predict   |update_status   |mindsdb_version   |error   |select_data_query   |training_options   |
 +-------+---------+-----------+----------+----------------+------------------+--------+--------------------+-------------------+
@@ -65,7 +65,7 @@ FROM mindsdb.predictors;
 
 On execution, we get:
 
-```
+```sql
 +-----------------+--------+------------------+-------+-------------+---------------+-----+-----------------+----------------+
 |name             |status  |accuracy          |predict|update_status|mindsdb_version|error|select_data_query|training_options|
 +-----------------+--------+------------------+-------+-------------+---------------+-----+-----------------+----------------+
@@ -90,7 +90,7 @@ FROM mindsdb.databases;
 
 On execution, we get:
 
-```
+```sql
 +-------+----------------+-------+-------+-------+
 |name   |database_type   |host   |port   |user   |
 +-------+----------------+-------+-------+-------+
@@ -120,7 +120,7 @@ FROM mindsdb.databases;
 
 On execution, we get:
 
-```
+```sql
 +-------------+----------------+---------------+-------+------------+
 |name         |database_type   |host           |port   |user        |
 +-------------+----------------+---------------+-------+------------+

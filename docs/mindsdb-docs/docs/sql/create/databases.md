@@ -128,6 +128,21 @@ WITH
     };
 ```
 
+### Cockroach Labs
+
+```sql
+CREATE DATABASE cockroach_datasource
+WITH
+    engine='cockroach',
+    parameters={
+            "user":"username",
+            "port": 26257,
+            "password": "Mimzo3i-mxt@9CpThpBj",
+            "host": "127.0.0.1",
+            "database": "cockroach"
+    };
+```
+
 ### MariaDB
 
 ```sql
@@ -157,6 +172,10 @@ WITH
             "database": "master"
     };
 ```
+
+### MongoDB
+
+!!! warning "This is a work in progress"
 
 ### MySQL
 

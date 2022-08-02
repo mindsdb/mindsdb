@@ -188,6 +188,21 @@ WITH
     };
 ```
 
+### QuestDB
+
+```sql
+CREATE DATABASE questdb_datasource
+WITH
+    engine='questdb',
+    parameters={
+            "user":"admin",
+            "port": 8812,
+            "password": "quest",
+            "host": "127.0.0.1",
+            "database": "qdb"
+    };
+```
+
 ### Scylla
 
 ```sql
@@ -234,21 +249,6 @@ WITH
             "schema": "public",
             "protocol": "https",
             "warehouse": "warehouse"
-    };
-```
-
-### QuestDB
-
-```sql
-CREATE DATABASE questdb_datasource
-WITH
-    engine='questdb',
-    parameters={
-            "user":"admin",
-            "port": 8812,
-            "password": "quest",
-            "host": "127.0.0.1",
-            "database": "qdb"
     };
 ```
 

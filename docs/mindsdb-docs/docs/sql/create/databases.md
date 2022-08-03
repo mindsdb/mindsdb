@@ -98,52 +98,18 @@ On execution:
 
 ## Supported Integrations
 
-### Snowflake
+### Cassandra
 
 ```sql
-CREATE DATABASE snowflake_datasource
+CREATE DATABASE psql_datasource
 WITH
-    engine='snowflake',
+    engine='cassandra',
     parameters={
-            "user":"user",
-            "port": 443,
-            "password": "Mimzo3i-mxt@9CpThpBj",
+            "user":"cassandra",
+            "port": 9042,
+            "password": "cassandra",
             "host": "127.0.0.1",
-            "database": "snowflake",
-            "account": "account",
-            "schema": "public",
-            "protocol": "https",
-            "warehouse": "warehouse"
-    };
-```
-
-### Singlestore
-
-```sql
-CREATE DATABASE singlestore_datasource
-WITH
-    engine='singlestore',
-    parameters={
-            "user":"root",
-            "port": 3306,
-            "password": "Mimzo3i-mxt@9CpThpBj",
-            "host": "127.0.0.1",
-            "database": "singlestore"
-    };
-```
-
-### MySQL
-
-```sql
-CREATE DATABASE mysql_datasource
-WITH
-    engine='mysql',
-    parameters={
-            "user":"root",
-            "port": 3306,
-            "password": "Mimzo3i-mxt@9CpThpBj",
-            "host": "127.0.0.1",
-            "database": "mysql"
+            "database": "keyspace"
     };
 ```
 
@@ -162,33 +128,18 @@ WITH
     };
 ```
 
-### PostgreSQL
+### Cockroach Labs
 
 ```sql
-CREATE DATABASE psql_datasource
+CREATE DATABASE cockroach_datasource
 WITH
-    engine='postgres',
+    engine='cockroach',
     parameters={
-            "user":"postgres",
-            "port": 5432,
+            "user":"username",
+            "port": 26257,
             "password": "Mimzo3i-mxt@9CpThpBj",
             "host": "127.0.0.1",
-            "database": "postgres"
-    };
-```
-
-### Cassandra
-
-```sql
-CREATE DATABASE psql_datasource
-WITH
-    engine='cassandra',
-    parameters={
-            "user":"cassandra",
-            "port": 9042,
-            "password": "cassandra",
-            "host": "127.0.0.1",
-            "database": "keyspace"
+            "database": "cockroach"
     };
 ```
 
@@ -222,34 +173,37 @@ WITH
     };
 ```
 
-### Scylladb
+### MongoDB
+
+!!! warning "This is a work in progress"
+
+### MySQL
 
 ```sql
-CREATE DATABASE scylladb_datasource
+CREATE DATABASE mysql_datasource
 WITH
-    engine='scylladb',
+    engine='mysql',
     parameters={
-            "user":"scylladb",
-            "port": 9042,
+            "user":"root",
+            "port": 3306,
             "password": "Mimzo3i-mxt@9CpThpBj",
             "host": "127.0.0.1",
-            "database": "scylladb"
+            "database": "mysql"
     };
 ```
 
-### Trino
+### PostgreSQL
 
 ```sql
-CREATE DATABASE trino_datasource
+CREATE DATABASE psql_datasource
 WITH
-    engine='trinodb',
+    engine='postgres',
     parameters={
-            "user":"trino",
-            "port": 8080,
+            "user":"postgres",
+            "port": 5432,
             "password": "Mimzo3i-mxt@9CpThpBj",
             "host": "127.0.0.1",
-            "catalog": "default",
-            "schema": "test"
+            "database": "postgres"
     };
 ```
 
@@ -268,6 +222,55 @@ WITH
     };
 ```
 
+### Scylla
+
+```sql
+CREATE DATABASE scylladb_datasource
+WITH
+    engine='scylladb',
+    parameters={
+            "user":"scylladb",
+            "port": 9042,
+            "password": "Mimzo3i-mxt@9CpThpBj",
+            "host": "127.0.0.1",
+            "database": "scylladb"
+    };
+```
+
+### SingleStore
+
+```sql
+CREATE DATABASE singlestore_datasource
+WITH
+    engine='singlestore',
+    parameters={
+            "user":"root",
+            "port": 3306,
+            "password": "Mimzo3i-mxt@9CpThpBj",
+            "host": "127.0.0.1",
+            "database": "singlestore"
+    };
+```
+
+### Snowflake
+
+```sql
+CREATE DATABASE snowflake_datasource
+WITH
+    engine='snowflake',
+    parameters={
+            "user":"user",
+            "port": 443,
+            "password": "Mimzo3i-mxt@9CpThpBj",
+            "host": "127.0.0.1",
+            "database": "snowflake",
+            "account": "account",
+            "schema": "public",
+            "protocol": "https",
+            "warehouse": "warehouse"
+    };
+```
+
 ### TiDB
 
 ```sql
@@ -283,6 +286,21 @@ WITH
     };
 ```
 
+### Trino
+
+```sql
+CREATE DATABASE trino_datasource
+WITH
+    engine='trinodb',
+    parameters={
+            "user":"trino",
+            "port": 8080,
+            "password": "Mimzo3i-mxt@9CpThpBj",
+            "host": "127.0.0.1",
+            "catalog": "default",
+            "schema": "test"
+    };
+```
 
 ## Connecting Through Ngrok
 

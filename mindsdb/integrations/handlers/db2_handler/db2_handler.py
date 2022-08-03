@@ -297,5 +297,3 @@ connection_args_example = OrderedDict(
     schemaName="db2admin",
     database="BOOKS",
 )
-
-# 💙💙💛💛💜💜🤍🤎🤍🤍🤎🤎🤎❤️❤️❤️❤️❤️🧡🧡🧡💜💜❤️❤️❤️🤍🤎🤍🤍❤️🧡💙💙

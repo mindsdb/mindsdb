@@ -1,2 +1,2 @@
-ibm_db_sa
-ibm_db_dbi
+ibm-db-sa
+ibm-db

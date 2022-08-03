@@ -133,13 +133,13 @@ WITH
 ```sql
 CREATE DATABASE cockroach_datasource
 WITH
-    engine='cockroach',
+    engine='cockroachdb',
     parameters={
             "user":"username",
             "port": 26257,
             "password": "Mimzo3i-mxt@9CpThpBj",
             "host": "127.0.0.1",
-            "database": "cockroach"
+            "database": "cockroachdb"
     };
 ```
 

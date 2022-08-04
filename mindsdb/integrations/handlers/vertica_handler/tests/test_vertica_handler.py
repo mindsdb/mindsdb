@@ -26,7 +26,6 @@ class VerticaHandlerTest(unittest.TestCase):
     def test_1_native_query_select(self):
         query = "SELECT * FROM customer_dimension;"
         result = self.handler.native_query(query)
-        print(result.data_frame)
         assert result.type is RESPONSE_TYPE.TABLE 
 
     def test_2_get_tables(self):

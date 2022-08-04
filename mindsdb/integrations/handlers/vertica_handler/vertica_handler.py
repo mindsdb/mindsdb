@@ -18,7 +18,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from sqlalchemy_vertica.dialect_pyodbc  import VerticaDialect
-# from sqla_vertica_python  import VerticaDialect
+
 
 
 

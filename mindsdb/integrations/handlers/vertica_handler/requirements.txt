@@ -1,0 +1,2 @@
+vertica_python
+sqlalchemy_vertica

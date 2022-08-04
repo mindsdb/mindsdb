@@ -272,7 +272,8 @@ __all__ = [
 ```
 
 For real examples, we encourage you to inspect the following handlers inside the MindsDB repository:
-* MySQL
-* Postgres
-* MLflow
-* Lightwood
+
+* [MySQL](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler)
+* [Postgres](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/postgres_handler)
+* [MLflow](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mlflow_handler)
+* [Lightwood](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/lightwood_handler)

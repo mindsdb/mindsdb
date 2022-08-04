@@ -21,28 +21,16 @@
 9. Add Password for the user 
     * MindsDB Cloud password
     * empty - for local deployment
-10. Click on `OK`.
+10. Click on `Test Connection...` to check if all the provided data allows you to connect to MindsDB
+
+    ![Test](/assets/sql/test_connection_dbeaver.png)
+
+11. Click on `OK`.
 
     ![Connect](/assets/sql/connectcloud.png)
 
-## MindsDB Database
-
-At startup mindsdb database will contain 3 tables `predictors`, `commands` and `databases`. 
-
-![Connect](/assets/sql/show.png)
-
-All of the newly trained machine learning models will be visible as a new record inside the `predictors` table. The `predictors` columns contains information about each model as:
-
-* name - The name of the model.
-* status - Training status(training, complete, error).
-* predict - The name of the target variable column.
-* accuracy - The model accuracy.
-* update_status - Training update status(up_to_date, updating).
-* mindsdb_version - The MindsDB version used.
-* error - Error message info in case of an error.
-* select_data_query - SQL select query to create the datasource.
-* training options - Additional training parameters.
-
-
 !!! tip "Whitelist MindsDB Cloud IP address"
     If you need to whitelist MindsDB Cloud IP address to have access to your database, reach out to MindsDB team so we can share the Cloud static IP with you.
+
+!!! tip "What is next?"
+    We recommend you to follow one of our tutorials or learn more about the [MindsDB Database](/sql/table-structure/).

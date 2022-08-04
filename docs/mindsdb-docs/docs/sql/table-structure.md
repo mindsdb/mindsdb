@@ -129,22 +129,3 @@ On execution, we get:
 |example_db   |postgres        |3.220.66.106   |5432   |demo_user   |
 +-------------+----------------+---------------+-------+------------+
 ```
-
-## The `[integration_name]` TABLE
-
-!!! warning "This is a work in progress" 
-
-## The model table
-
-!!! warning "This is a work in progress" 
-
-The below list contains the column names of the model table. Note that `target_variable_` will be the name of the target variable column.
-
-| Column name                         | Description                                                                                                                   |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `target_variable_original`          | The original value of the target variable.                                                                                    |
-| `target_variable_min`               | Lower bound of the predicted value.                                                                                           |
-| `target_variable_max`               | Upper bound of the predicted value.                                                                                           |
-| `target_variable_confidence`        | Model confidence score.                                                                                                       |
-| `target_variable_explain`           | JSON object that contains additional information as `confidence_lower_bound`, `confidence_upper_bound`, `anomaly`, `truth`.   |
-| `select_data_query`                 | SQL select query to create the datasource.                                                                                    |

@@ -35,26 +35,3 @@ Now, you can use this established connection to query your dataset as follows:
 ```sql
 SELECT * FROM bgdataset.dataset.table LIMIT 10;
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-CREATE DATABASE testbq1
-WITH ENGINE = "bigquery",
-PARAMETERS = {
-   "project": "personal-real-estate",
-   "service_account_keys": "~/Downloads/personal-real-estate.json"
-   }

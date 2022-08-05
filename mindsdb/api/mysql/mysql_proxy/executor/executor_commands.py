@@ -1191,7 +1191,7 @@ class ExecuteCommands:
         return ExecuteAnswer(
             ANSWER_TYPE.ERROR,
             error_code=0,
-            error_message='At the moment insert into predictors talbe is not supported'
+            error_message='At the moment insert into predictors table is not supported'
         )
 
     def _check_predict_columns(self, predict_column_names, ds_column_names):

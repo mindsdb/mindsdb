@@ -157,7 +157,7 @@ class LightwoodHandler(PredictiveHandler):
         data = []
         if predictor_record.dtype_dict is not None:
             for key, value in predictor_record.dtype_dict.items():
-                data.appen(key, value)
+                data.append(key, value)
         result = Response(
             RESPONSE_TYPE.TABLE,
             pd.DataFrame(

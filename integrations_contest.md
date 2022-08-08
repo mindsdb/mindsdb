@@ -86,7 +86,7 @@ For implementation to be accepted it needs to have:
 	* Required configuration
 	* How to run tests
 	
-> You can only work on one integration at a time. Once you submit the PR, you can start working on another integration. To win prize, the PR must be submited and merged before August 1st 2022.
+> You can only work on one integration at a time. Once you submit the PR, you can start working on another integration. To win prize, the PR must be submited and merged before September  1st 2022.
 
 ### What’s coming soon? ⌛
 

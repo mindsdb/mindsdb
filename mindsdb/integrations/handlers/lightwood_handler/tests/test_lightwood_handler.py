@@ -55,7 +55,6 @@ class HandlerControllerMock:
         }
 
 
-# TODO: bring all train+predict queries in mindsdb_sql test suite
 # TODO: drop all models and tables when closing tests
 class LightwoodHandlerTest(unittest.TestCase):
     @classmethod
@@ -71,40 +70,48 @@ class LightwoodHandlerTest(unittest.TestCase):
         cls.config = Config()
 
         cls.target_1 = 'rental_price'
-        cls.data_table_name_1 = 'home_rentals_subset'
-        cls.test_model_name_1 = 'test_lightwood_home_rentals'
-        cls.test_model_name_1b = 'test_lightwood_home_rentals_custom'
+        cls.data_table_1 = 'demo_data.home_rentals'
+        cls.test_model_1 = 'test_lightwood_home_rentals'
+        cls.test_model_1b = 'test_lightwood_home_rentals_custom'
 
         cls.target_2 = 'Traffic'
-        cls.data_table_name_2 = 'arrival'
-        cls.test_model_name_2 = 'test_lightwood_arrivals'
-        cls.model_2_into_table = 'test_join_tsmodel_into_lw'
+        cls.data_table_2 = 'demo_data.house_sales'
+        cls.test_model_2 = 'test_lightwood_house_sales'
+
+    def test_00_check_connection(self):
+        conn = self.handler.check_connection()
+        assert conn['status'] == '200'
 
     def test_01_drop_predictor(self):
-        try:
-            print('dropping predictor...')
-            self.handler.native_query(f"DROP PREDICTOR {self.test_model_name_1}")
-        except Exception as e:
-            print(f'failed to drop: {e}')
+        if self.test_model_1 not in self.handler.get_tables().data_frame.values:
+            # TODO: seems redundant because of test_02
+            query = f"""
+                CREATE PREDICTOR {self.test_model_1}
+                FROM {PG_HANDLER_NAME} (SELECT * FROM {self.data_table_1} limit 50)
+                PREDICT rental_price
+            """
+            self.handler.native_query(query)
+        response = self.handler.native_query(f"DROP PREDICTOR {self.test_model_1}")
+        self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
     def test_02_train_predictor(self):
         query = f"""
-            CREATE PREDICTOR {self.test_model_name_1}
-            FROM {PG_HANDLER_NAME} (SELECT * FROM demo_data.home_rentals limit 50)
+            CREATE PREDICTOR {self.test_model_1}
+            FROM {PG_HANDLER_NAME} (SELECT * FROM {self.data_table_1} limit 50)
             PREDICT rental_price
         """
         response = self.handler.native_query(query)
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
     def test_03_retrain_predictor(self):
-        query = f"RETRAIN {self.test_model_name_1}"
+        query = f"RETRAIN {self.test_model_1}"
         response = self.handler.native_query(query)
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
     def test_04_query_predictor_single_where_condition(self):
         query = f"""
             SELECT target
-            from {self.test_model_name_1}
+            from {self.test_model_1}
             WHERE sqft=100
         """
         response = self.handler.native_query(query)
@@ -116,7 +123,7 @@ class LightwoodHandlerTest(unittest.TestCase):
     def test_05_query_predictor_multi_where_condition(self):
         query = f"""
             SELECT target
-            from {self.test_model_name_1}
+            from {self.test_model_1}
             WHERE sqft=100
                   AND number_of_rooms=2
                   AND number_of_bathrooms=1
@@ -128,17 +135,21 @@ class LightwoodHandlerTest(unittest.TestCase):
         self.assertTrue(response.data_frame['number_of_bathrooms'][0] == 1)
 
     def test_06_train_predictor_custom_jsonai(self):
-        using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": True}}]}'
+        # TODO: turn this into a decorator?
+        if self.test_model_1b in self.handler.get_tables().data_frame.values:  # TODO this accesor feels weird, maybe rethink output format?
+            self.handler.native_query(f"DROP PREDICTOR {self.test_model_1b}")
+
+        using_str = 'model.args={"submodels": [{"module": "LightGBM", "args": {"stop_after": 12, "fit_on_dev": true}}]}'
         query = f"""
-            CREATE PREDICTOR {self.test_model_name_1b}
-            FROM {PG_HANDLER_NAME} (SELECT * FROM demo_data.home_rentals limit 50)
+            CREATE PREDICTOR {self.test_model_1b}
+            FROM {PG_HANDLER_NAME} (SELECT * FROM {self.data_table_1} limit 50)
             PREDICT rental_price
             USING {using_str}
         """
         response = self.handler.native_query(query)
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
         # TODO assert
-        # m = load_predictor(self.handler.storage.get('models')[self.test_model_name_1b], self.test_model_name_1b)
+        # m = load_predictor(self.handler.storage.get('models')[self.test_model_1b], self.test_model_1b)
         # assert len(m.ensemble.mixers) == 1
         # assert isinstance(m.ensemble.mixers[0], LightGBM)
 
@@ -148,14 +159,14 @@ class LightwoodHandlerTest(unittest.TestCase):
         print(response.data_frame)
 
     def test_08_get_columns(self):
-        response = self.handler.get_columns(f'{self.test_model_name_1}')
+        response = self.handler.get_columns(f'{self.test_model_1}')
         self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
         print(response.data_frame)
 
     # TODO
     # def test_09_join_predictor_into_table(self):
     #     into_table = 'test_join_into_lw'
-    #     query = f"SELECT tb.{self.target_1} as predicted, ta.{self.target_1} as truth, ta.sqft from {PG_HANDLER_NAME}.{self.data_table_name_1} AS ta JOIN {self.test_model_name_1} AS tb LIMIT 10"
+    #     query = f"SELECT tb.{self.target_1} as predicted, ta.{self.target_1} as truth, ta.sqft from {PG_HANDLER_NAME}.{self.data_table_1} AS ta JOIN {self.test_model_1} AS tb LIMIT 10"
     #     parsed = self.handler.parser(query, dialect=self.handler.dialect)
     #     predicted = self.handler.join(parsed, self.data_handler, into=into_table)
 
@@ -164,31 +175,93 @@ class LightwoodHandlerTest(unittest.TestCase):
     #     qp = self.handler.parser(q, dialect='mysql')
     #     assert len(self.data_handler.query(qp).data_frame) > 0
 
-    def test_10_train_ts_predictor(self):
-        try:
-            print('dropping predictor...')
-            self.handler.native_query(f"DROP PREDICTOR {self.test_model_name_2}")
-        except Exception as e:
-            print(f'failed to drop: {e}')
-
+    def test_10_train_ts_predictor_multigby_hor4(self):
         query = f"""
-            CREATE PREDICTOR {self.test_model_name_2}
-            FROM {PG_HANDLER_NAME} (SELECT * FROM demo_data.house_sales)
+            CREATE PREDICTOR {self.test_model_2}
+            FROM {PG_HANDLER_NAME} (SELECT * FROM {self.data_table_2})
             PREDICT MA
             ORDER BY saledate
             GROUP BY bedrooms, type
             WINDOW 8
             HORIZON 4
         """
+        if self.test_model_2 not in self.handler.get_tables().data_frame.values:
+            self.handler.native_query(query)
+        else:
+            self.handler.native_query(f"DROP PREDICTOR {self.test_model_2}")
+            self.handler.native_query(query)
+
         response = self.handler.native_query(query)
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
+        p = self.handler.storage.get('models')
+        m = load_predictor(p[self.test_model_2], self.test_model_2)
+        assert m.problem_definition.timeseries_settings.is_timeseries
+
+    def test_12_train_ts_predictor_multigby_hor1(self):
+        query = f"""
+            CREATE PREDICTOR {self.test_model_2}
+            FROM {PG_HANDLER_NAME} (SELECT * FROM {self.data_table_2})
+            PREDICT MA
+            ORDER BY saledate
+            GROUP BY bedrooms, type
+            WINDOW 8
+            HORIZON 1
+        """
+        if self.test_model_2 not in self.handler.get_tables().data_frame.values:
+            self.handler.native_query(query)
+        else:
+            self.handler.native_query(f"DROP PREDICTOR {self.test_model_2}")
+            self.handler.native_query(query)
+
+        p = self.handler.storage.get('models')
+        m = load_predictor(p[self.test_model_2], self.test_model_2)
+        assert m.problem_definition.timeseries_settings.is_timeseries
+
+    def test_13_train_ts_predictor_no_gby_hor1(self):
+        query = f"""
+            CREATE PREDICTOR {self.test_model_2}
+            FROM {PG_HANDLER_NAME} (SELECT * FROM {self.data_table_2})
+            PREDICT MA
+            ORDER BY saledate
+            WINDOW 8
+            HORIZON 1
+        """
+        if self.test_model_2 not in self.handler.get_tables().data_frame.values:
+            self.handler.native_query(query)
+        else:
+            self.handler.native_query(f"DROP PREDICTOR {self.test_model_2}")
+            self.handler.native_query(query)
+
+        p = self.handler.storage.get('models')
+        m = load_predictor(p[self.test_model_2], self.test_model_2)
+        assert m.problem_definition.timeseries_settings.is_timeseries
+
+    def test_14_train_ts_predictor_no_gby_hor4(self):
+        query = f"""
+            CREATE PREDICTOR {self.test_model_2}
+            FROM {PG_HANDLER_NAME} (SELECT * FROM {self.data_table_2})
+            PREDICT MA
+            ORDER BY saledate
+            WINDOW 8
+            HORIZON 4
+        """
+        if self.test_model_2 not in self.handler.get_tables().data_frame.values:
+            self.handler.native_query(query)
+        else:
+            self.handler.native_query(f"DROP PREDICTOR {self.test_model_2}")
+            self.handler.native_query(query)
+
+        p = self.handler.storage.get('models')
+        m = load_predictor(p[self.test_model_2], self.test_model_2)
+        assert m.problem_definition.timeseries_settings.is_timeseries
+
     # TODO
-    # def test_11_join_predictor_ts_into(self):
+    # def test_15_join_predictor_ts_into(self):
     #     query = f"""
     #         SELECT m.saledate as date,
     #                m.ma as forecast
-    #         FROM mindsdb.{self.test_model_name_2} m JOIN {PG_HANDLER_NAME}.demo_data.house_sales t
+    #         FROM mindsdb.{self.test_model_2} m JOIN {PG_HANDLER_NAME}.demo_data.house_sales t
     #         WHERE t.saledate > LATEST
     #               AND t.type = 'house'
     #               AND t.bedrooms = 2
@@ -196,6 +269,14 @@ class LightwoodHandlerTest(unittest.TestCase):
     #     """
     #     response = self.handler.native_query(query)
     #     self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
+
+    # def test_16_join_predictor_ts_model_left(self):
+    #     # TODO: is this one needed?
+    #     target = 'Traffic'
+    #     oby = 'T'
+    #     query = f"SELECT tb.{target} as predicted, ta.{target} as truth, ta.{oby} from mindsdb.{self.test_tsmodel_name_1} AS tb JOIN {self.sql_handler_name}.{self.data_table_name_2} AS ta ON 1=1 WHERE ta.{oby} > LATEST LIMIT 10"
+    #     parsed = self.handler.parser(query, dialect=self.handler.dialect)
+    #     predicted = self.handler.join(parsed, self.data_handler)  # , into=self.model_2_into_table) # TODO: restore when we add support for SQLite and other handlers for `into`
 
 
 if __name__ == "__main__":

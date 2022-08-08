@@ -157,7 +157,7 @@ class LightwoodHandler(PredictiveHandler):
         data = []
         if predictor_record.dtype_dict is not None:
             for key, value in predictor_record.dtype_dict.items():
-                data.append(key, value)
+                data.append((key, value))
         result = Response(
             RESPONSE_TYPE.TABLE,
             pd.DataFrame(
@@ -352,7 +352,8 @@ class LightwoodHandler(PredictiveHandler):
 
             handler_meta = self.handler_controller.get(predictor_record.integration_id)
             handler = self.handler_controller.get_handler(handler_meta['name'])
-            response = handler.query(predictor_record.fetch_data_query)
+            ast = self.parser(predictor_record.fetch_data_query, dialect=self.dialect)
+            response = handler.query(ast)
             if response.type == RESPONSE_TYPE.ERROR:
                 return response
 
@@ -393,8 +394,12 @@ class LightwoodHandler(PredictiveHandler):
             all_models = self.model_controller.get_models()
             all_models_names = [x['name'] for x in all_models]
             if model_name not in all_models_names:
-                raise Exception(f"Model '{model_name}' does not exists")
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Model '{model_name}' does not exist"
+                )
             self.model_controller.delete_model(model_name)
+            return Response(RESPONSE_TYPE.OK)
         elif type(statement) == Select:
             model_name = statement.from_table.parts[-1]
             where_data = get_where_data(statement.where)

@@ -83,7 +83,8 @@ Create table_name.sql (<em>table_name</em> will be used as the name of the predi
         }
     )
 }}
-    SELECT * FROM stores
+    SELECT *
+    FROM stores;
 ```
 
 ### Create predictions table
@@ -104,7 +105,9 @@ Create <em>table_name</em>.sql (If you need to specify schema, you can do it wit
         integration='photorep'
     )
 }}
-    SELECT a, bc FROM ddd WHERE name > latest
+    SELECT a, bc
+    FROM ddd
+    WHERE name > latest;
 ```
 
 !!! warning "Note that each time dbt is run, the results table will be rewritten."

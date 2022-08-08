@@ -25,7 +25,7 @@ In order to make use of this handler and connect to a BigQuery use the following
 CREATE DATABASE bqdataset
 WITH ENGINE = "bigquery",
 PARAMETERS = {
-   "project": "tough-future-332513",
+   "project_id": "tough-future-332513",
    "service_account_keys": "/home/user/MyProjects/tough-future-332513.json"
    }
 ```

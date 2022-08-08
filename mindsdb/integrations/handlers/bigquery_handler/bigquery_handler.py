@@ -83,11 +83,11 @@ class BigQueryHandler(DatabaseHandler):
         try:
             query = client.query(query)
             result = query.to_dataframe()
+            print('INNNNN', result)
             if not result.empty:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
-                    result,
-                    columns=result.columns.tolist()
+                    result
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)
@@ -105,6 +105,7 @@ class BigQueryHandler(DatabaseHandler):
         """
         renderer = SqlalchemyRender(BigQueryDialect)
         query_str = renderer.get_string(query, with_failback=True)
+        print('QUERYYY ', query_str)
         return self.native_query(query_str)
 
     def get_tables(self, dataset_id) -> Response:

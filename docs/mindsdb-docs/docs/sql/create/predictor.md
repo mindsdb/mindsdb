@@ -55,7 +55,7 @@ This example shows how you can train a Machine Learning model called home_rental
 CREATE PREDICTOR mindsdb.home_rentals_model
 FROM db_integration 
     (SELECT * FROM house_rentals_data) AS rentals
-PREDICT rental_price as price;
+PREDICT rental_price AS price;
 ```
 
 On execution, we get:

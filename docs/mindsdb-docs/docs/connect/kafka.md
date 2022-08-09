@@ -36,9 +36,19 @@ Let's go over some examples.
 ## Example
 
 ### Prerequisites:
-- Launch MindsDB instance where HTTP API interface is running on `docker network interface inet ip` (it is `172.17.0.1` in general)
-- Train a new model. You may use <ins>[this](/sql/tutorials/bodyfat)</ins> tutorial as example
-- run test kafka environment - `docker-compose up -d` (see details above)
+- Launch MindsDB instance where HTTP API interface is running on `docker network interface inet ip` - the IP address is usually `172.17.0.1`.
+
+    You can modify the HTTP API interface details in the [MindsDB config file](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/utilities/config.py#L50,L52).
+
+    Now, to launch your MindsDB, run the following command:
+
+    ```bash
+    python -m mindsdb --config=YOURCONFIGFILE
+    ```
+
+- Train a new model. You may use [this tutorial](/sql/tutorials/bodyfat) as an example.
+
+- Run the test environment as instructed in the *Inside the Test Docker Environment* section above.
 
 ### Create the connector instance:
 To create a connector need to send POST request to specific `connectors` url with connector configuration in JSON format:

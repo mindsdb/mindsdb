@@ -1,33 +1,37 @@
 # MindsDB and Kafka
 
-MindsDB provides a kafka connector plugin to connect to kafka cluster.
+MindsDB provides the Kafka connector plugin to connect to the Kafka cluster.
 
-At first, please visit <ins>[Kafka Connect Mindsdb](https://www.confluent.io/hub/mindsdb/mindsdb-kafka-connector)</ins> page on official confluent site. It contains all instructions how to install the connector from the confluent hub.
+Please visit the [Kafka Connect Mindsdb](https://www.confluent.io/hub/mindsdb/mindsdb-kafka-connector) page on the official Confluent site. It contains all the instructions on how to install the connector from the Confluent hub.
 
-In addition it wouldn't be a mistake to briefly review instructions described below.
+Let's review the instructions here as well.
 
 You may use official connector docker image:
 
 ```bash
 docker pull mindsdb/mindsdb-kafka-connector
-
 ```
 
-Also a source code of the connector is located <ins>[here](https://github.com/mindsdb/kafka_connector)</ins>. Please read the <ins>[instruction](https://github.com/mindsdb/kafka_connector/blob/main/README.md)</ins> first before building the connector from scratch.
+The source code of the Kafka connector is located [here](https://github.com/mindsdb/kafka_connector). Please read the [instruction](https://github.com/mindsdb/kafka_connector/blob/main/README.md) before building the connector from scratch.
 
-It is possible to integrate and use the connector as part of your own kafka cluster or you may try this one in our test docker <ins>[environment](https://github.com/mindsdb/kafka_connector/blob/main/docker-compose.yml)</ins>. Just execute:
+## Inside the Test Docker Environment
+
+It is possible to integrate and use the Kafka connector as part of your own Kafka cluster. Or you may try out our [test docker environment](https://github.com/mindsdb/kafka_connector/blob/main/docker-compose.yml).
+
+Before you bring the docker container up, please note that there are two types of connector configuration:
+
+ - For [MindsDB Cloud](https://github.com/mindsdb/kafka_connector/blob/main/examples/kafkaConfig.json)
+ - For a separate [MindsDB installation](https://github.com/mindsdb/kafka_connector/blob/main/examples/kafkaConfigSeparateMindsdbInstance.json)
+
+ Depending on which option you choose, these files require real values to be set in place of username, password, Kafka connection details, etc. The SASL mechanism details are optional, as local Kafka installation may not have this mechanism configured - or you can use [this data](https://github.com/mindsdb/kafka_connector/blob/main/kafka_server_jaas.conf#L11,L12) for the SASL username and password.
+
+ Now that your config files store real data, you can execute the command below from the root of the [Kafka connector repository](https://github.com/mindsdb/kafka_connector) to build the connector and launch it in the test environment locally.
 
 ```bash
 docker-compose up -d
 ```
 
-from the root of repository to build the connector and launch it in the test environment locally.
-
-Please note, there are two types of connector config (do not forget to set a real value for each parameter before using it):
-
- - For <ins>[MindsDB Cloud](https://github.com/mindsdb/kafka_connector/blob/main/examples/kafkaConfig.json)</ins>
- - For a separate <ins>[MindsDB installation](https://github.com/mindsdb/kafka_connector/blob/main/examples/kafkaConfigSeparateMindsdbInstance.json)</ins>
-
+Let's go over some examples.
 
 ## Example
 

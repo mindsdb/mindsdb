@@ -106,19 +106,21 @@ class BigQueryHandler(DatabaseHandler):
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    def get_tables(self, dataset_id) -> Response:
+    def get_tables(self, dataset) -> Response:
         """
         Get a list with all of the tabels in BigQuery
         """
-        client = self.connect()
-        result = client.list_tables(dataset_id)
+        q = f"SELECT table_name, table_type, FROM \
+             `{self.connection_data['project_id']}.{dataset}.INFORMATION_SCHEMA.TABLES`"
+        result = self.native_query(q)
         return result
 
-    def get_columns(self, project, dataset, table_name) -> Response:
+    def get_columns(self, dataset, table_name) -> Response:
         """
         Show details about the table
         """
-        q = f"SELECT column_name, data_type, FROM `{project}.{dataset}.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = '{table_name}'"
+        q = f"SELECT column_name, data_type, FROM \
+            `{self.connection_data['project_id']}.{dataset}.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = '{table_name}'"
         result = self.native_query(q)
         return result
 

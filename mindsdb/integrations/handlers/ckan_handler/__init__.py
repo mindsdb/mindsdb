@@ -1,8 +1,8 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
-from mindsdb.integrations.handlers.ckan_handler.__about__ import __version__ as version, __description__ as description
+from .__about__ import __version__ as version, __description__ as description
 try:
-    from mindsdb.integrations.handlers.ckan_handler import CkanHandler as Handler
+    from .ckan_handler import CkanHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None
@@ -11,7 +11,7 @@ except Exception as e:
 title = 'CKAN'
 name = 'ckan'
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.svg'
+icon_path = 'logo.png'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title',

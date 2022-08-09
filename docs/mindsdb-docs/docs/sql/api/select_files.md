@@ -13,7 +13,7 @@ The `#!sql SELECT from files.[file]` statement is used to select a `#!sql [file]
 SELECT * FROM files.[file_name];
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 +--------+--------+--------+--------+
@@ -40,6 +40,8 @@ This example shows how to use an uploaded file and create a predictor. But first
 ```sql
 SELECT * FROM files.home_rentals Limit 10;
 ```
+
+On execution, we get:
 
 ```sql
 +-----------------+---------------------+-------+----------+----------------+---------------+--------------+--------------+
@@ -69,11 +71,17 @@ FROM files
 PREDICT [target_variable];
 ```
 
-Example
+Example:
 
 ```sql
 CREATE PREDICTOR mindsdb.home_rentals_model
 FROM files
     (SELECT * from home_rentals)
 PREDICT rental_price;
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
 ```

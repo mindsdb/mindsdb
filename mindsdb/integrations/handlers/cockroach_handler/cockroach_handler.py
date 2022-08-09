@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.postgres_handler import PostgresHandler
+from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
 
 
 class CockroachHandler(PostgresHandler):

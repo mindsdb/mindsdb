@@ -1,5 +1,5 @@
 <h1 align="center">
-	<img width="1500" src="/assets/dev_contest.svg" alt="MindsDB">
+	<img width="1500" src="/assets/dev-contest.png" alt="MindsDB">
 	<br>
 </h1>
 
@@ -60,7 +60,7 @@ The `TOP-3` authors who submit ideas before `June 17th, 2022` will get SWAG and 
 </details>
 
 
-## Dev challenge (July 1st) 👩‍💻 👨‍💻 
+## Dev challenge (July 1st - September 1st) 👩‍💻 👨‍💻 
 
 From the `Ideas challenge` MindsDB community members have shared 53 ideas. In this challenge we will start implementing them. To participate check out the [ideas dashboard](https://github.com/mindsdb/mindsdb/projects/9) and follow the rules. If you want to work on an integration that is not included in the list, feel free to [open new issue](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=integration%2Cenhancement&template=integrations_contest.yaml&title=%5BNew+Integration%5D%3A+) and we can assign it to you.
 
@@ -86,7 +86,7 @@ For implementation to be accepted it needs to have:
 	* Required configuration
 	* How to run tests
 	
-> You can only work on one integration at a time. Once you submit the PR, you can start working on another integration. To win prize, the PR must be submited and merged before August 1st 2022.
+> You can only work on one integration at a time. Once you submit the PR, you can start working on another integration. To win prize, the PR must be submited and merged before September  1st 2022.
 
 ### What’s coming soon? ⌛
 

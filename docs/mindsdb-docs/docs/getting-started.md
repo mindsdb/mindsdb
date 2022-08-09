@@ -11,7 +11,7 @@ MindsDB integrates with the most popular databases and also with the DBT and MLf
         !!! example ""
             Create your [free MindsDB Cloud account](https://cloud.mindsdb.com/signup).
 
-            ![Cloud Signup](/assets/cloud-signup-filledout.png)
+            ![Cloud Signup](/assets/cloud-signup.png)
 
     === "Docker"
 
@@ -57,7 +57,7 @@ MindsDB integrates with the most popular databases and also with the DBT and MLf
 
                 ![DBeaver Configure Connection](/assets/dbeaver-configure-docker-connection.png)
 
-1. Connect your data to MindsDB using the [`CREATE DATABASE` syntax](/sql/api/databases).
+1. Connect your data to MindsDB using the [`CREATE DATABASE` syntax](https://docs.mindsdb.com/sql/create/databases/).
 
     <sup><sub>Example taken from our [Quick Start Guide](/quickstart/#connect-your-data).</sub></sup>
 
@@ -69,7 +69,7 @@ MindsDB integrates with the most popular databases and also with the DBT and MLf
 
     ![DBeaver Preview Data](/assets/dbeaver-preview-data.png)
 
-1. Now you are ready to create your model, using the [`CREATE PREDICTOR` syntax](/sql/api/predictor).  If you already have a model in MLFlow, you can connect to your model as well.
+1. Now you are ready to create your model, using the [`CREATE PREDICTOR` syntax](https://docs.mindsdb.com/sql/create/predictor/).  If you already have a model in MLFlow, you can connect to your model as well.
 
     === "MindsDB is creating my model"
 

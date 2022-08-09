@@ -12,7 +12,7 @@ In this tutorial, you will learn how to predict the best crop type based on fiel
 
 Before you start make sure you have:
 
-1. Access to MindsDB. In this tutorial, we will use [MindsDB Cloud GUI](https://docs.mindsdb.com/deployment/cloud/). If you want you can also deploy mindsdb on your premises, Check out the installation guide for [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPi](https://docs.mindsdb.com/deployment/pypi/). 
+1. Access to MindsDB. In this tutorial, we will use [MindsDB Cloud GUI](https://cloud.mindsdb.com/). If you want you can also deploy mindsdb on your premises, Check out the installation guide for [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [PyPi](https://docs.mindsdb.com/setup/self-hosted/pip/windows/). 
 
 2. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset).
 
@@ -20,7 +20,7 @@ Before you start make sure you have:
 
 MindsDB can integrates with many databases, in most scenarios your data will be stored in a database, if you decide to load this dataset into your database of choice, please follow instructions here as to how to connect mindsdb to your [database.](https://docs.mindsdb.com/sql/create/databases/)
 
-In this tutorial, we will be adding the dataset directly to MindsDB's GUI. For this example [MindsDB Cloud GUI](cloud.mindsdb.com) will be used.If you need to create an account you can find the guide on how to do it [here](https://docs.mindsdb.com/setup/cloud/).
+In this tutorial, we will be adding the dataset directly to MindsDB's GUI. For this example [MindsDB Cloud GUI](https://cloud.mindsdb.com/) will be used.If you need to create an account you can find the guide on how to do it [here](https://docs.mindsdb.com/setup/cloud/).
 Alternatively, you can also use MindsDB's local deployment and access the GUI in your browser with [127.0.0.1:47334](https://127.0.0.1:47334).
 
 **The first step will be to access MindsDB cloud where we will also make use of the SQL Editor:**

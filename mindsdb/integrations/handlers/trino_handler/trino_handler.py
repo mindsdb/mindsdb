@@ -1,10 +1,9 @@
-from typing import List, Dict
-
+from typing import Dict
 import pandas as pd
 from mindsdb_sql import parse_sql, ASTNode
-from trino.auth import KerberosAuthentication
+from trino.auth import KerberosAuthentication, BasicAuthentication
 from trino.dbapi import connect
-
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.response import (
@@ -23,16 +22,11 @@ class TrinoHandler(DatabaseHandler):
 
     name = 'trino'
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, connection_data, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.connection_args = kwargs
-        self.user = kwargs.get('user')
-        self.password = kwargs.get('password')
-        self.host = kwargs.get('host')
-        self.port = kwargs.get('port')
-        self.catalog = kwargs.get('catalog')
-        self.schema = kwargs.get('schema')
+        self.connection_data = connection_data
+        '''
         service_name = kwargs.get('service_name')
         self.config_file_name = kwargs.get('config_file_name')
         self.trino_config_provider = TrinoConfigProvider(config_file_name=self.config_file_name)
@@ -48,38 +42,28 @@ class TrinoHandler(DatabaseHandler):
                                                   principal=principal,
                                                   ca_bundle=ca_bundle,
                                                   hostname_override=hostname_override)
+        '''
         self.connection = None
         self.is_connected = False
 
-    def __del__(self):
-        if self.is_connected is True:
-            self.disconnect()
-
-    def connect(self, **kwargs):
-        if self.is_connected is True:
-            return self.connection
-
-        self.connection = self.__connect()
-        self.is_connected = True
-        return self.connection
-
-    def disconnect(self):
-        if self.is_connected is True:
-            self.disconnect()
-
-    def __connect(self):
+    def connect(self):
         """"
         Handles the connection to a Trino instance.
         """
+        if self.is_connected is True:
+            return self.connection
         conn = connect(
-            host=self.host,
-            port=self.port,
-            user=self.user,
-            catalog=self.catalog,
-            schema=self.schema,
-            http_scheme=self.http_scheme,
-            auth=self.auth_config
+            host=self.connection_data['host'],
+            port=self.connection_data['port'],
+            user=self.connection_data['user'],
+            catalog=self.connection_data['catalog'],
+            schema=self.connection_data['schema'],
+            # @TODO: Implement Kerberos or Basic auth
+            # http_scheme='https',
+            # auth=BasicAuthentication(self.connection_data['user'], self.connection_data['password'])
         )
+        self.is_connected = True
+        self.connection = conn
         return conn
 
     def check_connection(self) -> StatusResponse:
@@ -88,22 +72,19 @@ class TrinoHandler(DatabaseHandler):
         :return: success status and error message if error occurs
         """
         response = StatusResponse(False)
-        need_to_close = self.is_connected is False
 
         try:
             connection = self.connect()
             cur = connection.cursor()
-            cur.execute("SELECT * FROM system.runtime.nodes")
-            rows = cur.fetchall()
-            print('trino nodes: ', rows)
+            cur.execute("SELECT 1;")
             response.success = True
         except Exception as e:
-            log.error(f'Error connecting to Trino {self.schema}, {e}!')
+            log.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
             response.error_message = str(e)
-        finally:
-            cur.close()
-            if need_to_close is True:
-                connection.close()
+
+        if response.success is False and self.is_connected is True:
+            self.is_connected = False
+
         return response
 
     def native_query(self, query: str) -> Response:
@@ -112,8 +93,6 @@ class TrinoHandler(DatabaseHandler):
         :param query: The SQL query to run in Trino
         :return: returns the records from the current recordset
         """
-        need_to_close = self.is_connected is False
-
         try:
             connection = self.connect()
             cur = connection.cursor()
@@ -130,21 +109,18 @@ class TrinoHandler(DatabaseHandler):
                 response = Response(RESPONSE_TYPE.OK)
             connection.commit()
         except Exception as e:
-            log.error(f'Error connecting to Trino {self.schema}, {e}!')
+            log.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
             )
-        finally:
-            cur.close()
-            if need_to_close is True:
-                self.disconnect()
-            connection.rollback()
         return response
 
-    # TODO: complete the implementations
-    def query(self, query: ASTNode) -> dict:
-        pass
+    def query(self, query: ASTNode) -> Response:
+        # @TODO: Detect to which DB is trino connected and use that dialect?
+        renderer = SqlalchemyRender('mysql')
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
 
     def get_tables(self) -> Response:
         """

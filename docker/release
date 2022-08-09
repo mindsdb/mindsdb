@@ -17,15 +17,12 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 &
         psycopg[binary]>=1.15.3 \
         pymongo certifi \
         snowflake-connector-python>=2.7.6 \
-        trino~=0.313.0 \
         clickhouse-driver \
         scylla-driver && \
     pip install --prefer-binary --no-cache-dir \
         databricks-sql-connector sqlalchemy-databricks || true && \
     pip install --prefer-binary --no-cache-dir \
         fdb pyodbc || true && \
-    pip install --prefer-binary --no-cache-dir \
-        sqlalchemy-access || true && \
     pip install --prefer-binary --no-cache-dir \
         sqlalchemy-access || true && \
     pip install --prefer-binary --no-cache-dir \

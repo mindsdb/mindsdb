@@ -20,20 +20,30 @@ class VerticaHandlerTest(unittest.TestCase):
     def test_0_check_connection(self):
         assert self.handler.check_connection()
 
-    def test_0_connect(self):
+    def test_1_connect(self):
         assert self.handler.connect()
+    
+    def test_2_create_table(self):
+        query = "CREATE Table TEST(id Number(1),Name Varchar(33))"
+        result = self.handler.query(query)
+        assert result.type is not RESPONSE_TYPE.ERROR 
 
-    def test_1_native_query_select(self):
-        query = "SELECT * FROM customer_dimension;"
-        result = self.handler.native_query(query)
+    def test_3_insert(self):
+        query = "INSERT INTO TEST (1,'lOVe yOU)"
+        result = self.handler.query(query)
+        assert result.type is not RESPONSE_TYPE.ERROR 
+
+    def test_4_native_query_select(self):
+        query = "SELECT * FROM TEST;"
+        result = self.handler.query(query)
         assert result.type is RESPONSE_TYPE.TABLE 
 
-    def test_2_get_tables(self):
+    def test_5_get_tables(self):
         tables = self.handler.get_tables()
-        assert tables.type is not RESPONSE_TYPE.ERROR
+        assert tables.type is not RESPONSE_TYPE.TABLE
 
-    def test_4_get_columns(self):
-        columns = self.handler.get_columns('customer_dimension')
+    def test_6_get_columns(self):
+        columns = self.handler.get_columns('TEMP')
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 

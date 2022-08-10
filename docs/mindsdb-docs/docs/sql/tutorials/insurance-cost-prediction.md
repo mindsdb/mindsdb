@@ -6,7 +6,7 @@
 
 ## Pre-requisites
 
-First, you need MindsDB installed. So please make sure you've visited [Getting Started Guide](/info) and [Getting Started with Cloud](/deployment/cloud).
+First, you need MindsDB installed. So please make sure you've visited [Getting Started Guide](/info) and [Getting Started with Cloud](/setup/cloud).
 You may start to use MindsDB by installing it locally or you can use the [Cloud](https://cloud.mindsdb.com/signup) service. 
 Let’s use the cloud for this tutorial. 
 Second, you need a MySQL client to connect to the MindsDB MySQL API.

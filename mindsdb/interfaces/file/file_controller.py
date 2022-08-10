@@ -66,6 +66,7 @@ class FileController():
         if file_name is None:
             file_name = Path(file_path).name
 
+        file_dir = None
         try:
             df, _col_map = FileHandler._handle_source(file_path)
 
@@ -99,7 +100,8 @@ class FileController():
             log.error(e)
             raise
         finally:
-            shutil.rmtree(file_dir)
+            if file_dir is not None:
+                shutil.rmtree(file_dir)
 
         return file_record.id
 

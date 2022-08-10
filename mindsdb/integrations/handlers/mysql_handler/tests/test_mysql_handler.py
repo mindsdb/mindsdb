@@ -48,3 +48,4 @@ class MySQLHandlerTest(unittest.TestCase):
         query = "SELECT * FROM test_mdb WHERE 'id'='a'"
         result = self.handler.query(query)
         assert result['type'] is RESPONSE_TYPE.TABLE
+

@@ -2,30 +2,32 @@
 
 MindsDB provides the Kafka connector plugin to connect to the Kafka cluster.
 
-Please visit the [Kafka Connect Mindsdb](https://www.confluent.io/hub/mindsdb/mindsdb-kafka-connector) page on the official Confluent site. It contains all the instructions on how to install the connector from the Confluent hub.
+Please visit the [Kafka Connect MindsDB page](https://www.confluent.io/hub/mindsdb/mindsdb-kafka-connector) on the official Confluent site. It contains all the instructions on how to install the connector from the Confluent hub.
+
+## Setting up Kafka in Docker
 
 Let's review the instructions here as well.
 
-You may use official connector docker image:
+You may use the official connector docker image:
 
 ```bash
 docker pull mindsdb/mindsdb-kafka-connector
 ```
 
-The source code of the Kafka connector is located [here](https://github.com/mindsdb/kafka_connector). Please read the [instruction](https://github.com/mindsdb/kafka_connector/blob/main/README.md) before building the connector from scratch.
+The source code of the Kafka connector is in the [kafka_connector GitHub repository](https://github.com/mindsdb/kafka_connector). Please read the [instructions](https://github.com/mindsdb/kafka_connector/blob/main/README.md) before building the connector from scratch.
 
-## Inside the Test Docker Environment
+It is possible to integrate and use the Kafka connector as part of your own Kafka cluster, or you may use our test docker environment.
 
-It is possible to integrate and use the Kafka connector as part of your own Kafka cluster. Or you may try out our [test docker environment](https://github.com/mindsdb/kafka_connector/blob/main/docker-compose.yml).
+To try out our [test docker environment](https://github.com/mindsdb/kafka_connector/blob/main/docker-compose.yml), follow the steps below.
 
 Before you bring the docker container up, please note that there are two types of connector configuration:
 
  - For [MindsDB Cloud](https://github.com/mindsdb/kafka_connector/blob/main/examples/kafkaConfig.json)
  - For a separate [MindsDB installation](https://github.com/mindsdb/kafka_connector/blob/main/examples/kafkaConfigSeparateMindsdbInstance.json)
 
- Depending on which option you choose, these files require real values to be set in place of username, password, Kafka connection details, etc. The SASL mechanism details are optional, as local Kafka installation may not have this mechanism configured - or you can use [this data](https://github.com/mindsdb/kafka_connector/blob/main/kafka_server_jaas.conf#L11,L12) for the SASL username and password.
+ No matter which option you choose, these files require real values to be set in place of a username, password, Kafka connection details, etc. The SASL mechanism details are optional, as local Kafka installation may not have this mechanism configured - or you can use [this data](https://github.com/mindsdb/kafka_connector/blob/main/kafka_server_jaas.conf#L11,L12) for the SASL username and password.
 
- Now that your config files store real data, you can execute the command below from the root of the [Kafka connector repository](https://github.com/mindsdb/kafka_connector) to build the connector and launch it in the test environment locally.
+ Now that your config files store real data, you can execute the command below from the root of the [kafka_connector GitHub repository](https://github.com/mindsdb/kafka_connector) to build the connector and launch it in the test environment locally.
 
 ```bash
 docker-compose up -d
@@ -33,10 +35,11 @@ docker-compose up -d
 
 Let's go over some examples.
 
-## Example
+## Examples
 
-### Prerequisites:
-- Launch MindsDB instance where HTTP API interface is running on `docker network interface inet ip` - the IP address is usually `172.17.0.1`.
+### Prerequisites
+
+- Launch MindsDB instance where HTTP API interface runs on `docker network interface inet ip`. Usually, the IP address is `172.17.0.1`, and the port is `47334`.
 
     You can modify the HTTP API interface details in the [MindsDB config file](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/utilities/config.py#L50,L52).
 
@@ -48,10 +51,12 @@ Let's go over some examples.
 
 - Train a new model. You may use [this tutorial](/sql/tutorials/bodyfat) as an example.
 
-- Run the test environment as instructed in the *Inside the Test Docker Environment* section above.
+- Run the test environment as instructed in the [Setting up Kafka in Docker](#setting-up-kafka-in-docker) section above.
 
-### Create the connector instance:
-To create a connector need to send POST request to specific `connectors` url with connector configuration in JSON format:
+### Create the Connector Instance
+
+To create a connector, you need to send a POST request to a specific `connectors` URL with connector configuration in JSON format, as below.
+
 ```python
 import requests
 
@@ -88,10 +93,13 @@ headers = {"Content-Type": "application/json"}
 res = requests.post(CONNECTORS_URL, json=params, headers=headers)
 ```
 
-The code above creates a MindsDB Kafka connector which uses `PREDICTOR_NAME` model, receives source data from `STREAM_IN` kafka topic and sends prediction results to `STREAM_OUT` kafka topic.
+This code creates a MindsDB Kafka connector that uses the `PREDICTOR_NAME` model, receives source data from the `STREAM_IN` Kafka topic, and sends prediction results to the `STREAM_OUT` Kafka topic.
 
-### Send source data and receive prediction results:
-There are many kafka clients <ins>[implementations](https://docs.confluent.io/platform/current/clients/index.html)</ins>, and you may find the best one for your goals.
+### Send Source Data and Receive Prediction Results
+
+There are many [Kafka client implementations](https://docs.confluent.io/platform/current/clients/index.html) - choose the most suitable one depending on your goals.
+
+The code below generates and sends the source records to `topic_in` by default. You can use any other Kafka topic by providing its name as a CMD parameter.
 
 ```python
 import sys                                                                                                                                                  
@@ -116,7 +124,7 @@ if __name__ == '__main__':
     producer.close()
 ```
 
-This piece of code generates and sends for source records to `topic_in` (by default) or any other topic (if it is provided and cmd parameter).
+And the following code shows how to read prediction results from `topic_out` by default. Again, you can use any other Kafka topic by providing its name as a CMD parameter.
 
 ```python
 import sys
@@ -133,7 +141,6 @@ connection_info = {"bootstrap_servers": "127.0.0.1:9092",
 
 consumer = kafka.KafkaConsumer(**connection_info)
 
-
 if __name__ == '__main__':
     print(json.dumps(connection_info))
     if len(sys.argv) == 1:
@@ -146,4 +153,5 @@ if __name__ == '__main__':
         print("-" * 100)
 ```
 
-While this one shows how to read prediction results from `topic_out` (by default) or any other topic (if it is provided and cmd parameter).
+!!! tip "What's next?"
+    We recommend you to follow one of our tutorials or learn more about the [MindsDB Database](/sql/table-structure/).

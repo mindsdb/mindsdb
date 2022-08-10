@@ -37,7 +37,8 @@ class VerticaHandler(DatabaseHandler):
         self.dialect = 'vertica'
         self.kwargs = kwargs
         self.connection_data = connection_data
-        self.schema_name = connection_data['schema_name']
+        self.schema_name = connection_data['schema_name'] if 'schema_name' in connection_data else "public"
+
         self.connection = None
         self.is_connected = False
 

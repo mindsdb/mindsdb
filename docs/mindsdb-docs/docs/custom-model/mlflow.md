@@ -23,17 +23,18 @@ Next, we're going to bring this model into MindsDB:
 CREATE PREDICTOR mindsdb.byom_mlflow 
 PREDICT `1`  -- `1` is the target column name
 USING 
-url.predict='http://localhost:5000/invocations', 
-format='mlflow', 
-data_dtype={"0": "integer", "1": "integer"}
+    url.predict='http://localhost:5000/invocations', 
+    format='mlflow', 
+    data_dtype={"0": "integer", "1": "integer"};
 ```
 
 We can now run predictions as usual, by using the `WHERE` statement or joining on a data table with an appropriate schema:
 
 ```sql
-SELECT `1` FROM byom_mlflow WHERE `0`=2;
+SELECT `1`
+FROM byom_mlflow
+WHERE `0`=2;
 ```
-
 
 ## Advanced example - Keras NLP model
 
@@ -142,9 +143,9 @@ Or you can `JOIN` with a data table. For this, you should ensure the table actua
 ```sql
 SELECT
     ta.text,
-    tb.target as predicted
-FROM db_byom.test.nlp_kaggle_test as ta
-JOIN mindsdb.byom_mlflow_nlp as tb;
+    tb.target AS predicted
+FROM db_byom.test.nlp_kaggle_test AS ta
+JOIN mindsdb.byom_mlflow_nlp AS tb;
 ```
 
 ### Full Script

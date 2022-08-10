@@ -79,7 +79,7 @@ To create and train a new machine learning model we will need to use the CREATE 
 ```sql
 CREATE PREDICTOR mindsdb.predictor_name
 FROM integration_name
-(SELECT column_name, column_name2 FROM table_name)
+    (SELECT column_name, column_name2 FROM table_name)
 PREDICT column_name;
 ```
 
@@ -92,7 +92,9 @@ The required values that we need to provide are:
 To train the model that will predict the risk of heart disease as target we will run:
 
 ```sql
-CREATE PREDICTOR patients_target FROM mindsdb_predictions (SELECT * FROM heart_disease)
+CREATE PREDICTOR patients_target
+FROM mindsdb_predictions
+    (SELECT * FROM heart_disease)
 PREDICT target;
 ```
 
@@ -103,7 +105,9 @@ Select the `Run` button or Shift+Enter to execute the syntax. Once the machine l
 What we did here was to create a predictor called `patients_target `to predict the presence of heart disease as `target`. The model has started training. To check if the training has finished you can SELECT the model name from the predictors table:
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='patients_target';
+SELECT *
+FROM mindsdb.predictors
+WHERE name='patients_target';
 ```
 
 ![SELECT status](/assets/sql/tutorials/heart-disease/selectpredictor.png)
@@ -115,7 +119,14 @@ The complete status means that the model training has successfully finished.
 The next steps would be to query the model and predict the heart disease risk. Let’s imagine a patient. This patient’s age is 30, she has a cholesterol level of 177 mg/dl, with slope of the peak exercise ST segment as 2, and thal as 2. Add all of this information to the `WHERE` clause.
 
 ```sql
-SELECT target as prediction, target_confidence as confidence, target_explain as info FROM mindsdb.patients_target WHERE age=30 AND chol=177 AND slope=2 AND thal=2;
+SELECT target AS prediction,
+       target_confidence AS confidence,
+       target_explain AS info
+FROM mindsdb.patients_target
+WHERE age=30
+AND chol=177
+AND slope=2
+AND thal=2;
 ```
 
 ![SELECT from model](/assets/sql/tutorials/heart-disease/1prediction.png)
@@ -126,7 +137,10 @@ The above example shows how you can make predictions for a single patient. But w
 For this purpose, you can join the predictor with such a table.
  
 ```sql
-SELECT * FROM mindsdb_predictions.heart_disease AS t JOIN mindsdb.patients_target AS tb WHERE t.thal=2;
+SELECT *
+FROM mindsdb_predictions.heart_disease AS t
+JOIN mindsdb.patients_target AS tb
+WHERE t.thal=2;
 ```
 
 ![SELECT from model](/assets/sql/tutorials/heart-disease/2ndprediction.png)

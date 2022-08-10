@@ -34,7 +34,8 @@ In this tutorial you will learn how to predict the quality of a mining process u
 You can query the file that has been uploaded to see that the data does pull through.
 
 ```sql
-SELECT * from files.file_name;
+SELECT *
+FROM files.file_name;
 ```
 
 ## Connect to MindsDB SQL Sever
@@ -56,6 +57,7 @@ In this section you will connect to MindsDB with the MySql API and create a Pred
 
 Use the following query to create a Predictor that will foretell the silica_concentrate at the end of our mining process.
 > The row number is limited to 5000 to speed up training but you can keep the whole dataset.
+
 ```sql
 CREATE PREDICTOR mindsdb.process_quality_predictor
 FROM files (
@@ -68,25 +70,28 @@ FROM files (
            flotation_column_03_level, flotation_column_04_level,
            flotation_column_05_level, flotation_column_06_level, 
            flotation_column_07_level, iron_concentrate, silica_concentrate
-    FROM process_quality LIMIT 5000
-) PREDICT silica_concentrate as quality;
+    FROM process_quality
+    LIMIT 5000
+) PREDICT silica_concentrate AS quality;
 ```
 
-After creating the Predictor you should see a similar output:
+On execution, we get:
 
-```console
+```sql
 Query OK, 0 rows affected (2 min 27.52 sec)
 ```
 
 Now the Predictor will begin training. You can check the status with the following query.
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='process_quality_predictor';
+SELECT *
+FROM mindsdb.predictors
+WHERE name='process_quality_predictor';
 ```
 
-After the Predictor has finished training, you will see a similar output.
+On execution, we get:
 
-```console
+```sql
 +-----------------------------+----------+----------+--------------------+-------------------+------------------+
 | name                        | status   | accuracy | predict            | select_data_query | training_options |
 +-----------------------------+----------+----------+--------------------+-------------------+------------------+
@@ -108,11 +113,18 @@ To run a prediction against new or existing data, you can use the following quer
 ```sql
 SELECT silica_concentrate, silica_concentrate_confidence, silica_concentrate_explain
 FROM mindsdb.process_quality_predictor
-WHERE iron_feed=48.81 AND silica_feed=25.31 AND starch_flow=2504.94 AND amina_flow=309.448 AND ore_pulp_flow=377.6511682692 AND ore_pulp_ph=10.0607 AND ore_pulp_density=1.68676;
+WHERE iron_feed=48.81
+AND silica_feed=25.31
+AND starch_flow=2504.94
+AND amina_flow=309.448
+AND ore_pulp_flow=377.6511682692
+AND ore_pulp_ph=10.0607
+AND ore_pulp_density=1.68676;
 ```
 
-The output should look similar to this.
-```console
+On execution, we get:
+
+```sql
 +--------------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
 | silica_concentrate | silica_concentrate_confidence | Info                                                                                                                                            |
 +--------------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -138,8 +150,8 @@ SELECT
     collected_data.ore_pulp_flow,
     collected_data.ore_pulp_ph,
     collected_data.ore_pulp_density,
-    predictions.silica_concentrate_confidence as confidence,
-    predictions.silica_concentrate as predicted_silica_concentrate
+    predictions.silica_concentrate_confidence AS confidence,
+    predictions.silica_concentrate AS predicted_silica_concentrate
 FROM process_quality_integration.process_quality AS collected_data
 JOIN mindsdb.process_quality_predictor AS predictions
 LIMIT 5;
@@ -147,7 +159,7 @@ LIMIT 5;
 
 As you can see below, the predictor has made multiple predictions for each data point in the `collected_data` table! You can also try selecting other fields to get more insight on the predictions. See the [JOIN clause documentation](https://docs.mindsdb.com/sql/api/join/) for more information.
 
-```console
+```sql
 +-----------+-------------+-------------+------------+---------------+-------------+------------------+------------+------------------------------+
 | iron_feed | silica_feed | starch_flow | amina_flow | ore_pulp_flow | ore_pulp_ph | ore_pulp_density | confidence | predicted_silica_concentrate |
 +-----------+-------------+-------------+------------+---------------+-------------+------------------+------------+------------------------------+

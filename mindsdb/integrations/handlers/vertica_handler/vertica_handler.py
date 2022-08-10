@@ -17,7 +17,8 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
-from sqlalchemy_vertica.dialect_pyodbc  import VerticaDialect
+# from sqlalchemy_vertica.dialect_pyodbc  import VerticaDialect
+from sqla_vertica_python.vertica_python import VerticaDialect
 
 
 
@@ -94,16 +95,17 @@ class VerticaHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         connection = self.connect()
-        with connection.cursor('dict') as cur:
+        with connection.cursor() as cur:
             try:
                 e=cur.execute(query)
-                if cur.rowcount != -1:
-                    result = e.fetchall()
+                result = e.fetchall()
+                if e.rowcount != -1:
+                    
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         pd.DataFrame(
                             result,
-                            # columns=[x.name for x in cur.description]
+                            columns=[x.name for x in cur.description]
                         )
                     )
                 else:

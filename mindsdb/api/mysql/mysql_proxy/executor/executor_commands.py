@@ -123,7 +123,7 @@ class ExecuteCommands:
             else:
                 return self.answer_describe_predictor(statement.value.parts[-1])
         elif type(statement) == RetrainPredictor:
-            return self.answer_retrain_predictor(statement.name.parts[-1])
+            return self.answer_retrain_predictor(statement)
         elif type(statement) == Show:
             sql_category = statement.category.lower()
             if sql_category == 'predictors':
@@ -593,12 +593,12 @@ class ExecuteCommands:
             data=data
         )
 
-    def answer_retrain_predictor(self, predictor_name):
-        model_interface = self.session.model_interface
-        models = model_interface.get_models()
-        if predictor_name not in [x['name'] for x in models]:
-            raise ErBadTableError(f"Can't retrain predictor. There is no predictor with name '{predictor_name}'")
-        model_interface.update_model(predictor_name)
+    def answer_retrain_predictor(self, statement):
+        lw_handler = self.session.integration_controller.get_handler('lightwood')
+        result = lw_handler.query(statement)
+        if result.type == RESPONSE_TYPE.ERROR:
+            raise Exception(result.error_message)
+
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_datasource(self, struct: dict):

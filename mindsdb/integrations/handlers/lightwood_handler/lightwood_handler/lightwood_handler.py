@@ -37,8 +37,11 @@ from mindsdb.integrations.libs.response import (
 from mindsdb import __version__ as mindsdb_version
 from mindsdb.utilities.functions import cast_row_types
 
+from .learn_process import LearnProcess, UpdateProcess
 from .utils import unpack_jsonai_old_args, load_predictor
 from .join_utils import get_ts_join_input
+
+IS_PY36 = sys.version_info[1] <= 6
 
 
 def get_where_data(where):
@@ -167,65 +170,8 @@ class LightwoodHandler(PredictiveHandler):
         )
         return result
 
-    def _run_generate(self, df: pd.DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None):
-        json_ai = lightwood.json_ai_from_problem(df, problem_definition)
-        if json_ai_override is None:
-            json_ai_override = {}
-
-        json_ai_override = brack_to_mod(json_ai_override)
-        json_ai = json_ai.to_dict()
-        rep_recur(json_ai, json_ai_override)
-        json_ai = JsonAI.from_dict(json_ai)
-
-        code = lightwood.code_from_json_ai(json_ai)
-
-        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-        predictor_record.json_ai = json_ai.to_dict()
-        predictor_record.code = code
-        db.session.commit()
-
-    def _run_fit(self, predictor_id: int, df: pd.DataFrame) -> None:
-        try:
-            predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-            assert predictor_record is not None
-
-            predictor_record.data = {'training_log': 'training'}
-            db.session.commit()
-            predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
-            predictor.learn(df)
-
-            db.session.refresh(predictor_record)
-
-            fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
-            pickle_path = os.path.join(self.config['paths']['predictors'], fs_name)
-            predictor.save(pickle_path)
-
-            self.fs_store.put(fs_name, fs_name, self.config['paths']['predictors'])
-
-            predictor_record.data = predictor.model_analysis.to_dict()
-
-            # getting training time for each tried model. it is possible to do
-            # after training only
-            fit_mixers = list(predictor.runtime_log[x] for x in predictor.runtime_log
-                              if isinstance(x, tuple) and x[0] == "fit_mixer")
-            submodel_data = predictor_record.data.get("submodel_data", [])
-            # add training time to other mixers info
-            if submodel_data and fit_mixers and len(submodel_data) == len(fit_mixers):
-                for i, tr_time in enumerate(fit_mixers):
-                    submodel_data[i]["training_time"] = tr_time
-            predictor_record.data["submodel_data"] = submodel_data
-
-            predictor_record.dtype_dict = predictor.dtype_dict
-            db.session.commit()
-        except Exception as e:
-            db.session.refresh(predictor_record)
-            predictor_record.data = {'error': f'{traceback.format_exc()}\nMain error: {e}'}
-            db.session.commit()
-            raise e
-
     @mark_process(name='learn')
     def _learn(self, statement):
-        # TODO do it async
         model_name = statement.name.parts[-1]
 
         if model_name in self._get_tables_names():
@@ -253,6 +199,12 @@ class LightwoodHandler(PredictiveHandler):
             }
 
         json_ai_override = statement.using if statement.using else {}
+
+        join_learn_process = False
+        if 'join_learn_process' in json_ai_override:
+            join_learn_process = json_ai_override['join_learn_process']
+            del json_ai_override['join_learn_process']
+
         unpack_jsonai_old_args(json_ai_override)
 
         integration_name = str(statement.integration_name)
@@ -285,24 +237,42 @@ class LightwoodHandler(PredictiveHandler):
 
         predictor_id = predictor_record.id
 
-        try:
-            self._run_generate(training_data_df, problem_definition, predictor_id, json_ai_override)
-            self._run_fit(predictor_id, training_data_df)
-        except Exception as e:
-            print(traceback.format_exc())
-            try:
-                exception_type, _exception_object, exception_traceback = sys.exc_info()
-                filename = exception_traceback.tb_frame.f_code.co_filename
-                line_number = exception_traceback.tb_lineno
-                error_message = f'{exception_type.__name__}: {e}, raised at: {filename}#{line_number}'
-            except Exception:
-                error_message = str(e)
+        p = LearnProcess(training_data_df, problem_definition, predictor_id, json_ai_override)
+        p.start()
+        if join_learn_process:
+            p.join()
+            if not IS_PY36:
+                p.close()
 
-            predictor_record.data = {"error": error_message}
-            db.session.commit()
+        db.session.refresh(predictor_record)
 
-        predictor_record.training_stop_at = datetime.now()
+        return Response(RESPONSE_TYPE.OK)
+
+    @mark_process(name='learn')
+    def _retrain(self, statement):
+        model_name = statement.name.parts[-1]
+
+        predictor_record = db.Predictor.query.filter_by(
+            company_id=self.company_id, name=model_name
+        ).first()
+        if predictor_record is None:
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Error: model '{model_name}' does not exists!"
+            )
+
+        predictor_record.update_status = 'updating'
         db.session.commit()
+
+        handler_meta = self.handler_controller.get_by_id(predictor_record.integration_id)
+        handler = self.handler_controller.get_handler(handler_meta['name'])
+        ast = self.parser(predictor_record.fetch_data_query, dialect=self.dialect)
+        response = handler.query(ast)
+        if response.type == RESPONSE_TYPE.ERROR:
+            return response
+
+        p = UpdateProcess(model_name, response.data_frame, self.company_id)
+        p.start()
 
         return Response(RESPONSE_TYPE.OK)
 
@@ -312,7 +282,6 @@ class LightwoodHandler(PredictiveHandler):
 
     def query(self, query: ASTNode) -> Response:
         statement = query
-        config = Config()
 
         if type(statement) == Show:
             if statement.category.lower() == 'tables':
@@ -336,59 +305,7 @@ class LightwoodHandler(PredictiveHandler):
             # TODO cast columns to datasource case!
             return self._learn(statement)
         elif type(statement) == RetrainPredictor:
-            model_name = statement.name.parts[-1]
-
-            predictor_record = db.Predictor.query.filter_by(
-                company_id=self.company_id, name=model_name
-            ).first()
-            if predictor_record is None:
-                return Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=f"Error: model '{model_name}' does not exists!"
-                )
-
-            predictor_record.update_status = 'updating'
-            db.session.commit()
-
-            handler_meta = self.handler_controller.get(predictor_record.integration_id)
-            handler = self.handler_controller.get_handler(handler_meta['name'])
-            ast = self.parser(predictor_record.fetch_data_query, dialect=self.dialect)
-            response = handler.query(ast)
-            if response.type == RESPONSE_TYPE.ERROR:
-                return response
-
-            try:
-                problem_definition = predictor_record.learn_args
-                problem_definition['target'] = predictor_record.to_predict[0]
-
-                json_ai = lightwood.json_ai_from_problem(response.data_frame, problem_definition)
-                predictor_record.json_ai = json_ai.to_dict()
-                predictor_record.code = lightwood.code_from_json_ai(json_ai)
-                predictor_record.data = {'training_log': 'training'}
-                db.session.commit()
-                predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
-                predictor.learn(response.data_frame)
-
-                fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
-                pickle_path = os.path.join(config['paths']['predictors'], fs_name)
-                predictor.save(pickle_path)
-                self.fs_store.put(fs_name, fs_name, config['paths']['predictors'])
-                predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
-                db.session.commit()
-
-                predictor_record.lightwood_version = lightwood_version
-                predictor_record.mindsdb_version = mindsdb_version
-                predictor_record.update_status = 'up_to_date'
-                db.session.commit()
-            except Exception as e:
-                predictor_record.update_status = 'update_failed'  # type: ignore
-                db.session.commit()
-                return Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
-
-            return Response(RESPONSE_TYPE.OK)
+            return self._retrain(statement)
         elif type(statement) == DropPredictor:
             model_name = statement.name.parts[-1]
             all_models = self.model_controller.get_models()

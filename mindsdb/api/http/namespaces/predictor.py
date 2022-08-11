@@ -118,9 +118,7 @@ class PredictorPredict(Resource):
         # results = request.model_interface.predict(name, when, 'explain')
         lw_handler = request.integration_controller.get_handler('lightwood')
         response = lw_handler.predict(name, when)
-        if response.type == RESPONSE_TYPE.ERROR:
-            return http_error(400, detail=response.error_message)
-        return response.data_frame.to_dict(orient='records')
+        return response
 
 
 @ns_conf.route('/<name>/rename')

@@ -187,3 +187,12 @@ class PinotHandler(DatabaseHandler):
         """
 
         pass
+
+
+connection_args = OrderedDict(
+
+)
+
+connection_args_example = OrderedDict(
+
+)

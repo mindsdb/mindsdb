@@ -21,7 +21,7 @@ from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
-from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface
+from mindsdb.interfaces.model.model_interface import ModelInterface
 from mindsdb.interfaces.database.integrations import IntegrationController
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
@@ -44,8 +44,6 @@ def close_api_gracefully(apis):
             process.terminate()
             process.join()
             sys.stdout.flush()
-        if ray_based:
-            os.system('ray stop --force')
     except KeyboardInterrupt:
         sys.exit(0)
     except psutil.NoSuchProcess:

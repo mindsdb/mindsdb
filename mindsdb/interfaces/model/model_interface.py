@@ -1,7 +1,7 @@
 class ModelInterface():
     def __init__(self):
         from mindsdb.interfaces.model.model_controller import ModelController
-        self.controller = ModelController(False)
+        self.controller = ModelController()
 
     def create(self, *args, **kwargs):
         return self.controller.create(*args, **kwargs)
@@ -56,22 +56,3 @@ class ModelInterface():
 
     def import_predictor(self, *args, **kwargs):
         return self.controller.import_predictor(*args, **kwargs)
-
-
-ray_based = False
-
-'''
-Notes: Remove ray from actors are getting stuck
-try:
-    from mindsdb_worker.cluster.ray_interface import ModelInterfaceRay
-    import ray
-    try:
-        ray.init(ignore_reinit_error=True, address='auto')
-    except Exception:
-        ray.init(ignore_reinit_error=True)
-    ModelInterface = ModelInterfaceRay
-    ray_based = True
-except Exception as e:
-    ModelInterface = ModelInterfaceNativeImport
-    ray_based = False
-'''

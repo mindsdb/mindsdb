@@ -38,13 +38,11 @@ class ModelController():
     config: Config
     fs_store: FsStore
     predictor_cache: Dict[str, Dict[str, Union[Any]]]
-    ray_based: bool
 
-    def __init__(self, ray_based: bool) -> None:
+    def __init__(self) -> None:
         self.config = Config()
         self.fs_store = FsStore()
         self.predictor_cache = {}
-        self.ray_based = ray_based
 
     def _invalidate_cached_predictors(self) -> None:
         # @TODO: Cache will become stale if the respective ModelInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
@@ -262,31 +260,12 @@ class ModelController():
             models.append(reduced_model_data)
         return models
 
-    def delete_model(self, name, company_id: int):
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-
-        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
-        if db_p is None:
-            raise Exception(f"Predictor '{original_name}' does not exist")
-
-        is_cloud = self.config.get('cloud', False)
-        model = self.get_model_data(db_p.name, company_id=company_id)
-        if (
-            is_cloud is True
-            and model.get('status') in ['generating', 'training']
-            and isinstance(model.get('created_at'), str) is True
-            and (datetime.datetime.now() - parse_datetime(model.get('created_at'))) < datetime.timedelta(hours=1)
-        ):
-            raise Exception('You are unable to delete models currently in progress, please wait before trying again')
-
-        db.session.delete(db_p)
-        db.session.commit()
-
-        # delete from s3
-        self.fs_store.delete(f'predictor_{company_id}_{db_p.id}')
-
-        return 0
+    def delete_model(self, model_name: str, company_id: int, integration_name: str = 'lightwood'):
+        integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
+        lw_handler = integration_controller.get_handler(integration_name)
+        response = lw_handler.native_query(f'drop predictor {model_name}')
+        if response.type == RESPONSE_TYPE.ERROR:
+            raise Exception(response.error_message)
 
     def rename_model(self, old_name, new_name, company_id: int):
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=old_name).first()
@@ -377,18 +356,3 @@ class ModelController():
             fp.write(predictor_binary)
 
         self.fs_store.put(fs_name, fs_name, self.config['paths']['predictors'])
-
-
-'''
-Notes: Remove ray from actors are getting stuck
-try:
-    from mindsdb_worker.cluster.ray_controller import ray_ify
-    import ray
-    try:
-        ray.init(ignore_reinit_error=True, address='auto')
-    except Exception:
-        ray.init(ignore_reinit_error=True)
-    ModelController = ray_ify(ModelController)
-except Exception as e:
-    pass
-'''

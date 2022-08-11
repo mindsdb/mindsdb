@@ -5,6 +5,7 @@ import traceback
 from datetime import datetime
 from typing import Dict, List, Optional
 import copy
+from dateutil.parser import parse as parse_datetime
 
 import sqlalchemy
 import pandas as pd
@@ -276,6 +277,37 @@ class LightwoodHandler(PredictiveHandler):
 
         return Response(RESPONSE_TYPE.OK)
 
+    def _drop(self, statement):
+        model_name = statement.name.parts[-1]
+
+        existing_predictors_names = [x.lower() for x in self._get_tables_names()]
+        if model_name not in existing_predictors_names:
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Model '{model_name}' does not exist"
+            )
+
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=model_name).first()
+        if predictor_record is None:
+            raise Exception(f"Predictor '{model_name}' does not exist")
+
+        is_cloud = self.config.get('cloud', False)
+        model = self.model_controller.get_model_data(predictor_record.name, company_id=self.company_id)
+        if (
+            is_cloud is True
+            and model.get('status') in ['generating', 'training']
+            and isinstance(model.get('created_at'), str) is True
+            and (datetime.datetime.now() - parse_datetime(model.get('created_at'))) < datetime.timedelta(hours=1)
+        ):
+            raise Exception('You are unable to delete models currently in progress, please wait before trying again')
+
+        db.session.delete(predictor_record)
+        db.session.commit()
+
+        self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
+
+        return Response(RESPONSE_TYPE.OK)
+
     def native_query(self, query: str) -> Response:
         query_ast = self.parser(query, dialect=self.dialect)
         return self.query(query_ast)
@@ -307,16 +339,7 @@ class LightwoodHandler(PredictiveHandler):
         elif type(statement) == RetrainPredictor:
             return self._retrain(statement)
         elif type(statement) == DropPredictor:
-            model_name = statement.name.parts[-1]
-            all_models = self.model_controller.get_models()
-            all_models_names = [x['name'] for x in all_models]
-            if model_name not in all_models_names:
-                return Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=f"Model '{model_name}' does not exist"
-                )
-            self.model_controller.delete_model(model_name)
-            return Response(RESPONSE_TYPE.OK)
+            return self._drop(statement)
         elif type(statement) == Select:
             model_name = statement.from_table.parts[-1]
             where_data = get_where_data(statement.where)

@@ -117,23 +117,6 @@ class PredictorPredict(Resource):
         return results
 
 
-@ns_conf.route('/<name>/predict_datasource')
-@ns_conf.param('name', 'The predictor identifier')
-class PredictorPredictFromDataSource(Resource):
-    @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
-    def post(self, name):
-        return abort(410, 'Method is not available')
-        # data = request.json
-        # use_raw = False
-
-        # from_data = request.default_store.get_datasource_obj(data.get('data_source_name'), raw=use_raw)
-        # if from_data is None:
-        #     abort(400, 'No valid datasource given')
-
-        # results = request.model_interface.predict(name, from_data, 'explain')
-        # return results
-
-
 @ns_conf.route('/<name>/rename')
 @ns_conf.param('name', 'The predictor identifier')
 class PredictorDownload(Resource):

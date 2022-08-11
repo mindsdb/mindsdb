@@ -2,7 +2,7 @@ To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapte
 
 | Adapter for                                                     | Documentation                                     | Install from PyPi                |
 | --------------------------------------------------------------- | ------------------------------------------------- | -------------------------------- |
-| MindsDB ([dbt-mindsdb](https://github.com/mindsdb/dbt-mindsdb)) | [Profile Setup](/sql/connect/dbt-mindsdb-profile) | `#!bash pip install dbt-mindsdb` |
+| MindsDB ([dbt-mindsdb](https://github.com/mindsdb/dbt-mindsdb)) | [Profile Setup](/connect/dbt/#initialization) | `#!bash pip install dbt-mindsdb` |
 
 ## Usage
 

@@ -112,9 +112,15 @@ class PredictorPredict(Resource):
         # list is a required type for TS prediction
         if isinstance(when, (dict, list)) is False or len(when) == 0:
             return 'No data provided for the predictions', 400
+        if isinstance(when, dict):
+            when = [when]
 
-        results = request.model_interface.predict(name, when, 'explain')
-        return results
+        # results = request.model_interface.predict(name, when, 'explain')
+        lw_handler = request.integration_controller.get_handler('lightwood')
+        response = lw_handler.predict(name, when)
+        if response.type == RESPONSE_TYPE.ERROR:
+            return http_error(400, detail=response.error_message)
+        return response.data_frame.to_dict(orient='records')
 
 
 @ns_conf.route('/<name>/rename')

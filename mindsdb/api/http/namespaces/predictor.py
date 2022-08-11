@@ -86,10 +86,11 @@ class Predictor(Resource):
 class PredictorUpdate(Resource):
     @ns_conf.doc('Update predictor')
     def get(self, name):
-        msg = request.model_interface.update_model(name)
-        return {
-            'message': msg
-        }
+        lw_handler = request.integration_controller.get_handler('lightwood')
+        response = lw_handler.native_query(f'retrain {name}')
+        if response.type == RESPONSE_TYPE.ERROR:
+            return http_error(400, detail=response.error_message)
+        return '', 200
 
 
 @ns_conf.route('/<name>/adjust')

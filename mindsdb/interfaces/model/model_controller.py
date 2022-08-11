@@ -26,7 +26,6 @@ from mindsdb.utilities.json_encoder import json_serialiser
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
-from mindsdb.interfaces.model.learn_process import LearnProcess, GenerateProcess, FitProcess, UpdateProcess, LearnRemoteProcess
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
@@ -163,221 +162,6 @@ class ModelController():
         except requests.RequestException as e:
             raise Exception(f'Model url is incorrect: {str(e)}')
 
-    @mark_process(name='learn')
-    def learn(self, name: str, training_data: DataFrame, to_predict: str,
-              integration_id: int = None, fetch_data_query: str = None,
-              kwargs: dict = {}, company_id: int = None, user_class: int = 0) -> None:
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-        if predictor_record is not None:
-            raise Exception('Predictor name must be unique.')
-
-        problem_definition, join_learn_process, json_ai_override = self._unpack_old_args(kwargs, to_predict)
-
-        is_cloud = self.config.get('cloud', False)
-        if is_cloud is True:
-            models = self.get_models(company_id)
-            count = 0
-            for model in models:
-                if model.get('status') in ['generating', 'training']:
-                    created_at = model.get('created_at')
-                    if isinstance(created_at, str):
-                        created_at = parse_datetime(created_at)
-                    if isinstance(model.get('created_at'), datetime.datetime) is False:
-                        continue
-                    if (datetime.datetime.now() - created_at) < datetime.timedelta(hours=1):
-                        count += 1
-                if count == 2:
-                    raise Exception('You can train no more than 2 models at the same time')
-            if user_class != 1 and len(training_data) > 10000:
-                raise Exception('Datasets are limited to 10,000 rows on free accounts')
-
-        if 'url' in problem_definition:
-            train_url = problem_definition['url'].get('train', None)
-            if train_url is not None:
-                self._check_model_url(train_url)
-            predict_url = problem_definition['url'].get('predict', None)
-            if predict_url is not None:
-                self._check_model_url(predict_url)
-            com_format = problem_definition['format']
-            api_token = problem_definition['API_TOKEN'] if ('API_TOKEN' in problem_definition) else None
-            input_column = problem_definition['input_column'] if ('input_column' in problem_definition) else None
-            predictor_record = db.Predictor(
-                company_id=company_id,
-                name=name,
-                mindsdb_version=mindsdb_version,
-                lightwood_version=lightwood_version,
-                to_predict=problem_definition['target'],
-                learn_args=ProblemDefinition.from_dict(problem_definition).to_dict(),
-                data={'name': name, 'train_url': train_url, 'predict_url': predict_url, 'format': com_format,
-                      'status': 'complete' if train_url is None else 'training', 'API_TOKEN': api_token, 'input_column': input_column},
-                is_custom=True,
-                # @TODO: For testing purposes, remove afterwards!
-                dtype_dict=json_ai_override['dtype_dict'],
-            )
-
-            db.session.add(predictor_record)
-            db.session.commit()
-            if train_url is not None:
-                p = LearnRemoteProcess(training_data, predictor_record.id)
-                p.start()
-                if join_learn_process:
-                    p.join()
-                    if not IS_PY36:
-                        p.close()
-                db.session.refresh(predictor_record)
-            return
-
-        problem_definition = ProblemDefinition.from_dict(problem_definition)
-
-        predictor_record = db.Predictor(
-            company_id=company_id,
-            name=name,
-            integration_id=integration_id,
-            fetch_data_query=fetch_data_query,
-            mindsdb_version=mindsdb_version,
-            lightwood_version=lightwood_version,
-            to_predict=problem_definition.target,
-            learn_args=problem_definition.to_dict(),
-            data={'name': name},
-            training_data_columns_count=len(training_data.columns),
-            training_data_rows_count=len(training_data)
-        )
-
-        db.session.add(predictor_record)
-        db.session.commit()
-        predictor_id = predictor_record.id
-
-        p = LearnProcess(training_data, problem_definition, predictor_id, json_ai_override)
-        p.start()
-        if join_learn_process:
-            p.join()
-            if not IS_PY36:
-                p.close()
-        db.session.refresh(predictor_record)
-
-    @mark_process(name='predict')
-    def predict(self, name: str, when_data: Union[dict, list, pd.DataFrame], pred_format: str, company_id: int):
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
-        assert predictor_record is not None
-        predictor_data = self.get_model_data(name, company_id)
-
-        if isinstance(when_data, dict):
-            when_data = [when_data]
-        df = pd.DataFrame(when_data)
-
-        if predictor_record.is_custom:
-            if predictor_data['format'] == 'mlflow':
-                resp = requests.post(predictor_data['predict_url'],
-                                     data=df.to_json(orient='records'),
-                                     headers={'content-type': 'application/json; format=pandas-records'})
-                answer: List[object] = resp.json()
-
-                predictions = pd.DataFrame({
-                    'prediction': answer
-                })
-
-            elif predictor_data['format'] == 'huggingface':
-                headers = {"Authorization": "Bearer {API_TOKEN}".format(API_TOKEN=predictor_data['API_TOKEN'])}
-                col_data = df[predictor_data['input_column']]
-                col_data.rename({predictor_data['input_column']: 'inputs'}, axis='columns')
-                serialized_df = json.dumps(col_data.to_dict())
-                resp = requests.post(predictor_data['predict_url'], headers=headers, data=serialized_df)
-                predictions = pd.DataFrame(resp.json())
-
-            elif predictor_data['format'] == 'ray_server':
-                serialized_df = json.dumps(df.to_dict())
-                resp = requests.post(predictor_data['predict_url'], json={'df': serialized_df})
-                predictions = pd.DataFrame(resp.json())
-
-        else:
-            fs_name = f'predictor_{company_id}_{predictor_record.id}'
-
-            if (
-                name in self.predictor_cache
-                and self.predictor_cache[name]['updated_at'] != predictor_record.updated_at
-            ):
-                del self.predictor_cache[name]
-
-            if name not in self.predictor_cache:
-                # Clear the cache entirely if we have less than 1.2 GB left
-                if psutil.virtual_memory().available < 1.2 * pow(10, 9):
-                    self.predictor_cache = {}
-
-                if predictor_data['status'] == 'complete':
-                    self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
-                    self.predictor_cache[name] = {
-                        'predictor': lightwood.predictor_from_state(
-                            os.path.join(self.config['paths']['predictors'], fs_name),
-                            predictor_record.code
-                        ),
-                        'updated_at': predictor_record.updated_at,
-                        'created': datetime.datetime.now(),
-                        'code': predictor_record.code,
-                        'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
-                    }
-                else:
-                    raise Exception(
-                        f'Trying to predict using predictor {original_name} with status: {predictor_data["status"]}. Error is: {predictor_data.get("error", "unknown")}'
-                    )
-            predictions = self.predictor_cache[name]['predictor'].predict(df)
-            # Bellow is useful for debugging caching and storage issues
-            # del self.predictor_cache[name]
-
-        predictions = predictions.to_dict(orient='records')
-        after_predict_hook(
-            company_id=company_id,
-            predictor_id=predictor_record.id,
-            rows_in_count=df.shape[0],
-            columns_in_count=df.shape[1],
-            rows_out_count=len(predictions)
-        )
-        target = predictor_record.to_predict[0]
-        if pred_format in ('explain', 'dict', 'dict&explain'):
-            explain_arr = []
-            dict_arr = []
-            for i, row in enumerate(predictions):
-                obj = {
-                    target: {
-                        'predicted_value': row['prediction'],
-                        'confidence': row.get('confidence', None),
-                        'anomaly': row.get('anomaly', None),
-                        'truth': row.get('truth', None)
-                    }
-                }
-                if 'lower' in row:
-                    obj[target]['confidence_lower_bound'] = row.get('lower', None)
-                    obj[target]['confidence_upper_bound'] = row.get('upper', None)
-
-                explain_arr.append(obj)
-
-                td = {'predicted_value': row['prediction']}
-                for col in df.columns:
-                    if col in row:
-                        td[col] = row[col]
-                    elif f'order_{col}' in row:
-                        td[col] = row[f'order_{col}']
-                    elif f'group_{col}' in row:
-                        td[col] = row[f'group_{col}']
-                    else:
-                        orginal_index = row.get('original_index')
-                        if orginal_index is None:
-                            log.warning('original_index is None')
-                            orginal_index = i
-                        td[col] = df.iloc[orginal_index][col]
-                dict_arr.append({target: td})
-            if pred_format == 'explain':
-                return explain_arr
-            elif pred_format == 'dict':
-                return dict_arr
-            elif pred_format == 'dict&explain':
-                return dict_arr, explain_arr
-        # New format -- Try switching to this in 2-3 months for speed, for now above is ok
-        else:
-            return predictions
-
     @mark_process(name='analyse')
     def analyse_dataset(self, df: DataFrame, company_id: int) -> lightwood.DataAnalysis:
         analysis = lightwood.analyze_dataset(df)
@@ -509,68 +293,12 @@ class ModelController():
         db_p.name = new_name
         db.session.commit()
 
-    @mark_process(name='learn')
-    def update_model(self, name: str, company_id: int):
-        # TODO: Add version check here once we're done debugging
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-        assert predictor_record is not None
-        predictor_record.update_status = 'updating'
-        db.session.commit()
-
-        integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
-        integration_record = db.Integration.query.get(predictor_record.integration_id)
-        if integration_record is None:
-            raise Exception(f"There is no integration for predictor '{name}'")
-        integration_handler = integration_controller.get_handler(integration_record.name)
-
-        response = integration_handler.native_query(predictor_record.fetch_data_query)
-        if response.type != RESPONSE_TYPE.TABLE:
-            raise Exception(f"Can't fetch data for predictor training: {response.error_message}")
-
-        p = UpdateProcess(name, response.data_frame, company_id)
-        p.start()
-        return 'Updated in progress'
-
-    @mark_process(name='learn')
-    def generate_predictor(self, name: str, from_data: dict, dataset_id, problem_definition_dict: dict,
-                           join_learn_process: bool, company_id: int):
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-        if predictor_record is not None:
-            raise Exception('Predictor name must be unique.')
-
-        df, problem_definition, _, _ = self._unpack_old_args(from_data, problem_definition_dict)
-
-        problem_definition = ProblemDefinition.from_dict(problem_definition)
-
-        predictor_record = db.Predictor(
-            company_id=company_id,
-            name=name,
-            # dataset_id=dataset_id,
-            mindsdb_version=mindsdb_version,
-            lightwood_version=lightwood_version,
-            to_predict=problem_definition.target,
-            learn_args=problem_definition.to_dict(),
-            data={'name': name}
-        )
-
-        db.session.add(predictor_record)
-        db.session.commit()
-        predictor_id = predictor_record.id
-
-        p = GenerateProcess(df, problem_definition, predictor_id)
-        p.start()
-        if join_learn_process:
-            p.join()
-            if not IS_PY36:
-                p.close()
-        db.session.refresh(predictor_record)
-
     def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         assert predictor_record is not None
 
         json_ai = lightwood.JsonAI.from_dict(json_ai)
-        predictor_record.code = lightwood.code_from_json_ai(json_ai)   
+        predictor_record.code = lightwood.code_from_json_ai(json_ai)
         predictor_record.json_ai = json_ai.to_dict()
         db.session.commit()
 
@@ -591,21 +319,6 @@ class ModelController():
         predictor_record.code = code
         predictor_record.json_ai = None
         db.session.commit()
-
-    @mark_process(name='learn')
-    def fit_predictor(self, name: str, from_data: dict, join_learn_process: bool, company_id: int) -> None:
-        # TODO
-        pass
-        # predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-        # assert predictor_record is not None
-
-        # df = self._get_from_data_df(from_data)
-        # p = FitProcess(predictor_record.id, df)
-        # p.start()
-        # if join_learn_process:
-        #     p.join()
-        #     if not IS_PY36:
-        #         p.close()
 
     def export_predictor(self, name: str, company_id: int) -> json:
         predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
@@ -664,6 +377,7 @@ class ModelController():
             fp.write(predictor_binary)
 
         self.fs_store.put(fs_name, fs_name, self.config['paths']['predictors'])
+
 
 '''
 Notes: Remove ray from actors are getting stuck

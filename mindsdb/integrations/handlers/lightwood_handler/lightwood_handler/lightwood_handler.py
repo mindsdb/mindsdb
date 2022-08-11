@@ -25,7 +25,6 @@ import numpy as np
 
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.utils import recur_get_conditionals, get_aliased_columns, get_join_input, get_model_name
-from mindsdb.interfaces.model.learn_process import brack_to_mod, rep_recur
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 import mindsdb.interfaces.storage.db as db
@@ -36,8 +35,9 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb import __version__ as mindsdb_version
 from mindsdb.utilities.functions import cast_row_types
+from mindsdb.utilities.hooks import after_predict as after_predict_hook
 
-from .learn_process import LearnProcess, UpdateProcess
+from .learn_process import brack_to_mod, rep_recur, LearnProcess, UpdateProcess
 from .utils import unpack_jsonai_old_args, load_predictor
 from .join_utils import get_ts_join_input
 
@@ -328,6 +328,7 @@ class LightwoodHandler(PredictiveHandler):
         else:
             raise Exception(f"Query type {type(statement)} not supported")
 
+    @mark_process(name='predict')
     def predict(self, model_name: str, data: list) -> pd.DataFrame:
         if isinstance(data, dict):
             data = [data]
@@ -351,6 +352,14 @@ class LightwoodHandler(PredictiveHandler):
         )
         predictions = predictor.predict(df)
         predictions = predictions.to_dict(orient='records')
+
+        after_predict_hook(
+            company_id=self.company_id,
+            predictor_id=predictor_record.id,
+            rows_in_count=df.shape[0],
+            columns_in_count=df.shape[1],
+            rows_out_count=len(predictions)
+        )
 
         # region format result
         target = predictor_record.to_predict[0]
@@ -550,6 +559,7 @@ class LightwoodHandler(PredictiveHandler):
                     row[key + '_min'] = explanation[key]['confidence_lower_bound']
                 if 'confidence_upper_bound' in explanation[key]:
                     row[key + '_max'] = explanation[key]['confidence_upper_bound']
+
         return data
 
     def join(self, stmt, data_handler: BaseHandler, into: Optional[str] = None) -> pd.DataFrame:

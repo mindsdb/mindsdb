@@ -31,14 +31,14 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, model_interface, integration_controller):
+    def __init__(self, model_controller, integration_controller):
         self.config = Config()
-        self.model_interface = model_interface
+        self.model_controller = model_controller
         self.integration_controller = integration_controller
         self.handler = self.integration_controller.get_handler('lightwood')
 
     def get_tables(self):
-        models = self.model_interface.get_models()
+        models = self.model_controller.get_models()
         tables = []
         for model in models:
             tables.append(TablesRow(TABLE_NAME=model['name']))
@@ -52,7 +52,7 @@ class MindsDBDataNode(DataNode):
         return table in names
 
     def _get_model_columns(self, table_name):
-        model = self.model_interface.get_model_data(name=table_name)
+        model = self.model_controller.get_model_data(name=table_name)
         dtype_dict = model.get('dtype_dict')
         if isinstance(dtype_dict, dict) is False:
             return []
@@ -79,14 +79,14 @@ class MindsDBDataNode(DataNode):
 
         columns = []
 
-        if table in [x['name'] for x in self.model_interface.get_models()]:
+        if table in [x['name'] for x in self.model_controller.get_models()]:
             columns = self._get_model_columns(table)
             columns += ['when_data', 'select_data_query']
 
         return columns
 
     def _select_predictors(self):
-        models = self.model_interface.get_models()
+        models = self.model_controller.get_models()
         columns = ['name', 'status', 'accuracy', 'predict', 'update_status',
                    'mindsdb_version', 'error', 'select_data_query',
                    'training_options']
@@ -116,7 +116,7 @@ class MindsDBDataNode(DataNode):
         )
 
     def delete_predictor(self, name):
-        self.model_interface.delete_model(name)
+        self.model_controller.delete_model(name)
 
     def get_predictors(self, mindsdb_sql_query):
         predictors_df = self._select_predictors()

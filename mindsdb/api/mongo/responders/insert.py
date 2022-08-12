@@ -73,7 +73,7 @@ class Responce(Responder):
                 'connection'
             ]
 
-            models = mindsdb_env['model_interface'].get_models()
+            models = mindsdb_env['model_controller'].get_models()
 
             if len(query['documents']) != 1:
                 raise Exception("Must be inserted just one predictor at time")

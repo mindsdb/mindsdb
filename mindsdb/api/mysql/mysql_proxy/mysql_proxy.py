@@ -73,7 +73,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     BinaryResultsetRowPacket
 )
 
-from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
@@ -378,7 +378,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def decode_utf(self, text):
         try:
             return text.decode('utf-8')
-        except Exception as e:
+        except Exception:
             raise ErWrongCharset(f'SQL contains non utf-8 values: {text}')
 
     def is_cloud_connection(self):
@@ -828,7 +828,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.connection_id = 0
         server.hook_before_handle = empty_fn
 
-        server.original_model_interface = ModelInterface()
+        server.original_model_controller = ModelController()
         server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
 

@@ -86,7 +86,7 @@ class ValidateJsonAI(Resource):
         if json_ai is None:
             return 'Please provide json_ai', 400
         try:
-            code = request.model_interface.code_from_json_ai(json_ai)
+            code = request.model_controller.code_from_json_ai(json_ai)
         except Exception as e:
             return {'error': str(e)}
         return {'code': code}

@@ -21,7 +21,7 @@ from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
-from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     print(f"Storage path:\n   {config['paths']['root']}")
 
     # @TODO Backwards compatibility for tests, remove later
-    model_interface = WithKWArgsWrapper(ModelInterface(), company_id=COMPANY_ID)
+    model_controller = WithKWArgsWrapper(ModelController(), company_id=COMPANY_ID)
     integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
     for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
         import_meta = handler_meta.get('import', {})
@@ -109,13 +109,12 @@ if __name__ == '__main__':
             print(f"Dependencies for the handler '{handler_name}' are not installed by default.\n",
                   f'If you want to use "{handler_name}" please install "{dependencies}"')
 
-    raw_model_data_arr = model_interface.get_models()
+    raw_model_data_arr = model_controller.get_models()
     model_data_arr = []
     for model in raw_model_data_arr:
         if model['status'] == 'complete':
-            x = model_interface.get_model_data(model['name'])
             try:
-                model_data_arr.append(model_interface.get_model_data(model['name']))
+                model_data_arr.append(model_controller.get_model_data(model['name']))
             except Exception:
                 pass
 
@@ -180,7 +179,7 @@ if __name__ == '__main__':
                 stream_controller.setup(integration_name)
         del stream_controller
 
-    del model_interface
+    del model_controller
     # @TODO Backwards compatibility for tests, remove later
 
     if args.api is None:

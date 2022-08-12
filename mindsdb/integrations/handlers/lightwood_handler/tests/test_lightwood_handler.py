@@ -20,7 +20,7 @@ from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.utils imp
 # from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.integrations.handlers.postgres_handler import Handler as PGHandler
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
@@ -65,7 +65,7 @@ class LightwoodHandlerTest(unittest.TestCase):
             'lightwood',
             handler_controller=handler_controller,
             fs_store=WithKWArgsWrapper(FsStore(), company_id=None),
-            model_controller=WithKWArgsWrapper(ModelInterface(), company_id=None)
+            model_controller=WithKWArgsWrapper(ModelController(), company_id=None)
         )
         cls.config = Config()
 

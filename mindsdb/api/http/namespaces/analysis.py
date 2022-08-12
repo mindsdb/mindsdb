@@ -53,7 +53,7 @@ class QueryAnalysis(Resource):
             return http_error(500, 'Error', 'Query does not return data')
 
         column_names = [x['name'] for x in result.columns]
-        analysis = request.model_interface.analyse_dataset(
+        analysis = request.model_controller.analyse_dataset(
             df=DataFrame(result.data, columns=column_names),
             company_id=None
         )

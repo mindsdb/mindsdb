@@ -23,7 +23,7 @@ class PredictorList(Resource):
     @ns_conf.doc('list_predictors')
     def get(self):
         '''List all predictors'''
-        models = request.model_interface.get_models()
+        models = request.model_controller.get_models()
         return models
 
 
@@ -33,7 +33,7 @@ class PredictorList(Resource):
 class Predictor(Resource):
     @ns_conf.doc('get_predictor')
     def get(self, name):
-        model = request.model_interface.get_model_data(name)
+        model = request.model_controller.get_model_data(name)
 
         for k in ['train_end_at', 'updated_at', 'created_at']:
             if k in model and model[k] is not None:
@@ -44,7 +44,7 @@ class Predictor(Resource):
     @ns_conf.doc('delete_predictor')
     def delete(self, name):
         '''Remove predictor'''
-        request.model_interface.delete_model(name)
+        request.model_controller.delete_model(name)
         return '', 200
 
     @ns_conf.doc('put_predictor')
@@ -115,7 +115,7 @@ class PredictorPredict(Resource):
         if isinstance(when, dict):
             when = [when]
 
-        # results = request.model_interface.predict(name, when, 'explain')
+        # results = request.model_controller.predict(name, when, 'explain')
         lw_handler = request.integration_controller.get_handler('lightwood')
         response = lw_handler.predict(name, when, pred_format='explain')
         return response
@@ -128,7 +128,7 @@ class PredictorDownload(Resource):
     def get(self, name):
         try:
             new_name = request.args.get('new_name')
-            request.model_interface.rename_model(name, new_name)
+            request.model_controller.rename_model(name, new_name)
         except Exception as e:
             return str(e), 400
 
@@ -150,7 +150,7 @@ class PredictorGenerate(Resource):
         # )
         # datasource = request.default_store.get_datasource(datasource_name)
 
-        # request.model_interface.generate_predictor(
+        # request.model_controller.generate_predictor(
         #     name,
         #     from_data,
         #     datasource['id'],
@@ -166,7 +166,7 @@ class PredictorGenerate(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorEditJsonAI(Resource):
     def put(self, name):
-        request.model_interface.edit_json_ai(name, request.json['json_ai'])
+        request.model_controller.edit_json_ai(name, request.json['json_ai'])
         return '', 200
 
 
@@ -175,7 +175,7 @@ class PredictorEditJsonAI(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorEditCode(Resource):
     def put(self, name):
-        request.model_interface.edit_code(name, request.json['code'])
+        request.model_controller.edit_code(name, request.json['code'])
         return '', 200
 
 
@@ -195,7 +195,7 @@ class PredictorTrain(Resource):
         #     raw=True
         # )
 
-        # request.model_interface.fit_predictor(name, from_data, request.json.get('join_learn_process', False))
+        # request.model_controller.fit_predictor(name, from_data, request.json.get('join_learn_process', False))
         # return '', 200
 
 
@@ -204,7 +204,7 @@ class PredictorTrain(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorExport(Resource):
     def get(self, name):
-        payload: json = request.model_interface.export_predictor(name)
+        payload: json = request.model_controller.export_predictor(name)
         return payload, 200
 
 
@@ -213,5 +213,5 @@ class PredictorExport(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorImport(Resource):
     def put(self, name):
-        request.model_interface.import_predictor(name, request.json)
+        request.model_controller.import_predictor(name, request.json)
         return '', 200

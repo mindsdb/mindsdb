@@ -109,19 +109,19 @@ class Integration(Resource):
             request.integration_controller.add(name, engine, params)
 
             model_data_arr = []
-            for model in request.model_interface.get_models():
+            for model in request.model_controller.get_models():
                 if model['status'] == 'complete':
                     try:
-                        model_data_arr.append(request.model_interface.get_model_data(model['name']))
+                        model_data_arr.append(request.model_controller.get_model_data(model['name']))
                     except Exception:
                         pass
 
             if is_test is False and params.get('publish', False) is True:
                 model_data_arr = []
-                for model in request.model_interface.get_models():
+                for model in request.model_controller.get_models():
                     if model['status'] == 'complete':
                         try:
-                            model_data_arr.append(request.model_interface.get_model_data(model['name']))
+                            model_data_arr.append(request.model_controller.get_model_data(model['name']))
                         except Exception:
                             pass
 

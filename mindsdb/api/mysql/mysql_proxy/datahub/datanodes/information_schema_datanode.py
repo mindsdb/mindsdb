@@ -38,7 +38,7 @@ class InformationSchemaDataNode(DataNode):
         self.view_interface = session.view_interface
         self.persis_datanodes = {
             'mindsdb': MindsDBDataNode(
-                session.model_interface,
+                session.model_controller,
                 session.integration_controller
             ),
             'files': IntegrationDataNode(

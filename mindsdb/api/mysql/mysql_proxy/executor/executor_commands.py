@@ -513,11 +513,11 @@ class ExecuteCommands:
             predictor_attr = predictor_value[1]
         else:
             predictor_name = predictor_value
-        model_interface = self.session.model_interface
-        models = model_interface.get_models()
+        model_controller = self.session.model_controller
+        models = model_controller.get_models()
         if predictor_name not in [x['name'] for x in models]:
             raise ErBadTableError(f"Can't describe predictor. There is no predictor with name '{predictor_name}'")
-        description = model_interface.get_model_description(predictor_name)
+        description = model_controller.get_model_description(predictor_name)
 
         if predictor_attr is None:
             columns = [
@@ -538,7 +538,7 @@ class ExecuteCommands:
             ]
             data = [description]
         else:
-            data = model_interface.get_model_data(predictor_name)
+            data = model_controller.get_model_data(predictor_name)
             if predictor_attr == "features":
                 data = self._get_features_info(data)
                 columns = [{

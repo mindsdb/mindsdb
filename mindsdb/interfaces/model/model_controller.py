@@ -27,7 +27,6 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 
@@ -45,7 +44,7 @@ class ModelController():
         self.predictor_cache = {}
 
     def _invalidate_cached_predictors(self) -> None:
-        # @TODO: Cache will become stale if the respective ModelInterface is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
+        # @TODO: Cache will become stale if the respective ModelController is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
         for predictor_name in list(self.predictor_cache.keys()):
             if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
                 del self.predictor_cache[predictor_name]
@@ -261,6 +260,8 @@ class ModelController():
         return models
 
     def delete_model(self, model_name: str, company_id: int, integration_name: str = 'lightwood'):
+        # FIXME
+        from mindsdb.interfaces.database.integrations import IntegrationController
         integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
         lw_handler = integration_controller.get_handler(integration_name)
         response = lw_handler.native_query(f'drop predictor {model_name}')

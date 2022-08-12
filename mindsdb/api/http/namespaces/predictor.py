@@ -117,7 +117,7 @@ class PredictorPredict(Resource):
 
         # results = request.model_interface.predict(name, when, 'explain')
         lw_handler = request.integration_controller.get_handler('lightwood')
-        response = lw_handler.predict(name, when)
+        response = lw_handler.predict(name, when, pred_format='explain')
         return response
 
 

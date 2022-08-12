@@ -3,10 +3,11 @@ import sys
 import json
 import traceback
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Union, Any
 import copy
 from dateutil.parser import parse as parse_datetime
 
+import psutil
 import sqlalchemy
 import pandas as pd
 import lightwood
@@ -82,10 +83,12 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class LightwoodHandler(PredictiveHandler):
 
     name = 'lightwood'
+    predictor_cache: Dict[str, Dict[str, Union[Any]]]
 
     def __init__(self, name, **kwargs):
         """ Lightwood AutoML integration """  # noqa
         super().__init__(name)
+        self.predictor_cache = {}
         self.config = Config()
         self.storage = None
         self.parser = parse_sql
@@ -147,7 +150,7 @@ class LightwoodHandler(PredictiveHandler):
         data = response.data_frame.to_dict(orient='records')
         return [x['table_name'] for x in data]
 
-    def get_columns(self, table_name: str) ->  Response:
+    def get_columns(self, table_name: str) -> Response:
         """ For getting standard info about a table. e.g. data types """  # noqa
         predictor_record = db.Predictor.query.filter_by(
             company_id=self.company_id, name=table_name
@@ -352,7 +355,7 @@ class LightwoodHandler(PredictiveHandler):
             raise Exception(f"Query type {type(statement)} not supported")
 
     @mark_process(name='predict')
-    def predict(self, model_name: str, data: list) -> pd.DataFrame:
+    def predict(self, model_name: str, data: list, pred_format: str = 'dict') -> pd.DataFrame:
         if isinstance(data, dict):
             data = [data]
         df = pd.DataFrame(data)
@@ -368,6 +371,37 @@ class LightwoodHandler(PredictiveHandler):
         # TODO Add predictor cache!!!
 
         fs_name = f'predictor_{self.company_id}_{predictor_record.id}'
+
+        # regon LoadCache
+        # if (
+        #     model_name in self.predictor_cache
+        #     and self.predictor_cache[model_name]['updated_at'] != predictor_record.updated_at
+        # ):
+        #     del self.predictor_cache[model_name]
+
+        # if model_name not in self.predictor_cache:
+        #     # Clear the cache entirely if we have less than 1.2 GB left
+        #     if psutil.virtual_memory().available < 1.2 * pow(10, 9):
+        #         self.predictor_cache = {}
+
+        #     if predictor_data['status'] == 'complete':
+        #         self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
+        #         self.predictor_cache[model_name] = {
+        #             'predictor': lightwood.predictor_from_state(
+        #                 os.path.join(self.config['paths']['predictors'], fs_name),
+        #                 predictor_record.code
+        #             ),
+        #             'updated_at': predictor_record.updated_at,
+        #             'created': datetime.datetime.now(),
+        #             'code': predictor_record.code,
+        #             'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
+        #         }
+        #     else:
+        #         raise Exception(
+        #             f"Trying to predict using predictor '{model_name}' with status: {predictor_data['status']}. Error is: {predictor_data.get('error', 'unknown')}"
+        #         )
+        # endregion
+
         self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
         predictor = lightwood.predictor_from_state(
             os.path.join(self.config['paths']['predictors'], fs_name),
@@ -544,6 +578,9 @@ class LightwoodHandler(PredictiveHandler):
 
             explain_arr = explanations
         # endregion
+
+        if pred_format == 'explain':
+            return explain_arr
 
         keys = [x for x in pred_dicts[0] if x in columns]
         min_max_keys = []

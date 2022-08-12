@@ -392,7 +392,7 @@ class LightwoodHandler(PredictiveHandler):
                         predictor_record.code
                     ),
                     'updated_at': predictor_record.updated_at,
-                    'created': datetime.datetime.now(),
+                    'created': datetime.now(),
                     'code': predictor_record.code,
                     'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
                 }
@@ -407,7 +407,7 @@ class LightwoodHandler(PredictiveHandler):
         #     os.path.join(self.config['paths']['predictors'], fs_name),
         #     predictor_record.code
         # )
-        predictor = self.predictor_cache[model_name]['predictor'].predict(df)
+        predictor = self.predictor_cache[model_name]['predictor']
         predictions = predictor.predict(df)
         predictions = predictions.to_dict(orient='records')
 

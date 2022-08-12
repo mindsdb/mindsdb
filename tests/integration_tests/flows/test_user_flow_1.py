@@ -112,8 +112,9 @@ class UserFlowTest_1(unittest.TestCase):
             assert len(res) == 1
             res = res[0]
             for field in TO_PREDICT:
-                assert res.get(field) is not None
-                assert res[f'{field}_confidence'] > 0
+                assert field in res
+                assert res[field]['predicted_value'] is not None
+                assert res[field]['confidence'] > 0
 
         test_predictor(TEST_PREDICTOR, TEST_DS)
 

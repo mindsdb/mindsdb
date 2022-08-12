@@ -368,8 +368,6 @@ class LightwoodHandler(PredictiveHandler):
                 error_message=f"Error: model '{model_name}' does not exists!"
             )
 
-        # TODO Add predictor cache!!!
-
         fs_name = f'predictor_{self.company_id}_{predictor_record.id}'
 
         model_data = self.model_controller.get_model_data(model_name, company_id=self.company_id)

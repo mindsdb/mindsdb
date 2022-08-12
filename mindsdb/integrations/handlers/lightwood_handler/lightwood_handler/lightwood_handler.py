@@ -372,41 +372,44 @@ class LightwoodHandler(PredictiveHandler):
 
         fs_name = f'predictor_{self.company_id}_{predictor_record.id}'
 
+        model_data = self.model_controller.get_model_data(model_name, company_id=self.company_id)
+
         # regon LoadCache
-        # if (
-        #     model_name in self.predictor_cache
-        #     and self.predictor_cache[model_name]['updated_at'] != predictor_record.updated_at
-        # ):
-        #     del self.predictor_cache[model_name]
+        if (
+            model_name in self.predictor_cache
+            and self.predictor_cache[model_name]['updated_at'] != predictor_record.updated_at
+        ):
+            del self.predictor_cache[model_name]
 
-        # if model_name not in self.predictor_cache:
-        #     # Clear the cache entirely if we have less than 1.2 GB left
-        #     if psutil.virtual_memory().available < 1.2 * pow(10, 9):
-        #         self.predictor_cache = {}
+        if model_name not in self.predictor_cache:
+            # Clear the cache entirely if we have less than 1.2 GB left
+            if psutil.virtual_memory().available < 1.2 * pow(10, 9):
+                self.predictor_cache = {}
 
-        #     if predictor_data['status'] == 'complete':
-        #         self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
-        #         self.predictor_cache[model_name] = {
-        #             'predictor': lightwood.predictor_from_state(
-        #                 os.path.join(self.config['paths']['predictors'], fs_name),
-        #                 predictor_record.code
-        #             ),
-        #             'updated_at': predictor_record.updated_at,
-        #             'created': datetime.datetime.now(),
-        #             'code': predictor_record.code,
-        #             'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
-        #         }
-        #     else:
-        #         raise Exception(
-        #             f"Trying to predict using predictor '{model_name}' with status: {predictor_data['status']}. Error is: {predictor_data.get('error', 'unknown')}"
-        #         )
+            if model_data['status'] == 'complete':
+                self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
+                self.predictor_cache[model_name] = {
+                    'predictor': lightwood.predictor_from_state(
+                        os.path.join(self.config['paths']['predictors'], fs_name),
+                        predictor_record.code
+                    ),
+                    'updated_at': predictor_record.updated_at,
+                    'created': datetime.datetime.now(),
+                    'code': predictor_record.code,
+                    'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
+                }
+            else:
+                raise Exception(
+                    f"Trying to predict using predictor '{model_name}' with status: {model_data['status']}. Error is: {model_data.get('error', 'unknown')}"
+                )
         # endregion
 
-        self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
-        predictor = lightwood.predictor_from_state(
-            os.path.join(self.config['paths']['predictors'], fs_name),
-            predictor_record.code
-        )
+        # self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
+        # predictor = lightwood.predictor_from_state(
+        #     os.path.join(self.config['paths']['predictors'], fs_name),
+        #     predictor_record.code
+        # )
+        predictor = self.predictor_cache[model_name]['predictor'].predict(df)
         predictions = predictor.predict(df)
         predictions = predictions.to_dict(orient='records')
 

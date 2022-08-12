@@ -69,10 +69,11 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlWrongArguments
 )
 from mindsdb_sql.parser.ast.base import ASTNode
-
+from mindsdb.utilities.cache import get_cache, json_checksum
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
 
+predictor_cache = get_cache('predict')
 
 def get_preditor_alias(step, mindsdb_database):
     predictor_name = '.'.join(step.predictor.parts)
@@ -788,13 +789,19 @@ class SQLQuery():
                     columns[table_name] = [(c, c) for c in cols]
                     values = []
                 else:
-                    data = dn.query(
-                        table=predictor,
-                        columns=None,
-                        where_data=where_data,
-                        integration_name=self.session.integration,
-                        integration_type=self.session.integration_type
-                    )
+                    # check cache
+                    key = f'{predictor}_{json_checksum(where_data)}'
+                    data = predictor_cache.get(key)
+
+                    if data is None:
+                        data = dn.query(
+                            table=predictor,
+                            columns=None,
+                            where_data=where_data,
+                            integration_name=self.session.integration,
+                            integration_type=self.session.integration_type
+                        )
+                        predictor_cache.set(key, data)
 
                     data = [{(key, key): value for key, value in row.items()} for row in data]
 

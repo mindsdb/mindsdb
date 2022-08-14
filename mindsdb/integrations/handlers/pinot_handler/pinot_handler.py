@@ -87,16 +87,12 @@ class PinotHandler(DatabaseHandler):
         return self.connection
 
     def disconnect(self):
-        """
-        Close any existing connections.
-        """
+        """ Close any existing connections
 
-        if self.is_connected is False:
-            return
-
-        self.connection.close()
+        Should switch self.is_connected.
+        """
         self.is_connected = False
-        return self.is_connected
+        return
 
     def check_connection(self) -> StatusResponse:
         """

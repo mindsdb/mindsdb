@@ -3,6 +3,8 @@ from collections import OrderedDict
 
 import pandas as pd
 import pinotdb
+import requests
+from requests.exceptions import InvalidSchema
 import json
 
 from mindsdb_sql import parse_sql
@@ -67,7 +69,7 @@ class PinotHandler(DatabaseHandler):
 
         self.connection = pinotdb.connect(
             host=self.connection_data['host'],
-            port=self.connection_data['port'],
+            port=self.connection_data['broker_port'],
             path=self.connection_data['path'],
             scheme=self.connection_data['scheme'],
             username=self.connection_data['username'],
@@ -175,7 +177,22 @@ class PinotHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        api_url = f"{self.connection_data['host']}:{self.connection_data['controller_port']}/tables"
+        try:
+            result = requests.get(api_url)
+        except InvalidSchema as e:
+            api_url = 'http://' + api_url
+            result = requests.get(api_url)
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                json.loads(result.content)['tables'],
+                columns=['table_name']
+            )
+        )
+
+        return response
 
     def get_columns(self, table_name: str) -> StatusResponse:
         """
@@ -186,7 +203,22 @@ class PinotHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        api_url = f"{self.connection_data['host']}:{self.connection_data['controller_port']}/tables/{table_name}/schema"
+        try:
+            result = requests.get(api_url)
+        except InvalidSchema as e:
+            api_url = 'http://' + api_url
+            result = requests.get(api_url)
+
+        df = pd.DataFrame(json.loads(result.content)['dimensionFieldSpecs'])
+        df = df.rename(columns={'name': 'column_name', 'dataType': 'data_type'})
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=df
+        )
+
+        return response
 
 
 connection_args = OrderedDict(

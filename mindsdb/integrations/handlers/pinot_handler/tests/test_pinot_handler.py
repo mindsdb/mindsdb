@@ -7,11 +7,11 @@ class PinotHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": 'localhost',
+            "host": "localhost",
             "broker_port": 8000,
             "controller_port": 9000,
-            "path": '/query/sql',
-            "scheme": 'http'
+            "path": "/query/sql",
+            "scheme": "http"
         }
         cls.handler = PinotHandler('test_pinot_handler', cls.kwargs)
 

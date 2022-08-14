@@ -42,10 +42,13 @@ class PinotHandler(DatabaseHandler):
         self.parser = parse_sql
         self.dialect = 'pinot'
 
-        optional_parameters = ['username', 'password', 'verify_ssl']
+        optional_parameters = ['username', 'password']
         for parameter in optional_parameters:
             if parameter not in connection_data:
                 connection_data[parameter] = None
+
+        if 'verify_ssl' not in connection_data:
+            connection_data['verify_ssl'] = False
 
         if 'scheme' not in connection_data:
             connection_data['scheme'] = 'http'

@@ -48,7 +48,7 @@ class PinotHandler(DatabaseHandler):
                 connection_data[parameter] = None
 
         if 'verify_ssl' not in connection_data:
-            connection_data['verify_ssl'] = False
+            connection_data['verify_ssl'] = 'False'
 
         if 'scheme' not in connection_data:
             connection_data['scheme'] = 'http'

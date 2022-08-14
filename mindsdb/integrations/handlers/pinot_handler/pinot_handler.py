@@ -181,7 +181,7 @@ class PinotHandler(DatabaseHandler):
         try:
             result = requests.get(api_url)
         except InvalidSchema as e:
-            api_url = 'http://' + api_url
+            api_url = self.connection_data['scheme'] + api_url
             result = requests.get(api_url)
 
         response = Response(
@@ -207,7 +207,7 @@ class PinotHandler(DatabaseHandler):
         try:
             result = requests.get(api_url)
         except InvalidSchema as e:
-            api_url = 'http://' + api_url
+            api_url = self.connection_data['scheme'] + api_url
             result = requests.get(api_url)
 
         df = pd.DataFrame(json.loads(result.content)['dimensionFieldSpecs'])

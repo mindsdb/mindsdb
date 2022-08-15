@@ -120,7 +120,7 @@ class MySqlBinApiTest(unittest.TestCase, TestScenario):
             ''',
             f'''
             SELECT 
-              TRUNCATE(`Custom SQL Query`.`x1`,0) AS `x1`,
+              `Custom SQL Query`.`x1` AS `x1`,
               COUNT(DISTINCT TRUNCATE(`Custom SQL Query`.`y`,0)) AS `ctd_y_ok`
             FROM (
                SELECT res.x1, res.y

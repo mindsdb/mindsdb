@@ -120,7 +120,7 @@ class S3Handler(DatabaseHandler):
                 ExpressionType='SQL',
                 Expression=query,
                 InputSerialization=ast.literal_eval(self.connection_data['input_serialization']),
-                OutputSerialization=ast.literal_eval(self.connection_data['output_serialization'])
+                OutputSerialization={"CSV": {}}
             )
 
             records = []

@@ -159,7 +159,8 @@ class S3Handler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        pass
+
+        return self.native_query(query.to_string())
 
     def get_tables(self) -> StatusResponse:
         """
@@ -168,9 +169,20 @@ class S3Handler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        connection = self.connect()
+        objects = [obj['Key'] for obj in connection.list_objects(Bucket=self.connection_data["bucket"])['Contents']]
 
-    def get_columns(self, table_name: str) -> StatusResponse:
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                objects,
+                columns=['table_name']
+            )
+        )
+
+        return response
+
+    def get_columns(self, table_name: str = None) -> StatusResponse:
         """
         Returns a list of entity columns.
         Args:
@@ -179,7 +191,20 @@ class S3Handler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        query = "SELECT * FROM S3Object LIMIT 5"
+        df = self.native_query(query)
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                {
+                    'column_name': df.columns,
+                    'data_type': df.dtypes
+                }
+            )
+        )
+
+        return response
 
 
 connection_args = OrderedDict(

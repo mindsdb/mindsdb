@@ -1165,13 +1165,13 @@ class SQLQuery():
             cols = set()
             for _, col_list in step_data['columns'].items():
                 for col in col_list:
-                    cols.add(col[0])
+                    cols.add(col[1])
 
             for row in step_data['values']:
                 data_row = {}
                 for table, col_list in step_data['columns'].items():
                     for col in col_list:
-                        data_row[col[0]] = row[table][col]
+                        data_row[col[1]] = row[table][col]
                 result.append(data_row)
 
             df = pd.DataFrame(result, columns=list(cols))

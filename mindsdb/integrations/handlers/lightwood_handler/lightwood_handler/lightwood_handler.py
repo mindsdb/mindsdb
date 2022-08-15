@@ -12,7 +12,7 @@ import sqlalchemy
 import pandas as pd
 import lightwood
 from lightwood.api.types import JsonAI
-from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, code_from_json_ai, ProblemDefinition
+from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, ProblemDefinition
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant, Select, OrderBy, Show
@@ -627,6 +627,37 @@ class LightwoodHandler(PredictiveHandler):
                     row[key + '_max'] = explanation[key]['confidence_upper_bound']
 
         return data
+
+    def analyze_dataset(self, data_frame: pd.DataFrame) -> dict:
+        analysis = lightwood.analyze_dataset(data_frame)
+        return analysis.to_dict()
+
+    def edit_json_ai(self, name: str, json_ai: dict):
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=name).first()
+        assert predictor_record is not None
+
+        json_ai = lightwood.JsonAI.from_dict(json_ai)
+        predictor_record.code = lightwood.code_from_json_ai(json_ai)
+        predictor_record.json_ai = json_ai.to_dict()
+        db.session.commit()
+
+    def code_from_json_ai(self, json_ai: dict):
+        json_ai = lightwood.JsonAI.from_dict(json_ai)
+        code = lightwood.code_from_json_ai(json_ai)
+        return code
+
+    def edit_code(self, name: str, code: str):
+        """Edit an existing predictor's code"""
+        if self.config.get('cloud', False):
+            raise Exception('Code editing prohibited on cloud')
+
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=name).first()
+        assert predictor_record is not None
+
+        lightwood.predictor_from_code(code)
+        predictor_record.code = code
+        predictor_record.json_ai = None
+        db.session.commit()
 
     def join(self, stmt, data_handler: BaseHandler, into: Optional[str] = None) -> pd.DataFrame:
         """

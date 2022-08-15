@@ -155,11 +155,6 @@ class ModelController():
         except requests.RequestException as e:
             raise Exception(f'Model url is incorrect: {str(e)}')
 
-    @mark_process(name='analyse')
-    def analyse_dataset(self, df: DataFrame, company_id: int) -> lightwood.DataAnalysis:
-        analysis = lightwood.analyze_dataset(df)
-        return analysis.to_dict()  # type: ignore
-
     def get_model_data(self, name, company_id: int):
         if '@@@@@' in name:
             sn = name.split('@@@@@')
@@ -265,33 +260,6 @@ class ModelController():
     def rename_model(self, old_name, new_name, company_id: int):
         db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=old_name).first()
         db_p.name = new_name
-        db.session.commit()
-
-    def edit_json_ai(self, name: str, json_ai: dict, company_id=None):
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-        assert predictor_record is not None
-
-        json_ai = lightwood.JsonAI.from_dict(json_ai)
-        predictor_record.code = lightwood.code_from_json_ai(json_ai)
-        predictor_record.json_ai = json_ai.to_dict()
-        db.session.commit()
-
-    def code_from_json_ai(self, json_ai: dict, company_id=None):
-        json_ai = lightwood.JsonAI.from_dict(json_ai)
-        code = lightwood.code_from_json_ai(json_ai)
-        return code
-
-    def edit_code(self, name: str, code: str, company_id=None):
-        """Edit an existing predictor's code"""
-        if self.config.get('cloud', False):
-            raise Exception('Code editing prohibited on cloud')
-
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-        assert predictor_record is not None
-
-        lightwood.predictor_from_code(code)
-        predictor_record.code = code
-        predictor_record.json_ai = None
         db.session.commit()
 
     def export_predictor(self, name: str, company_id: int) -> json:

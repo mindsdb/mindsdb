@@ -166,7 +166,8 @@ class PredictorGenerate(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorEditJsonAI(Resource):
     def put(self, name):
-        request.model_controller.edit_json_ai(name, request.json['json_ai'])
+        lw_handler = request.integration_controller.get_handler('lightwood')
+        lw_handler.edit_json_ai(name, request.json['json_ai'])
         return '', 200
 
 
@@ -175,7 +176,8 @@ class PredictorEditJsonAI(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorEditCode(Resource):
     def put(self, name):
-        request.model_controller.edit_code(name, request.json['code'])
+        lw_handler = request.integration_controller.get_handler('lightwood')
+        lw_handler.edit_code(name, request.json['code'])
         return '', 200
 
 

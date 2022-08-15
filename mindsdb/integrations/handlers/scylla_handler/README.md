@@ -24,20 +24,18 @@ The required arguments to establish a connection are:
 In order to make use of this handler and connect to a Scylla server in MindsDB, the following syntax can be used:
 
 ```sql
-CREATE DATABASE sc
-WITH ENGINE = "scylladb",
-PARAMETERS = {
-    "host": "127.0.0.1",
-    "port": "9042",
-    "user": "user",
-    "password": "pass",
-    "keyspace": "test_data",
-    "protocol_version": 4
-    }
+CREATE DATABASE scylladb_datasource
+WITH ENGINE='scylladb',
+PARAMETERS={
+  "user":"user@mindsdb.com",
+  "password": "pass",
+  "secure_connect_bundle": "/home/zoran/Downloads/secure-connect.zip"
+};
 ```
+> Note protocol version is 4 by default. If you want to change it add "protocol_version": 5 to the above query.
 
 Now, you can use this established connection to query your database as follows:
 
 ```sql
-SELECT * FROM sc.example_table LIMIT 10;
+SELECT * FROM scylladb_datasource.keystore.example_table LIMIT 10;
 ```

@@ -145,10 +145,13 @@ You can make predictions by querying the predictor as if it were a table. The [`
 ```sql
 SELECT rental_price, rental_price_explain
 FROM mindsdb.home_rentals_model
-WHERE sqft = 823 AND location='good' AND neighborhood='downtown' AND days_on_market=10;
+WHERE sqft = 823
+AND location='good'
+AND neighborhood='downtown'
+AND days_on_market=10;
 ```
 
-On execution, you get the following output:
+On execution, we get:
 
 ```sql
 +--------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
@@ -163,13 +166,15 @@ On execution, you get the following output:
 Also, you can make bulk predictions by joining a table with your predictor.
 
 ```sql
-SELECT t.rental_price as real_price, m.rental_price as predicted_price, t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market 
-FROM example_db.demo_data.home_rentals as t 
-JOIN mindsdb.home_rentals_model as m
+SELECT t.rental_price AS real_price, 
+       m.rental_price AS predicted_price,
+       t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market 
+FROM example_db.demo_data.home_rentals AS t 
+JOIN mindsdb.home_rentals_model AS m
 LIMIT 100;
 ```
 
-On execution, you get the following output:
+On execution, we get:
 
 ```sql
 +------------+-----------------+-----------------+---------------------+------+----------+----------------+

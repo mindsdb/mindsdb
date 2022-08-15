@@ -80,22 +80,28 @@ FROM mydb (
 ) 
 PREDICT number_of_rooms
 USING
-url.train = 'http://127.0.0.1:8000/my_model/train',
-url.predict = 'http://127.0.0.1:8000/my_model/predict',
-dtype_dict={"number_of_rooms": "categorical", "initial_price": "integer", "rental_price": "integer"},
-format='ray_server';
+    url.train = 'http://127.0.0.1:8000/my_model/train',
+    url.predict = 'http://127.0.0.1:8000/my_model/predict',
+    dtype_dict={"number_of_rooms": "categorical", "initial_price": "integer", "rental_price": "integer"},
+    format='ray_server';
 ```
 
 And you can query predictions as usual, either by conditioning on a subset of input columns:
 
 ```sql
-SELECT * FROM byom_ray_serve WHERE initial_price=3000 AND rental_price=3000;
+SELECT *
+FROM byom_ray_serve
+WHERE initial_price=3000
+AND rental_price=3000;
 ```
 
 Or by `JOINING` to do batch predictions:
 
 ```sql
-SELECT tb.number_of_rooms, t.rental_price FROM mydb.test_data.home_rentals AS t JOIN mindsdb.byom_ray_serve AS tb WHERE t.rental_price > 5300;
+SELECT tb.number_of_rooms, t.rental_price
+FROM mydb.test_data.home_rentals AS t
+JOIN mindsdb.byom_ray_serve AS tb
+WHERE t.rental_price > 5300;
 ```
 
 *Please note that, if your model is behind a reverse proxy (e.g. nginx) you might have to increase the maximum limit for POST requests in order to receive the training data. MindsDB itself can send as much as you'd like and has been stress-tested with over a billion rows.*
@@ -303,10 +309,10 @@ FROM maria (
     FROM test.nlp_kaggle_train
 ) PREDICT target
 USING
-url.train = 'http://127.0.0.1:8000/nlp_kaggle_model/train',
-url.predict = 'http://127.0.0.1:8000/nlp_kaggle_model/predict',
-dtype_dict={"text": "rich_text", "target": "integer"},
-format='ray_server';
+    url.train = 'http://127.0.0.1:8000/nlp_kaggle_model/train',
+    url.predict = 'http://127.0.0.1:8000/nlp_kaggle_model/predict',
+    dtype_dict={"text": "rich_text", "target": "integer"},
+    format='ray_server';
 ```
 
 Training will take a while given that this model is a neural network rather than a simple logistic regression. You can check its status with the query `SELECT * FROM mindsdb.predictors WHERE name = 'byom_ray_serve_nlp';`, much like you'd do with a "normal" MindsDB predictor.
@@ -314,13 +320,17 @@ Training will take a while given that this model is a neural network rather than
 Once the predictor's status becomes `trained` we can query it for predictions as usual:
 
 ```sql
-SELECT * FROM mindsdb.byom_ray_serve_nlp WHERE text='The tsunami is coming, seek high ground';
+SELECT *
+FROM mindsdb.byom_ray_serve_nlp
+WHERE text='The tsunami is coming, seek high ground';
 ```
 
 Which would, hopefully, output `1`. Alternatively, we can try out this tweet to expect `0` as an output:
 
 ```sql
-SELECT * FROM mindsdb.byom_ray_serve_nlp WHERE text='This is lovely dear friend';
+SELECT *
+FROM mindsdb.byom_ray_serve_nlp
+WHERE text='This is lovely dear friend';
 ```
 
 If your results do not match this example, it could help to train the model for a longer amount of epochs.

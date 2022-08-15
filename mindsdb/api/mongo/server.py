@@ -302,10 +302,10 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         except Exception as e:
             log.error(e)
             response = {
-                '$err': {
-                    'title': str(e),
-                    'info': traceback.format_exc()
-                }
+                "ok": 0,
+                "errmsg": f'{str(e)} : {traceback.format_exc()}',
+                "code": 2,
+                "codeName": "BadValue"
             }
             return responder.to_bytes(response, request_id, is_error=True)
 

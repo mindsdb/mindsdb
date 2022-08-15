@@ -7,27 +7,26 @@ In MindsDB, an **AI Table** is a virtual table based on the result-set of the SQ
 ## Syntax
 
 ```sql
-CREATE VIEW mindsdb.[ai_table_name] as (
+CREATE VIEW mindsdb.[ai_table_name] AS (
     SELECT
         a.[column_name1],
         a.[column_name2],
         a.[column_name3],
         p.[model_column] as model_column
-    FROM [integration_name].[table_name] as a
-    JOIN mindsdb.[predictor_name] as p
+    FROM [integration_name].[table_name] AS a
+    JOIN mindsdb.[predictor_name] AS p
 );
-
 ```
 
 Where:
 
-| Expressions                         | Description                                                                   |
-| ----------------------------------- | ----------------------------------------------------------------------------- |
-| `[ai_table_name]`                   | Name of the view to be created                                                |
-| `[column_name1], [column_name2] ...` | Name of the columns to be joined, input for the model to make a prediction   |
-| `[model_column]`                    | name of the target column for the predictions                                 |
-| `[integration_name].[table_name]`   | where `integration_name` is the linked database and has it's `table_name`     |
-| `[predictor_name]`                  | Name of the model to be used to generate the predictions                      |
+| Expressions                          | Description                                                                   |
+| ------------------------------------ | ----------------------------------------------------------------------------- |
+| `[ai_table_name]`                    | Name of the view to be created                                                |
+| `[column_name1], [column_name2] ...` | Name of the columns to be joined, input for the model to make a prediction    |
+| `[model_column]`                     | name of the target column for the predictions                                 |
+| `[integration_name].[table_name]`    | where `integration_name` is the linked database and has it's `table_name`     |
+| `[predictor_name]`                   | Name of the model to be used to generate the predictions                      |
 
 ## Example
 
@@ -36,8 +35,8 @@ Having executed a SQL query for training a `home_rentals_model` that learns to p
 ```sql
 CREATE PREDICTOR mindsdb.home_rentals_model
 FROM integration_name
-    (SELECT * FROM house_rentals_data) as rentals
-PREDICT rental_price as price;
+    (SELECT * FROM house_rentals_data) AS rentals
+PREDICT rental_price AS price;
 ```
 
 Once trained, we can [`#!sql JOIN`](/sql/api/join/) any input data with the trained model and store the results as an AI Table using the `#!sql CREATE VIEW` syntax.
@@ -45,14 +44,14 @@ Once trained, we can [`#!sql JOIN`](/sql/api/join/) any input data with the trai
 Let's pass some of the expected input columns (in this case, `sqft`, `number_of_bathrooms`, `location`) to the model and join the predicted `rental_price` values:
 
 ```sql
-CREATE VIEW mindsdb.home_rentals as (
+CREATE VIEW mindsdb.home_rentals AS (
     SELECT
         a.sqft,
         a.number_of_bathrooms,
         a.location,
-        p.rental_price as price
-    FROM mysql_db.home_rentals as a
-    JOIN mindsdb.home_rentals_model as p
+        p.rental_price AS price
+    FROM mysql_db.home_rentals AS a
+    JOIN mindsdb.home_rentals_model AS p
 );
 ```
 

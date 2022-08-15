@@ -821,6 +821,10 @@ class SQLQuery():
                     raise ErNotSupportedYet('At this moment supported only JOIN without condition')
                 if step.query.join_type.upper() not in ('LEFT JOIN', 'JOIN'):
                     raise ErNotSupportedYet('At this moment supported only JOIN and LEFT JOIN')
+
+                if len(left_data['tables']) == 0 or len(right_data['tables']) == 0:
+                    raise ErLogicError('Table for join is not found')
+
                 if (
                         len(left_data['tables']) != 1 or len(right_data['tables']) != 1
                         or left_data['tables'][0] == right_data['tables'][0]

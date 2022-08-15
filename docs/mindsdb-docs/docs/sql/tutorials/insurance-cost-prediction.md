@@ -97,8 +97,8 @@ To train a new machine learning model we will need to CREATE PREDICTOR as a new 
 ```sql
 CREATE PREDICTOR mindsdb.predictor_name
 FROM integration_name
-(SELECT column_name, column_name2 FROM table_name) as ds_name
-PREDICT column_name as column_alias;
+    (SELECT column_name, column_name2 FROM table_name) AS ds_name
+PREDICT column_name AS column_alias;
 ```
 
 The values that we need to provide are:
@@ -114,7 +114,7 @@ So, use this command to create the models:
 ```sql
 CREATE PREDICTOR insurance_cost_predictor
 FROM insurance_costs
-(SELECT * from insurance)
+    (SELECT * FROM insurance)
 PREDICT charges;
 ```
 
@@ -123,7 +123,9 @@ PREDICT charges;
 If there's no error, that means your model is created and training has started. To see if your model is finished, use this command:
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name = predictor_name;
+SELECT *
+FROM mindsdb.predictors
+WHERE name = predictor_name;
 ```
 
 And values that we need to provide are:
@@ -131,7 +133,9 @@ And values that we need to provide are:
 * predictor_name (string) - The name of the model.
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='insurance_cost_predictor';
+SELECT *
+FROM mindsdb.predictors
+WHERE name='insurance_cost_predictor';
 ```
 
 ![Show model](/assets/sql/tutorials/insurance-cost/select_insurance.png)
@@ -143,8 +147,10 @@ If the predictor is ready, it will look like this. The model has been created an
 Now you are in the last step of this tutorial, making the prediction. To make a prediction you can use this command:
 
 ```sql
-SELECT target_variable, target_variable_explain FROM model_table 
-WHERE column3="value" AND column2=value;
+SELECT target_variable, target_variable_explain
+FROM model_table 
+WHERE column3="value"
+AND column2=value;
 ```
 
 You need to set these values:
@@ -155,9 +161,14 @@ You need to set these values:
 - when_data - The data to make the predictions from(WHERE clause params).
 
 ```sql
-SELECT charges, charges_confidence, charges_explain as info
+SELECT charges, charges_confidence, charges_explain AS info
 FROM insurance_cost_predictor
-WHERE age=20 AND sex='male' AND bmi=33.20 AND children=0 AND smoker='no' AND region='southeast';
+WHERE age=20
+AND sex='male'
+AND bmi=33.20
+AND children=0
+AND smoker='no'
+AND region='southeast';
 ```
 
 ![Query model](/assets/sql/tutorials/insurance-cost/prediction_insurance.png)

@@ -119,8 +119,7 @@ class InformationSchemaDataNode(DataNode):
                 if (
                     type(arg) == BinaryOperation and arg.op == '='
                     and type(arg.args[0]) == Identifier
-                    and arg.args[0].parts[0].upper() == 'TABLES'
-                    and arg.args[0].parts[1].upper() == 'TABLE_SCHEMA'
+                    and arg.args[0].parts[-1].upper() == 'TABLE_SCHEMA'
                     and type(arg.args[1]) == Constant
                 ):
                     target_table = arg.args[1].value

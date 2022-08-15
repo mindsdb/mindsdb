@@ -62,7 +62,7 @@ CREATE TABLE int1.tbl1 (
     FROM int2.tbl2 AS ta
     JOIN mindsdb.predictor_name AS tb
     WHERE ta.date > '2015-12-31'
-)
+);
 ```
 
 On execution, we get:

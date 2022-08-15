@@ -166,7 +166,7 @@ AND MultipleLines='No phone service'
 AND InternetService='DSL';
 ```
 
-On execution, you get the following output:
+On execution, we get:
 
 ```sql
 +-------+---------------------+-------------------------------------------------------------------------------------------------+
@@ -203,7 +203,7 @@ AND MonthlyCharges=29.85
 AND TotalCharges=29.85;
 ```
 
-On execution, you get the following output:
+On execution, we get:
 
 ```sql
 +-------+---------------------+-------------------------------------------------------------------------------------------------+

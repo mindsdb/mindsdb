@@ -146,9 +146,9 @@ Now, if the status of our predictor says `complete`, we can start making predict
 You can make predictions by querying the predictor as if it were a table. The [`SELECT`](/sql/api/select/) syntax lets you make predictions for the label based on the chosen features for a given period of time. Usually, you want to know what happens right after the latest training data point that was fed. We have a special keyword for that: the `LATEST` keyword.
 
 ```sql
-SELECT m.saledate as date, m.MA as forecast
-FROM mindsdb.house_sales_predictor as m 
-JOIN files.house_sales as t
+SELECT m.saledate AS date, m.MA AS forecast
+FROM mindsdb.house_sales_predictor AS m 
+JOIN files.house_sales AS t
 WHERE t.saledate > LATEST 
 AND t.type = 'house' 
 AND t.bedrooms = 2

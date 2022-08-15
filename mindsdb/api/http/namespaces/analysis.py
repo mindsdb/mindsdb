@@ -72,3 +72,22 @@ class QueryAnalysis(Resource):
             'timestamp': time.time(),
             'tables': query_tables
         }
+
+
+@ns_conf.route('/data')
+class DataAnalysis(Resource):
+    @ns_conf.doc('post_data_to_analyze')
+    def post(self):
+        payload = request.json
+        column_names = payload.get('column_names')
+        data = payload.get('data')
+
+        analysis = request.model_interface.analyse_dataset(
+            df=DataFrame(data, columns=column_names),
+            company_id=None
+        )
+
+        return {
+            'analysis': analysis,
+            'timestamp': time.time()
+        }

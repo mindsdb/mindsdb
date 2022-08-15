@@ -67,6 +67,11 @@ class Responce(Responder):
             )
             table_select.parentheses = True
 
+            modifiers = query['filter'].get('modifiers')
+            if modifiers is not None and hasattr(ast_query, 'modifiers'):
+                for modifier in modifiers:
+                    table_select.modifiers.append(modifier)
+
             # convert to join
             right_table = ast_query.from_table
 
@@ -87,6 +92,10 @@ class Responce(Responder):
                 limit=query.get('limit'),
                 skip=query.get('skip'),
             )
+            modifiers = query['filter'].get('modifiers')
+            if modifiers is not None and hasattr(ast_query, 'modifiers'):
+                for modifier in modifiers:
+                    ast_query.modifiers.append(modifier)
 
         data = run_sql_command(mindsdb_env, ast_query)
 

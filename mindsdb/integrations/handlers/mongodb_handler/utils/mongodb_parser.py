@@ -13,7 +13,7 @@ class MongodbParser:
     '''
 
     def from_string(self, call_str):
-        tree = py_ast.parse(call_str, mode='eval')
+        tree = py_ast.parse(call_str.strip(), mode='eval')
         calls = self.process(tree.body)
         # first call contents collection
         method1 = calls[0]['method']

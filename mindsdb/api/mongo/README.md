@@ -144,6 +144,20 @@ db.predictors.insert(
 
 Parameters of USING operator of sql query are located in training_options of mongo query 
 
+If you have nested values in mongo collections. For example key hist_data contents list of objects like 
+`{ sale_price: 80.38, saledate: '2020-08-01T00:00:00.000'}`
+
+You can unnest it using aggregate mongo query:
+```
+"select_data_query": "db.house_sales.aggregate([\
+{'$match': {'type': 'house'}},\
+{'$unwind': '$hist_data'},\
+{'$project': {'sale_price': '$hist_data.sale_price', 'saledate': '$hist_data.saledate', 'type': 1}}\
+])"
+```
+
+- $unwind - is doing unnesting
+- $project - is moving keys to top level
 
 ## List of predictors from mongo:
 ```
@@ -194,6 +208,28 @@ db.sales_model.find(
     "query":  { 
         "$where": "this.sale_date > latest and this.type = 'house'" 
     },
+},
+{ // projection block
+    'house_sales.sale_price': 'orig_price',
+    'sales_model.sale_price': 'predicted_price'
+}
+)
+```
+
+To work with nested values you can add modifiers in mindsdb queries that will pass to query to mongodb database. 
+It will prepare data from mongo to pass it to predictor in expected format 
+
+```
+db.sales_model.find(
+{
+    "collection": "mongo_int.house_sales", 
+    "query":  { 
+        "$where": "this.sale_date > latest and this.type = 'house'" 
+    },
+    'modifiers': [
+        {'$unwind': '$hist_data'},
+        {'$project': {'sale_price': '$hist_data.sale_price', 'saledate': '$hist_data.saledate', 'type': 1}}
+    ]
 },
 { // projection block
     'house_sales.sale_price': 'orig_price',

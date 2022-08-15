@@ -108,8 +108,13 @@ Each DatabaseHandler should inherit from `DatabaseHandler` class.
 It will be used inside MindsDB as name of handler. For example, the name is used use an `ENGINE` in `CREATE DATABASE` statement:
 
 ```sql
-    CREATE DATABASE integration_name WITH ENGINE='postgres', +
-    PARAMETERS={'host': '127.0.0.1', 'user': 'root', 'password': 'password'}
+CREATE DATABASE integration_name
+WITH ENGINE='postgres', +
+PARAMETERS={
+  'host': '127.0.0.1',
+  'user': 'root',
+  'password': 'password'
+};
 ```
 
 #### Step 1.1: Implement `__init__`

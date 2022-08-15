@@ -36,7 +36,6 @@ For this example the port number used is 5432.
 
 You should see a similar output:
 
-
 ```console
 Session Status                online
 Account                       chandre (Plan: Free)
@@ -98,9 +97,9 @@ Use the following query to create a predictor that will predict the `Class` (*po
 
 ```sql
 CREATE PREDICTOR diabetes_predictor
-FROM mindsdb_prediction (
-    SELECT * FROM diabetes
-) PREDICT class;
+FROM mindsdb_prediction
+    (SELECT * FROM diabetes)
+PREDICT class;
 ```
 
 Select the `RUN` button,alternatively select Shift+Enter to execute the query. You will receive the message 'Query successfully completed' if the machine learning model is successfully created.
@@ -110,7 +109,9 @@ Select the `RUN` button,alternatively select Shift+Enter to execute the query. Y
 The predictor was created successfully and has started training. To check the status of the model, use the below query.
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='diabetes_predictor';
+SELECT *
+FROM mindsdb.predictors
+WHERE name='diabetes_predictor';
 ```
 
 After the predictor has finished training, you will see a similar output. Note that MindsDB does model testing for you automatically, so you will immediately see if the predictor is accurate enough.
@@ -131,11 +132,16 @@ Use the following query using mock data with the predictor.
 
 
 ```sql
-SELECT Class FROM mindsdb.diabetes_predictor
-WHERE number_of_times_pregnant=0 AND plasma_glucose_concentration=135.0 
-AND diastolic_blood_pressure=65.0 AND triceps_skin_fold_thickness=30 
-AND two_Hour_serum_insulin=0 AND body_mass_index=23.5 
-AND diabetes_pedigree_function=0.366 AND age=31;
+SELECT Class
+FROM mindsdb.diabetes_predictor
+WHERE number_of_times_pregnant=0
+AND plasma_glucose_concentration=135.0 
+AND diastolic_blood_pressure=65.0
+AND triceps_skin_fold_thickness=30 
+AND two_Hour_serum_insulin=0
+AND body_mass_index=23.5 
+AND diabetes_pedigree_function=0.366
+AND age=31;
 ```
 
 MindsDB will provide you with results similar to below:

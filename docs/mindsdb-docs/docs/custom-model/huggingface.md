@@ -8,5 +8,5 @@ PREDICT `1`  -- `1` is the target column name
 USING 
     format='huggingface',
     APITOKEN='yourapitoken'
-    data_dtype={"0": "integer", "1": "integer"}
+    data_dtype={"0": "integer", "1": "integer"};
 ```

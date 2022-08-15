@@ -11,7 +11,6 @@ from sqlalchemy import func
 from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.utilities.fs import create_directory
 
 from mindsdb.interfaces.file.file_controller import FileController
@@ -242,10 +241,6 @@ class IntegrationController:
         elif handler_type == 'lightwood':
             handler_ars['handler_controller'] = WithKWArgsWrapper(
                 IntegrationController(),
-                company_id=company_id
-            )
-            handler_ars['model_controller'] = WithKWArgsWrapper(
-                ModelController(),
                 company_id=company_id
             )
             handler_ars['company_id'] = company_id

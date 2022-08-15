@@ -3,23 +3,19 @@ import sys
 import time
 import json
 import base64
-import psutil
 import datetime
 from copy import deepcopy
 from contextlib import contextmanager
 from dateutil.parser import parse as parse_datetime
 from typing import Optional, Tuple, Union, Dict, Any
 import requests
-from typing import List
 
 import lightwood
 from lightwood.api.types import ProblemDefinition
-from lightwood import __version__ as lightwood_version
 import numpy as np
 import pandas as pd
 from pandas.core.frame import DataFrame
 
-from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.json_encoder import json_serialiser
@@ -28,7 +24,7 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.log import log
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb.utilities.hooks import after_predict as after_predict_hook
+from mindsdb.interfaces.database.integrations import IntegrationController
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -260,8 +256,6 @@ class ModelController():
         return models
 
     def delete_model(self, model_name: str, company_id: int, integration_name: str = 'lightwood'):
-        # FIXME
-        from mindsdb.interfaces.database.integrations import IntegrationController
         integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
         lw_handler = integration_controller.get_handler(integration_name)
         response = lw_handler.native_query(f'drop predictor {model_name}')

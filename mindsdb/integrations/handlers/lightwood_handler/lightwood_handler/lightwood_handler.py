@@ -38,6 +38,8 @@ from mindsdb.integrations.libs.response import (
 from mindsdb import __version__ as mindsdb_version
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.interfaces.model.model_controller import ModelController
 
 from .learn_process import brack_to_mod, rep_recur, LearnProcess, UpdateProcess
 from .utils import unpack_jsonai_old_args, load_predictor
@@ -122,8 +124,11 @@ class LightwoodHandler(PredictiveHandler):
 
         self.handler_controller = kwargs.get('handler_controller')
         self.fs_store = kwargs.get('fs_store')
-        self.model_controller = kwargs.get('model_controller')
         self.company_id = kwargs.get('company_id')
+        self.model_controller = WithKWArgsWrapper(
+            ModelController(),
+            company_id=self.company_id
+        )
 
     def check_connection(self) -> Dict[str, int]:
         try:

@@ -8,6 +8,9 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt update && apt install -y build-essential
 
+# db2 requirement
+RUN apt install -y libxml2 || true
+
 RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 && \
     pip install --prefer-binary --no-cache-dir wheel==0.37.1 && \
     pip install --prefer-binary --no-cache-dir \

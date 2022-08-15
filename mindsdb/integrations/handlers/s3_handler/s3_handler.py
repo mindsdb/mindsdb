@@ -2,7 +2,9 @@ from typing import Optional
 from collections import OrderedDict
 
 import pandas as pd
-
+import boto3
+import io
+import ast
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -54,14 +56,25 @@ class S3Handler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        pass
+        if self.is_connected is True:
+            return self.connection
+
+        self.connection = boto3.client(
+            's3',
+            aws_access_key_id=self.connection_data['aws_access_key_id'],
+            aws_secret_access_key=self.connection_data['aws_secret_access_key'],
+            region_name=self.connection_data['region_name']
+        )
+        self.is_connected = True
+
+        return self.connection
 
     def disconnect(self):
+        """ Close any existing connections
+        Should switch self.is_connected.
         """
-        Close any existing connections.
-        """
-
-        pass
+        self.is_connected = False
+        return
 
     def check_connection(self) -> StatusResponse:
         """
@@ -70,7 +83,22 @@ class S3Handler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        pass
+        response = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
+        try:
+            self.connect()
+            response.success = True
+        except Exception as e:
+            log.error(f'Error connecting to Databricks {self.connection_data["schema"]}, {e}!')
+            response.error_message = str(e)
+        finally:
+            if response.success is True and need_to_close:
+                self.disconnect()
+            if response.success is False and self.is_connected is True:
+                self.is_connected = False
+
+        return response
 
     def native_query(self, query: str) -> StatusResponse:
         """
@@ -81,7 +109,46 @@ class S3Handler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+
+        try:
+            result = connection.select_object_content(
+                Bucket=self.connection_data['bucket'],
+                Key=self.connection_data['key'],
+                ExpressionType='SQL',
+                Expression=query,
+                InputSerialization=ast.literal_eval(self.connection_data['input_serialization']),
+                OutputSerialization=ast.literal_eval(self.connection_data['output_serialization'])
+            )
+
+            records = []
+            for event in result['Payload']:
+                if 'Records' in event:
+                    records.append(event['Records']['Payload'])
+                elif 'Stats' in event:
+                    stats = event['Stats']['Details']
+
+            file_str = ''.join(r.decode('utf-8') for r in records)
+
+            df = pd.read_csv(io.StringIO(file_str))
+
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=df
+            )
+        except Exception as e:
+            log.error(f'Error running query: {query} on {self.connection_data["key"]} in {self.connection_data["bucket"]}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
 
     def query(self, query: ASTNode) -> StatusResponse:
         """

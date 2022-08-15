@@ -71,8 +71,8 @@ class Predictor(Resource):
             name=Identifier(name),
             integration_name=Identifier(data.get('integration')),
             query_str=data.get('query'),
-            targets=[Identifier(x) for x in to_predict]
-            # TODO add ts settings
+            targets=[Identifier(x) for x in to_predict],
+            using=kwargs
         )
 
         response = lw_handler.query(ast)

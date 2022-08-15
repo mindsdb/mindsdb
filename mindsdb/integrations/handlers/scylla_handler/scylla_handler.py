@@ -41,10 +41,7 @@ class ScyllaHandler(DatabaseHandler):
         connection_props = {
             'auth_provider': auth_provider
         }
-
-        if self.connection_args['protocol_version'] is not None:
-            connection_props['protocol_version'] = self.connection_args['protocol_version']
-
+        connection_props['protocol_version'] = self.connection_args.get('protocol_version', 4)
         secure_connect_bundle = self.connection_args.get('secure_connect_bundle')
 
         if secure_connect_bundle is not None:
@@ -58,7 +55,7 @@ class ScyllaHandler(DatabaseHandler):
             connection_props['port'] = int(self.connection_args['port'])
 
         cluster = Cluster(**connection_props)
-        session = cluster.connect(self.connection_args['keyspace'])
+        session = cluster.connect(self.connection_args.get('keyspace'))
 
         self.is_connected = True
         self.session = session

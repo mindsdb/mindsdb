@@ -55,7 +55,7 @@ class QueryAnalysis(Resource):
         lw_handler = request.integration_controller.get_handler('lightwood')
 
         column_names = [x['name'] for x in result.columns]
-        analysis = lw_handler.analyse_dataset(
+        analysis = lw_handler.analyze_dataset(
             df=DataFrame(result.data, columns=column_names)
         )
 
@@ -85,7 +85,7 @@ class DataAnalysis(Resource):
 
         lw_handler = request.integration_controller.get_handler('lightwood')
 
-        analysis = lw_handler.analyse_dataset(
+        analysis = lw_handler.analyze_dataset(
             df=DataFrame(data, columns=column_names)
         )
 

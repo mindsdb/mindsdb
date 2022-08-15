@@ -27,44 +27,10 @@ IS_PY36 = sys.version_info[1] <= 6
 class ModelController():
     config: Config
     fs_store: FsStore
-    predictor_cache: Dict[str, Dict[str, Union[Any]]]
 
     def __init__(self) -> None:
         self.config = Config()
         self.fs_store = FsStore()
-        self.predictor_cache = {}
-
-    def _lock_predictor(self, id: int, mode: str) -> None:
-        from mindsdb.interfaces.storage.db import session, Semaphor
-
-        while True:
-            semaphor_record = session.query(Semaphor).filter_by(entity_id=id, entity_type='predictor').first()
-            if semaphor_record is not None:
-                if mode == 'read' and semaphor_record.action == 'read':
-                    return True
-            try:
-                semaphor_record = Semaphor(entity_id=id, entity_type='predictor', action=mode)
-                session.add(semaphor_record)
-                session.commit()
-                return True
-            except Exception:
-                pass
-            time.sleep(1)
-
-    def _unlock_predictor(self, id: int) -> None:
-        from mindsdb.interfaces.storage.db import session, Semaphor
-        semaphor_record = session.query(Semaphor).filter_by(entity_id=id, entity_type='predictor').first()
-        if semaphor_record is not None:
-            session.delete(semaphor_record)
-            session.commit()
-
-    @contextmanager
-    def _lock_context(self, id, mode: str):
-        try:
-            self._lock_predictor(id, mode)
-            yield True
-        finally:
-            self._unlock_predictor(id)
 
     def _check_model_url(self, url):
         # try to post without data and check status code not in (not_found, method_not_allowed)

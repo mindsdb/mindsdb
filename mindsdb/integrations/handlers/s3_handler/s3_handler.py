@@ -192,14 +192,14 @@ class S3Handler(DatabaseHandler):
         """
 
         query = "SELECT * FROM S3Object LIMIT 5"
-        df = self.native_query(query)
+        result = self.native_query(query)
 
         response = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 {
-                    'column_name': df.columns,
-                    'data_type': df.dtypes
+                    'column_name': result.data_frame.columns,
+                    'data_type': result.data_frame.dtypes
                 }
             )
         )

@@ -39,7 +39,9 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 &
     pip install --prefer-binary --no-cache-dir \
         redshift_connector sqlalchemy-redshift || true && \
     pip install --prefer-binary --no-cache-dir \
-        trino~=0.313.0 requests-kerberos==0.12.0 || true
+        trino~=0.313.0 requests-kerberos==0.12.0 || true && \
+    pip install --prefer-binary --no-cache-dir \
+        google-cloud-bigquery db-types sqlalchemy-bigquery || true
 
 ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}

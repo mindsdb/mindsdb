@@ -7,17 +7,12 @@ import datetime
 from copy import deepcopy
 from contextlib import contextmanager
 from dateutil.parser import parse as parse_datetime
-from typing import Optional, Tuple, Union, Dict, Any
+from typing import Union, Dict, Any
 import requests
 
-import lightwood
-from lightwood.api.types import ProblemDefinition
 import numpy as np
-import pandas as pd
-from pandas.core.frame import DataFrame
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.json_encoder import json_serialiser
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
@@ -38,12 +33,6 @@ class ModelController():
         self.config = Config()
         self.fs_store = FsStore()
         self.predictor_cache = {}
-
-    def _invalidate_cached_predictors(self) -> None:
-        # @TODO: Cache will become stale if the respective ModelController is not invoked yet a bunch of predictors remained cached, no matter where we invoke it. In practice shouldn't be a big issue though
-        for predictor_name in list(self.predictor_cache.keys()):
-            if (datetime.datetime.now() - self.predictor_cache[predictor_name]['created']).total_seconds() > 1200:
-                del self.predictor_cache[predictor_name]
 
     def _lock_predictor(self, id: int, mode: str) -> None:
         from mindsdb.interfaces.storage.db import session, Semaphor
@@ -76,75 +65,6 @@ class ModelController():
             yield True
         finally:
             self._unlock_predictor(id)
-
-    # def _get_from_data_df(self, from_data: dict) -> DataFrame:
-    #     if from_data['class'] == 'QueryDS':
-    #         ds = QueryDS(*from_data['args'], **from_data['kwargs'])
-    #     else:
-    #         ds_cls = getattr(mindsdb_datasources, from_data['class'])
-    #         ds = ds_cls(*from_data['args'], **from_data['kwargs'])
-    #     return ds.df
-
-    # def _unpack_old_args(
-    #     self, from_data: dict, kwargs: dict, to_predict: Optional[Union[str, list]] = None
-    # ) -> Tuple[pd.DataFrame, ProblemDefinition, bool]:
-    def _unpack_old_args(
-        self, kwargs: dict, to_predict: Optional[Union[str, list]] = None
-    ) -> Tuple[pd.DataFrame, ProblemDefinition, bool]:
-        problem_definition = kwargs or {}
-        if isinstance(to_predict, str):
-            problem_definition['target'] = to_predict
-        elif isinstance(to_predict, list) and len(to_predict) == 1:
-            problem_definition['target'] = to_predict[0]
-        elif problem_definition.get('target') is None:
-            raise Exception(
-                f"Predict target must be 'str' or 'list' with 1 element. Got: {to_predict}"
-            )
-
-        while '.' in str(list(kwargs.keys())):
-            for k in list(kwargs.keys()):
-                if '.' in k:
-                    nks = k.split('.')
-                    obj = kwargs
-                    for nk in nks[:-1]:
-                        if nk not in obj:
-                            obj[nk] = {}
-                        obj = obj[nk]
-                    obj[nks[-1]] = kwargs[k]
-                    del kwargs[k]
-
-        join_learn_process = kwargs.get('join_learn_process', False)
-        if 'join_learn_process' in kwargs:
-            del kwargs['join_learn_process']
-
-        # Adapt kwargs to problem definition
-        if 'timeseries_settings' in kwargs:
-            problem_definition['timeseries_settings'] = kwargs['timeseries_settings']
-
-        if 'stop_training_in_x_seconds' in kwargs:
-            problem_definition['time_aim'] = kwargs['stop_training_in_x_seconds']
-
-        if kwargs.get('ignore_columns') is not None:
-            problem_definition['ignore_features'] = kwargs['ignore_columns']
-
-        json_ai_override = {}
-        json_ai_keys = list(lightwood.JsonAI.__dict__['__annotations__'].keys())
-        for k in kwargs:
-            if k in json_ai_keys:
-                json_ai_override[k] = kwargs[k]
-
-        if (
-            problem_definition.get('ignore_features') is not None and isinstance(problem_definition['ignore_features'], list) is False
-        ):
-            problem_definition['ignore_features'] = [problem_definition['ignore_features']]
-
-        # if from_data is not None:
-        #     df = self._get_from_data_df(from_data)
-        # else:
-        #     df = None
-
-        # return df, problem_definition, join_learn_process, json_ai_override
-        return problem_definition, join_learn_process, json_ai_override
 
     def _check_model_url(self, url):
         # try to post without data and check status code not in (not_found, method_not_allowed)

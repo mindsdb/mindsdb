@@ -14,7 +14,9 @@ The required arguments to establish a connection are,
 * `password`: password to authenticate your access
 * `host`: host to server IP Address or hostname
 * `port`: port through which  connection is to be made.
-* `schema`: schema name to get tables 
+* `schema_name`: schema name to get tables.
+
+    _Note : DefaulT value of schema_name is 'doc'_
 
 ## Usage
 In order to make use of this handler and connect to Crate DB in MindsDB, the following syntax can be used,

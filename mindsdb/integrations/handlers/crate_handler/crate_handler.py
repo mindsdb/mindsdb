@@ -39,7 +39,7 @@ class CrateHandler(DatabaseHandler):
         self.dialect = "crate"
         self.user = connection_data['user']
         self.password = connection_data['password']
-        # self.schemaName = connection_data['schema_name'] 
+        self.schemaName = connection_data['schema_name'] if 'schema_name' in connection_data else "doc"
         self.host = connection_data['host']
         self.port = connection_data['port']
 
@@ -57,7 +57,6 @@ class CrateHandler(DatabaseHandler):
         Returns:
             Connection Object
         """
-        print(" ✓  ✓  ✓  ✓  ✓  ✓   ✓  ✓  ✓  ✓  ✓ CONNECTED CALLED ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓ ")
         if self.is_connected is True:
             return self.connection
 
@@ -77,7 +76,6 @@ class CrateHandler(DatabaseHandler):
         """ Close any existing connections
         Should switch self.is_connected.
         """
-        print(" ✓  ✓  ✓  ✓  ✓  ✓   ✓  ✓  ✓  ✓  ✓ DISCONNECTED CALLED ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓ ")
 
         if self.is_connected is False:
             return
@@ -95,7 +93,6 @@ class CrateHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
-        print(" ✓  ✓  ✓  ✓  ✓  ✓   ✓  ✓  ✓  ✓  ✓ CHECK CONNECTION CALLED ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓ ")
 
         responseCode = StatusResponse(False)
         need_to_close = self.is_connected is False
@@ -123,7 +120,6 @@ class CrateHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        print(" ✓  ✓  ✓  ✓  ✓  ✓   ✓  ✓  ✓  ✓  ✓ NATIVE QUERY CALLED ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓ ")
 
         need_to_close = self.is_connected is False
         
@@ -163,7 +159,6 @@ class CrateHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        print(" ✓  ✓  ✓  ✓  ✓  ✓   ✓  ✓  ✓  ✓  ✓ QUERY CALLED ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓ ")
         
 
 
@@ -180,9 +175,8 @@ class CrateHandler(DatabaseHandler):
                 (https://dev.mysql.com/doc/refman/8.0/en/information-schema-tables-table.html)
                 Column 'TABLE_NAME' is mandatory, other is optional.
         """
-        print(" ✓  ✓  ✓  ✓  ✓  ✓   ✓  ✓  ✓  ✓  ✓ TABLE CALLED ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓ ")
         
-        q = "SHOW TABLES FROM doc;"
+        q = f"SHOW TABLES FROM {self.schemaName};"
         result = self.native_query(q)
         return result
     
@@ -197,7 +191,6 @@ class CrateHandler(DatabaseHandler):
                 recomended to define also 'DATA_TYPE': it should be one of
                 python data types (by default it str).
         """
-        print(" ✓  ✓  ✓  ✓  ✓  ✓   ✓  ✓  ✓  ✓  ✓ COLUMNS CALLED ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓  ✓ ")
 
         
         q = f"SHOW COLUMNS FROM {table_name};"
@@ -228,10 +221,10 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.INT,
         'description': 'Specify port to connect CrateDB server'
     }, 
-    # schemaName={
-    #     'type': ARG_TYPE.STR,
-    #     'description': 'Specify the schema name '
-    # },
+    schemaName={
+        'type': ARG_TYPE.STR,
+        'description': 'Specify the schema name. Note: It is optional DEFAULT is "doc"'
+    },
 
 )
 
@@ -240,6 +233,6 @@ connection_args_example = OrderedDict(
     port='4200',
     password='',
     user='crate',
-    # schemaName="doc",
+    
 
 )

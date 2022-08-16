@@ -9,7 +9,8 @@ class Responce(Responder):
         )
 
     result = {
-        'version': '3.6',
+        'version': '3.6.8',
+        'versionArray': [3, 6, 8, 0],
         'ok': 1
     }
 

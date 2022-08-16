@@ -16,7 +16,7 @@ The `DESCRIBE mindsdb.[name_of_your_predictor].features` statement is used to di
 DESCRIBE mindsdb.[name_of_your_predictor].features;
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 +--------------+-------------+--------------+-------------+
@@ -28,11 +28,11 @@ On execution:
 
 Where:
 
-|                            | Description                                           |
+| Name                       | Description                                           |
 | -------------------------- | ----------------------------------------------------- |
 | `[name_of_your_predictor]` | Name of the model to be described                     |
 | column                     | Columns used                                          |
-| type                       | Type of data inferred                                  |
+| type                       | Type of data inferred                                 |
 | encoder                    | Encoder used                                          |
 | role                       | Role for that column, it can be `feature` or `target` |
 
@@ -42,7 +42,7 @@ Where:
 DESCRIBE mindsdb.home_rentals_model.features;
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 +---------------------+-------------+----------------+---------+
@@ -68,19 +68,19 @@ The `DESCRIBE mindsdb.[name_of_your_predictor].model` statement is used to displ
 DESCRIBE mindsdb.[name_of_your_predictor].model;
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
-+-----------------+-------------+---------------+----------+
-| name            | performance | training_time | selected |
-+-----------------+-------------+---------------+----------+
++-----------------+-------------+---------------+-----------+
+| name            | performance | training_time | selected  |
++-----------------+-------------+---------------+-----------+
 | candidate_model | performance  | training_time | selected |
-+-----------------+-------------+---------------+----------+
++-----------------+-------------+---------------+-----------+
 ```
 
 Where:
 
-|                            | Description                                            |
+| Name                       | Description                                            |
 | -------------------------- | ------------------------------------------------------ |
 | `[name_of_your_predictor]` | Name of the model to be described                      |
 | name                       | Name of the candidate_model                            |
@@ -94,7 +94,7 @@ Where:
 DESCRIBE mindsdb.home_rentals_model.model;
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 +------------+--------------------+----------------------+----------+
@@ -114,7 +114,7 @@ On execution:
 DESCRIBE mindsdb.[name_of_your_predictor].ensemble;
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 +-----------------+
@@ -126,7 +126,7 @@ On execution:
 
 Where:
 
-|          | Description                                                                    |
+| Name     | Description                                                                    |
 | -------- | ------------------------------------------------------------------------------ |
 | ensemble | JSON type object describing the parameters used to select best model candidate |
 
@@ -136,122 +136,122 @@ Where:
 DESCRIBE mindsdb.home_rentals_model.ensemble;
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 +----------------------------------------------------------------------+
 | ensemble                                                             |
 +----------------------------------------------------------------------+
-| {
-  "encoders": {
-    "rental_price": {
-      "module": "NumericEncoder",
-      "args": {
-        "is_target": "True",
-        "positive_domain": "$statistical_analysis.positive_domain"
-      }
-    },
-    "number_of_rooms": {
-      "module": "OneHotEncoder",
-      "args": {}
-    },
-    "number_of_bathrooms": {
-      "module": "BinaryEncoder",
-      "args": {}
-    },
-    "sqft": {
-      "module": "NumericEncoder",
-      "args": {}
-    },
-    "location": {
-      "module": "OneHotEncoder",
-      "args": {}
-    },
-    "days_on_market": {
-      "module": "NumericEncoder",
-      "args": {}
-    },
-    "neighborhood": {
-      "module": "OneHotEncoder",
-      "args": {}
-    }
-  },
-  "dtype_dict": {
-    "number_of_rooms": "categorical",
-    "number_of_bathrooms": "binary",
-    "sqft": "integer",
-    "location": "categorical",
-    "days_on_market": "integer",
-    "neighborhood": "categorical",
-    "rental_price": "integer"
-  },
-  "dependency_dict": {},
-  "model": {
-    "module": "BestOf",
-    "args": {
-      "submodels": [
-        {
-          "module": "Neural",
-          "args": {
-            "fit_on_dev": true,
-            "stop_after": "$problem_definition.seconds_per_mixer",
-            "search_hyperparameters": true
-          }
-        },
-        {
-          "module": "LightGBM",
-          "args": {
-            "stop_after": "$problem_definition.seconds_per_mixer",
-            "fit_on_dev": true
-          }
-        },
-        {
-          "module": "Regression",
-          "args": {
-            "stop_after": "$problem_definition.seconds_per_mixer"
-          }
-        }
-      ],
-      "args": "$pred_args",
-      "accuracy_functions": "$accuracy_functions",
-      "ts_analysis": null
-    }
-  },
-  "problem_definition": {
-    "target": "rental_price",
-    "pct_invalid": 2,
-    "unbias_target": true,
-    "seconds_per_mixer": 57024.0,
-    "seconds_per_encoder": null,
-    "expected_additional_time": 8.687719106674194,
-    "time_aim": 259200,
-    "target_weights": null,
-    "positive_domain": false,
-    "timeseries_settings": {
-      "is_timeseries": false,
-      "order_by": null,
-      "window": null,
-      "group_by": null,
-      "use_previous_target": true,
-      "horizon": null,
-      "historical_columns": null,
-      "target_type": "",
-      "allow_incomplete_history": true,
-      "eval_cold_start": true,
-      "interval_periods": []
-    },
-    "anomaly_detection": false,
-    "use_default_analysis": true,
-    "ignore_features": [],
-    "fit_on_all": true,
-    "strict_mode": true,
-    "seed_nr": 420
-  },
-  "identifiers": {},
-  "accuracy_functions": [
-    "r2_score"
-  ]
-}                                                                      |
+| {                                                                    |
+| "encoders": {                                                        |
+|   "rental_price": {                                                  |
+|     "module": "NumericEncoder",                                      |
+|     "args": {                                                        |
+|       "is_target": "True",                                           |
+|       "positive_domain": "$statistical_analysis.positive_domain"     |
+|     }                                                                |
+|   },                                                                 |
+|   "number_of_rooms": {                                               |
+|     "module": "OneHotEncoder",                                       |
+|     "args": {}                                                       |
+|   },                                                                 |
+|   "number_of_bathrooms": {                                           |
+|     "module": "BinaryEncoder",                                       |
+|     "args": {}                                                       |
+|   },                                                                 |
+|   "sqft": {                                                          |
+|     "module": "NumericEncoder",                                      |
+|     "args": {}                                                       |
+|   },                                                                 |
+|   "location": {                                                      |
+|     "module": "OneHotEncoder",                                       |
+|     "args": {}                                                       |
+|   },                                                                 |
+|   "days_on_market": {                                                |
+|     "module": "NumericEncoder",                                      |
+|     "args": {}                                                       |
+|   },                                                                 |
+|   "neighborhood": {                                                  |
+|     "module": "OneHotEncoder",                                       |
+|     "args": {}                                                       |
+|   }                                                                  |
+| },                                                                   |
+| "dtype_dict": {                                                      |
+|   "number_of_rooms": "categorical",                                  |
+|   "number_of_bathrooms": "binary",                                   |
+|   "sqft": "integer",                                                 |
+|   "location": "categorical",                                         |
+|   "days_on_market": "integer",                                       |
+|   "neighborhood": "categorical",                                     |
+|   "rental_price": "integer"                                          |
+| },                                                                   |
+| "dependency_dict": {},                                               |
+| "model": {                                                           |
+|   "module": "BestOf",                                                |
+|   "args": {                                                          |
+|     "submodels": [                                                   |
+|       {                                                              |
+|         "module": "Neural",                                          |
+|         "args": {                                                    |
+|           "fit_on_dev": true,                                        |
+|           "stop_after": "$problem_definition.seconds_per_mixer",     |
+|           "search_hyperparameters": true                             |
+|         }                                                            |
+|       },                                                             |
+|       {                                                              |
+|         "module": "LightGBM",                                        |
+|         "args": {                                                    |
+|           "stop_after": "$problem_definition.seconds_per_mixer",     |
+|           "fit_on_dev": true                                         |
+|         }                                                            |
+|       },                                                             |
+|       {                                                              |
+|         "module": "Regression",                                      |
+|         "args": {                                                    |
+|           "stop_after": "$problem_definition.seconds_per_mixer"      |
+|         }                                                            |
+|       }                                                              |
+|     ],                                                               |
+|     "args": "$pred_args",                                            |
+|     "accuracy_functions": "$accuracy_functions",                     |
+|     "ts_analysis": null                                              |
+|   }                                                                  |
+| },                                                                   |
+| "problem_definition": {                                              |
+|   "target": "rental_price",                                          |
+|   "pct_invalid": 2,                                                  |
+|   "unbias_target": true,                                             |
+|   "seconds_per_mixer": 57024.0,                                      |
+|   "seconds_per_encoder": null,                                       |
+|   "expected_additional_time": 8.687719106674194,                     |
+|   "time_aim": 259200,                                                |
+|   "target_weights": null,                                            |
+|   "positive_domain": false,                                          |
+|   "timeseries_settings": {                                           |
+|     "is_timeseries": false,                                          |
+|     "order_by": null,                                                |
+|     "window": null,                                                  |
+|     "group_by": null,                                                |
+|     "use_previous_target": true,                                     |
+|     "horizon": null,                                                 |
+|     "historical_columns": null,                                      |
+|     "target_type": "",                                               |
+|     "allow_incomplete_history": true,                                |
+|     "eval_cold_start": true,                                         |
+|     "interval_periods": []                                           |
+|   },                                                                 |
+|   "anomaly_detection": false,                                        |
+|   "use_default_analysis": true,                                      |
+|   "ignore_features": [],                                             |
+|   "fit_on_all": true,                                                |
+|   "strict_mode": true,                                               |
+|   "seed_nr": 420                                                     |
+| },                                                                   |
+| "identifiers": {},                                                   |
+| "accuracy_functions": [                                              |
+|   "r2_score"                                                         |
+| ]                                                                    |
+|}                                                                     |
 +----------------------------------------------------------------------+
 ```
 

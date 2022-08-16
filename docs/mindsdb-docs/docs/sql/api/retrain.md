@@ -11,7 +11,7 @@ The predictor is updated to leverage any new data in optimizing its predictive c
 RETRAIN mindsdb.[predictor_name];
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 Query OK, 0 rows affected (0.058 sec)
@@ -20,11 +20,12 @@ Query OK, 0 rows affected (0.058 sec)
 ## Validation
 
 ```sql
-SELECT name, update_status FROM mindsdb.predictors
-    WHERE name = '[predictor_name]';
+SELECT name, update_status
+FROM mindsdb.predictors
+WHERE name = '[predictor_name]';
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 +------------------+---------------+
@@ -36,7 +37,7 @@ On execution:
 
 Where:
 
-|                    | Description                                                                              |
+| Name               | Description                                                                              |
 | ------------------ | ---------------------------------------------------------------------------------------- |
 | `[predictor_name]` | Name of the model to be retrained                                                        |
 | `update_status`    | Column from `#!sql mindsdb.predictors` that informs if the model can be retrained or not |
@@ -46,11 +47,12 @@ Where:
 ### Validating Prior Status
 
 ```sql
-SELECT name, update_status FROM mindsdb.predictors
-    WHERE name = 'home_rentals_model';
+SELECT name, update_status
+FROM mindsdb.predictors
+WHERE name = 'home_rentals_model';
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 +--------------------+---------------+
@@ -60,7 +62,7 @@ On execution:
 +--------------------+---------------+
 ```
 
-Note the value for `update_status` is `available`
+Note the value for `update_status` is `available`.
 
 ### Retraining model
 
@@ -68,7 +70,7 @@ Note the value for `update_status` is `available`
 RETRAIN home_rentals_model;
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 Query OK, 0 rows affected (0.058 sec)
@@ -77,11 +79,12 @@ Query OK, 0 rows affected (0.058 sec)
 ### Validating Resulting Status
 
 ```sql
-SELECT  name, update_status FROM mindsdb.predictors
-    WHERE name = 'home_rentals_model';
+SELECT  name, update_status
+FROM mindsdb.predictors
+WHERE name = 'home_rentals_model';
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 +--------------------+---------------+

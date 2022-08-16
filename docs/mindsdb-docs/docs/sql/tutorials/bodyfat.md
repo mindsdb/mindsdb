@@ -54,7 +54,9 @@ Once you have successfully uploaded the file, you can query the data from the fi
 Run the following syntax:
 
 ```sql
-SELECT * FROM files.bodyfat LIMIT 10;
+SELECT *
+FROM files.bodyfat
+LIMIT 10;
 ```
 
 ![selectdate](/assets/sql/tutorials/bodyfat/selectdata.png)
@@ -68,7 +70,7 @@ With the CREATE PREDICTOR statement, we can create a machine learning model:
 ```sql
 CREATE PREDICTOR mindsdb.predictor_name
 FROM files 
-(SELECT column_name, column_name2 FROM file_name)
+        (SELECT column_name, column_name2 FROM file_name)
 PREDICT column_name;
 ```
 
@@ -82,9 +84,9 @@ For our case, we'll enter the following syntax:
 
 ```sql
 CREATE PREDICTOR bodyfat_predictor
-FROM files (
-        SELECT * FROM bodyfat
-) PREDICT Bodyfat;
+FROM files
+        (SELECT * FROM bodyfat)
+PREDICT Bodyfat;
 ```
 
 Select the `Run` button or select Shift+Enter to run the syntax. Once is is successful you will receive a message in the console 'Query successfully completed'.
@@ -97,7 +99,9 @@ You should see output similar to the following:
 At this point, the predictor will immediately begin training.  Check the status of the training by entering the command:
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='bodyfat_predictor';
+SELECT *
+FROM mindsdb.predictors
+WHERE name='bodyfat_predictor';
 ```
 
 When complete, you should see output similar to the following:
@@ -115,7 +119,20 @@ Let's imagine an individual aged 25, with a body density of 1.08, a weight of 17
 ```sql
 SELECT BodyFat, BodyFat_confidence, BodyFat_explain 
 FROM mindsdb.bodyfat_predictor 
-WHERE Density=1.08 AND Age=25 AND Weight=170 AND Height=70 AND Neck=38.1 AND Chest=103.5 AND Abdomen=85.4 AND Hip=102.2 AND Thigh=63.0 AND Knee=39.4 AND Ankle=22.8 AND Biceps=33.3 AND Forearm=28.7 AND Wrist=18.3;
+WHERE Density=1.08
+AND Age=25
+AND Weight=170
+AND Height=70
+AND Neck=38.1
+AND Chest=103.5
+AND Abdomen=85.4
+AND Hip=102.2
+AND Thigh=63.0
+AND Knee=39.4
+AND Ankle=22.8
+AND Biceps=33.3
+AND Forearm=28.7
+AND Wrist=18.3;
 ```
 
 This should return output similar to:
@@ -131,15 +148,19 @@ The above example showed how to make predictions for a single individual's bodyf
 The basic syntax to use the JOIN syntax is:
 
 ```sql
-SELECT t.column_name1, t.column_name2, FROM integration_name.table AS t 
-JOIN mindsdb.predictor_name AS p WHERE t.column_name IN (value1, value2, ...);
+SELECT t.column_name1, t.column_name2
+FROM integration_name.table AS t 
+JOIN mindsdb.predictor_name AS p
+WHERE t.column_name IN (value1, value2, ...);
 ```
 
 For our purposes, we'll re-use the original data set, taking the Age, Density, Weight, Height, Neck circumference, Chest circumference, Abdomen circumference, and Hip circumference fields.  We'll also include the original BodyFat percentage to compare our predicted values against the originals.  Execute the following command:
 
 ```sql
-SELECT t.Age, t.Density, t.Weight, t.Height, t.Neck, t.Chest, t.Abdomen, t.Hip, t.BodyFat, p.BodyFat AS predicted_BodyFat
-FROM bodyfat_integration.bodyfat AS t JOIN mindsdb.bodyfat_predictor AS p
+SELECT t.Age, t.Density, t.Weight, t.Height, t.Neck,
+       t.Chest, t.Abdomen, t.Hip, t.BodyFat, p.BodyFat AS predicted_BodyFat
+FROM bodyfat_integration.bodyfat AS t
+JOIN mindsdb.bodyfat_predictor AS p
 LIMIT 5;
 ```
 

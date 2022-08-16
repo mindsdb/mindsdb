@@ -41,10 +41,10 @@ PARAMETERS = {
   "host": "3.220.66.106",
   "port": "5432",
   "database": "demo"
-}
+};
 ```
 
-On execution, you should get:
+On execution, we get:
 
 ```sql
 Query OK, 0 rows affected (3.22 sec)
@@ -60,7 +60,7 @@ FROM example_data.demo_data.home_rentals
 LIMIT 10;
 ```
 
-On execution, you should get:
+On execution, we get:
 
 ```sql
 +-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
@@ -90,6 +90,8 @@ FROM example_data
 PREDICT rental_price;
 ```
 
+On execution, we get:
+
 ```sql
 Query OK, 0 rows affected (9.79 sec)
 ```
@@ -104,7 +106,7 @@ FROM mindsdb.predictors
 WHERE name='home_rentals_predictor';
 ```
 
-On execution, you should get:
+On execution, we get:
 
 ```sql
 +----------+
@@ -113,6 +115,7 @@ On execution, you should get:
 | training |
 +----------+
 ```
+
 Or:
 
 ```sql
@@ -132,10 +135,11 @@ The [`SELECT`](/sql/api/select/) syntax will allow you to make a prediction base
 ```sql 
 SELECT rental_price
 FROM mindsdb.home_rentals_predictor
-WHERE number_of_bathrooms=2 AND sqft=1000;
+WHERE number_of_bathrooms=2
+AND sqft=1000;
 ```
 
-On execution, you should get:
+On execution, we get:
 
 ```sql
 +--------------+

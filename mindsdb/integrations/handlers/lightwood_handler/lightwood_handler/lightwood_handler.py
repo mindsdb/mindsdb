@@ -132,7 +132,6 @@ class LightwoodHandler(PredictiveHandler):
 
     def check_connection(self) -> Dict[str, int]:
         try:
-            import lightwood
             year, major, minor, hotfix = lightwood.__version__.split('.')
             assert int(year) > 22 or (int(year) == 22 and int(major) >= 4)
             print("Lightwood OK!")

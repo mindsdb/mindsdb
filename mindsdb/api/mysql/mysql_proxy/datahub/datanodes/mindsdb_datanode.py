@@ -143,8 +143,6 @@ class MindsDBDataNode(DataNode):
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
     def query(self, table, where_data=None):
-        ''' NOTE WHERE statements can be just $eq joined with 'and'
-        '''
         if table == 'predictors':
             return self._select_predictors()
         if table == 'datasources':

@@ -90,7 +90,7 @@ class S3Handler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.error(f'Error connecting to Databricks {self.connection_data["schema"]}, {e}!')
+            log.error(f'Error connecting to AWS with the given credentials, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:

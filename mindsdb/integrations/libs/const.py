@@ -12,6 +12,7 @@ class HANDLER_CONNECTION_ARG_TYPE:
     STR = 'str'
     INT = 'int'
     BOOL = 'bool'
+    URL = 'url'
 
 
 HANDLER_CONNECTION_ARG_TYPE = HANDLER_CONNECTION_ARG_TYPE()

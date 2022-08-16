@@ -130,8 +130,8 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.STR,
         'description': 'The BigQuery project id.'
     },
-    credentials={
-        'type': ARG_TYPE.STR,
+    service_account_keys={
+        'type': ARG_TYPE.URL,
         'description': 'Full path to the service account JSON file'
     }
 )

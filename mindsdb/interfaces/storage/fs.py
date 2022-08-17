@@ -32,24 +32,47 @@ def copy(src, dst):
 
 
 class BaseFSStore(ABC):
+    """Base class for file storage
+    """
+
     def __init__(self):
         self.config = Config()
         self.storage = self.config['paths']['storage']
 
     @abstractmethod
     def get(self, local_name, base_dir):
+        """Copy file/folder from storage to {base_dir}
+
+        Args:
+            local_name (str): name of resource (file/folder)
+            base_dir (str): path to copy the resource
+        """
         pass
 
     @abstractmethod
     def put(self, local_name, base_dir):
+        """Copy file/folder from {base_dir} to storage
+
+        Args:
+            local_name (str): name of resource (file/folder)
+            base_dir (str): path to folder with the resource
+        """
         pass
 
     @abstractmethod
     def delete(self, remote_name):
+        """Delete file/folder from storage
+
+        Args:
+            remote_name (str): name of resource
+        """
         pass
 
 
 class LocalFSStore(BaseFSStore):
+    """Storage that stores files locally
+    """
+
     def __init__(self):
         super().__init__()
 
@@ -72,6 +95,9 @@ class LocalFSStore(BaseFSStore):
 
 
 class S3FSStore(BaseFSStore):
+    """Storage that stores files in amazon s3
+    """
+
     def __init__(self):
         super().__init__()
         if 's3_credentials' in self.config['permanent_storage']:

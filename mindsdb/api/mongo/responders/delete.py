@@ -34,13 +34,13 @@ class Responce(Responder):
 
         predictor_name = query['deletes'][0]['q']['name']
 
-        models = mindsdb_env['model_interface'].get_models()
+        models = mindsdb_env['model_controller'].get_models()
         model_names = [x['name'] for x in models]
 
         n = 0
         if predictor_name in model_names:
             n = 1
-            mindsdb_env['model_interface'].delete_model(predictor_name)
+            mindsdb_env['model_controller'].delete_model(predictor_name)
 
         return {
             'n': n,

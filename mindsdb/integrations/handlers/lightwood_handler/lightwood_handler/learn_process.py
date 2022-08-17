@@ -3,10 +3,8 @@ import sys
 import traceback
 import tempfile
 from pathlib import Path
-from typing import Optional
 import json
 import requests
-import traceback
 from datetime import datetime
 
 import pandas as pd
@@ -18,14 +16,11 @@ from lightwood import __version__ as lightwood_version
 
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
-from mindsdb.interfaces.storage.db import Integration, session, Predictor
+from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.log import log
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.interfaces.database.integrations import IntegrationController
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 ctx = mp.get_context('spawn')
@@ -89,7 +84,7 @@ def brack_to_mod(ovr):
 
 
 @mark_process(name='learn')
-def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None) -> int:
+def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None):
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
     if json_ai_override is None:
         json_ai_override = {}
@@ -207,14 +202,11 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
 
 @mark_process(name='learn')
 def run_update(name: str, df: DataFrame, company_id: int):
-    original_name = name
-    name = f'{company_id}@@@@@{name}'
-
     fs_store = FsStore()
     config = Config()
 
     try:
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
         assert predictor_record is not None
         predictor_record.update_status = 'updating'
         session.commit()
@@ -224,10 +216,6 @@ def run_update(name: str, df: DataFrame, company_id: int):
 
         if 'join_learn_process' in problem_definition:
             del problem_definition['join_learn_process']
-
-        # Adapt kwargs to problem definition
-        if 'timeseries_settings' in problem_definition:
-            problem_definition['timeseries_settings'] = problem_definition['timeseries_settings']
 
         if 'stop_training_in_x_seconds' in problem_definition:
             problem_definition['time_aim'] = problem_definition['stop_training_in_x_seconds']

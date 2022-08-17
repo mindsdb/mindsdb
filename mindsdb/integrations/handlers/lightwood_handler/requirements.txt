@@ -1,1 +1,3 @@
-lightwood >= 22.4.1.0
+lightwood[all_extras] >= 22.8.1.0
+mindsdb_sql >= 0.3.10
+mindsdb >= 22.7.5.0

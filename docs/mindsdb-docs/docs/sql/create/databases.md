@@ -218,11 +218,9 @@ PARAMETERS={
 CREATE DATABASE scylladb_datasource
 WITH ENGINE='scylladb',
 PARAMETERS={
-  "user":"scylladb",
-  "port": 9042,
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "host": "127.0.0.1",
-  "database": "scylladb"
+  "user":"user@mindsdb.com",
+  "password": "pass",
+  "secure_connect_bundle": "/home/zoran/Downloads/secure-connect-mindsdb.zip"
 };
 ```
 

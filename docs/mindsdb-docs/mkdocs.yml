@@ -68,7 +68,7 @@ markdown_extensions:
 nav:
   - Quickstart: index.md
   - What is MindsDB?: what-is-mindsdb.md
-  - Setup:
+  - Deployment:
     - Self-hosted:
       - Docker: setup/self-hosted/docker.md
       - pip:
@@ -76,7 +76,12 @@ nav:
         - Linux via pip: setup/self-hosted/pip/linux.md
         - MacOS via pip: setup/self-hosted/pip/macos.md
         - Sourcecode via pip: setup/self-hosted/pip/source.md
+    - Extend the Default MindsDB Configuration: setup/custom-config.md
     - MindsDB Cloud: setup/cloud.md
+    - Digital Ocean: setup/digital-ocean.md
+    - Google Cloud Platform: setup/gcp.md
+    - Vultr Cloud: setup/vultr.md
+    - Civo Cloud: setup/civo.md
   - Connect to MindsDB:
       - MindsDB SQL Editor: connect/mindsdb_editor.md
       - MySQL CLI: connect/mysql-client.md

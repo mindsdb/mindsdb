@@ -28,7 +28,32 @@ class IntegrationController:
 
     def add(self, name, engine, data, company_id=None):
         bundle_path = data.get('secure_connect_bundle')
-        if engine in ('cassandra', 'scylla') and self._is_not_empty_str(bundle_path):
+        if engine == 'bigquery':
+            original_file_path = data['service_account_keys']
+            data['service_account_keys'] = Path(data['service_account_keys']).name
+            integration_record = Integration(
+                name=name,
+                engine=engine,
+                data=data,
+                company_id=company_id
+            )
+            session.add(integration_record)
+            session.commit()
+            integration_id = integration_record.id
+            folder_name = f'integration_files_{company_id}_{integration_id}'
+            integrations_dir = Config()['paths']['integrations']
+            integration_dir = os.path.join(integrations_dir, folder_name)
+            create_directory(integration_dir)
+            p = Path(data['service_account_keys'])
+            shutil.copyfile(original_file_path, os.path.join(integration_dir, p.name))
+
+            FsStore().put(
+                folder_name,
+                integration_dir,
+                integrations_dir
+            )
+
+        elif engine in ('cassandra', 'scylla') and self._is_not_empty_str(bundle_path):
             if os.path.isfile(bundle_path) is False:
                 raise Exception(f'Can not get access to file: {bundle_path}')
             integrations_dir = Config()['paths']['integrations']
@@ -183,6 +208,10 @@ class IntegrationController:
             'connection_data': data
         }
 
+    def get_by_id(self, integration_id, company_id=None, sensitive_info=True):
+        integration_record = session.query(Integration).filter_by(company_id=company_id, id=integration_id).first()
+        return self._get_integration_record_data(integration_record, sensitive_info)
+
     def get(self, name, company_id=None, sensitive_info=True, case_sensitive=False):
         if case_sensitive:
             integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
@@ -234,6 +263,12 @@ class IntegrationController:
                 ViewController(),
                 company_id=company_id
             )
+        elif handler_type == 'lightwood':
+            handler_ars['handler_controller'] = WithKWArgsWrapper(
+                IntegrationController(),
+                company_id=company_id
+            )
+            handler_ars['company_id'] = company_id
 
         return self.handler_modules[handler_type].Handler(**handler_ars)
 
@@ -246,7 +281,16 @@ class IntegrationController:
                 & (func.lower(Integration.name) == func.lower(name))
             ).first()
         if integration_record is None:
-            raise Exception(f'Unknown integration: {name}')
+            if name == 'lightwood':
+                handler = self.create_handler(
+                    name=name,
+                    handler_type='lightwood',
+                    connection_data=None,
+                    company_id=company_id
+                )
+                return handler
+            else:
+                raise Exception(f'Unknown integration: {name}')
         integration_meta = self._get_integration_record_data(integration_record, True)
 
         integration_engine = integration_meta['engine']
@@ -254,6 +298,15 @@ class IntegrationController:
 
         if integration_engine not in self.handler_modules:
             raise Exception(f"Cant find handler for '{integration_name}' ({integration_engine})")
+
+        if integration_engine == 'bigquery':
+            try:
+                folder_name = f'integration_files_{company_id}_{integration_record.id}'
+                integrations_dir = Config()['paths']['integrations']
+                FsStore().get(folder_name, folder_name, integrations_dir)
+            except Exception:
+                pass
+            integration_meta['connection_data']['service_account_keys'] = Path(integrations_dir).joinpath(folder_name).joinpath(integration_meta['connection_data']['service_account_keys'])
 
         handler = self.create_handler(
             name=integration_name,

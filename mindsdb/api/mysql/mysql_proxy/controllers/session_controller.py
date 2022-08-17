@@ -31,15 +31,12 @@ class SessionController():
         self.auth = False
         self.company_id = company_id
         self.logging = log
-
-        self.integration = None
-        self.integration_type = None
         self.database = None
 
         self.config = Config()
 
-        self.model_interface = WithKWArgsWrapper(
-            server.original_model_interface,
+        self.model_controller = WithKWArgsWrapper(
+            server.original_model_controller,
             company_id=company_id
         )
 

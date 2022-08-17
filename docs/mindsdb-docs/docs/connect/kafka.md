@@ -46,8 +46,10 @@ Let's go over some examples.
     Now, to launch your MindsDB, run the following command:
 
     ```bash
-    python -m mindsdb --config=YOURCONFIGFILE
+    python -m mindsdb --config=YOURCONFIGFILE.JSON
     ```
+
+    Please note that the config file must be in the JSON format. It must include [this part](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/utilities/config.py#L35,L72) of the config file from the MindsDB repository in a proper JSON format.
 
 - Train a new model. You may use [this tutorial](/sql/tutorials/bodyfat) as an example.
 

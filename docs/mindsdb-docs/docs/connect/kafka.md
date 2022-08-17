@@ -104,7 +104,7 @@ There are many [Kafka client implementations](https://docs.confluent.io/platform
 The code below generates and sends the source records to `topic_in` by default. You can use any other Kafka topic by providing its name as a CMD parameter.
 
 ```python
-import sys                                                                                                                                                  
+import sys
 import json
 import kafka
 connection_info = {"bootstrap_servers": "127.0.0.1:9092",

@@ -173,3 +173,23 @@ class AirtableHandler(DatabaseHandler):
         """
 
         return self.native_query(query.to_string())
+
+    def get_tables(self) -> StatusResponse:
+        """
+        Return list of entities that will be accessible as tables.
+        Returns:
+            HandlerResponse
+        """
+
+        pass
+
+    def get_columns(self) -> StatusResponse:
+        """
+        Returns a list of entity columns.
+        Args:
+            table_name (str): name of one of tables returned by self.get_tables()
+        Returns:
+            HandlerResponse
+        """
+
+        pass

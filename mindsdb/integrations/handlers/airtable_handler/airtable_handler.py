@@ -48,6 +48,44 @@ class AirtableHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
+    def connect(self) -> StatusResponse:
+        """
+        Set up the connection required by the handler.
+        Returns:
+            HandlerStatusResponse
+        """
+
+        if self.is_connected is True:
+            return self.connection
+
+        url = f"https://api.airtable.com/v0/{self.connection_data['base_id']}/{self.connection_data['table_name']}"
+        headers = {"Authorization": "Bearer " + self.connection_data['api_key']}
+
+        response = requests.get(url, headers=headers)
+        response = response.json()
+        records = response['records']
+
+        while new_records:
+            try:
+                if response['offset']:
+                    params = {"offset": response['offset']}
+                    response = requests.get(url, params=params, headers=headers)
+                    response = response.json()
+
+                    new_records = response['records']
+                    records = records + new_records
+            except Exception as e:
+                new_records = False
+
+        rows = [record['fields'] for record in records]
+        globals()[self.connection_data['table_name']] = pd.DataFrame(rows)
+
+        self.connection = duckdb.connect()
+
+        self.is_connected = True
+
+        return self.connection
+
     def disconnect(self):
         """
         Close any existing connections.

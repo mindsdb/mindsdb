@@ -65,6 +65,7 @@ class AirtableHandler(DatabaseHandler):
         response = response.json()
         records = response['records']
 
+        new_records = True
         while new_records:
             try:
                 if response['offset']:
@@ -134,28 +135,28 @@ class AirtableHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         connection = self.connect()
-        with connection.cursor() as cursor:
-            try:
-                cursor.execute(query)
-                result = cursor.fetchall()
-                if result:
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cursor.description]
-                        )
-                    )
-
-                else:
-                    response = Response(RESPONSE_TYPE.OK)
-                    connection.commit()
-            except Exception as e:
-                log.error(f'Error running query: {query} on table {self.connection_data["table_name"]} in base {self.connection_data["base_id"]}!')
+        cursor = connection.cursor()
+        try:
+            cursor.execute(query)
+            result = cursor.fetchall()
+            if result:
                 response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.DataFrame(
+                        result,
+                        columns=[x[0] for x in cursor.description]
+                    )
                 )
+
+            else:
+                response = Response(RESPONSE_TYPE.OK)
+                connection.commit()
+        except Exception as e:
+            log.error(f'Error running query: {query} on table {self.connection_data["table_name"]} in base {self.connection_data["base_id"]}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
 
         if need_to_close is True:
             self.disconnect()

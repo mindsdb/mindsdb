@@ -2,7 +2,7 @@ To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapte
 
 | Adapter for                                                     | Documentation                                     | Install from PyPi                |
 | --------------------------------------------------------------- | ------------------------------------------------- | -------------------------------- |
-| MindsDB ([dbt-mindsdb](https://github.com/mindsdb/dbt-mindsdb)) | [Profile Setup](/sql/connect/dbt-mindsdb-profile) | `#!bash pip install dbt-mindsdb` |
+| MindsDB ([dbt-mindsdb](https://github.com/mindsdb/dbt-mindsdb)) | [Profile Setup](/connect/dbt/#initialization) | `#!bash pip install dbt-mindsdb` |
 
 ## Usage
 
@@ -83,7 +83,8 @@ Create table_name.sql (<em>table_name</em> will be used as the name of the predi
         }
     )
 }}
-    SELECT * FROM stores
+    SELECT *
+    FROM stores;
 ```
 
 ### Create predictions table
@@ -104,7 +105,9 @@ Create <em>table_name</em>.sql (If you need to specify schema, you can do it wit
         integration='photorep'
     )
 }}
-    SELECT a, bc FROM ddd WHERE name > latest
+    SELECT a, bc
+    FROM ddd
+    WHERE name > latest;
 ```
 
 !!! warning "Note that each time dbt is run, the results table will be rewritten."

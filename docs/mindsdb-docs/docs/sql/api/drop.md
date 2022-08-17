@@ -10,7 +10,7 @@ The `#!sql DROP PREDICTOR` statement is used to delete the model table:
 DROP PREDICTOR [predictor_name];
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 Query OK, 0 rows affected (0.058 sec)
@@ -18,18 +18,19 @@ Query OK, 0 rows affected (0.058 sec)
 
 Where:
 
-|                    | Description                     |
+| Name               | Description                     |
 | ------------------ | ------------------------------- |
 | `[predictor_name]` | Name of the model to be deleted |
 
 ## Validation
 
 ```sql
-SELECT name FROM mindsdb.predictors
-    WHERE name = '[predictor_name]';
+SELECT name
+FROM mindsdb.predictors
+WHERE name = '[predictor_name]';
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 Empty set (0.026 sec)
@@ -40,10 +41,11 @@ Empty set (0.026 sec)
 The following SQL statement drops the model table called `home_rentals_model`. Given the following query to list all predictors by name
 
 ```sql
-SELECT name FROM mindsdb.predictors;
+SELECT name
+FROM mindsdb.predictors;
 ```
 
-Resulting in a table with 2 rows:
+On execution, we get:
 
 ```sql
 +---------------------+
@@ -61,7 +63,7 @@ Execute the `#!sql DROP PREDICTOR` statement as:
 DROP PREDICTOR home_rentals_model;
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 Query OK, 0 rows affected (0.058 sec)
@@ -70,10 +72,11 @@ Query OK, 0 rows affected (0.058 sec)
 Validate that the model has been deleted by listing again all predictors by name:
 
 ```sql
-SELECT name FROM mindsdb.predictors;
+SELECT name
+FROM mindsdb.predictors;
 ```
 
-Resulting in a table with only one row, and without the dropped model:
+On execution, we get:
 
 ```sql
 +---------------------+

@@ -10,13 +10,13 @@ The `#!sql SELECT` statement is used to get a predictions from the model table. 
 SELECT [target_variable], [target_variable]_explain
 FROM mindsdb.[predictor_name]
 WHERE [column]=[value] 
-    AND [column]=[value];
+AND [column]=[value];
 ```
 
 !!! warning "Grammar matters"
-Ensure that there are no spaces between the column name, equal sign and value. Ensure to not use any quotations for numerical values and singular quotes for strings
+    Ensure that there are no spaces between the column name, equal sign and value. Ensure to not use any quotations for numerical values and singular quotes for strings.
 
-On execution, you should get:
+On execution, we get:
 
 ```sql
 +----------+----------+-------------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
@@ -42,13 +42,13 @@ The following SQL statement selects a `rental_price` prediction from the `home_r
 ```sql
 SELECT location, neighborhood, days_on_market, rental_price, rental_price_explain
 FROM mindsdb.home_rentals_model1
-    WHERE sqft = 823
-    AND location='good'
-    AND neighborhood='downtown'
-    AND days_on_market=10;
+WHERE sqft = 823
+AND location='good'
+AND neighborhood='downtown'
+AND days_on_market=10;
 ```
 
-On execution,
+On execution, we get:
 
 ```sql
 +----------+--------------+----------------+--------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
@@ -62,9 +62,10 @@ On execution,
     You can also make bulk predictions by joining a table with your model:
 
     ```sql
-    SELECT t.rental_price as real_price,
-        m.rental_price as predicted_price,
+    SELECT t.rental_price AS real_price,
+        m.rental_price AS predicted_price,
         t.sqft, t.location, t.days_on_market
-    FROM example_db.demo_data.home_rentals as t
-    JOIN mindsdb.home_rentals_model as m limit 100
+    FROM example_db.demo_data.home_rentals AS t
+    JOIN mindsdb.home_rentals_model AS m
+    LIMIT 100;
     ```

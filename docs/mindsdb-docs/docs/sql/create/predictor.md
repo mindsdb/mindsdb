@@ -2,7 +2,7 @@
 
 ## Description
 
-The `CREATE PREDICTOR` statement is used to train a new model. The basic syntax for training a model is:
+The `CREATE PREDICTOR` statement is used to train a new model. The basic syntax for training a model is as follows:
 
 ## Syntax
 
@@ -10,10 +10,10 @@ The `CREATE PREDICTOR` statement is used to train a new model. The basic syntax 
 CREATE PREDICTOR mindsdb.[predictor_name]
 FROM [integration_name]
     (SELECT [column_name, ...] FROM [table_name])
-PREDICT [target_column]
+PREDICT [target_column];
 ```
 
-On execution, you should get:
+On execution, we get:
 
 ```sql
 Query OK, 0 rows affected (x.xxx sec)
@@ -29,13 +29,23 @@ Where:
 | `PREDICT [target_column]`                       | where `target_column` is the column name of the target variable.                                                                      |
 
 !!! TIP "Checking the status of the model"
-After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training model, by selecting from the `#!sql mindsdb.predictors`
+After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training model by selecting from the `#!sql mindsdb.predictors`.
 
-    ```sql
-    SELECT *
-    FROM mindsdb.predictors
-    WHERE name='[predictor_name]';
-    ```
+```sql
+SELECT *
+FROM mindsdb.predictors
+WHERE name='[predictor_name]';
+```
+
+On execution, we get:
+
+```sql
++------------------------+-----------------------------------+----------------------------------------+-----------------------+-------------+---------------+-----+-----------------+----------------+
+|name                    |status                             |accuracy                                |predict                |update_status|mindsdb_version|error|select_data_query|training_options|
++------------------------+-----------------------------------+----------------------------------------+-----------------------+-------------+---------------+-----+-----------------+----------------+
+|predictor_name          |generating or training or complete |number depending on the accuracy metric |column_to_be_predicted |up_to_date   |22.7.5.0       |     |                 |                |
++------------------------+-----------------------------------+----------------------------------------+-----------------------+-------------+---------------+-----+-----------------+----------------+
+```
 
 ## Example
 
@@ -43,30 +53,33 @@ This example shows how you can train a Machine Learning model called home_rental
 
 ```sql
 CREATE PREDICTOR mindsdb.home_rentals_model
-FROM db_integration (SELECT * FROM house_rentals_data) as rentals
-PREDICT rental_price as price;
+FROM db_integration 
+    (SELECT * FROM house_rentals_data) AS rentals
+PREDICT rental_price AS price;
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
-Query OK, 0 rows affected (8.878 sec)
+Query OK, 0 rows affected (x.xxx sec)
 ```
 
-To check the predictor status query the [`#!sql mindsdb.predictors`](/sql/table-structure/#the-predictors-table) :
+To check the predictor status, query the [`#!sql mindsdb.predictors`](/sql/table-structure/#the-predictors-table) table.
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='home_rentals_model';
+SELECT *
+FROM mindsdb.predictors
+WHERE name='home_rentals_model';
 ```
 
-On execution,
+On execution, we get:
 
 ```sql
-+-----------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
-| name            | status   | accuracy           | predict      | update_status | mindsdb_version | error | select_data_query | training_options |
-+-----------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
-| home_rentals123 | complete | 0.9991920992432087 | rental_price | up_to_date    | 22.5.1.0        | NULL  |                   |                  |
-+-----------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
++--------------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
+| name               | status   | accuracy           | predict      | update_status | mindsdb_version | error | select_data_query | training_options |
++--------------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
+| home_rentals_model | complete | 0.9991920992432087 | rental_price | up_to_date    | 22.5.1.0        | NULL  |                   |                  |
++--------------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
 ```
 
 ## `#!sql ... USING` Statement
@@ -82,8 +95,16 @@ CREATE PREDICTOR mindsdb.[predictor_name]
 FROM [integration_name]
     (SELECT [column_name, ...] FROM [table_name])
 PREDICT [target_column]
-USING [parameter_key] = ['parameter_value']
+USING [parameter_key] = ['parameter_value'];
 ```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+Where:
 
 | parameter key                               | Description                                                                                                                                                                                                                                                |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -93,25 +114,22 @@ USING [parameter_key] = ['parameter_value']
 
 ### `#!sql ... USING encoders` Key
 
-Grants access to configure how each column is encoded. To learn more about how encoders work and their options, go [here](https://lightwood.io/encoder.html).
+It grants access to configure how each column is encoded. To learn more about how encoders work and their options, go [here](https://lightwood.io/encoder.html).
 
 ```sql
 ...
-USING
-encoders.[column_name].module='value';
+USING encoders.[column_name].module='value';
 ```
 
 !!! tip "By default, the AutoML engine will try to get the best match for the data."
 
 ### `#!sql ... USING model` Key
 
-Allows you to specify what type of Machine Learning algorithm to learn from the encoder data.
+It allows you to specify what type of Machine Learning algorithm to learn from the encoder data.
 
 ```sql
 ...
-USING
-model.args='{"key": value}'
-;
+USING model.args='{"key": value}';
 ```
 
 Module options:
@@ -136,9 +154,9 @@ We will use the home rentals dataset, specifying particular encoders for some of
 
 ```sql
 CREATE PREDICTOR mindsdb.home_rentals_predictor
-FROM my_db_integration (
-    SELECT * FROM home_rentals
-) PREDICT rental_price
+FROM my_db_integration
+    (SELECT * FROM home_rentals)
+PREDICT rental_price
 USING
     encoders.location.module='CategoricalAutoEncoder',
     encoders.rental_price.module = 'NumericEncoder',
@@ -153,13 +171,19 @@ USING
                 ]}';
 ```
 
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
 ## `#!sql CREATE PREDICTOR` From file
 
 In order to create a predictor from a file, you should first upload a file to MindsDB. Follow [this guide](https://docs.mindsdb.com/sql/create/file/) to see how to do that.
 
 ### `#!sql CREATE PREDICTOR` Description
 
-To train a model using a file:
+This statement is used to create and train a model using a file or a database table.
 
 ### `#!sql CREATE PREDICTOR` Syntax
 
@@ -168,6 +192,12 @@ CREATE PREDICTOR mindsdb.[predictor_name]
 FROM files
     (SELECT * FROM [file_name])
 PREDICT target_variable;
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
 ```
 
 Where:
@@ -179,12 +209,6 @@ Where:
 | `(SELECT * FROM [file_name])` | SELECT statement for selecting the data to be used for training and validation |
 | `target_variable`             | `target_column` is the column name of the target variable.                     |
 
-On execution,
-
-```sql
-Query OK, 0 rows affected (8.878 sec)
-```
-
 ### `#!sql CREATE PREDICTOR` Example
 
 ```sql
@@ -192,6 +216,12 @@ CREATE PREDICTOR mindsdb.home_rentals_model
 FROM files
     (SELECT * from home_rentals)
 PREDICT rental_price;
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
 ```
 
 ## `#!sql CREATE PREDICTOR` For Time Series Models
@@ -205,7 +235,8 @@ To train a timeseries model, MindsDB provides additional statements.
 ```sql
 CREATE PREDICTOR mindsdb.[predictor_name]
 FROM [integration_name]
-(SELECT [sequential_column], [partition_column], [other_column], [target_column] FROM [table_name])
+    (SELECT [sequential_column], [partition_column], [other_column], [target_column]
+     FROM [table_name])
 PREDICT [target_column]
 
 ORDER BY [sequential_column]
@@ -213,6 +244,12 @@ GROUP BY [partition_column]
 
 WINDOW [int]
 HORIZON [int];
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
 ```
 
 Where:
@@ -224,12 +261,6 @@ Where:
 | `WINDOW [int]`                           | Specifies the number `[int]` of rows to "look back" into when making a prediction after the rows are ordered by the order_by column and split into groups. This could be interpreted like "Always use the previous 10 rows". |
 | `HORIZON [int]` (optional)               | keyword specifies the number of future predictions, default value is 1                                                                                                                                                       |
 
-On execution,
-
-```sql
-Query OK, 0 rows affected (8.878 sec)
-```
-
 !!! warning "Getting a prediction of a Time Series model"
 Due to the nature of Time Series Forecasting you will need to use the [`#!sql JOIN`](/sql/api/join) statement to get results.
 
@@ -238,13 +269,18 @@ Due to the nature of Time Series Forecasting you will need to use the [`#!sql JO
 ```sql
 CREATE PREDICTOR mindsdb.inventory_model
 FROM db_integration
-(SELECT * FROM inventory) as inventory
-PREDICT units_in_inventory as predicted_units_in_inventory
+    (SELECT * FROM inventory) AS inventory
+PREDICT units_in_inventory AS predicted_units_in_inventory
 
-ORDER BY date,
-GROUP BY product_id,
+ORDER BY date
+GROUP BY product_id
 
 WINDOW 20
-HORIZON 7
+HORIZON 7;
+```
 
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
 ```

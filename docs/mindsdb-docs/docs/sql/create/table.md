@@ -6,12 +6,27 @@ The `#!sql CREATE TABLE` is used to create a table and fill it with the result o
 
 ## Syntax
 
+You can use the usual `CREATE TABLE` statement:
+
 ```sql
-CREATE [OR REPLACE] TABLE [integration_name].[table_name]
-    [SELECT ...]
+CREATE TABLE [integration_name].[table_name]
+    (SELECT ...);
 ```
 
-It performs a subselect `#!sql [SELECT ...]` and gets data from it, thereafter it creates a table `#!sql [table_name]` in `#!sql [integration_name]`. lastly it performs an `#!sql INSERT INTO [integration_name].[table_name]` with the contents of the `#!sql [SELECT ...]`
+Or the `CREATE OR REPLACE TABLE` statement:
+
+```sql
+CREATE OR REPLACE TABLE [integration_name].[table_name]
+    (SELECT ...);
+```
+
+It performs a subselect `#!sql [SELECT ...]` and gets data from it, thereafter it creates a table `#!sql [table_name]` in `#!sql [integration_name]`. lastly it performs an `#!sql INSERT INTO [integration_name].[table_name]` with the contents of the `#!sql [SELECT ...]`.
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
 
 !!!warning "`#!sql REPLACE`"
     If `#!sql REPLACE` is indicated then `#!sql [integration_name].[table_name]` will be **Dropped**
@@ -47,5 +62,11 @@ CREATE TABLE int1.tbl1 (
     FROM int2.tbl2 AS ta
     JOIN mindsdb.predictor_name AS tb
     WHERE ta.date > '2015-12-31'
-)
+);
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
 ```

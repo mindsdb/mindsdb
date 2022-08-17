@@ -38,15 +38,34 @@ The default configuration for MindsDB's Docker image is represented as a JSON bl
 {
  "config_version":"1.4",
  "storage_dir": "/root/mdb_storage",
- "log":
-  { "level": { "console": "ERROR", "file": "WARNING", "db": "WARNING" } },
+ "log": { 
+     "level": {
+         "console": "ERROR",
+	 "file": "WARNING",
+	 "db": "WARNING"
+	      } 
+        },
  "debug": false,
  "integrations": {},
  "api":
   {
-   "http": { "host": "0.0.0.0", "port": "47334" },
-   "mysql": { "host": "0.0.0.0", "password": "", "port": "47335", "user": "mindsdb", "database": "mindsdb", "ssl": true },
-   "mongodb": { "host": "0.0.0.0", "port": "47336", "database": "mindsdb" }
+   "http": {
+       "host": "0.0.0.0",
+       "port": "47334"
+           },
+   "mysql": {
+       "host": "0.0.0.0",
+       "password": "",
+       "port": "47335",
+       "user": "mindsdb",
+       "database": "mindsdb",
+       "ssl": true
+            },
+   "mongodb": {
+       "host": "0.0.0.0",
+       "port": "47336",
+       "database": "mindsdb"
+              }
   }
 }
 

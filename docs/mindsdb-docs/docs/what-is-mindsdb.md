@@ -21,6 +21,8 @@ SELECT income, debt
 FROM income_table;
 ```
 
+On execution, we get:
+
 ```sql
 +------+-----+
 |income|debt |
@@ -49,6 +51,8 @@ FROM income_table
 WHERE income = 80000;
 ```
 
+On execution, we get:
+
 ```sql
 +------+-----+
 |income|debt |
@@ -69,6 +73,8 @@ SELECT income, debt
 FROM income
 WHERE income = 90000;
 ```
+
+On execution, we get:
 
 ```sql
 Empty set (0.00 sec)
@@ -93,6 +99,12 @@ FROM income_table
 PREDICT debt;
 ```
 
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
 MindsDB provides the [`#!sql CREATE PREDICTOR`](/sql/create/predictor/) statement. When we execute this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows:
 
 <figure markdown> 
@@ -107,6 +119,8 @@ SELECT income, debt
 FROM mindsdb.debt_model 
 WHERE income = 90000;
 ```
+
+On execution, we get:
 
 ```sql
 +------+-----+

@@ -76,6 +76,7 @@ nav:
         - Linux via pip: setup/self-hosted/pip/linux.md
         - MacOS via pip: setup/self-hosted/pip/macos.md
         - Sourcecode via pip: setup/self-hosted/pip/source.md
+    - Extend the Default MindsDB Configuration: setup/custom-config.md
     - MindsDB Cloud: setup/cloud.md
   - Connect to MindsDB:
       - MindsDB SQL Editor: connect/mindsdb_editor.md
@@ -91,7 +92,7 @@ nav:
   - Train a Predictor: sql/create/predictor.md
   - Get a Prediction: sql/api/select.md
   - SQL API:
-    - Table Structure (Schema): sql/table-structure.md
+    - MindsDB Tables Structure: sql/table-structure.md
     - CREATE:
       - DATABASE: sql/create/databases.md
       - PREDICTOR: sql/create/predictor.md
@@ -123,8 +124,8 @@ nav:
     - Classification:
       - Customer Churn: sql/tutorials/customer-churn.md
     - Time Series:
-      - AI powered forecasts with MindsDB: sql/tutorials/mindsdb-superset-snowflake.md
-      - Forecasting house sales: sql/tutorials/house-sales-forecasting.md
+      #- AI powered forecasts with MindsDB: sql/tutorials/mindsdb-superset-snowflake.md
+      - House Sales: sql/tutorials/house-sales-forecasting.md
   - Community Tutorials:
     - Regression:
       - Insurance Cost: sql/tutorials/insurance-cost-prediction.md
@@ -141,6 +142,7 @@ nav:
       - Bug reports and Feature requests: contribute/issues.md
       - Building a new integration: contribute/integrations.md
       - Writing documentation: contribute/docs.md
+      - Docs style guide: docs-rules.md
       - Testing and improving test coverage: contribute/tests.md
       - Writing tutorials: contribute/tutorials.md
   - Community:

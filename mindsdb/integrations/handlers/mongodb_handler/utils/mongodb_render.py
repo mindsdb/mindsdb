@@ -77,6 +77,12 @@ class MongodbRender:
 
         method = 'aggregate'
         arg = []
+
+        # mongodb related pipeline steps for aggregate method
+        if node.modifiers is not None:
+            for modifier in node.modifiers:
+                arg.append(modifier)
+
         if filters:
             arg.append({"$match": filters})
 

@@ -3,7 +3,7 @@ from mindsdb.integrations.handlers.informix_handler.informix_handler import Info
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
-class informixHandlerTest(unittest.TestCase):
+class InformixHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {

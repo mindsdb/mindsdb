@@ -15,11 +15,11 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 import pandas as pd
-import IfxPyDbi as ff 
+import IfxPyDbi as I 
 
 from  pyinformix.ibm_db import InformixDialect
-# from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as InformixDialect
-
+# from sqla import DB2Dialect_ibm_db as InformixDialect
+# from IfxAlchemy.IfxPy import IfxDialect_IfxPy as InformixDialect
 
 
 class InformixHandler(DatabaseHandler):
@@ -72,7 +72,7 @@ class InformixHandler(DatabaseHandler):
             return self.connection
 
         try:
-            self.connection = ff.connect(self.connString,'','')
+            self.connection = I.connect(self.connString,'','')
   
             self.is_connected= True
         except Exception as e:
@@ -131,7 +131,6 @@ class InformixHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
         conn = self.connect()
         cur = conn.cursor()
-        query=query.upper()
         try:
             cur.execute(query)
                    

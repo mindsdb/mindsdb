@@ -103,12 +103,14 @@ class TestMongoDBServer(unittest.TestCase):
 
                 mock_sqlquery.reset_mock()
 
+                modifiers = [{'$unwind': '$hist_data'}]
                 res = client_con.mindsdb.house_sales_model_h1w4.find(
                     {
                         "collection": "example_mongo.house_sales2",
                         "query": {
                             "$where": "this.saledate > latest and this.type = 'house' and this.bedrooms=2"
                         },
+                        "modifiers": modifiers,
                     },
                     {
                         "house_sales_model_h1w4.saledate": "date",
@@ -130,6 +132,8 @@ class TestMongoDBServer(unittest.TestCase):
                 '''
                 assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
 
+                # check modifiers
+                assert ast.from_table.left.modifiers == modifiers
                 # ==== test datetime ===
 
                 mock_sqlquery.reset_mock()

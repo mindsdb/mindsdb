@@ -10,7 +10,8 @@ The `#!sql SELECT from files.[file]` statement is used to select a `#!sql [file]
 ## Syntax
 
 ```sql
-SELECT * FROM files.[file_name];
+SELECT *
+FROM files.[file_name];
 ```
 
 On execution, we get:
@@ -25,11 +26,11 @@ On execution, we get:
 
 Where:
 
-|               | Description                                       |
-| ------------- | ------------------------------------------------- |
+| Name          | Description                                                                               |
+| ------------- | ----------------------------------------------------------------------------------------- |
 | `[file_name]` | Name of file uploaded to MindsDB via the [MindsDB SQL Editor](/connect/mindsdb_editor/)   |
-| column        | Name of the column depending on the file uploaded |
-| value         | Value depending on the file uploaded              |
+| column        | Name of the column depending on the file uploaded                                         |
+| value         | Value depending on the file uploaded                                                      |
 
 ## Example
 
@@ -38,7 +39,9 @@ This example shows how to use an uploaded file and create a predictor. But first
 ### Select the file as datasource
 
 ```sql
-SELECT * FROM files.home_rentals Limit 10;
+SELECT *
+FROM files.home_rentals
+LIMIT 10;
 ```
 
 On execution, we get:

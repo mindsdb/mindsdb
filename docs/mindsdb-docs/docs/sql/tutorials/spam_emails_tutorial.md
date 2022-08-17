@@ -45,22 +45,29 @@ We will start by training a model with the CREATE PREDICTOR command using all co
 ```sql
 CREATE PREDICTOR mindsdb.spam_predictor
 FROM files
-(SELECT * FROM spam_predict)
+    (SELECT * FROM spam_predict)
 PREDICT Spam;
 ```
 
 We can check the status of the model by querying the name we used as the predictor. As this is a larger dataset, the status may show “Generating” or “Training” for a few minutes. Re-run the query to refresh.
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='spam_predictor';
+SELECT *
+FROM mindsdb.predictors
+WHERE name='spam_predictor';
 ```
 
-When the model has finished training the status will change tp "complete". You should see something similar to:
+When the model has finished training the status will change to "complete".
 
+On execution, we get:
+
+```sql
++----------------+----------+--------------------+-------------+------------------+------------------+-------+--------------------+------------------+
 | name           | status   | accuracy           | predict     | update_status    | mindsdb_version  | error | select_data_query  | training_options |
-|     :---:      |  :---:   |      :---:         |     :---:   |     :---:        |      :---:       | :---: |     :---:          |     :---:        |   
++----------------+----------+--------------------+-------------+------------------+------------------+-------+--------------------+------------------+   
 | spam_predictor | complete | 0.9580387730450108 | Spam        | up_to_date       | 22.4.2.1         | null  |                    |                  |
-
++----------------+----------+--------------------+-------------+------------------+------------------+-------+--------------------+------------------+
+```
 
 You have just created and trained the Machine Learning Model with approximately 96% accuracy!
 
@@ -72,26 +79,40 @@ We will now begin to make predictions about whether a given email is spam using 
 The generic syntax to make predictions is:
 
 ```sql
-SELECT t.column_name1, t.column_name2, FROM integration_name.table AS t
-JOIN mindsdb.predictor_name AS p WHERE t.column_name IN (value1, value2, ...);
+SELECT t.column_name1, t.column_name2
+FROM integration_name.table AS t
+JOIN mindsdb.predictor_name AS p
+WHERE t.column_name IN (value1, value2, ...);
 ```
 
 For our prediction we will query the spam, spam_confidence, and spam_explain columns from the spam_predictor model we trained. To simulate a test email we will provide values for several in the WHERE clause representing various word frequencies and capital letter runs.
 
 ```sql
-SELECT spam, spam_confidence, spam_explain  FROM mindsdb.spam_predictor
-WHERE word_freq_internet=2.5 AND word_freq_email=2 AND word_freq_credit=0.9
-    AND word_freq_money=0.9 AND word_freq_report=1.2
-    AND word_freq_free=1.2 AND word_freq_your=0.9
-    AND word_freq_all=2.4 AND capital_run_length_average = 20
-    AND word_freq_mail=1 AND capital_run_total=20 AND capital_run_longest=20;
+SELECT spam, spam_confidence, spam_explain
+FROM mindsdb.spam_predictor
+WHERE word_freq_internet=2.5
+AND word_freq_email=2
+AND word_freq_credit=0.9
+AND word_freq_money=0.9
+AND word_freq_report=1.2
+AND word_freq_free=1.2
+AND word_freq_your=0.9
+AND word_freq_all=2.4
+AND capital_run_length_average = 20
+AND word_freq_mail=1
+AND capital_run_total=20
+AND capital_run_longest=20;
 ```
-When the query has run you should see an output similar to:
 
-| spam  | spam_confidence   | spam_explain |
-| :---: |      :---:        |    :---:     |
-| 1     | 0.956989247311828 | {"predicted_value": "1", "confidence": 0.956989247311828, anomaly": null, "truth": null} |
+On execution, we get:
 
+```sql
++-------+-------------------+-------------------------------------------------------------------------------------------+
+| spam  | spam_confidence   | spam_explain                                                                              |
++-------+-------------------+-------------------------------------------------------------------------------------------+
+| 1     | 0.956989247311828 | {"predicted_value": "1", "confidence": 0.956989247311828, "anomaly": null, "truth": null} |
++-------+-------------------+-------------------------------------------------------------------------------------------+
+```
 
 With this output we can see that MindsDB predicts that this is a spam email with approximately 96% accuracy.
 
@@ -105,26 +126,34 @@ In the example above, we saw how we can use MindsDB to determine if a single ema
 The generic syntax to do this is:
 
 ```sql
-SELECT t.column_name1, t.column_name2, FROM integration_name.table AS t
-JOIN mindsdb.predictor_name AS p WHERE t.column_name IN (value1, value2, ...);
+SELECT t.column_name1, t.column_name2
+FROM integration_name.table AS t
+JOIN mindsdb.predictor_name AS p
+WHERE t.column_name IN (value1, value2, ...);
 ```
 As we are using the original dataset, which contains 58 columns, we will only include a few of them. The important column for the purposes of this tutorial is the “spam” column for both tables, which we can use to check the predictions accuracy.
 
 ```sql
-SELECT t.word_freq_internet, t.word_freq_email, t.word_freq_credit, t.word_freq_money, t.word_freq_report, t.capital_run_length_longest, t.spam, p.spam AS predicted_spam
-FROM files.spam_predict as t
-JOIN mindsdb.spam_predictor as p;
+SELECT t.word_freq_internet, t.word_freq_email, t.word_freq_credit,
+       t.word_freq_money, t.word_freq_report, t.capital_run_length_longest,
+       t.spam, p.spam AS predicted_spam
+FROM files.spam_predict AS t
+JOIN mindsdb.spam_predictor AS p;
 ```
 
-This should return an output like the following:
+On execution, we get:
 
+```sql
++--------------------+-----------------+------------------+-----------------+------------------+---------------------------+-------+----------------+
 | word_freq_internet | word_freq_email | word_freq_credit | word_freq_money | word_freq_report | capital_run_length_longest| spam  | spam_predictor |
-|        :---:       |      :---:      |      :---:       |      :---:      |     :---:        |         :---:             | :---: |     :---:      |   
++--------------------+-----------------+------------------+-----------------+------------------+---------------------------+-------+----------------+   
 | 0                  | 0               | 0                | 0               | 0                | 9989                      | 1     | 1              |   
 | 0                  | 0               | 0                | 0               | 0                | 99                        | 1     | 1              |   
 | 0                  | 0.21            | 0                | 0               | 0                | 99                        | 1     | 1              |   
 | 0                  | 0               | 0                | 0               | 0                | 99                        | 1     | 1              |   
 | 0                  | 0               | 0                | 0               | 0                | 99                        | 1     | 1              |
++--------------------+-----------------+------------------+-----------------+------------------+---------------------------+-------+----------------+
+```
 
 With the ability to scroll through all 4600 rows, broken up 100 per page. You can now see predictions for a whole dataset!
 

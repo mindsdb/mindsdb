@@ -14,7 +14,7 @@ JOIN mindsdb.[predictor_name] AS p;
 
 On execution, we get:
 
-```
+```sql
 +-----------------+-----------------+
 | t.[column_name] | p.[column_name] |
 +-----------------+-----------------+
@@ -24,7 +24,7 @@ On execution, we get:
 
 Where:
 
-|                                     | Description                                              |
+| Name                                | Description                                              |
 | ----------------------------------- | -------------------------------------------------------- |
 | `[integration_name].[table]`        | Name of the table te be used as input for the prediction |
 | `mindsdb.[predictor_name]`          | Name of the model to be used to make predictions         |
@@ -35,17 +35,17 @@ Where:
 The following SQL statement joins the `home_rentals` data with the `home_rentals_model` on the predicted price:
 
 ```sql
-SELECT t.rental_price as real_price, 
-       m.rental_price as predicted_price,
+SELECT t.rental_price AS real_price, 
+       m.rental_price AS predicted_price,
        t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market 
-FROM example_db.demo_data.home_rentals as t 
-JOIN mindsdb.home_rentals_model as m 
+FROM example_db.demo_data.home_rentals AS t 
+JOIN mindsdb.home_rentals_model AS m 
 LIMIT 100;
 ```
 
 On execution, we get:
 
-```
+```sql
 +------------+-----------------+-----------------+---------------------+------+----------+----------------+
 | real_price | predicted_price | number_of_rooms | number_of_bathrooms | sqft | location | days_on_market |
 +------------+-----------------+-----------------+---------------------+------+----------+----------------+
@@ -90,7 +90,7 @@ HORIZON 4;
 
 On execution, we get:
 
-```
+```sql
 Query OK, 0 row(s) updated - xxxms
 ```
 
@@ -98,16 +98,17 @@ Now, you can query it to get the predictions like this:
 
 ```sql
 SELECT m.saledate as date,
-    m.ma as forecast
-FROM mindsdb.house_sales_model as m 
-JOIN example_db.demo_data.house_sales as t
-WHERE t.saledate > LATEST AND t.type = 'house'
+    m.ma AS forecast
+FROM mindsdb.house_sales_model AS m 
+JOIN example_db.demo_data.house_sales AS t
+WHERE t.saledate > LATEST
+AND t.type = 'house'
 LIMIT 4;
 ```
 
 On execution, we get:
 
-```
+```sql
 +----------+------------------+
 |date      |forecast          |
 +----------+------------------+

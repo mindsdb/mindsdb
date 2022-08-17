@@ -4,18 +4,17 @@ import json
 import base64
 from copy import deepcopy
 from dateutil.parser import parse as parse_datetime
-import requests
 
 import numpy as np
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.json_encoder import json_serialiser
-from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
+from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.utilities.log import log
+from mindsdb.utilities.config import Config
+from mindsdb.utilities.json_encoder import json_serialiser
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb.interfaces.database.integrations import IntegrationController
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -90,8 +89,8 @@ class ModelController():
 
     def get_models(self, company_id: int):
         models = []
-        for db_p in db.session.query(db.Predictor).filter_by(company_id=company_id):
-            model_data = self.get_model_data(db_p.name, company_id=company_id)
+        for predictor_record in db.session.query(db.Predictor).filter_by(company_id=company_id):
+            model_data = self.get_model_data(predictor_record.name, company_id=company_id)
             reduced_model_data = {}
 
             for k in ['name', 'version', 'is_active', 'predict', 'status',

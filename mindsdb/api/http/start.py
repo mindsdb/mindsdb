@@ -105,8 +105,8 @@ def start(verbose, no_studio, with_nlp):
         request.company_id = company_id
         request.user_class = user_class
 
-        request.model_interface = WithKWArgsWrapper(
-            current_app.original_model_interface,
+        request.model_controller = WithKWArgsWrapper(
+            current_app.original_model_controller,
             company_id=company_id
         )
 

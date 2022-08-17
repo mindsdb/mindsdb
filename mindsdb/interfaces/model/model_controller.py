@@ -28,29 +28,10 @@ class ModelController():
         self.config = Config()
         self.fs_store = FsStore()
 
-    def _check_model_url(self, url):
-        # try to post without data and check status code not in (not_found, method_not_allowed)
-        try:
-            resp = requests.post(url)
-            if resp.status_code in (404, 405):
-                raise Exception(f'Model url is incorrect, status_code: {resp.status_code}')
-        except requests.RequestException as e:
-            raise Exception(f'Model url is incorrect: {str(e)}')
-
     def get_model_data(self, name, company_id: int):
-        if '@@@@@' in name:
-            sn = name.split('@@@@@')
-            assert len(sn) < 3  # security
-            name = sn[1]
-
-        original_name = name
-        name = f'{company_id}@@@@@{name}'
-
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=original_name).first()
+        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
         if predictor_record is None:
-            raise Exception(f"Model does not exists: {original_name}")
-
-        # linked_dataset = db.session.query(db.Dataset).get(predictor_record.dataset_id)
+            raise Exception(f"Model does not exists: {name}")
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -62,7 +43,6 @@ class ModelController():
         data['name'] = predictor_record.name
         data['code'] = predictor_record.code
         data['json_ai'] = predictor_record.json_ai
-        # data['data_source_name'] = linked_dataset.name if linked_dataset else None !!!!!
         data['problem_definition'] = predictor_record.learn_args
 
         # assume older models are complete, only temporary

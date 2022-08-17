@@ -202,14 +202,11 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
 
 @mark_process(name='learn')
 def run_update(name: str, df: DataFrame, company_id: int):
-    original_name = name
-    name = f'{company_id}@@@@@{name}'
-
     fs_store = FsStore()
     config = Config()
 
     try:
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
+        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
         assert predictor_record is not None
         predictor_record.update_status = 'updating'
         session.commit()

@@ -1,8 +1,7 @@
+from mindsdb_sql.parser.ast import Describe, Identifier
+
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
-
-from mindsdb_sql.parser.ast import *
-
 from mindsdb.api.mongo.classes.query_sql import run_sql_command
 
 
@@ -39,7 +38,7 @@ class Responce(Responder):
 
             res['ns'] = f"{db}.{collection}"
             if db == 'mindsdb' and collection == 'predictors':
-                res['count'] = len(mindsdb_env['model_interface'].get_models())
+                res['count'] = len(mindsdb_env['model_controller'].get_models())
         else:
 
             ident_parts = [collection]

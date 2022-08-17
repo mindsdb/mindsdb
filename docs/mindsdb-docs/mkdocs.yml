@@ -76,6 +76,7 @@ nav:
         - Linux via pip: setup/self-hosted/pip/linux.md
         - MacOS via pip: setup/self-hosted/pip/macos.md
         - Sourcecode via pip: setup/self-hosted/pip/source.md
+    - Extend the Default MindsDB Configuration: setup/custom-config.md
     - MindsDB Cloud: setup/cloud.md
   - Connect to MindsDB:
       - MindsDB SQL Editor: connect/mindsdb_editor.md

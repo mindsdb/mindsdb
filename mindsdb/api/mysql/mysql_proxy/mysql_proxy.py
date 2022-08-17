@@ -25,7 +25,6 @@ from typing import List, Dict
 
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
-from lightwood.api import dtype
 
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
@@ -35,7 +34,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapab
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.mysql.mysql_proxy.utilities import log
-
+from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErWrongCharset,
@@ -74,7 +73,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     BinaryResultsetRowPacket
 )
 
-from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
@@ -99,18 +98,7 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         if isinstance(password, str):
             password = password.encode()
 
-        integration = None
-        integration_type = None
-        extracted_username = username
-        integration_controller = IntegrationController()
-        integrations_names = integration_controller.get_all(company_id).keys()
-        for integration_name in integrations_names:
-            if username == f'{hardcoded_user}_{integration_name}':
-                extracted_username = hardcoded_user
-                integration = integration_name
-                integration_type = integration_controller.get(integration, company_id)['engine']
-
-        if extracted_username != hardcoded_user:
+        if username != hardcoded_user:
             log.warning(f'Check auth, user={username}: user mismatch')
             return {
                 'success': False
@@ -125,9 +113,7 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
         log.info(f'Check auth, user={username}: Ok')
         return {
             'success': True,
-            'username': extracted_username,
-            'integration': integration,
-            'integration_type': integration_type
+            'username': username
         }
     except Exception as e:
         log.error(f'Check auth, user={username}: ERROR')
@@ -308,8 +294,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         if auth_data['success']:
             self.session.username = auth_data['username']
             self.session.auth = True
-            self.session.integration = auth_data['integration']
-            self.session.integration_type = auth_data['integration_type']
             self.packet(OkPacket).send()
             return True
         else:
@@ -354,19 +338,15 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             column_name = column.get('name', 'column_name')
             column_alias = column.get('alias', column_name)
             flags = column.get('flags', 0)
-            if self.session.integration_type == 'mssql':
-                # mssql raise error if value more then this.
-                length = 0x2000
+            if len(data) == 0:
+                length = 0xffff
             else:
-                if len(data) == 0:
-                    length = 0xffff
-                else:
-                    length = 1
-                    for row in data:
-                        if isinstance(row, dict):
-                            length = max(len(str(row[column_alias])), length)
-                        else:
-                            length = max(len(str(row[i])), length)
+                length = 1
+                for row in data:
+                    if isinstance(row, dict):
+                        length = max(len(str(row[column_alias])), length)
+                    else:
+                        length = max(len(str(row[i])), length)
 
             packets.append(
                 self.packet(
@@ -398,7 +378,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def decode_utf(self, text):
         try:
             return text.decode('utf-8')
-        except Exception as e:
+        except Exception:
             raise ErWrongCharset(f'SQL contains non utf-8 values: {text}')
 
     def is_cloud_connection(self):
@@ -651,8 +631,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.session.username = 'cloud'
             self.session.user_class = cloud_connection['user_class']
             self.session.auth = True
-            self.session.integration = None
-            self.session.integration_type = None
 
         while True:
             log.debug('Got a new packet')
@@ -850,7 +828,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.connection_id = 0
         server.hook_before_handle = empty_fn
 
-        server.original_model_interface = ModelInterface()
+        server.original_model_controller = ModelController()
         server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
 

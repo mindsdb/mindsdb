@@ -21,7 +21,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 class AirtableHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Firebird statements.
+    This handler handles connection and execution of the Airtable statements.
     """
 
     name = 'airtable'
@@ -81,7 +81,6 @@ class AirtableHandler(DatabaseHandler):
         globals()[self.connection_data['table_name']] = pd.DataFrame(rows)
 
         self.connection = duckdb.connect()
-
         self.is_connected = True
 
         return self.connection

@@ -203,7 +203,7 @@ class AirtableHandler(DatabaseHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 {
-                    'column_name': globals()[self.connection_data['table_name']].columns,
+                    'column_name': list(globals()[self.connection_data['table_name']].columns),
                     'data_type': globals()[self.connection_data['table_name']].dtypes
                 }
             )

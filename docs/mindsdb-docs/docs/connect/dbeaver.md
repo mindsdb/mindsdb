@@ -16,21 +16,27 @@ Now it's the time to fill in the connection details.
 
 ![Connection details](/assets/sql/dbeaver_3.png)
 
-There are two options as follows:
+There are two options, as below.
 
-- You can connect to your MindsDB Cloud account. To do that, please use the connection details below:
-    - Hostname: `cloud-mysql.mindsdb.com`
-    - Port: `3306`
-    - Username: *your MindsDB Cloud username*
-    - Password: *your MindsDB Cloud password*
-    - Database: *leave it empty*
+=== "Connecting to your MindsDB Cloud account"
 
-- You can connect to your local MindsDB. To do that, please use the connection details below:
-    - Hostname: `127.0.0.1`
-    - Port: `47334`
-    - Username: *mindsdb*
-    - Password: *leave it empty*
-    - Database: *leave it empty*
+    You can connect to your MindsDB Cloud account. To do that, please use the connection details below:<br/>
+
+    &emsp;&emsp;Hostname: `cloud-mysql.mindsdb.com`<br/>
+    &emsp;&emsp;Port: `3306`<br/>
+    &emsp;&emsp;Username: *your MindsDB Cloud username*<br/>
+    &emsp;&emsp;Password: *your MindsDB Cloud password*<br/>
+    &emsp;&emsp;Database: *leave it empty*<br/>
+
+=== "Connecting to your local MindsDB"
+
+    You can connect to your local MindsDB. To do that, please use the connection details below:<br/>
+
+    &emsp;&emsp;Hostname: `127.0.0.1`<br/>
+    &emsp;&emsp;Port: `47334`<br/>
+    &emsp;&emsp;Username: `mindsdb`<br/>
+    &emsp;&emsp;Password: *leave it empty*<br/>
+    &emsp;&emsp;Database: *leave it empty*<br/>
 
 Now we are ready to test the connection.
 

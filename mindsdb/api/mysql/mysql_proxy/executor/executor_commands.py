@@ -644,10 +644,10 @@ class ExecuteCommands:
                         temp_dir = tempfile.mkdtemp(prefix='mindsdb_file_download_')
                         if scheme != '':
                             response = requests.get(url)
-                            temp_file_name = Path(temp_dir).joinpath('file')
-                            with open(str(temp_file_name), 'wb')as file:
+                            temp_file_path = Path(temp_dir).joinpath('file')
+                            with open(str(temp_file_path), 'wb')as file:
                                 file.write(response.content)
-                            connection_args[arg_name] = temp_file_name
+                            connection_args[arg_name] = temp_file_path
 
             handler = self.session.integration_controller.create_handler(
                 handler_type=engine,

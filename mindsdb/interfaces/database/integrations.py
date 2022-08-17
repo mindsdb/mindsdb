@@ -49,8 +49,7 @@ class IntegrationController:
 
             FsStore().put(
                 folder_name,
-                integration_dir,
-                integrations_dir
+                base_dir=integrations_dir
             )
 
         elif engine in ('cassandra', 'scylla') and self._is_not_empty_str(bundle_path):
@@ -78,8 +77,7 @@ class IntegrationController:
 
             FsStore().put(
                 folder_name,
-                integration_dir,
-                integrations_dir
+                base_dir=integration_dir,
             )
         elif engine in ('mysql', 'mariadb'):
             ssl = data.get('ssl')
@@ -122,8 +120,7 @@ class IntegrationController:
                     shutil.copyfile(file_path, os.path.join(integration_dir, p.name))
                 FsStore().put(
                     folder_name,
-                    integration_dir,
-                    integrations_dir
+                    base_dir=integrations_dir
                 )
         else:
             integration_record = Integration(
@@ -183,11 +180,9 @@ class IntegrationController:
             fs_store = FsStore()
             integrations_dir = Config()['paths']['integrations']
             folder_name = f'integration_files_{integration_record.company_id}_{integration_record.id}'
-            integration_dir = os.path.join(integrations_dir, folder_name)
             fs_store.get(
                 folder_name,
-                integration_dir,
-                integrations_dir
+                base_dir=integrations_dir
             )
 
         if not sensitive_info:
@@ -303,7 +298,7 @@ class IntegrationController:
             try:
                 folder_name = f'integration_files_{company_id}_{integration_record.id}'
                 integrations_dir = Config()['paths']['integrations']
-                FsStore().get(folder_name, folder_name, integrations_dir)
+                FsStore().get(folder_name, base_dir=integrations_dir)
             except Exception:
                 pass
             integration_meta['connection_data']['service_account_keys'] = Path(integrations_dir).joinpath(folder_name).joinpath(integration_meta['connection_data']['service_account_keys'])

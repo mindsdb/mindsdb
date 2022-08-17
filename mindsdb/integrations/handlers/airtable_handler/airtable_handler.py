@@ -6,7 +6,6 @@ import requests
 import duckdb
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -212,3 +211,25 @@ class AirtableHandler(DatabaseHandler):
         )
 
         return response
+
+
+connection_args = OrderedDict(
+    base_id={
+        'type': ARG_TYPE.STR,
+        'description': 'The Airtable base ID.'
+    },
+    table_name={
+        'type': ARG_TYPE.STR,
+        'description': 'The Airtable table name.'
+    },
+    api_key={
+        'type': ARG_TYPE.STR,
+        'description': 'The API key for the Airtable API.'
+    }
+)
+
+connection_args_example = OrderedDict(
+    base_id='dqweqweqrwwqq',
+    table_name='iris',
+    api_key='knlsndlknslk'
+)

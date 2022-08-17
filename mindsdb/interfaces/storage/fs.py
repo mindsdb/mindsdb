@@ -137,7 +137,7 @@ class S3FSStore(BaseFSStore):
         self.s3.delete_object(Bucket=self.bucket, Key=remote_name)
 
 
-storage_location = Config().config['permanent_storage']['location']
+storage_location = Config()['permanent_storage']['location']
 if storage_location == 'local':
     FsStore = LocalFSStore
 elif storage_location == 's3':

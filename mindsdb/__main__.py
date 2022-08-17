@@ -109,15 +109,6 @@ if __name__ == '__main__':
             print(f"Dependencies for the handler '{handler_name}' are not installed by default.\n",
                   f'If you want to use "{handler_name}" please install "{dependencies}"')
 
-    raw_model_data_arr = model_controller.get_models()
-    model_data_arr = []
-    for model in raw_model_data_arr:
-        if model['status'] == 'complete':
-            try:
-                model_data_arr.append(model_controller.get_model_data(model['name']))
-            except Exception:
-                pass
-
     if not is_cloud:
         # region creating permanent integrations
         for integration_name in ['files', 'views']:

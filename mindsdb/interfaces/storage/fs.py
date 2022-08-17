@@ -37,15 +37,15 @@ class BaseFSStore(ABC):
         self.storage = self.config['paths']['storage']
 
     @abstractmethod
-    def get(self, name):
+    def get(self, local_name, base_dir):
         pass
 
     @abstractmethod
-    def put(self, name):
+    def put(self, local_name, base_dir):
         pass
 
     @abstractmethod
-    def delete(self, name):
+    def delete(self, remote_name):
         pass
 
 
@@ -53,17 +53,17 @@ class LocalFSStore(BaseFSStore):
     def __init__(self):
         super().__init__()
 
-    def get(self, filename, remote_name, local_path):
+    def get(self, local_name, base_dir):
+        remote_name = local_name
         copy(
             os.path.join(self.storage, remote_name),
-            os.path.join(local_path, filename)
+            os.path.join(base_dir, local_name)
         )
 
-    def put(self, filename, remote_name, local_path):
-        print('From: ', os.path.join(local_path, filename))
-        print('To: ', os.path.join(self.storage, remote_name))
+    def put(self, local_name, local_path):
+        remote_name = local_name
         copy(
-            os.path.join(local_path, filename),
+            os.path.join(local_path, local_name),
             os.path.join(self.storage, remote_name)
         )
 
@@ -80,30 +80,32 @@ class S3FSStore(BaseFSStore):
             self.s3 = boto3.client('s3')
         self.bucket = self.config['permanent_storage']['bucket']
 
-    def get(self, filename, remote_name, local_path):
+    def get(self, local_name, base_dir):
+        remote_name = local_name
         remote_ziped_name = f'{remote_name}.tar.gz'
-        local_ziped_name = f'{filename}.tar.gz'
-        local_ziped_path = os.path.join(local_path, local_ziped_name)
+        local_ziped_name = f'{local_name}.tar.gz'
+        local_ziped_path = os.path.join(base_dir, local_ziped_name)
         self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
-        shutil.unpack_archive(local_ziped_path, local_path)
-        os.system(f'chmod -R 777 {local_path}')
+        shutil.unpack_archive(local_ziped_path, base_dir)
+        os.system(f'chmod -R 777 {base_dir}')
         os.remove(local_ziped_path)
 
-    def put(self, filename, remote_name, local_path):
+    def put(self, local_name, base_dir):
         # NOTE: This `make_archive` function is implemente poorly and will create an empty archive file even if
         # the file/dir to be archived doesn't exist or for some other reason can't be archived
+        remote_name = local_name
         shutil.make_archive(
-            os.path.join(local_path, remote_name),
+            os.path.join(base_dir, remote_name),
             'gztar',
-            root_dir=local_path,
-            base_dir=filename
+            root_dir=base_dir,
+            base_dir=local_name
         )
         self.s3.upload_file(
-            os.path.join(local_path, f'{remote_name}.tar.gz'),
+            os.path.join(base_dir, f'{remote_name}.tar.gz'),
             self.bucket,
             f'{remote_name}.tar.gz'
         )
-        os.remove(os.path.join(local_path, remote_name + '.tar.gz'))
+        os.remove(os.path.join(base_dir, remote_name + '.tar.gz'))
 
     def delete(self, remote_name):
         self.s3.delete_object(Bucket=self.bucket, Key=remote_name)

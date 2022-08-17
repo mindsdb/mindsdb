@@ -1,4 +1,4 @@
-# Custom Configuration of MindsDB Locally
+# Extend the Default MindsDB Configuration
 
 To follow this guide, please make sure you have a local installation of MindsDB. [Here](https://docs.mindsdb.com/setup/self-hosted/pip/source/), you can find out how to install MindsDB locally.
 
@@ -6,9 +6,13 @@ To follow this guide, please make sure you have a local installation of MindsDB.
 
 It is very straightforward to start MindsDB locally with the default config file - just run the commands below.
 
+First, activate the virtual environment with this command:
+
 ```bash
 source mindsdb/bin/activate
 ```
+
+And then, start MindsDB using this command:
 
 ```bash
 python -m mindsdb
@@ -16,7 +20,7 @@ python -m mindsdb
 
 Now you can access your MindsDB locally at `127.0.0.1:47334`.
 
-## Starting MindsDB with Custom Configuration
+## Starting MindsDB with Extended Configuration
 
 First, you should prepare a `config.json` file based on [the config file from the MindsDB GitHub repository](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/utilities/config.py#L35,L72).
 
@@ -66,7 +70,7 @@ Or you can use the template below and substitute your custom configuration value
 Now that your `config.json` file is ready, run the command below to start MindsDB locally with your custom configuration.
 
 ```bash
-python -m mindsdb --config=config-file.json
+python -m mindsdb --config=/path-to-the-extended-config-file/config-file.json
 ```
 
 You can access your MindsDB locally at `127.0.0.1:47334`, or any other IP address and port combination if you altered them.

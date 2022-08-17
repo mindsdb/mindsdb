@@ -46,7 +46,26 @@ On success, you should see the message, as shown above.
 
 To finally make sure that our MinsdDB database connection works, let's run some queries.
 
-![Query](/assets/sql/dbeaver_5.png)
+```sql
+SELECT *
+FROM mindsdb.predictors;
+```
+
+On execution, we get:
+
+```sql
++-------------------------+--------+------------------+------------------+-------------+---------------+-----+-----------------+----------------+
+|name                     |status  |accuracy          |predict           |update_status|mindsdb_version|error|select_data_query|training_options|
++-------------------------+--------+------------------+------------------+-------------+---------------+-----+-----------------+----------------+
+|house_sales_model        |complete|0.4658770134240238|ma                |up_to_date   |22.7.5.1       |     |                 |                |
+|process_quality_predictor|complete|1.0               |silica_concentrate|up_to_date   |22.7.5.1       |     |                 |                |
+|home_rentals_model       |complete|0.9991920992432087|rental_price      |up_to_date   |22.7.4.0       |     |                 |                |
++-------------------------+--------+------------------+------------------+-------------+---------------+-----+-----------------+----------------+
+```
+
+Here is how it looks in DBeaver:
+
+![Query test](/assets/sql/dbeaver_5.png)
 
 !!! tip "Whitelist MindsDB Cloud IP address"
     If you need to whitelist MindsDB Cloud IP address to have access to your database, reach out to MindsDB team so we can share the Cloud static IP with you.

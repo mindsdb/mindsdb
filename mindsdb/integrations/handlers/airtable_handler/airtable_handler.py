@@ -182,7 +182,15 @@ class AirtableHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                [self.connection_data['table_name']],
+                columns=['table_name']
+            )
+        )
+
+        return response
 
     def get_columns(self) -> StatusResponse:
         """
@@ -193,4 +201,14 @@ class AirtableHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                {
+                    'column_name': globals()[self.connection_data['table_name']].columns,
+                    'data_type': globals()[self.connection_data['table_name']].dtypes
+                }
+            )
+        )
+
+        return response

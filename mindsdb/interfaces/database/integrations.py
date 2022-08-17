@@ -208,6 +208,10 @@ class IntegrationController:
             'connection_data': data
         }
 
+    def get_by_id(self, integration_id, company_id=None, sensitive_info=True):
+        integration_record = session.query(Integration).filter_by(company_id=company_id, id=integration_id).first()
+        return self._get_integration_record_data(integration_record, sensitive_info)
+
     def get(self, name, company_id=None, sensitive_info=True, case_sensitive=False):
         if case_sensitive:
             integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
@@ -259,6 +263,12 @@ class IntegrationController:
                 ViewController(),
                 company_id=company_id
             )
+        elif handler_type == 'lightwood':
+            handler_ars['handler_controller'] = WithKWArgsWrapper(
+                IntegrationController(),
+                company_id=company_id
+            )
+            handler_ars['company_id'] = company_id
 
         return self.handler_modules[handler_type].Handler(**handler_ars)
 
@@ -271,7 +281,16 @@ class IntegrationController:
                 & (func.lower(Integration.name) == func.lower(name))
             ).first()
         if integration_record is None:
-            raise Exception(f'Unknown integration: {name}')
+            if name == 'lightwood':
+                handler = self.create_handler(
+                    name=name,
+                    handler_type='lightwood',
+                    connection_data=None,
+                    company_id=company_id
+                )
+                return handler
+            else:
+                raise Exception(f'Unknown integration: {name}')
         integration_meta = self._get_integration_record_data(integration_record, True)
 
         integration_engine = integration_meta['engine']

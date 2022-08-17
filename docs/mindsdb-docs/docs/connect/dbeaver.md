@@ -16,21 +16,27 @@ Now it's the time to fill in the connection details.
 
 ![Connection details](/assets/sql/dbeaver_3.png)
 
-There are two options as follows:
+There are two options, as below.
 
-- You can connect to your MindsDB Cloud account. To do that, please use the connection details below:
-    - Hostname: `cloud-mysql.mindsdb.com`
-    - Port: `3306`
-    - Username: *your MindsDB Cloud username*
-    - Password: *your MindsDB Cloud password*
-    - Database: *leave it empty*
+=== "Connecting to your MindsDB Cloud account"
 
-- You can connect to your local MindsDB. To do that, please use the connection details below:
-    - Hostname: `127.0.0.1`
-    - Port: `47334`
-    - Username: *mindsdb*
-    - Password: *leave it empty*
-    - Database: *leave it empty*
+    You can connect to your MindsDB Cloud account. To do that, please use the connection details below:<br/>
+
+    &emsp;&emsp;Hostname: `cloud-mysql.mindsdb.com`<br/>
+    &emsp;&emsp;Port: `3306`<br/>
+    &emsp;&emsp;Username: *your MindsDB Cloud username*<br/>
+    &emsp;&emsp;Password: *your MindsDB Cloud password*<br/>
+    &emsp;&emsp;Database: *leave it empty*<br/>
+
+=== "Connecting to your local MindsDB"
+
+    You can connect to your local MindsDB. To do that, please use the connection details below:<br/>
+
+    &emsp;&emsp;Hostname: `127.0.0.1`<br/>
+    &emsp;&emsp;Port: `47334`<br/>
+    &emsp;&emsp;Username: `mindsdb`<br/>
+    &emsp;&emsp;Password: *leave it empty*<br/>
+    &emsp;&emsp;Database: *leave it empty*<br/>
 
 Now we are ready to test the connection.
 
@@ -46,7 +52,26 @@ On success, you should see the message, as shown above.
 
 To finally make sure that our MinsdDB database connection works, let's run some queries.
 
-![Query](/assets/sql/dbeaver_5.png)
+```sql
+SELECT *
+FROM mindsdb.predictors;
+```
+
+On execution, we get:
+
+```sql
++-------------------------+--------+------------------+------------------+-------------+---------------+-----+-----------------+----------------+
+|name                     |status  |accuracy          |predict           |update_status|mindsdb_version|error|select_data_query|training_options|
++-------------------------+--------+------------------+------------------+-------------+---------------+-----+-----------------+----------------+
+|house_sales_model        |complete|0.4658770134240238|ma                |up_to_date   |22.7.5.1       |     |                 |                |
+|process_quality_predictor|complete|1.0               |silica_concentrate|up_to_date   |22.7.5.1       |     |                 |                |
+|home_rentals_model       |complete|0.9991920992432087|rental_price      |up_to_date   |22.7.4.0       |     |                 |                |
++-------------------------+--------+------------------+------------------+-------------+---------------+-----+-----------------+----------------+
+```
+
+Here is how it looks in DBeaver:
+
+![Query test](/assets/sql/dbeaver_5.png)
 
 !!! tip "Whitelist MindsDB Cloud IP address"
     If you need to whitelist MindsDB Cloud IP address to have access to your database, reach out to MindsDB team so we can share the Cloud static IP with you.

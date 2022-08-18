@@ -1,7 +1,8 @@
 import psycopg2
 from pandas import DataFrame
 from typing import Optional
-
+from collections import OrderedDict
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -137,3 +138,40 @@ class YugabyteHandler(DatabaseHandler):
     def get_columns(self, table_name):
         query = f"""SELECT column_name as "Field", data_type as "Type" FROM information_schema.columns WHERE table_name = '{table_name}'"""
         return self.query(query)
+
+
+
+connection_args = OrderedDict(
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the YugabyteDB server/database.'
+    },
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the YugabyteDB server.'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the YugabyteDB server.'
+    },
+    port={
+        'type': ARG_TYPE.INT,
+        'description': 'Specify port to connect YugabyteDB server'
+    }, 
+    database={
+        'type': ARG_TYPE.STR,
+        'description': 'Specify database name  to connect YugabyteDB server'
+    },
+
+
+)
+
+connection_args_example = OrderedDict(
+    host='127.0.0.1',
+    port=5433,
+    password='',
+    user='admin',
+    database='yugabyte'
+    
+
+)

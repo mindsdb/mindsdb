@@ -96,6 +96,20 @@ On execution, we get:
 
 ## Supported Integrations
 
+### Amazon Redshift
+
+```sql
+CREATE DATABASE amazonredshift_datasource
+WITH ENGINE='amazonredshift',
+PARAMETERS={
+  "user":"amazonredshift",
+  "port": 5439,
+  "password": "amazonredshift",
+  "host": "127.0.0.1",
+  "database": "test"
+};
+```
+
 ### Cassandra
 
 ```sql
@@ -135,6 +149,34 @@ PARAMETERS={
   "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
   "database": "cockroachdb"
+};
+```
+
+### Databricks
+
+```sql
+CREATE DATABASE databricks_datasource
+WITH ENGINE='databricks',
+PARAMETERS={
+  "user":"databricks",
+  "port": 15001,
+  "password": "databricks",
+  "host": "127.0.0.1",
+  "database": "test"
+};
+```
+
+### Firebird
+
+```sql
+CREATE DATABASE firebird_datasource
+WITH ENGINE='firebird',
+PARAMETERS={
+  "user":"firebird",
+  "port": 3050,
+  "password": "firebird",
+  "host": "127.0.0.1",
+  "database": "test"
 };
 ```
 
@@ -253,6 +295,20 @@ PARAMETERS={
   "schema": "public",
   "protocol": "https",
   "warehouse": "warehouse"
+};
+```
+
+### Supabase
+
+```sql
+CREATE DATABASE supabase_datasource
+WITH ENGINE='supabase',
+PARAMETERS={
+  "user":"supabase",
+  "port": 54321,
+  "password": "supabase",
+  "host": "127.0.0.1",
+  "database": "test"
 };
 ```
 

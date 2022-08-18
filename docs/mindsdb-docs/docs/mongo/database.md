@@ -1,4 +1,4 @@
-# `#!sql Insert Databases` Methods
+# `#!sql databases.insertOne()` Method
 
 ## Description
 
@@ -39,11 +39,11 @@ Where:
 
 ## Example
 
-Here is a concrete example on how to connect to a MySQL database.
+Here is a concrete example on how to connect to the local MongoDB.
 
 ```sql
 db.databases.insertOne({
-    'name': 'mongo_int', 
+    'name': 'mongo_local', 
     'engine': 'mongodb',
     'connection_args': {
             "port": 27017,
@@ -67,7 +67,7 @@ On execution:
 You can list linked databases as follows:
 
 ```sql
-show db;
+show dbs;
 ```
 
 On execution:
@@ -76,10 +76,11 @@ On execution:
 +--------------------+
 | Database           |
 +--------------------+
-| information_schema |
-| mindsdb            |
+| admin              |
 | files              |
+| information_schema |             
+| mindsdb            |
+| mongo_int          |
 | views              |
-| mongo_int         |
 +--------------------+
 ```

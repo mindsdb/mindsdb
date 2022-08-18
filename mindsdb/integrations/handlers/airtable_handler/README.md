@@ -11,6 +11,8 @@ This handler was implemented using `duckdb`, a library that allows SQL queries t
 
 In essence, when querying a particular table, the entire table will first be pulled into a `pandas` DataFrame using the Airtable API. Once this is done, SQL queries can be run on the DataFrame using `duckdb`.
 
+Note: Since the entire table needs to be pulled into memory first (DataFrame), it is recommended to be somewhat careful when querying large tables so as not to overload your machine.
+
 The documentation for the Airtable API is available here,
 <br>
 https://airtable.com/api

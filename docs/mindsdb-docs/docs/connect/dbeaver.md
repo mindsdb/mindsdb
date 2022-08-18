@@ -1,4 +1,4 @@
-# Connect to MindsDB from DBeaver
+# MindsDB and DBeaver
 
 DBeaver is a database tool that allows you to connect to and work with various database engines. You can download it [here](https://dbeaver.io/).
 
@@ -74,7 +74,12 @@ Here is how it looks in DBeaver:
 ![Query test](/assets/sql/dbeaver_5.png)
 
 !!! tip "Whitelist MindsDB Cloud IP address"
-    If you need to whitelist MindsDB Cloud IP address to have access to your database, reach out to MindsDB team so we can share the Cloud static IP with you.
+    If you need to whitelist the MindsDB Cloud IP address to gain access to your database, reach out to the MindsDB team, and we'll share the MindsDB Cloud static IP address with you.
 
-!!! tip "What is next?"
-    We recommend you to follow one of our tutorials or learn more about the [MindsDB Database](/sql/table-structure/).
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and **Community Tutorials** sections, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **SQL API** section, as they explain a common SQL syntax with examples.
+
+Have fun!

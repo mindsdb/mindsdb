@@ -62,7 +62,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlSyntaxError,
     ErSqlWrongArguments,
 )
-from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
+from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case, download_file
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery, Column
@@ -629,25 +629,24 @@ class ExecuteCommands:
             accept_connection_args = handler_meta.get('connection_args')
             if accept_connection_args is not None:
                 for arg_name, arg_meta in accept_connection_args.items():
-                    if (
-                        arg_meta.get('type') == HANDLER_CONNECTION_ARG_TYPE.URL
-                        and arg_name in connection_args
-                    ):
-                        url = connection_args[arg_name]
-                        try:
-                            parse_result = urllib.parse.urlparse(url)
-                            scheme = parse_result.scheme
-                        except ValueError:
-                            raise Exception(f'Invalid url: {url}')
-                        except Exception as e:
-                            raise Exception(f'URL parsing error: {e}')
-                        temp_dir = tempfile.mkdtemp(prefix='mindsdb_file_download_')
-                        if scheme != '':
-                            response = requests.get(url)
-                            temp_file_path = Path(temp_dir).joinpath('file')
-                            with open(str(temp_file_path), 'wb')as file:
-                                file.write(response.content)
-                            connection_args[arg_name] = temp_file_path
+                    arg_type = arg_meta.get('type')
+                    if arg_type == HANDLER_CONNECTION_ARG_TYPE.UNION:
+                        parsed = False
+                        for union_arg_type in arg_meta.get('options', []):
+                            if (
+                                union_arg_type == HANDLER_CONNECTION_ARG_TYPE.PATH
+                                and Path(connection_args[arg_name]).is_file()
+                            ):
+                                parsed = True
+                                break
+                            elif union_arg_type == HANDLER_CONNECTION_ARG_TYPE.URL:
+                                connection_args[arg_name] = download_file(connection_args[arg_name])
+                                parsed = True
+                                break
+                        if parsed is not True:
+                            raise SqlApiException("Can't handle connection argument: {arg_name}")
+                    elif arg_meta == HANDLER_CONNECTION_ARG_TYPE.URL:
+                        connection_args[arg_name] = download_file(connection_args[arg_name])
 
             handler = self.session.integration_controller.create_handler(
                 handler_type=engine,

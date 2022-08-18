@@ -361,9 +361,16 @@ class IntegrationController:
         if import_error is not None:
             handler_meta['import']['error_message'] = str(import_error)
 
-        for attr in ('connection_args_example', 'connection_args', 'description', 'name', 'type', 'title'):
-            if hasattr(module, attr):
-                handler_meta[attr] = getattr(module, attr)
+        module_attrs = [attr for attr in [
+            'connection_args_example',
+            'connection_args',
+            'description',
+            'name',
+            'type',
+            'title'
+        ] if hasattr(module, attr)]
+        for attr in module_attrs:
+            handler_meta[attr] = getattr(module, attr)
 
         # region icon
         if hasattr(module, 'icon_path'):

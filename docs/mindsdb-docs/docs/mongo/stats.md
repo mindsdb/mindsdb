@@ -2,80 +2,131 @@
 
 ## Description
 
-The `stats()` function is used to display the attributes of an existing model.
+The `stats()` method is used to display the attributes of an existing model. It accept the {'scale': attribute} object.
 
-## `#!sql DESCRIBE ... FEATURES` Statement
+## `#!sql {'scale':'features'}` Parameter
 
-### `#!sql DESCRIBE ... FEATURES` Description
+### `#!sql stats({'scale':'features'})` Description
 
-The `db.[name_of_your_predictor].stats({'scale':'features'})` methiod is used to display the way that the model encoded the data prior to training.
+The `db.[name_of_your_predictor].stats({'scale':'features'})` method is used to display the way that the model encoded the data prior to training.
 
-### `#!sql DESCRIBE ... FEATURES` Syntax
+### `#!sql stats({'scale':'features'})` Syntax
 
 ```sql
-DESCRIBE mindsdb.[name_of_your_predictor].features;
+db.<name_of_your_predictor>.stats({'scale':'features'});
 ```
 
 On execution:
 
-```sql
-+--------------+-------------+--------------+-------------+
-| column       | type        | encoder      | role        |
-+--------------+-------------+--------------+-------------+
-| column_name  | column_type | encoder_used | column_role |
-+--------------+-------------+--------------+-------------+
+```json
+{
+  "data":[
+    {
+       "column" : "number_of_rooms",
+       "type" : "categorical",
+       "encoder" : "OneHotEncoder",
+       "role" : "feature"
+    }
+  ]
+}
 ```
 
 Where:
 
 |                            | Description                                           |
 | -------------------------- | ----------------------------------------------------- |
-| `[name_of_your_predictor]` | Name of the model to be described                     |
-| column                     | Columns used                                          |
-| type                       | Type of data inferred                                  |
-| encoder                    | Encoder used                                          |
+| `column` | The name of the column                      |
+| `type`                     | Type of data inferred                                        |
+| `encoder`                    | Encoder used                                          |
 | role                       | Role for that column, it can be `feature` or `target` |
 
-### `#!sql DESCRIBE ... FEATURES` Example
+### `#!sql stats({'scale':'features'})` Example
 
 ```sql
-DESCRIBE mindsdb.home_rentals_model.features;
+db.home_rentals_model.stats({'scale':'features'})
 ```
 
 On execution:
 
-```sql
-+---------------------+-------------+----------------+---------+
-| column              | type        | encoder        | role    |
-+---------------------+-------------+----------------+---------+
-| number_of_rooms     | categorical | OneHotEncoder  | feature |
-| number_of_bathrooms | binary      | BinaryEncoder  | feature |
-| sqft                | integer     | NumericEncoder | feature |
-| location            | categorical | OneHotEncoder  | feature |
-| days_on_market      | integer     | NumericEncoder | feature |
-| neighborhood        | categorical | OneHotEncoder  | feature |
-| rental_price        | integer     | NumericEncoder | target  |
-+---------------------+-------------+----------------+---------+
+```json
+{
+        "data" : [
+                {
+                        "column" : "number_of_rooms",
+                        "type" : "categorical",
+                        "encoder" : "OneHotEncoder",
+                        "role" : "feature"
+                },
+                {
+                        "column" : "number_of_bathrooms",
+                        "type" : "binary",
+                        "encoder" : "BinaryEncoder",
+                        "role" : "feature"
+                },
+                {
+                        "column" : "sqft",
+                        "type" : "float",
+                        "encoder" : "NumericEncoder",
+                        "role" : "feature"
+                },
+                {
+                        "column" : "location",
+                        "type" : "categorical",
+                        "encoder" : "OneHotEncoder",
+                        "role" : "feature"
+                },
+                {
+                        "column" : "days_on_market",
+                        "type" : "integer",
+                        "encoder" : "NumericEncoder",
+                        "role" : "feature"
+                },
+                {
+                        "column" : "initial_price",
+                        "type" : "integer",
+                        "encoder" : "NumericEncoder",
+                        "role" : "feature"
+                },
+                {
+                        "column" : "neighborhood",
+                        "type" : "categorical",
+                        "encoder" : "OneHotEncoder",
+                        "role" : "feature"
+                },
+                {
+                        "column" : "rental_price",
+                        "type" : "float",
+                        "encoder" : "NumericEncoder",
+                        "role" : "target"
+                }
+        ],
+        "ns" : "mindsdb.home_rentals_model"
+}
 ```
 
-## `#!sql DESCRIBE ... MODEL` Statement
+## `#!sql {'scale':'model'}` Parameter
 
-The `DESCRIBE mindsdb.[name_of_your_predictor].model` statement is used to display the performance of the candidate models.
+The `db.<name_of_your_predictor>.stats({'scale':'model'})` method is used to display the performance of the candidate models.
 
-### `#!sql DESCRIBE ... MODEL` Syntax
+### `#!sql stats({'scale':'model'})` Syntax
 
 ```sql
-DESCRIBE mindsdb.[name_of_your_predictor].model;
+db.<name_of_your_predictor>.stats({'scale':'model'})
 ```
 
 On execution:
 
-```sql
-+-----------------+-------------+---------------+----------+
-| name            | performance | training_time | selected |
-+-----------------+-------------+---------------+----------+
-| candidate_model | performance  | training_time | selected |
-+-----------------+-------------+---------------+----------+
+```json
+{
+  "data" :[
+      {
+              "name" : "<candidate_model>",
+              "performance" : <0.0|1.0>,
+              "training_time" : <seconds>,
+              "selected" : <0|1>
+      },
+  ]
+}
 ```
 
 Where:
@@ -88,30 +139,49 @@ Where:
 | training_time              | Time elapsed for the model training to be completed    |
 | selected                   | `1` for the best performing model `0` for the rest     |
 
-### `#!sql DESCRIBE ... MODEL` Example
+### `#!sql stats({'scale':'model'})` Example
 
 ```sql
-DESCRIBE mindsdb.home_rentals_model.model;
+db.home_rentals_model.stats({'scale':'model'})
 ```
 
 On execution:
 
-```sql
-+------------+--------------------+----------------------+----------+
-| name       | performance        | training_time        | selected |
-+------------+--------------------+----------------------+----------+
-| Neural     | 0.9861694189913056 | 3.1538941860198975   | 0        |
-| LightGBM   | 0.9991920992432087 | 15.671080827713013   | 1        |
-| Regression | 0.9983390488042778 | 0.016761064529418945 | 0        |
-+------------+--------------------+----------------------+----------+
+```json
+{
+        "data" : [
+                {
+                        "name" : "Neural",
+                        "performance" : 0.999,
+                        "training_time" : 48.37,
+                        "selected" : 0
+                },
+                {
+                        "name" : "LightGBM",
+                        "performance" : 1,
+                        "training_time" : 33,
+                        "selected" : 1
+                },
+                {
+                        "name" : "Regression",
+                        "performance" : 0.999,
+                        "training_time" : 0.05,
+                        "selected" : 0
+                }
+        ],
+        "ns" : "mindsdb.home_rentals_model"
+}
 ```
 
-## `#!sql DESCRIBE ... ENSEMBLE`
+## `#!sql {'scale':'ensemble'}` Parameter
 
-### `#!sql DESCRIBE ... ENSEMBLE` Syntax
+
+The `db.<name_of_your_predictor>.stats({'scale':'ensemble'})` method is used to display the parameters used to select best model candidate.
+
+### `#!sql stats({'scale':'ensemble'})` Syntax
 
 ```sql
-DESCRIBE mindsdb.[name_of_your_predictor].ensemble;
+db.<name_of_your_predictor>.stats({'scale':'ensemble'});
 ```
 
 On execution:
@@ -130,130 +200,8 @@ Where:
 | -------- | ------------------------------------------------------------------------------ |
 | ensemble | JSON type object describing the parameters used to select best model candidate |
 
-### `#!sql DESCRIBE ... ENSEMBLE` Example
+### `#!sql DESCRIBE ... ENSEMBLE` Example WIP
 
-```sql
-DESCRIBE mindsdb.home_rentals_model.ensemble;
-```
-
-On execution:
-
-```sql
-+----------------------------------------------------------------------+
-| ensemble                                                             |
-+----------------------------------------------------------------------+
-| {
-  "encoders": {
-    "rental_price": {
-      "module": "NumericEncoder",
-      "args": {
-        "is_target": "True",
-        "positive_domain": "$statistical_analysis.positive_domain"
-      }
-    },
-    "number_of_rooms": {
-      "module": "OneHotEncoder",
-      "args": {}
-    },
-    "number_of_bathrooms": {
-      "module": "BinaryEncoder",
-      "args": {}
-    },
-    "sqft": {
-      "module": "NumericEncoder",
-      "args": {}
-    },
-    "location": {
-      "module": "OneHotEncoder",
-      "args": {}
-    },
-    "days_on_market": {
-      "module": "NumericEncoder",
-      "args": {}
-    },
-    "neighborhood": {
-      "module": "OneHotEncoder",
-      "args": {}
-    }
-  },
-  "dtype_dict": {
-    "number_of_rooms": "categorical",
-    "number_of_bathrooms": "binary",
-    "sqft": "integer",
-    "location": "categorical",
-    "days_on_market": "integer",
-    "neighborhood": "categorical",
-    "rental_price": "integer"
-  },
-  "dependency_dict": {},
-  "model": {
-    "module": "BestOf",
-    "args": {
-      "submodels": [
-        {
-          "module": "Neural",
-          "args": {
-            "fit_on_dev": true,
-            "stop_after": "$problem_definition.seconds_per_mixer",
-            "search_hyperparameters": true
-          }
-        },
-        {
-          "module": "LightGBM",
-          "args": {
-            "stop_after": "$problem_definition.seconds_per_mixer",
-            "fit_on_dev": true
-          }
-        },
-        {
-          "module": "Regression",
-          "args": {
-            "stop_after": "$problem_definition.seconds_per_mixer"
-          }
-        }
-      ],
-      "args": "$pred_args",
-      "accuracy_functions": "$accuracy_functions",
-      "ts_analysis": null
-    }
-  },
-  "problem_definition": {
-    "target": "rental_price",
-    "pct_invalid": 2,
-    "unbias_target": true,
-    "seconds_per_mixer": 57024.0,
-    "seconds_per_encoder": null,
-    "expected_additional_time": 8.687719106674194,
-    "time_aim": 259200,
-    "target_weights": null,
-    "positive_domain": false,
-    "timeseries_settings": {
-      "is_timeseries": false,
-      "order_by": null,
-      "window": null,
-      "group_by": null,
-      "use_previous_target": true,
-      "horizon": null,
-      "historical_columns": null,
-      "target_type": "",
-      "allow_incomplete_history": true,
-      "eval_cold_start": true,
-      "interval_periods": []
-    },
-    "anomaly_detection": false,
-    "use_default_analysis": true,
-    "ignore_features": [],
-    "fit_on_all": true,
-    "strict_mode": true,
-    "seed_nr": 420
-  },
-  "identifiers": {},
-  "accuracy_functions": [
-    "r2_score"
-  ]
-}                                                                      |
-+----------------------------------------------------------------------+
-```
 
 !!! TIP "Unsure what it all means?"
     If you're unsure on how to `#!sql DESCRIBE` your model or understand the results feel free to ask us how to do it on the community [Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).

@@ -16,10 +16,8 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 import pandas as pd
 import IfxPyDbi as I 
+from sqlalchemy_informix.ibmdb import  InformixDialect
 
-from  pyinformix.ibm_db import InformixDialect
-# from sqla import DB2Dialect_ibm_db as InformixDialect
-# from IfxAlchemy.IfxPy import IfxDialect_IfxPy as InformixDialect
 
 
 class InformixHandler(DatabaseHandler):

@@ -40,3 +40,10 @@ Now, you can use this established connection to query your database as follows,
 ~~~~sql
 SELECT * FROM informix_datasource.items;
 ~~~~
+
+
+This integration uses IfxPy it is in develpment stage there it can be install using `pip install IfxPy`.But it doesn't work for higher version of python, therfore you have to build it from source.
+
+For more Info checkout [here](https://github.com/OpenInformix/IfxPy) also it has some prerequisite.
+
+There are many method for Build but wheel method easy and Recommended.

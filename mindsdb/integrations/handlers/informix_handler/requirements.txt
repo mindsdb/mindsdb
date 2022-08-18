@@ -1,2 +1,2 @@
 IfxPy
-PyInformix
+sqlalchemy-informix

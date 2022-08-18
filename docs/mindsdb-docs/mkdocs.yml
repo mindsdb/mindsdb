@@ -93,6 +93,7 @@ nav:
       - Tableau: connect/tableau.md
   - Data Setup in MindsDB: sql/create/databases.md
   - Upload a File to MindsDB: sql/create/file.md
+  - MindsDB Data Insights: sql/data-insights.md
   - Train a Predictor: sql/create/predictor.md
   - Get a Prediction: sql/api/select.md
   - SQL API:
@@ -117,7 +118,7 @@ nav:
     - Stats(): mongo/stats.md
     - Find(): mongo/find.md
     - Delete(): mongo/delete.md
-  - Using a custom model:
+  - Using Custom Models:
     - MLFlow: custom-model/mlflow.md
     - Ray Serve: custom-model/ray-serve.md
     - HuggingFace: custom-model/huggingface.md
@@ -142,15 +143,15 @@ nav:
       - Mushrooms Hunting: sql/tutorials/mushrooms.md
       - Heart Disease: sql/tutorials/heart-disease.md
   - Contributing Guide:
-      - Installing for development: contribute/install.md
-      - Bug reports and Feature requests: contribute/issues.md
-      - Building a new integration: contribute/integrations.md
-      - Writing documentation: contribute/docs.md
-      - Docs style guide: docs-rules.md
-      - Testing and improving test coverage: contribute/tests.md
-      - Writing tutorials: contribute/tutorials.md
+      - MindsDB Installation for Development: contribute/install.md
+      - Bug Reports and Feature Requests: contribute/issues.md
+      - Building a New Integration: contribute/integrations.md
+      - Writing Documentation: contribute/docs.md
+      - Docs Style Guide: docs-rules.md
+      - Testing and Improving Test Coverage: contribute/tests.md
+      - Writing Tutorials: contribute/tutorials.md
   - Community:
-      - How to contribute: contribute.md
-      - Join our community: community.md
+      - How to Contribute: contribute.md
+      - Join our Community: community.md
 extra_css:
   - stylesheets/extra.css

@@ -104,7 +104,7 @@ There are many [Kafka client implementations](https://docs.confluent.io/platform
 The code below generates and sends the source records to `topic_in` by default. You can use any other Kafka topic by providing its name as a CMD parameter.
 
 ```python
-import sys                                                                                                                                                  
+import sys
 import json
 import kafka
 connection_info = {"bootstrap_servers": "127.0.0.1:9092",
@@ -155,5 +155,10 @@ if __name__ == '__main__':
         print("-" * 100)
 ```
 
-!!! tip "What's next?"
-    We recommend you to follow one of our tutorials or learn more about the [MindsDB Database](/sql/table-structure/).
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and **Community Tutorials** sections, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **SQL API** section, as they explain a common SQL syntax with examples.
+
+Have fun!

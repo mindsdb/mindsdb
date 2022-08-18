@@ -1,3 +1,5 @@
+# MindsDB and DBT
+
 To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapter:
 
 | Adapter for                                                     | Documentation                                     | Install from PyPi                |
@@ -58,7 +60,7 @@ To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapte
 | `username` |    ✔️    | The username to use to connect to the server         | `mindsdb` or mindsdb cloud user |
 | `password` |    ✔️    | The password to use for authenticating to the server | `pass`                          |
 
-### Create predictor
+### Create a Predictor
 
 Create table_name.sql (<em>table_name</em> will be used as the name of the predictor):
 
@@ -87,7 +89,7 @@ Create table_name.sql (<em>table_name</em> will be used as the name of the predi
     FROM stores;
 ```
 
-### Create predictions table
+### Create Predictions Table
 
 Create <em>table_name</em>.sql (If you need to specify schema, you can do it with a dot separator: <em><strong>schema_name.</strong>table_name</em>.sql):
 
@@ -125,3 +127,11 @@ Create <em>table_name</em>.sql (If you need to specify schema, you can do it wit
    ```bash
    python -m pytest tests/
    ```
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and **Community Tutorials** sections, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **SQL API** section, as they explain a common SQL syntax with examples.
+
+Have fun!

@@ -22,7 +22,7 @@ You can either connect locally or to a MindsDB Cloud instance, depending on the 
     mysql -h cloud.mindsdb.com --port 3307 -u [mindsdb_cloud_email] -p [mindsdb_cloud_password]
     ```
 
-On execution, you should get:
+On execution, we get:
 
 ```bash
 Welcome to the MariaDB monitor.  Commands end with ; or \g.
@@ -50,5 +50,10 @@ Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 MySQL [(none)]>
 ```
 
-!!! tip "What is next?"
-    We recommend you to follow one of our tutorials or jump more into detail understanding the [MindsDB Database](/sql/table-structure/)
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and **Community Tutorials** sections, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **SQL API** section, as they explain a common SQL syntax with examples.
+
+Have fun!

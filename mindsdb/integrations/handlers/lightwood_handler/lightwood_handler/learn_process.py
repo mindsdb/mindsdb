@@ -122,7 +122,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         pickle_path = os.path.join(config['paths']['predictors'], fs_name)
         predictor.save(pickle_path)
 
-        fs_store.put(fs_name, fs_name, config['paths']['predictors'])
+        fs_store.put(fs_name, base_dir=config['paths']['predictors'])
 
         predictor_record.data = predictor.model_analysis.to_dict()
 
@@ -247,7 +247,7 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
         fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
         pickle_path = os.path.join(config['paths']['predictors'], fs_name)
         predictor.save(pickle_path)
-        fs_store.put(fs_name, fs_name, config['paths']['predictors'])
+        fs_store.put(fs_name, base_dir=config['paths']['predictors'])
         predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
         predictor_record.update_status = 'up_to_date'
         old_predictor_record.update_status = 'up_to_date'

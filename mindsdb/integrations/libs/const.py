@@ -13,6 +13,7 @@ class HANDLER_CONNECTION_ARG_TYPE:
     INT = 'int'
     BOOL = 'bool'
     URL = 'url'
+    PATH = 'path'
 
 
 HANDLER_CONNECTION_ARG_TYPE = HANDLER_CONNECTION_ARG_TYPE()

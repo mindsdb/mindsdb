@@ -201,15 +201,31 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
 
 
 @mark_process(name='learn')
-def run_update(name: str, df: DataFrame, company_id: int):
+def run_update(predictor_id: str, df: DataFrame, company_id: int):
     fs_store = FsStore()
     config = Config()
 
     try:
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=name).first()
-        assert predictor_record is not None
-        predictor_record.update_status = 'updating'
+        old_predictor_record = Predictor.query.filter_by(id=predictor_id).first()
+        assert old_predictor_record is not None
+        old_predictor_record.update_status = 'updating'
         session.commit()
+
+        predictor_record = db.Predictor(
+            company_id=company_id,
+            name=old_predictor_record.name,
+            integration_id=old_predictor_record.integration_id,
+            fetch_data_query=old_predictor_record.fetch_data_query,
+            mindsdb_version=mindsdb_version,
+            lightwood_version=lightwood_version,
+            to_predict=old_predictor_record.to_predict,
+            learn_args=old_predictor_record.learn_args,
+            data={'name': old_predictor_record.name},
+            training_data_columns_count=len(df.columns),
+            training_data_rows_count=len(df),
+            training_start_at=datetime.now(),
+            active=False
+        )
 
         problem_definition = predictor_record.learn_args
         problem_definition['target'] = predictor_record.to_predict[0]
@@ -233,13 +249,12 @@ def run_update(name: str, df: DataFrame, company_id: int):
         predictor.save(pickle_path)
         fs_store.put(fs_name, fs_name, config['paths']['predictors'])
         predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
-        session.commit()
-
-        predictor_record.lightwood_version = lightwood_version
-        predictor_record.mindsdb_version = mindsdb_version
         predictor_record.update_status = 'up_to_date'
-        session.commit()
+        old_predictor_record.update_status = 'up_to_date'
 
+        old_predictor_record.active = False
+        predictor_record.active = True
+        session.commit()
     except Exception as e:
         log.error(e)
         predictor_record.update_status = 'update_failed'  # type: ignore

@@ -58,6 +58,7 @@ class ElasticsearchHandler(DatabaseHandler):
 
         self.connection = Elasticsearch(
             hosts=self.connection_data['hosts'].split(','),
+            cloud_id=self.connection_data['cloud_id'],
             basic_auth=(self.connection_data['username'], self.connection_data['password'])
         )
         self.is_connected = True

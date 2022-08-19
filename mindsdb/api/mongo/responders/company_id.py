@@ -13,8 +13,8 @@ class Responce(Responder):
 
         mindsdb_env['user_class'] = user_class
         mindsdb_env['company_id'] = company_id
-        mindsdb_env['model_interface'] = WithKWArgsWrapper(
-            mindsdb_env['origin_model_interface'],
+        mindsdb_env['model_controller'] = WithKWArgsWrapper(
+            mindsdb_env['origin_model_controller'],
             company_id=company_id
         )
         mindsdb_env['integration_controller'] = WithKWArgsWrapper(

@@ -73,7 +73,7 @@ class Integration(Resource):
 
         files = request.files
         temp_dir = None
-        if files is not None:
+        if files is not None and len(files) > 0:
             temp_dir = tempfile.mkdtemp(prefix='integration_files_')
             for key, file in files.items():
                 temp_dir_path = Path(temp_dir)
@@ -108,23 +108,7 @@ class Integration(Resource):
                 del params['type']
             request.integration_controller.add(name, engine, params)
 
-            model_data_arr = []
-            for model in request.model_interface.get_models():
-                if model['status'] == 'complete':
-                    try:
-                        model_data_arr.append(request.model_interface.get_model_data(model['name']))
-                    except Exception:
-                        pass
-
             if is_test is False and params.get('publish', False) is True:
-                model_data_arr = []
-                for model in request.model_interface.get_models():
-                    if model['status'] == 'complete':
-                        try:
-                            model_data_arr.append(request.model_interface.get_model_data(model['name']))
-                        except Exception:
-                            pass
-
                 stream_controller = StreamController(request.company_id)
                 if engine in stream_controller.known_dbs and params.get('publish', False) is True:
                     stream_controller.setup(name)

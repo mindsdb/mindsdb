@@ -9,7 +9,7 @@ class Responce(Responder):
         db = query['$db']
         collections = 0
         if db == 'mindsdb':
-            collections = 2 + len(mindsdb_env['model_interface'].get_models())
+            collections = 2 + len(mindsdb_env['model_controller'].get_models())
         return {
             'db': db,
             'collections': collections,

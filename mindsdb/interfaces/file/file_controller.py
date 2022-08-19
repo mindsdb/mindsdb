@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import shutil
 
-from mindsdb.interfaces.storage.db import session, Semaphor, Predictor, File
+from mindsdb.interfaces.storage.db import session, File
 from mindsdb.integrations.handlers.file_handler import Handler as FileHandler
 from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config

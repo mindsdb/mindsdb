@@ -68,7 +68,7 @@ markdown_extensions:
 nav:
   - Quickstart: index.md
   - What is MindsDB?: what-is-mindsdb.md
-  - Setup:
+  - Deployment:
     - Self-hosted:
       - Docker: setup/self-hosted/docker.md
       - pip:
@@ -76,7 +76,12 @@ nav:
         - Linux via pip: setup/self-hosted/pip/linux.md
         - MacOS via pip: setup/self-hosted/pip/macos.md
         - Sourcecode via pip: setup/self-hosted/pip/source.md
+    - Extend the Default MindsDB Configuration: setup/custom-config.md
     - MindsDB Cloud: setup/cloud.md
+    - Digital Ocean: setup/digital-ocean.md
+    - Google Cloud Platform: setup/gcp.md
+    - Vultr Cloud: setup/vultr.md
+    - Civo Cloud: setup/civo.md
   - Connect to MindsDB:
       - MindsDB SQL Editor: connect/mindsdb_editor.md
       - MySQL CLI: connect/mysql-client.md
@@ -88,6 +93,7 @@ nav:
       - Tableau: connect/tableau.md
   - Data Setup in MindsDB: sql/create/databases.md
   - Upload a File to MindsDB: sql/create/file.md
+  - MindsDB Data Insights: sql/data-insights.md
   - Train a Predictor: sql/create/predictor.md
   - Get a Prediction: sql/api/select.md
   - SQL API:
@@ -104,7 +110,7 @@ nav:
     - SELECT: sql/api/select.md
     - SELECT from files: sql/api/select_files.md
     - JOIN: sql/api/join.md
-  - Using a custom model:
+  - Using Custom Models:
     - MLFlow: custom-model/mlflow.md
     - Ray Serve: custom-model/ray-serve.md
     - HuggingFace: custom-model/huggingface.md
@@ -129,15 +135,15 @@ nav:
       - Mushrooms Hunting: sql/tutorials/mushrooms.md
       - Heart Disease: sql/tutorials/heart-disease.md
   - Contributing Guide:
-      - Installing for development: contribute/install.md
-      - Bug reports and Feature requests: contribute/issues.md
-      - Building a new integration: contribute/integrations.md
-      - Writing documentation: contribute/docs.md
-      - Docs style guide: docs-rules.md
-      - Testing and improving test coverage: contribute/tests.md
-      - Writing tutorials: contribute/tutorials.md
+      - MindsDB Installation for Development: contribute/install.md
+      - Bug Reports and Feature Requests: contribute/issues.md
+      - Building a New Integration: contribute/integrations.md
+      - Writing Documentation: contribute/docs.md
+      - Docs Style Guide: docs-rules.md
+      - Testing and Improving Test Coverage: contribute/tests.md
+      - Writing Tutorials: contribute/tutorials.md
   - Community:
-      - How to contribute: contribute.md
-      - Join our community: community.md
+      - How to Contribute: contribute.md
+      - Join our Community: community.md
 extra_css:
   - stylesheets/extra.css

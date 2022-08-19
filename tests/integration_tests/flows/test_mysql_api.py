@@ -112,9 +112,11 @@ class TestScenario:
         self.check_predictor_readiness(self.predictor_name)
 
     def test_3_making_prediction(self):
-        _query = ('SELECT rental_price, rental_price_explain FROM ' +
-                  self.predictor_name +
-                  ' WHERE when_data=\'{"number_of_rooms":"2","sqft":"400","location":"downtown","days_on_market":"2","initial_price":"2500"}\';')
+        _query = f"""
+            SELECT rental_price, rental_price_explain
+            FROM {self.predictor_name}
+            WHERE number_of_rooms = 2 and sqft = 400 and location = 'downtown' and days_on_market = 2 and initial_price= 2500;
+        """
         res = self.query(_query)
         self.assertTrue('rental_price' in res and 'rental_price_explain' in res,
                         f"error getting prediction from {self.predictor_name} - {res}")

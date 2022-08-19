@@ -14,7 +14,6 @@ class HANDLER_CONNECTION_ARG_TYPE:
     BOOL = 'bool'
     URL = 'url'
     PATH = 'path'
-    UNION = 'union'
 
 
 HANDLER_CONNECTION_ARG_TYPE = HANDLER_CONNECTION_ARG_TYPE()

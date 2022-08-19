@@ -131,10 +131,9 @@ connection_args = OrderedDict(
         'description': 'The BigQuery project id.'
     },
     service_account_keys={
-        'type': ARG_TYPE.UNION,
-        'options': [ARG_TYPE.URL, ARG_TYPE.PATH],
-        'description': 'Full path to the service account JSON file or URL to it'
-    }
+        'type': ARG_TYPE.PATH,
+        'description': 'Full path or URL to the service account JSON file'
+    },
 )
 
 connection_args_example = OrderedDict(

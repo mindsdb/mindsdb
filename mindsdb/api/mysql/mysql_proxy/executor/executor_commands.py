@@ -1,13 +1,9 @@
 import json
-import urllib
-import tempfile
 import datetime
 from typing import Optional
 from pathlib import Path
 
-import requests
 import pandas as pd
-
 from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatasource,
     RetrainPredictor,
@@ -17,10 +13,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateView
 )
 from mindsdb_sql import parse_sql
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
-from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb_sql.parser.dialects.mysql import Variable
-
 from mindsdb_sql.parser.ast import (
     RollbackTransaction,
     CommitTransaction,
@@ -49,6 +42,8 @@ from mindsdb_sql.parser.ast import (
     ASTNode,
 )
 
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErBadDbError,
@@ -63,11 +58,9 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlWrongArguments,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case, download_file
-
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery, Column
 )
-
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
@@ -75,7 +68,6 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     TYPES,
     SERVER_VARIABLES,
 )
-
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE
@@ -628,25 +620,28 @@ class ExecuteCommands:
 
             accept_connection_args = handler_meta.get('connection_args')
             if accept_connection_args is not None:
-                for arg_name, arg_meta in accept_connection_args.items():
+                for arg_name, arg_value in connection_args.items():
+                    if arg_name not in accept_connection_args:
+                        raise SqlApiException(f"Unknown connection argument: {arg_name}")
+                    arg_meta = accept_connection_args[arg_name]
                     arg_type = arg_meta.get('type')
-                    if arg_type == HANDLER_CONNECTION_ARG_TYPE.UNION:
-                        parsed = False
-                        for union_arg_type in arg_meta.get('options', []):
-                            if (
-                                union_arg_type == HANDLER_CONNECTION_ARG_TYPE.PATH
-                                and Path(connection_args[arg_name]).is_file()
-                            ):
-                                parsed = True
-                                break
-                            elif union_arg_type == HANDLER_CONNECTION_ARG_TYPE.URL:
-                                connection_args[arg_name] = download_file(connection_args[arg_name])
-                                parsed = True
-                                break
-                        if parsed is not True:
-                            raise SqlApiException("Can't handle connection argument: {arg_name}")
-                    elif arg_meta == HANDLER_CONNECTION_ARG_TYPE.URL:
-                        connection_args[arg_name] = download_file(connection_args[arg_name])
+                    if arg_type == HANDLER_CONNECTION_ARG_TYPE.PATH:
+                        # arg may be one of:
+                        # str: '/home/file.pem'
+                        # dict: {'path': '/home/file.pem'}
+                        # dict: {'url': 'https://host.com/file'}
+                        arg_value = connection_args[arg_name]
+                        if isinstance(arg_value, (str, dict)) is False:
+                            raise SqlApiException(f"Unknown type of arg: '{arg_value}'")
+                        if isinstance(arg_value, str) or 'path' in arg_value:
+                            path = arg_value if isinstance(arg_value, str) else arg_value['path']
+                            if Path(path).is_file() is False:
+                                raise SqlApiException(f"File not found at: '{path}'")
+                        elif 'url' in arg_value:
+                            path = download_file(arg_value['url'])
+                        else:
+                            raise SqlApiException(f"Argument '{arg_name}' must be path or url to the file")
+                        connection_args[arg_name] = path
 
             handler = self.session.integration_controller.create_handler(
                 handler_type=engine,
@@ -669,9 +664,11 @@ class ExecuteCommands:
     def answer_drop_datasource(self, ds_name):
         try:
             integration = self.session.integration_controller.get(ds_name)
+            if integration is None:
+                raise SqlApiException(f"Database '{ds_name}' does not exists.")
             self.session.integration_controller.delete(integration['name'])
         except Exception:
-            raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
+            raise ErDbDropDelete(f"Something went wrong during deleting database '{ds_name}'.")
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):

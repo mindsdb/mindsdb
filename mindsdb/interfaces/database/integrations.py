@@ -5,17 +5,17 @@ import importlib
 from pathlib import Path
 from copy import deepcopy
 import base64
+import shutil
 
 from sqlalchemy import func
 
 from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.utilities.fs import create_directory
-
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 
 class IntegrationController:
@@ -26,111 +26,42 @@ class IntegrationController:
     def __init__(self):
         self._load_handler_modules()
 
-    def add(self, name, engine, data, company_id=None):
-        bundle_path = data.get('secure_connect_bundle')
-        if engine == 'bigquery':
-            original_file_path = data['service_account_keys']
-            data['service_account_keys'] = Path(data['service_account_keys']).name
-            integration_record = Integration(
-                name=name,
-                engine=engine,
-                data=data,
-                company_id=company_id
-            )
-            session.add(integration_record)
-            session.commit()
-            integration_id = integration_record.id
+    def add(self, name, engine, connection_args, company_id=None):
+        handlers_meta = self.get_handlers_import_status()
+        handler_meta = handlers_meta[engine]
+        accept_connection_args = handler_meta.get('connection_args')
+
+        temp_dir = None
+        if accept_connection_args is not None:
+            for arg_name, arg_value in connection_args.items():
+                if (
+                    arg_name in accept_connection_args
+                    and accept_connection_args[arg_name]['type'] == ARG_TYPE.PATH
+                ):
+                    if temp_dir is None:
+                        temp_dir = tempfile.mkdtemp(prefix='mindsdb_files_')
+                    shutil.copy(arg_value, temp_dir)
+                    connection_args[arg_name] = Path(arg_value).name
+
+        integration_record = Integration(
+            name=name,
+            engine=engine,
+            data=connection_args,
+            company_id=company_id
+        )
+        session.add(integration_record)
+        session.commit()
+        integration_id = integration_record.id
+
+        if temp_dir is not None:
             folder_name = f'integration_files_{company_id}_{integration_id}'
             integrations_dir = Config()['paths']['integrations']
-            integration_dir = os.path.join(integrations_dir, folder_name)
-            create_directory(integration_dir)
-            p = Path(data['service_account_keys'])
-            shutil.copyfile(original_file_path, os.path.join(integration_dir, p.name))
-
+            integration_data_dir = os.path.join(integrations_dir, folder_name)
+            shutil.move(temp_dir, integration_data_dir)
             FsStore().put(
                 folder_name,
                 base_dir=integrations_dir
             )
-
-        elif engine in ('cassandra', 'scylla') and self._is_not_empty_str(bundle_path):
-            if os.path.isfile(bundle_path) is False:
-                raise Exception(f'Can not get access to file: {bundle_path}')
-            integrations_dir = Config()['paths']['integrations']
-
-            p = Path(bundle_path)
-            data['secure_connect_bundle'] = p.name
-
-            integration_record = Integration(
-                name=name,
-                engine=engine,
-                data=data,
-                company_id=company_id
-            )
-            session.add(integration_record)
-            session.commit()
-            integration_id = integration_record.id
-
-            folder_name = f'integration_files_{company_id}_{integration_id}'
-            integration_dir = os.path.join(integrations_dir, folder_name)
-            create_directory(integration_dir)
-            shutil.copyfile(bundle_path, os.path.join(integration_dir, p.name))
-
-            FsStore().put(
-                folder_name,
-                base_dir=integration_dir,
-            )
-        elif engine in ('mysql', 'mariadb'):
-            ssl = data.get('ssl')
-            files = {}
-            temp_dir = None
-            if ssl is True:
-                for key in ['ssl_ca', 'ssl_cert', 'ssl_key']:
-                    if key not in data:
-                        continue
-                    if os.path.isfile(data[key]) is False:
-                        if self._is_not_empty_str(data[key]) is False:
-                            raise Exception("'ssl_ca', 'ssl_cert' and 'ssl_key' must be paths or inline certs")
-                        if temp_dir is None:
-                            temp_dir = tempfile.mkdtemp(prefix='integration_files_')
-                        cert_file_name = data.get(f'{key}_name', f'{key}.pem')
-                        cert_file_path = os.path.join(temp_dir, cert_file_name)
-                        with open(cert_file_path, 'wt') as f:
-                            f.write(data[key])
-                        data[key] = cert_file_path
-                    files[key] = data[key]
-                    p = Path(data[key])
-                    data[key] = p.name
-            integration_record = Integration(
-                name=name,
-                engine=engine,
-                data=data,
-                company_id=company_id
-            )
-            session.add(integration_record)
-            session.commit()
-            integration_id = integration_record.id
-
-            if len(files) > 0:
-                integrations_dir = Config()['paths']['integrations']
-                folder_name = f'integration_files_{company_id}_{integration_id}'
-                integration_dir = os.path.join(integrations_dir, folder_name)
-                create_directory(integration_dir)
-                for file_path in files.values():
-                    p = Path(file_path)
-                    shutil.copyfile(file_path, os.path.join(integration_dir, p.name))
-                FsStore().put(
-                    folder_name,
-                    base_dir=integrations_dir
-                )
-        else:
-            integration_record = Integration(
-                name=name,
-                engine=engine,
-                data=data,
-                company_id=company_id
-            )
-            session.add(integration_record)
-            session.commit()
 
     def modify(self, name, data, company_id):
         integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()

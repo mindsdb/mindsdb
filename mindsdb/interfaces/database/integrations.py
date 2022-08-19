@@ -26,7 +26,22 @@ class IntegrationController:
     def __init__(self):
         self._load_handler_modules()
 
+    def _add_integration_record(self, name, engine, connection_args, company_id=None):
+        integration_record = Integration(
+            name=name,
+            engine=engine,
+            data=connection_args,
+            company_id=company_id
+        )
+        session.add(integration_record)
+        session.commit()
+        return integration_record.id
+
     def add(self, name, engine, connection_args, company_id=None):
+        if engine in ['redis', 'kafka']:
+            self._add_integration_record(name, engine, connection_args, company_id)
+            return
+        
         handlers_meta = self.get_handlers_import_status()
         handler_meta = handlers_meta[engine]
         accept_connection_args = handler_meta.get('connection_args')
@@ -43,15 +58,7 @@ class IntegrationController:
                     shutil.copy(arg_value, temp_dir)
                     connection_args[arg_name] = Path(arg_value).name
 
-        integration_record = Integration(
-            name=name,
-            engine=engine,
-            data=connection_args,
-            company_id=company_id
-        )
-        session.add(integration_record)
-        session.commit()
-        integration_id = integration_record.id
+        integration_id = self._add_integration_record(name, engine, connection_args, company_id)
 
         if temp_dir is not None:
             folder_name = f'integration_files_{company_id}_{integration_id}'

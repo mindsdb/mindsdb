@@ -163,6 +163,17 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
     session.commit()
 
 
+def format_exception_error(exception):
+    try:
+        exception_type, _exception_object, exception_traceback = sys.exc_info()
+        filename = exception_traceback.tb_frame.f_code.co_filename
+        line_number = exception_traceback.tb_lineno
+        error_message = f'{exception_type.__name__}: {exception}, raised at: {filename}#{line_number}'
+    except Exception:
+        error_message = str(exception)
+    return error_message
+
+
 @mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
               json_ai_override: dict = None) -> None:
@@ -180,13 +191,7 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
         print(traceback.format_exc())
 
-        try:
-            exception_type, _exception_object, exception_traceback = sys.exc_info()
-            filename = exception_traceback.tb_frame.f_code.co_filename
-            line_number = exception_traceback.tb_lineno
-            error_message = f'{exception_type.__name__}: {e}, raised at: {filename}#{line_number}'
-        except Exception:
-            error_message = str(e)
+        error_message = format_exception_error(e)
 
         predictor_record.data = {"error": error_message}
         db.session.commit()
@@ -253,16 +258,24 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
         predictor_record.data = predictor.model_analysis.to_dict()
         predictor_record.update_status = 'up_to_date'
         old_predictor_record.update_status = 'up_to_date'
-        predictor_record.training_stop_at = datetime.now()
 
         old_predictor_record.active = False
         predictor_record.active = True
         session.commit()
     except Exception as e:
         log.error(e)
+        predictor_record = Predictor.query.with_for_update().get(predictor_id)
+        print(traceback.format_exc())
+
+        error_message = format_exception_error(e)
+
+        predictor_record.data = {"error": error_message}
+
         old_predictor_record.update_status = 'update_failed'   # TODO
-        session.commit()
-        return str(e)
+        db.session.commit()
+
+    predictor_record.training_stop_at = datetime.now()
+    db.session.commit()
 
 
 class LearnRemoteProcess(ctx.Process):

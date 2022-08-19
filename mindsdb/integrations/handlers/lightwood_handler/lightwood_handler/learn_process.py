@@ -226,6 +226,8 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
             training_start_at=datetime.now(),
             active=False
         )
+        session.add(predictor_record)
+        session.commit()
 
         problem_definition = predictor_record.learn_args
         problem_definition['target'] = predictor_record.to_predict[0]
@@ -248,16 +250,17 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
         pickle_path = os.path.join(config['paths']['predictors'], fs_name)
         predictor.save(pickle_path)
         fs_store.put(fs_name, base_dir=config['paths']['predictors'])
-        predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
+        predictor_record.data = predictor.model_analysis.to_dict()
         predictor_record.update_status = 'up_to_date'
         old_predictor_record.update_status = 'up_to_date'
+        predictor_record.training_stop_at = datetime.now()
 
         old_predictor_record.active = False
         predictor_record.active = True
         session.commit()
     except Exception as e:
         log.error(e)
-        predictor_record.update_status = 'update_failed'  # type: ignore
+        old_predictor_record.update_status = 'update_failed'   # TODO
         session.commit()
         return str(e)
 

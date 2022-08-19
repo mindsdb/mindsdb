@@ -279,7 +279,7 @@ class LightwoodHandler(PredictiveHandler):
         if response.type == RESPONSE_TYPE.ERROR:
             return response
 
-        p = UpdateProcess(model_name, response.data_frame, self.company_id)
+        p = UpdateProcess(predictor_record.id, response.data_frame, self.company_id)
         p.start()
 
         return Response(RESPONSE_TYPE.OK)

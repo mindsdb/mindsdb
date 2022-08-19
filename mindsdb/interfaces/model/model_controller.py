@@ -15,6 +15,12 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.json_encoder import json_serialiser
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.interfaces.model.functions import (
+    get_model_record,
+    get_model_records,
+    PredictorRecordNotFound,
+    MultiplePredictorRecordsFound
+)
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -28,9 +34,7 @@ class ModelController():
         self.fs_store = FsStore()
 
     def get_model_data(self, name, company_id: int):
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-        if predictor_record is None:
-            raise Exception(f"Model does not exists: {name}")
+        predictor_record = get_model_record(company_id=company_id, except_absent=True, name=name)
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -89,7 +93,7 @@ class ModelController():
 
     def get_models(self, company_id: int):
         models = []
-        for predictor_record in db.session.query(db.Predictor).filter_by(company_id=company_id):
+        for predictor_record in get_model_records(company_id=company_id):
             model_data = self.get_model_data(predictor_record.name, company_id=company_id)
             reduced_model_data = {}
 
@@ -119,13 +123,16 @@ class ModelController():
             raise Exception(response.error_message)
 
     def rename_model(self, old_name, new_name, company_id: int):
-        db_p = db.session.query(db.Predictor).filter_by(company_id=company_id, name=old_name).first()
-        db_p.name = new_name
+        model_record = get_model_record(company_id=company_id, name=new_name)
+        if model_record is None:
+            raise Exception(f"Model with name '{new_name}' already exists")
+
+        for model_record in get_model_records(company_id=company_id, name=old_name):
+            model_record.name = new_name
         db.session.commit()
 
     def export_predictor(self, name: str, company_id: int) -> json:
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=company_id, name=name).first()
-        assert predictor_record is not None
+        predictor_record = get_model_record(company_id=company_id, name=name, except_absent=True)
 
         fs_name = f'predictor_{company_id}_{predictor_record.id}'
         self.fs_store.get(fs_name, base_dir=self.config['paths']['predictors'])

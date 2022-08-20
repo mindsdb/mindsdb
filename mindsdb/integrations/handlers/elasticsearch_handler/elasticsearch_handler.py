@@ -165,3 +165,39 @@ class ElasticsearchHandler(DatabaseHandler):
         renderer = SqlalchemyRender(ESDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
+
+    def get_tables(self) -> StatusResponse:
+        """
+        Return list of entities that will be accessible as tables.
+        Returns:
+            HandlerResponse
+        """
+
+        query = """
+            SHOW TABLES;
+        """
+        result = self.native_query(query)
+        df = result.data_frame
+        df = df.drop(['type', 'type'], axis=1)
+        result.data_frame = df.rename(columns={'name': 'table_name'})
+
+        return result
+
+    def get_columns(self, table_name: str) -> StatusResponse:
+        """
+        Returns a list of entity columns.
+        Args:
+            table_name (str): name of one of indexes returned by self.get_tables()
+        Returns:
+            HandlerResponse
+        """
+
+        query = f"""
+            DESCRIBE '{table_name}';
+        """
+        result = self.native_query(query)
+        df = result.data_frame
+        df = df.drop('mapping', axis=1)
+        result.data_frame = df.rename(columns={'column': 'column_name', 'type': 'data_type'})
+
+        return result

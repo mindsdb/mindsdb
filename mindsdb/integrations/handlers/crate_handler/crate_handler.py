@@ -144,6 +144,7 @@ class CrateHandler(DatabaseHandler):
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
             )
+        cur.close()
 
         if need_to_close is True:
             self.disconnect()

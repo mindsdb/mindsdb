@@ -5,17 +5,17 @@ import importlib
 from pathlib import Path
 from copy import deepcopy
 import base64
+import shutil
 
 from sqlalchemy import func
 
 from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.utilities.fs import create_directory
-
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 
 class IntegrationController:
@@ -26,89 +26,49 @@ class IntegrationController:
     def __init__(self):
         self._load_handler_modules()
 
-    def add(self, name, engine, data, company_id=None):
-        bundle_path = data.get('secure_connect_bundle')
-        if engine in ('cassandra', 'scylla') and self._is_not_empty_str(bundle_path):
-            if os.path.isfile(bundle_path) is False:
-                raise Exception(f'Can not get access to file: {bundle_path}')
-            integrations_dir = Config()['paths']['integrations']
+    def _add_integration_record(self, name, engine, connection_args, company_id=None):
+        integration_record = Integration(
+            name=name,
+            engine=engine,
+            data=connection_args,
+            company_id=company_id
+        )
+        session.add(integration_record)
+        session.commit()
+        return integration_record.id
 
-            p = Path(bundle_path)
-            data['secure_connect_bundle'] = p.name
+    def add(self, name, engine, connection_args, company_id=None):
+        if engine in ['redis', 'kafka']:
+            self._add_integration_record(name, engine, connection_args, company_id)
+            return
+        
+        handlers_meta = self.get_handlers_import_status()
+        handler_meta = handlers_meta[engine]
+        accept_connection_args = handler_meta.get('connection_args')
 
-            integration_record = Integration(
-                name=name,
-                engine=engine,
-                data=data,
-                company_id=company_id
-            )
-            session.add(integration_record)
-            session.commit()
-            integration_id = integration_record.id
+        temp_dir = None
+        if accept_connection_args is not None:
+            for arg_name, arg_value in connection_args.items():
+                if (
+                    arg_name in accept_connection_args
+                    and accept_connection_args[arg_name]['type'] == ARG_TYPE.PATH
+                ):
+                    if temp_dir is None:
+                        temp_dir = tempfile.mkdtemp(prefix='mindsdb_files_')
+                    shutil.copy(arg_value, temp_dir)
+                    connection_args[arg_name] = Path(arg_value).name
 
+        integration_id = self._add_integration_record(name, engine, connection_args, company_id)
+
+        if temp_dir is not None:
             folder_name = f'integration_files_{company_id}_{integration_id}'
-            integration_dir = os.path.join(integrations_dir, folder_name)
-            create_directory(integration_dir)
-            shutil.copyfile(bundle_path, os.path.join(integration_dir, p.name))
-
+            integrations_dir = Config()['paths']['integrations']
+            integration_data_dir = os.path.join(integrations_dir, folder_name)
+            shutil.move(temp_dir, integration_data_dir)
             FsStore().put(
                 folder_name,
-                integration_dir,
-                integrations_dir
+                base_dir=integrations_dir
             )
-        elif engine in ('mysql', 'mariadb'):
-            ssl = data.get('ssl')
-            files = {}
-            temp_dir = None
-            if ssl is True:
-                for key in ['ssl_ca', 'ssl_cert', 'ssl_key']:
-                    if key not in data:
-                        continue
-                    if os.path.isfile(data[key]) is False:
-                        if self._is_not_empty_str(data[key]) is False:
-                            raise Exception("'ssl_ca', 'ssl_cert' and 'ssl_key' must be paths or inline certs")
-                        if temp_dir is None:
-                            temp_dir = tempfile.mkdtemp(prefix='integration_files_')
-                        cert_file_name = data.get(f'{key}_name', f'{key}.pem')
-                        cert_file_path = os.path.join(temp_dir, cert_file_name)
-                        with open(cert_file_path, 'wt') as f:
-                            f.write(data[key])
-                        data[key] = cert_file_path
-                    files[key] = data[key]
-                    p = Path(data[key])
-                    data[key] = p.name
-            integration_record = Integration(
-                name=name,
-                engine=engine,
-                data=data,
-                company_id=company_id
-            )
-            session.add(integration_record)
-            session.commit()
-            integration_id = integration_record.id
-
-            if len(files) > 0:
-                integrations_dir = Config()['paths']['integrations']
-                folder_name = f'integration_files_{company_id}_{integration_id}'
-                integration_dir = os.path.join(integrations_dir, folder_name)
-                create_directory(integration_dir)
-                for file_path in files.values():
-                    p = Path(file_path)
-                    shutil.copyfile(file_path, os.path.join(integration_dir, p.name))
-                FsStore().put(
-                    folder_name,
-                    integration_dir,
-                    integrations_dir
-                )
-        else:
-            integration_record = Integration(
-                name=name,
-                engine=engine,
-                data=data,
-                company_id=company_id
-            )
-            session.add(integration_record)
-            session.commit()
 
     def modify(self, name, data, company_id):
         integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
@@ -158,11 +118,9 @@ class IntegrationController:
             fs_store = FsStore()
             integrations_dir = Config()['paths']['integrations']
             folder_name = f'integration_files_{integration_record.company_id}_{integration_record.id}'
-            integration_dir = os.path.join(integrations_dir, folder_name)
             fs_store.get(
                 folder_name,
-                integration_dir,
-                integrations_dir
+                base_dir=integrations_dir
             )
 
         if not sensitive_info:
@@ -182,6 +140,10 @@ class IntegrationController:
             'date_last_update': deepcopy(integration_record.updated_at),
             'connection_data': data
         }
+
+    def get_by_id(self, integration_id, company_id=None, sensitive_info=True):
+        integration_record = session.query(Integration).filter_by(company_id=company_id, id=integration_id).first()
+        return self._get_integration_record_data(integration_record, sensitive_info)
 
     def get(self, name, company_id=None, sensitive_info=True, case_sensitive=False):
         if case_sensitive:
@@ -234,6 +196,12 @@ class IntegrationController:
                 ViewController(),
                 company_id=company_id
             )
+        elif handler_type == 'lightwood':
+            handler_ars['handler_controller'] = WithKWArgsWrapper(
+                IntegrationController(),
+                company_id=company_id
+            )
+            handler_ars['company_id'] = company_id
 
         return self.handler_modules[handler_type].Handler(**handler_ars)
 
@@ -246,7 +214,16 @@ class IntegrationController:
                 & (func.lower(Integration.name) == func.lower(name))
             ).first()
         if integration_record is None:
-            raise Exception(f'Unknown integration: {name}')
+            if name == 'lightwood':
+                handler = self.create_handler(
+                    name=name,
+                    handler_type='lightwood',
+                    connection_data=None,
+                    company_id=company_id
+                )
+                return handler
+            else:
+                raise Exception(f'Unknown integration: {name}')
         integration_meta = self._get_integration_record_data(integration_record, True)
 
         integration_engine = integration_meta['engine']
@@ -254,6 +231,15 @@ class IntegrationController:
 
         if integration_engine not in self.handler_modules:
             raise Exception(f"Cant find handler for '{integration_name}' ({integration_engine})")
+
+        if integration_engine == 'bigquery':
+            try:
+                folder_name = f'integration_files_{company_id}_{integration_record.id}'
+                integrations_dir = Config()['paths']['integrations']
+                FsStore().get(folder_name, base_dir=integrations_dir)
+            except Exception:
+                pass
+            integration_meta['connection_data']['service_account_keys'] = Path(integrations_dir).joinpath(folder_name).joinpath(integration_meta['connection_data']['service_account_keys'])
 
         handler = self.create_handler(
             name=integration_name,
@@ -313,9 +299,16 @@ class IntegrationController:
         if import_error is not None:
             handler_meta['import']['error_message'] = str(import_error)
 
-        for attr in ('connection_args_example', 'connection_args', 'description', 'name', 'type', 'title'):
-            if hasattr(module, attr):
-                handler_meta[attr] = getattr(module, attr)
+        module_attrs = [attr for attr in [
+            'connection_args_example',
+            'connection_args',
+            'description',
+            'name',
+            'type',
+            'title'
+        ] if hasattr(module, attr)]
+        for attr in module_attrs:
+            handler_meta[attr] = getattr(module, attr)
 
         # region icon
         if hasattr(module, 'icon_path'):

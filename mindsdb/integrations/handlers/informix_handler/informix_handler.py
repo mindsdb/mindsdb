@@ -154,6 +154,9 @@ class InformixHandler(DatabaseHandler):
             if self.loging_enabled:
                 self.connection.rollback()
 
+            cur.close()
+
+
         if need_to_close is True:
             self.disconnect()
 

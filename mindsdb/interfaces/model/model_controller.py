@@ -128,7 +128,7 @@ class ModelController():
         assert predictor_record is not None
 
         fs_name = f'predictor_{company_id}_{predictor_record.id}'
-        self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
+        self.fs_store.get(fs_name, base_dir=self.config['paths']['predictors'])
         local_predictor_savefile = os.path.join(self.config['paths']['predictors'], fs_name)
         predictor_binary = open(local_predictor_savefile, 'rb').read()
 
@@ -179,4 +179,4 @@ class ModelController():
         with open(os.path.join(self.config['paths']['predictors'], fs_name), 'wb') as fp:
             fp.write(predictor_binary)
 
-        self.fs_store.put(fs_name, fs_name, self.config['paths']['predictors'])
+        self.fs_store.put(fs_name, base_dir=self.config['paths']['predictors'])

@@ -150,7 +150,7 @@ class ElasticsearchHandler(DatabaseHandler):
                     )
                 )
         except Exception as e:
-            log.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+            log.error(f'Error running query: {query} on {self.connection_data["hosts"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
@@ -166,7 +166,7 @@ class ElasticsearchHandler(DatabaseHandler):
         Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
             query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
+                of query: SELECT, INSERT, DELETE, etc
         Returns:
             HandlerResponse
         """
@@ -183,7 +183,7 @@ class ElasticsearchHandler(DatabaseHandler):
         """
 
         query = """
-            SHOW TABLES;
+            SHOW TABLES
         """
         result = self.native_query(query)
         df = result.data_frame
@@ -202,7 +202,7 @@ class ElasticsearchHandler(DatabaseHandler):
         """
 
         query = f"""
-            DESCRIBE '{table_name}';
+            DESCRIBE {table_name}
         """
         result = self.native_query(query)
         df = result.data_frame

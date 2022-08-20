@@ -38,6 +38,15 @@ class ElasticsearchHandler(DatabaseHandler):
         super().__init__(name)
         self.parser = parse_sql
         self.dialect = 'elasticsearch'
+
+        if ('hosts' not in connection_data) and ('cloud_id' not in connection_data):
+            raise Exception("Either the hosts or cloud_id parameter should be provided!")
+
+        optional_parameters = ['hosts', 'cloud_id', 'username', 'password']
+        for parameter in optional_parameters:
+            if parameter not in connection_data:
+                connection_data[parameter] = None
+
         self.connection_data = connection_data
         self.kwargs = kwargs
 

@@ -177,7 +177,7 @@ class ElasticsearchHandler(DatabaseHandler):
 
     def get_tables(self) -> StatusResponse:
         """
-        Return list of entities that will be accessible as tables.
+        Return list of indexes that will be accessible as tables.
         Returns:
             HandlerResponse
         """

@@ -102,7 +102,7 @@ Check our [docs](https://docs.mindsdb.com/?utm_medium=community&utm_source=githu
 
 ## Features
 
-* Automatic data pre-processing, feature engineering and encoding
+* Automatic data pre-processing, feature engineering, and encoding
 * Classification, regression, time-series tasks
 * Bring models to production without “traditional deployment” as AI Tables
 * Get mModels’ accuracy scoring and confidence intervals for each prediction

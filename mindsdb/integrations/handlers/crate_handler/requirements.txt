@@ -1,1 +1,1 @@
-crate
+crate[sqlalchemy]

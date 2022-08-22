@@ -36,10 +36,10 @@ class CrateHandler(DatabaseHandler):
         
         self.kwargs = kwargs
         self.parser = parse_sql
-        self.dialect = "crate"
+        self.dialect = 'crate'
         self.user = connection_data['user']
         self.password = connection_data['password']
-        self.schemaName = connection_data['schema_name'] if 'schema_name' in connection_data else "doc"
+        self.schemaName = connection_data.get('schema_name','doc')
         self.host = connection_data['host']
         self.port = connection_data['port']
 

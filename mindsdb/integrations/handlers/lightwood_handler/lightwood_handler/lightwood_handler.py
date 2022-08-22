@@ -311,7 +311,10 @@ class LightwoodHandler(PredictiveHandler):
                     raise Exception('You are unable to delete models currently in progress, please wait before trying again')
 
         for predictor_record in predictors_records:
-            db.session.delete(predictor_record)
+            if is_cloud:
+                predictor_record.deleted_at = datetime.now()
+            else:
+                db.session.delete(predictor_record)
             self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
         db.session.commit()
 

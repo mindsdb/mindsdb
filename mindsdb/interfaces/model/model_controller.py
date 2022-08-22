@@ -33,8 +33,9 @@ class ModelController():
         self.config = Config()
         self.fs_store = FsStore()
 
-    def get_model_data(self, name, company_id: int):
-        predictor_record = get_model_record(company_id=company_id, except_absent=True, name=name)
+    def get_model_data(self, company_id: int, name: str = None, predictor_record=None) -> dict:
+        if predictor_record is None:
+            predictor_record = get_model_record(company_id=company_id, except_absent=True, name=name)
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -80,7 +81,7 @@ class ModelController():
         :returns: Dictionary of the analysis (meant to be foramtted by the APIs and displayed as json/yml/whatever)
         """ # noqa
         model_description = {}
-        model_data = self.get_model_data(name, company_id)
+        model_data = self.get_model_data(name=name, company_id=company_id)
 
         model_description['accuracies'] = model_data['accuracies']
         model_description['column_importances'] = model_data['column_importances']
@@ -94,7 +95,7 @@ class ModelController():
     def get_models(self, company_id: int):
         models = []
         for predictor_record in get_model_records(company_id=company_id):
-            model_data = self.get_model_data(predictor_record.name, company_id=company_id)
+            model_data = self.get_model_data(predictor_record=predictor_record, company_id=company_id)
             reduced_model_data = {}
 
             for k in ['name', 'version', 'is_active', 'predict', 'status',

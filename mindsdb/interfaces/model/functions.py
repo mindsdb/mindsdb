@@ -21,7 +21,8 @@ class MultiplePredictorRecordsFound(Exception):
 
 def get_model_records(company_id: int, active: bool = True, **kwargs):
     kwargs['company_id'] = company_id
-    kwargs['active'] = active
+    if active is not None:
+        kwargs['active'] = active
     return (
         db.session.query(db.Predictor)
         .filter_by(**kwargs)
@@ -32,7 +33,8 @@ def get_model_records(company_id: int, active: bool = True, **kwargs):
 def get_model_record(company_id: int, except_absent=False,
                      active: bool = True, **kwargs):
     kwargs['company_id'] = company_id
-    kwargs['active'] = active
+    if active is not None:
+        kwargs['active'] = active
 
     records = (
         db.session.query(db.Predictor)

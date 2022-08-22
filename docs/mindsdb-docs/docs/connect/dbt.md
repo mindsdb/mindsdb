@@ -44,7 +44,7 @@ To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapte
           type: mindsdb
           database: 'mindsdb'
           host: 'cloud.mindsdb.com'
-          port: 47335
+          port: 3306
           schema: '[dbt schema]'
           username: '[mindsdb cloud username]'
           password: '[mindsdb cloud password]'

@@ -1,6 +1,5 @@
 import requests
-from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Optional, Any
 
 import dask
 import dill
@@ -13,7 +12,6 @@ from ludwig.automl import auto_train
 from mindsdb_sql import parse_sql
 from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
-from mindsdb_sql.parser.ast import Join, Select, Identifier, Constant, Star
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.utils import get_join_input, recur_get_conditionals, get_aliased_columns, default_data_gather
@@ -166,7 +164,6 @@ class LudwigHandler(PredictiveHandler):
 
         else:
             raise Exception(f"Query type {type(statement)} not supported")
-        
         return r
 
     def query(self, query: ASTNode) -> HandlerResponse:
@@ -205,7 +202,7 @@ class LudwigHandler(PredictiveHandler):
 
                 data_handler.select_into(into, predictions, dtypes=dtypes)
             except Exception as e:
-                print("Error when trying to store the JOIN output in data handler.")
+                print("Error when trying to store the JOIN output in data handler.", e)
 
         r = HandlerResponse(
             RESPONSE_TYPE.TABLE,

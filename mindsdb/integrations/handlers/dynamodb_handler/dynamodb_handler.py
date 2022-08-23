@@ -142,7 +142,7 @@ class DyanmoDBHandler(DatabaseHandler):
 
     def parse_record(self, record):
         deserializer = TypeDeserializer()
-        return {k: deserializer.deserialize(v) for k,v in record.items()}
+        return {k: deserializer.deserialize(v) for k, v in record.items()}
 
     def query(self, query: ASTNode) -> StatusResponse:
         """

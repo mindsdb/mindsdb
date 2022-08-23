@@ -117,7 +117,7 @@ class MongoDBHandler(DatabaseHandler):
 
             mquery = MongoQuery(query['collection'])
 
-            for c in  query['call']:
+            for c in query['call']:
                 mquery.add_step({
                     'method': c['method'],
                     'args': c['args']
@@ -233,4 +233,3 @@ class MongoDBHandler(DatabaseHandler):
             df
         )
         return response
-

@@ -1,5 +1,3 @@
-from contextlib import closing
-
 import pymssql
 import pandas as pd
 
@@ -18,7 +16,7 @@ from mindsdb.integrations.libs.response import (
 
 class SqlServerHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Microsoft SQL Server statements. 
+    This handler handles connection and execution of the Microsoft SQL Server statements.
     """
     name = 'mssql'
 

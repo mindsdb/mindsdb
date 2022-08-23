@@ -12,20 +12,13 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
-
-
 import pandas as pd
 import ibm_db_dbi as love
-
 from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as DB2Dialect
 
 
-
-
 class DB2Handler(DatabaseHandler):
-
-
-    name= 'DB2'
+    name = 'DB2'
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """ Initialize the handler
@@ -35,32 +28,26 @@ class DB2Handler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        
         self.kwargs = kwargs
         self.parser = parse_sql
         self.driver = "{IBM DB2 ODBC DRIVER}"
         self.database = connection_data['database']
         self.user = connection_data['user']
         self.password = connection_data['password']
-        self.schemaName = connection_data['schema_name'] 
+        self.schemaName = connection_data['schema_name']
         self.host = connection_data['host']
         self.port = connection_data['port']
         self.connString = (
-    "DRIVER={0};"
-    "DATABASE={1};"
-    "HOST={2};"
-    "PORT={3};"
-    "PROTOCOL={4};"
-    "UID={5};"
-    "PWD={6};").format(self.driver, self.database, self.host, self.port,"TCPIP" , self.user, self.password)
-
-        
-        
-
+            "DRIVER={0};"
+            "DATABASE={1};"
+            "HOST={2};"
+            "PORT={3};"
+            "PROTOCOL={4};"
+            "UID={5};"
+            "PWD={6};").format(self.driver, self.database, self.host, self.port, "TCPIP", self.user, self.password)    
         self.connection = None
         self.is_connected = False
-          
-    
+
     def connect(self):
         """ Set up any connections required by the handler
         Should return output of check_connection() method after attempting
@@ -72,15 +59,11 @@ class DB2Handler(DatabaseHandler):
             return self.connection
 
         try:
-            self.connection = love.pconnect(self.connString,'','')
-  
-            self.is_connected= True
+            self.connection = love.pconnect(self.connString, '', '')
+            self.is_connected = True
         except Exception as e:
             log.error(f"Error while connecting to {self.database}, {e}")
-
-
         return self.connection
-
 
     def disconnect(self):
         """ Close any existing connections
@@ -90,12 +73,10 @@ class DB2Handler(DatabaseHandler):
             return
         try:
             self.connection.close()
-            self.is_connected=False
+            self.is_connected = False
         except Exception as e:
             log.error(f"Error while disconnecting to {self.database}, {e}")
-
-        return 
-
+        return
 
     def check_connection(self) -> StatusResponse:
         """ Check connection to the handler
@@ -119,7 +100,6 @@ class DB2Handler(DatabaseHandler):
 
         return responseCode
 
-
     def native_query(self, query: str) -> StatusResponse:
         """Receive raw query and act upon it somehow.
         Args:
@@ -129,13 +109,12 @@ class DB2Handler(DatabaseHandler):
             HandlerResponse
         """
         need_to_close = self.is_connected is False
-        query=query.upper()
+        query = query.upper()
         conn = self.connect()
         with conn.cursor() as cur:
             try:
                 cur.execute(query)
-                   
-                if cur._result_set_produced :
+                if cur._result_set_produced:
                     result = cur.fetchall() 
                     response = Response(
                         RESPONSE_TYPE.TABLE,
@@ -160,7 +139,6 @@ class DB2Handler(DatabaseHandler):
 
         return response
 
-    
     def query(self, query: ASTNode) -> StatusResponse:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
@@ -169,13 +147,9 @@ class DB2Handler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        
-
-
         renderer = SqlalchemyRender(DB2Dialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
-
 
     def get_tables(self) -> StatusResponse:
         """ Return list of entities
@@ -186,34 +160,26 @@ class DB2Handler(DatabaseHandler):
                 Column 'TABLE_NAME' is mandatory, other is optional.
         """
         self.connect()
-
-
-        result=self.connection.tables(self.schemaName)
+        result = self.connection.tables(self.schemaName)
         try:
             if result:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.DataFrame(
-                        [result[i]['TABLE_NAME'] for i in range(len(result)) ],
+                        [result[i]['TABLE_NAME'] for i in range(len(result))],
                         columns=['TABLE_NAME']
-                        
                     )
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)
-            
         except Exception as e:
             log.error(f'Error running while getting table {e} on ')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
             )
-
-
-
         return response
 
-    
     def get_columns(self, table_name: str) -> StatusResponse:
         """ Returns a list of entity columns
         Args:
@@ -225,39 +191,26 @@ class DB2Handler(DatabaseHandler):
                 recomended to define also 'DATA_TYPE': it should be one of
                 python data types (by default it str).
         """
-        
         self.connect()
-
-
-        result=self.connection.columns(table_name=table_name)
+        result = self.connection.columns(table_name=table_name)
         try:
             if result:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.DataFrame(
-                        [result[i]['COLUMN_NAME'] for i in range(len(result)) ],
+                        [result[i]['COLUMN_NAME'] for i in range(len(result))],
                         columns=['COLUMN_NAME']
-                        
                     )
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)
-            
         except Exception as e:
             log.error(f'Error running while getting table {e} on ')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
             )
-
-
-
         return response
-
-        
-
-
-
 
 
 connection_args = OrderedDict(

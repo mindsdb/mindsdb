@@ -3,11 +3,10 @@ import json
 import datetime
 
 import numpy as np
-from sqlalchemy import create_engine, orm, types, UniqueConstraint
+from sqlalchemy import create_engine, types, UniqueConstraint
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
-from sqlalchemy.sql.expression import null
 from sqlalchemy.sql.schema import ForeignKey
 
 

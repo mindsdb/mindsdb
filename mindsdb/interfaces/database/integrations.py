@@ -5,10 +5,8 @@ import importlib
 from pathlib import Path
 from copy import deepcopy
 import base64
-import shutil
 
 from sqlalchemy import func
-
 from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore

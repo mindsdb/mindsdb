@@ -4,6 +4,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 
 from mindsdb_sql.parser.ast import ASTNode
 
+
 class HandlerResponse:
     def __init__(self, resp_type: RESPONSE_TYPE, data_frame: DataFrame = None,
                  query: ASTNode = 0, error_code: int = 0, error_message: str = None) -> None:

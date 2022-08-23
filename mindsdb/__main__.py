@@ -1,4 +1,17 @@
+import atexit
+import traceback
+import sys
+import os
+import time
+import asyncio
+import signal
+import psutil
+
+import torch.multiprocessing as mp
+mp.set_start_method('spawn')
+# noqa
 from packaging import version
+
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
@@ -13,17 +26,7 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
-import atexit
-import traceback
-import sys
-import os
-import time
-import asyncio
-import signal
-import psutil
 
-import torch.multiprocessing as mp
-mp.set_start_method('spawn')
 
 COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
 

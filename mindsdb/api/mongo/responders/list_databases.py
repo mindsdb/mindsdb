@@ -1,4 +1,4 @@
-from mindsdb_sql.parser.ast import *
+from mindsdb_sql.parser.ast import Show
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
 

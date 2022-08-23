@@ -244,6 +244,3 @@ class MongoWhereParser:
     @staticmethod
     def test(cls):
         assert cls('this.a ==1 and "te" >= latest').to_string() == "a = 1 AND 'te' >= LATEST"
-
-
-

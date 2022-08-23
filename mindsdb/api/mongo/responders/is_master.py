@@ -2,6 +2,7 @@ from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
 import datetime as dt
 
+
 class Responce(Responder):
     when = {'isMaster': helpers.is_true}
 

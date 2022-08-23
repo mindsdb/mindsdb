@@ -47,7 +47,8 @@ from mindsdb_sql.planner.steps import (
     FilterStep,
     UnionStep,
     JoinStep,
-    GroupByStep
+    GroupByStep,
+    SubSelectStep,
 )
 
 from mindsdb_sql.exceptions import PlanningException
@@ -305,11 +306,18 @@ class SQLQuery():
             default_namespace=database
         )
 
-    def fetch(self, datahub, view='list'):
+    def fetch(self, view='list'):
         data = self.fetched_data
 
-        if view == 'list':
-            self.result = self._make_list_result_view(data)
+        if view == 'dataframe':
+            result = self._make_list_result_view(data)
+            col_names = [
+                col.alias if col.alias is not None else col.name
+                for col in self.columns_list
+            ]
+            result = pd.DataFrame(result, columns=col_names)
+        else:
+            result = self._make_list_result_view(data)
 
         # this is not used
         # elif view == 'dict':
@@ -319,19 +327,28 @@ class SQLQuery():
 
         return {
             'success': True,
-            'result': self.result
+            'result': result
         }
 
     def _fetch_dataframe_step(self, step):
         dn = self.datahub.get(step.integration)
         query = step.query
 
-        table_alias = get_table_alias(step.query.from_table, self.database)
-        # TODO for information_schema we have 'database' = 'mindsdb'
+        if query is None:
+            table_alias = (self.database, 'result', 'result')
 
-        data, columns_info = dn.query(
-            query=query
-        )
+            # fetch raw_query
+            data, columns_info = dn.query(
+                native_query=step.raw_query
+            )
+        else:
+
+            table_alias = get_table_alias(step.query.from_table, self.database)
+            # TODO for information_schema we have 'database' = 'mindsdb'
+
+            data, columns_info = dn.query(
+                query=query
+            )
 
         # if this is query: execute it
         if isinstance(data, ASTNode):
@@ -339,11 +356,6 @@ class SQLQuery():
             return subquery.fetched_data
 
         columns = [(column['name'], column['name']) for column in columns_info]
-        columns.append(('__mindsdb_row_id', '__mindsdb_row_id'))
-
-        for i, row in enumerate(data):
-            row['__mindsdb_row_id'] = self.row_id + i
-        self.row_id = self.row_id + len(data)
 
         data = [{(key, key): value for key, value in row.items()} for row in data]
         data = [{table_alias: x} for x in data]
@@ -743,6 +755,20 @@ class SQLQuery():
                     raise SqlApiUnknownError(f'error in apply predictor row step: {e}') from e
         elif type(step) in (ApplyPredictorStep, ApplyTimeseriesPredictorStep):
             try:
+                # set row_id
+                data = steps_data[step.dataframe.step_num]
+                row_id_col = ('__mindsdb_row_id', '__mindsdb_row_id')
+                for table in data['columns']:
+                    data['columns'][table].append(row_id_col)
+
+                row_count = len(data['values'])
+
+                for i, row in enumerate(data['values']):
+                    for n, table_name in enumerate(row):
+                        row[table_name][row_id_col] = self.row_id + i + n * row_count
+                # shift counter
+                self.row_id += self.row_id + row_count * len(data['tables'])
+
                 dn = self.datahub.get(self.mindsdb_database_name)
                 predictor = '.'.join(step.predictor.parts)
                 where_data = []
@@ -1212,6 +1238,79 @@ class SQLQuery():
                 'values': values,
                 'types': types  # copy
             }
+
+        elif type(step) == SubSelectStep:
+
+            step_data = steps_data[step.dataframe.step_num]
+
+            class PrepareDFQuery:
+                def step_data_to_df(self, step_data, table_name=None):
+                    self.step_data = step_data
+
+                    if table_name is None:
+                        table_name = 'df_table'
+                    else:
+                        table_name = table_name
+                    self.table_name = table_name
+
+                    result = []
+                    cols = set()
+                    for _, col_list in step_data['columns'].items():
+                        for col in col_list:
+                            cols.add(col[0])
+
+                    for row in step_data['values']:
+                        data_row = {}
+                        for table, col_list in step_data['columns'].items():
+                            for col in col_list:
+                                data_row[col[0]] = row[table][col]
+                        result.append(data_row)
+                    df = pd.DataFrame(result, columns=list(cols))
+
+                    return df
+
+                def df_to_step_data(self, res):
+                    resp_dict = res.to_dict(orient='records')
+
+                    # get from first table
+                    database = self.step_data['tables'][0][0]
+                    appropriate_table = (database, self.table_name, self.table_name)
+
+                    columns = []
+                    for key, dtyp in res.dtypes.items():
+
+                        columns.append((key, key))
+
+                    values = []
+                    for row in resp_dict:
+                        row2 = {
+                            (key, key): value
+                            for key, value in row.items()
+                        }
+
+                        values.append(
+                            {
+                                appropriate_table: row2
+                            }
+                        )
+
+                    types = self.step_data.get('types', {})
+                    data = {
+                        'tables': [appropriate_table],
+                        'columns': {appropriate_table: columns},
+                        'values': values,
+                        'types': types  # copy
+                    }
+                    return data
+
+            prep = PrepareDFQuery()
+
+            query = step.query
+            query.from_table = Identifier('df_table')
+            df = prep.step_data_to_df(step_data, table_name=step.table_name)
+            res = query_df(df, query)
+
+            data = prep.df_to_step_data(res)
 
         elif type(step) == SaveToTable or type(step) == InsertToTable:
             is_replace = False

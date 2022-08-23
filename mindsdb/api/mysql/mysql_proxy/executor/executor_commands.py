@@ -43,6 +43,8 @@ from mindsdb_sql.parser.ast import (
     DropTables,
     Operation,
     ASTNode,
+    DropView,
+    NativeQuery,
 )
 
 from mindsdb.api.mysql.mysql_proxy.utilities import (
@@ -466,6 +468,8 @@ class ExecuteCommands:
             return self.answer_create_predictor(statement)
         elif type(statement) == CreateView:
             return self.answer_create_view(statement)
+        elif type(statement) == DropView:
+            return self.answer_drop_view(statement)
         elif type(statement) == Delete:
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
@@ -688,8 +692,17 @@ class ExecuteCommands:
         self.session.view_interface.add(name, query, datasource_name)
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
+    def answer_drop_view(self, statement):
+        names = statement.names
+
+        for name in names:
+            view_name = name.parts[-1]
+            self.session.view_interface.delete(view_name)
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
     def answer_create_predictor(self, statement):
-        integration_name = None
+
         struct = {
             'predictor_name': statement.name.parts[-1],
             'select': statement.query_str,
@@ -728,20 +741,19 @@ class ExecuteCommands:
         integration_id = None
         fetch_data_query = None
         if integration_name is not None:
-            handler = self.session.integration_controller.get_handler(integration_name)
-            integration_meta = self.session.integration_controller.get(integration_name)
-            if integration_meta is None:
-                raise SqlApiException(f"Integration '{integration_meta}' does not exists.")
-            integration_id = integration_meta.get('id')
-            # TODO
-            # raise ErBadDbError(f"Unknown datasource: {integration_name}")
-            result = handler.native_query(struct['select'])
-            fetch_data_query = struct['select']
+            # get data from integration
+            query = Select(
+                targets=[Star()],
+                from_table=NativeQuery(
+                    integration=Identifier(integration_name),
+                    query=struct['select']
+                )
+            )
 
-            if result.type != RESPONSE_TYPE.TABLE:
-                raise Exception(f'Error during query: {result.error_message}')
+            sqlquery = SQLQuery(query, session=self.session)
+            result = sqlquery.fetch(view='dataframe')
 
-            ds_data_df = result.data_frame
+            ds_data_df = result['result']
             ds_column_names = list(ds_data_df.columns)
 
             predict = self._check_predict_columns(struct['predict'], ds_column_names)
@@ -807,9 +819,7 @@ class ExecuteCommands:
             session=self.session
         )
 
-        result = sqlquery.fetch(
-            self.session.datahub
-        )
+        result = sqlquery.fetch()
 
         predictors_names = [x[0] for x in result['result']]
 
@@ -1246,14 +1256,12 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_select(self, query):
-        query.fetch(
-            self.session.datahub
-        )
+        data = query.fetch()
 
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=query.columns_list,
-            data=query.result,
+            data=data['result'],
         )
 
     def is_db_exists(self, db_name):
@@ -1266,9 +1274,7 @@ class ExecuteCommands:
             sql_statement,
             session=self.session
         )
-        result = query.fetch(
-            self.session.datahub
-        )
+        result = query.fetch()
         if result.get('success') is True and len(result.get('result')) > 0:
             return True
         return False

@@ -164,6 +164,7 @@ def create_predictors(force=False):
                 continue
             time.sleep(5)
 
+
 def stop_mindsdb(ppid):
     pprocess = psutil.Process(ppid)
     pids = [x.pid for x in pprocess.children(recursive=True)]
@@ -175,12 +176,14 @@ def stop_mindsdb(ppid):
         except ProcessLookupError:
             pass
 
+
 def run_mindsdb():
     sp = Popen(['python3', '-m', 'mindsdb', '--config', CONFIG_PATH],
                close_fds=True)
 
     time.sleep(30)
     atexit.register(stop_mindsdb, sp.pid)
+
 
 def run_clickhouse():
     docker_client = docker.from_env(version='auto')
@@ -192,6 +195,7 @@ def run_clickhouse():
     container = docker_client.containers.run(image, detach=True, **container_params)
     atexit.register(container.stop)
     return container
+
 
 def prepare_db():
     db = schema.database
@@ -219,6 +223,7 @@ def prepare_db():
                 query('INSERT INTO ' + schema.database + '.' + dataset.name + ' VALUES ({})'.format(
                     str(row).lstrip('[').rstrip(']')
                 ))
+
 
 def query(query):
 
@@ -248,6 +253,7 @@ def query(query):
         print(res.text, res.status_code)
     assert res.status_code == 200
     return res.text
+
 
 def prepare_env(prepare_data=True,
                 use_docker=True,

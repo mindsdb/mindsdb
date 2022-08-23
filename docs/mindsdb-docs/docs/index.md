@@ -28,7 +28,7 @@ You can use the MindsDB Cloud SQL Editor or open your preferred SQL client, such
     ```
 
     !!! Tip ""
-        If you do not have a preferred SQL client yet, we recommend [DBeaver Community Edition](https://dbeaver.io/download/). Follow [this guide](connect/dbeaver/) on how to connect to MindsDB from DBeaver.
+        If you do not have a preferred SQL client yet, we recommend using the [MindsDB SQL Editor](https://cloud.mindsdb.com/editor) or [DBeaver Community Edition](https://dbeaver.io/download/). Follow [this guide](setup/cloud/) to set up your MindsDB SQL Editor. And [here](connect/dbeaver/), you'll find how to connect to MindsDB from DBeaver.
 
 ## 3. Connecting a Database Using [`#!sql CREATE DATABASE`](/sql/create/databases/)
 

@@ -21,7 +21,7 @@ To try out MindsDB right away without bringing in your own data or models, follo
 1. Open your SQL client and connect to MindsDB.
 
     !!! Tip ""
-        If you do not have a preferred SQL client yet, we recommend [DBeaver Community Edition](https://dbeaver.io/download/). Follow [this guide](/connect/dbeaver/) on how to connect to MindsDB from DBeaver.
+        If you do not have a preferred SQL client yet, we recommend using the [MindsDB SQL Editor](https://cloud.mindsdb.com/editor) or [DBeaver Community Edition](https://dbeaver.io/download/). Follow [this guide](setup/cloud/) to set up your MindsDB SQL Editor. And [here](connect/dbeaver/), you'll find how to connect to MindsDB from DBeaver.
 
     === "MindsDB Cloud"
 

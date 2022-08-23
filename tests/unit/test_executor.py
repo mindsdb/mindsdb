@@ -11,6 +11,7 @@ from mindsdb_sql import parse_sql
 
 from .executor_test_base import BaseTestCase
 
+
 class Test(BaseTestCase):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_integration_select(self, mock_handler):
@@ -26,6 +27,106 @@ class Test(BaseTestCase):
         # check sql in query method
         assert mock_handler().query.mock_calls[0].args[0].to_string() == 'SELECT * FROM tasks'
 
+    def test_predictor_1_row(self):
+        predicted_value = 3.14
+        predictor = {
+            'name': 'task_model',
+            'predict': 'p',
+            'dtypes': {
+                'p': dtype.float,
+                'a': dtype.integer,
+                'b': dtype.categorical
+            },
+            'predicted_value': predicted_value
+        }
+        self.set_predictor(predictor)
+        ret = self.command_executor.execute_command(parse_sql(f'''
+             select * from mindsdb.task_model where a = 2
+           ''', dialect='mindsdb'))
+        ret_df = self.ret_to_df(ret)
+        assert ret_df['p'][0] == predicted_value
+
+
+class TestTableau(BaseTestCase):
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_predictor_nested_select(self, mock_handler):
+        df = pd.DataFrame([
+            {'a': 1, 'b': 'one'},
+            {'a': 2, 'b': 'two'},
+            {'a': 1, 'b': 'three'},
+        ])
+        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
+
+        # --- use predictor ---
+        predictor = {
+            'name': 'task_model',
+            'predict': 'p',
+            'dtypes': {
+                'p': dtype.float,
+                'a': dtype.integer,
+                'b': dtype.categorical
+            },
+            'predicted_value': 3.14
+        }
+        self.set_predictor(predictor)
+        ret = self.command_executor.execute_command(parse_sql(f'''
+              SELECT 
+              `Custom SQL Query`.`a` AS `height`,
+              last(`Custom SQL Query`.`b`) AS `length1`
+            FROM (
+               SELECT res.a, res.b 
+               FROM pg.tasks as source
+               JOIN mindsdb.task_model as res
+            ) `Custom SQL Query`
+            group by 1
+            LIMIT 1
+                ''', dialect='mindsdb'))
+        assert ret.error_code is None
+
+        # second column is having last value of 'b'
+        assert ret.data[0][1] == 'three'
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_predictor_tableau_header(self, mock_handler):
+        df = pd.DataFrame([
+            {'a': 1, 'b': 'one'},
+            {'a': 2, 'b': 'two'},
+            {'a': 1, 'b': 'three'},
+        ])
+        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
+
+        # --- use predictor ---
+        predicted_value = 5
+        predictor = {
+            'name': 'task_model',
+            'predict': 'p',
+            'dtypes': {
+                'p': dtype.float,
+                'a': dtype.integer,
+                'b': dtype.categorical
+            },
+            'predicted_value': predicted_value
+        }
+        self.set_predictor(predictor)
+        ret = self.command_executor.execute_command(parse_sql(f'''
+           SELECT 
+              SUM(1) AS `cnt__0B4A4E8BD11C48FFB4730D4D2C32191A_ok`,
+              sum(`Custom SQL Query`.`a`) AS `sum_height_ok`,
+              max(`Custom SQL Query`.`p`) AS `sum_length1_ok`
+            FROM (
+              SELECT res.a, res.p 
+               FROM pg.tasks as source
+               JOIN mindsdb.task_model as res
+            ) `Custom SQL Query`
+            HAVING (COUNT(1) > 0)
+                ''', dialect='mindsdb'))
+
+        # second column is having last value of 'b'
+        # 3: count rows, 4: sum of 'a', 5 max of prediction
+        assert ret.data[0] == [3, 4, 5]
+
+
+class TestWithNativeQuery(BaseTestCase):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_integration_native_query(self, mock_handler):
 
@@ -220,99 +321,3 @@ class Test(BaseTestCase):
 
         # p is predicted value
         assert ret_df['p'][0] == predicted_value
-
-    def test_predictor_1_row(self):
-        predicted_value = 3.14
-        predictor = {
-            'name': 'task_model',
-            'predict': 'p',
-            'dtypes': {
-                'p': dtype.float,
-                'a': dtype.integer,
-                'b': dtype.categorical
-            },
-            'predicted_value': predicted_value
-        }
-        self.set_predictor(predictor)
-        ret = self.command_executor.execute_command(parse_sql(f'''
-             select * from mindsdb.task_model where a = 2
-           ''', dialect='mindsdb'))
-        ret_df = self.ret_to_df(ret)
-        assert ret_df['p'][0] == predicted_value
-
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_predictor_nested_select(self, mock_handler):
-        df = pd.DataFrame([
-            {'a': 1, 'b': 'one'},
-            {'a': 2, 'b': 'two'},
-            {'a': 1, 'b': 'three'},
-        ])
-        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
-
-        # --- use predictor ---
-        predictor = {
-            'name': 'task_model',
-            'predict': 'p',
-            'dtypes': {
-                'p': dtype.float,
-                'a': dtype.integer,
-                'b': dtype.categorical
-            },
-            'predicted_value': 3.14
-        }
-        self.set_predictor(predictor)
-        ret = self.command_executor.execute_command(parse_sql(f'''
-              SELECT 
-              `Custom SQL Query`.`a` AS `height`,
-              last(`Custom SQL Query`.`b`) AS `length1`
-            FROM (
-               SELECT res.a, res.b 
-               FROM pg.tasks as source
-               JOIN mindsdb.task_model as res
-            ) `Custom SQL Query`
-            group by 1
-            LIMIT 1
-                ''', dialect='mindsdb'))
-        assert ret.error_code is None
-
-        # second column is having last value of 'b'
-        assert ret.data[0][1] == 'three'
-
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_predictor_tableau_header(self, mock_handler):
-        df = pd.DataFrame([
-            {'a': 1, 'b': 'one'},
-            {'a': 2, 'b': 'two'},
-            {'a': 1, 'b': 'three'},
-        ])
-        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
-
-        # --- use predictor ---
-        predicted_value = 5
-        predictor = {
-            'name': 'task_model',
-            'predict': 'p',
-            'dtypes': {
-                'p': dtype.float,
-                'a': dtype.integer,
-                'b': dtype.categorical
-            },
-            'predicted_value': predicted_value
-        }
-        self.set_predictor(predictor)
-        ret = self.command_executor.execute_command(parse_sql(f'''
-           SELECT 
-              SUM(1) AS `cnt__0B4A4E8BD11C48FFB4730D4D2C32191A_ok`,
-              sum(`Custom SQL Query`.`a`) AS `sum_height_ok`,
-              max(`Custom SQL Query`.`p`) AS `sum_length1_ok`
-            FROM (
-              SELECT res.a, res.p 
-               FROM pg.tasks as source
-               JOIN mindsdb.task_model as res
-            ) `Custom SQL Query`
-            HAVING (COUNT(1) > 0)
-                ''', dialect='mindsdb'))
-
-        # second column is having last value of 'b'
-        # 3: count rows, 4: sum of 'a', 5 max of prediction
-        assert ret.data[0] == [3, 4, 5]

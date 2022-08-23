@@ -2,6 +2,7 @@ import json
 
 import pandas as pd
 import numpy as np
+from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -43,6 +44,7 @@ class MindsDBDataNode(DataNode):
         for model in models:
             tables.append(TablesRow(TABLE_NAME=model['name']))
         tables.append(TablesRow(TABLE_NAME='predictors'))
+        tables.append(TablesRow(TABLE_NAME='predictors_versions'))
         tables.append(TablesRow(TABLE_NAME='databases'))
 
         return tables
@@ -102,6 +104,23 @@ class MindsDBDataNode(DataNode):
             ''   # TODO
         ] for x in models], columns=columns)
 
+    def _select_predictors_versions(self):
+        models = self.model_controller.get_models(with_versions=True)
+        columns = ['name', 'status', 'accuracy', 'predict', 'update_status',
+                   'mindsdb_version', 'error', 'select_data_query',
+                   'training_options']
+        return pd.DataFrame([[
+            x['name'],
+            x['status'],
+            str(x['accuracy']) if x['accuracy'] is not None else None,
+            ', '.join(x['predict']) if isinstance(x['predict'], list) else x['predict'],
+            x['update'],
+            x['mindsdb_version'],
+            x['error'],
+            '',
+            ''   # TODO
+        ] for x in models], columns=columns)
+
     def _select_integrations(self):
         integrations = self.integration_controller.get_all()
         result = []
@@ -118,25 +137,32 @@ class MindsDBDataNode(DataNode):
     def delete_predictor(self, name):
         self.model_controller.delete_model(name)
 
-    def get_predictors(self, mindsdb_sql_query):
+    def get_predictors(self, query: ASTNode):
         predictors_df = self._select_predictors()
 
         try:
-            result_df = query_df(predictors_df, mindsdb_sql_query)
+            result_df = query_df(predictors_df, query)
         except Exception as e:
             print(f'Exception! {e}')
             return [], []
 
-        # FIXME https://github.com/mindsdb/dfsql/issues/38
-        # TODO remove it whem wll be sure query_df do properly casting
-        # result_df = result_df.where(pd.notnull(result_df), '')
+        return result_df.to_dict(orient='records'), list(result_df.columns)
+
+    def get_predictors_versions(self, query: ASTNode):
+        predictors_df = self._select_predictors_versions()
+
+        try:
+            result_df = query_df(predictors_df, query)
+        except Exception as e:
+            print(f'Exception! {e}')
+            return [], []
 
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
-    def get_integrations(self, mindsdb_sql_query):
+    def get_integrations(self, query: ASTNode):
         datasources_df = self._select_integrations()
         try:
-            result_df = query_df(datasources_df, mindsdb_sql_query)
+            result_df = query_df(datasources_df, query)
         except Exception as e:
             print(f'Exception! {e}')
             return [], []
@@ -145,6 +171,8 @@ class MindsDBDataNode(DataNode):
     def query(self, table, where_data=None):
         if table == 'predictors':
             return self._select_predictors()
+        if table == 'predictors_versions':
+            return self._select_predictors_versions()
         if table == 'datasources':
             return self._select_datasources()
 

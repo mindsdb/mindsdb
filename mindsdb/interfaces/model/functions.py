@@ -1,3 +1,5 @@
+from sqlalchemy import null
+
 import mindsdb.interfaces.storage.db as db
 
 
@@ -19,8 +21,10 @@ class MultiplePredictorRecordsFound(Exception):
         )
 
 
-def get_model_records(company_id: int, active: bool = True, **kwargs):
+def get_model_records(company_id: int, active: bool = True, deleted_at=null(),
+                      **kwargs):
     kwargs['company_id'] = company_id
+    kwargs['deleted_at'] = deleted_at
     if active is not None:
         kwargs['active'] = active
     return (
@@ -31,8 +35,9 @@ def get_model_records(company_id: int, active: bool = True, **kwargs):
 
 
 def get_model_record(company_id: int, except_absent=False,
-                     active: bool = True, **kwargs):
+                     active: bool = True, deleted_at=null(), **kwargs):
     kwargs['company_id'] = company_id
+    kwargs['deleted_at'] = deleted_at
     if active is not None:
         kwargs['active'] = active
 

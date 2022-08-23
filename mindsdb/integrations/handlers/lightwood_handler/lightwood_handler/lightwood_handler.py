@@ -264,9 +264,8 @@ class LightwoodHandler(PredictiveHandler):
     def _retrain(self, statement):
         model_name = statement.name.parts[-1]
 
-        predictor_record = db.Predictor.query.filter_by(
-            company_id=self.company_id, name=model_name, active=True
-        ).first()
+        predictor_record = get_model_record(company_id=self.company_id, name=model_name)
+
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,

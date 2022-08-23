@@ -110,6 +110,31 @@ PARAMETERS={
 };
 ```
 
+### Big Query
+
+```sql
+CREATE DATABASE bigquery_datasource
+WITH ENGINE = "bigquery",
+PARAMETERS = {
+   "project_id": "badger-345908",
+   "service_account_keys": {
+      "path": "/home/Downloads/badger-345908.json"
+  }
+};
+```
+Or if you are using MindsDB Cloud, provide the `service_account_keys` as url:
+
+```sql
+CREATE DATABASE bigquery_datasource
+WITH ENGINE = "bigquery",
+PARAMETERS = {
+   "project_id": "badger-345908",
+   "service_account_keys": {
+      "url": "https://url/badger-345908.json"
+  }
+};
+```
+
 ### Cassandra
 
 ```sql

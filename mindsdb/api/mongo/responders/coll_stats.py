@@ -1,5 +1,4 @@
 from mindsdb_sql.parser.ast import Describe, Identifier
-
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes.query_sql import run_sql_command

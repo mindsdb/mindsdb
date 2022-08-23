@@ -1,5 +1,4 @@
 from bson.int64 import Int64
-
 from mindsdb_sql.parser.ast import *
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder

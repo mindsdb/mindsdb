@@ -57,14 +57,13 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlSyntaxError,
     ErSqlWrongArguments,
 )
-from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case, download_file
+from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery, Column
 )
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
-    ERR,
     TYPES,
     SERVER_VARIABLES,
 )

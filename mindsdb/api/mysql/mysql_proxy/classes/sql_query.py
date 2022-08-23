@@ -21,7 +21,6 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     UnaryOperation,
-    CreateTable,
     Identifier,
     Constant,
     Select,
@@ -391,7 +390,6 @@ class SQLQuery():
             join_query_data(data, sub_data)
 
         return data
-
 
     def prepare_query(self, prepare=True):
         mindsdb_sql_struct = self.query

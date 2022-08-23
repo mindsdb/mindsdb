@@ -41,6 +41,7 @@ jobs:
         #python -m pip install --upgrade pip==21.0.1
         pip install 'pymssql >= 2.1.4'
         pip install boto3
+        pip install flake8
         pip install --no-cache-dir .
         pip install -r requirements_test.txt
       shell: bash
@@ -59,6 +60,9 @@ jobs:
       if: ${{ github.ref != 'refs/heads/stable' }}
       run: |
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+    - name: Lint with flake8
+      run: |
+        python -m flake8 .
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then

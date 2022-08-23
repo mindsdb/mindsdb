@@ -389,7 +389,7 @@ class LightwoodHandler(PredictiveHandler):
                 self.predictor_cache = {}
 
             if model_data['status'] == 'complete':
-                self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
+                self.fs_store.get(fs_name, base_dir=self.config['paths']['predictors'])
                 self.predictor_cache[model_name] = {
                     'predictor': lightwood.predictor_from_state(
                         os.path.join(self.config['paths']['predictors'], fs_name),
@@ -406,11 +406,6 @@ class LightwoodHandler(PredictiveHandler):
                 )
         # endregion
 
-        # self.fs_store.get(fs_name, fs_name, self.config['paths']['predictors'])
-        # predictor = lightwood.predictor_from_state(
-        #     os.path.join(self.config['paths']['predictors'], fs_name),
-        #     predictor_record.code
-        # )
         predictor = self.predictor_cache[model_name]['predictor']
         predictions = predictor.predict(df)
         predictions = predictions.to_dict(orient='records')

@@ -1,6 +1,8 @@
-# SQL Alchemy and MindsDB
+# MindsDB and SQL Alchemy
 
 SQL Alchemy is a Python package, or a Python SQL toolkit, that provides object-relational mapping features for the Python programming language. It facilitates working with databases and Python. You can download it [here](https://www.sqlalchemy.org/) or run a `pip install sqlalchemy` command if you use a Linux system.
+
+## How to Connect
 
 Please follow the instructions below to connect your MindsDB to SQL Alchemy.
 
@@ -84,5 +86,10 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     Connection to the 127.0.0.1 for user mindsdb created successfully.
     ```
 
-!!! tip "What is next?"
-    We recommend you to follow one of our tutorials or learn more about the [MindsDB Database](/sql/table-structure/).
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and **Community Tutorials** sections, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **SQL API** section, as they explain a common SQL syntax with examples.
+
+Have fun!

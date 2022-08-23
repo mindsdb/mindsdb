@@ -1,22 +1,35 @@
-# `#!sql stats()` Method
+# Getting the Statistics
 
-## Description
+## The `#!sql stats()` Method
 
-The `stats()` method is used to display the attributes of an existing model. It accept the {'scale': attribute} object.
+The `stats()` method is used to display the attributes of an existing model. It accepts the `{'scale': 'attribute'}` object as an argument.
 
-## `#!sql {'scale':'features'}` Parameter
-
-### `#!sql stats({'scale':'features'})` Description
-
-The `db.[name_of_your_predictor].stats({'scale':'features'})` method is used to display the way that the model encoded the data prior to training.
-
-### `#!sql stats({'scale':'features'})` Syntax
+Here is how to call the `stats()` method.
 
 ```sql
-db.<name_of_your_predictor>.stats({'scale':'features'});
+db.name_of_your_predictor.stats({'scale':'attribute'});
 ```
 
-On execution:
+Where:
+
+| Name                       | Description                                                                                                                                       |
+| ---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name_of_your_predictor`   | The name of the predictor whose statistics you want to see                                                                                        |
+| `{'scale': 'attribute'}`   | The argument of the `stats()` method defines the type of statistics (`{'scale':'features'}`, or `{'scale':'model'}`, or `{'scale':'ensemble'}`)   |
+
+## Using the `#!sql stats()` Method with the `#!sql {'scale':'features'}` Parameter
+
+### Description
+
+The `db.name_of_your_predictor.stats({'scale':'features'})` method is used to display the way the model encoded the data before training.
+
+### Syntax
+
+```sql
+db.name_of_your_predictor.stats({'scale':'features'});
+```
+
+On execution, we get:
 
 ```json
 {
@@ -33,20 +46,20 @@ On execution:
 
 Where:
 
-|                            | Description                                           |
-| -------------------------- | ----------------------------------------------------- |
-| `column` | The name of the column                      |
-| `type`                     | Type of data inferred                                        |
-| `encoder`                    | Encoder used                                          |
-| role                       | Role for that column, it can be `feature` or `target` |
+| Name            | Description                                      |
+| --------------- | ------------------------------------------------ |
+| `column`        | The name of the column                           |
+| `type`          | Type of the inferred data                        |
+| `encoder`       | Encoder used                                     |
+| `role`          | Role of the column (`feature` or `target`)       |
 
-### `#!sql stats({'scale':'features'})` Example
+### Example
 
 ```sql
-db.home_rentals_model.stats({'scale':'features'})
+db.home_rentals_model.stats({'scale':'features'});
 ```
 
-On execution:
+On execution, we get:
 
 ```json
 {
@@ -104,17 +117,19 @@ On execution:
 }
 ```
 
-## `#!sql {'scale':'model'}` Parameter
+## Using the `#!sql stats()` Method with the `#!sql {'scale':'model'}` Parameter
 
-The `db.<name_of_your_predictor>.stats({'scale':'model'})` method is used to display the performance of the candidate models.
+### Description
 
-### `#!sql stats({'scale':'model'})` Syntax
+The `db.name_of_your_predictor.stats({'scale':'model'})` method is used to display the performance of the candidate models.
+
+### Syntax
 
 ```sql
-db.<name_of_your_predictor>.stats({'scale':'model'})
+db.name_of_your_predictor.stats({'scale':'model'});
 ```
 
-On execution:
+On execution, we get:
 
 ```json
 {
@@ -131,21 +146,20 @@ On execution:
 
 Where:
 
-|                            | Description                                            |
-| -------------------------- | ------------------------------------------------------ |
-| `[name_of_your_predictor]` | Name of the model to be described                      |
-| name                       | Name of the candidate_model                            |
-| performance                | Accuracy From 0 - 1 depending on the type of the model |
-| training_time              | Time elapsed for the model training to be completed    |
-| selected                   | `1` for the best performing model `0` for the rest     |
+| Name                       | Description                                                |
+| -------------------------- | ---------------------------------------------------------- |
+| `name`                     | Name of the candidate model                                |
+| `performance`              | Accuracy from 0 to 1 depending on the type of the model    |
+| `training_time`            | Time elapsed for the training of the model                 |
+| `selected`                 | `1` for the best performing model and `0` for the rest     |
 
-### `#!sql stats({'scale':'model'})` Example
+### Example
 
 ```sql
-db.home_rentals_model.stats({'scale':'model'})
+db.home_rentals_model.stats({'scale':'model'});
 ```
 
-On execution:
+On execution, we get:
 
 ```json
 {
@@ -173,18 +187,19 @@ On execution:
 }
 ```
 
-## `#!sql {'scale':'ensemble'}` Parameter
+## Using the `#!sql stats()` Method with the `#!sql {'scale':'ensemble'}` Parameter
 
+### Description
 
-The `db.<name_of_your_predictor>.stats({'scale':'ensemble'})` method is used to display the parameters used to select best model candidate.
+The `db.name_of_your_predictor.stats({'scale':'ensemble'})` method is used to display the parameters used to select the best candidate model.
 
-### `#!sql stats({'scale':'ensemble'})` Syntax
+### Syntax
 
 ```sql
-db.<name_of_your_predictor>.stats({'scale':'ensemble'});
+db.name_of_your_predictor.stats({'scale':'ensemble'});
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 +-----------------+
@@ -196,12 +211,14 @@ On execution:
 
 Where:
 
-|          | Description                                                                    |
-| -------- | ------------------------------------------------------------------------------ |
-| ensemble | JSON type object describing the parameters used to select best model candidate |
+| Name       | Description                                                                               |
+| ---------- | ----------------------------------------------------------------------------------------- |
+| `ensemble` | Object of the JSON type describing the parameters used to select the best candidate model |
 
-### `#!sql DESCRIBE ... ENSEMBLE` Example WIP
+### Example
 
+!!! warning "Example WIP"
+    This example is a work in progress.
 
 !!! TIP "Unsure what it all means?"
-    If you're unsure on how to `#!sql DESCRIBE` your model or understand the results feel free to ask us how to do it on the community [Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).
+    If you're unsure how to `#!sql DESCRIBE` your model or understand the results, feel free to ask us at the community [Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).

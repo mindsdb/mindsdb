@@ -1,15 +1,15 @@
 # Making Predictions using the ML Models
 
-## Using the `#!sql find()` Method
+## Using the `#!sql find({})` Method
 
 ### Description
 
-The `#!sql find()` method is used to get predictions from the model table. The data is not persistent and returned on the fly as a result-document.
+The `find({})` method is used to get predictions from the model table. The data is not persistent and returned on the fly as a result-document.
 
 ### Syntax
 
 ```sql
-db.predictor_name.find({<column>:<value>,<column>:<value>});
+db.name_of_your_predictor.find({<column>:<value>,<column>:<value>});
 ```
 
 On execution, we get:
@@ -39,9 +39,11 @@ Where:
 | `<[target_variable>_min`           | Lower bound value                                                                                                                |
 | `<[target_variable>_max`           | Upper bound value                                                                                                                |
 
-### Example
+## Example
 
-The following MQL statement fetches the predicted value of the `rental_price` column from the `home_rentals_model` model. The predicted value is the rental price of a property with attributes listed as a parameter to the `find()` method.
+### Making a Single Prediction
+
+The following MQL statement fetches the predicted value of the `rental_price` column from the `home_rentals_model` model. The predicted value is the rental price of a property with attributes listed as a parameter to the `find({})` method.
 
 ```sql
 db.home_rentals_model.find({'sqft':823, 'location': 'good','neighborhood':'downtown', 'days_on_market': 10});
@@ -69,6 +71,8 @@ On execution, we get:
     "rental_price_max": 1483.2088343172054
 }
 ```
+
+### Making Bulk Predictions
 
 !!! warning "Bulk Predictions WIP"
     The bulk predictions is a work in progress.

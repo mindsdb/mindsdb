@@ -78,7 +78,7 @@ WriteResult({ "nInserted" : 1 })
 
 ### Checking Predictor Status
 
-To check the predictor status, query the [`mindsdb.predictors`](/mongo/collection-structure/#the-predictors-collection) using the `find` command.
+To check the predictor status, query the [`mindsdb.predictors`](/mongo/collection-structure/#the-predictors-collection) using the `db.predictors.find({})` command.
 
 ```sql
 db.predictors.find({'name': "home_rentals_model"});

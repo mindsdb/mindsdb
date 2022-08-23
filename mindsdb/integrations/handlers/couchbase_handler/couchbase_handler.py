@@ -3,17 +3,10 @@ from mindsdb.integrations.libs.base_handler import DatabaseHandler
 
 from mindsdb.utilities.log import log
 from mindsdb_sql.parser.ast.base import ASTNode
-from couchbase.n1ql import N1QLQuery
 import pandas as pd
 
-from typing import Optional
-
 from datetime import timedelta
-
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-
-
-
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -26,27 +19,23 @@ from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.exceptions import UnAmbiguousTimeoutException
 # needed for options -- cluster, timeout, SQL++ (N1QL) query, etc.
-from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
-                               QueryOptions)
+from couchbase.options import (ClusterOptions, ClusterTimeoutOptions)
+from couchbase.exceptions import KeyspaceNotFoundException, CouchbaseException
 
-from couchbase.exceptions import QueryErrorContext,KeyspaceNotFoundException,CouchbaseException
 
 class CouchbaseHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Couchbase statements. 
+    This handler handles connection and execution of the Couchbase statements.
     """
 
     name = 'couchbase'
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
-        self.connection_data = kwargs.get("connection_data")
-        
-        self.scope = self.connection_data.get('scope') or '_default'
-        
+        self.connection_data = kwargs.get("connection_data")   
+        self.scope = self.connection_data.get('scope') or '_default'    
         self.bucket_name = self.connection_data.get('bucket')
         self.cluster = None
-        
         self.is_connected = False
 
     def connect(self):
@@ -56,15 +45,13 @@ class CouchbaseHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.cluster
-        
         # User Input ends here.
         endpoint = self.connection_data.get('host')
         username = self.connection_data.get('user')
         password = self.connection_data.get('password')
-        bucket_name = self.connection_data.get('bucket')
+        # bucket_name = self.connection_data.get('bucket')
         # Connect options - global timeout opts
-        timeout_opts = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=10))
-        
+        ClusterTimeoutOptions(kv_timeout=timedelta(seconds=10))
         auth = PasswordAuthenticator(
             username,
             password,
@@ -72,18 +59,13 @@ class CouchbaseHandler(DatabaseHandler):
             # We strongly reccomend this for production use.
             # cert_path=cert_path
         )
-
-
         cluster = Cluster.connect(f'couchbase://{endpoint}', ClusterOptions(auth))
-        
         # # Wait until the cluster is ready for use.
         cluster.wait_until_ready(timedelta(seconds=5))
-        
         self.is_connected = cluster.connected
         self.cluster = cluster
         return self.cluster
 
-    
     def disconnect(self):
         """ Close any existing connections
         Should switch self.is_connected.
@@ -92,7 +74,7 @@ class CouchbaseHandler(DatabaseHandler):
             return
         self.is_connected = self.cluster.connected
         return
-    
+  
     def check_connection(self) -> StatusResponse:
         """
         Check the connection of the Couchbase bucket
@@ -114,7 +96,7 @@ class CouchbaseHandler(DatabaseHandler):
         if result.success is False and self.is_connected is True:
             self.is_connected = False
         return result
-    
+
     def native_query(self, query: str) -> Response:
         """Receive raw query and act upon it somehow.
         Args:
@@ -144,9 +126,9 @@ class CouchbaseHandler(DatabaseHandler):
                             data[k].append(v)
                     else:
                         for k, v in collection.items():
-                                if data.get(k) is None: 
-                                    data[k] = []
-                                data[k].append(v)
+                            if data.get(k) is None:
+                                data[k] = []
+                            data[k].append(v)
             if len(data) > 0:
                 df = pd.DataFrame(data)
                 response = Response(
@@ -162,8 +144,8 @@ class CouchbaseHandler(DatabaseHandler):
                 error_message=f'{e.error_context.first_error_message}'
             )
         return response
-    
-    def query(self, query:ASTNode)-> Response:
+
+    def query(self, query: ASTNode) -> Response:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
             query (ASTNode): sql query represented as AST. May be any kind
@@ -172,7 +154,7 @@ class CouchbaseHandler(DatabaseHandler):
             HandlerResponse
         """
         return self.native_query(query.to_string())
-    
+
     def get_tables(self) -> Response:
         """
         Get a list with of collection in database
@@ -180,23 +162,18 @@ class CouchbaseHandler(DatabaseHandler):
 
         cluster = self.connect()
         bucket = cluster.bucket(self.bucket_name)
- 
         collections = []
-
         for _scope in bucket.collections().get_all_scopes():
-                for __collections in _scope.collections:
-                    collections.append(__collections.name)
+            for __collections in _scope.collections:
+                collections.append(__collections.name)
         collections_ar = [
             [i] for i in collections
         ]
-        
         df = pd.DataFrame(collections_ar, columns=['TABLE_NAME'])
-        
         response = Response(
             RESPONSE_TYPE.TABLE,
             df
         )
-        
         return response
 
     def get_columns(self, table_name) -> Response:
@@ -210,7 +187,6 @@ class CouchbaseHandler(DatabaseHandler):
                 recomended to define also 'DATA_TYPE': it should be one of
                 python data types (by default it str).
         """
-        
         response = Response(False)
 
         cluster = self.connect()
@@ -233,12 +209,10 @@ class CouchbaseHandler(DatabaseHandler):
         except KeyspaceNotFoundException as e:
             print(f'Error: {e.error_context.first_error_message}')
             response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=f'Error: {e.error_context.first_error_message}'
-                )
-                
+                RESPONSE_TYPE.ERROR,
+                error_message=f'Error: {e.error_context.first_error_message}'
+            ) 
         return response
-
 
 
 connection_args = OrderedDict(

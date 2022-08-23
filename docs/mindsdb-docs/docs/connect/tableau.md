@@ -2,7 +2,7 @@
 
 Tableau lets you visualize your data easily and intuitively. Now that MindsDB supports the MySQL binary protocol, you can connect it to Tableau and see the forecasts.
 
-## Connect MindsDB in Tableau
+## How to Connect
 
 Follow the steps below to connect your MindsDB to Tableau.
 
@@ -62,4 +62,10 @@ There is one technical limitation. Namely, we cannot join tables from different 
   <img src="/assets/connect_tableau_7.png" />
 </p>
 
-Go ahead and try it out yourself!
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and **Community Tutorials** sections, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **SQL API** section, as they explain a common SQL syntax with examples.
+
+Have fun!

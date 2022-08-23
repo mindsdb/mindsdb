@@ -1,19 +1,21 @@
+import os
+import json
+from collections import OrderedDict
+
 from google.cloud import bigquery
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from google.oauth2 import service_account
+from sqlalchemy_bigquery.base import BigQueryDialect
+from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+
+from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb_sql.parser.ast.base import ASTNode
-from collections import OrderedDict
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-from sqlalchemy_bigquery.base import BigQueryDialect
 from mindsdb.utilities.log import log
-from google.oauth2 import service_account
-import json
-import os
 
 
 class BigQueryHandler(DatabaseHandler):
@@ -130,10 +132,10 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.STR,
         'description': 'The BigQuery project id.'
     },
-    credentials={
-        'type': ARG_TYPE.STR,
-        'description': 'Full path to the service account JSON file'
-    }
+    service_account_keys={
+        'type': ARG_TYPE.PATH,
+        'description': 'Full path or URL to the service account JSON file'
+    },
 )
 
 connection_args_example = OrderedDict(

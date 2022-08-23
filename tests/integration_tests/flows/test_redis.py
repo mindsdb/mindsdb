@@ -196,7 +196,7 @@ class RedisTest(unittest.TestCase):
             time.sleep(0.01)
         time.sleep(10)
 
-        self.assertEqual(len(list(stream_out.read())), 2)
+        self.assertEqual(len(list(stream_out.read())), 11)  # 10 window + 1 horizon
 
     def test_6_create_stream_redis_native_api(self):
         print(f"\nExecuting {self._testMethodName}")
@@ -285,7 +285,7 @@ class RedisTest(unittest.TestCase):
             stream_in.write({'x1': x, 'x2': 2 * x, 'order': x, 'y': 3 * x})
             time.sleep(5)
 
-        self.assertEqual(len(list(stream_out.read())), 2)
+        self.assertEqual(len(list(stream_out.read())), 11)
 
     def test_delete_stream_http_api(self):
         print(f"\nExecuting {self._testMethodName}")

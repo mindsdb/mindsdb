@@ -90,6 +90,7 @@ class DB2Handler(DatabaseHandler):
             return
         try:
             self.connection.close()
+            self.is_connected=False
         except Exception as e:
             log.error(f"Error while disconnecting to {self.database}, {e}")
 

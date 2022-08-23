@@ -56,7 +56,6 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
 
-from mindsdb.api.mysql.mysql_proxy.classes.com_operators import operator_map
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
@@ -208,7 +207,6 @@ class Column:
 class SQLQuery():
     def __init__(self, sql, session, execute=True):
         self.session = session
-        self.integration = session.integration
         self.database = None if session.database == '' else session.database.lower()
         self.datahub = session.datahub
         self.outer_query = None
@@ -219,14 +217,14 @@ class SQLQuery():
         self.mindsdb_database_name = 'mindsdb'
 
         if isinstance(sql, str):
-        # +++ workaround for subqueries in superset
+            # region workaround for subqueries in superset
             if 'as virtual_table' in sql.lower():
                 subquery = re.findall(superset_subquery, sql)
                 if isinstance(subquery, list) and len(subquery) == 1:
                     subquery = subquery[0]
                     self.outer_query = sql.replace(subquery, 'dataframe')
                     sql = subquery.strip('()')
-            # ---
+            # endregion
             self.query = parse_sql(sql, dialect='mindsdb')
             self.query_str = sql
         else:
@@ -727,10 +725,7 @@ class SQLQuery():
 
                 data = dn.query(
                     table=predictor,
-                    columns=None,
-                    where_data=where_data,
-                    integration_name=self.session.integration,
-                    integration_type=self.session.integration_type
+                    where_data=where_data
                 )
 
                 data = [{(key, key): value for key, value in row.items()} for row in data]
@@ -816,10 +811,7 @@ class SQLQuery():
                 else:
                     data = dn.query(
                         table=predictor,
-                        columns=None,
-                        where_data=where_data,
-                        integration_name=self.session.integration,
-                        integration_type=self.session.integration_type
+                        where_data=where_data
                     )
 
                     data = [{(key, key): value for key, value in row.items()} for row in data]

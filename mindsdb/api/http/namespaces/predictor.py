@@ -1,7 +1,12 @@
 import json
 from dateutil.parser import parse as parse_datetime
+
 from flask import request
 from flask_restx import Resource, abort
+
+from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
+from mindsdb_sql.parser.ast import Identifier
+
 from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
@@ -18,7 +23,7 @@ class PredictorList(Resource):
     @ns_conf.doc('list_predictors')
     def get(self):
         '''List all predictors'''
-        models = request.model_interface.get_models()
+        models = request.model_controller.get_models()
         return models
 
 
@@ -28,7 +33,7 @@ class PredictorList(Resource):
 class Predictor(Resource):
     @ns_conf.doc('get_predictor')
     def get(self, name):
-        model = request.model_interface.get_model_data(name)
+        model = request.model_controller.get_model_data(name)
 
         for k in ['train_end_at', 'updated_at', 'created_at']:
             if k in model and model[k] is not None:
@@ -39,15 +44,16 @@ class Predictor(Resource):
     @ns_conf.doc('delete_predictor')
     def delete(self, name):
         '''Remove predictor'''
-        request.model_interface.delete_model(name)
+        request.model_controller.delete_model(name)
         return '', 200
 
     @ns_conf.doc('put_predictor')
     @ns_conf.expect(put_predictor_metadata)
     def put(self, name):
         '''Learning new predictor'''
+        lw_handler = request.integration_controller.get_handler('lightwood')
+
         data = request.json
-        to_predict = data.get('to_predict')
 
         try:
             kwargs = data.get('kwargs')
@@ -57,39 +63,21 @@ class Predictor(Resource):
         if isinstance(kwargs, dict) is False:
             kwargs = {}
 
-        if 'equal_accuracy_for_all_output_categories' not in kwargs:
-            kwargs['equal_accuracy_for_all_output_categories'] = True
+        to_predict = data.get('to_predict')
+        if isinstance(to_predict, list) is False:
+            to_predict = [to_predict]
 
-        if 'advanced_args' not in kwargs:
-            kwargs['advanced_args'] = {}
-
-        if 'use_selfaware_model' not in kwargs['advanced_args']:
-            kwargs['advanced_args']['use_selfaware_model'] = False
-
-        integration_name = data.get('integration')
-        query = data.get('query')
-        if isinstance(integration_name, str) is False or isinstance(query, str) is False:
-            return http_error(400, 'Error', 'Parameters should contain integration and query')
-
-        integration_meta = request.integration_controller.get(integration_name)
-        if integration_meta is None:
-            return http_error(400, 'Error', f"Cant get integration '{integration_name}'")
-        handler = request.integration_controller.get_handler(integration_name)
-        if handler is None:
-            return http_error(400, 'Error', f"Cant get integration '{integration_name}'")
-
-        result = handler.native_query(query)
-
-        if result.type != RESPONSE_TYPE.TABLE:
-            raise Exception(f'Error during query: {result.get("error_message")}')
-
-        df = result.data_frame
-
-        request.model_interface.learn(
-            name, df, to_predict, integration_id=integration_meta['id'],
-            fetch_data_query=query, kwargs=kwargs, user_class=request.user_class
+        ast = CreatePredictor(
+            name=Identifier(name),
+            integration_name=Identifier(data.get('integration')),
+            query_str=data.get('query'),
+            targets=[Identifier(x) for x in to_predict],
+            using=kwargs
         )
 
+        response = lw_handler.query(ast)
+        if response.type == RESPONSE_TYPE.ERROR:
+            return http_error(400, detail=response.error_message)
         return '', 200
 
 
@@ -98,10 +86,11 @@ class Predictor(Resource):
 class PredictorUpdate(Resource):
     @ns_conf.doc('Update predictor')
     def get(self, name):
-        msg = request.model_interface.update_model(name)
-        return {
-            'message': msg
-        }
+        lw_handler = request.integration_controller.get_handler('lightwood')
+        response = lw_handler.native_query(f'retrain {name}')
+        if response.type == RESPONSE_TYPE.ERROR:
+            return http_error(400, detail=response.error_message)
+        return '', 200
 
 
 @ns_conf.route('/<name>/adjust')
@@ -110,25 +99,6 @@ class PredictorAdjust(Resource):
     @ns_conf.doc('post_predictor_adjust', params=predictor_query_params)
     def post(self, name):
         return abort(410, 'Method is not available')
-        # data = request.json
-
-        # ds_name = data.get('data_source_name') if data.get('data_source_name') is not None else data.get('from_data')
-        # from_data = request.default_store.get_datasource_obj(ds_name, raw=True)
-
-        # if from_data is None:
-        #     return {'message': f'Can not find datasource: {ds_name}'}, 400
-
-        # model_names = [x['name'] for x in request.model_interface.get_models()]
-        # if name not in model_names:
-        #     return abort(404, f'Predictor "{name}" doesn\'t exist',)
-
-        # request.model_interface.adjust(
-        #     name,
-        #     from_data,
-        #     request.default_store.get_datasource(ds_name)['id']
-        # )
-
-        # return '', 200
 
 
 @ns_conf.route('/<name>/predict')
@@ -142,26 +112,13 @@ class PredictorPredict(Resource):
         # list is a required type for TS prediction
         if isinstance(when, (dict, list)) is False or len(when) == 0:
             return 'No data provided for the predictions', 400
+        if isinstance(when, dict):
+            when = [when]
 
-        results = request.model_interface.predict(name, when, 'explain')
-        return results
-
-
-@ns_conf.route('/<name>/predict_datasource')
-@ns_conf.param('name', 'The predictor identifier')
-class PredictorPredictFromDataSource(Resource):
-    @ns_conf.doc('post_predictor_predict', params=predictor_query_params)
-    def post(self, name):
-        return abort(410, 'Method is not available')
-        # data = request.json
-        # use_raw = False
-
-        # from_data = request.default_store.get_datasource_obj(data.get('data_source_name'), raw=use_raw)
-        # if from_data is None:
-        #     abort(400, 'No valid datasource given')
-
-        # results = request.model_interface.predict(name, from_data, 'explain')
-        # return results
+        # results = request.model_controller.predict(name, when, 'explain')
+        lw_handler = request.integration_controller.get_handler('lightwood')
+        response = lw_handler.predict(name, when, pred_format='explain')
+        return response
 
 
 @ns_conf.route('/<name>/rename')
@@ -171,7 +128,7 @@ class PredictorDownload(Resource):
     def get(self, name):
         try:
             new_name = request.args.get('new_name')
-            request.model_interface.rename_model(name, new_name)
+            request.model_controller.rename_model(name, new_name)
         except Exception as e:
             return str(e), 400
 
@@ -193,7 +150,7 @@ class PredictorGenerate(Resource):
         # )
         # datasource = request.default_store.get_datasource(datasource_name)
 
-        # request.model_interface.generate_predictor(
+        # request.model_controller.generate_predictor(
         #     name,
         #     from_data,
         #     datasource['id'],
@@ -209,7 +166,8 @@ class PredictorGenerate(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorEditJsonAI(Resource):
     def put(self, name):
-        request.model_interface.edit_json_ai(name, request.json['json_ai'])
+        lw_handler = request.integration_controller.get_handler('lightwood')
+        lw_handler.edit_json_ai(name, request.json['json_ai'])
         return '', 200
 
 
@@ -218,7 +176,8 @@ class PredictorEditJsonAI(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorEditCode(Resource):
     def put(self, name):
-        request.model_interface.edit_code(name, request.json['code'])
+        lw_handler = request.integration_controller.get_handler('lightwood')
+        lw_handler.edit_code(name, request.json['code'])
         return '', 200
 
 
@@ -238,7 +197,7 @@ class PredictorTrain(Resource):
         #     raw=True
         # )
 
-        # request.model_interface.fit_predictor(name, from_data, request.json.get('join_learn_process', False))
+        # request.model_controller.fit_predictor(name, from_data, request.json.get('join_learn_process', False))
         # return '', 200
 
 
@@ -247,7 +206,7 @@ class PredictorTrain(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorExport(Resource):
     def get(self, name):
-        payload: json = request.model_interface.export_predictor(name)
+        payload: json = request.model_controller.export_predictor(name)
         return payload, 200
 
 
@@ -256,5 +215,5 @@ class PredictorExport(Resource):
 @ns_conf.response(404, 'predictor not found')
 class PredictorImport(Resource):
     def put(self, name):
-        request.model_interface.import_predictor(name, request.json)
+        request.model_controller.import_predictor(name, request.json)
         return '', 200

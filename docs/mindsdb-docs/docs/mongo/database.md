@@ -1,12 +1,16 @@
-# `#!sql databases.insertOne()` Method
+# Connecting Databases to MindsDB in Mongo
 
-## Description
+The integrations provide data to be used for making forecasts. Here, we use the `databases.insertOne()` method to connect the integrations to Mongo.
 
-MindsDB enables connections to your mongo instance via the `#!sql db.databases.insertOne()` syntax.
+## Using the `#!sql databases.insertOne()` Method
 
-Our MindsDB Mongo API supports creating a connection by passing the credentials needed for connecting to the database.
+### Description
 
-## Syntax
+MindsDB enables adding databases to your Mongo instance using the `db.databases.insertOne()` method.
+
+Our MindsDB Mongo API supports creating a connection by passing the database credentials.
+
+### Syntax
 
 ```sql
 db.databases.insertOne({
@@ -20,7 +24,7 @@ db.databases.insertOne({
 });
 ```
 
-On execution, you should get:
+On execution, we get:
 
 ```sql
 {
@@ -31,15 +35,17 @@ On execution, you should get:
 
 Where:
 
-|                        | Description                                                      |
-| ---------------------- | ---------------------------------------------------------------- |
-| `[name]`               | Identifier for the datasource to be created                      |
-| `[engine]=mongodb`     |  Engine to be selected. For MONGO API it is always mongodb      |
-| `connection_args`      | `#!json {"key":"value"}` object with the connection parameters specific for mongo engine as port, host, database  |
+| Name                   | Description                                                                                     |
+| ---------------------- | ----------------------------------------------------------------------------------------------- |
+| `name`                 | Identifier for the data source to be created                                                     |
+| `engine`               | Engine to be selected (for Mongo API, it is always `mongodb`)                                   |
+| `connection_args`      | `#!json {"key":"value"}` object storing the connection parameters such as port, host, database  |
 
 ## Example
 
-Here is a concrete example on how to connect to the local MongoDB.
+### Creating a New Connection
+
+Here is an example of how to connect to the local MongoDB.
 
 ```sql
 db.databases.insertOne({
@@ -53,7 +59,7 @@ db.databases.insertOne({
 });
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 {
@@ -62,15 +68,15 @@ On execution:
 }
 ```
 
-## Listing Linked DATABASES
+### Listing Linked Databases
 
-You can list linked databases as follows:
+You can list all the linked databases using the following command:
 
 ```sql
-show dbs;
+SHOW dbs;
 ```
 
-On execution:
+On execution, we get:
 
 ```sql
 +--------------------+

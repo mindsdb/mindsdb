@@ -2,8 +2,6 @@ from collections import OrderedDict
 from typing import Optional
 import pandas as pd
 import vertica_python as vp
-
-
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -21,8 +19,6 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from sqla_vertica_python.vertica_python import VerticaDialect
 
 
-
-
 class VerticaHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Vertica statements.
@@ -31,8 +27,7 @@ class VerticaHandler(DatabaseHandler):
     name = 'vertica'
 
     def __init__(self, name, connection_data: Optional[dict], **kwargs):
-        super().__init__(name)
-        
+        super().__init__(name)   
         self.parser = parse_sql
         self.dialect = 'vertica'
         self.kwargs = kwargs
@@ -41,7 +36,6 @@ class VerticaHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
-
 
     def connect(self):
         if self.is_connected is True:
@@ -68,7 +62,6 @@ class VerticaHandler(DatabaseHandler):
         return
 
     def check_connection(self) -> StatusResponse:
-       
         result = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -98,10 +91,9 @@ class VerticaHandler(DatabaseHandler):
         connection = self.connect()
         with connection.cursor() as cur:
             try:
-                e=cur.execute(query)
+                e = cur.execute(query)
                 result = e.fetchall()
                 if e.rowcount != -1:
-                    
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         pd.DataFrame(
@@ -140,12 +132,10 @@ class VerticaHandler(DatabaseHandler):
         q = f'''SELECT 
         TABLE_NAME,
         TABLE_SCHEMA
-        from v_catalog.tables 
-        WHERE table_schema='{self.schema_name}' 
+        from v_catalog.tables
+        WHERE table_schema='{self.schema_name}'
         order by
         table_name;'''
-
-         
         return self.native_query(q)
 
     def get_columns(self, table_name) -> Response:
@@ -153,12 +143,10 @@ class VerticaHandler(DatabaseHandler):
         Show details about the table
         """
         q = f'''SELECT 
-        column_name , 
-        data_type 
-        FROM v_catalog.columns 
+        column_name ,
+        data_type
+        FROM v_catalog.columns
         WHERE table_name='{table_name}';'''
-
-        
         return self.native_query(q)
 
 

@@ -182,7 +182,7 @@ class PinotHandler(DatabaseHandler):
         api_url = f"{self.connection_data['host']}:{self.connection_data['controller_port']}/tables"
         try:
             result = requests.get(api_url)
-        except InvalidSchema as e:
+        except InvalidSchema:
             api_url = f"{self.connection_data['scheme']}://{api_url}"
             result = requests.get(api_url)
 
@@ -208,7 +208,7 @@ class PinotHandler(DatabaseHandler):
         api_url = f"{self.connection_data['host']}:{self.connection_data['controller_port']}/tables/{table_name}/schema"
         try:
             result = requests.get(api_url)
-        except InvalidSchema as e:
+        except InvalidSchema:
             api_url = f"{self.connection_data['scheme']}://{api_url}"
             result = requests.get(api_url)
 

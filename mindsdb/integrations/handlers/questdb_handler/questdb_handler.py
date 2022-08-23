@@ -3,7 +3,7 @@ from ..postgres_handler import Handler as PostgresHandler
 
 class QuestDBHandler(PostgresHandler):
     """
-    This handler handles connection and execution of the QuestDB statements. 
+    This handler handles connection and execution of the QuestDB statements.
     TODO: check the dialect for questdb
     """
     name = 'questdb'

@@ -120,7 +120,7 @@ PARAMETERS = {
    "service_account_keys": {
       "path": "/home/Downloads/badger-345908.json"
   }
-}
+};
 ```
 Or if you are using MindsDB Cloud, provide the `service_account_keys` as url:
 
@@ -132,7 +132,7 @@ PARAMETERS = {
    "service_account_keys": {
       "url": "https://url/badger-345908.json"
   }
-}
+};
 ```
 
 ### Cassandra

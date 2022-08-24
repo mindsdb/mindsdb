@@ -15,7 +15,7 @@ from lightwood.api.types import JsonAI
 from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, ProblemDefinition
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant, Select, OrderBy, Show
+from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant, Select, OrderBy, Show, Star, NativeQuery
 from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
     CreatePredictor,
@@ -40,6 +40,7 @@ from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.model.model_controller import ModelController
+from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 
 from .learn_process import brack_to_mod, rep_recur, LearnProcess, UpdateProcess
 from .utils import unpack_jsonai_old_args, load_predictor
@@ -215,12 +216,24 @@ class LightwoodHandler(PredictiveHandler):
 
         unpack_jsonai_old_args(json_ai_override)
 
-        integration_name = str(statement.integration_name)
-        handler = self.handler_controller.get_handler(integration_name)
-        response = handler.native_query(statement.query_str)
-        if response.type == RESPONSE_TYPE.ERROR:
-            return response
-        training_data_df = response.data_frame
+        integration_name = statement.integration_name.parts[0]
+
+        # get data from integration
+        query = Select(
+            targets=[Star()],
+            from_table=NativeQuery(
+                integration=Identifier(integration_name),
+                query=statement.query_str
+            )
+        )
+        # injected session
+        session = statement.session
+
+        # execute as query
+        sqlquery = SQLQuery(query, session=session)
+        result = sqlquery.fetch(view='dataframe')
+
+        training_data_df = result['result']
 
         integration_meta = self.handler_controller.get(name=integration_name)
         problem_definition = ProblemDefinition.from_dict(problem_definition_dict)

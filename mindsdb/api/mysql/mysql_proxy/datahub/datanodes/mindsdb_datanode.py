@@ -106,22 +106,27 @@ class MindsDBDataNode(DataNode):
 
     def _select_predictors_versions(self):
         models = self.model_controller.get_models(with_versions=True)
-        columns = ['name', 'status', 'accuracy', 'predict', 'update_status',
+        models.sort(key=lambda x: x['created_at'])
+        columns = ['name', 'version', 'status', 'accuracy', 'predict', 'update_status',
                    'mindsdb_version', 'error', 'select_data_query',
                    'training_options', 'created_at', 'training_time']
-        return pd.DataFrame([[
-            x['name'],
-            x['status'],
-            str(x['accuracy']) if x['accuracy'] is not None else None,
-            ', '.join(x['predict']) if isinstance(x['predict'], list) else x['predict'],
-            x['update'],
-            x['mindsdb_version'],
-            x['error'],
-            '',
-            '',   # TODO
-            str(x['created_at']),
-            str(x['training_time'])
-        ] for x in models], columns=columns)
+        data = []
+        for i, model in enumerate(models):
+            data.append([
+                model['name'],
+                i + 1,
+                model['status'],
+                str(model['accuracy']) if model['accuracy'] is not None else None,
+                ', '.join(model['predict']) if isinstance(model['predict'], list) else model['predict'],
+                model['update'],
+                model['mindsdb_version'],
+                model['error'],
+                '',
+                '',
+                str(model['created_at']),
+                str(model['training_time'])
+            ])
+        return pd.DataFrame(data, columns=columns)
 
     def _select_integrations(self):
         integrations = self.integration_controller.get_all()

@@ -62,14 +62,20 @@ class BaseTestCase:
 
         integration_controller = IntegrationController()
         view_controller = ViewController()
-        self.mock_model_interface = mock.Mock()
+        self.mock_model_controller = mock.Mock()
 
         # no predictors yet
-        self.mock_model_interface.get_models.side_effect = lambda: []
+        self.mock_model_controller.get_models.side_effect = lambda: []
 
         server_obj.original_integration_controller = integration_controller
-        server_obj.original_model_interface = self.mock_model_interface
+        server_obj.original_model_controller = self.mock_model_controller
         server_obj.original_view_controller = view_controller
+
+        predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
+        self.mock_predict = predict_patcher.__enter__()
+
+        learn_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler._learn')
+        self.mock_learn = learn_patcher.__enter__()
 
         sql_session = SessionController(
             server=server_obj,
@@ -83,7 +89,9 @@ class BaseTestCase:
         # fill model_interface mock with predictor data for test case
 
         # clear calls
-        self.mock_model_interface.reset_mock()
+        self.mock_model_controller.reset_mock()
+        self.mock_predict.reset_mock()
+        self.mock_learn.reset_mock()
 
         # remove previous predictor record
         r = self.db.Predictor.query.filter_by(name=predictor['name']).first()
@@ -105,23 +113,41 @@ class BaseTestCase:
         self.db.session.add(r)
         self.db.session.commit()
 
-        def predict_f(name, when_data, pred_format, *args, **kargs):
+        def predict_f(model_name, data, pred_format='dict', *args, **kargs):
+            if model_name != predictor['name']:
+                raise Exception(f"Model does not exists: {model_name}")
             dict_arr = []
             explain_arr = []
 
-            for row in when_data:
-                row = row.copy()
-                row['predicted_value'] = predictor['predicted_value']
-                dict_arr.append({predictor['predict']: row})
+            predicted_value = predictor['predicted_value']
+            target = predictor['predict']
 
-                exp_row = {'predicted_value': predictor['predicted_value'], 'confidence': 0.9999, 'anomaly': None, 'truth': None}
+            meta = {
+                # 'select_data_query': None, 'when_data': None,
+                'original': None,
+                'confidence': 0.8,
+                'anomaly': None
+            }
+
+            for row in data:
+                # row = row.copy()
+                exp_row = {'predicted_value': predictor['predicted_value'],
+                           'confidence': 0.9999,
+                           'anomaly': None,
+                           'truth': None}
                 explain_arr.append({predictor['predict']: exp_row})
+
+                row[target] = predicted_value
+                # dict_arr.append({predictor['predict']: row})
+
+                for k, v in meta.items():
+                    row[f'{target}_{k}'] = v
+                row[f'{target}_explain'] = str(exp_row)
+
+
             if pred_format == 'explain':
                 return explain_arr
-            elif pred_format == 'dict':
-                return dict_arr
-            elif pred_format == 'dict&explain':
-                return dict_arr, explain_arr
+            return data
 
         predictor_record = {
             'version': None, 'is_active': None,
@@ -135,10 +161,17 @@ class BaseTestCase:
         predictor['dtype_dict'] = predictor['dtypes']
         predictor_record.update(predictor)
 
+        def get_model_data_f(name,  *args):
+            if name != predictor['name']:
+                raise Exception(f"Model does not exists: {name}")
+            return predictor_record
+
+
         # inject predictor info to model interface
-        self.mock_model_interface.predict.side_effect = predict_f
-        self.mock_model_interface.get_models.side_effect = lambda: [predictor_record]
-        self.mock_model_interface.get_model_data.side_effect = lambda name: predictor_record
+        self.mock_predict.side_effect = predict_f
+        self.mock_model_controller.get_models.side_effect = lambda: [predictor_record]
+        self.mock_model_controller.get_model_data.side_effect = get_model_data_f
+        self.mock_model_controller.get_model_description.side_effect = get_model_data_f
 
     def set_handler(self, mock_handler, name, tables, engine='postgres'):
         # integration

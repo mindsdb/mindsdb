@@ -178,9 +178,11 @@ class TestWithNativeQuery(BaseTestCase):
         assert ret.error_code is None
 
         # learn was called
-        assert self.mock_model_interface.learn.mock_calls[0].args[0] == 'task_model'
+        assert self.mock_learn.mock_calls[0].args[0].name.to_string() == 'task_model'
         # integration was called
-        assert mock_handler().native_query.mock_calls[0].args[0] == 'select * from tasks'
+        # TODO: integration is not called during learn process because learn function is mocked
+        #   (data selected inside learn function)
+        # assert mock_handler().native_query.mock_calls[0].args[0] == 'select * from tasks'
 
         # --- drop view ---
         ret = self.command_executor.execute_command(parse_sql(
@@ -233,11 +235,11 @@ class TestWithNativeQuery(BaseTestCase):
 
         # check predictor call
 
-        # model was called
-        assert self.mock_model_interface.predict.mock_calls[0].args[0] == 'task_model'
+        # prediction was called
+        assert self.mock_predict.mock_calls[0].args[0] == 'task_model'
 
         # input = one row whit a==2
-        when_data = self.mock_model_interface.predict.mock_calls[0].args[1]
+        when_data = self.mock_predict.mock_calls[0].args[1]
         assert len(when_data) == 1
         assert when_data[0]['a'] == 2
 
@@ -305,11 +307,11 @@ class TestWithNativeQuery(BaseTestCase):
         assert mock_handler().native_query.mock_calls[0].args[0] == 'select * from tasks'
 
         # check predictor call
-        # model was called
-        assert self.mock_model_interface.predict.mock_calls[0].args[0] == 'task_model'
+        # prediction was called
+        assert self.mock_predict.mock_calls[0].args[0] == 'task_model'
 
         # input to predictor is only 3 rows g=='y'
-        when_data = self.mock_model_interface.predict.mock_calls[0].args[1]
+        when_data = self.mock_predict.mock_calls[0].args[1]
         assert len(when_data) == 3
         for row in when_data:
             assert row['g'] == 'y'

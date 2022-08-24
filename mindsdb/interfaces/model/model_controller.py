@@ -3,6 +3,7 @@ import sys
 import json
 import base64
 from copy import deepcopy
+from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_datetime
 
 import numpy as np
@@ -41,6 +42,8 @@ class ModelController():
         data['dtype_dict'] = predictor_record.dtype_dict
         data['created_at'] = str(parse_datetime(str(predictor_record.created_at).split('.')[0]))
         data['updated_at'] = str(parse_datetime(str(predictor_record.updated_at).split('.')[0]))
+        data['training_start_at'] = predictor_record.training_start_at
+        data['training_stop_at'] = predictor_record.training_stop_at
         data['predict'] = predictor_record.to_predict[0]
         data['update'] = predictor_record.update_status
         data['mindsdb_version'] = predictor_record.mindsdb_version
@@ -100,18 +103,16 @@ class ModelController():
 
             for k in ['name', 'version', 'is_active', 'predict', 'status',
                       'current_phase', 'accuracy', 'data_source', 'update',
-                      'mindsdb_version', 'error']:
+                      'mindsdb_version', 'error', 'created_at']:
                 reduced_model_data[k] = model_data.get(k, None)
 
-            for k in ['train_end_at', 'updated_at', 'created_at']:
-                reduced_model_data[k] = model_data.get(k, None)
-                if reduced_model_data[k] is not None:
-                    try:
-                        reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]).split('.')[0])
-                    except Exception as e:
-                        # @TODO Does this ever happen
-                        log.error(f'Date parsing exception while parsing: {k} in get_models: ', e)
-                        reduced_model_data[k] = parse_datetime(str(reduced_model_data[k]))
+            reduced_model_data['training_time'] = None
+            if model_data.get('training_start_at') is not None:
+                if model_data.get('training_stop_at') is not None:
+                    reduced_model_data['training_time'] = model_data.get('training_stop_at') - model_data.get('training_start_at')
+                elif model_data.get('status') == 'training':
+                    reduced_model_data['training_time'] = datetime.now() - model_data.get('training_start_at')
+                reduced_model_data['training_time'] = reduced_model_data['training_time'] - timedelta(microseconds=reduced_model_data['training_time'].microseconds)
 
             models.append(reduced_model_data)
         return models

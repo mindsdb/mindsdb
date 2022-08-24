@@ -108,7 +108,7 @@ class MindsDBDataNode(DataNode):
         models = self.model_controller.get_models(with_versions=True)
         columns = ['name', 'status', 'accuracy', 'predict', 'update_status',
                    'mindsdb_version', 'error', 'select_data_query',
-                   'training_options', 'created_at']
+                   'training_options', 'created_at', 'training_time']
         return pd.DataFrame([[
             x['name'],
             x['status'],
@@ -119,7 +119,8 @@ class MindsDBDataNode(DataNode):
             x['error'],
             '',
             '',   # TODO
-            str(x['created_at'])
+            str(x['created_at']),
+            str(x['training_time'])
         ] for x in models], columns=columns)
 
     def _select_integrations(self):

@@ -2,7 +2,7 @@
 
 Predictors are the machine learning models that enable us to forecast future data based on the available data. By using the `db.predictors.insert()` method, we create and train predictors in Mongo.
 
-## Using the `#!sql db.predictors.insert()` Method
+## Using the `db.predictors.insert()` Method
 
 ### Description
 
@@ -38,7 +38,7 @@ Where:
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `<predictor_name>`                              | The name of the model to be created                                                                                                   |
 | `<target_column>`                               | The column name of the target variable                                                                                                |
-| `<integration_name>`                            | The name of the integration created via [`#!sql INSERT DATABASE`](/mongo/database/) or [file upload](/sql/api/select_files/)          |
+| `<integration_name>`                            | The name of the integration created via [`INSERT DATABASE`](/mongo/database/) or [file upload](/sql/api/select_files/)          |
 | `select_data_query`                             | Object that stores the data collection name to be used for training and validation and additional arguments for filtering the data.   |
 
 !!! TIP "Checking the status of the model"

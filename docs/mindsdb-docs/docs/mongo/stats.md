@@ -1,6 +1,6 @@
 # Getting the Statistics
 
-## The `#!sql stats()` Method
+## The `stats()` Method
 
 The `stats()` method is used to display the attributes of an existing model. It accepts the `{'scale': 'attribute'}` object as an argument.
 
@@ -17,7 +17,7 @@ Where:
 | `name_of_your_predictor`   | The name of the predictor whose statistics you want to see                                                                                        |
 | `{'scale': 'attribute'}`   | The argument of the `stats()` method defines the type of statistics (`{'scale':'features'}`, or `{'scale':'model'}`, or `{'scale':'ensemble'}`)   |
 
-## Using the `#!sql stats()` Method with the `#!sql {'scale':'features'}` Parameter
+## Using the `stats()` Method with the `{'scale':'features'}` Parameter
 
 ### Description
 
@@ -117,7 +117,7 @@ On execution, we get:
 }
 ```
 
-## Using the `#!sql stats()` Method with the `#!sql {'scale':'model'}` Parameter
+## Using the `stats()` Method with the `{'scale':'model'}` Parameter
 
 ### Description
 
@@ -187,7 +187,7 @@ On execution, we get:
 }
 ```
 
-## Using the `#!sql stats()` Method with the `#!sql {'scale':'ensemble'}` Parameter
+## Using the `stats()` Method with the `{'scale':'ensemble'}` Parameter
 
 ### Description
 

@@ -2,7 +2,7 @@
 
 The integrations provide data to be used for making forecasts. Here, we use the `databases.insertOne()` method to connect the integrations to Mongo.
 
-## Using the `#!sql db.databases.insertOne()` Method
+## Using the `db.databases.insertOne()` Method
 
 ### Description
 

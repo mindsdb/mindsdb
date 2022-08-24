@@ -1,6 +1,6 @@
 # Deleting a Predictor
 
-## Using the `#!sql db.predictors.deleteOne()` Method
+## Using the `db.predictors.deleteOne()` Method
 
 ### Description
 

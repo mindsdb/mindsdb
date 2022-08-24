@@ -11,16 +11,13 @@ import numpy as np
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.interfaces.database.integrations import IntegrationController
-from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.json_encoder import json_serialiser
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.interfaces.model.functions import (
     get_model_record,
-    get_model_records,
-    PredictorRecordNotFound,
-    MultiplePredictorRecordsFound
+    get_model_records
 )
 
 IS_PY36 = sys.version_info[1] <= 6

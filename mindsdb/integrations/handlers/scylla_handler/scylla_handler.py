@@ -6,6 +6,7 @@ from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.parser import ast
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
@@ -116,6 +117,12 @@ class ScyllaHandler(DatabaseHandler):
         """
         Retrieve the data from the SQL statement.
         """
+
+        # remove table alias because Cassandra Query Language doesn't support it
+        if isinstance(query, ast.Select):
+            if isinstance(query.from_table, ast.Identifier) and query.from_table.alias is not None:
+                query.from_table.alias = None
+
         renderer = SqlalchemyRender('mysql')
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)

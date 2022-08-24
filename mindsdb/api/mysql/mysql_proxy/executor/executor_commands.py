@@ -732,8 +732,7 @@ class ExecuteCommands:
 
     def answer_create_predictor(self, statement):
         lw_handler = self.session.integration_controller.get_handler('lightwood')
-        # inject session for executing query inside LW handler
-        statement.session = self.session
+
         result = lw_handler.query(statement)
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)

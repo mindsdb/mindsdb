@@ -25,6 +25,9 @@ from lightwood import __version__ as lightwood_version
 from lightwood.api import dtype
 import numpy as np
 
+from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.views import ViewController
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.utils import recur_get_conditionals, get_aliased_columns, get_join_input, get_model_name
 from mindsdb.utilities.config import Config
@@ -179,6 +182,20 @@ class LightwoodHandler(PredictiveHandler):
         )
         return result
 
+    def make_sql_session(self, company_id):
+
+        server_obj = type('', (), {})()
+        server_obj.original_integration_controller = IntegrationController()
+        server_obj.original_model_controller = ModelController()
+        server_obj.original_view_controller = ViewController()
+
+        sql_session = SessionController(
+            server=server_obj,
+            company_id=company_id
+        )
+        sql_session.database = 'mindsdb'
+        return sql_session
+
     @mark_process(name='learn')
     def _learn(self, statement):
         model_name = statement.name.parts[-1]
@@ -226,11 +243,10 @@ class LightwoodHandler(PredictiveHandler):
                 query=statement.query_str
             )
         )
-        # injected session
-        session = statement.session
+        sql_session = self.make_sql_session(self.company_id)
 
         # execute as query
-        sqlquery = SQLQuery(query, session=session)
+        sqlquery = SQLQuery(query, session=sql_session)
         result = sqlquery.fetch(view='dataframe')
 
         training_data_df = result['result']

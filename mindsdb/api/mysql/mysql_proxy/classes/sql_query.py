@@ -58,7 +58,10 @@ from mindsdb_sql.planner.utils import query_traversal
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
-
+from mindsdb.interfaces.model.functions import (
+    get_model_record,
+    get_model_records
+)
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErKeyColumnDoesNotExist,
@@ -251,7 +254,7 @@ class SQLQuery():
         integrations_names.append('views')
 
         predictor_metadata = {}
-        predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
+        predictors = get_model_records(company_id=self.session.company_id)
 
         query_tables = []
 

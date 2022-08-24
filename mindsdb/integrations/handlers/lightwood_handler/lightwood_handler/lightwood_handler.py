@@ -160,9 +160,7 @@ class LightwoodHandler(PredictiveHandler):
 
     def get_columns(self, table_name: str) -> Response:
         """ For getting standard info about a table. e.g. data types """  # noqa
-        predictor_record = db.Predictor.query.filter_by(
-            company_id=self.company_id, name=table_name, active=True
-        ).first()
+        predictor_record = get_model_record(company_id=self.company_id, name=table_name)
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -373,9 +371,7 @@ class LightwoodHandler(PredictiveHandler):
         if isinstance(data, dict):
             data = [data]
         df = pd.DataFrame(data)
-        predictor_record = db.Predictor.query.filter_by(
-            company_id=self.company_id, name=model_name, active=True
-        ).first()
+        predictor_record = get_model_record(company_id=self.company_id, name=model_name)
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -637,7 +633,7 @@ class LightwoodHandler(PredictiveHandler):
         return analysis.to_dict()
 
     def edit_json_ai(self, name: str, json_ai: dict):
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=name).first()
+        predictor_record = get_model_record(company_id=self.company_id, name=name)
         assert predictor_record is not None
 
         json_ai = lightwood.JsonAI.from_dict(json_ai)
@@ -655,7 +651,7 @@ class LightwoodHandler(PredictiveHandler):
         if self.config.get('cloud', False):
             raise Exception('Code editing prohibited on cloud')
 
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=name).first()
+        predictor_record = get_model_record(company_id=self.company_id, name=name)
         assert predictor_record is not None
 
         lightwood.predictor_from_code(code)

@@ -257,6 +257,7 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
         fs_store.put(fs_name, base_dir=config['paths']['predictors'])
         predictor_record.data = predictor.model_analysis.to_dict()
         predictor_record.update_status = 'up_to_date'
+        predictor_record.dtype_dict = predictor.dtype_dict
         old_predictor_record.update_status = 'up_to_date'
 
         old_predictor_record.active = False

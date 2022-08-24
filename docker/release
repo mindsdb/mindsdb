@@ -20,15 +20,12 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 &
         psycopg[binary]>=1.15.3 \
         pymongo certifi \
         snowflake-connector-python>=2.7.6 \
-        trino~=0.313.0 \
         clickhouse-driver \
         scylla-driver && \
     pip install --prefer-binary --no-cache-dir \
         databricks-sql-connector sqlalchemy-databricks || true && \
     pip install --prefer-binary --no-cache-dir \
         fdb pyodbc || true && \
-    pip install --prefer-binary --no-cache-dir \
-        sqlalchemy-access || true && \
     pip install --prefer-binary --no-cache-dir \
         sqlalchemy-access || true && \
     pip install --prefer-binary --no-cache-dir \
@@ -44,7 +41,15 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 &
     pip install --prefer-binary --no-cache-dir \
         trino~=0.313.0 requests-kerberos==0.12.0 || true && \
     pip install --prefer-binary --no-cache-dir \
-        google-cloud-bigquery db-types sqlalchemy-bigquery || true
+        google-cloud-bigquery db-types sqlalchemy-bigquery || true \
+    pip install --prefer-binary --no-cache-dir \
+        boto3 || true \
+    pip install --prefer-binary --no-cache-dir \
+        vertica-python sqlalchemy-vertica-python || true \
+    pip install --prefer-binary --no-cache-dir \
+        crate[sqlalchemy] || true \
+    pip install --prefer-binary --no-cache-dir \
+        pinotdb || true
 
 ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}

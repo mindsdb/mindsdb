@@ -26,7 +26,6 @@ class BaseCache(ABC):
         pass
 
 
-
 class LocalCache(BaseCache):
     def __init__(self, name, *args, **kwargs):
         super().__init__()

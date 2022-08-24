@@ -1,0 +1,2 @@
+!!! warning "Documentation WIP"
+    Note: This documentation is work in progress, for now you can follow up to [Deploying MindsDB on a Digital Ocean Droplet](https://dev.to/heyrutam/deploying-mindsdb-on-a-digital-ocean-droplet-31ed) tutorial.

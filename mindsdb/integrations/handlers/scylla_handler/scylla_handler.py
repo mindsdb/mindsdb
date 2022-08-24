@@ -1,17 +1,21 @@
 import os
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from collections import OrderedDict
+
+import pandas as pd
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
+from mindsdb_sql import parse_sql
+from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
 from mindsdb.utilities.log import log
-import pandas as pd
-from mindsdb_sql.parser.ast.base import ASTNode
 
 
 class ScyllaHandler(DatabaseHandler):
@@ -133,3 +137,35 @@ class ScyllaHandler(DatabaseHandler):
         q = f"DESCRIBE {table_name};"
         result = self.native_query(q)
         return result
+
+
+connection_args = OrderedDict(
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'User name'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'Password'
+    },
+    protocol_version={
+        'type': ARG_TYPE.INT,
+        'description': 'The protocol version.'
+    },
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'Server host'
+    },
+    port={
+        'type': ARG_TYPE.INT,
+        'description': 'Server port'
+    },
+    keyspace={
+        'type': ARG_TYPE.STR,
+        'description': 'Name of keyspace'
+    },
+    secure_connect_bundle={
+        'type': ARG_TYPE.PATH,
+        'description': 'Path or URL to the secure connect bundle'
+    }
+)

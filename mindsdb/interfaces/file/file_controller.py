@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import shutil
 
-from mindsdb.interfaces.storage.db import session, Semaphor, Predictor, File
+from mindsdb.interfaces.storage.db import session, File
 from mindsdb.integrations.handlers.file_handler import Handler as FileHandler
 from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
@@ -95,7 +95,7 @@ class FileController():
             # NOTE may be delay between db record exists and file is really in folder
             shutil.move(file_path, str(source))
 
-            self.fs_store.put(store_file_path, store_file_path, self.dir)
+            self.fs_store.put(store_file_path, base_dir=self.dir)
         except Exception as e:
             log.error(e)
             raise
@@ -120,5 +120,5 @@ class FileController():
         if file_record is None:
             raise Exception(f"File '{name}' does not exists")
         file_dir = f'file_{company_id}_{file_record.id}'
-        self.fs_store.get(file_dir, file_dir, self.dir)
+        self.fs_store.get(file_dir, base_dir=self.dir)
         return str(Path(self.dir).joinpath(file_dir).joinpath(Path(file_record.source_file_path).name))

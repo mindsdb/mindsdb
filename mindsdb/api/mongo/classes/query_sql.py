@@ -1,13 +1,12 @@
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-
 from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
 
+
 def run_sql_command(mindsdb_env, ast_query):
-    # empty object
     server_obj = type('', (), {})()
 
     server_obj.original_integration_controller = mindsdb_env['origin_integration_controller']
-    server_obj.original_model_interface = mindsdb_env['origin_model_interface']
+    server_obj.original_model_controller = mindsdb_env['origin_model_controller']
     server_obj.original_view_controller = mindsdb_env['origin_view_controller']
 
     sql_session = SessionController(
@@ -31,4 +30,3 @@ def run_sql_command(mindsdb_env, ast_query):
         data.append(dict(zip(column_names, row)))
 
     return data
-

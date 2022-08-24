@@ -1,4 +1,8 @@
-from flask import request
+import os
+import importlib
+from pathlib import Path
+
+from flask import request, send_file, abort
 from flask_restx import Resource
 
 from mindsdb.api.http.utils import http_error
@@ -18,6 +22,24 @@ class HandlersList(Resource):
             row.update(handler_meta)
             result.append(row)
         return result
+
+
+@ns_conf.route('/<handler_name>/icon')
+class HandlerIcon(Resource):
+    @ns_conf.param('handler_name', 'Handler name')
+    def get(self, handler_name):
+        try:
+            handlers_import_status = request.integration_controller.get_handlers_import_status()
+            icon_name = handlers_import_status[handler_name]['icon']['name']
+            handler_folder = handlers_import_status[handler_name]['import']['folder']
+            mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent
+            icon_path = mindsdb_path.joinpath('integrations/handlers').joinpath(handler_folder).joinpath(icon_name)
+            if icon_path.is_absolute() is False:
+                icon_path = Path(os.getcwd()).joinpath(icon_path)
+        except Exception:
+            return abort(404)
+        else:
+            return send_file(icon_path)
 
 
 @ns_conf.route('/<handler_name>/install')

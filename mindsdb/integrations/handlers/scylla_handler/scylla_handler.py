@@ -4,6 +4,8 @@ from collections import OrderedDict
 import pandas as pd
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
+from cassandra.util import Date
+
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser import ast
@@ -87,6 +89,18 @@ class ScyllaHandler(DatabaseHandler):
 
         return response
 
+    def prepare_response(self, resp):
+        # replace cassandra types
+        data = []
+        for row in resp:
+            row2 = {}
+            for k, v in row._asdict().items():
+                if isinstance(v, Date):
+                    v = v.date()
+                row2[k] = v
+            data.append(row2)
+        return data
+
     def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
@@ -96,6 +110,7 @@ class ScyllaHandler(DatabaseHandler):
         session = self.connect()
         try:
             resp = session.execute(query).all()
+            resp = self.prepare_response(resp)
             if resp:
                 response = Response(
                     RESPONSE_TYPE.TABLE,

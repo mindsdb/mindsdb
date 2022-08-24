@@ -41,7 +41,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 &
     pip install --prefer-binary --no-cache-dir \
         trino~=0.313.0 requests-kerberos==0.12.0 || true && \
     pip install --prefer-binary --no-cache-dir \
-        google-cloud-bigquery db-types sqlalchemy-bigquery || true \
+        google-cloud-bigquery db-dtypes sqlalchemy-bigquery || true \
     pip install --prefer-binary --no-cache-dir \
         boto3 || true \
     pip install --prefer-binary --no-cache-dir \

@@ -100,14 +100,14 @@ class MindsDBDataNode(DataNode):
             x['update'],
             x['mindsdb_version'],
             x['error'],
-            '',
+            x['fetch_data_query'],
             ''   # TODO
         ] for x in models], columns=columns)
 
     def _select_predictors_versions(self):
         models = self.model_controller.get_models(with_versions=True)
         models.sort(key=lambda x: x['created_at'])
-        columns = ['name', 'version', 'status', 'accuracy', 'predict', 'update_status',
+        columns = ['name', 'version', 'active', 'status', 'accuracy', 'predict', 'update_status',
                    'mindsdb_version', 'error', 'select_data_query',
                    'training_options', 'created_at', 'training_time']
         data = []
@@ -115,13 +115,14 @@ class MindsDBDataNode(DataNode):
             data.append([
                 model['name'],
                 i + 1,
+                model['active'],
                 model['status'],
                 str(model['accuracy']) if model['accuracy'] is not None else None,
                 ', '.join(model['predict']) if isinstance(model['predict'], list) else model['predict'],
                 model['update'],
                 model['mindsdb_version'],
                 model['error'],
-                '',
+                model['fetch_data_query'],
                 '',
                 str(model['created_at']),
                 str(model['training_time'])

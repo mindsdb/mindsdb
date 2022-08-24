@@ -51,6 +51,8 @@ class ModelController():
         data['code'] = predictor_record.code
         data['json_ai'] = predictor_record.json_ai
         data['problem_definition'] = predictor_record.learn_args
+        data['fetch_data_query'] = predictor_record.fetch_data_query
+        data['active'] = predictor_record.active
 
         # assume older models are complete, only temporary
         if 'status' in predictor_record.data:
@@ -102,8 +104,8 @@ class ModelController():
             reduced_model_data = {}
 
             for k in ['name', 'version', 'is_active', 'predict', 'status',
-                      'current_phase', 'accuracy', 'data_source', 'update',
-                      'mindsdb_version', 'error', 'created_at']:
+                      'current_phase', 'accuracy', 'data_source', 'update', 'active',
+                      'mindsdb_version', 'error', 'created_at', 'fetch_data_query']:
                 reduced_model_data[k] = model_data.get(k, None)
 
             reduced_model_data['training_time'] = None

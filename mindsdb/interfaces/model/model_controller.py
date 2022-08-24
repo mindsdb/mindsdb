@@ -111,10 +111,20 @@ class ModelController():
             reduced_model_data['training_time'] = None
             if model_data.get('training_start_at') is not None:
                 if model_data.get('training_stop_at') is not None:
-                    reduced_model_data['training_time'] = model_data.get('training_stop_at') - model_data.get('training_start_at')
+                    reduced_model_data['training_time'] = (
+                        model_data.get('training_stop_at')
+                        - model_data.get('training_start_at')
+                    )
                 elif model_data.get('status') == 'training':
-                    reduced_model_data['training_time'] = datetime.now() - model_data.get('training_start_at')
-                reduced_model_data['training_time'] = reduced_model_data['training_time'] - timedelta(microseconds=reduced_model_data['training_time'].microseconds)
+                    reduced_model_data['training_time'] = (
+                        datetime.now()
+                        - model_data.get('training_start_at')
+                    )
+                if reduced_model_data['training_time'] is not None:
+                    reduced_model_data['training_time'] = (
+                        reduced_model_data['training_time']
+                        - timedelta(microseconds=reduced_model_data['training_time'].microseconds)
+                    )
 
             models.append(reduced_model_data)
         return models

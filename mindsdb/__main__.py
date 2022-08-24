@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
         # region Mark old predictors as outdated
         is_modified = False
-        predictor_records = get_model_records(active=None)
+        predictor_records = db.session.query(db.Predictor).filter(db.Predictor.deleted_at.is_(None)).all()
         if len(predictor_records) > 0:
             sucess, compatible_versions = get_versions_where_predictors_become_obsolete()
             if sucess is True:

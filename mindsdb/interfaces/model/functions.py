@@ -23,7 +23,10 @@ class MultiplePredictorRecordsFound(Exception):
 
 def get_model_records(company_id: int, active: bool = True, deleted_at=null(),
                       **kwargs):
-    kwargs['company_id'] = company_id
+    if company_id is None:
+        kwargs['company_id'] = null()
+    else:
+        kwargs['company_id'] = company_id
     kwargs['deleted_at'] = deleted_at
     if active is not None:
         kwargs['active'] = active
@@ -36,7 +39,10 @@ def get_model_records(company_id: int, active: bool = True, deleted_at=null(),
 
 def get_model_record(company_id: int, except_absent=False,
                      active: bool = True, deleted_at=null(), **kwargs):
-    kwargs['company_id'] = company_id
+    if company_id is None:
+        kwargs['company_id'] = null()
+    else:
+        kwargs['company_id'] = company_id
     kwargs['deleted_at'] = deleted_at
     if active is not None:
         kwargs['active'] = active

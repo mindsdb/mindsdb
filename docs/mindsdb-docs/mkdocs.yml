@@ -55,7 +55,7 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.inlinehilite
   - pymdownx.tabbed:
-      alternate_style: true 
+      alternate_style: true
   - pymdownx.superfences
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
@@ -83,13 +83,14 @@ nav:
     - Vultr Cloud: setup/vultr.md
     - Civo Cloud: setup/civo.md
   - Connect to MindsDB:
-      - MindsDB SQL Editor: connect/mindsdb_editor.md
-      - MySQL CLI: connect/mysql-client.md
       - DBeaver: connect/dbeaver.md
-      - Deepnote: connect/deepnote.md
-      - SQL Alchemy: connect/sql-alchemy.md
       - DBT: connect/dbt.md
-      - Kafka: connect/kafka.md 
+      - Deepnote: connect/deepnote.md
+      - MindsDB SQL Editor: connect/mindsdb_editor.md
+      - Metabase: connect/metabase.md
+      - Kafka: connect/kafka.md
+      - MySQL CLI: connect/mysql-client.md
+      - SQL Alchemy: connect/sql-alchemy.md
       - Tableau: connect/tableau.md
   - Data Setup in MindsDB: sql/create/databases.md
   - Upload a File to MindsDB: sql/create/file.md
@@ -112,7 +113,7 @@ nav:
     - JOIN: sql/api/join.md
   - Mongo API:
     - Collection Structure: mongo/collection-structure.md
-    - Insert(): 
+    - Insert():
       - Databases: mongo/database.md
       - Predictors: mongo/insert.md
     - Stats(): mongo/stats.md

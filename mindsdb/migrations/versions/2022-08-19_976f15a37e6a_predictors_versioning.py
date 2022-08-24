@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import text
 
-import mindsdb.interfaces.storage.db
+import mindsdb.interfaces.storage.db    # noqa
 
 
 # revision identifiers, used by Alembic.
@@ -28,8 +28,10 @@ def upgrade():
         batch_op.add_column(sa.Column('active', sa.Boolean(), nullable=True))
 
     conn.execute(text('''
-        update predictor set active = true;
-    '''))
+        update predictor set active = :val;
+    '''), {
+        'val': True
+    })
 
     session.commit()
 

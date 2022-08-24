@@ -272,6 +272,12 @@ class LightwoodHandler(PredictiveHandler):
                 error_message=f"Error: model '{model_name}' does not exists!"
             )
 
+        if predictor_record.update_status == 'updating':
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Error: model '{model_name}' already retraining!"
+            )
+
         predictor_record.update_status = 'updating'
         db.session.commit()
 

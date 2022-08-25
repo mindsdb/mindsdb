@@ -28,7 +28,9 @@ db.predictors.insert({
 On execution, we get:
 
 ```json
-WriteResult({ "nInserted" : 1 })
+WriteResult({
+    "nInserted" : 1
+})
 ```
 
 Where:
@@ -71,7 +73,9 @@ db.predictors.insert({
 On execution, we get:
 
 ```json
-WriteResult({ "nInserted" : 1 })
+WriteResult({
+    "nInserted" : 1
+})
 ```
 
 ### Checking Predictor Status

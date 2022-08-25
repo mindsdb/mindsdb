@@ -39,7 +39,7 @@ db.predictors.find({});
 
 On execution, we get:
 
-```JSON
+```json
 {
     "name": "home_rentals_model",
     "status": "complete",

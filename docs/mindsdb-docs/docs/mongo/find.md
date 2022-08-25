@@ -45,7 +45,7 @@ Where:
 
 ### Making a Single Prediction
 
-The following SQL statement fetches the predicted value of the `rental_price` column from the `home_rentals_model` model. The predicted value is the rental price of a property with attributes listed as a parameter to the `find()` method.
+The following MQL statement fetches the predicted value of the `rental_price` column from the `home_rentals_model` model. The predicted value is the rental price of a property with attributes listed as a parameter to the `find()` method.
 
 ```sql
 db.home_rentals_model.find({sqft: "823", location: "good", neighborhood: "downtown", days_on_market: "10"});

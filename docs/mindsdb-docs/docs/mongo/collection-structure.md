@@ -4,7 +4,7 @@
 
 On start-up, the MindsDB database consists of 2 collections: `databases` and `predictors`.
 
-You can verify it by running the following SQL commands:
+You can verify it by running the following MQL commands:
 
 ```sql
 USE mindsdb;

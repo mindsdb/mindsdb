@@ -26,7 +26,7 @@ db.databases.insertOne({
 
 On execution, we get:
 
-```sql
+```json
 {
 	"acknowledged" : true,
 	"insertedId" : ObjectId("62dff63c6cc2fa93e1d7f12c")
@@ -61,7 +61,7 @@ db.databases.insertOne({
 
 On execution, we get:
 
-```sql
+```json
 {
 	"acknowledged" : true,
 	"insertedId" : ObjectId("62dff63c6cc2fa93e1d7f12c")

@@ -8,11 +8,11 @@ class DruidHandlerTest(unittest.TestCase):
     def setUpClass(cls):
         cls.kwargs = {
             "host": "localhost",
-            "broker_port": 8888,
+            "port": 8888,
             "path": "/druid/v2/sql/",
             "scheme": "http"
         }
-        cls.handler = PinotHandler('test_druid_handler', cls.kwargs)
+        cls.handler = DruidHandler('test_druid_handler', cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()

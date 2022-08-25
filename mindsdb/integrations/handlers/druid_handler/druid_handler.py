@@ -171,3 +171,44 @@ class DruidHandler(DatabaseHandler):
         renderer = SqlalchemyRender(DruidDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
+
+    def get_tables(self) -> StatusResponse:
+        """
+        Return list of entities that will be accessible as tables.
+        Returns:
+            HandlerResponse
+        """
+
+        query = """
+            SELECT *
+            FROM INFORMATION_SCHEMA.TABLES
+        """
+        result = self.native_query(query)
+        df = result.data_frame
+
+        df = df[['TABLE_NAME' 'TABLE_TYPE']]
+        result.data_frame = df.rename(columns={'TABLE_NAME': 'table_name', 'TABLE_TYPE': 'table_type'})
+
+        return result
+
+    def get_columns(self, table_name: str) -> StatusResponse:
+        """
+        Returns a list of entity columns.
+        Args:
+            table_name (str): name of one of tables returned by self.get_tables()
+        Returns:
+            HandlerResponse
+        """
+
+        query = f"""
+            SELECT *
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE "TABLE_SCHEMA" = 'druid' AND "TABLE_NAME" = '{table_name}'
+        """
+        result = self.native_query(query)
+        df = result.data_frame
+
+        df = df[['COLUMN_NAME', 'DATA_TYPE']]
+        result.data_frame = df.rename(columns={'COLUMN_NAME': 'column_name', 'DATA_TYPE': 'data_type'})
+
+        return result

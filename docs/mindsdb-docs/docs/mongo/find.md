@@ -1,48 +1,54 @@
-# `#!sql find()` Method
+# Making Predictions using the ML Models
 
-## Description
+## Using the `find()` Method
 
-The `#!sql find()` method is used to get a predictions from the model table. The data is not persistent and is returned on the fly as a result-document. The basic syntax for finding prediction from the model is:
+### Description
 
-## Syntax
+The `find()` method is used to get predictions from the model table. The data is not persistent - it is returned on the fly as a result-document.
+
+### Syntax
 
 ```sql
-db.<predictor_name>.find({<column>:<value>,<column>:<value>});
+db.predictor_name.find({column: "value", column: "value"});
 ```
 
 On execution, we get:
 
 ```json
-    "column_name1" : value,
-    "column_name2": value,
+{
+    "column_name1" : "value",
+    "column_name2": "value",
     ...columns
     "select_data_query": null,
     "when_data": null,
-    "<target_variable>_original": value,
-    "<target_variable>__confidence": value,
-    "<target_variable>__explain": "{\"predicted_value\": value, \"confidence\": value, \"anomaly\": null, \"truth\": null, \"confidence_lower_bound\": value \"confidence_upper_bound\": value}",
-    "<target_variable>__anomaly": value,
-    "<target_variable>__min": value,
-    "<target_variable>__max": value
+    "<target_variable>_original": "value",
+    "<target_variable>_confidence": "value",
+    "<target_variable>_explain": "{\"predicted_value\": value, \"confidence\": value, \"anomaly\": null, \"truth\": null, \"confidence_lower_bound\": value \"confidence_upper_bound\": value}",
+    "<target_variable>_anomaly": "value",
+    "<target_variable>_min": "value",
+    "<target_variable>_max": "value"
+}
 ```
 
 Where:
 
-| Expressions                                     | Description                                                                                                                 |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `<[target_variable>_original`                      |  The real value of the target variable from the collection                                                  |
-| `<[target_variable>_confidence_`                      | Model confidence|
-| `<target_variable>`\_explain             | JSON object that contains additional information as `confidence_lower_bound`, `confidence_upper_bound`, `anomaly`, `truth`. |
-| `<[target_variable>__anomaly`                      | Model confidence|
-| `<[target_variable>__min`                      | Lower bound value|
-| `<[target_variable>__max`                      | Upper bound value|
+| Expressions                        | Description                                                                                                                      |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `"<target_variable>_original"`     | The real value of the target variable from the collection                                                                        |
+| `"<target_variable>_confidence"`   | Model confidence                                                                                                                 |
+| `"<target_variable>_explain"`      | JSON object that contains additional information, such as `confidence_lower_bound`, `confidence_upper_bound`, `anomaly`, `truth` |
+| `"<[target_variable>_anomaly"`     | Model anomaly                                                                                                                    |
+| `"<[target_variable>_min"`         | Lower bound value                                                                                                                |
+| `"<[target_variable>_max"`         | Upper bound value                                                                                                                |
 
 ## Example
 
-The following MQL statement gets a `rental_price` prediction from the `home_rentals_model` for a property that has the attributes named as a parameter to the `#!sql find({})` method:
+### Making a Single Prediction
+
+The following MQL statement fetches the predicted value of the `rental_price` column from the `home_rentals_model` model. The predicted value is the rental price of a property with attributes listed as a parameter to the `find()` method.
 
 ```sql
-db.home_rentals_model.find({'sqft':823, 'location': 'good','neighborhood':'downtown', 'days_on_market': 10});
+db.home_rentals_model.find({sqft: "823", location: "good", neighborhood: "downtown", days_on_market: "10"});
 ```
 
 On execution, we get:
@@ -65,8 +71,10 @@ On execution, we get:
     "rental_price_anomaly": null,
     "rental_price_min": 1379.4387560440227,
     "rental_price_max": 1483.2088343172054
-} >
+}
 ```
 
-!!! tip "Bulk predictions"
-    WIP
+### Making Bulk Predictions
+
+!!! warning "Bulk Predictions WIP"
+    The bulk predictions is a work in progress.

@@ -138,6 +138,14 @@ class ScyllaHandler(DatabaseHandler):
             if isinstance(query.from_table, ast.Identifier) and query.from_table.alias is not None:
                 query.from_table.alias = None
 
+            # remove table name from fields
+            table_name = query.from_table.parts[-1]
+
+            for target in query.targets:
+                if isinstance(target, ast.Identifier):
+                    if target.parts[0] == table_name:
+                        target.parts.pop(0)
+
         renderer = SqlalchemyRender('mysql')
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)

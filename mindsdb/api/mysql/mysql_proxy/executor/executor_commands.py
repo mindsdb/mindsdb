@@ -574,6 +574,10 @@ class ExecuteCommands:
                     'table_name': '',
                     'name': "selected",
                     'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': "accuracy_functions",
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
                 }]
                 columns = [Column(**d) for d in columns]
             elif predictor_attr == "ensemble":
@@ -1271,16 +1275,22 @@ class ExecuteCommands:
         return data
 
     def _get_model_info(self, data):
+        accuracy_functions = data.get('json_ai', {}).get('accuracy_functions')
+        if accuracy_functions:
+            accuracy_functions = str(accuracy_functions)
+
         models_data = data.get("submodel_data", [])
         if models_data == []:
             raise ErBadTableError("predictor doesn't contain enough data to generate 'model' attribute")
         data = []
+
         for model in models_data:
             m_data = []
             m_data.append(model["name"])
             m_data.append(model["accuracy"])
             m_data.append(model.get("training_time", "unknown"))
             m_data.append(1 if model["is_best"] else 0)
+            m_data.append(accuracy_functions)
             data.append(m_data)
         return data
 

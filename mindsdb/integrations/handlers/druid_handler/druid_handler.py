@@ -59,3 +59,37 @@ class DruidHandler(DatabaseHandler):
     def __del__(self):
         if self.is_connected is True:
             self.disconnect()
+
+    def connect(self) -> StatusResponse:
+        """
+        Set up the connection required by the handler.
+        Returns:
+            HandlerStatusResponse
+        """
+
+        if self.is_connected is True:
+            return self.connection
+
+        self.connection = connect(
+            host=self.connection_data['host'],
+            port=self.connection_data['port'],
+            path=self.connection_data['path'],
+            scheme=self.connection_data['scheme'],
+            username=self.connection_data['user'],
+            password=self.connection_data['password']
+        )
+        self.is_connected = True
+
+        return self.connection
+
+    def disconnect(self):
+        """
+        Close any existing connections.
+        """
+
+        if self.is_connected is False:
+            return
+
+        self.connection.close()
+        self.is_connected = False
+        return self.is_connected

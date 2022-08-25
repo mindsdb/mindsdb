@@ -58,7 +58,10 @@ from mindsdb_sql.planner.utils import query_traversal
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
-
+from mindsdb.interfaces.model.functions import (
+    get_model_record,
+    get_model_records
+)
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErKeyColumnDoesNotExist,
@@ -251,7 +254,7 @@ class SQLQuery():
         integrations_names.append('views')
 
         predictor_metadata = {}
-        predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
+        predictors = get_model_records(company_id=self.session.company_id)
 
         query_tables = []
 
@@ -397,6 +400,104 @@ class SQLQuery():
         mindsdb_sql_struct = self.query
 
         if isinstance(mindsdb_sql_struct, Select):
+
+            if (
+                isinstance(mindsdb_sql_struct.from_table, Identifier)
+                and (
+                    self.database == 'mindsdb'
+                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+                )
+            ):
+                if mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors':
+                    dn = self.datahub.get(self.mindsdb_database_name)
+                    data, columns = dn.get_predictors(mindsdb_sql_struct)
+                    table_name = ('mindsdb', 'predictors', 'predictors')
+                    data = [
+                        {
+                            (key, key): value
+                            for key, value in row.items()
+                        }
+                        for row in data
+                    ]
+                    data = [{table_name: x} for x in data]
+                    self.columns_list = [
+                        Column(
+                            database='mindsdb',
+                            table_name='predictors',
+                            name=column_name
+                        )
+                        for column_name in columns
+                    ]
+
+                    columns = [(column_name, column_name) for column_name in columns]
+
+                    self.fetched_data = {
+                        'values': data,
+                        'columns': {table_name: columns},
+                        'tables': [table_name]
+                    }
+                    return
+                elif mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors_versions':
+                    dn = self.datahub.get(self.mindsdb_database_name)
+                    data, columns = dn.get_predictors_versions(mindsdb_sql_struct)
+                    table_name = ('mindsdb', 'predictors_versions', 'predictors_versions')
+                    data = [
+                        {
+                            (key, key): value
+                            for key, value in row.items()
+                        }
+                        for row in data
+                    ]
+                    data = [{table_name: x} for x in data]
+                    self.columns_list = [
+                        Column(
+                            database='mindsdb',
+                            table_name='predictors_versions',
+                            name=column_name
+                        )
+                        for column_name in columns
+                    ]
+
+                    columns = [(column_name, column_name) for column_name in columns]
+
+                    self.fetched_data = {
+                        'values': data,
+                        'columns': {table_name: columns},
+                        'tables': [table_name]
+                    }
+                    return
+                elif mindsdb_sql_struct.from_table.parts[-1].lower() in ('datasources', 'databases'):
+                    dn = self.datahub.get(self.mindsdb_database_name)
+                    data, columns = dn.get_integrations(mindsdb_sql_struct)
+                    table_name = ('mindsdb', 'datasources', 'datasources')
+                    data = [
+                        {
+                            (key, key): value
+                            for key, value in row.items()
+                        }
+                        for row in data
+                    ]
+
+                    data = [{table_name: x} for x in data]
+
+                    self.columns_list = [
+                        Column(
+                            database='mindsdb',
+                            table_name='datasources',
+                            name=column_name
+                        )
+                        for column_name in columns
+                    ]
+
+                    columns = [(column_name, column_name) for column_name in columns]
+
+                    self.fetched_data = {
+                        'values': data,
+                        'columns': {table_name: columns},
+                        'tables': [table_name]
+                    }
+                    return
+
             # is it query to 'predictors'?
             if (
                 isinstance(mindsdb_sql_struct.from_table, Identifier)

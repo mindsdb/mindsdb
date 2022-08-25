@@ -25,6 +25,7 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
+from mindsdb.interfaces.model.functions import get_model_records
 
 
 COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
@@ -126,7 +127,7 @@ if __name__ == '__main__':
 
         # region Mark old predictors as outdated
         is_modified = False
-        predictor_records = db.session.query(db.Predictor).all()
+        predictor_records = db.session.query(db.Predictor).filter(db.Predictor.deleted_at.is_(None)).all()
         if len(predictor_records) > 0:
             sucess, compatible_versions = get_versions_where_predictors_become_obsolete()
             if sucess is True:

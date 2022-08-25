@@ -79,6 +79,7 @@ class Predictor(Base):
     id = Column(Integer, primary_key=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
+    deleted_at = Column(DateTime)
     name = Column(String)
     data = Column(Json)  # A JSON -- should be everything returned by `get_model_data`, I think
     to_predict = Column(Array)
@@ -90,6 +91,7 @@ class Predictor(Base):
     is_custom = Column(Boolean)
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')
+    active = Column(Boolean, default=True)
     training_data_columns_count = Column(Integer)
     training_data_rows_count = Column(Integer)
     training_start_at = Column(DateTime)

@@ -69,7 +69,7 @@ If the installation fails when installing **torch** or **torchvision**, try to i
 Here, you need either [Anaconda](https://www.anaconda.com/products/individual) or [Conda](https://conda.io/projects/conda/en/latest/index.html)
 installed on your machine.
 
-1. Open Anaconda prompt and create a new virtual environment 
+1. Open Anaconda prompt and create a new virtual environment:
 
     ```console
     conda create -n mindsdb

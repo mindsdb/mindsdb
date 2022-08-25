@@ -99,7 +99,7 @@ class Predictor(Base):
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
     dtype_dict = Column(Json, nullable=True)
-    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_predictor_name_company_id')
 
 
 class Log(Base):
@@ -123,7 +123,7 @@ class Integration(Base):
     engine = Column(String, nullable=False)
     data = Column(Json)
     company_id = Column(Integer)
-    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_integration_name_company_id')
 
 
 class Stream(Base):
@@ -155,7 +155,7 @@ class File(Base):
     columns = Column(Json, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_file_name_company_id')
 
 
 class View(Base):
@@ -164,7 +164,7 @@ class View(Base):
     name = Column(String, nullable=False)
     company_id = Column(Integer)
     query = Column(String, nullable=False)
-    uniq_const = UniqueConstraint('name', 'company_id', name='unique_name_company_id')
+    uniq_const = UniqueConstraint('name', 'company_id', name='unique_view_name_company_id')
 
 
 # DDL is changing through migrations

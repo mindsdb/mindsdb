@@ -1,5 +1,4 @@
-from ..scylla_handler import Handler as ScyllaHandler
-
+from ..scylla_handler import Handler as ScyllaHandler, connection_args
 
 class DatastaxHandler(ScyllaHandler):
     """

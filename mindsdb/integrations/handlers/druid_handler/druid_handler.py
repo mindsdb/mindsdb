@@ -75,7 +75,7 @@ class DruidHandler(DatabaseHandler):
             port=self.connection_data['port'],
             path=self.connection_data['path'],
             scheme=self.connection_data['scheme'],
-            username=self.connection_data['user'],
+            user=self.connection_data['user'],
             password=self.connection_data['password']
         )
         self.is_connected = True
@@ -186,7 +186,7 @@ class DruidHandler(DatabaseHandler):
         result = self.native_query(query)
         df = result.data_frame
 
-        df = df[['TABLE_NAME' 'TABLE_TYPE']]
+        df = df[['TABLE_NAME', 'TABLE_TYPE']]
         result.data_frame = df.rename(columns={'TABLE_NAME': 'table_name', 'TABLE_TYPE': 'table_type'})
 
         return result

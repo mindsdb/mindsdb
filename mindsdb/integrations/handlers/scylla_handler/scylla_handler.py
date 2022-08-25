@@ -4,8 +4,11 @@ from collections import OrderedDict
 import pandas as pd
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
+from cassandra.util import Date
+
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.parser import ast
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
@@ -86,6 +89,18 @@ class ScyllaHandler(DatabaseHandler):
 
         return response
 
+    def prepare_response(self, resp):
+        # replace cassandra types
+        data = []
+        for row in resp:
+            row2 = {}
+            for k, v in row._asdict().items():
+                if isinstance(v, Date):
+                    v = v.date()
+                row2[k] = v
+            data.append(row2)
+        return data
+
     def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
@@ -95,6 +110,7 @@ class ScyllaHandler(DatabaseHandler):
         session = self.connect()
         try:
             resp = session.execute(query).all()
+            resp = self.prepare_response(resp)
             if resp:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
@@ -116,6 +132,12 @@ class ScyllaHandler(DatabaseHandler):
         """
         Retrieve the data from the SQL statement.
         """
+
+        # remove table alias because Cassandra Query Language doesn't support it
+        if isinstance(query, ast.Select):
+            if isinstance(query.from_table, ast.Identifier) and query.from_table.alias is not None:
+                query.from_table.alias = None
+
         renderer = SqlalchemyRender('mysql')
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)

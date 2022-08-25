@@ -796,10 +796,10 @@ class SQLQuery():
                         if '__mdb_forecast_offset' not in row:
                             row['__mdb_forecast_offset'] = _mdb_forecast_offset
 
-                for row in where_data:
-                    for key in row:
-                        if isinstance(row[key], datetime.date):
-                            row[key] = str(row[key])
+                # for row in where_data:
+                #     for key in row:
+                #         if isinstance(row[key], datetime.date):
+                #             row[key] = str(row[key])
 
                 table_name = get_preditor_alias(step, self.database)
                 columns = {table_name: []}

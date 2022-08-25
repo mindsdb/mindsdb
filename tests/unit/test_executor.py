@@ -1,5 +1,6 @@
 from unittest.mock import patch
 import pandas as pd
+import datetime as dt
 
 from lightwood.api import dtype
 
@@ -45,6 +46,43 @@ class Test(BaseTestCase):
            ''', dialect='mindsdb'))
         ret_df = self.ret_to_df(ret)
         assert ret_df['p'][0] == predicted_value
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_dates(self, mock_handler):
+        df = pd.DataFrame([
+            {'a': 1, 'b': dt.datetime(2020, 1, 1)},
+            {'a': 2, 'b': dt.datetime(2020, 1, 2)},
+            {'a': 1, 'b': dt.datetime(2020, 1, 3)},
+        ])
+        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
+
+        # --- use predictor ---
+        predictor = {
+            'name': 'task_model',
+            'predict': 'p',
+            'dtypes': {
+                'p': dtype.float,
+                'a': dtype.integer,
+                'b': dtype.categorical
+            },
+            'predicted_value': 3.14
+        }
+        self.set_predictor(predictor)
+        ret = self.command_executor.execute_command(parse_sql(f'''
+            SELECT a, last(b)
+            FROM (
+               SELECT res.a, res.b 
+               FROM pg.tasks as source
+               JOIN mindsdb.task_model as res
+            ) 
+            group by 1
+            order by a
+           ''', dialect='mindsdb'))
+        assert ret.error_code is None
+
+        assert len(ret.data) == 2
+        # is last datetime value of a = 1
+        assert ret.data[0][1].isoformat() == dt.datetime(2020, 1, 3).isoformat()
 
 
 class TestTableau(BaseTestCase):

@@ -22,7 +22,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 class DruidHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Apache Pinot statements.
+    This handler handles connection and execution of the Apache Druid statements.
     """
 
     name = 'druid'
@@ -37,7 +37,7 @@ class DruidHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'pinot'
+        self.dialect = 'druid'
 
         optional_parameters = ['user', 'password']
         for parameter in optional_parameters:

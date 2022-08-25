@@ -46,15 +46,15 @@ Where:
 
 | Name                       | Description                                                                           |
 | -------------------------- | ------------------------------------------------------------------------------------- |
-| "name"                     | The name of the model                                                                 |
-| "status"                   | Training status (`generating`, or `training`, or `complete`, or `error`)              |
-| "accuracy"                 | The model accuracy (`0.999` is a sample accuracy value)                               |
-| "predict"                  | The name of the target variable column                                                |
-| "update_status"            | Training update status (`up_to_date`, or `updating`)                                  |
-| "mindsdb_version"          | The MindsDB version used while training (`22.8.2.1` is a sample version value)        |
-| "error"                    | Error message stores a value in case of an error, otherwise, it is null               |
-| "select_data_query"        | It is required for SQL API, otherwise, it is null                                     |
-| "training_options"         | Additional training parameters                                                        |
+| `"name"`                   | The name of the model                                                                 |
+| `"status"`                 | Training status (`generating`, or `training`, or `complete`, or `error`)              |
+| `"accuracy"`               | The model accuracy (`0.999` is a sample accuracy value)                               |
+| `"predict"`                | The name of the target variable column                                                |
+| `"update_status"`          | Training update status (`up_to_date` or `updating`)                                  |
+| `"mindsdb_version"`        | The MindsDB version used while training (`22.8.2.1` is a sample version value)        |
+| `"error"`                  | Error message stores a value in case of an error, otherwise, it is null               |
+| `"select_data_query"`      | It is required for SQL API, otherwise, it is null                                     |
+| `"training_options"`       | Additional training parameters                                                        |
 
 ## The `databases` Collection
 
@@ -62,11 +62,11 @@ All the Mongo database connections are stored inside the `databases` collection,
 
 ```json
 { 
-"name" : "mongo_int",
-"database_type" : "mongodb",
-"host" : "",
-"port" : 27017,
-"user" : null
+    "name" : "mongo_int",
+    "database_type" : "mongodb",
+    "host" : "",
+    "port" : 27017,
+    "user" : null
 }
 ```
 
@@ -74,8 +74,8 @@ Where:
 
 | Name                | Description                                 |
 | ------------------- | ------------------------------------------- |
-| "name"              | The name of the integration                 |
-| "database_type"     | The database type (it is always `mongodb`)  |
-| "host"              | The Mongo host                              |
-| "port"              | The Mongo port                              |
-| "user"              | The Mongo user                              |
+| `"name"`            | The name of the integration                 |
+| `"database_type"`   | The database type (it is always `mongodb`)  |
+| `"host"`            | The Mongo host                              |
+| `"port"`            | The Mongo port                              |
+| `"user"`            | The Mongo user                              |

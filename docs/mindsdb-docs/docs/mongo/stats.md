@@ -2,31 +2,31 @@
 
 ## The `stats()` Method
 
-The `stats()` method is used to display the attributes of an existing model. It accepts the `{'scale': 'attribute'}` object as an argument.
+The `stats()` method is used to display the attributes of an existing model. It accepts the `{scale: "attribute"}` object as an argument.
 
 Here is how to call the `stats()` method.
 
 ```sql
-db.name_of_your_predictor.stats({'scale':'attribute'});
+db.predictor_name.stats({scale: "attribute"});
 ```
 
 Where:
 
 | Name                       | Description                                                                                                                                       |
 | ---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| `name_of_your_predictor`   | The name of the predictor whose statistics you want to see                                                                                        |
-| `{'scale': 'attribute'}`   | The argument of the `stats()` method defines the type of statistics (`{'scale':'features'}`, or `{'scale':'model'}`, or `{'scale':'ensemble'}`)   |
+| `predictor_name`   | The name of the predictor whose statistics you want to see                                                                                        |
+| `{scale: "attribute"}`   | The argument of the `stats()` method defines the type of statistics (`{scale: "features"}`, or `{scale: "model"}`, or `{scale: "ensemble"}`)   |
 
-## Using the `stats()` Method with the `{'scale':'features'}` Parameter
+## Using the `stats()` Method with the `{scale: "features"}` Parameter
 
 ### Description
 
-The `db.name_of_your_predictor.stats({'scale':'features'})` method is used to display the way the model encoded the data before training.
+The `db.predictor_name.stats({scale: "features"})` method is used to display the way the model encoded the data before training.
 
 ### Syntax
 
 ```sql
-db.name_of_your_predictor.stats({'scale':'features'});
+db.predictor_name.stats({scale: "features"});
 ```
 
 On execution, we get:
@@ -48,15 +48,15 @@ Where:
 
 | Name            | Description                                      |
 | --------------- | ------------------------------------------------ |
-| `column`        | The name of the column                           |
-| `type`          | Type of the inferred data                        |
-| `encoder`       | Encoder used                                     |
-| `role`          | Role of the column (`feature` or `target`)       |
+| `"column"`      | The name of the column                           |
+| `"type"`        | Type of the inferred data                        |
+| `"encoder"`     | Encoder used                                     |
+| `"role"`        | Role of the column (`feature` or `target`)       |
 
 ### Example
 
 ```sql
-db.home_rentals_model.stats({'scale':'features'});
+db.home_rentals_model.stats({scale: "features"});
 ```
 
 On execution, we get:
@@ -117,29 +117,29 @@ On execution, we get:
 }
 ```
 
-## Using the `stats()` Method with the `{'scale':'model'}` Parameter
+## Using the `stats()` Method with the `{scale: "model"}` Parameter
 
 ### Description
 
-The `db.name_of_your_predictor.stats({'scale':'model'})` method is used to display the performance of the candidate models.
+The `db.predictor_name.stats({scale: "model"})` method is used to display the performance of the candidate models.
 
 ### Syntax
 
 ```sql
-db.name_of_your_predictor.stats({'scale':'model'});
+db.predictor_name.stats({scale: "model"});
 ```
 
 On execution, we get:
 
 ```json
 {
-  "data" :[
-      {
-              "name" : "<candidate_model>",
-              "performance" : <0.0|1.0>,
-              "training_time" : <seconds>,
-              "selected" : <0|1>
-      },
+  "data": [
+    {
+       "name" : "candidate_model",
+       "performance" : <0.0|1.0>,
+       "training_time" : <seconds>,
+       "selected" : <0|1>
+    }
   ]
 }
 ```
@@ -148,15 +148,15 @@ Where:
 
 | Name                       | Description                                                |
 | -------------------------- | ---------------------------------------------------------- |
-| `name`                     | Name of the candidate model                                |
-| `performance`              | Accuracy from 0 to 1 depending on the type of the model    |
-| `training_time`            | Time elapsed for the training of the model                 |
-| `selected`                 | `1` for the best performing model and `0` for the rest     |
+| `"name"`                   | Name of the candidate model                                |
+| `"performance"`            | Accuracy from 0 to 1 depending on the type of the model    |
+| `"training_time"`          | Time elapsed for the training of the model                 |
+| `"selected"`               | `1` for the best performing model and `0` for the rest     |
 
 ### Example
 
 ```sql
-db.home_rentals_model.stats({'scale':'model'});
+db.home_rentals_model.stats({scale: "model"});
 ```
 
 On execution, we get:
@@ -187,16 +187,16 @@ On execution, we get:
 }
 ```
 
-## Using the `stats()` Method with the `{'scale':'ensemble'}` Parameter
+## Using the `stats()` Method with the `{scale: "ensemble"}` Parameter
 
 ### Description
 
-The `db.name_of_your_predictor.stats({'scale':'ensemble'})` method is used to display the parameters used to select the best candidate model.
+The `db.predictor_name.stats({scale: "ensemble"})` method is used to display the parameters used to select the best candidate model.
 
 ### Syntax
 
 ```sql
-db.name_of_your_predictor.stats({'scale':'ensemble'});
+db.predictor_name.stats({scale: "ensemble"});
 ```
 
 On execution, we get:

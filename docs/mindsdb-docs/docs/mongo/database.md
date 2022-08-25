@@ -1,6 +1,6 @@
 # Connecting Databases to MindsDB in Mongo
 
-The integrations provide data to be used for making forecasts. Here, we use the `databases.insertOne()` method to connect the integrations to Mongo.
+Integrations, or external databases, provide data to be used for making forecasts. Here, we use the `databases.insertOne()` method to connect the integrations to Mongo.
 
 ## Using the `db.databases.insertOne()` Method
 
@@ -14,13 +14,13 @@ Our MindsDB Mongo API supports creating a connection by passing the database cre
 
 ```sql
 db.databases.insertOne({
-    'name': 'mongo_int', 
-    'engine': 'mongodb',
-    'connection_args': {
+    name: "mongo_int", 
+    engine: "mongodb",
+    connection_args: {
             "port": 27017,
             "host": "mongodb+srv://admin:@localhost",
             "database": "test_data"            
-  }   
+    }
 });
 ```
 
@@ -49,9 +49,9 @@ Here is an example of how to connect to the local MongoDB.
 
 ```sql
 db.databases.insertOne({
-    'name': 'mongo_local', 
-    'engine': 'mongodb',
-    'connection_args': {
+    name: "mongo_local", 
+    engine: "mongodb",
+    connection_args: {
             "port": 27017,
             "host": "mongodb+srv://admin:@localhost",
             "database": "test_data"            

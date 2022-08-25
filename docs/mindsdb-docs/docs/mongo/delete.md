@@ -9,26 +9,29 @@ The `db.predictors.deleteOne()` method deletes an ML model specified in its argu
 ### Syntax
 
 ```sql
-db.predictors.deleteOne({'name': <predictor_name>});
+db.predictors.deleteOne({name: "predictor_name"});
 ```
 
 On execution, we get:
 
 ```json
-{ "acknowledged" : true, "deletedCount" : 1 }
+{
+    "acknowledged" : true,
+    "deletedCount" : 1
+}
 ```
 
 Where:
 
 | Name               | Description                     |
 | ------------------ | ------------------------------- |
-| `<predictor_name>` | Name of the model to be deleted |
+| `name`             | Name of the model to be deleted |
 
 ## Example
 
 ### Listing All the Predictors
 
-Before deleting a predictor, let's list all the available predictors using the `db.predictors.find({})` method.
+Before deleting a predictor, let's list all the available predictors using the `db.predictors.find()` method.
 
 ```sql
 db.predictors.find({});
@@ -65,14 +68,17 @@ On execution, we get:
 
 The `db.predictors.deleteOne()` method drops the model collection called `home_rentals_model`.
 
-```
-db.predictors.deleteOne({'name': 'home_rentals_model'});
+```sql
+db.predictors.deleteOne({name: "home_rentals_model"});
 ```
 
 On execution, we get:
 
 ```json
-{ "acknowledged" : true, "deletedCount" : 1 }
+{
+    "acknowledged" : true,
+    "deletedCount" : 1
+}
 ```
 
 ### Validating the Deletion

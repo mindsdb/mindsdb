@@ -723,6 +723,8 @@ class ExecuteCommands:
             ml_integration_name = statement.name.parts[0]
             statement.name.parts = [statement.name.parts[-1]]
         ml_integration_name = ml_integration_name.lower()
+        if ml_integration_name == 'mindsdb':
+            ml_integration_name = 'lightwood'
 
         ml_handler = self.session.integration_controller.get_handler(ml_integration_name)
 

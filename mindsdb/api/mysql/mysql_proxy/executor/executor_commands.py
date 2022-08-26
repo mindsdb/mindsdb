@@ -718,8 +718,15 @@ class ExecuteCommands:
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     def answer_create_predictor(self, statement):
-        lw_handler = self.session.integration_controller.get_handler('lightwood')
-        result = lw_handler.query(statement)
+        ml_integration_name = self.session.database
+        if len(statement.name.parts) == 2:
+            ml_integration_name = statement.name.parts[0]
+            statement.name.parts = [statement.name.parts[-1]]
+        ml_integration_name = ml_integration_name.lower()
+
+        ml_handler = self.session.integration_controller.get_handler(ml_integration_name)
+
+        result = ml_handler.query(statement)
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 

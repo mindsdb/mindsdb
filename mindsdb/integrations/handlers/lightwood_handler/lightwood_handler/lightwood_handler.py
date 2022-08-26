@@ -464,15 +464,25 @@ class LightwoodHandler(PredictiveHandler):
                 'anomaly': row.get('anomaly', None),
                 'truth': row.get('truth', None)
             }
+
             if predictor.supports_proba:
                 for cls in predictor.statistical_analysis.train_observed_classes:
                     if row.get(f'__mdb_proba_{cls}', False):
                         values[f'probability_class_{cls}'] = round(row[f'__mdb_proba_{cls}'], 4)
-            obj = { target: values }
-            if 'lower' in row:
-                obj[target]['confidence_lower_bound'] = row.get('lower', None)
-                obj[target]['confidence_upper_bound'] = row.get('upper', None)
 
+            for block in predictor.analysis_blocks:
+                if type(block).__name__ == 'ShapleyValues':
+                    cols = block.columns
+                    values['shap_base_response'] = round(row['shap_base_response'], 4)
+                    values['shap_final_response'] = round(row['shap_final_response'], 4)
+                    for col in cols:
+                        values[f'shap_contribution_{col}'] = round(row[f'shap_contribution_{col}'], 4)
+
+            if 'lower' in row:
+                values['confidence_lower_bound'] = row.get('lower', None)
+                values['confidence_upper_bound'] = row.get('upper', None)
+
+            obj = { target: values }
             explain_arr.append(obj)
 
             td = {'predicted_value': row['prediction']}

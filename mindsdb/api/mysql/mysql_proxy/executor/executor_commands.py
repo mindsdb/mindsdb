@@ -539,7 +539,7 @@ class ExecuteCommands:
             ]
             data = [description]
         else:
-            data = model_controller.get_model_data(predictor_name)
+            data = model_controller.get_model_data(name=predictor_name)
             if predictor_attr == "features":
                 data = self._get_features_info(data)
                 columns = [{

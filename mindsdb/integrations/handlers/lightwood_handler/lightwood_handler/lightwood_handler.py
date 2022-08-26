@@ -43,6 +43,10 @@ from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.model.model_controller import ModelController
+from mindsdb.interfaces.model.functions import (
+    get_model_record,
+    get_model_records
+)
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 
 from .learn_process import brack_to_mod, rep_recur, LearnProcess, UpdateProcess
@@ -89,7 +93,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class LightwoodHandler(PredictiveHandler):
 
     name = 'lightwood'
-    predictor_cache: Dict[str, Dict[str, Union[Any]]]
+    predictor_cache: Dict[str, Dict[str, Any]]
 
     def __init__(self, name, **kwargs):
         """ Lightwood AutoML integration """  # noqa
@@ -160,9 +164,7 @@ class LightwoodHandler(PredictiveHandler):
 
     def get_columns(self, table_name: str) -> Response:
         """ For getting standard info about a table. e.g. data types """  # noqa
-        predictor_record = db.Predictor.query.filter_by(
-            company_id=self.company_id, name=table_name
-        ).first()
+        predictor_record = get_model_record(company_id=self.company_id, name=table_name)
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -289,13 +291,18 @@ class LightwoodHandler(PredictiveHandler):
     def _retrain(self, statement):
         model_name = statement.name.parts[-1]
 
-        predictor_record = db.Predictor.query.filter_by(
-            company_id=self.company_id, name=model_name
-        ).first()
+        predictor_record = get_model_record(company_id=self.company_id, name=model_name)
+
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=f"Error: model '{model_name}' does not exists!"
+            )
+
+        if predictor_record.update_status == 'updating':
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Error: model '{model_name}' already retraining!"
             )
 
         predictor_record.update_status = 'updating'
@@ -308,7 +315,7 @@ class LightwoodHandler(PredictiveHandler):
         if response.type == RESPONSE_TYPE.ERROR:
             return response
 
-        p = UpdateProcess(model_name, response.data_frame, self.company_id)
+        p = UpdateProcess(predictor_record.id, response.data_frame, self.company_id)
         p.start()
 
         return Response(RESPONSE_TYPE.OK)
@@ -316,31 +323,32 @@ class LightwoodHandler(PredictiveHandler):
     def _drop(self, statement):
         model_name = statement.name.parts[-1]
 
-        existing_predictors_names = [x.lower() for x in self._get_tables_names()]
-        if model_name not in existing_predictors_names:
+        predictors_records = get_model_records(company_id=self.company_id, name=model_name, active=None)
+        if len(predictors_records) == 0:
             return Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=f"Model '{model_name}' does not exist"
             )
 
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=model_name).first()
-        if predictor_record is None:
-            raise Exception(f"Predictor '{model_name}' does not exist")
-
         is_cloud = self.config.get('cloud', False)
-        model = self.model_controller.get_model_data(predictor_record.name, company_id=self.company_id)
-        if (
-            is_cloud is True
-            and model.get('status') in ['generating', 'training']
-            and isinstance(model.get('created_at'), str) is True
-            and (datetime.datetime.now() - parse_datetime(model.get('created_at'))) < datetime.timedelta(hours=1)
-        ):
-            raise Exception('You are unable to delete models currently in progress, please wait before trying again')
+        if is_cloud:
+            for predictor_record in predictors_records:
+                model_data = self.model_controller.get_model_data(predictor_record=predictor_record)
+                if (
+                    is_cloud is True
+                    and model_data.get('status') in ['generating', 'training']
+                    and isinstance(model_data.get('created_at'), str) is True
+                    and (datetime.datetime.now() - parse_datetime(model_data.get('created_at'))) < datetime.timedelta(hours=1)
+                ):
+                    raise Exception('You are unable to delete models currently in progress, please wait before trying again')
 
-        db.session.delete(predictor_record)
+        for predictor_record in predictors_records:
+            if is_cloud:
+                predictor_record.deleted_at = datetime.now()
+            else:
+                db.session.delete(predictor_record)
+            self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
         db.session.commit()
-
-        self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
 
         return Response(RESPONSE_TYPE.OK)
 
@@ -392,9 +400,7 @@ class LightwoodHandler(PredictiveHandler):
         if isinstance(data, dict):
             data = [data]
         df = pd.DataFrame(data)
-        predictor_record = db.Predictor.query.filter_by(
-            company_id=self.company_id, name=model_name
-        ).first()
+        predictor_record = get_model_record(company_id=self.company_id, name=model_name)
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -403,7 +409,7 @@ class LightwoodHandler(PredictiveHandler):
 
         fs_name = f'predictor_{self.company_id}_{predictor_record.id}'
 
-        model_data = self.model_controller.get_model_data(model_name, company_id=self.company_id)
+        model_data = self.model_controller.get_model_data(predictor_record=predictor_record)
 
         # regon LoadCache
         if (
@@ -656,7 +662,7 @@ class LightwoodHandler(PredictiveHandler):
         return analysis.to_dict()
 
     def edit_json_ai(self, name: str, json_ai: dict):
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=name).first()
+        predictor_record = get_model_record(company_id=self.company_id, name=name)
         assert predictor_record is not None
 
         json_ai = lightwood.JsonAI.from_dict(json_ai)
@@ -674,7 +680,7 @@ class LightwoodHandler(PredictiveHandler):
         if self.config.get('cloud', False):
             raise Exception('Code editing prohibited on cloud')
 
-        predictor_record = db.session.query(db.Predictor).filter_by(company_id=self.company_id, name=name).first()
+        predictor_record = get_model_record(company_id=self.company_id, name=name)
         assert predictor_record is not None
 
         lightwood.predictor_from_code(code)

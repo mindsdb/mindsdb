@@ -56,7 +56,7 @@ def upgrade():
 
     with op.batch_alter_table('datasource', schema=None) as batch_op:
         batch_op.add_column(sa.Column('analysis_id', sa.Integer(), nullable=True))
-        batch_op.create_foreign_key('fk_analysis_id', 'analysis', ['analysis_id'], ['id'])
+        batch_op.create_foreign_key('fk_ds_analysis_id', 'analysis', ['analysis_id'], ['id'])
         batch_op.add_column(sa.Column('ds_class', sa.String(), nullable=True))
 
     session = sa.orm.Session(bind=conn)
@@ -205,7 +205,7 @@ def downgrade():
     with op.batch_alter_table('dataset', schema=None) as batch_op:
         batch_op.drop_constraint('fk_integration_id', type_='foreignkey')
         batch_op.add_column(sa.Column('analysis', sa.VARCHAR(), nullable=True))
-        batch_op.drop_constraint('fk_analysis_id', type_='foreignkey')
+        batch_op.drop_constraint('fk_ds_analysis_id', type_='foreignkey')
         batch_op.drop_column('ds_class')
 
     op.rename_table('dataset', 'datasource')

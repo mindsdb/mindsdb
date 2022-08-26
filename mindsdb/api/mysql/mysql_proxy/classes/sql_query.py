@@ -1235,74 +1235,69 @@ class SQLQuery():
 
             step_data = steps_data[step.dataframe.step_num]
 
-            class PrepareDFQuery:
-                def step_data_to_df(self, step_data, table_name=None):
-                    self.step_data = step_data
+            table_name = step.table_name
+            if table_name is None:
+                table_name = 'df_table'
+            else:
+                table_name = table_name
 
-                    if table_name is None:
-                        table_name = 'df_table'
-                    else:
-                        table_name = table_name
-                    self.table_name = table_name
+            def step_data_to_df(step_data):
+                result = []
+                cols = set()
+                for _, col_list in step_data['columns'].items():
+                    for col in col_list:
+                        cols.add(col[0])
 
-                    result = []
-                    cols = set()
-                    for _, col_list in step_data['columns'].items():
+                for row in step_data['values']:
+                    data_row = {}
+                    for table, col_list in step_data['columns'].items():
                         for col in col_list:
-                            cols.add(col[0])
+                            data_row[col[0]] = row[table][col]
+                    result.append(data_row)
+                df = pd.DataFrame(result, columns=list(cols))
 
-                    for row in step_data['values']:
-                        data_row = {}
-                        for table, col_list in step_data['columns'].items():
-                            for col in col_list:
-                                data_row[col[0]] = row[table][col]
-                        result.append(data_row)
-                    df = pd.DataFrame(result, columns=list(cols))
+                return df
 
-                    return df
+            def df_to_step_data(res, step_data0, table_name):
+                resp_dict = res.to_dict(orient='records')
 
-                def df_to_step_data(self, res):
-                    resp_dict = res.to_dict(orient='records')
+                # get from first table
+                database = step_data0['tables'][0][0]
+                appropriate_table = (database, table_name, table_name)
 
-                    # get from first table
-                    database = self.step_data['tables'][0][0]
-                    appropriate_table = (database, self.table_name, self.table_name)
+                columns = []
+                for key, dtyp in res.dtypes.items():
 
-                    columns = []
-                    for key, dtyp in res.dtypes.items():
+                    columns.append((key, key))
 
-                        columns.append((key, key))
-
-                    values = []
-                    for row in resp_dict:
-                        row2 = {
-                            (key, key): value
-                            for key, value in row.items()
-                        }
-
-                        values.append(
-                            {
-                                appropriate_table: row2
-                            }
-                        )
-
-                    types = self.step_data.get('types', {})
-                    data = {
-                        'tables': [appropriate_table],
-                        'columns': {appropriate_table: columns},
-                        'values': values,
-                        'types': types  # copy
+                values = []
+                for row in resp_dict:
+                    row2 = {
+                        (key, key): value
+                        for key, value in row.items()
                     }
-                    return data
 
-            prep = PrepareDFQuery()
+                    values.append(
+                        {
+                            appropriate_table: row2
+                        }
+                    )
+
+                types = step_data0.get('types', {})
+                data = {
+                    'tables': [appropriate_table],
+                    'columns': {appropriate_table: columns},
+                    'values': values,
+                    'types': types  # copy
+                }
+                return data
 
             query = step.query
             query.from_table = Identifier('df_table')
-            df = prep.step_data_to_df(step_data, table_name=step.table_name)
+            df = step_data_to_df(step_data)
             res = query_df(df, query)
 
-            data = prep.df_to_step_data(res)
+            data = df_to_step_data(res, step_data, table_name)
 
         elif type(step) == SaveToTable or type(step) == InsertToTable:
             is_replace = False

@@ -1,3 +1,5 @@
+import copy
+
 from pandas import DataFrame
 
 from mindsdb_sql import parse_sql
@@ -49,6 +51,7 @@ class ViewHandler(DatabaseHandler):
             )
 
         # set alias
+        query = copy.deepcopy(query)
         subquery_ast.alias = Identifier(view_name)
         query.from_table = subquery_ast
 

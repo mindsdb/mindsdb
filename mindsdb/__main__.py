@@ -138,7 +138,7 @@ if __name__ == '__main__':
                     last_compatible_version = compatible_versions[-1]
                     for predictor_record in predictor_records:
                         if (
-                            isinstance(predictor_record.mindsdb_version, str) is not None
+                            isinstance(predictor_record.mindsdb_version, str)
                             and version.parse(predictor_record.mindsdb_version) < last_compatible_version
                         ):
                             predictor_record.update_status = 'available'

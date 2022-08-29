@@ -41,4 +41,4 @@ Now, you are ready to use MindsDB Cloud.
 
 !!! tip "What's next?"
     Now you can use [MindsDB Cloud as a SQL database](/connect/mindsdb_editor).
-    We recommend you to follow one of our tutorials or learn more about the [MindsDB Database](/sql/table-structure/).
+    We recommend you follow one of our tutorials or learn more about the [MindsDB Database](/sql/table-structure/).

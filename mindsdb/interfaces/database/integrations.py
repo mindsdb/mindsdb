@@ -1,11 +1,11 @@
 import os
+import base64
 import shutil
 import tempfile
 import importlib
 from pathlib import Path
 from copy import deepcopy
-import base64
-import shutil
+from collections import OrderedDict
 
 from sqlalchemy import func
 
@@ -213,38 +213,40 @@ class IntegrationController:
                 (Integration.company_id == company_id)
                 & (func.lower(Integration.name) == func.lower(name))
             ).first()
-        if integration_record is None:
-            if name == 'lightwood':
-                handler = self.create_handler(
-                    name=name,
-                    handler_type='lightwood',
-                    connection_data=None,
-                    company_id=company_id
-                )
-                return handler
-            else:
-                raise Exception(f'Unknown integration: {name}')
-        integration_meta = self._get_integration_record_data(integration_record, True)
 
-        integration_engine = integration_meta['engine']
-        integration_name = integration_meta['name']
+        integration_data = self._get_integration_record_data(integration_record, True)
+        connection_data = integration_data.get('connection_data', {})
+        integration_engine = integration_data['engine']
+        integration_name = integration_data['name']
 
         if integration_engine not in self.handler_modules:
             raise Exception(f"Cant find handler for '{integration_name}' ({integration_engine})")
 
-        if integration_engine == 'bigquery':
-            try:
-                folder_name = f'integration_files_{company_id}_{integration_record.id}'
-                integrations_dir = Config()['paths']['integrations']
-                FsStore().get(folder_name, base_dir=integrations_dir)
-            except Exception:
-                pass
-            integration_meta['connection_data']['service_account_keys'] = Path(integrations_dir).joinpath(folder_name).joinpath(integration_meta['connection_data']['service_account_keys'])
+        integration_meta = self.handlers_import_status[integration_engine]
+        connection_args = integration_meta.get('connection_args')
+        if isinstance(connection_args, (dict, OrderedDict)):
+            files_to_get = [
+                arg_name for arg_name in connection_data
+                if connection_args.get(arg_name)['type'] == ARG_TYPE.PATH
+            ]
+            if len(files_to_get) > 0:
+                try:
+                    folder_name = f'integration_files_{company_id}_{integration_record.id}'
+                    integrations_dir = Config()['paths']['integrations']
+                    FsStore().get(folder_name, base_dir=integrations_dir)
+                except Exception:
+                    pass
+                for file_name in files_to_get:
+                    connection_data[file_name] = (
+                        Path(integrations_dir)
+                        .joinpath(folder_name)
+                        .joinpath(connection_data[file_name])
+                    )
 
         handler = self.create_handler(
             name=integration_name,
             handler_type=integration_engine,
-            connection_data=integration_meta['connection_data'],
+            connection_data=connection_data,
             company_id=company_id
         )
 

@@ -129,7 +129,6 @@ class MonetDBHandler(DatabaseHandler):
         cur=conn.cursor() 
         try:
             cur.execute(query)
-            print(query , cur.rowcount,query.strip().upper().startswith('SELECT') )
                    
             if cur.rowcount>0  and query.strip().upper().startswith('SELECT') :
                 result = cur.fetchall() 
@@ -164,8 +163,7 @@ class MonetDBHandler(DatabaseHandler):
         Args:
             query (ASTNode): sql query represented as AST. May be any kind
                 of query: SELECT, INTSERT, DELETE, etc
-        Returns:
-            HandlerResponse
+        Returns: HandlerResponse
         """
         
 
@@ -178,8 +176,7 @@ class MonetDBHandler(DatabaseHandler):
     def get_tables(self) -> StatusResponse:
         """ Return list of entities
         Return list of entities that will be accesible as tables.
-        Returns:
-            HandlerResponse: shoud have same columns as information_schema.tables
+        Returns: HandlerResponse: shoud have same columns as information_schema.tables
                 (https://dev.mysql.com/doc/refman/8.0/en/information-schema-tables-table.html)
                 Column 'TABLE_NAME' is mandatory, other is optional.
         """

@@ -23,12 +23,12 @@ def upgrade():
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
     conn.execute(text('''
-        delete from file t1
+        delete from file
         where exists (
-            select 1 from file t2
-            where t1.name = t2.name
-                  and t1.company_id = t2.company_id
-                  and t1.id < t2.id
+            select 1 from file as t2
+            where file.name = t2.name
+                  and file.company_id = t2.company_id
+                  and file.id < t2.id
         )
     '''))
     session.commit()

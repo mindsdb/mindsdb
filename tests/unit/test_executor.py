@@ -290,15 +290,15 @@ class TestWithNativeQuery(BaseTestCase):
         # set integration data
 
         df = pd.DataFrame([
-            {'a': 1, 't': 1, 'g': 'x'},
-            {'a': 2, 't': 2, 'g': 'x'},
-            {'a': 3, 't': 3, 'g': 'x'},
-            {'a': 4, 't': 1, 'g': 'y'},
-            {'a': 5, 't': 2, 'g': 'y'},
-            {'a': 6, 't': 3, 'g': 'y'},
-            {'a': 7, 't': 1, 'g': 'z'},
-            {'a': 8, 't': 2, 'g': 'z'},
-            {'a': 9, 't': 3, 'g': 'z'},
+            {'a': 1, 't': dt.datetime(2020, 1, 1), 'g': 'x'},
+            {'a': 2, 't': dt.datetime(2020, 1, 2), 'g': 'x'},
+            {'a': 3, 't': dt.datetime(2020, 1, 3), 'g': 'x'},
+            {'a': 4, 't': dt.datetime(2020, 1, 1), 'g': 'y'},
+            {'a': 5, 't': dt.datetime(2020, 1, 2), 'g': 'y'},
+            {'a': 6, 't': dt.datetime(2020, 1, 3), 'g': 'y'},
+            {'a': 7, 't': dt.datetime(2020, 1, 1), 'g': 'z'},
+            {'a': 8, 't': dt.datetime(2020, 1, 2), 'g': 'z'},
+            {'a': 9, 't': dt.datetime(2020, 1, 3), 'g': 'z'},
         ])
         self.set_handler(mock_handler, name='pg', tables={'tasks': df})
 
@@ -337,7 +337,7 @@ class TestWithNativeQuery(BaseTestCase):
            select task_model.*
            from views.{view_name}
            join mindsdb.task_model
-           where {view_name}.g = 'y'
+           where {view_name}.t > latest
         ''', dialect='mindsdb'))
         assert ret.error_code is None
 
@@ -348,16 +348,19 @@ class TestWithNativeQuery(BaseTestCase):
         # prediction was called
         assert self.mock_predict.mock_calls[0].args[0] == 'task_model'
 
-        # input to predictor is only 3 rows g=='y'
+        # input to predictor all 9 rows
         when_data = self.mock_predict.mock_calls[0].args[1]
-        assert len(when_data) == 3
-        for row in when_data:
-            assert row['g'] == 'y'
+        assert len(when_data) == 9
+
+        # all group values in input
+        group_values = {'x', 'y', 'z'}
+        assert set(pd.DataFrame(when_data)['g'].unique()) == group_values
 
         # check prediction
         # output is has  g=='y' or None
         ret_df = self.ret_to_df(ret)
-        assert ret_df[(ret_df['g'] != 'y') & (~ret_df['g'].isna())].empty
+        # all group values in output
+        assert set(ret_df['g'].unique()) == group_values
 
         # p is predicted value
         assert ret_df['p'][0] == predicted_value

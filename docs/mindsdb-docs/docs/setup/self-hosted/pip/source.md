@@ -88,3 +88,6 @@ If you encounter the `This site can’t be reached. 127.0.0.1 refused to connect
 You can try to replicate your issue using the [Docker setup](/setup/self-hosted/docker/).
 
 Also, please create an issue with detailed description in the [MindsDB GitHub repository](https://github.com/mindsdb/mindsdb/issues) so we can help you. Usually, we review issues and respond within a few hours.
+
+!!! tip "What's next?"
+    We recommend you to follow one of our tutorials or learn more about the [MindsDB Database](/sql/table-structure/).

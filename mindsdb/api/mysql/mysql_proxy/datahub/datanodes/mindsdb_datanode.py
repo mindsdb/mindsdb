@@ -111,10 +111,13 @@ class MindsDBDataNode(DataNode):
                    'mindsdb_version', 'error', 'select_data_query',
                    'training_options', 'created_at', 'training_time']
         data = []
-        for i, model in enumerate(models):
+        model_version_number = {}
+        for model in models:
+            if model['name'] not in model_version_number:
+                model_version_number[model['name']] = 1
             data.append([
                 model['name'],
-                i + 1,
+                model_version_number[model['name']],
                 model['active'],
                 model['status'],
                 str(model['accuracy']) if model['accuracy'] is not None else None,
@@ -127,6 +130,7 @@ class MindsDBDataNode(DataNode):
                 str(model['created_at']),
                 str(model['training_time'])
             ])
+            model_version_number[model['name']] += 1
         return pd.DataFrame(data, columns=columns)
 
     def _select_integrations(self):

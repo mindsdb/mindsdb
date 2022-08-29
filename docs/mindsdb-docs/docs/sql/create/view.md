@@ -39,6 +39,12 @@ FROM integration_name
 PREDICT rental_price AS price;
 ```
 
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
 Once trained, we can [`#!sql JOIN`](/sql/api/join/) any input data with the trained model and store the results as an AI Table using the `#!sql CREATE VIEW` syntax.
 
 Let's pass some of the expected input columns (in this case, `sqft`, `number_of_bathrooms`, `location`) to the model and join the predicted `rental_price` values:
@@ -53,6 +59,12 @@ CREATE VIEW mindsdb.home_rentals AS (
     FROM mysql_db.home_rentals AS a
     JOIN mindsdb.home_rentals_model AS p
 );
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
 ```
 
 Note that in this example, we pass part of the same data that was used to train as a test query, but usually you would create an AI table to store predictions for new data.

@@ -102,9 +102,9 @@ On execution, we get:
 CREATE DATABASE airtable_datasource
 WITH ENGINE='airtable',
 PARAMETERS={
-    "base_id": " ",
-    "table_name": " ",
-    "api_key": " "
+    "base_id": "appve10klsda2",
+    "table_name": "my_table",
+    "api_key": "KdJX2Q5km%5b$T$sQYm^gvN"
 };
 ```
 
@@ -125,7 +125,7 @@ PARAMETERS={
 ### Cassandra
 
 ```sql
-CREATE DATABASE psql_datasource
+CREATE DATABASE cassandra_datasource
 WITH ENGINE='cassandra',
 PARAMETERS={
   "user": "cassandra",
@@ -142,7 +142,7 @@ PARAMETERS={
 CREATE DATABASE ckan_datasource
 WITH ENGINE = 'ckan',
 PARAMETERS = {
-    "url": " ",
+    "url": "http://demo.ckan.org/api/3/action/",
     "apikey": " "
 };
 ```

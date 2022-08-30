@@ -96,13 +96,25 @@ On execution, we get:
 
 ## Supported Integrations
 
+### Airtable
+
+```sql
+CREATE DATABASE airtable_datasource
+WITH ENGINE='airtable',
+PARAMETERS={
+    "base_id": "appve10klsda2",
+    "table_name": "my_table",
+    "api_key": "KdJX2Q5km%5b$T$sQYm^gvN"
+};
+```
+
 ### Amazon Redshift
 
 ```sql
 CREATE DATABASE amazonredshift_datasource
 WITH ENGINE='amazonredshift',
 PARAMETERS={
-  "user":"amazonredshift",
+  "user": "amazonredshift",
   "port": 5439,
   "password": "amazonredshift",
   "host": "127.0.0.1",
@@ -110,42 +122,28 @@ PARAMETERS={
 };
 ```
 
-### Big Query
-
-```sql
-CREATE DATABASE bigquery_datasource
-WITH ENGINE = "bigquery",
-PARAMETERS = {
-   "project_id": "badger-345908",
-   "service_account_keys": {
-      "path": "/home/Downloads/badger-345908.json"
-  }
-};
-```
-Or if you are using MindsDB Cloud, provide the `service_account_keys` as url:
-
-```sql
-CREATE DATABASE bigquery_datasource
-WITH ENGINE = "bigquery",
-PARAMETERS = {
-   "project_id": "badger-345908",
-   "service_account_keys": {
-      "url": "https://url/badger-345908.json"
-  }
-};
-```
-
 ### Cassandra
 
 ```sql
-CREATE DATABASE psql_datasource
+CREATE DATABASE cassandra_datasource
 WITH ENGINE='cassandra',
 PARAMETERS={
-  "user":"cassandra",
+  "user": "cassandra",
   "port": 9042,
   "password": "cassandra",
   "host": "127.0.0.1",
   "database": "keyspace"
+};
+```
+
+### Ckan
+
+```sql
+CREATE DATABASE ckan_datasource
+WITH ENGINE = 'ckan',
+PARAMETERS = {
+    "url": "http://demo.ckan.org/api/3/action/",
+    "apikey": " "
 };
 ```
 
@@ -155,7 +153,7 @@ PARAMETERS={
 CREATE DATABASE clickhouse_datasource
 WITH ENGINE='clickhouse',
 PARAMETERS={
-  "user":"default",
+  "user": "default",
   "port": 9000,
   "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
@@ -169,11 +167,39 @@ PARAMETERS={
 CREATE DATABASE cockroach_datasource
 WITH ENGINE='cockroachdb',
 PARAMETERS={
-  "user":"username",
+  "user": "username",
   "port": 26257,
   "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
   "database": "cockroachdb"
+};
+```
+
+### Couchbase
+
+```sql
+CREATE DATABASE couchbase_datasource
+WITH ENGINE = 'couchbase',
+PARAMETERS = {
+    "host": "127.0.0.1",
+    "bucket": " ",
+    "user": " ",
+    "password": " ",
+    "scope": " "
+};
+```
+
+### CrateDB
+
+```sql
+CREATE DATABASE cratedb_datasource
+WITH ENGINE='crate',
+PARAMETERS={
+    "user": " ",
+    "password": " ",
+    "host": "127.0.0.1",
+    "port": "4200",
+    "schema_name": " "
 };
 ```
 
@@ -183,11 +209,35 @@ PARAMETERS={
 CREATE DATABASE databricks_datasource
 WITH ENGINE='databricks',
 PARAMETERS={
-  "user":"databricks",
+  "user": "databricks",
   "port": 15001,
   "password": "databricks",
   "host": "127.0.0.1",
   "database": "test"
+};
+```
+
+### DataStax
+
+```sql
+CREATE DATABASE datastax_datasource
+WITH ENGINE='astra',
+PARAMETERS={
+    "user": " ",
+    "password": " ",
+    "secure_connection_bundle": " "
+};
+```
+
+### DynamoDB
+
+```sql
+CREATE DATABASE dynamodb_datasource
+WITH ENGINE='dynamodb',
+PARAMETERS={
+    "aws_access_key_id": " ",
+    "aws_secret_access_key": " ",
+    "region_name": " "
 };
 ```
 
@@ -197,11 +247,51 @@ PARAMETERS={
 CREATE DATABASE firebird_datasource
 WITH ENGINE='firebird',
 PARAMETERS={
-  "user":"firebird",
+  "user": "firebird",
   "port": 3050,
   "password": "firebird",
   "host": "127.0.0.1",
   "database": "test"
+};
+```
+
+### Google Big Query
+
+```sql
+CREATE DATABASE bigquery_datasource
+WITH ENGINE='bigquery',
+PARAMETERS={
+   "project_id": "badger-345908",
+   "service_account_keys": {
+      "path": "/home/Downloads/badger-345908.json"
+  }
+};
+```
+Or if you are using MindsDB Cloud, provide the `service_account_keys` as url:
+
+```sql
+CREATE DATABASE bigquery_datasource
+WITH ENGINE='bigquery',
+PARAMETERS={
+   "project_id": "badger-345908",
+   "service_account_keys": {
+      "url": "https://url/badger-345908.json"
+  }
+};
+```
+
+### IBM DB2
+
+```sql
+CREATE DATABASE db2_datasource
+WITH ENGINE='DB2',
+PARAMETERS={
+    "user": " ",
+    "password": " ",
+    "host": "127.0.0.1",
+    "port": "25000",
+    "schema_name": " ",
+    "database": " "
 };
 ```
 
@@ -211,11 +301,21 @@ PARAMETERS={
 CREATE DATABASE maria_datasource
 WITH ENGINE='mariadb',
 PARAMETERS={
-  "user":"root",
+  "user": "root",
   "port": 3306,
   "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
   "database": "mariadb"
+};
+```
+
+### Microsoft Access
+
+```sql
+CREATE DATABASE access_datasource
+WITH ENGINE = 'access',
+PARAMETERS = {
+    "db_file": " ",
 };
 ```
 
@@ -225,7 +325,7 @@ PARAMETERS={
 CREATE DATABASE mssql_datasource
 WITH ENGINE='mssql',
 PARAMETERS={
-  "user":"sa",
+  "user": "sa",
   "port": 1433,
   "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
@@ -243,11 +343,39 @@ PARAMETERS={
 CREATE DATABASE mysql_datasource
 WITH ENGINE='mysql',
 PARAMETERS={
-  "user":"root",
+  "user": "root",
   "port": 3306,
   "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
   "database": "mysql"
+};
+```
+
+### Oracle
+
+```sql
+CREATE DATABASE oracle_datasource
+WITH ENGINE='oracle',
+PARAMETERS={
+    "host": "127.0.0.1",
+    "port": "1521",
+    "sid": " ",
+    "user": " ",
+    "password": " "
+};
+```
+
+### Pinot
+
+```sql
+CREATE DATABASE pinot_datasource
+WITH ENGINE='pinot',
+PARAMETERS={
+    "host": "127.0.0.1",
+    "broker_port": "8000",
+    "controller_port": "9000",
+    "path": "4200",
+    "scheme": " "
 };
 ```
 
@@ -257,7 +385,7 @@ PARAMETERS={
 CREATE DATABASE psql_datasource
 WITH ENGINE='postgres',
 PARAMETERS={
-  "user":"postgres",
+  "user": "postgres",
   "port": 5432,
   "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
@@ -271,7 +399,7 @@ PARAMETERS={
 CREATE DATABASE questdb_datasource
 WITH ENGINE='questdb',
 PARAMETERS={
-  "user":"admin",
+  "user": "admin",
   "port": 8812,
   "password": "quest",
   "host": "127.0.0.1",
@@ -285,7 +413,7 @@ PARAMETERS={
 CREATE DATABASE scylladb_datasource
 WITH ENGINE='scylladb',
 PARAMETERS={
-  "user":"user@mindsdb.com",
+  "user": "user@mindsdb.com",
   "password": "pass",
   "secure_connect_bundle": "/home/zoran/Downloads/secure-connect-mindsdb.zip"
 };
@@ -297,7 +425,7 @@ PARAMETERS={
 CREATE DATABASE singlestore_datasource
 WITH ENGINE='singlestore',
 PARAMETERS={
-  "user":"root",
+  "user": "root",
   "port": 3306,
   "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
@@ -311,7 +439,7 @@ PARAMETERS={
 CREATE DATABASE snowflake_datasource
 WITH ENGINE='snowflake',
 PARAMETERS={
-  "user":"user",
+  "user": "user",
   "port": 443,
   "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
@@ -323,13 +451,23 @@ PARAMETERS={
 };
 ```
 
+### SQLite
+
+```sql
+CREATE DATABASE sqlite_datasource
+WITH ENGINE='sqlite',
+PARAMETERS={
+    "db_file": " "
+};
+```
+
 ### Supabase
 
 ```sql
 CREATE DATABASE supabase_datasource
 WITH ENGINE='supabase',
 PARAMETERS={
-  "user":"supabase",
+  "user": "supabase",
   "port": 54321,
   "password": "supabase",
   "host": "127.0.0.1",
@@ -343,7 +481,7 @@ PARAMETERS={
 CREATE DATABASE tidb_datasource
 WITH ENGINE='tidb',
 PARAMETERS={
-  "user":"root",
+  "user": "root",
   "port": 4000,
   "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
@@ -357,12 +495,27 @@ PARAMETERS={
 CREATE DATABASE trino_datasource
 WITH ENGINE='trinodb',
 PARAMETERS={
-  "user":"trino",
+  "user": "trino",
   "port": 8080,
   "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
   "catalog": "default",
   "schema": "test"
+};
+```
+
+### Vertica
+
+```sql
+CREATE DATABASE vertica_datasource
+WITH ENGINE='vertica',
+PARAMETERS={
+    "user": " ",
+    "password": " ",
+    "host": "127.0.0.1",
+    "port": 5433,
+    "database": " ",
+    "schema": " "
 };
 ```
 

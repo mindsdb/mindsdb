@@ -346,6 +346,8 @@ PARAMETERS={
 };
 ```
 
+Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
+
 ### MySQL
 
 ```sql

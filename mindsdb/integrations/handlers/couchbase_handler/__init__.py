@@ -1,7 +1,11 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 try:
-    from .couchbase_handler import CouchbaseHandler as Handler
+    from .couchbase_handler import (
+        CouchbaseHandler as Handler,
+        connection_args,
+        connection_args_example
+    )
     import_error = None
 except Exception as e:
     Handler = None
@@ -16,5 +20,5 @@ icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',
-    'import_error', 'icon_path'
+    'connection_args', 'connection_args_example', 'import_error', 'icon_path'
 ]

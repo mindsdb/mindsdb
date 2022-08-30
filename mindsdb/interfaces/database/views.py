@@ -15,7 +15,8 @@ class ViewController:
             raise Exception(f'Name should be without dots: {name}')
 
         # name exists?
-        rec = session.query(View.id).filter(View.name == name).first()
+        rec = session.query(View.id).filter(View.name == name,
+                                            View.company_id == company_id).first()
         if rec is not None:
             raise Exception(f'View already exists: {name}')
 
@@ -45,6 +46,14 @@ class ViewController:
 
         view_record = View(name=name, company_id=company_id, query=query)
         session.add(view_record)
+        session.commit()
+
+    def delete(self, name, company_id=None):
+
+        rec = session.query(View).filter(View.name == name, View.company_id == company_id).first()
+        if rec is None:
+            raise Exception(f'View not found: {name}')
+        session.delete(rec)
         session.commit()
 
     def _get_view_record_data(self, record):

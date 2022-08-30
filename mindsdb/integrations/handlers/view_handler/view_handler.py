@@ -1,3 +1,5 @@
+import copy
+
 from pandas import DataFrame
 
 from mindsdb_sql import parse_sql
@@ -30,16 +32,18 @@ class ViewHandler(DatabaseHandler):
         """
         return StatusResponse(True)
 
-    def native_query(self, query: ASTNode) -> Response:
-        """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in PostgreSQL
-        :return: returns the records from the current recordset
-        """
+    def native_query(self, query: str) -> Response:
+
+        ast = parse_sql(query, dialect='mindsdb')
+
+        return self.query(ast)
+
+    def query(self, query: ASTNode) -> Response:
+
         view_name = query.from_table.parts[-1]
         view_meta = self.view_controller.get(name=view_name)
 
-        subquery_ast = parse_sql(view_meta['query'], dialect='mysql')
+        subquery_ast = parse_sql(view_meta['query'], dialect='mindsdb')
         if query.from_table.parts[-1] != view_name:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -47,6 +51,7 @@ class ViewHandler(DatabaseHandler):
             )
 
         # set alias
+        query = copy.deepcopy(query)
         subquery_ast.alias = Identifier(view_name)
         query.from_table = subquery_ast
 
@@ -55,13 +60,6 @@ class ViewHandler(DatabaseHandler):
             query=query
         )
 
-    def query(self, query: ASTNode) -> Response:
-        """
-        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
-        """
-        return self.native_query(query)
-        # query_str = self.renderer.get_string(query, with_failback=True)
-        # return self.native_query(query_str)
 
     def get_tables(self) -> Response:
         """

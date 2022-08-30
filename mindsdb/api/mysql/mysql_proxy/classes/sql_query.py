@@ -47,7 +47,8 @@ from mindsdb_sql.planner.steps import (
     FilterStep,
     UnionStep,
     JoinStep,
-    GroupByStep
+    GroupByStep,
+    SubSelectStep,
 )
 
 from mindsdb_sql.exceptions import PlanningException
@@ -58,7 +59,10 @@ from mindsdb_sql.planner.utils import query_traversal
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
-
+from mindsdb.interfaces.model.functions import (
+    get_model_record,
+    get_model_records
+)
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErKeyColumnDoesNotExist,
@@ -251,7 +255,7 @@ class SQLQuery():
         integrations_names.append('views')
 
         predictor_metadata = {}
-        predictors = db.session.query(db.Predictor).filter_by(company_id=self.session.company_id)
+        predictors = get_model_records(company_id=self.session.company_id)
 
         query_tables = []
 
@@ -303,11 +307,18 @@ class SQLQuery():
             default_namespace=database
         )
 
-    def fetch(self, datahub, view='list'):
+    def fetch(self, view='list'):
         data = self.fetched_data
 
-        if view == 'list':
-            self.result = self._make_list_result_view(data)
+        if view == 'dataframe':
+            result = self._make_list_result_view(data)
+            col_names = [
+                col.alias if col.alias is not None else col.name
+                for col in self.columns_list
+            ]
+            result = pd.DataFrame(result, columns=col_names)
+        else:
+            result = self._make_list_result_view(data)
 
         # this is not used
         # elif view == 'dict':
@@ -317,19 +328,28 @@ class SQLQuery():
 
         return {
             'success': True,
-            'result': self.result
+            'result': result
         }
 
     def _fetch_dataframe_step(self, step):
         dn = self.datahub.get(step.integration)
         query = step.query
 
-        table_alias = get_table_alias(step.query.from_table, self.database)
-        # TODO for information_schema we have 'database' = 'mindsdb'
+        if query is None:
+            table_alias = (self.database, 'result', 'result')
 
-        data, columns_info = dn.query(
-            query=query
-        )
+            # fetch raw_query
+            data, columns_info = dn.query(
+                native_query=step.raw_query
+            )
+        else:
+
+            table_alias = get_table_alias(step.query.from_table, self.database)
+            # TODO for information_schema we have 'database' = 'mindsdb'
+
+            data, columns_info = dn.query(
+                query=query
+            )
 
         # if this is query: execute it
         if isinstance(data, ASTNode):
@@ -337,11 +357,6 @@ class SQLQuery():
             return subquery.fetched_data
 
         columns = [(column['name'], column['name']) for column in columns_info]
-        columns.append(('__mindsdb_row_id', '__mindsdb_row_id'))
-
-        for i, row in enumerate(data):
-            row['__mindsdb_row_id'] = self.row_id + i
-        self.row_id = self.row_id + len(data)
 
         data = [{(key, key): value for key, value in row.items()} for row in data]
         data = [{table_alias: x} for x in data]
@@ -397,6 +412,104 @@ class SQLQuery():
         mindsdb_sql_struct = self.query
 
         if isinstance(mindsdb_sql_struct, Select):
+
+            if (
+                isinstance(mindsdb_sql_struct.from_table, Identifier)
+                and (
+                    self.database == 'mindsdb'
+                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
+                )
+            ):
+                if mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors':
+                    dn = self.datahub.get(self.mindsdb_database_name)
+                    data, columns = dn.get_predictors(mindsdb_sql_struct)
+                    table_name = ('mindsdb', 'predictors', 'predictors')
+                    data = [
+                        {
+                            (key, key): value
+                            for key, value in row.items()
+                        }
+                        for row in data
+                    ]
+                    data = [{table_name: x} for x in data]
+                    self.columns_list = [
+                        Column(
+                            database='mindsdb',
+                            table_name='predictors',
+                            name=column_name
+                        )
+                        for column_name in columns
+                    ]
+
+                    columns = [(column_name, column_name) for column_name in columns]
+
+                    self.fetched_data = {
+                        'values': data,
+                        'columns': {table_name: columns},
+                        'tables': [table_name]
+                    }
+                    return
+                elif mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors_versions':
+                    dn = self.datahub.get(self.mindsdb_database_name)
+                    data, columns = dn.get_predictors_versions(mindsdb_sql_struct)
+                    table_name = ('mindsdb', 'predictors_versions', 'predictors_versions')
+                    data = [
+                        {
+                            (key, key): value
+                            for key, value in row.items()
+                        }
+                        for row in data
+                    ]
+                    data = [{table_name: x} for x in data]
+                    self.columns_list = [
+                        Column(
+                            database='mindsdb',
+                            table_name='predictors_versions',
+                            name=column_name
+                        )
+                        for column_name in columns
+                    ]
+
+                    columns = [(column_name, column_name) for column_name in columns]
+
+                    self.fetched_data = {
+                        'values': data,
+                        'columns': {table_name: columns},
+                        'tables': [table_name]
+                    }
+                    return
+                elif mindsdb_sql_struct.from_table.parts[-1].lower() in ('datasources', 'databases'):
+                    dn = self.datahub.get(self.mindsdb_database_name)
+                    data, columns = dn.get_integrations(mindsdb_sql_struct)
+                    table_name = ('mindsdb', 'datasources', 'datasources')
+                    data = [
+                        {
+                            (key, key): value
+                            for key, value in row.items()
+                        }
+                        for row in data
+                    ]
+
+                    data = [{table_name: x} for x in data]
+
+                    self.columns_list = [
+                        Column(
+                            database='mindsdb',
+                            table_name='datasources',
+                            name=column_name
+                        )
+                        for column_name in columns
+                    ]
+
+                    columns = [(column_name, column_name) for column_name in columns]
+
+                    self.fetched_data = {
+                        'values': data,
+                        'columns': {table_name: columns},
+                        'tables': [table_name]
+                    }
+                    return
+
             # is it query to 'predictors'?
             if (
                 isinstance(mindsdb_sql_struct.from_table, Identifier)
@@ -738,6 +851,20 @@ class SQLQuery():
                     raise SqlApiUnknownError(f'error in apply predictor row step: {e}') from e
         elif type(step) in (ApplyPredictorStep, ApplyTimeseriesPredictorStep):
             try:
+                # set row_id
+                data = steps_data[step.dataframe.step_num]
+                row_id_col = ('__mindsdb_row_id', '__mindsdb_row_id')
+                for table in data['columns']:
+                    data['columns'][table].append(row_id_col)
+
+                row_count = len(data['values'])
+
+                for i, row in enumerate(data['values']):
+                    for n, table_name in enumerate(row):
+                        row[table_name][row_id_col] = self.row_id + i + n * row_count
+                # shift counter
+                self.row_id += self.row_id + row_count * len(data['tables'])
+
                 dn = self.datahub.get(self.mindsdb_database_name)
                 predictor = '.'.join(step.predictor.parts)
                 where_data = []
@@ -770,10 +897,10 @@ class SQLQuery():
                         if '__mdb_forecast_offset' not in row:
                             row['__mdb_forecast_offset'] = _mdb_forecast_offset
 
-                for row in where_data:
-                    for key in row:
-                        if isinstance(row[key], datetime.date):
-                            row[key] = str(row[key])
+                # for row in where_data:
+                #     for key in row:
+                #         if isinstance(row[key], datetime.date):
+                #             row[key] = str(row[key])
 
                 table_name = get_preditor_alias(step, self.database)
                 columns = {table_name: []}
@@ -1204,6 +1331,74 @@ class SQLQuery():
                 'values': values,
                 'types': types  # copy
             }
+
+        elif type(step) == SubSelectStep:
+
+            step_data = steps_data[step.dataframe.step_num]
+
+            table_name = step.table_name
+            if table_name is None:
+                table_name = 'df_table'
+            else:
+                table_name = table_name
+
+            def step_data_to_df(step_data):
+                result = []
+                cols = set()
+                for _, col_list in step_data['columns'].items():
+                    for col in col_list:
+                        cols.add(col[0])
+
+                for row in step_data['values']:
+                    data_row = {}
+                    for table, col_list in step_data['columns'].items():
+                        for col in col_list:
+                            data_row[col[0]] = row[table][col]
+                    result.append(data_row)
+                df = pd.DataFrame(result, columns=list(cols))
+
+                return df
+
+            def df_to_step_data(res, step_data0, table_name):
+                resp_dict = res.to_dict(orient='records')
+
+                # get from first table
+                database = step_data0['tables'][0][0]
+                appropriate_table = (database, table_name, table_name)
+
+                columns = []
+                for key, dtyp in res.dtypes.items():
+
+                    columns.append((key, key))
+
+                values = []
+                for row in resp_dict:
+                    row2 = {
+                        (key, key): value
+                        for key, value in row.items()
+                    }
+
+                    values.append(
+                        {
+                            appropriate_table: row2
+                        }
+                    )
+
+                types = step_data0.get('types', {})
+                data = {
+                    'tables': [appropriate_table],
+                    'columns': {appropriate_table: columns},
+                    'values': values,
+                    'types': types  # copy
+                }
+                return data
+
+            query = step.query
+            query.from_table = Identifier('df_table')
+            df = step_data_to_df(step_data)
+            res = query_df(df, query)
+
+            data = df_to_step_data(res, step_data, table_name)
 
         elif type(step) == SaveToTable or type(step) == InsertToTable:
             is_replace = False

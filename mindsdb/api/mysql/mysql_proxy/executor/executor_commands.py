@@ -40,6 +40,8 @@ from mindsdb_sql.parser.ast import (
     DropTables,
     Operation,
     ASTNode,
+    DropView,
+    NativeQuery,
 )
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -463,6 +465,8 @@ class ExecuteCommands:
             return self.answer_create_predictor(statement)
         elif type(statement) == CreateView:
             return self.answer_create_view(statement)
+        elif type(statement) == DropView:
+            return self.answer_drop_view(statement)
         elif type(statement) == Delete:
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
@@ -535,7 +539,7 @@ class ExecuteCommands:
             ]
             data = [description]
         else:
-            data = model_controller.get_model_data(predictor_name)
+            data = model_controller.get_model_data(name=predictor_name)
             if predictor_attr == "features":
                 data = self._get_features_info(data)
                 columns = [{
@@ -573,6 +577,10 @@ class ExecuteCommands:
                 }, {
                     'table_name': '',
                     'name': "selected",
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': "accuracy_functions",
                     'type': TYPES.MYSQL_TYPE_VAR_STRING
                 }]
                 columns = [Column(**d) for d in columns]
@@ -717,9 +725,27 @@ class ExecuteCommands:
         self.session.view_interface.add(name, query, datasource_name)
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
+    def answer_drop_view(self, statement):
+        names = statement.names
+
+        for name in names:
+            view_name = name.parts[-1]
+            self.session.view_interface.delete(view_name)
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
     def answer_create_predictor(self, statement):
-        lw_handler = self.session.integration_controller.get_handler('lightwood')
-        result = lw_handler.query(statement)
+        ml_integration_name = self.session.database
+        if len(statement.name.parts) == 2:
+            ml_integration_name = statement.name.parts[0]
+            statement.name.parts = [statement.name.parts[-1]]
+        ml_integration_name = ml_integration_name.lower()
+        if ml_integration_name == 'mindsdb':
+            ml_integration_name = 'lightwood'
+
+        ml_handler = self.session.integration_controller.get_handler(ml_integration_name)
+
+        result = ml_handler.query(statement)
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 
@@ -1176,14 +1202,12 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_select(self, query):
-        query.fetch(
-            self.session.datahub
-        )
+        data = query.fetch()
 
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=query.columns_list,
-            data=query.result,
+            data=data['result'],
         )
 
     def is_db_exists(self, db_name):
@@ -1196,9 +1220,7 @@ class ExecuteCommands:
             sql_statement,
             session=self.session
         )
-        result = query.fetch(
-            self.session.datahub
-        )
+        result = query.fetch()
         if result.get('success') is True and len(result.get('result')) > 0:
             return True
         return False
@@ -1271,16 +1293,22 @@ class ExecuteCommands:
         return data
 
     def _get_model_info(self, data):
+        accuracy_functions = data.get('json_ai', {}).get('accuracy_functions')
+        if accuracy_functions:
+            accuracy_functions = str(accuracy_functions)
+
         models_data = data.get("submodel_data", [])
         if models_data == []:
             raise ErBadTableError("predictor doesn't contain enough data to generate 'model' attribute")
         data = []
+
         for model in models_data:
             m_data = []
             m_data.append(model["name"])
             m_data.append(model["accuracy"])
             m_data.append(model.get("training_time", "unknown"))
             m_data.append(1 if model["is_best"] else 0)
+            m_data.append(accuracy_functions)
             data.append(m_data)
         return data
 

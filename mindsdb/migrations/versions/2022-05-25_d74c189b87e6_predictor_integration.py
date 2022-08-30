@@ -106,6 +106,9 @@ def upgrade():
         batch_op.drop_constraint('unique_file_name_company_id', type_='unique')
         batch_op.drop_constraint('fk_analysis_id', type_='foreignkey')
         batch_op.drop_column('analysis_id')
+    with op.batch_alter_table('dataset', schema=None) as batch_op:
+        batch_op.drop_constraint('fk_ds_analysis_id', type_='foreignkey')
+        batch_op.drop_column('analysis_id')
     op.drop_table('analysis')
     op.drop_table('dataset')
 
@@ -141,7 +144,7 @@ def downgrade():
         sa.Column('integration_id', sa.INTEGER(), nullable=True),
         sa.Column('analysis_id', sa.INTEGER(), nullable=True),
         sa.Column('ds_class', sa.VARCHAR(), nullable=True),
-        sa.ForeignKeyConstraint(['analysis_id'], ['analysis.id'], name='fk_analysis_id'),
+        sa.ForeignKeyConstraint(['analysis_id'], ['analysis.id'], name='fk_ds_analysis_id'),
         sa.ForeignKeyConstraint(['integration_id'], ['integration.id'], name='fk_integration_id'),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('name', 'company_id', name='unique_dataset_name_company_id')

@@ -1,39 +1,45 @@
-# `#!sql predictors.deleteOne()` Method
+# Deleting a Predictor
 
-## Description
+## Using the `db.predictors.deleteOne()` Method
 
-The `#!sql predictors.deleteOne()` method is called to delete the model collection:
+### Description
 
-## Syntax
+The `db.predictors.deleteOne()` method deletes an ML model specified in its argument.
+
+### Syntax
 
 ```sql
-db.predictors.deleteOne({'name': <predictor_name>});
+db.predictors.deleteOne({name: "predictor_name"});
 ```
 
 On execution, we get:
 
 ```json
-{ "acknowledged" : true, "deletedCount" : 1 }
+{
+    "acknowledged" : true,
+    "deletedCount" : 1
+}
 ```
 
 Where:
 
 | Name               | Description                     |
 | ------------------ | ------------------------------- |
-| `<predictor_name>` | Name of the model to be deleted |
-
+| `name`             | Name of the model to be deleted |
 
 ## Example
 
-The following MQL statement drops the model collection called `home_rentals_model`. Given the following mongo query to list all predictors by name
+### Listing All the Predictors
+
+Before deleting a predictor, let's list all the available predictors using the `db.predictors.find()` method.
 
 ```sql
-db.predictors.find({})
+db.predictors.find({});
 ```
 
 On execution, we get:
 
-```JSON
+```json
 {
     "name": "home_rentals_model",
     "status": "complete",
@@ -58,22 +64,29 @@ On execution, we get:
 }
 ```
 
-Execute the `#!sql deleteOne()` method as:
+### Dropping a Predictor
 
-```
-db.predictors.deleteOne({'name': 'home_rentals_model'})
+The `db.predictors.deleteOne()` method drops the model collection called `home_rentals_model`.
+
+```sql
+db.predictors.deleteOne({name: "home_rentals_model"});
 ```
 
 On execution, we get:
 
 ```json
-{ "acknowledged" : true, "deletedCount" : 1 }
+{
+    "acknowledged" : true,
+    "deletedCount" : 1
+}
 ```
 
-Validate that the model has been deleted by listing again all predictors by name:
+### Validating the Deletion
 
-```
-db.predictors.find({})
+You can validate that the model was removed by listing all the predictors.
+
+```sql
+db.predictors.find({});
 ```
 
 On execution, we get:

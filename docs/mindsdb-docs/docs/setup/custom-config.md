@@ -76,4 +76,4 @@ python -m mindsdb --config=/path-to-the-extended-config-file/config-file.json
 You can access your MindsDB locally at `127.0.0.1:47334`, or any other IP address and port combination if you altered them.
 
 !!! tip "What's next?"
-    We recommend you to follow one of our tutorials or learn more about the [MindsDB Database](/sql/table-structure/).
+    We recommend you follow one of our tutorials or learn more about the [MindsDB Database](/sql/table-structure/).

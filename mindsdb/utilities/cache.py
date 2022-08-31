@@ -89,7 +89,12 @@ class BaseCache(ABC):
             max_size = self.config["cache"].get("max_size", 50)
         self.max_size = max_size
         if serializer is None:
-            self.serializer = self.config["cache"].get('serializer', dill)
+            serializer_module = self.config["cache"].get('serializer')
+            if serializer_module == 'pickle':
+                import pickle as s_module
+            else:
+                import dill as s_module
+            self.serializer = s_module
 
     def serialize(self, value):
         return self.serializer.dumps(value)

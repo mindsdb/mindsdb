@@ -89,7 +89,6 @@ class CompanyIndependentTest(unittest.TestCase):
 
         test_integration_data = {}
         test_integration_data.update(config['integrations']['default_postgres'])
-        test_integration_data['publish'] = False
 
         res = requests.put(
             f'{HTTP_API_ROOT}/config/integrations/test_integration_a',

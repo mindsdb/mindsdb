@@ -52,10 +52,11 @@ class QueryAnalysis(Resource):
         if result.type != SQL_RESPONSE_TYPE.TABLE:
             return http_error(500, 'Error', 'Query does not return data')
 
+        lw_handler = request.integration_controller.get_handler('lightwood')
+
         column_names = [x['name'] for x in result.columns]
-        analysis = request.model_interface.analyse_dataset(
-            df=DataFrame(result.data, columns=column_names),
-            company_id=None
+        analysis = lw_handler.analyze_dataset(
+            data_frame=DataFrame(result.data, columns=column_names)
         )
 
         query_tables = []
@@ -71,4 +72,24 @@ class QueryAnalysis(Resource):
             'row_count': len(result.data),
             'timestamp': time.time(),
             'tables': query_tables
+        }
+
+
+@ns_conf.route('/data')
+class DataAnalysis(Resource):
+    @ns_conf.doc('post_data_to_analyze')
+    def post(self):
+        payload = request.json
+        column_names = payload.get('column_names')
+        data = payload.get('data')
+
+        lw_handler = request.integration_controller.get_handler('lightwood')
+
+        analysis = lw_handler.analyze_dataset(
+            data_frame=DataFrame(data, columns=column_names)
+        )
+
+        return {
+            'analysis': analysis,
+            'timestamp': time.time()
         }

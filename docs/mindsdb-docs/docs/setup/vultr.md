@@ -1,0 +1,2 @@
+!!! warning "Documentation WIP"
+    Note: This documentation is work in progress, for now you can follow up to [Deploying MindsDB on Vultr Cloud Instance](https://community.ops.io/rutamhere/deploying-mindsdb-on-a-vultr-cloud-instance-40bm) tutorial.

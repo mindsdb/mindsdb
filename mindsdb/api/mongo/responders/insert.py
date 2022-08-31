@@ -1,8 +1,13 @@
+from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
+from mindsdb_sql.parser.ast import Identifier, OrderBy
+
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mongo.utilities import log
 from mindsdb.integrations.libs.response import HandlerStatusResponse
+
+from mindsdb.api.mongo.classes.query_sql import run_sql_command
 
 class Responce(Responder):
     when = {'insert': helpers.is_true}
@@ -69,7 +74,7 @@ class Responce(Responder):
                 'connection'
             ]
 
-            models = mindsdb_env['model_interface'].get_models()
+            models = mindsdb_env['model_controller'].get_models()
 
             if len(query['documents']) != 1:
                 raise Exception("Must be inserted just one predictor at time")
@@ -117,27 +122,45 @@ class Responce(Responder):
                 if connection is None:
                     raise Exception("Can't find connection for data source")
 
-                handler = mindsdb_env['integration_controller'].get_handler(connection)
-                result = handler.native_query(select_data_query)
-
-                if result.type != RESPONSE_TYPE.TABLE:
-                    raise Exception(f'Error during query: {result.error_message}')
-
-                ds_data_df = result.data_frame
-                ds_column_names = list(ds_data_df.columns)
-
                 predict = doc['predict']
                 if not isinstance(predict, list):
                     predict = [x.strip() for x in predict.split(',')]
 
-                for col in predict:
-                    if col not in ds_column_names:
-                        raise Exception(f"Column '{col}' not exists")
+                order_by = None
+                group_by = None
+                ts_settings = {}
+                if 'timeseries_settings' in kwargs:
+                    ts_settings = kwargs.pop('timeseries_settings')
+                    if 'order_by' in ts_settings:
+                        order_by = ts_settings['order_by']
+                        if not isinstance(order_by, list):
+                            order_by = [order_by]
 
-                mindsdb_env['model_interface'].learn(
-                    doc['name'], ds_data_df, predict, kwargs=dict(kwargs),
-                    user_class=mindsdb_env.get('user_class', 0)
+                        order_by = [
+                            OrderBy(Identifier(x))
+                            for x in order_by
+                        ]
+                    if 'group_by' in ts_settings:
+                        group_by = [
+                            Identifier(x)
+                            for x in ts_settings.get('group_by', [])
+                        ]
+
+                using = dict(kwargs)
+
+                create_predictor_ast = CreatePredictor(
+                    name=Identifier(doc['name']),
+                    integration_name=Identifier(connection),
+                    query_str=select_data_query,
+                    targets=[Identifier(x) for x in predict],
+                    order_by=order_by,
+                    group_by=group_by,
+                    window=ts_settings.get('window'),
+                    horizon=ts_settings.get('horizon'),
+                    using=using,
                 )
+
+                run_sql_command(mindsdb_env, create_predictor_ast)
 
             result = {
                 "n": len(query['documents']),

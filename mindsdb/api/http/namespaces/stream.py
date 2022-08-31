@@ -3,6 +3,7 @@ from flask_restx import Resource, abort
 
 from mindsdb.api.http.namespaces.configs.streams import ns_conf
 import mindsdb.interfaces.storage.db as db
+from mindsdb.interfaces.model.functions import get_model_record
 
 STREAM_INTEGRATION_TYPES = ('kafka', 'redis')
 
@@ -72,7 +73,7 @@ class Stream(Resource):
         if db.session.query(db.Stream).filter_by(company_id=request.company_id, name=name).first() is not None:
             return abort(404, 'Stream "{}" already exists'.format(name))
 
-        if db.session.query(db.Predictor).filter_by(company_id=request.company_id, name=params['predictor']).first() is None:
+        if get_model_record(company_id=request.company_id, name=params['predictor']) is None:
             return abort(404, 'Predictor "{}" doesn\'t exist'.format(params['predictor']))
 
         stream = db.Stream(

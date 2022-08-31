@@ -1,7 +1,7 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 try:
-    from .cassandra_handler import CassandraHandler as Handler
+    from .cassandra_handler import CassandraHandler as Handler,  connection_args
     import_error = None
 except Exception as e:
     Handler = None
@@ -16,5 +16,5 @@ icon_path = 'logo.png'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',
-    'import_error', 'icon_path'
+    'connection_args', 'import_error', 'icon_path'
 ]

@@ -1,21 +1,29 @@
-To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapter:
+# MindsDB and DBT
 
-| Adapter for                                                     | Documentation                                     | Install from PyPi                |
-| --------------------------------------------------------------- | ------------------------------------------------- | -------------------------------- |
-| MindsDB ([dbt-mindsdb](https://github.com/mindsdb/dbt-mindsdb)) | [Profile Setup](/connect/dbt/#initialization) | `#!bash pip install dbt-mindsdb` |
+DBT is a development framework that facilitates data transformation processes. You can read more [here](https://www.getdbt.com/).
 
 ## Usage
 
-### Initialization
+### Installing Adapter for DBT
 
-1. Create dbt project:
+MindsDB provides an adapter to integrate your predictions into the DBT workflow.
 
-   ```bash
-   dbt init [project_name]
-   ```
+To find out more about the [dbt-mindsdb](https://github.com/mindsdb/dbt-mindsdb) adapter, follow the instructions [here](https://github.com/mindsdb/dbt-mindsdb/blob/main/README.md).
 
-2. Configure your [profiles.yml](/connect/dbt-mindsdb-profile), 
-   currently MindsDB only supports user/password authentication, as shown below on: `~/.dbt/profiles.yml`
+You can install the [dbt-mindsdb](https://github.com/mindsdb/dbt-mindsdb) adapter by executing this command: `#!bash pip install dbt-mindsdb`.
+
+### Profile Setup
+
+1. Create a DBT project:
+
+    ```bash
+    dbt init [project_name]
+    ```
+
+2. Configure your `profiles.yml` file:
+
+!!! tip "What MindsDB Supports"
+    Currently, MindsDB supports only user/password authentication. Please see below `~/.dbt/profiles.yml` file for details.
 
 === "Self-Hosted Local Deployment"
 
@@ -28,8 +36,8 @@ To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapte
           host: '127.0.0.1'
           port: 47335
           schema: 'mindsdb'
-          password: ''
           username: 'mindsdb'
+          password: ''
       target: dev
     ```
 
@@ -42,33 +50,28 @@ To integrate your predictions into your DBT workflow, use the dbt-mindsdb adapte
           type: mindsdb
           database: 'mindsdb'
           host: 'cloud.mindsdb.com'
-          port: 47335
+          port: 3306
           schema: '[dbt schema]'
           username: '[mindsdb cloud username]'
           password: '[mindsdb cloud password]'
       target: dev
     ```
 
+Let's list the required data fields.
+
 | Key        | Required | Description                                          | Example                         |
 | ---------- | :------: | ---------------------------------------------------- | ------------------------------- |
-| `type`     |    ✔️    | The specific adapter to use                          | `mindsdb`                       |
+| `type`     |    ✔️    | The adapter name                                     | `mindsdb`                       |
+| `database` |    ✔️    | The database name                                    | `mindsdb`                       |
 | `host`     |    ✔️    | The MindsDB (hostname) to connect to                 | `cloud.mindsdb.com`             |
-| `port`     |    ✔️    | The port to use                                      | `3306` or `47335`               |
-| `schema`   |    ✔️    | Specify the schema (database) to build models into   | The MindsDB datasource          |
-| `username` |    ✔️    | The username to use to connect to the server         | `mindsdb` or mindsdb cloud user |
-| `password` |    ✔️    | The password to use for authenticating to the server | `pass`                          |
+| `port`     |    ✔️    | The port to be used                                  | `47335` or `3306`               |
+| `schema`   |    ✔️    | The schema (database) where models are built         | The MindsDB data source          |
+| `username` |    ✔️    | The username to be used to connect to the server     | `mindsdb` or MindsDB Cloud user |
+| `password` |    ✔️    | The password to be used for authentication           | local password or MindsDB Cloud password     |
 
-### Create predictor
+### Creating a Predictor
 
-Create table_name.sql (<em>table_name</em> will be used as the name of the predictor):
-
-| Parameter       | Required | Description                                                                                        | Example          |
-| --------------- | :------: | -------------------------------------------------------------------------------------------------- | ---------------- |
-| `materialized`  |    ✔️    | Always `predictor`                                                                                 | `predictor`      |
-| `integration`   |    ✔️    | Name of integration to get data from and save result to. It must be created in MindsDB beforehand. | `photorep`       |
-| `predict`       |    ✔️    | Field to be predicted                                                                              | `name`           |
-| `predict_alias` |          | Alias for predicted field                                                                          | `predicted_name` |
-| `using`         |          | Configuration options for trained model                                                            | ...              |
+Create a `table_name.sql` file where `table_name` is the name of the predictor.
 
 ```sql
 {{
@@ -87,15 +90,19 @@ Create table_name.sql (<em>table_name</em> will be used as the name of the predi
     FROM stores;
 ```
 
-### Create predictions table
+Let's list the required and optional data fields.
 
-Create <em>table_name</em>.sql (If you need to specify schema, you can do it with a dot separator: <em><strong>schema_name.</strong>table_name</em>.sql):
+| Parameter       | Required | Description                                                                                        | Example          |
+| --------------- | :------: | -------------------------------------------------------------------------------------------------- | ---------------- |
+| `materialized`  |    ✔️    | Use always the value `predictor`                                                                   | `predictor`      |
+| `integration`   |    ✔️    | Create an integration in MindsDB that is used to get the data from and save the result to          | `photorep`       |
+| `predict`       |    ✔️    | Field to be predicted                                                                              | `name`           |
+| `predict_alias` |           | Alias for predicted field                                                                          | `predicted_name` |
+| `using`         |           | Configuration options for trained model                                                            | ...              |
 
-| Parameter        | Required | Description                                                                                        | Example           |
-| ---------------- | :------: | -------------------------------------------------------------------------------------------------- | ----------------- |
-| `materialized`   |    ✔️    | Always `table`                                                                                     | `table`           |
-| `predictor_name` |    ✔️    | Name of predictor model from `Create predictor`                                                    | `store_predictor` |
-| `integration`    |    ✔️    | Name of integration to get data from and save result to. It must be created in MindsDB beforehand. | `photorep`        |
+### Creating Predictions Table
+
+Create a `table_name.sql` file where `table_name` is used as the name of the predictor. Or you can create a `schema_name.table_name.sql` file where `schema_name` is the name of the integration and `table_name` is the name of the predictor.
 
 ```sql
 {{
@@ -110,18 +117,34 @@ Create <em>table_name</em>.sql (If you need to specify schema, you can do it wit
     WHERE name > latest;
 ```
 
-!!! warning "Note that each time dbt is run, the results table will be rewritten."
+Let's list the required data fields.
+
+| Parameter        | Required | Description                                                                                        | Example           |
+| ---------------- | :------: | -------------------------------------------------------------------------------------------------- | ----------------- |
+| `materialized`   |    ✔️    | Use always the value `table`                                                                       | `table`           |
+| `predictor_name` |    ✔️    | Name of the predictor model from `CREATE PREDICTOR`                                                | `store_predictor` |
+| `integration`    |    ✔️    | Create an integration in MindsDB that is used to get the data from and save the result to          | `photorep`        |
+
+!!! warning "Note that each time DBT is run, the results table is overwritten."
 
 ## Testing
 
-1. Install dev requirements
+1. Install dev requirements:
 
    ```bash
    pip install -r dev_requirements.txt
    ```
 
-2. Run pytest
+2. Run tests:
 
    ```bash
    python -m pytest tests/
    ```
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and **Community Tutorials** sections, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **SQL API** section, as they explain a common SQL syntax with examples.
+
+Have fun!

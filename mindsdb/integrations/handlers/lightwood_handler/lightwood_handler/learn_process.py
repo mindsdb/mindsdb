@@ -3,10 +3,8 @@ import sys
 import traceback
 import tempfile
 from pathlib import Path
-from typing import Optional
 import json
 import requests
-import traceback
 from datetime import datetime
 
 import pandas as pd
@@ -18,14 +16,11 @@ from lightwood import __version__ as lightwood_version
 
 from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
-from mindsdb.interfaces.storage.db import Integration, session, Predictor
+from mindsdb.interfaces.storage.db import session, Predictor
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.log import log
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.interfaces.database.integrations import IntegrationController
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 ctx = mp.get_context('spawn')
@@ -89,7 +84,7 @@ def brack_to_mod(ovr):
 
 
 @mark_process(name='learn')
-def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None) -> int:
+def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None):
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
     if json_ai_override is None:
         json_ai_override = {}
@@ -127,7 +122,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         pickle_path = os.path.join(config['paths']['predictors'], fs_name)
         predictor.save(pickle_path)
 
-        fs_store.put(fs_name, fs_name, config['paths']['predictors'])
+        fs_store.put(fs_name, base_dir=config['paths']['predictors'])
 
         predictor_record.data = predictor.model_analysis.to_dict()
 
@@ -168,6 +163,17 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
     session.commit()
 
 
+def format_exception_error(exception):
+    try:
+        exception_type, _exception_object, exception_traceback = sys.exc_info()
+        filename = exception_traceback.tb_frame.f_code.co_filename
+        line_number = exception_traceback.tb_lineno
+        error_message = f'{exception_type.__name__}: {exception}, raised at: {filename}#{line_number}'
+    except Exception:
+        error_message = str(exception)
+    return error_message
+
+
 @mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
               json_ai_override: dict = None) -> None:
@@ -185,13 +191,7 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
         print(traceback.format_exc())
 
-        try:
-            exception_type, _exception_object, exception_traceback = sys.exc_info()
-            filename = exception_traceback.tb_frame.f_code.co_filename
-            line_number = exception_traceback.tb_lineno
-            error_message = f'{exception_type.__name__}: {e}, raised at: {filename}#{line_number}'
-        except Exception:
-            error_message = str(e)
+        error_message = format_exception_error(e)
 
         predictor_record.data = {"error": error_message}
         db.session.commit()
@@ -206,17 +206,32 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
 
 
 @mark_process(name='learn')
-def run_update(name: str, df: DataFrame, company_id: int):
-    original_name = name
-    name = f'{company_id}@@@@@{name}'
-
+def run_update(predictor_id: str, df: DataFrame, company_id: int):
     fs_store = FsStore()
     config = Config()
 
     try:
-        predictor_record = Predictor.query.filter_by(company_id=company_id, name=original_name).first()
-        assert predictor_record is not None
-        predictor_record.update_status = 'updating'
+        old_predictor_record = Predictor.query.filter_by(id=predictor_id).first()
+        assert old_predictor_record is not None
+        old_predictor_record.update_status = 'updating'
+        session.commit()
+
+        predictor_record = db.Predictor(
+            company_id=company_id,
+            name=old_predictor_record.name,
+            integration_id=old_predictor_record.integration_id,
+            fetch_data_query=old_predictor_record.fetch_data_query,
+            mindsdb_version=mindsdb_version,
+            lightwood_version=lightwood_version,
+            to_predict=old_predictor_record.to_predict,
+            learn_args=old_predictor_record.learn_args,
+            data={'name': old_predictor_record.name},
+            training_data_columns_count=len(df.columns),
+            training_data_rows_count=len(df),
+            training_start_at=datetime.now(),
+            active=False
+        )
+        session.add(predictor_record)
         session.commit()
 
         problem_definition = predictor_record.learn_args
@@ -224,10 +239,6 @@ def run_update(name: str, df: DataFrame, company_id: int):
 
         if 'join_learn_process' in problem_definition:
             del problem_definition['join_learn_process']
-
-        # Adapt kwargs to problem definition
-        if 'timeseries_settings' in problem_definition:
-            problem_definition['timeseries_settings'] = problem_definition['timeseries_settings']
 
         if 'stop_training_in_x_seconds' in problem_definition:
             problem_definition['time_aim'] = problem_definition['stop_training_in_x_seconds']
@@ -243,20 +254,29 @@ def run_update(name: str, df: DataFrame, company_id: int):
         fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
         pickle_path = os.path.join(config['paths']['predictors'], fs_name)
         predictor.save(pickle_path)
-        fs_store.put(fs_name, fs_name, config['paths']['predictors'])
-        predictor_record.data = predictor.model_analysis.to_dict()  # type: ignore
-        session.commit()
-
-        predictor_record.lightwood_version = lightwood_version
-        predictor_record.mindsdb_version = mindsdb_version
+        fs_store.put(fs_name, base_dir=config['paths']['predictors'])
+        predictor_record.data = predictor.model_analysis.to_dict()
         predictor_record.update_status = 'up_to_date'
-        session.commit()
+        predictor_record.dtype_dict = predictor.dtype_dict
+        old_predictor_record.update_status = 'up_to_date'
 
+        old_predictor_record.active = False
+        predictor_record.active = True
+        session.commit()
     except Exception as e:
         log.error(e)
-        predictor_record.update_status = 'update_failed'  # type: ignore
-        session.commit()
-        return str(e)
+        predictor_record = Predictor.query.with_for_update().get(predictor_id)
+        print(traceback.format_exc())
+
+        error_message = format_exception_error(e)
+
+        predictor_record.data = {"error": error_message}
+
+        old_predictor_record.update_status = 'update_failed'   # TODO
+        db.session.commit()
+
+    predictor_record.training_stop_at = datetime.now()
+    db.session.commit()
 
 
 class LearnRemoteProcess(ctx.Process):

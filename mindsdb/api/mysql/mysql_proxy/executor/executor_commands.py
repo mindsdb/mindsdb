@@ -1,9 +1,9 @@
 import json
 import datetime
 from typing import Optional
+from pathlib import Path
 
 import pandas as pd
-
 from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatasource,
     RetrainPredictor,
@@ -13,10 +13,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateView
 )
 from mindsdb_sql import parse_sql
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
-from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb_sql.parser.dialects.mysql import Variable
-
 from mindsdb_sql.parser.ast import (
     RollbackTransaction,
     CommitTransaction,
@@ -43,8 +40,12 @@ from mindsdb_sql.parser.ast import (
     DropTables,
     Operation,
     ASTNode,
+    DropView,
+    NativeQuery,
 )
 
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErBadDbError,
@@ -58,12 +59,10 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlSyntaxError,
     ErSqlWrongArguments,
 )
-from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
-
+from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case, download_file
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery, Column
 )
-
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
@@ -71,9 +70,9 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     TYPES,
     SERVER_VARIABLES,
 )
-
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
 from mindsdb.integrations.libs.response import HandlerStatusResponse
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE
 
 
 class ExecuteCommands:
@@ -123,7 +122,7 @@ class ExecuteCommands:
             else:
                 return self.answer_describe_predictor(statement.value.parts[-1])
         elif type(statement) == RetrainPredictor:
-            return self.answer_retrain_predictor(statement.name.parts[-1])
+            return self.answer_retrain_predictor(statement)
         elif type(statement) == Show:
             sql_category = statement.category.lower()
             if sql_category == 'predictors':
@@ -466,6 +465,8 @@ class ExecuteCommands:
             return self.answer_create_predictor(statement)
         elif type(statement) == CreateView:
             return self.answer_create_view(statement)
+        elif type(statement) == DropView:
+            return self.answer_drop_view(statement)
         elif type(statement) == Delete:
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
@@ -513,11 +514,11 @@ class ExecuteCommands:
             predictor_attr = predictor_value[1]
         else:
             predictor_name = predictor_value
-        model_interface = self.session.model_interface
-        models = model_interface.get_models()
+        model_controller = self.session.model_controller
+        models = model_controller.get_models()
         if predictor_name not in [x['name'] for x in models]:
             raise ErBadTableError(f"Can't describe predictor. There is no predictor with name '{predictor_name}'")
-        description = model_interface.get_model_description(predictor_name)
+        description = model_controller.get_model_description(predictor_name)
 
         if predictor_attr is None:
             columns = [
@@ -538,7 +539,7 @@ class ExecuteCommands:
             ]
             data = [description]
         else:
-            data = model_interface.get_model_data(predictor_name)
+            data = model_controller.get_model_data(name=predictor_name)
             if predictor_attr == "features":
                 data = self._get_features_info(data)
                 columns = [{
@@ -577,6 +578,10 @@ class ExecuteCommands:
                     'table_name': '',
                     'name': "selected",
                     'type': TYPES.MYSQL_TYPE_VAR_STRING
+                }, {
+                    'table_name': '',
+                    'name': "accuracy_functions",
+                    'type': TYPES.MYSQL_TYPE_VAR_STRING
                 }]
                 columns = [Column(**d) for d in columns]
             elif predictor_attr == "ensemble":
@@ -593,12 +598,12 @@ class ExecuteCommands:
             data=data
         )
 
-    def answer_retrain_predictor(self, predictor_name):
-        model_interface = self.session.model_interface
-        models = model_interface.get_models()
-        if predictor_name not in [x['name'] for x in models]:
-            raise ErBadTableError(f"Can't retrain predictor. There is no predictor with name '{predictor_name}'")
-        model_interface.update_model(predictor_name)
+    def answer_retrain_predictor(self, statement):
+        lw_handler = self.session.integration_controller.get_handler('lightwood')
+        result = lw_handler.query(statement)
+        if result.type == RESPONSE_TYPE.ERROR:
+            raise Exception(result.error_message)
+
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_datasource(self, struct: dict):
@@ -616,6 +621,36 @@ class ExecuteCommands:
         status = HandlerStatusResponse(success=False)
 
         try:
+            handlers_meta = self.session.integration_controller.get_handlers_import_status()
+            handler_meta = handlers_meta[engine]
+            if handler_meta.get('import', {}).get('success') is not True:
+                raise SqlApiException(f"Hanbdler '{engine}' can not be used")
+
+            accept_connection_args = handler_meta.get('connection_args')
+            if accept_connection_args is not None:
+                for arg_name, arg_value in connection_args.items():
+                    if arg_name not in accept_connection_args:
+                        raise SqlApiException(f"Unknown connection argument: {arg_name}")
+                    arg_meta = accept_connection_args[arg_name]
+                    arg_type = arg_meta.get('type')
+                    if arg_type == HANDLER_CONNECTION_ARG_TYPE.PATH:
+                        # arg may be one of:
+                        # str: '/home/file.pem'
+                        # dict: {'path': '/home/file.pem'}
+                        # dict: {'url': 'https://host.com/file'}
+                        arg_value = connection_args[arg_name]
+                        if isinstance(arg_value, (str, dict)) is False:
+                            raise SqlApiException(f"Unknown type of arg: '{arg_value}'")
+                        if isinstance(arg_value, str) or 'path' in arg_value:
+                            path = arg_value if isinstance(arg_value, str) else arg_value['path']
+                            if Path(path).is_file() is False:
+                                raise SqlApiException(f"File not found at: '{path}'")
+                        elif 'url' in arg_value:
+                            path = download_file(arg_value['url'])
+                        else:
+                            raise SqlApiException(f"Argument '{arg_name}' must be path or url to the file")
+                        connection_args[arg_name] = path
+
             handler = self.session.integration_controller.create_handler(
                 handler_type=engine,
                 connection_data=connection_args
@@ -637,10 +672,12 @@ class ExecuteCommands:
     def answer_drop_datasource(self, ds_name):
         try:
             integration = self.session.integration_controller.get(ds_name)
+            if integration is None:
+                raise SqlApiException(f"Database '{ds_name}' does not exists.")
             self.session.integration_controller.delete(integration['name'])
         except Exception:
-            raise ErDbDropDelete(f"Something went wrong during deleting of datasource '{ds_name}'.")
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+            raise ErDbDropDelete(f"Something went wrong during deleting database '{ds_name}'.")
+        return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):
         """ answer on 'drop table [if exists] {name}'
@@ -688,110 +725,29 @@ class ExecuteCommands:
         self.session.view_interface.add(name, query, datasource_name)
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
+    def answer_drop_view(self, statement):
+        names = statement.names
+
+        for name in names:
+            view_name = name.parts[-1]
+            self.session.view_interface.delete(view_name)
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
     def answer_create_predictor(self, statement):
-        integration_name = None
-        struct = {
-            'predictor_name': statement.name.parts[-1],
-            'select': statement.query_str,
-            'predict': [x.parts[-1] for x in statement.targets]
-        }
+        ml_integration_name = self.session.database
+        if len(statement.name.parts) == 2:
+            ml_integration_name = statement.name.parts[0]
+            statement.name.parts = [statement.name.parts[-1]]
+        ml_integration_name = ml_integration_name.lower()
+        if ml_integration_name == 'mindsdb':
+            ml_integration_name = 'lightwood'
 
-        if len(struct['predict']) > 1:
-            raise SqlApiException("Only one field can be in 'PREDICT'")
-        if isinstance(statement.integration_name, Identifier):
-            struct['integration_name'] = statement.integration_name.parts[-1]
-        if statement.using is not None:
-            struct['using'] = statement.using
-        if statement.datasource_name is not None:
-            struct['datasource_name'] = statement.datasource_name.parts[-1]
-        if statement.order_by is not None:
-            struct['order_by'] = [x.field.parts[-1] for x in statement.order_by]
-            if len(struct['order_by']) > 1:
-                raise SqlApiException("Only one field can be in 'OPRDER BY'")
-        if statement.group_by is not None:
-            struct['group_by'] = [x.parts[-1] for x in statement.group_by]
-        if statement.window is not None:
-            struct['window'] = statement.window
-        if statement.horizon is not None:
-            struct['horizon'] = statement.horizon
+        ml_handler = self.session.integration_controller.get_handler(ml_integration_name)
 
-        model_interface = self.session.model_interface
-
-        models = model_interface.get_models()
-        model_names = [x['name'] for x in models]
-        if struct['predictor_name'] in model_names:
-            raise SqlApiException(f"Predictor with name '{struct['predictor_name']}' already exists. Each predictor must have unique name.")
-
-        predictor_name = struct['predictor_name']
-        integration_name = struct.get('integration_name')
-
-        integration_id = None
-        fetch_data_query = None
-        if integration_name is not None:
-            handler = self.session.integration_controller.get_handler(integration_name)
-            integration_meta = self.session.integration_controller.get(integration_name)
-            if integration_meta is None:
-                raise SqlApiException(f"Integration '{integration_meta}' does not exists.")
-            integration_id = integration_meta.get('id')
-            # TODO
-            # raise ErBadDbError(f"Unknown datasource: {integration_name}")
-            result = handler.native_query(struct['select'])
-            fetch_data_query = struct['select']
-
-            if result.type != RESPONSE_TYPE.TABLE:
-                raise Exception(f'Error during query: {result.error_message}')
-
-            ds_data_df = result.data_frame
-            ds_column_names = list(ds_data_df.columns)
-
-            predict = self._check_predict_columns(struct['predict'], ds_column_names)
-
-            for i, p in enumerate(predict):
-                predict[i] = get_column_in_case(ds_column_names, p)
-        else:
-            predict = struct['predict']
-
-        timeseries_settings = {}
-        for w in ['order_by', 'group_by', 'window', 'horizon']:
-            if w in struct:
-                timeseries_settings[w] = struct.get(w)
-
-        kwargs = struct.get('using', {})
-        if len(timeseries_settings) > 0:
-            if 'timeseries_settings' not in kwargs:
-                kwargs['timeseries_settings'] = timeseries_settings
-            else:
-                if isinstance(kwargs.get('timeseries_settings'), str):
-                    kwargs['timeseries_settings'] = json.loads(kwargs['timeseries_settings'])
-                kwargs['timeseries_settings'].update(timeseries_settings)
-
-        # Cast all column names to same case
-        if isinstance(kwargs.get('timeseries_settings'), dict):
-            order_by = kwargs['timeseries_settings'].get('order_by')
-            if order_by is not None:
-                if len(order_by) != 1:
-                    raise ErSqlWrongArguments("Only one filed should be used in 'order by'")
-                order_by = order_by[0]
-                new_name = get_column_in_case(ds_column_names, order_by)
-                if new_name is None:
-                    raise ErSqlWrongArguments(
-                        f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {order_by}'
-                    )
-                kwargs['timeseries_settings']['order_by'] = new_name
-            group_by = kwargs['timeseries_settings'].get('group_by')
-            if group_by is not None:
-                for i, col in enumerate(group_by):
-                    new_name = get_column_in_case(ds_column_names, col)
-                    kwargs['timeseries_settings']['group_by'][i] = new_name
-                    if new_name is None:
-                        raise ErSqlWrongArguments(
-                            f'Cant get appropriate cast column case. Columns: {ds_column_names}, column: {col}'
-                        )
-
-        model_interface.learn(
-            predictor_name, ds_data_df, predict, integration_id=integration_id,
-            fetch_data_query=fetch_data_query, kwargs=kwargs, user_class=self.session.user_class
-        )
+        result = ml_handler.query(statement)
+        if result.type == RESPONSE_TYPE.ERROR:
+            raise Exception(result.error_message)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1246,14 +1202,12 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_select(self, query):
-        query.fetch(
-            self.session.datahub
-        )
+        data = query.fetch()
 
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=query.columns_list,
-            data=query.result,
+            data=data['result'],
         )
 
     def is_db_exists(self, db_name):
@@ -1266,9 +1220,7 @@ class ExecuteCommands:
             sql_statement,
             session=self.session
         )
-        result = query.fetch(
-            self.session.datahub
-        )
+        result = query.fetch()
         if result.get('success') is True and len(result.get('result')) > 0:
             return True
         return False
@@ -1287,54 +1239,11 @@ class ExecuteCommands:
             Parameters:
              - insert - dict with keys as columns of mindsb.predictors table.
         '''
-        model_interface = self.session.model_interface
-        integration_controller = self.session.integration_controller
-
-        select_data_query = insert.get('select_data_query')
-        if isinstance(select_data_query, str) is False or len(select_data_query) == 0:
-            raise ErSqlWrongArguments("'select_data_query' should not be empty")
-
-        models = model_interface.get_models()
-        if insert['name'] in [x['name'] for x in models]:
-            raise ErSqlWrongArguments(f"predictor with name '{insert['name']}'' already exists")
-
-        kwargs = {}
-        if isinstance(insert.get('training_options'), str) \
-                and len(insert['training_options']) > 0:
-            try:
-                kwargs = json.loads(insert['training_options'])
-            except json.JSONDecodeError:
-                raise ErSqlWrongArguments('training_options should be in valid JSON string')
-
-        integration = self.session.integration
-        if isinstance(integration, str) is False or len(integration) == 0:
-            raise ErSqlWrongArguments('select_data_query can be used only in query from database')
-
-        insert['select_data_query'] = insert['select_data_query'].replace(r"\'", "'")
-
-        integration_handler = integration_controller.get_handler(integration)
-        result = integration_handler.native_query(insert['select_data_query'])
-        ds_data_df = result['data_frame']
-        ds_column_names = list(ds_data_df.columns)
-
-        insert['predict'] = [x.strip() for x in insert['predict'].split(',')]
-
-        for col in insert['predict']:
-            if col not in ds_column_names:
-                raise ErKeyColumnDoesNotExist(f"Column '{col}' not exists")
-
-        insert['predict'] = self._check_predict_columns(insert['predict'], ds_column_names)
-
-        integration_meta = integration_controller.get(integration)
-        integration_id = integration_meta.get('id')
-        fetch_data_query = insert['select_data_query']
-
-        model_interface.learn(
-            insert['name'], ds_data_df, insert['predict'], integration_id=integration_id,
-            fetch_data_query=fetch_data_query, kwargs=kwargs, user_class=self.session.user_class
+        return ExecuteAnswer(
+            ANSWER_TYPE.ERROR,
+            error_code=0,
+            error_message='At the moment insert into predictors table is not supported'
         )
-
-        return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def _check_predict_columns(self, predict_column_names, ds_column_names):
         ''' validate 'predict' column names
@@ -1384,16 +1293,22 @@ class ExecuteCommands:
         return data
 
     def _get_model_info(self, data):
+        accuracy_functions = data.get('json_ai', {}).get('accuracy_functions')
+        if accuracy_functions:
+            accuracy_functions = str(accuracy_functions)
+
         models_data = data.get("submodel_data", [])
         if models_data == []:
             raise ErBadTableError("predictor doesn't contain enough data to generate 'model' attribute")
         data = []
+
         for model in models_data:
             m_data = []
             m_data.append(model["name"])
             m_data.append(model["accuracy"])
             m_data.append(model.get("training_time", "unknown"))
             m_data.append(1 if model["is_best"] else 0)
+            m_data.append(accuracy_functions)
             data.append(m_data)
         return data
 

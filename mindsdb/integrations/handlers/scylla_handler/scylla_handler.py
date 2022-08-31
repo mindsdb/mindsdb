@@ -1,17 +1,24 @@
 import os
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from collections import OrderedDict
+
+import pandas as pd
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
+from cassandra.util import Date
+
+from mindsdb_sql import parse_sql
+from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.parser import ast
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
 from mindsdb.utilities.log import log
-import pandas as pd
-from mindsdb_sql.parser.ast.base import ASTNode
 
 
 class ScyllaHandler(DatabaseHandler):
@@ -41,24 +48,21 @@ class ScyllaHandler(DatabaseHandler):
         connection_props = {
             'auth_provider': auth_provider
         }
-
-        if self.connection_args['protocol_version'] is not None:
-            connection_props['protocol_version'] = self.connection_args['protocol_version']
- 
+        connection_props['protocol_version'] = self.connection_args.get('protocol_version', 4)
         secure_connect_bundle = self.connection_args.get('secure_connect_bundle')
 
         if secure_connect_bundle is not None:
-            if os.path.isfile(self.secure_connect_bundle) is False:
+            if os.path.isfile(secure_connect_bundle) is False:
                 raise Exception("Secure_connect_bundle' must be path to the file")
             connection_props['cloud'] = {
-                'secure_connect_bundle': self.secure_connect_bundle
+                'secure_connect_bundle': secure_connect_bundle
             }
         else:
             connection_props['contact_points'] = [self.connection_args['host']]
             connection_props['port'] = int(self.connection_args['port'])
 
         cluster = Cluster(**connection_props)
-        session = cluster.connect(self.connection_args['keyspace'])
+        session = cluster.connect(self.connection_args.get('keyspace'))
 
         self.is_connected = True
         self.session = session
@@ -85,6 +89,18 @@ class ScyllaHandler(DatabaseHandler):
 
         return response
 
+    def prepare_response(self, resp):
+        # replace cassandra types
+        data = []
+        for row in resp:
+            row2 = {}
+            for k, v in row._asdict().items():
+                if isinstance(v, Date):
+                    v = v.date()
+                row2[k] = v
+            data.append(row2)
+        return data
+
     def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
@@ -94,6 +110,7 @@ class ScyllaHandler(DatabaseHandler):
         session = self.connect()
         try:
             resp = session.execute(query).all()
+            resp = self.prepare_response(resp)
             if resp:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
@@ -115,6 +132,20 @@ class ScyllaHandler(DatabaseHandler):
         """
         Retrieve the data from the SQL statement.
         """
+
+        # remove table alias because Cassandra Query Language doesn't support it
+        if isinstance(query, ast.Select):
+            if isinstance(query.from_table, ast.Identifier) and query.from_table.alias is not None:
+                query.from_table.alias = None
+
+            # remove table name from fields
+            table_name = query.from_table.parts[-1]
+
+            for target in query.targets:
+                if isinstance(target, ast.Identifier):
+                    if target.parts[0] == table_name:
+                        target.parts.pop(0)
+
         renderer = SqlalchemyRender('mysql')
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
@@ -136,3 +167,35 @@ class ScyllaHandler(DatabaseHandler):
         q = f"DESCRIBE {table_name};"
         result = self.native_query(q)
         return result
+
+
+connection_args = OrderedDict(
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'User name'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'Password'
+    },
+    protocol_version={
+        'type': ARG_TYPE.INT,
+        'description': 'The protocol version.'
+    },
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'Server host'
+    },
+    port={
+        'type': ARG_TYPE.INT,
+        'description': 'Server port'
+    },
+    keyspace={
+        'type': ARG_TYPE.STR,
+        'description': 'Name of keyspace'
+    },
+    secure_connect_bundle={
+        'type': ARG_TYPE.PATH,
+        'description': 'Path or URL to the secure connect bundle'
+    }
+)

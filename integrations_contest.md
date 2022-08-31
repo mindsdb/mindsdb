@@ -60,8 +60,11 @@ The `TOP-3` authors who submit ideas before `June 17th, 2022` will get SWAG and 
 </details>
 
 
-## Dev challenge (July 1st - September 1st) 👩‍💻 👨‍💻 
+## ~~Dev challenge~~ (Finished - September 1st) 👩‍💻 👨‍💻 
 
+<details>
+  <summary> Check out the details and winners (Click to expand!)</summary>
+  
 From the `Ideas challenge` MindsDB community members have shared 53 ideas. In this challenge we will start implementing them. To participate check out the [ideas dashboard](https://github.com/mindsdb/mindsdb/projects/9) and follow the rules. If you want to work on an integration that is not included in the list, feel free to [open new issue](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=integration%2Cenhancement&template=integrations_contest.yaml&title=%5BNew+Integration%5D%3A+) and we can assign it to you.
 
 #### Rewards 🏅
@@ -88,9 +91,35 @@ For implementation to be accepted it needs to have:
 	
 > You can only work on one integration at a time. Once you submit the PR, you can start working on another integration. To win prize, the PR must be submited and merged before September  1st 2022.
 
+</details>
+
+## ML Frameworks Ideas Challenge 📖 📝 🚧
+
+This challenge will be quite similar to the Phase 1 Ideas challenge but only for the ML Frameworks ideas. The `TOP-3` authors who submit ideas before `October 1st, 2022` will get SWAG and cool prizes:
+
+| Place | Prize|
+--------|--------
+| 1st| $1000|
+| 2nd| $500|
+| 3th| $250|
+
+> Rewards will be paid as one-time GitHub sponsorship.
+
+### How to participate? 🏁
+
+1. Create a new [GitHub issue](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=integration%2Cenhancement&template=integrations_contest.yaml&title=%5BNew+Integration%5D%3A+)
+2. Invite everyone to upvote by adding 👍(thumbs up) emoji to an issue
+3. Share it on MindsDB community Slack, [`using_mindsdb` channel](https://join.slack.com/share/enQtMzU5ODc5OTMzMDYzMC1iYzc1MmFkMjY0MDQ0MmM0OTM2ZWY0MzU2NWY2NjBmM2I5MjZlN2JlZDIzN2M4MzQwNzY3MzJhMjJmNjcyYWM1)
+
+### Rules 🚥
+
+* MindsDB team will review the ideas and label them `accepted`. Once the idea is accepted it will be moved to the `ML Frameworks Integrations ideas` [project](https://github.com/mindsdb/mindsdb/projects/10). 
+* People will start voting on the proposed ideas and discuss further implementation. 
+* The top 3 authors whose ideas will get the highest number of upvotes 👍 will be the winners. If multiple ideas have the same number of votes the first one posted wins. Please, feel free to submit as many ideas as you like, however, we will not sum up upvotes from multiple issues from a single author and will take just one that has the highest number of votes. 
+* Make sure you complete all the steps above to be considered for a prize. After the deadline is finished, the ideas issues will be moved to the `Implementation` step, and the number of votes till the deadline will be counted. Note that we only count the votes from the accounts created 1 month before the contest started to avoid vote-rigging.
+
+📣 We will announce the winners on our [Community Slack](https://mindsdb.com/joincommunity) during the first couple of days after the submission deadline.
+
 ### What’s coming soon? ⌛
 
-In the coming weeks we will add more challenges, like writing tutorials, so stay tuned. And if you like MindsDB, we would appreciate you sharing your love with a GitHub Star ⭐
-
-#### Tutorials Challenge 📖 📝 🚧
-> Starting soon ...
+In the coming weeks we will add more challenges like writing tutorials, new integrations and many more so stay tuned. And if you like MindsDB, we would appreciate you sharing your love with a GitHub Star ⭐

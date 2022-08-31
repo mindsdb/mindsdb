@@ -120,7 +120,7 @@ del OneDB-Win64-ODBC-Driver.zip
 * Add  **`%INFORMIXDIR%\bin to PATH`**
 
 * Below code will clone, build and install wheel
-``cmd
+```cmd
 pip install wheel
 mkdir Temp
 cd Temp
@@ -132,7 +132,7 @@ cd ..
 cd ..
 cd ..
 rmdir Temp
-``
+```
 </details>
 
 <br>

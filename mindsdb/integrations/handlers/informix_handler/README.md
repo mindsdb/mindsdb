@@ -72,7 +72,7 @@ rm OneDB-Linux64-ODBC-Driver.tar
 * After running  above command you need to go in `.bashrc` file and add enviroment variable there
 
 ```bash
-export INFORMIXDIR = $HOME/Informix/home/informix/cli/onedb-driver
+export INFORMIXDIR = $HOME/Informix/home/informix/cli/onedb-odbc-driver
 export LD_LIBRARY_PATH=${INFORMIXDIR}/lib:${INFORMIXDIR}/lib/esql:${INFORMIXDIR}/lib/cli
 ```
 * Now you are done with setting Enviroment variable.
@@ -116,7 +116,7 @@ del OneDB-Win64-ODBC-Driver.zip
 
 * Above code will Download, Extract OneDB ODBC zip file.
 * You need to add THis To ENViroment Variable
-* `set INFORMIXDIR=$HOME/Informix/home/informix/cli/onedb-driver`
+* `set INFORMIXDIR=$HOME/Informix/home/informix/cli/onedb-odbc-driver`
 * Add  **`%INFORMIXDIR%\bin to PATH`**
 
 * Below code will clone, build and install wheel

@@ -227,9 +227,25 @@ class RedisCache(BaseCache):
         self.client.hdel(self.category, key)
 
 
+class NoCache:
+    '''
+        class for no cache mode
+    '''
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def get(self, name):
+        return None
+
+    def set(self, name, value):
+        pass
+
+
 def get_cache(category, **kwargs):
     config = Config()
-    if config['cache']['type'] == 'redis':
+    if config.get('cache')['type'] == 'redis':
         return RedisCache(category, **kwargs)
+    if config.get('cache')['type'] == 'none':
+        return NoCache(category, **kwargs)
     else:
         return FileCache(category, **kwargs)

@@ -63,8 +63,7 @@ import pandas as pd
 import walrus
 
 from mindsdb.utilities.config import Config
-
-CONFIG = Config()
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 
 def dataframe_checksum(df: pd.DataFrame):
@@ -73,7 +72,7 @@ def dataframe_checksum(df: pd.DataFrame):
 
 
 def json_checksum(obj: [dict, list]):
-    checksum = str_checksum(json.dumps(obj))
+    checksum = str_checksum(CustomJSONEncoder().encode(obj))
     return checksum
 
 

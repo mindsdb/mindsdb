@@ -204,7 +204,7 @@ class RedisCache(BaseCache):
 
         self.client.set(key, value)
         # using key with category name to store all keys with modify time
-        self.client.hset(self.category, key, int(time.time()*100))
+        self.client.hset(self.category, key, int(time.time()*1000))
 
         self.clear_old_cache(key)
 

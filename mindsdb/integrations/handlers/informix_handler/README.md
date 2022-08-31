@@ -116,7 +116,7 @@ del OneDB-Win64-ODBC-Driver.zip
 
 * Above code will Download, Extract OneDB ODBC zip file.
 * You need to add THis To ENViroment Variable
-* **`set INFORMIXDIR=$HOME/Informix/home/informix/cli/onedb-driver`**
+* `set INFORMIXDIR=$HOME/Informix/home/informix/cli/onedb-driver`
 * Add  **`%INFORMIXDIR%\bin to PATH`**
 
 * Below code will clone, build and install wheel

@@ -95,9 +95,12 @@ def get_table_alias(table_obj, default_db_name):
             name = (default_db_name, table_obj.parts[0])
         else:
             name = tuple(table_obj.parts)
-    else:
+    elif isinstance(table_obj, Select):
         # it is subquery
-        name = table_obj.alias.parts[0] or 't'
+        if table_obj.alias is None:
+            name = 't'
+        else:
+            name = table_obj.alias.parts[0]
         name = (default_db_name, name)
 
     if table_obj.alias is not None:

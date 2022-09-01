@@ -85,9 +85,6 @@ if not is_ray_worker:
     mindsdb_config = Config()
     create_dirs_recursive(mindsdb_config['paths'])
 
-    os.environ['DEFAULT_LOG_LEVEL'] = os.environ.get('DEFAULT_LOG_LEVEL', 'ERROR')
-    os.environ['LIGHTWOOD_LOG_LEVEL'] = os.environ.get('LIGHTWOOD_LOG_LEVEL', 'ERROR')
-
     if telemetry_file_exists(mindsdb_config['storage_dir']):
         os.environ['CHECK_FOR_UPDATES'] = '0'
         print('\n x telemetry disabled! \n')

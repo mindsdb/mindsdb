@@ -88,9 +88,6 @@ if __name__ == '__main__':
                 print(f"{'{0: <18}'.format(handler_name)} - error during dependencies installation: {result.get('error_message', 'unknown error')}")
         sys.exit(0)
 
-    os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
-    os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
-
     # Switch to this once the native interface has it's own thread :/
     ctx = mp.get_context('spawn')
 

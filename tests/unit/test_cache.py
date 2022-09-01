@@ -39,9 +39,19 @@ class TestCashe(unittest.TestCase):
 
         name = dataframe_checksum(df)
 
+        # test save
         cache.set(name, df)
 
         df2 = cache.get(name)
+
+        assert dataframe_checksum(df) == dataframe_checksum(df2)
+        assert list(df.columns) == list(df2.columns)
+
+        # test save df
+        name += '1'
+        cache.set_df(name, df)
+
+        df2 = cache.get_df(name)
 
         assert dataframe_checksum(df) == dataframe_checksum(df2)
         assert list(df.columns) == list(df2.columns)

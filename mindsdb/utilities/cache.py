@@ -95,6 +95,14 @@ class BaseCache(ABC):
                 import dill as s_module
             self.serializer = s_module
 
+    # default functions
+
+    def set_df(self, name, df):
+        return self.set(name, df)
+
+    def get_df(self, name):
+        return self.get(name)
+
     def serialize(self, value):
         return self.serializer.dumps(value)
 
@@ -135,6 +143,11 @@ class FileCache(BaseCache):
     def file_path(self, name):
         return self.path / name
 
+    def set_df(self, name, df):
+        path = self.file_path(name)
+        df.to_pickle(path)
+        self.clear_old_cache()
+
     def set(self, name, value):
         path = self.file_path(name)
         value = self.serialize(value)
@@ -142,6 +155,13 @@ class FileCache(BaseCache):
         with open(path, 'wb') as fd:
             fd.write(value)
         self.clear_old_cache()
+
+    def get_df(self, name):
+        path = self.file_path(name)
+
+        if not os.path.exists(path):
+            return None
+        return pd.read_pickle(path)
 
     def get(self, name):
         path = self.file_path(name)

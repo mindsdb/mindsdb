@@ -281,6 +281,10 @@ class SQLQuery():
 
             if isinstance(p.data, dict) and 'error' not in p.data:
                 ts_settings = p.learn_args.get('timeseries_settings', {})
+                predictor = {
+                    'timeseries': False,
+                    'id': p.id
+                }
                 if ts_settings.get('is_timeseries') is True:
                     window = ts_settings.get('window')
                     order_by = ts_settings.get('order_by')
@@ -289,17 +293,15 @@ class SQLQuery():
                     group_by = ts_settings.get('group_by')
                     if isinstance(group_by, list) is False and group_by is not None:
                         group_by = [group_by]
-                    predictor_metadata[model_name] = {
+                    predictor.update({
                         'timeseries': True,
                         'window': window,
                         'horizon': ts_settings.get('horizon'),
                         'order_by_column': order_by,
                         'group_by_columns': group_by
-                    }
-                else:
-                    predictor_metadata[model_name] = {
-                        'timeseries': False
-                    }
+                    })
+                predictor_metadata[model_name] = predictor
+
                 self.model_types.update(p.data.get('dtypes', {}))
 
         mindsdb_database_name = 'mindsdb'
@@ -917,7 +919,8 @@ class SQLQuery():
                     values = []
                 else:
                     # check cache
-                    key = f'{predictor}_{json_checksum(where_data)}'
+                    predictor_id = self.planner.predictor_metadata[predictor]['id']
+                    key = f'{predictor}_{predictor_id}_{json_checksum(where_data)}'
                     data = predictor_cache.get(key)
 
                     if data is None:

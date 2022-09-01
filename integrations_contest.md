@@ -95,7 +95,15 @@ Here are the requirements for an implementation to be accepted.
 
 ## ML Frameworks Ideas Challenge 📖 📝 🚧
 
-This challenge is similar to the `Phase 1 Ideas challenge`, but here we consider only the ML Frameworks ideas. The `TOP-3` authors who submit ideas before `October 1st, 2022` get SWAG and other cool prizes:
+We believe that offering a simple way to implement Machine Learning where the data lives, can bring improvements to the design of the ML aplications and their adoption. That's why we want to hear your ideas and bring different ML Frameworks to different data sources. Currently, MindsDB supports +40 different data sources and few ML Frameworks. Some examples of the current ideas we have and the supported ML integrations:
+
+* [MLFlow](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mlflow_handler)
+* [Lightwood](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/lightwood_handler)
+* [Ludwig](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/ludwig_handler)
+* [🚧 Huggingface]() 
+* [🚧 Ray Serve ]()
+
+This challenge is similar to the Phase 1 Ideas challenge, but here we consider only the ML Frameworks ideas. The `TOP-3` authors who submit ideas before `October 1st, 2022` get SWAG and other cool prizes:
 
 | Place | Prize|
 --------|--------

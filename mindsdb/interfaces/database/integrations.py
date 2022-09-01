@@ -214,6 +214,9 @@ class IntegrationController:
                 & (func.lower(Integration.name) == func.lower(name))
             ).first()
 
+        # test override for ludwig, REMOVE LATER
+        name = 'ludwig'
+
         # TODO del in future
         if integration_record is None:
             if name in self.handler_modules.keys():
@@ -227,6 +230,8 @@ class IntegrationController:
             else:
                 raise Exception(f'Unknown integration: {name}')
 
+        integration_record.engine = 'ludwig'
+        integration_record.name = 'ludwig'
         integration_data = self._get_integration_record_data(integration_record, True)
         connection_data = integration_data.get('connection_data', {})
         integration_engine = integration_data['engine']

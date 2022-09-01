@@ -41,7 +41,7 @@ class BaseHandler:
         return
 
     def check_connection(self) -> HandlerStatusResponse:
-        """ Cehck connection to the handler
+        """ Check connection to the handler
 
         Returns:
             HandlerStatusResponse

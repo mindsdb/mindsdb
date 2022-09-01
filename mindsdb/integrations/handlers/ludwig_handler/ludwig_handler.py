@@ -1,29 +1,29 @@
-import requests
-from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Optional, Any, Dict
 
 import dask
 import dill
 import sqlalchemy
 import pandas as pd
-import ludwig as lw
 from ludwig.api import LudwigModel
 from ludwig.automl import auto_train
 
 from mindsdb_sql import parse_sql
 from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
-from mindsdb_sql.parser.ast import Join, Select, Identifier, Constant, Star
+from mindsdb.utilities.functions import mark_process
+from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.libs.utils import get_join_input, recur_get_conditionals, get_aliased_columns, default_data_gather
+from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant, Select, Show, Star, NativeQuery
+from mindsdb.integrations.utilities.utils import get_join_input, recur_get_conditionals, get_aliased_columns, default_data_gather, make_sql_session
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
-from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler, DatabaseHandler
+from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse,
     HandlerResponse,
     RESPONSE_TYPE
 )
+from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb_sql.parser.dialects.mindsdb import (
     CreatePredictor,
     RetrainPredictor,
@@ -33,17 +33,31 @@ from mindsdb_sql.parser.dialects.mindsdb import (
 
 class LudwigHandler(PredictiveHandler):
 
-    type = 'ludwig'
+    name = 'ludwig'
+    predictor_cache: Dict[str, Dict[str, Any]]
 
-    def __init__(self, name):
+    def __init__(self, name, **kwargs):
         """
         Handler to create and use Ludwig AutoML models from MindsDB.
         """  # noqa
         super().__init__(name)
-        self.storage = None
+        self.config = Config()
+        self.predictor_cache = {}
+        storage_config = kwargs.get('storage_config', {'name': "ludwig_handler_storage"})
+        self.storage = SqliteStorageHandler(context={}, config=storage_config)
+
         self.parser = parse_sql
         self.dialect = 'mindsdb'
         self.handler_dialect = 'mysql'
+
+        self.handler_controller = kwargs.get('handler_controller')
+        self.fs_store = kwargs.get('fs_store')
+        self.company_id = kwargs.get('company_id')
+        self.model_controller = WithKWArgsWrapper(
+            ModelController(),
+            company_id=self.company_id
+        )
+
         self.dtypes_to_sql = {
             "Number": sqlalchemy.Integer,
             "Binary": sqlalchemy.Text,
@@ -55,12 +69,10 @@ class LudwigHandler(PredictiveHandler):
             "H3": sqlalchemy.Text,
             "Sequence": sqlalchemy.Text,
             "Vector": sqlalchemy.Text,
-        }  # TODO audio, image?
-        self.is_connected = False
+        }
 
-    def connect(self, **kwargs) -> HandlerStatusResponse:
+    def check_connection(self, **kwargs) -> HandlerStatusResponse:
         """ Setup storage and check whether Ludwig is available. """  # noqa
-        self.storage = SqliteStorageHandler(context=self.name, config=kwargs['config'])
         result = HandlerStatusResponse(False)
         try:
             import ludwig as lw
@@ -73,39 +85,33 @@ class LudwigHandler(PredictiveHandler):
             result.error_message = str(e)
         return result
 
-    def disconnect(self):
-        self.is_connected = False
-        return
-
-    def check_connection(self) -> HandlerStatusResponse:
-        return HandlerResponse(self.is_connected)
-
     def get_tables(self) -> HandlerResponse:
         """ Returns name list of trained models.  """  # noqa
-        models = self.storage.get('models')
-        r = HandlerResponse(
-            RESPONSE_TYPE.TABLE,
-            pd.DataFrame(
+        models = self.storage.get('models', [])
+        if models:
+            df = pd.DataFrame(
                 list(models.keys()) if models else [],
-                columns=['model_name']
+                columns=['table_name']
             )
-        )
-        return r
+        else:
+            df = pd.DataFrame(columns=['table_name'])
+
+        return HandlerResponse(RESPONSE_TYPE.TABLE, df)
 
     def get_columns(self, table_name: str) -> HandlerResponse:
         """ For any given model, return the input data types. """  # noqa
         try:
-            model = dill.loads(self.storage.get('models').get(table_name)['model'])
+            model = self.storage.get('models', {}).get(table_name, {}).get('model', None)
             if not model:
-                model = LudwigModel()
-            cfg = model.config  # json-like
-            r = HandlerResponse(
-                RESPONSE_TYPE.TABLE,
-                pd.DataFrame(
+                df = pd.DataFrame(columns=['COLUMN_NAME', 'DATA_TYPE'])
+            else:
+                model = dill.loads(model)
+                cfg = model.config
+                df = pd.DataFrame(
                     [v for v in cfg.values()],
                     columns=[k for k in cfg.keys()]
                 )
-            )
+            r = HandlerResponse(RESPONSE_TYPE.TABLE, df)
         except Exception as e:
             log.error(f"Could not get columns for model {table_name}, error: {e}")
             r = HandlerResponse(RESPONSE_TYPE.ERROR)
@@ -113,47 +119,13 @@ class LudwigHandler(PredictiveHandler):
 
     def native_query(self, query: Any) -> HandlerResponse:
         statement = self.parser(query, dialect=self.dialect)
-        r = HandlerResponse(True)
 
         if type(statement) == CreatePredictor:
-            model_name = statement.name.parts[-1]
-
-            if model_name in self.get_tables().data_frame.values:
-                raise Exception("Error: this model already exists!")
-
-            target = statement.targets[0].parts[-1]
-            if statement.order_by:
-                raise Exception("Ludwig handler does not support time series tasks yet!")
-
-            # get training data from other integration
-            handler = MDB_CURRENT_HANDLERS[str(statement.integration_name)]  # TODO import from mindsdb init
-            handler_query = self.parser(statement.query_str, dialect=self.handler_dialect)
-            df = default_data_gather(handler, handler_query)
-
-            grace_period = 72
-            time_budget = 120
-            results = auto_train(
-                dataset=df,
-                target=target,
-                time_limit_s=max(grace_period, time_budget),  # TODO customizable (also, is grace period fixed?)
-                tune_for_memory=False
-            )
-            model = results.best_model
-
-            all_models = self.storage.get('models')
-            payload = {
-                'stmt': statement,
-                'model': dill.dumps(model),
-            }
-            if all_models is not None:
-                all_models[model_name] = payload
-            else:
-                all_models = {model_name: payload}
-            self.storage.set('models', all_models)
+            self._learn(statement)
 
         elif type(statement) == RetrainPredictor:
-            log.warning('Warning: retraining Ludwig models is not yet supported!')  # TODO: restore this
-            return r
+            msg = 'Warning: retraining Ludwig models is not yet supported!'  # TODO: restore this
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=msg)
 
         elif type(statement) == DropPredictor:
             to_drop = statement.name.parts[-1]
@@ -167,7 +139,7 @@ class LudwigHandler(PredictiveHandler):
         else:
             raise Exception(f"Query type {type(statement)} not supported")
         
-        return r
+        return HandlerResponse(RESPONSE_TYPE.OK)
 
     def query(self, query: ASTNode) -> HandlerResponse:
         values = recur_get_conditionals(query.where.args, {})
@@ -222,3 +194,51 @@ class LudwigHandler(PredictiveHandler):
         predictions.columns = ['prediction']
         joined = df.join(predictions)
         return joined
+
+    @mark_process(name='learn')
+    def _learn(self, statement):
+        model_name = statement.name.parts[-1]
+
+        if model_name in self.get_tables().data_frame.values:
+            raise Exception("Error: this model already exists!")
+
+        target = statement.targets[0].parts[-1]
+        if statement.order_by:
+            raise Exception("Ludwig handler does not support time series tasks yet!")
+
+        # TODO: potentially abstract this into a common utility?
+        # get data from integration  # TODO: custom dialect?
+        integration_name = statement.integration_name.parts[0]
+        query = Select(
+            targets=[Star()],
+            from_table=NativeQuery(
+                integration=Identifier(integration_name),
+                query=statement.query_str,
+            )
+        )
+        sql_session = make_sql_session(self.company_id, ml_handler=LudwigHandler.name)
+        sqlquery = SQLQuery(query, session=sql_session)
+        df = sqlquery.fetch(view='dataframe')
+
+        # df = default_data_gather(handler, handler_query)
+
+        grace_period = 72
+        time_budget = 120
+        results = auto_train(
+            dataset=df,
+            target=target,
+            time_limit_s=max(grace_period, time_budget),  # TODO customizable (also, is grace period fixed?)
+            tune_for_memory=False
+        )
+        model = results.best_model
+
+        all_models = self.storage.get('models')
+        payload = {
+            'stmt': statement,
+            'model': dill.dumps(model),
+        }
+        if all_models is not None:
+            all_models[model_name] = payload
+        else:
+            all_models = {model_name: payload}
+        self.storage.set('models', all_models)

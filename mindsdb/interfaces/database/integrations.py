@@ -15,7 +15,7 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
 
 
 class IntegrationController:
@@ -196,7 +196,7 @@ class IntegrationController:
                 ViewController(),
                 company_id=company_id
             )
-        elif handler_type == 'lightwood':
+        elif self.handler_modules.get(handler_type, False).type == HANDLER_TYPE.ML:
             handler_ars['handler_controller'] = WithKWArgsWrapper(
                 IntegrationController(),
                 company_id=company_id
@@ -216,11 +216,11 @@ class IntegrationController:
 
         # TODO del in future
         if integration_record is None:
-            if name == 'lightwood':
+            if name in self.handler_modules.keys():
                 handler = self.create_handler(
                     name=name,
-                    handler_type='lightwood',
-                    connection_data=None,
+                    handler_type=name,
+                    connection_data={},
                     company_id=company_id
                 )
                 return handler

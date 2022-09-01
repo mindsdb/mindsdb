@@ -1,2 +1,3 @@
 ludwig[distributed]>=0.5.2
 mindsdb>=22.6.2.1
+dill

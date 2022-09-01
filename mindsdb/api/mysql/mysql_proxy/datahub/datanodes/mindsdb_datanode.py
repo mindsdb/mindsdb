@@ -32,11 +32,11 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, model_controller, integration_controller):
+    def __init__(self, model_controller, integration_controller, ml_handler='lightwood'):
         self.config = Config()
         self.model_controller = model_controller
         self.integration_controller = integration_controller
-        self.handler = self.integration_controller.get_handler('lightwood')
+        self.handler = self.integration_controller.get_handler(ml_handler)
 
     def get_tables(self):
         models = self.model_controller.get_models()

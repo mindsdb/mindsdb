@@ -32,14 +32,15 @@ class InformationSchemaDataNode(DataNode):
         'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
     }
 
-    def __init__(self, session):
+    def __init__(self, session, ml_handler='lightwood'):
         self.session = session
         self.integration_controller = session.integration_controller
         self.view_interface = session.view_interface
         self.persis_datanodes = {
             'mindsdb': MindsDBDataNode(
                 session.model_controller,
-                session.integration_controller
+                session.integration_controller,
+                ml_handler=ml_handler
             ),
             'files': IntegrationDataNode(
                 'files',

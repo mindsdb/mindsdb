@@ -1,9 +1,8 @@
 import os
 import sys
 import json
-import traceback
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Any
 import copy
 from dateutil.parser import parse as parse_datetime
 
@@ -11,11 +10,10 @@ import psutil
 import sqlalchemy
 import pandas as pd
 import lightwood
-from lightwood.api.types import JsonAI
-from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, ProblemDefinition
+from lightwood.api.high_level import ProblemDefinition
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant, Select, OrderBy, Show, Star, NativeQuery
+from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant, Select, Show, Star, NativeQuery
 from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
     CreatePredictor,
@@ -25,16 +23,14 @@ from lightwood import __version__ as lightwood_version
 from lightwood.api import dtype
 import numpy as np
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.interfaces.database.integrations import IntegrationController
-from mindsdb.interfaces.database.views import ViewController
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
-from mindsdb.integrations.libs.utils import recur_get_conditionals, get_aliased_columns, get_join_input, get_model_name
+from mindsdb.integrations.utilities.utils import get_aliased_columns, get_join_input, get_model_name, make_sql_session
+from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
+    HandlerStatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
@@ -49,7 +45,7 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 
-from .learn_process import brack_to_mod, rep_recur, LearnProcess, UpdateProcess
+from .learn_process import LearnProcess, UpdateProcess
 from .utils import unpack_jsonai_old_args, load_predictor
 from .join_utils import get_ts_join_input
 
@@ -138,15 +134,16 @@ class LightwoodHandler(PredictiveHandler):
             company_id=self.company_id
         )
 
-    def check_connection(self) -> Dict[str, int]:
+    def check_connection(self) -> HandlerStatusResponse:
+        result = HandlerStatusResponse(False)
         try:
             year, major, minor, hotfix = lightwood.__version__.split('.')
             assert int(year) > 22 or (int(year) == 22 and int(major) >= 4)
-            print("Lightwood OK!")
-            return {'status': '200'}
+            result.success = True
         except AssertionError as e:
-            print("Cannot import lightwood!")
-            return {'status': '503', 'error': e}
+            log.error(f"Cannot import lightwood, {e}")
+            result.error_message = str(e)
+        return result
 
     def get_tables(self) -> Response:
         """ Returns list of model names (that have been succesfully linked with CREATE PREDICTOR) """  # noqa
@@ -184,19 +181,6 @@ class LightwoodHandler(PredictiveHandler):
         )
         return result
 
-    def make_sql_session(self, company_id):
-
-        server_obj = type('', (), {})()
-        server_obj.original_integration_controller = IntegrationController()
-        server_obj.original_model_controller = ModelController()
-        server_obj.original_view_controller = ViewController()
-
-        sql_session = SessionController(
-            server=server_obj,
-            company_id=company_id
-        )
-        sql_session.database = 'mindsdb'
-        return sql_session
 
     @mark_process(name='learn')
     def _learn(self, statement):
@@ -245,7 +229,7 @@ class LightwoodHandler(PredictiveHandler):
                 query=statement.query_str
             )
         )
-        sql_session = self.make_sql_session(self.company_id)
+        sql_session = make_sql_session(self.company_id, ml_handler='lightwood')
 
         # execute as query
         sqlquery = SQLQuery(query, session=sql_session)
@@ -731,7 +715,7 @@ class LightwoodHandler(PredictiveHandler):
 
                 data_handler.select_into(into, predictions, dtypes=dtypes)
             except Exception:
-                print("Error when trying to store the JOIN output in data handler.")
+                log.error("Error when trying to store the JOIN output in data handler.")
 
         return predictions
 

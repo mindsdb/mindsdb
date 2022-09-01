@@ -221,7 +221,7 @@ class LudwigHandler(PredictiveHandler):
         )
         sql_session = make_sql_session(self.company_id, ml_handler=LudwigHandler.name)
         sqlquery = SQLQuery(query, session=sql_session)
-        df = sqlquery.fetch(view='dataframe')
+        df = sqlquery.fetch(view='dataframe')['result']
 
         # df = default_data_gather(handler, handler_query)
 

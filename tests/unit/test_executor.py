@@ -164,6 +164,45 @@ class TestTableau(BaseTestCase):
         assert ret.data[0] == [3, 4, 5]
 
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_predictor_tableau_header_alias(self, mock_handler):
+        df = pd.DataFrame([
+            {'a': 1, 'b': 'one'},
+            {'a': 2, 'b': 'two'},
+            {'a': 1, 'b': 'three'},
+        ])
+        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
+
+        # --- use predictor ---
+        predicted_value = 5
+        predictor = {
+            'name': 'task_model',
+            'predict': 'p',
+            'dtypes': {
+                'p': dtype.float,
+                'a': dtype.integer,
+                'b': dtype.categorical
+            },
+            'predicted_value': predicted_value
+        }
+        self.set_predictor(predictor)
+        ret = self.command_executor.execute_command(parse_sql(f'''
+           SELECT              
+              max(a1) AS a1,
+              min(a2) AS a2
+            FROM (
+              SELECT source.a as a1, source.a as a2 
+               FROM pg.tasks as source
+               JOIN mindsdb.task_model as res
+            ) t1
+            HAVING (COUNT(1) > 0)
+                ''', dialect='mindsdb'))
+
+        # second column is having last value of 'b'
+        # 3: count rows, 4: sum of 'a', 5 max of prediction
+        assert ret.data[0] == [2, 1]
+
+
 class TestWithNativeQuery(BaseTestCase):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_integration_native_query(self, mock_handler):

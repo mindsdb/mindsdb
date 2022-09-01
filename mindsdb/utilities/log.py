@@ -41,6 +41,9 @@ class LoggerWrapper(object):
     def flush(self):
         pass
 
+    def isatty(self):
+        return True  # assumes terminal attachment
+
 
 class DbHandler(logging.Handler):
     def __init__(self):

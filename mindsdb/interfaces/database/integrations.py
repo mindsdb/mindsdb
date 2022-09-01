@@ -215,7 +215,8 @@ class IntegrationController:
             ).first()
 
         # test override for ludwig, REMOVE LATER
-        name = 'ludwig'
+        if name == 'lightwood':
+            name = 'ludwig'
 
         # TODO del in future
         if integration_record is None:
@@ -230,8 +231,9 @@ class IntegrationController:
             else:
                 raise Exception(f'Unknown integration: {name}')
 
-        integration_record.engine = 'ludwig'
-        integration_record.name = 'ludwig'
+        if integration_record.engine == 'lightwood':
+            integration_record.engine = 'ludwig'
+            integration_record.name = 'ludwig'
         integration_data = self._get_integration_record_data(integration_record, True)
         connection_data = integration_data.get('connection_data', {})
         integration_engine = integration_data['engine']

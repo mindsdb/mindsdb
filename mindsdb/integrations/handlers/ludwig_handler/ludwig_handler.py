@@ -119,29 +119,10 @@ class LudwigHandler(PredictiveHandler):
 
     def native_query(self, query: Any) -> HandlerResponse:
         statement = self.parser(query, dialect=self.dialect)
-
-        if type(statement) == CreatePredictor:
-            self._learn(statement)
-
-        elif type(statement) == RetrainPredictor:
-            msg = 'Warning: retraining Ludwig models is not yet supported!'  # TODO: restore this
-            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=msg)
-
-        elif type(statement) == DropPredictor:
-            to_drop = statement.name.parts[-1]
-            models = self.storage.get('models')
-            if models:
-                del models[to_drop]
-                self.storage.set('models', models)
-            else:
-                raise Exception(f"Can't drop non-existent model {to_drop}")
-
-        else:
-            raise Exception(f"Query type {type(statement)} not supported")
-        
-        return HandlerResponse(RESPONSE_TYPE.OK)
+        return self.query(statement)
 
     def query(self, query: ASTNode) -> HandlerResponse:
+        """old query body
         values = recur_get_conditionals(query.where.args, {})
         model_name, _, _ = self._get_model_name(query)
         model = self._get_model(model_name)
@@ -152,6 +133,28 @@ class LudwigHandler(PredictiveHandler):
             df
         )
         return r
+        """
+        print(query)
+        if type(query) == CreatePredictor:
+            self._learn(query)
+
+        elif type(query) == RetrainPredictor:
+            msg = 'Warning: retraining Ludwig models is not yet supported!'  # TODO: restore this
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=msg)
+
+        elif type(query) == DropPredictor:
+            to_drop = query.name.parts[-1]
+            models = self.storage.get('models')
+            if models:
+                del models[to_drop]
+                self.storage.set('models', models)
+            else:
+                raise Exception(f"Can't drop non-existent model {to_drop}")
+
+        else:
+            raise Exception(f"Query type {type(query)} not supported")
+        
+        return HandlerResponse(RESPONSE_TYPE.OK)
 
     def join(self, stmt, data_handler, into: Optional[str]) -> HandlerResponse:
         """

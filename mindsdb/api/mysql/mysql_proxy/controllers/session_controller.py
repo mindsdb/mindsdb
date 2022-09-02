@@ -20,7 +20,8 @@ class SessionController():
     This class manages the server session
     '''
 
-    def __init__(self, server, company_id: int = None, user_class: int = None, ml_handler='lightwood') -> object:
+    def __init__(self, server, query: str = '', company_id: int = None, user_class: int = None, ml_handler: str = '') \
+            -> object:
         """
         Initialize the session
         :param company_id:
@@ -50,7 +51,7 @@ class SessionController():
             company_id=company_id
         )
 
-        self.datahub = init_datahub(self, ml_handler=ml_handler)
+        self.datahub = init_datahub(self, query, ml_handler)
 
         self.prepared_stmts = {}
         self.packet_sequence_number = 0

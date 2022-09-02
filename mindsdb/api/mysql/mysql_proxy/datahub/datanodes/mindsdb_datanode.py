@@ -3,6 +3,7 @@ import json
 import pandas as pd
 import numpy as np
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql import parse_sql
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -32,11 +33,21 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, model_controller, integration_controller, ml_handler='lightwood'):
+    def __init__(self, model_controller, integration_controller, query, ml_handler):
         self.config = Config()
         self.model_controller = model_controller
         self.integration_controller = integration_controller
-        self.handler = self.integration_controller.get_handler(ml_handler)
+        if ml_handler:
+            handler = ml_handler
+        elif query:
+            ast = parse_sql(query, dialect=self.type)
+            handler = ast.name.parts[0].lower()
+            handlers = self.integration_controller.original_instance.handlers_import_status
+            if not handlers.get(handler, {}).get('import', {}).get('success', False):
+                handler = 'lightwood'
+        else:
+            handler = 'lightwood'
+        self.handler = self.integration_controller.get_handler(handler)
 
     def get_tables(self):
         models = self.model_controller.get_models()

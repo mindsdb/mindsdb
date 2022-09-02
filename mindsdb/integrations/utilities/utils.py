@@ -6,7 +6,7 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.views import ViewController
 
 
-def make_sql_session(company_id, ml_handler):
+def make_sql_session(company_id, ml_handler=None):
 
     server_obj = type('', (), {})()
     server_obj.original_integration_controller = IntegrationController()

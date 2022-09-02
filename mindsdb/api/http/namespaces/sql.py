@@ -28,7 +28,8 @@ class Query(Resource):
 
         mysql_proxy = FakeMysqlProxy(
             company_id=request.company_id,
-            user_class=request.user_class
+            user_class=request.user_class,
+            query=query
         )
         mysql_proxy.set_context(context)
         try:

@@ -15,7 +15,7 @@ class Dummy:
 
 
 class FakeMysqlProxy(MysqlProxy):
-    def __init__(self, company_id, user_class):
+    def __init__(self, company_id, user_class, query=''):
         request = Dummy()
         client_address = ['', '']
         server = Dummy()
@@ -36,7 +36,8 @@ class FakeMysqlProxy(MysqlProxy):
         self.session = SessionController(
             server=self.server,
             company_id=company_id,
-            user_class=user_class
+            user_class=user_class,
+            query=query
         )
         self.session.database = 'mindsdb'
 

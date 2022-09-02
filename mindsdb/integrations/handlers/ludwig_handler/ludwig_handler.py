@@ -219,7 +219,7 @@ class LudwigHandler(PredictiveHandler):
                 query=statement.query_str,
             )
         )
-        sql_session = make_sql_session(self.company_id, ml_handler=LudwigHandler.name)
+        sql_session = make_sql_session(self.company_id, ml_handler=self.name)
         sqlquery = SQLQuery(query, session=sql_session)
         df = sqlquery.fetch(view='dataframe')['result']
 

@@ -32,7 +32,7 @@ class InformationSchemaDataNode(DataNode):
         'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
     }
 
-    def __init__(self, session, ml_handler='lightwood'):
+    def __init__(self, session, query, ml_handler):
         self.session = session
         self.integration_controller = session.integration_controller
         self.view_interface = session.view_interface
@@ -40,7 +40,8 @@ class InformationSchemaDataNode(DataNode):
             'mindsdb': MindsDBDataNode(
                 session.model_controller,
                 session.integration_controller,
-                ml_handler=ml_handler
+                query,
+                ml_handler
             ),
             'files': IntegrationDataNode(
                 'files',

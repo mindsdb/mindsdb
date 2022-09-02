@@ -24,7 +24,7 @@ from lightwood.api import dtype
 import numpy as np
 
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
-from mindsdb.integrations.utilities.utils import get_aliased_columns, get_join_input, get_model_name, make_sql_session
+from mindsdb.integrations.utilities.utils import get_aliased_columns, get_join_input, get_model_name, make_sql_session, get_where_data
 from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
@@ -50,22 +50,6 @@ from .utils import unpack_jsonai_old_args, load_predictor
 from .join_utils import get_ts_join_input
 
 IS_PY36 = sys.version_info[1] <= 6
-
-
-def get_where_data(where):
-    result = {}
-    if type(where) != BinaryOperation:
-        raise Exception("Wrong 'where' statement")
-    if where.op == '=':
-        if type(where.args[0]) != Identifier or type(where.args[1]) != Constant:
-            raise Exception("Wrong 'where' statement")
-        result[where.args[0].parts[-1]] = where.args[1].value
-    elif where.op == 'and':
-        result.update(get_where_data(where.args[0]))
-        result.update(get_where_data(where.args[1]))
-    else:
-        raise Exception("Wrong 'where' statement")
-    return result
 
 
 class NumpyJSONEncoder(json.JSONEncoder):

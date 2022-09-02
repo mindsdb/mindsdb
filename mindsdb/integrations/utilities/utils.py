@@ -1,5 +1,5 @@
 import pandas as pd
-from mindsdb_sql.parser.ast import Identifier, Constant, Star, Select, Join
+from mindsdb_sql.parser.ast import Identifier, Constant, Star, Select, Join, BinaryOperation
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.model.model_controller import ModelController
@@ -20,6 +20,22 @@ def make_sql_session(company_id, ml_handler=None):
     )
     sql_session.database = 'mindsdb'
     return sql_session
+
+
+def get_where_data(where):
+    result = {}
+    if type(where) != BinaryOperation:
+        raise Exception("Wrong 'where' statement")
+    if where.op == '=':
+        if type(where.args[0]) != Identifier or type(where.args[1]) != Constant:
+            raise Exception("Wrong 'where' statement")
+        result[where.args[0].parts[-1]] = where.args[1].value
+    elif where.op == 'and':
+        result.update(get_where_data(where.args[0]))
+        result.update(get_where_data(where.args[1]))
+    else:
+        raise Exception("Wrong 'where' statement")
+    return result
 
 
 def recur_get_conditionals(args: list, values):

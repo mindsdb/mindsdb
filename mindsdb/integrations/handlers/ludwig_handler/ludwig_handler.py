@@ -14,13 +14,17 @@ from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant, Select, Show, Star, NativeQuery
-from mindsdb.integrations.utilities.utils import get_join_input, recur_get_conditionals, get_aliased_columns, default_data_gather, make_sql_session
+from mindsdb.integrations.utilities.utils import get_join_input, recur_get_conditionals, get_aliased_columns, default_data_gather, make_sql_session, get_where_data
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse,
     HandlerResponse,
     RESPONSE_TYPE
+)
+from mindsdb.interfaces.model.functions import (
+    get_model_record,
+    get_model_records
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb_sql.parser.dialects.mindsdb import (
@@ -153,6 +157,14 @@ class LudwigHandler(PredictiveHandler):
             else:
                 raise Exception(f"Can't drop non-existent model {to_drop}")
 
+        # elif type(query) == Select:
+        #     model_name = query.from_table.parts[-1]
+        #     where_data = get_where_data(query.where)
+        #     predictions = self.predict(model_name, where_data)
+        #     return HandlerResponse(
+        #         RESPONSE_TYPE.TABLE,
+        #         data_frame=pd.DataFrame(predictions)
+        #     )
         else:
             raise Exception(f"Query type {type(query)} not supported")
         
@@ -250,3 +262,20 @@ class LudwigHandler(PredictiveHandler):
             all_models = {model_name: payload}
         self.storage.set('models', all_models)
         log.info(f'Ludwig model {model_name} has finished training.')
+
+    @mark_process(name='predict')
+    def predict(self, model_name, data):
+        if isinstance(data, dict):
+            data = [data]
+        df = pd.DataFrame(data)
+        predictor_record = get_model_record(company_id=self.company_id, name=model_name)
+        if predictor_record is None:
+            return HandlerResponse(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Error: model '{model_name}' does not exists!"
+            )
+
+        fs_name = f'predictor_{self.company_id}_{predictor_record.id}'
+        model_data = self.model_controller.get_model_data(predictor_record=predictor_record)
+
+        return df

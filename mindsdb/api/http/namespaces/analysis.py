@@ -36,7 +36,8 @@ class QueryAnalysis(Resource):
 
         mysql_proxy = FakeMysqlProxy(
             company_id=request.company_id,
-            user_class=request.user_class
+            user_class=request.user_class,
+            query=query
         )
         mysql_proxy.set_context(context)
 
@@ -52,6 +53,7 @@ class QueryAnalysis(Resource):
         if result.type != SQL_RESPONSE_TYPE.TABLE:
             return http_error(500, 'Error', 'Query does not return data')
 
+        # is_lw_available = request.integration_controller.  # TODO: check, because self-hosted lightwood may not be present!
         lw_handler = request.integration_controller.get_handler('lightwood')
 
         column_names = [x['name'] for x in result.columns]

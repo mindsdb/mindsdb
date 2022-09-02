@@ -40,10 +40,14 @@ class MindsDBDataNode(DataNode):
         if ml_handler:
             handler = ml_handler
         elif query:
-            ast = parse_sql(query, dialect=self.type)
-            handler = ast.name.parts[0].lower()
+            handler = None
             handlers = self.integration_controller.original_instance.handlers_import_status
-            if not handlers.get(handler, {}).get('import', {}).get('success', False):
+            ast = parse_sql(query, dialect=self.type)
+            if hasattr(ast, 'name'):
+                handler = ast.name.parts[0].lower()
+            elif hasattr(ast, 'from_table'):
+                handler = ast.from_table.parts[0].lower()
+            if not handler or not handlers.get(handler, {}).get('import', {}).get('success', False):
                 handler = 'lightwood'
         else:
             handler = 'lightwood'
@@ -158,7 +162,7 @@ class MindsDBDataNode(DataNode):
         )
 
     def delete_predictor(self, name):
-        self.model_controller.delete_model(name)
+        self.model_controller.delete_model(name, integration_name=self.handler.name)
 
     def get_predictors(self, query: ASTNode):
         predictors_df = self._select_predictors()

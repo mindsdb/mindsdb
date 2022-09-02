@@ -4,7 +4,6 @@ import dask
 import dill
 import sqlalchemy
 import pandas as pd
-from ludwig.api import LudwigModel
 from ludwig.automl import auto_train
 
 from mindsdb_sql import parse_sql
@@ -45,6 +44,10 @@ class LudwigHandler(PredictiveHandler):
         self.predictor_cache = {}
         storage_config = kwargs.get('storage_config', {'name': "ludwig_handler_storage"})
         self.storage = SqliteStorageHandler(context={}, config=storage_config)
+        try:
+            self.storage.get('models')
+        except KeyError:
+            self.storage.set('models', {})
 
         self.parser = parse_sql
         self.dialect = 'mindsdb'
@@ -134,7 +137,6 @@ class LudwigHandler(PredictiveHandler):
         )
         return r
         """
-        print(query)
         if type(query) == CreatePredictor:
             self._learn(query)
 
@@ -223,15 +225,17 @@ class LudwigHandler(PredictiveHandler):
         sqlquery = SQLQuery(query, session=sql_session)
         df = sqlquery.fetch(view='dataframe')['result']
 
-        # df = default_data_gather(handler, handler_query)
-
-        grace_period = 72
-        time_budget = 120
         results = auto_train(
             dataset=df,
             target=target,
-            time_limit_s=max(grace_period, time_budget),  # TODO customizable (also, is grace period fixed?)
-            tune_for_memory=False
+            # TODO: add and enable custom values via SQL (mindful of local vs cloud) for these params:
+            tune_for_memory=False,
+            time_limit_s=120,
+            # output_directory='./',
+            user_config={'hyperopt': {'executor': {'gpu_resources_per_trial': 0, 'num_samples': 3}}},  # no GPU for now
+            # random_seed=42,
+            # use_reference_config=False,
+            # kwargs={}
         )
         model = results.best_model
 
@@ -245,3 +249,4 @@ class LudwigHandler(PredictiveHandler):
         else:
             all_models = {model_name: payload}
         self.storage.set('models', all_models)
+        log.info(f'Ludwig model {model_name} has finished training.')

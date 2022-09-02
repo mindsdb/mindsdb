@@ -180,7 +180,7 @@ class MindsDBDataNode(DataNode):
             return [], []
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
-    def query(self, table, where_data=None):
+    def query(self, table, where_data=None, ml_handler_name='lightwood'):
         if table == 'predictors':
             return self._select_predictors()
         if table == 'predictors_versions':
@@ -194,5 +194,13 @@ class MindsDBDataNode(DataNode):
         if len(where_data) == 0:
             return []
 
-        result = self.handler.predict(table, where_data)
+        if ml_handler_name.lower() == 'mindsdb':
+            ml_handler_name = 'lightwood'
+
+        if ml_handler_name != 'lightwood':
+            handler = self.integration_controller.get_handler(ml_handler_name)
+        else:
+            handler = self.handler
+
+        result = handler.predict(table, where_data)
         return result

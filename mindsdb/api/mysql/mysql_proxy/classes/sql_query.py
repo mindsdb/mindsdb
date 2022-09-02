@@ -407,7 +407,6 @@ class SQLQuery():
 
         return data
 
-
     def prepare_query(self, prepare=True):
         mindsdb_sql_struct = self.query
 
@@ -728,6 +727,18 @@ class SQLQuery():
         except Exception as e:
             raise SqlApiUnknownError("error in column list step") from e
 
+    def _split_handler_predictor_names(self, parts):
+        predictor_name = parts[0]
+        if len(parts) > 1:
+            handler_name = parts[0].lower()
+            predictor_name = parts[1]
+        elif self.database is not None:
+            handler_name = self.database.lower()
+        else:
+            handler_name = 'lightwood'
+
+        return handler_name, predictor_name
+
     def execute_step(self, step, steps_data):
         if type(step) == GetPredictorColumns:
             predictor_name = step.predictor.parts[-1]
@@ -820,13 +831,15 @@ class SQLQuery():
                     data['values'].extend(subdata['values'])
         elif type(step) == ApplyPredictorRowStep:
             try:
-                predictor = '.'.join(step.predictor.parts)
+                ml_handler_name, predictor_name = self._split_handler_predictor_names(step.predictor.parts)
+
                 dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
 
                 data = dn.query(
-                    table=predictor,
-                    where_data=where_data
+                    table=predictor_name,
+                    where_data=where_data,
+                    ml_handler_name=ml_handler_name
                 )
 
                 data = [{(key, key): value for key, value in row.items()} for row in data]
@@ -865,8 +878,7 @@ class SQLQuery():
                 # shift counter
                 self.row_id += self.row_id + row_count * len(data['tables'])
 
-                dn = self.datahub.get(self.mindsdb_database_name)
-                predictor = '.'.join(step.predictor.parts)
+                ml_handler_name, predictor_name = self._split_handler_predictor_names(step.predictor.parts)
                 where_data = []
                 for row in steps_data[step.dataframe.step_num]['values']:
                     new_row = {}
@@ -881,7 +893,7 @@ class SQLQuery():
 
                 where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
 
-                is_timeseries = self.planner.predictor_metadata[predictor]['timeseries']
+                is_timeseries = self.planner.predictor_metadata[predictor_name]['timeseries']
                 _mdb_forecast_offset = None
                 if is_timeseries:
                     if '> LATEST' in self.query_str:
@@ -904,15 +916,16 @@ class SQLQuery():
 
                 table_name = get_preditor_alias(step, self.database)
                 columns = {table_name: []}
+                dn = self.datahub.get(self.mindsdb_database_name)
                 if len(where_data) == 0:
-                    # no data, don't run predictor
-                    cols = dn.get_table_columns(predictor) + ['__mindsdb_row_id']
+                    cols = dn.get_table_columns(predictor_name) + ['__mindsdb_row_id']
                     columns[table_name] = [(c, c) for c in cols]
                     values = []
                 else:
                     data = dn.query(
-                        table=predictor,
-                        where_data=where_data
+                        table=predictor_name,
+                        where_data=where_data,
+                        ml_handler_name=ml_handler_name
                     )
 
                     data = [{(key, key): value for key, value in row.items()} for row in data]

@@ -106,7 +106,29 @@ class MySqlBinApiTest(unittest.TestCase, TestScenario):
                    JOIN mindsdb.{predictor_name} as res
                 ) `Custom SQL Query`
                 LIMIT 100
-            '''
+            ''',
+            f'''
+            SELECT 
+              `Custom SQL Query`.`x1` AS `x1`,
+              SUM(`Custom SQL Query`.`y2`) AS `sum_y2_ok`
+            FROM (
+               SELECT res.x1, res.y as y2 
+               FROM files.{test_ds_name} as source
+               JOIN mindsdb.{predictor_name} as res
+            ) `Custom SQL Query`
+            GROUP BY 1
+            ''',
+            f'''
+            SELECT 
+              `Custom SQL Query`.`x1` AS `x1`,
+              COUNT(DISTINCT TRUNCATE(`Custom SQL Query`.`y`,0)) AS `ctd_y_ok`
+            FROM (
+               SELECT res.x1, res.y
+               FROM files.{test_ds_name} as source
+               JOIN mindsdb.{predictor_name} as res
+            ) `Custom SQL Query`
+            GROUP BY 1
+            ''',
         ]
         for _query in queries:
             self.query(_query)

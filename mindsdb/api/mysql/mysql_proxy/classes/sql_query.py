@@ -71,10 +71,13 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErLogicError,
     ErSqlWrongArguments
 )
+from mindsdb.utilities.cache import get_cache, json_checksum
+
 from mindsdb_sql.parser.ast.base import ASTNode
 
-
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
+
+predictor_cache = get_cache('predict')
 
 
 def get_preditor_alias(step, mindsdb_database):
@@ -92,9 +95,12 @@ def get_table_alias(table_obj, default_db_name):
             name = (default_db_name, table_obj.parts[0])
         else:
             name = tuple(table_obj.parts)
-    else:
+    elif isinstance(table_obj, Select):
         # it is subquery
-        name = table_obj.alias.parts[0] or 't'
+        if table_obj.alias is None:
+            name = 't'
+        else:
+            name = table_obj.alias.parts[0]
         name = (default_db_name, name)
 
     if table_obj.alias is not None:
@@ -275,6 +281,10 @@ class SQLQuery():
 
             if isinstance(p.data, dict) and 'error' not in p.data:
                 ts_settings = p.learn_args.get('timeseries_settings', {})
+                predictor = {
+                    'timeseries': False,
+                    'id': p.id
+                }
                 if ts_settings.get('is_timeseries') is True:
                     window = ts_settings.get('window')
                     order_by = ts_settings.get('order_by')
@@ -283,17 +293,15 @@ class SQLQuery():
                     group_by = ts_settings.get('group_by')
                     if isinstance(group_by, list) is False and group_by is not None:
                         group_by = [group_by]
-                    predictor_metadata[model_name] = {
+                    predictor.update({
                         'timeseries': True,
                         'window': window,
                         'horizon': ts_settings.get('horizon'),
                         'order_by_column': order_by,
                         'group_by_columns': group_by
-                    }
-                else:
-                    predictor_metadata[model_name] = {
-                        'timeseries': False
-                    }
+                    })
+                predictor_metadata[model_name] = predictor
+
                 self.model_types.update(p.data.get('dtypes', {}))
 
         mindsdb_database_name = 'mindsdb'
@@ -406,7 +414,6 @@ class SQLQuery():
             join_query_data(data, sub_data)
 
         return data
-
 
     def prepare_query(self, prepare=True):
         mindsdb_sql_struct = self.query
@@ -728,6 +735,18 @@ class SQLQuery():
         except Exception as e:
             raise SqlApiUnknownError("error in column list step") from e
 
+    def _split_handler_predictor_names(self, parts):
+        predictor_name = parts[0]
+        if len(parts) > 1:
+            handler_name = parts[0].lower()
+            predictor_name = parts[1]
+        elif self.database is not None:
+            handler_name = self.database.lower()
+        else:
+            handler_name = 'lightwood'
+
+        return handler_name, predictor_name
+
     def execute_step(self, step, steps_data):
         if type(step) == GetPredictorColumns:
             predictor_name = step.predictor.parts[-1]
@@ -820,13 +839,15 @@ class SQLQuery():
                     data['values'].extend(subdata['values'])
         elif type(step) == ApplyPredictorRowStep:
             try:
-                predictor = '.'.join(step.predictor.parts)
+                ml_handler_name, predictor_name = self._split_handler_predictor_names(step.predictor.parts)
+
                 dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
 
                 data = dn.query(
-                    table=predictor,
-                    where_data=where_data
+                    table=predictor_name,
+                    where_data=where_data,
+                    ml_handler_name=ml_handler_name
                 )
 
                 data = [{(key, key): value for key, value in row.items()} for row in data]
@@ -865,8 +886,7 @@ class SQLQuery():
                 # shift counter
                 self.row_id += self.row_id + row_count * len(data['tables'])
 
-                dn = self.datahub.get(self.mindsdb_database_name)
-                predictor = '.'.join(step.predictor.parts)
+                ml_handler_name, predictor_name = self._split_handler_predictor_names(step.predictor.parts)
                 where_data = []
                 for row in steps_data[step.dataframe.step_num]['values']:
                     new_row = {}
@@ -881,7 +901,7 @@ class SQLQuery():
 
                 where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
 
-                is_timeseries = self.planner.predictor_metadata[predictor]['timeseries']
+                is_timeseries = self.planner.predictor_metadata[predictor_name]['timeseries']
                 _mdb_forecast_offset = None
                 if is_timeseries:
                     if '> LATEST' in self.query_str:
@@ -904,16 +924,23 @@ class SQLQuery():
 
                 table_name = get_preditor_alias(step, self.database)
                 columns = {table_name: []}
+                dn = self.datahub.get(self.mindsdb_database_name)
                 if len(where_data) == 0:
-                    # no data, don't run predictor
-                    cols = dn.get_table_columns(predictor) + ['__mindsdb_row_id']
+                    cols = dn.get_table_columns(predictor_name) + ['__mindsdb_row_id']
                     columns[table_name] = [(c, c) for c in cols]
                     values = []
                 else:
-                    data = dn.query(
-                        table=predictor,
-                        where_data=where_data
-                    )
+                    predictor_id = self.planner.predictor_metadata[predictor_name]['id']
+                    key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
+                    data = predictor_cache.get(key)
+
+                    if data is None:
+                        data = dn.query(
+                            table=predictor_name,
+                            where_data=where_data,
+                            ml_handler_name=ml_handler_name
+                        )
+                        predictor_cache.set(key, data)
 
                     data = [{(key, key): value for key, value in row.items()} for row in data]
 
@@ -1277,13 +1304,13 @@ class SQLQuery():
             cols = set()
             for _, col_list in step_data['columns'].items():
                 for col in col_list:
-                    cols.add(col[0])
+                    cols.add(col[1])
 
             for row in step_data['values']:
                 data_row = {}
                 for table, col_list in step_data['columns'].items():
                     for col in col_list:
-                        data_row[col[0]] = row[table][col]
+                        data_row[col[1]] = row[table][col]
                 result.append(data_row)
 
             df = pd.DataFrame(result, columns=list(cols))
@@ -1347,13 +1374,13 @@ class SQLQuery():
                 cols = set()
                 for _, col_list in step_data['columns'].items():
                     for col in col_list:
-                        cols.add(col[0])
+                        cols.add(col[1])
 
                 for row in step_data['values']:
                     data_row = {}
                     for table, col_list in step_data['columns'].items():
                         for col in col_list:
-                            data_row[col[0]] = row[table][col]
+                            data_row[col[1]] = row[table][col]
                     result.append(data_row)
                 df = pd.DataFrame(result, columns=list(cols))
 

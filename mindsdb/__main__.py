@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
     if not is_cloud:
         # region creating permanent integrations
-        for integration_name in ['files', 'views', 'lightwood']:
+        for integration_name in ['files', 'views', 'lightwood', 'dummyml']:
             integration_meta = integration_controller.get(name=integration_name)
             if integration_meta is None:
                 integration_record = db.Integration(

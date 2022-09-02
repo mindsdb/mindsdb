@@ -52,6 +52,11 @@ def query_df(df, query, session=None):
                 else:
                     cur_db = None
                 return Constant(cur_db)
+            if node.op.lower() == 'truncate':
+                # replace mysql 'truncate' function to duckdb 'round'
+                node.op = 'round'
+                if len(node.args) == 1:
+                    node.args.append(0)
 
     query_traversal(query_ast, adapt_query)
 

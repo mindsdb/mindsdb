@@ -3,6 +3,7 @@ import base64
 import shutil
 import tempfile
 import importlib
+from time import time
 from pathlib import Path
 from copy import deepcopy
 from collections import OrderedDict
@@ -175,38 +176,8 @@ class IntegrationController:
             connections[integration_name] = status.get('success', False)
         return connections
 
-    def create_tmp_handler(self, handler_type: str, connection_data: dict) -> object:
-        """ Returns temporary handler. That handler does not exists in database.
-
-            Args:
-                handler_type (str)
-                connection_data (dict)
-
-            Returns:
-                Handler object
-        """
-
-        # fs_store = SpecificFSStore(
-        #     resource_name=f'integration_{name}',
-        #     resource_id=
-        #     company_id=company_id
-        # )
-        pass
-
-    def create_handler(self, name: str = None, handler_type: str = None,
-                       connection_data: dict = {}, company_id: int = None):
-        fs_store = FsStore()
-
-        # fs_store = SpecificFSStore(
-        #     resource_name=f'integration_{name}',
-        #     resource_id=
-        #     company_id=company_id
-        # )
-
+    def _make_handler_args(self, handler_type: str, connection_data: dict, company_id: int):
         handler_ars = dict(
-            name=name,
-            db_store=None,
-            fs_store=fs_store,
             connection_data=connection_data
         )
 
@@ -226,6 +197,51 @@ class IntegrationController:
                 company_id=company_id
             )
             handler_ars['company_id'] = company_id
+
+        return handler_ars
+
+    def create_tmp_handler(self, handler_type: str, connection_data: dict, company_id) -> object:
+        """ Returns temporary handler. That handler does not exists in database.
+
+            Args:
+                handler_type (str)
+                connection_data (dict)
+
+            Returns:
+                Handler object
+        """
+        resource_id = int(time() * 10000)
+        name = f'handler_{resource_id}'
+        fs_store = SpecificFSStore(
+            resource_name=name,
+            resource_id=resource_id,
+            company_id=company_id,
+            root_dir='tmp',
+            sync=False
+        )
+        handler_ars = self._make_handler_args(handler_type, connection_data, company_id)
+        handler_ars['fs_store'] = fs_store
+        handler_ars = dict(
+            name=name,
+            fs_store=fs_store,
+            connection_data=connection_data
+        )
+
+        return self.handler_modules[handler_type].Handler(**handler_ars)
+
+    def create_handler(self, name: str = None, handler_type: str = None,
+                       connection_data: dict = {}, company_id: int = None):
+        fs_store = FsStore()
+
+        # fs_store = SpecificFSStore(
+        #     resource_name=f'integration_{name}',
+        #     resource_id=
+        #     company_id=company_id
+        # )
+
+        handler_ars = self._make_handler_args(handler_type, connection_data, company_id)
+        handler_ars['name'] = name
+        handler_ars['fs_store'] = fs_store
 
         return self.handler_modules[handler_type].Handler(**handler_ars)
 

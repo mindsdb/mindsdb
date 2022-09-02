@@ -1,6 +1,7 @@
 import os
 import shutil
 import hashlib
+from pathlib import Path
 from abc import ABC, abstractmethod
 
 from checksumdir import dirhash
@@ -147,10 +148,12 @@ else:
 
 
 class SpecificFSStore:
-    def __init__(self, resource_name: str, resource_id: int, company_id=None):
+    def __init__(self, resource_name: str, resource_id: int, company_id=None, root_dir='content', sync=True):
         self.fs_store = FsStore()
         self.folder_name = f'{resource_name}_{resource_id}_{company_id}'
-        pass
+        self.root_dir = root_dir
+        self.folder_path = os.path.join(self.root_dir, self.folder_name)
+        self.sync = sync
 
     def push(self):
         pass
@@ -158,12 +161,21 @@ class SpecificFSStore:
     def pull(self):
         pass
 
-    def add(self, path: str):
+    def add(self, path: str, rel_path: str = None):
         """Copy file/folder to persist storage
 
         Args:
             path (str): path to the resource
+            rel_path (str): relative path in storage
         """
+        dest_path = Path(path).name
+        if rel_path is not None:
+            dest_path = Path()
+
+        copy(
+            path,
+            self.folder_path
+        )
         pass
 
     def get_path(self, relative_path):

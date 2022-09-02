@@ -11,7 +11,7 @@ from sqlalchemy import func
 
 from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.fs import FsStore
+from mindsdb.interfaces.storage.fs import FsStore, SpecificFSStore
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
@@ -175,9 +175,33 @@ class IntegrationController:
             connections[integration_name] = status.get('success', False)
         return connections
 
+    def create_tmp_handler(self, handler_type: str, connection_data: dict) -> object:
+        """ Returns temporary handler. That handler does not exists in database.
+
+            Args:
+                handler_type (str)
+                connection_data (dict)
+
+            Returns:
+                Handler object
+        """
+
+        # fs_store = SpecificFSStore(
+        #     resource_name=f'integration_{name}',
+        #     resource_id=
+        #     company_id=company_id
+        # )
+        pass
+
     def create_handler(self, name: str = None, handler_type: str = None,
                        connection_data: dict = {}, company_id: int = None):
         fs_store = FsStore()
+
+        # fs_store = SpecificFSStore(
+        #     resource_name=f'integration_{name}',
+        #     resource_id=
+        #     company_id=company_id
+        # )
 
         handler_ars = dict(
             name=name,

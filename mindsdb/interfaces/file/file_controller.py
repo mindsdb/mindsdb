@@ -13,7 +13,10 @@ class FileController():
     def __init__(self):
         self.config = Config()
         self.fs_store = FsStore()
-        self.dir = self.config['paths']['datasources']
+        # FIXME !!!!
+        import os
+        self.dir = os.path.join(self.config['paths']['root'], 'datasources')
+        # self.dir = self.config['paths']['datasources']
 
     def get_files_names(self, company_id=None):
         """ return list of files names

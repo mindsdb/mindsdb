@@ -144,3 +144,47 @@ elif storage_location == 's3':
     FsStore = S3FSStore
 else:
     raise Exception(f"Location: '{storage_location}' not supported")
+
+
+class SpecificFSStore:
+    def __init__(self, resource_name: str, resource_id: int, company_id=None):
+        self.fs_store = FsStore()
+        self.folder_name = f'{resource_name}_{resource_id}_{company_id}'
+        pass
+
+    def push(self):
+        pass
+
+    def pull(self):
+        pass
+
+    def add(self, path: str):
+        """Copy file/folder to persist storage
+
+        Args:
+            path (str): path to the resource
+        """
+        pass
+
+    def get_path(self, relative_path):
+        pass
+
+    # def list(self, relative_path=''):
+    #     pass
+
+# class SpecificFSStore:
+#     def __init__(self, resource_name: str):
+#         self.resource_name = resource_name
+#         super().__init__()
+
+#     def get(self):
+
+#         super().get(self, local_name, base_dir), local_name, base_dir
+#         pass
+
+#     def put(self, local_name, base_dir):
+#         super().put()
+
+#     def delete(self):
+#         # , remote_name
+#         super().delete()

@@ -308,9 +308,6 @@ class SQLQuery():
         mindsdb_database_name = 'mindsdb'
         database = None if self.session.database == '' else self.session.database.lower()
 
-        # FIXME
-        predictor_metadata = [{'name': 'test', 'integration_name': 'ld', 'timeseries': False, 'id': 0}]
-
         self.predictor_metadata = predictor_metadata
         self.planner = query_planner.QueryPlanner(
             self.query,

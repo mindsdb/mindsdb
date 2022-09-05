@@ -94,8 +94,6 @@ class LudwigHandler(PredictiveHandler):
 
     def get_tables(self) -> HandlerResponse:
         """ Returns name list of trained models.  """  # noqa
-        # FIXME
-        return HandlerResponse(RESPONSE_TYPE.TABLE, pd.DataFrame([['test']], columns=['table_name']))
 
         models = self.storage.get('models', [])
         if models:

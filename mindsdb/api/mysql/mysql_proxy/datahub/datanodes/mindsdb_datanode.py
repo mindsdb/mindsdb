@@ -33,7 +33,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, model_controller, integration_controller):    #, query, ml_handler):
+    def __init__(self, model_controller, integration_controller):
         self.config = Config()
         self.model_controller = model_controller
         self.integration_controller = integration_controller

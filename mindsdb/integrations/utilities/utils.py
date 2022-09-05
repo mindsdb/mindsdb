@@ -103,7 +103,7 @@ def get_join_input(query, model, model_aliases, data_handler, data_side):
 def get_model_name(handler, stmt):
     """ Discern between joined entities to retrieve model name, alias and the clause side it is on. """
     side = None
-    models = handler.get_tables() # .data_frame['model_name'].values
+    models = handler.get_tables()
     if type(stmt.from_table) == Join:
         model_name = stmt.from_table.right.parts[-1]
         side = 'right'

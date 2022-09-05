@@ -213,7 +213,7 @@ class LightwoodHandler(PredictiveHandler):
                 query=statement.query_str
             )
         )
-        sql_session = make_sql_session(self.company_id, ml_handler='lightwood')
+        sql_session = make_sql_session(self.company_id)
 
         # execute as query
         sqlquery = SQLQuery(query, session=sql_session)

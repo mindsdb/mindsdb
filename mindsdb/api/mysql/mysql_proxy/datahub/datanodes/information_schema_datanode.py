@@ -32,16 +32,14 @@ class InformationSchemaDataNode(DataNode):
         'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
     }
 
-    def __init__(self, session, query, ml_handler):
+    def __init__(self, session):
         self.session = session
         self.integration_controller = session.integration_controller
         self.view_interface = session.view_interface
         self.persis_datanodes = {
             'mindsdb': MindsDBDataNode(
                 session.model_controller,
-                session.integration_controller,
-                query,
-                ml_handler
+                session.integration_controller
             ),
             'files': IntegrationDataNode(
                 'files',

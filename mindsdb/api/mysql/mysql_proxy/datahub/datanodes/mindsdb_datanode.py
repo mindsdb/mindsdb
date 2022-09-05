@@ -33,25 +33,11 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class MindsDBDataNode(DataNode):
     type = 'mindsdb'
 
-    def __init__(self, model_controller, integration_controller, query, ml_handler):
+    def __init__(self, model_controller, integration_controller):    #, query, ml_handler):
         self.config = Config()
         self.model_controller = model_controller
         self.integration_controller = integration_controller
-        if ml_handler:
-            handler = ml_handler
-        elif query:
-            handler = None
-            handlers = self.integration_controller.original_instance.handlers_import_status
-            ast = parse_sql(query, dialect=self.type)
-            if hasattr(ast, 'name'):
-                handler = ast.name.parts[0].lower()
-            elif hasattr(ast, 'from_table'):
-                handler = ast.from_table.parts[0].lower()
-            if not handler or not handlers.get(handler, {}).get('import', {}).get('success', False):
-                handler = 'lightwood'
-        else:
-            handler = 'lightwood'
-        self.handler = self.integration_controller.get_handler(handler)
+        self.handler = self.integration_controller.get_handler('lightwood')
 
     def get_tables(self):
         models = self.model_controller.get_models()

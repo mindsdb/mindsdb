@@ -255,12 +255,11 @@ class SQLQuery():
 
     def create_planner(self):
 
-        integrations_names = self.session.datahub.get_integrations_names()
+        integrations_meta = self.session.integration_controller.get_all()
+        integrations_names = list(integrations_meta.keys())
         integrations_names.append('information_schema')
-        integrations_names.append('files')
-        integrations_names.append('views')
 
-        predictor_metadata = {}
+        predictor_metadata = []
         predictors = get_model_records(company_id=self.session.company_id)
 
         query_tables = []
@@ -282,7 +281,9 @@ class SQLQuery():
             if isinstance(p.data, dict) and 'error' not in p.data:
                 ts_settings = p.learn_args.get('timeseries_settings', {})
                 predictor = {
+                    'name': model_name,
                     'timeseries': False,
+                    'integration_name': 'lightwood',
                     'id': p.id
                 }
                 if ts_settings.get('is_timeseries') is True:
@@ -300,13 +301,17 @@ class SQLQuery():
                         'order_by_column': order_by,
                         'group_by_columns': group_by
                     })
-                predictor_metadata[model_name] = predictor
+                predictor_metadata.append(predictor)
 
                 self.model_types.update(p.data.get('dtypes', {}))
 
         mindsdb_database_name = 'mindsdb'
         database = None if self.session.database == '' else self.session.database.lower()
 
+        # FIXME
+        predictor_metadata = [{'name': 'test', 'integration_name': 'ld', 'timeseries': False, 'id': 0}]
+
+        self.predictor_metadata = predictor_metadata
         self.planner = query_planner.QueryPlanner(
             self.query,
             integrations=integrations_names,
@@ -735,18 +740,6 @@ class SQLQuery():
         except Exception as e:
             raise SqlApiUnknownError("error in column list step") from e
 
-    def _split_handler_predictor_names(self, parts):
-        predictor_name = parts[0]
-        if len(parts) > 1:
-            handler_name = parts[0].lower()
-            predictor_name = parts[1]
-        elif self.database is not None:
-            handler_name = self.database.lower()
-        else:
-            handler_name = 'lightwood'
-
-        return handler_name, predictor_name
-
     def execute_step(self, step, steps_data):
         if type(step) == GetPredictorColumns:
             predictor_name = step.predictor.parts[-1]
@@ -839,7 +832,8 @@ class SQLQuery():
                     data['values'].extend(subdata['values'])
         elif type(step) == ApplyPredictorRowStep:
             try:
-                ml_handler_name, predictor_name = self._split_handler_predictor_names(step.predictor.parts)
+                ml_handler_name = step.namespace
+                predictor_name = step.predictor.parts[0]
 
                 dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
@@ -886,7 +880,8 @@ class SQLQuery():
                 # shift counter
                 self.row_id += self.row_id + row_count * len(data['tables'])
 
-                ml_handler_name, predictor_name = self._split_handler_predictor_names(step.predictor.parts)
+                ml_handler_name = step.namespace
+                predictor_name = step.predictor.parts[0]
                 where_data = []
                 for row in steps_data[step.dataframe.step_num]['values']:
                     new_row = {}
@@ -901,7 +896,12 @@ class SQLQuery():
 
                 where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
 
-                is_timeseries = self.planner.predictor_metadata[predictor_name]['timeseries']
+                predictor_metadata = {}
+                for pm in self.predictor_metadata:
+                    if pm['name'] == predictor_name and pm['integration_name'].lower() == ml_handler_name:
+                        predictor_metadata = pm
+                        break
+                is_timeseries = predictor_metadata['timeseries']
                 _mdb_forecast_offset = None
                 if is_timeseries:
                     if '> LATEST' in self.query_str:
@@ -930,7 +930,7 @@ class SQLQuery():
                     columns[table_name] = [(c, c) for c in cols]
                     values = []
                 else:
-                    predictor_id = self.planner.predictor_metadata[predictor_name]['id']
+                    predictor_id = predictor_metadata['id']
                     key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
                     data = predictor_cache.get(key)
 

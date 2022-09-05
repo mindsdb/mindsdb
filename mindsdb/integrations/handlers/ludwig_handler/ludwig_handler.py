@@ -1,5 +1,6 @@
 from typing import Optional, Any, Dict
 
+import ray
 import dask
 import dill
 import sqlalchemy
@@ -143,7 +144,8 @@ class LudwigHandler(PredictiveHandler):
         return r
         """
         if type(query) == CreatePredictor:
-            self._learn(query)
+            with RayConnection():
+                self._learn(query)
 
         elif type(query) == RetrainPredictor:
             msg = 'Warning: retraining Ludwig models is not yet supported!'  # TODO: restore this
@@ -158,54 +160,64 @@ class LudwigHandler(PredictiveHandler):
             else:
                 raise Exception(f"Can't drop non-existent model {to_drop}")
 
-        # elif type(query) == Select:
-        #     model_name = query.from_table.parts[-1]
-        #     where_data = get_where_data(query.where)
-        #     predictions = self.predict(model_name, where_data)
-        #     return HandlerResponse(
-        #         RESPONSE_TYPE.TABLE,
-        #         data_frame=pd.DataFrame(predictions)
-        #     )
+        elif type(query) == Select:
+            model_name = query.from_table.parts[-1]
+            where_data = get_where_data(query.where)
+
+            if not self._get_model(model_name):
+                return HandlerResponse(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Error: model '{model_name}' does not exist!"
+                )
+
+            predictions_df = self.predict(model_name, where_data)
+            return HandlerResponse(
+                RESPONSE_TYPE.TABLE,
+                data_frame=predictions_df
+            )
         else:
             raise Exception(f"Query type {type(query)} not supported")
 
         return HandlerResponse(RESPONSE_TYPE.OK)
 
-    def join(self, stmt, data_handler, into: Optional[str]) -> HandlerResponse:
-        """
-        Batch prediction using the output of a query passed to a data handler as input for the model.
-        """  # noqa
-
-        model_name, model_alias, model_side = self._get_model_name(stmt)
-        data_side = 'right' if model_side == 'left' else 'left'
-        model = self._get_model(model_name)
-        model_input = get_join_input(stmt, model, [model_name, model_alias], data_handler, data_side)
-
-        # get model output and rename columns
-        predictions = self._call_model(model_input, model)
-        model_input.columns = get_aliased_columns(list(model_input.columns), model_alias, stmt.targets, mode='input')
-        predictions.columns = get_aliased_columns(list(predictions.columns), model_alias, stmt.targets, mode='output')
-
-        if into:
-            try:
-                dtypes = {}
-                for col in predictions.columns:
-                    if model.dtype_dict.get(col, False):
-                        dtypes[col] = self.dtypes_to_sql.get(col, sqlalchemy.Text)
-
-                data_handler.select_into(into, predictions, dtypes=dtypes)
-            except Exception as e:
-                print("Error when trying to store the JOIN output in data handler.")
-
-        r = HandlerResponse(
-            RESPONSE_TYPE.TABLE,
-            predictions
-        )
-        return r
+    # def join(self, stmt, data_handler, into: Optional[str]) -> HandlerResponse:
+    #     """
+    #     Batch prediction using the output of a query passed to a data handler as input for the model.
+    #     """  # noqa
+    #
+    #     model_name, model_alias, model_side = self._get_model_name(stmt)
+    #     data_side = 'right' if model_side == 'left' else 'left'
+    #     model = self._get_model(model_name)
+    #     model_input = get_join_input(stmt, model, [model_name, model_alias], data_handler, data_side)
+    #
+    #     # get model output and rename columns
+    #     predictions = self._call_model(model_input, model)
+    #     model_input.columns = get_aliased_columns(list(model_input.columns), model_alias, stmt.targets, mode='input')
+    #     predictions.columns = get_aliased_columns(list(predictions.columns), model_alias, stmt.targets, mode='output')
+    #
+    #     if into:
+    #         try:
+    #             dtypes = {}
+    #             for col in predictions.columns:
+    #                 if model.dtype_dict.get(col, False):
+    #                     dtypes[col] = self.dtypes_to_sql.get(col, sqlalchemy.Text)
+    #
+    #             data_handler.select_into(into, predictions, dtypes=dtypes)
+    #         except Exception as e:
+    #             print("Error when trying to store the JOIN output in data handler.")
+    #
+    #     r = HandlerResponse(
+    #         RESPONSE_TYPE.TABLE,
+    #         predictions
+    #     )
+    #     return r
 
     def _get_model(self, model_name):
-        model = dill.loads(self.storage.get('models')[model_name]['model'])
-        return model
+        storage = self.storage.get('models')
+        try:
+            return dill.loads(storage[model_name]['model'])
+        except KeyError:
+            return None
 
     def _call_model(self, df, model):
         predictions = dask.compute(model.predict(df)[0])[0]
@@ -266,17 +278,20 @@ class LudwigHandler(PredictiveHandler):
 
     @mark_process(name='predict')
     def predict(self, model_name, data):
-        if isinstance(data, dict):
-            data = [data]
-        df = pd.DataFrame(data)
-        predictor_record = get_model_record(company_id=self.company_id, name=model_name)
-        if predictor_record is None:
-            return HandlerResponse(
-                RESPONSE_TYPE.ERROR,
-                error_message=f"Error: model '{model_name}' does not exists!"
-            )
+        with RayConnection():
+            if isinstance(data, dict):
+                data = [data]
+            df = pd.DataFrame(data)
+            model = self._get_model(model_name)  # TODO: use DB.record/get_model_record instead?
+            return self._call_model(df, model)
 
-        fs_name = f'predictor_{self.company_id}_{predictor_record.id}'
-        model_data = self.model_controller.get_model_data(predictor_record=predictor_record)
 
-        return df
+class RayConnection:
+    def __init__(self, addr=None, **kwargs):
+        ray.init(address=addr, **kwargs)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        ray.shutdown()

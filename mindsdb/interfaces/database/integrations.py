@@ -220,10 +220,10 @@ class IntegrationController:
 
         # TODO del in future
         if integration_record is None:
-            if name in self.handler_modules.keys():
+            if name == 'lightwood':
                 handler = self.create_handler(
                     name=name,
-                    handler_type=name,
+                    handler_type='lightwood',
                     connection_data={},
                     company_id=company_id
                 )

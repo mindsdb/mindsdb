@@ -6,7 +6,7 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.views import ViewController
 
 
-def make_sql_session(company_id, ml_handler=None):
+def make_sql_session(company_id):
 
     server_obj = type('', (), {})()
     server_obj.original_integration_controller = IntegrationController()
@@ -15,8 +15,7 @@ def make_sql_session(company_id, ml_handler=None):
 
     sql_session = SessionController(
         server=server_obj,
-        company_id=company_id,
-        ml_handler=ml_handler
+        company_id=company_id
     )
     sql_session.database = 'mindsdb'
     return sql_session
@@ -102,21 +101,21 @@ def get_join_input(query, model, model_aliases, data_handler, data_side):
 
 
 def get_model_name(handler, stmt):
-     """ Discern between joined entities to retrieve model name, alias and the clause side it is on. """
-     side = None
-     models = handler.get_tables() # .data_frame['model_name'].values
-     if type(stmt.from_table) == Join:
-         model_name = stmt.from_table.right.parts[-1]
-         side = 'right'
-         if model_name not in models:
-             model_name = stmt.from_table.left.parts[-1]
-             side = 'left'
-         alias = str(getattr(stmt.from_table, side).alias)
-     else:
-         model_name = stmt.from_table.parts[-1]
-         alias = None  # todo: fix this
+    """ Discern between joined entities to retrieve model name, alias and the clause side it is on. """
+    side = None
+    models = handler.get_tables() # .data_frame['model_name'].values
+    if type(stmt.from_table) == Join:
+        model_name = stmt.from_table.right.parts[-1]
+        side = 'right'
+        if model_name not in models:
+            model_name = stmt.from_table.left.parts[-1]
+            side = 'left'
+        alias = str(getattr(stmt.from_table, side).alias)
+    else:
+        model_name = stmt.from_table.parts[-1]
+        alias = None  # todo: fix this
 
-     if model_name not in models:
-         raise Exception("Error, not found. Please create this predictor first.")
+    if model_name not in models:
+        raise Exception("Error, not found. Please create this predictor first.")
 
-     return model_name, alias, side
+    return model_name, alias, side

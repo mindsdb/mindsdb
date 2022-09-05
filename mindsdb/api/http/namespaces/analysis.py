@@ -52,13 +52,19 @@ class QueryAnalysis(Resource):
         if result.type != SQL_RESPONSE_TYPE.TABLE:
             return http_error(500, 'Error', 'Query does not return data')
 
-        # is_lw_available = request.integration_controller.  # TODO: check, because self-hosted lightwood may not be present!
-        lw_handler = request.integration_controller.get_handler('lightwood')
-
         column_names = [x['name'] for x in result.columns]
-        analysis = lw_handler.analyze_dataset(
-            data_frame=DataFrame(result.data, columns=column_names)
-        )
+        df = DataFrame(result.data, columns=column_names)
+
+        controller = request.integration_controller
+        lw_available = controller.original_instance.handlers_import_status['lightwood']['import']['success']
+        if lw_available and len(df) > 0:
+            lw_handler = controller.get_handler('lightwood')
+
+            analysis = lw_handler.analyze_dataset(
+                data_frame=df
+            )
+        else:
+            analysis = {}
 
         query_tables = []
 

@@ -85,6 +85,59 @@ class Test(BaseTestCase):
         assert ret.data[0][1].isoformat() == dt.datetime(2020, 1, 3).isoformat()
 
 
+class TestCompexQueries(BaseTestCase):
+    df = pd.DataFrame([
+        {'a': 1, 'b': 'aaa', 'c': dt.datetime(2020, 1, 1)},
+        {'a': 2, 'b': 'bbb', 'c': dt.datetime(2020, 1, 2)},
+        {'a': 1, 'b': 'ccc', 'c': dt.datetime(2020, 1, 3)},
+    ])
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_union(self, mock_handler):
+
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
+
+        # --- use predictor ---
+        predictor = {
+            'name': 'task_model',
+            'predict': 'p',
+            'dtypes': {
+                'p': dtype.float,
+                'a': dtype.integer,
+                'b': dtype.categorical,
+                'c': dtype.datetime
+            },
+            'predicted_value': 'ccc'
+        }
+        self.set_predictor(predictor)
+        sql = '''
+             SELECT a as a1, b as target
+              FROM pg.tasks
+           UNION {union}
+             SELECT model.a as a2, model.p as target2
+              FROM pg.tasks as t
+             JOIN mindsdb.task_model as model
+             WHERE t.a=1           
+        '''
+        # union all
+        ret = self.command_executor.execute_command(
+            parse_sql(sql.format(union='ALL'), dialect='mindsdb'))
+        assert ret.error_code is None
+
+        ret_df = self.ret_to_df(ret)
+        assert list(ret_df.columns) == ['a1', 'target']
+        assert ret_df.shape[0] == 3 + 2
+
+        # union
+        ret = self.command_executor.execute_command(
+            parse_sql(sql.format(union=''), dialect='mindsdb'))
+        assert ret.error_code is None
+
+        ret_df = self.ret_to_df(ret)
+        assert list(ret_df.columns) == ['a1', 'target']
+        assert ret_df.shape[0] == 3
+
+
 class TestTableau(BaseTestCase):
 
     task_table = pd.DataFrame([

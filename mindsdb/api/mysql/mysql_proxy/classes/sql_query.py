@@ -13,6 +13,7 @@ import re
 from collections import OrderedDict, defaultdict
 import datetime
 import time
+import hashlib
 
 import duckdb
 import pandas as pd
@@ -873,11 +874,39 @@ class SQLQuery():
         elif type(step) == FetchDataframeStep:
             data = self._fetch_dataframe_step(step)
         elif type(step) == UnionStep:
-            raise ErNotSupportedYet('Union step is not implemented')
-            # TODO add union support
-            # left_data = steps_data[step.left.step_num]
-            # right_data = steps_data[step.right.step_num]
-            # data = left_data + right_data
+            left_result = ResultSet()
+            right_result = ResultSet()
+
+            left_result.from_step_data(steps_data[step.left.step_num])
+            right_result.from_step_data(steps_data[step.right.step_num])
+
+            # count of columns have to match
+            if len(left_result.columns) != len(right_result.columns):
+                raise ErSqlWrongArguments(
+                    f'UNION columns count mismatch: {len(left_result.columns)} != {len(right_result.columns)} ')
+
+            # types have to match
+            for i, left_col in enumerate(left_result.columns):
+                right_col = right_result.columns[i]
+                type1, type2 = left_col.type, right_col.type
+                if type1 is not None and type2 is not None:
+                    if type1 != type2:
+                        raise ErSqlWrongArguments(f'UNION types mismatch: {len(type1)} != {len(type2)} ')
+
+            records = []
+            records_hashes = []
+            for rec in left_result.records + right_result.records:
+                if step.unique:
+                    checksum = hashlib.sha256(str(rec).encode()).hexdigest()
+                    if checksum in records_hashes:
+                        continue
+                    records_hashes.append(checksum)
+                records.append(rec)
+
+            left_result.replace_records(records)
+
+            data = left_result.to_step_data()
+
         elif type(step) == MapReduceStep:
             try:
                 if step.reduce != 'union':

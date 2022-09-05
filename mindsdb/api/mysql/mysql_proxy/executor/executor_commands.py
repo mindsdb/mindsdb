@@ -41,7 +41,7 @@ from mindsdb_sql.parser.ast import (
     Operation,
     ASTNode,
     DropView,
-    NativeQuery,
+    Union,
 )
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -493,6 +493,12 @@ class ExecuteCommands:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
 
+            query = SQLQuery(
+                statement,
+                session=self.session
+            )
+            return self.answer_select(query)
+        elif type(statement) == Union:
             query = SQLQuery(
                 statement,
                 session=self.session

@@ -8,6 +8,7 @@ from pymongo import MongoClient
 from mindsdb_sql import parse_sql
 
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
+from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column
 
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
@@ -40,7 +41,6 @@ class TestMongoDBServer(unittest.TestCase):
                     "mongodb": {"host": "127.0.0.1", "port": "47399", "database": "mindsdb"}
                 },
             }
-            mock_executor.side_effect = lambda x: ExecuteAnswer(ANSWER_TYPE.OK)
 
             from mindsdb.api.mongo.server import MongoServer
 
@@ -62,6 +62,7 @@ class TestMongoDBServer(unittest.TestCase):
                 for test_name, test_method in inspect.getmembers(self, predicate=inspect.ismethod):
                     if test_name.startswith('t_'):
                         mock_executor.reset_mock()
+                        mock_executor.side_effect = lambda x: ExecuteAnswer(ANSWER_TYPE.OK)
 
                         test_method(client_con, mock_executor)
 
@@ -77,11 +78,17 @@ class TestMongoDBServer(unittest.TestCase):
 
     def t_single_row(self, client_con, mock_executor):
         # ==== test single row ===
+        mock_executor.side_effect = lambda x: ExecuteAnswer(
+            ANSWER_TYPE.TABLE,
+            columns=[Column('a')],
+            data=[['test']]
+        )
 
         res = client_con.mindsdb.fish_model1.find(
             {'length1': 10, 'type': 'a'}
         )
         res = list(res)  # to fetch
+        assert res == [{'a': 'test'}]
 
         ast = mock_executor.mock_calls[0].args[0]
 

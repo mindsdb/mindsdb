@@ -86,14 +86,17 @@ class Test(BaseTestCase):
 
 
 class TestTableau(BaseTestCase):
+
+    task_table = pd.DataFrame([
+        {'a': 1, 'b': 'one'},
+        {'a': 2, 'b': 'two'},
+        {'a': 1, 'b': 'three'},
+    ])
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_predictor_nested_select(self, mock_handler):
-        df = pd.DataFrame([
-            {'a': 1, 'b': 'one'},
-            {'a': 2, 'b': 'two'},
-            {'a': 1, 'b': 'three'},
-        ])
-        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
+
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.task_table})
 
         # --- use predictor ---
         predictor = {
@@ -126,12 +129,8 @@ class TestTableau(BaseTestCase):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_predictor_tableau_header(self, mock_handler):
-        df = pd.DataFrame([
-            {'a': 1, 'b': 'one'},
-            {'a': 2, 'b': 'two'},
-            {'a': 1, 'b': 'three'},
-        ])
-        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
+
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.task_table})
 
         # --- use predictor ---
         predicted_value = 5
@@ -162,6 +161,56 @@ class TestTableau(BaseTestCase):
         # second column is having last value of 'b'
         # 3: count rows, 4: sum of 'a', 5 max of prediction
         assert ret.data[0] == [3, 4, 5]
+
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_predictor_tableau_header_alias(self, mock_handler):
+
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.task_table})
+
+        # --- use predictor ---
+        predicted_value = 5
+        predictor = {
+            'name': 'task_model',
+            'predict': 'p',
+            'dtypes': {
+                'p': dtype.float,
+                'a': dtype.integer,
+                'b': dtype.categorical
+            },
+            'predicted_value': predicted_value
+        }
+        self.set_predictor(predictor)
+        ret = self.command_executor.execute_command(parse_sql(f'''
+           SELECT              
+              max(a1) AS a1,
+              min(a2) AS a2
+            FROM (
+              SELECT source.a as a1, source.a as a2 
+               FROM pg.tasks as source
+               JOIN mindsdb.task_model as res
+            ) t1
+            HAVING (COUNT(1) > 0)
+                ''', dialect='mindsdb'))
+
+        # second column is having last value of 'b'
+        # 3: count rows, 4: sum of 'a', 5 max of prediction
+        assert ret.data[0] == [2, 1]
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_integration_subselect_no_alias(self, mock_handler):
+
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.task_table})
+
+        ret = self.command_executor.execute_command(parse_sql(f'''
+           SELECT max(y2) FROM (          
+              select a as y2  from pg.tasks
+           ) 
+        ''', dialect='mindsdb'))
+
+        # second column is having last value of 'b'
+        # 3: count rows, 4: sum of 'a', 5 max of prediction
+        assert ret.data[0] == [2]
 
 
 class TestWithNativeQuery(BaseTestCase):

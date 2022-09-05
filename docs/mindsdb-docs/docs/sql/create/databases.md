@@ -198,7 +198,7 @@ PARAMETERS={
     "user": " ",
     "password": " ",
     "host": "127.0.0.1",
-    "port": "4200",
+    "port": 4200,
     "schema_name": " "
 };
 ```
@@ -289,7 +289,7 @@ PARAMETERS={
     "user": " ",
     "password": " ",
     "host": "127.0.0.1",
-    "port": "25000",
+    "port": 25000,
     "schema_name": " ",
     "database": " "
 };
@@ -335,7 +335,18 @@ PARAMETERS={
 
 ### MongoDB
 
-!!! warning "This is a work in progress"
+```sql
+CREATE DATABASE mongo_datasource
+WITH ENGINE='mongo',
+PARAMETERS={
+  "user": " ",
+  "password": " ",
+  "host": " ",
+  "port": 27017
+};
+```
+
+Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 
 ### MySQL
 
@@ -358,7 +369,7 @@ CREATE DATABASE oracle_datasource
 WITH ENGINE='oracle',
 PARAMETERS={
     "host": "127.0.0.1",
-    "port": "1521",
+    "port": 1521,
     "sid": " ",
     "user": " ",
     "password": " "
@@ -372,8 +383,8 @@ CREATE DATABASE pinot_datasource
 WITH ENGINE='pinot',
 PARAMETERS={
     "host": "127.0.0.1",
-    "broker_port": "8000",
-    "controller_port": "9000",
+    "broker_port": 8000,
+    "controller_port": 9000,
     "path": "4200",
     "scheme": " "
 };

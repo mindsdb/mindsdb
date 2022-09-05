@@ -1,3 +1,4 @@
+import json
 import tempfile
 import os
 from unittest import mock
@@ -84,6 +85,11 @@ class BaseTestCase:
         sql_session.database = 'mindsdb'
 
         self.command_executor = ExecuteCommands(sql_session, executor=None)
+
+        # disable cache. it is need to check predictor input
+        config_patch = mock.patch('mindsdb.utilities.cache.FileCache.get')
+        self.mock_config = config_patch.__enter__()
+        self.mock_config.side_effect = lambda x: None
 
     def set_predictor(self, predictor):
         # fill model_interface mock with predictor data for test case

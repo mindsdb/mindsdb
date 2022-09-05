@@ -217,7 +217,7 @@ class LudwigHandler(PredictiveHandler):
     def _learn(self, statement):
         model_name = statement.name.parts[-1]
 
-        if model_name in self.get_tables().data_frame.values:
+        if model_name in self.get_tables().data_frame['table_name'].values:
             raise Exception("Error: this model already exists!")
 
         target = statement.targets[0].parts[-1]

@@ -128,8 +128,8 @@ class ModelController():
 
     def delete_model(self, model_name: str, company_id: int, integration_name: str = 'lightwood'):
         integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
-        lw_handler = integration_controller.get_handler(integration_name)
-        response = lw_handler.native_query(f'drop predictor {model_name}')
+        ml_handler = integration_controller.get_handler(integration_name)
+        response = ml_handler.native_query(f'drop predictor {model_name}')
         if response.type == RESPONSE_TYPE.ERROR:
             raise Exception(response.error_message)
 

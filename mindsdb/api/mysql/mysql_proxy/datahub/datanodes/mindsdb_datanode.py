@@ -147,8 +147,8 @@ class MindsDBDataNode(DataNode):
             columns=['name', 'database_type', 'host', 'port', 'user']
         )
 
-    def delete_predictor(self, name):
-        self.model_controller.delete_model(name, integration_name=self.handler.name)
+    def delete_predictor(self, name, integration_name):
+        self.model_controller.delete_model(name, integration_name=integration_name)
 
     def get_predictors(self, query: ASTNode):
         predictors_df = self._select_predictors()

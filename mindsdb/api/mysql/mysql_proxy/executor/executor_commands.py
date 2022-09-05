@@ -102,9 +102,9 @@ class ExecuteCommands:
             }
             return self.answer_create_datasource(struct)
         if type(statement) == DropPredictor:
-            predictor_name = statement.name.parts[-1]
+            ml_handler, predictor_name = statement.name.parts
             try:
-                self.session.datahub['mindsdb'].delete_predictor(predictor_name)
+                self.session.datahub['mindsdb'].delete_predictor(predictor_name, ml_handler)
             except Exception as e:
                 if not statement.if_exists:
                     raise e

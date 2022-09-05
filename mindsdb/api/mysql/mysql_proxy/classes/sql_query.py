@@ -17,6 +17,7 @@ import time
 import duckdb
 import pandas as pd
 import numpy as np
+
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
@@ -211,6 +212,108 @@ class Column:
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.__dict__})'
+
+
+class ResultSet:
+    def __init__(self):
+        self.columns = []
+        # records is list of lists with the same length as columns
+        self.records = []
+
+    def from_step_data(self, step_data):
+
+        for table, col_list in step_data['columns'].items():
+            for col in col_list:
+                type = None
+                if 'types' in step_data:
+                    type = step_data['types'].get(table, {}).get(col[0])
+                self.columns.append(Column(
+                    name=col[0],
+                    alias=col[1],
+                    type=type,
+                    table_name=table[1],
+                    table_alias=table[2],
+                    database=table[0]
+                ))
+
+        for row in step_data['values']:
+            data_row = []
+            for col in self.columns:
+                col_key = (col.name, col.alias)
+                table_key = (col.database, col.table_name, col.table_alias)
+                val = row[table_key][col_key]
+
+                data_row.append(val)
+
+            self.records.append(data_row)
+
+    def from_df(self, df, database, table_name):
+
+        resp_dict = df.to_dict(orient='split')
+
+        self.records = resp_dict['data']
+
+        for col in resp_dict['columns']:
+            self.columns.append(Column(
+                name=col,
+                table_name=table_name,
+                database=database
+            ))
+
+    def to_df(self):
+        columns = [
+            col.name if col.alias is None else col.alias
+            for col in self.columns
+        ]
+
+        return pd.DataFrame(self.records, columns=columns)
+
+    def to_step_data(self):
+        step_data = {
+            'values': [],
+            'columns': {},
+            'types': {},
+            'tables': []
+        }
+
+        for col in self.columns:
+            col_key = (col.name, col.alias)
+            table_key = (col.database, col.table_name, col.table_alias)
+
+            if not table_key in step_data['tables']:
+                step_data['tables'].append(table_key)
+                step_data['columns'][table_key] = []
+                step_data['types'][table_key] = {}
+
+            step_data['columns'][table_key].append(col_key)
+            if col.type is not None:
+                step_data['types'][table_key][col_key] = col.type
+
+        for rec in self.records:
+            row = {}
+            for table in step_data['tables']:
+                row[table] = {}
+            for i, col in enumerate(self.columns):
+                col_key = (col.name, col.alias)
+                table_key = (col.database, col.table_name, col.table_alias)
+
+                row[table_key][col_key] = rec[i]
+
+            step_data['values'].append(row)
+        return step_data
+
+    def clear_records(self):
+        self.records = []
+
+    def replace_records(self, records):
+        self.clear_records()
+        for rec in records:
+            self.add_record(rec)
+
+    def add_record(self, rec):
+        if len(rec) != len(self.columns):
+            raise ErSqlWrongArguments(f'Record length mismatch columns length: {len(rec)} != {len(self.columns)}')
+        self.records.append(rec)
 
 
 class SQLQuery():
@@ -1357,63 +1460,22 @@ class SQLQuery():
             else:
                 table_name = table_name
 
-            def step_data_to_df(step_data):
-                result = []
-                cols = set()
-                for _, col_list in step_data['columns'].items():
-                    for col in col_list:
-                        cols.add(col[1])
-
-                for row in step_data['values']:
-                    data_row = {}
-                    for table, col_list in step_data['columns'].items():
-                        for col in col_list:
-                            data_row[col[1]] = row[table][col]
-                    result.append(data_row)
-                df = pd.DataFrame(result, columns=list(cols))
-
-                return df
-
-            def df_to_step_data(res, step_data0, table_name):
-                resp_dict = res.to_dict(orient='records')
-
-                # get from first table
-                database = step_data0['tables'][0][0]
-                appropriate_table = (database, table_name, table_name)
-
-                columns = []
-                for key, dtyp in res.dtypes.items():
-
-                    columns.append((key, key))
-
-                values = []
-                for row in resp_dict:
-                    row2 = {
-                        (key, key): value
-                        for key, value in row.items()
-                    }
-
-                    values.append(
-                        {
-                            appropriate_table: row2
-                        }
-                    )
-
-                types = step_data0.get('types', {})
-                data = {
-                    'tables': [appropriate_table],
-                    'columns': {appropriate_table: columns},
-                    'values': values,
-                    'types': types  # copy
-                }
-                return data
+            result = ResultSet()
+            result.from_step_data(step_data)
 
             query = step.query
             query.from_table = Identifier('df_table')
-            df = step_data_to_df(step_data)
+
+            df = result.to_df()
             res = query_df(df, query)
 
-            data = df_to_step_data(res, step_data, table_name)
+            result2 = ResultSet()
+            # get database from first column
+            database = result.columns[0].database
+            result2.from_df(res, database, table_name)
+
+            data = result2.to_step_data()
+
 
         elif type(step) == SaveToTable or type(step) == InsertToTable:
             is_replace = False
@@ -1496,23 +1558,6 @@ class SQLQuery():
         else:
             raise ErLogicError(F'Unknown planner step: {step}')
         return data
-
-    # Is not used
-    # def _apply_where_filter(self, row, where):
-    #     if isinstance(where, Identifier):
-    #         return row[where.value]
-    #     elif isinstance(where, Constant):
-    #         return where.value
-    #     elif not isinstance(where, (UnaryOperation, BinaryOperation)):
-    #         raise SqlApiException(f'Unknown operation type: {where}')
-    #
-    #     op_fn = operator_map.get(where.op)
-    #     if op_fn is None:
-    #         raise SqlApiException(f'unknown operator {where.op}')
-    #
-    #     args = [self._apply_where_filter(row, arg) for arg in where.args]
-    #     result = op_fn(*args)
-    #     return result
 
     def _make_list_result_view(self, data):
         if self.outer_query is not None:

@@ -461,51 +461,63 @@ PARAMETERS = {
 
 ### MariaDB
 
-```sql
-CREATE DATABASE maria_datasource
-WITH ENGINE='mariadb',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 3306,
-  "database": "mariadb",
-  "user": "root",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "ssl": True,
-  "ssl_ca": {
-    "path": " "
-  },
-  "ssl_cert": {
-    "path": " "
-  },
-  "ssl_key": {
-    "path": " "
-  }
-};
-```
+=== "Template"
 
-The `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`). If it is enabled, then the `ssl_ca`, `ssl_cert`, and `ssl_key` paramaters can be defined as a path or a URL.
+    ```sql
+    CREATE DATABASE maria_datasource          --- display name for database
+    WITH ENGINE='mariadb',                    --- name of the mindsdb handler
+    PARAMETERS={
+      "host": " ",                            --- host in the form of an ip address or a url
+      "port": ,                               --- default port value is 3306
+      "database": " ",                        --- optional, name of your database
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "ssl": True/False,                      --- optional, enabling/disabling SSL
+      "ssl_ca": {                             --- optional, SSL Certificate Authority
+        "path": " "                           --- either "path" or "url"
+      },
+      "ssl_cert": {                           --- optional, SSL certificates
+        "path": " "                           --- either "path" or "url"
+      },
+      "ssl_key": {                            --- optional, SSL keys
+        "path": " "                           --- either "path" or "url"
+      }
+    };
+    ```
 
-```sql
-CREATE DATABASE maria_datasource
-WITH ENGINE='mariadb',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 3306,
-  "database": "mariadb",
-  "user": "root",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "ssl": True,
-  "ssl_ca": {
-    "url": " "
-  },
-  "ssl_cert": {
-    "url": " "
-  },
-  "ssl_key": {
-    "url": " "
-  }
-};
-```
+    The `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`). If it is enabled, then the `ssl_ca`, `ssl_cert`, and `ssl_key` paramaters can be defined as a path or a URL.
+
+=== "Example for MariaDB"
+
+    ```sql
+    CREATE DATABASE maria_datasource
+    WITH ENGINE='mariadb',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "mariadb",
+      "user": "root",
+      "password": "Mimzo3i-mxt@9CpThpBj"
+    };
+    ```
+
+=== "Example for MariaDB Cloud (or SkySQL)"
+
+    ```sql
+    CREATE DATABASE skysql_datasource
+    WITH ENGINE = 'mariadb',
+    PARAMETERS = {
+      "host": "mindsdbtest.mdb0002956.db1.skysql.net",
+      "port": "5001",
+      "database": "mindsdb_data",
+      "user": "DB00007539",
+      "password": "[DaS3I8g527n41637sFM|XtjjX",
+      --- here, the SSL certificate is required
+      "ssl-ca": {
+        "url": "https://mindsdb-web-builds.s3.amazonaws.com/aws_skysql_chain.pem"
+      }
+    };
+    ```
 
 ### Matrixone
 

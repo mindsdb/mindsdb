@@ -1061,7 +1061,8 @@ class SQLQuery():
                             table=predictor,
                             where_data=where_data
                         )
-                        predictor_cache.set(key, data)
+                        if data is not None and isinstance(data, list):
+                            predictor_cache.set(key, data)
 
                     data = [{(key, key): value for key, value in row.items()} for row in data]
 

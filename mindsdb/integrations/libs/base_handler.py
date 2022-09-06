@@ -115,13 +115,11 @@ class PredictiveHandler(BaseHandler):
     def __init__(self, name: str):
         super().__init__(name)
 
-    def join(self, stmt, data_handler, into: Optional[str]) -> pd.DataFrame:
+    def join(self, stmt, data_handler) -> pd.DataFrame:
         """
         Join the output of some entity in the handler with output from some other handler.
 
         Data from the external handler should be retrieved via the `select_query` method.
-
-        `into`: if provided, the resulting output will be stored in the specified data handler table via `handler.select_into()`. 
         """
         raise NotImplementedError()
 

@@ -5,13 +5,18 @@ import dask
 import dill
 import sqlalchemy
 import pandas as pd
+import datetime
+from dateutil.parser import parse as parse_datetime
+from ludwig import __version__ as ludwig_version
 from ludwig.automl import auto_train
 
 from mindsdb_sql import parse_sql
+from mindsdb import __version__ as mindsdb_version
 from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant, Select, Show, Star, NativeQuery
@@ -49,10 +54,11 @@ class LudwigHandler(PredictiveHandler):
         self.predictor_cache = {}
         storage_config = kwargs.get('storage_config', {'name': "ludwig_handler_storage"})
         self.storage = SqliteStorageHandler(context={}, config=storage_config)
-        try:
-            self.storage.get('models')
-        except KeyError:
-            self.storage.set('models', {})
+        for key in ('models', 'metadata'):
+            try:
+                self.storage.get(key)
+            except KeyError:
+                self.storage.set(key, {})
 
         self.parser = parse_sql
         self.dialect = 'mindsdb'
@@ -155,8 +161,40 @@ class LudwigHandler(PredictiveHandler):
             to_drop = query.name.parts[-1]
             models = self.storage.get('models')
             if models:
+                # @TODO: this could be a common helper method
+                predictors_records = get_model_records(company_id=self.company_id, name=to_drop, active=None)
+                if len(predictors_records) == 0:
+                    return HandlerResponse(
+                        RESPONSE_TYPE.ERROR,
+                        error_message=f"Model '{to_drop}' does not exist"
+                    )
+
+                is_cloud = self.config.get('cloud', False)
+                if is_cloud:
+                    for predictor_record in predictors_records:
+                        model_data = self.model_controller.get_model_data(predictor_record=predictor_record)
+                        if (
+                            is_cloud is True
+                            and model_data.get('status') in ['generating', 'training']
+                            and isinstance(model_data.get('created_at'), str) is True
+                            and (datetime.datetime.now() - parse_datetime(model_data.get('created_at'))) < datetime.timedelta(hours=1)
+                        ):
+                            raise Exception('You are unable to delete models currently in progress, please wait before trying again')
+
+                for predictor_record in predictors_records:
+                    if is_cloud:
+                        predictor_record.deleted_at = datetime.datetime.now()
+                    else:
+                        db.session.delete(predictor_record)
+                    self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
+                db.session.commit()
+
+                # end common method
+
                 del models[to_drop]
                 self.storage.set('models', models)
+
+                return HandlerResponse(RESPONSE_TYPE.OK)
             else:
                 raise Exception(f"Can't drop non-existent model {to_drop}")
 
@@ -273,7 +311,44 @@ class LudwigHandler(PredictiveHandler):
             all_models[model_name] = payload
         else:
             all_models = {model_name: payload}
-        self.storage.set('models', all_models)
+
+
+        dtypes = {f['name']: f['type'] for f in model.base_config['input_features']}
+        model_data = {
+            'name': model_name,
+            'status': 'complete',
+            'dtype_dict': dtypes,
+            'accuracies': {'metric': results.experiment_analysis.best_result['metric_score']}
+        }
+        all_metadata = self.storage.get('metadata')
+        if all_metadata is not None:
+            all_metadata[model_name] = model_data
+        else:
+            all_metadata = {model_name: model_data}
+
+        # TODO: replace with new generic table
+        integration_meta = self.handler_controller.get(name=integration_name)
+        predictor_record = db.Predictor(
+            company_id=self.company_id,
+            name=model_name,
+            integration_id=integration_meta['id'],
+            fetch_data_query=statement.query_str,
+            mindsdb_version=mindsdb_version,
+            lightwood_version=ludwig_version,
+            to_predict=target,
+            learn_args={},  # todo: match to user_config
+            data=model_data,
+            update_status='complete',
+            training_data_columns_count=len(df.columns),
+            training_data_rows_count=len(df),
+            training_start_at=datetime.datetime.now()
+        )
+
+        db.session.add(predictor_record)
+        db.session.commit()
+        self.storage.set('metadata', all_metadata)
+        self.storage.set('models', all_models)  # commits to internal storage once db record has been committed
+
         log.info(f'Ludwig model {model_name} has finished training.')
 
     @mark_process(name='predict')

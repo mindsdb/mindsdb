@@ -164,7 +164,7 @@ class LightwoodHandler(PredictiveHandler):
 
     def get_columns(self, table_name: str) -> Response:
         """ For getting standard info about a table. e.g. data types """  # noqa
-        predictor_record = get_model_record(company_id=self.company_id, name=table_name)
+        predictor_record = get_model_record(company_id=self.company_id, name=table_name, ml_handler_name='lightwood')
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -294,7 +294,7 @@ class LightwoodHandler(PredictiveHandler):
     def _retrain(self, statement):
         model_name = statement.name.parts[-1]
 
-        predictor_record = get_model_record(company_id=self.company_id, name=model_name)
+        predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name='lightwood')
 
         if predictor_record is None:
             return Response(
@@ -326,7 +326,12 @@ class LightwoodHandler(PredictiveHandler):
     def _drop(self, statement):
         model_name = statement.name.parts[-1]
 
-        predictors_records = get_model_records(company_id=self.company_id, name=model_name, active=None)
+        predictors_records = get_model_records(
+            company_id=self.company_id,
+            name=model_name,
+            active=None,
+            ml_handler_name='lightwood'
+        )
         if len(predictors_records) == 0:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -403,7 +408,7 @@ class LightwoodHandler(PredictiveHandler):
         if isinstance(data, dict):
             data = [data]
         df = pd.DataFrame(data)
-        predictor_record = get_model_record(company_id=self.company_id, name=model_name)
+        predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name='lightwood')
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -678,7 +683,7 @@ class LightwoodHandler(PredictiveHandler):
         return analysis.to_dict()
 
     def edit_json_ai(self, name: str, json_ai: dict):
-        predictor_record = get_model_record(company_id=self.company_id, name=name)
+        predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
         assert predictor_record is not None
 
         json_ai = lightwood.JsonAI.from_dict(json_ai)
@@ -696,7 +701,7 @@ class LightwoodHandler(PredictiveHandler):
         if self.config.get('cloud', False):
             raise Exception('Code editing prohibited on cloud')
 
-        predictor_record = get_model_record(company_id=self.company_id, name=name)
+        predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
         assert predictor_record is not None
 
         lightwood.predictor_from_code(code)

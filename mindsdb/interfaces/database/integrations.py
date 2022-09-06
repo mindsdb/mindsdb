@@ -231,15 +231,14 @@ class IntegrationController:
 
         return self.handler_modules[handler_type].Handler(**handler_ars)
 
-    def create_handler(self, name: str = None, handler_type: str = None,
+    def create_handler(self, handler_id: int, name: str = None, handler_type: str = None,
                        connection_data: dict = {}, company_id: int = None):
-        fs_store = FsStore()
-
-        # fs_store = SpecificFSStore(
-        #     resource_name=f'integration_{name}',
-        #     resource_id=
-        #     company_id=company_id
-        # )
+        fs_store = SpecificFSStore(
+            resource_group=RESOURCE_GROUP.INTEGRATION,
+            resource_id=handler_id,
+            company_id=company_id,
+            sync=True
+        )
 
         handler_ars = self._make_handler_args(handler_type, connection_data, company_id)
         handler_ars['name'] = name
@@ -256,18 +255,18 @@ class IntegrationController:
                 & (func.lower(Integration.name) == func.lower(name))
             ).first()
 
-        # TODO del in future
-        if integration_record is None:
-            if name == 'lightwood':
-                handler = self.create_handler(
-                    name=name,
-                    handler_type='lightwood',
-                    connection_data=None,
-                    company_id=company_id
-                )
-                return handler
-            else:
-                raise Exception(f'Unknown integration: {name}')
+        # # TODO del in future
+        # if integration_record is None:
+        #     if name == 'lightwood':
+        #         handler = self.create_handler(
+        #             name=name,
+        #             handler_type='lightwood',
+        #             connection_data=None,
+        #             company_id=company_id
+        #         )
+        #         return handler
+        #     else:
+        #         raise Exception(f'Unknown integration: {name}')
 
         integration_data = self._get_integration_record_data(integration_record, True)
         connection_data = integration_data.get('connection_data', {})
@@ -299,6 +298,7 @@ class IntegrationController:
                     )
 
         handler = self.create_handler(
+            handler_id=integration_record.id,
             name=integration_name,
             handler_type=integration_engine,
             connection_data=connection_data,

@@ -651,7 +651,7 @@ class ExecuteCommands:
                             raise SqlApiException(f"Argument '{arg_name}' must be path or url to the file")
                         connection_args[arg_name] = path
 
-            handler = self.session.integration_controller.create_handler(
+            handler = self.session.integration_controller.create_tmp_handler(
                 handler_type=engine,
                 connection_data=connection_args
             )

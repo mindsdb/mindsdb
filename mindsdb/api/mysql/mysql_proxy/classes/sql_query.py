@@ -886,12 +886,13 @@ class SQLQuery():
                     f'UNION columns count mismatch: {len(left_result.columns)} != {len(right_result.columns)} ')
 
             # types have to match
-            for i, left_col in enumerate(left_result.columns):
-                right_col = right_result.columns[i]
-                type1, type2 = left_col.type, right_col.type
-                if type1 is not None and type2 is not None:
-                    if type1 != type2:
-                        raise ErSqlWrongArguments(f'UNION types mismatch: {len(type1)} != {len(type2)} ')
+            # TODO: return checking type later
+            # for i, left_col in enumerate(left_result.columns):
+            #     right_col = right_result.columns[i]
+            #     type1, type2 = left_col.type, right_col.type
+            #     if type1 is not None and type2 is not None:
+            #         if type1 != type2:
+            #             raise ErSqlWrongArguments(f'UNION types mismatch: {type1} != {type2}')
 
             records = []
             records_hashes = []

@@ -1,6 +1,7 @@
 from unittest.mock import patch
 import pandas as pd
 import datetime as dt
+import pytest
 
 from lightwood.api import dtype
 
@@ -136,6 +137,19 @@ class TestCompexQueries(BaseTestCase):
         ret_df = self.ret_to_df(ret)
         assert list(ret_df.columns) == ['a1', 'target']
         assert ret_df.shape[0] == 3
+
+    # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    # def test_union_type_mismatch(self, mock_handler):
+    #     self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
+    #
+    #     sql = '''
+    #          SELECT a, b  FROM pg.tasks
+    #        UNION
+    #          SELECT b, a  FROM pg.tasks
+    #     '''
+    #     from mindsdb.api.mysql.mysql_proxy.utilities import ErSqlWrongArguments
+    #     with pytest.raises(ErSqlWrongArguments):
+    #         self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
 
 
 class TestTableau(BaseTestCase):

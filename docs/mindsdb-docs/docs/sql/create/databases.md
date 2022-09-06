@@ -106,15 +106,29 @@ Let's look at sample codes showing how to connect to each of the supported integ
 
 ### Airtable
 
-```sql
-CREATE DATABASE airtable_datasource
-WITH ENGINE='airtable',
-PARAMETERS={
-  "base_id": "appve10klsda2",
-  "table_name": "my_table",
-  "api_key": "KdJX2Q5km%5b$T$sQYm^gvN"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE airtable_datasource          --- display name for database
+    WITH ENGINE='airtable',                      --- name of the mindsdb handler
+    PARAMETERS={
+      "base_id": " ",                            --- the Airtable base ID
+      "table_name": " ",                         --- the Airtable table name
+      "api_key": " "                             --- the API key for the Airtable API
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE airtable_datasource
+    WITH ENGINE='airtable',
+    PARAMETERS={
+      "base_id": "appve10klsda2",
+      "table_name": "my_table",
+      "api_key": "KdJX2Q5km%5b$T$sQYm^gvN"
+    };
+    ```
 
 ### Amazon Redshift
 

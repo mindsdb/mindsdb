@@ -102,7 +102,7 @@ The list of databases supported by MindsDB keeps growing. Here are the currently
   <img src="/assets/supported_integrations.png" />
 </p>
 
-Let's look at sample codes showing how to connect to each of the supported integrations.
+Let's look at sample codes showing how to connect to each of the supported integrations. You can also have a look at the particular [databases' handler files here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers) to see their connection arguments.
 
 ### Airtable
 
@@ -110,9 +110,9 @@ Let's look at sample codes showing how to connect to each of the supported integ
 CREATE DATABASE airtable_datasource
 WITH ENGINE='airtable',
 PARAMETERS={
-    "base_id": "appve10klsda2",
-    "table_name": "my_table",
-    "api_key": "KdJX2Q5km%5b$T$sQYm^gvN"
+  "base_id": "appve10klsda2",
+  "table_name": "my_table",
+  "api_key": "KdJX2Q5km%5b$T$sQYm^gvN"
 };
 ```
 
@@ -122,11 +122,11 @@ PARAMETERS={
 CREATE DATABASE amazonredshift_datasource
 WITH ENGINE='amazonredshift',
 PARAMETERS={
-  "user": "amazonredshift",
-  "port": 5439,
-  "password": "amazonredshift",
   "host": "127.0.0.1",
-  "database": "test"
+  "port": 5439,
+  "database": "test",
+  "user": "amazonredshift",
+  "password": "amazonredshift"
 };
 ```
 
@@ -136,12 +136,12 @@ PARAMETERS={
 CREATE DATABASE amazons3_datasource
 WITH ENGINE = 's3',
 PARAMETERS = {
-    "aws_access_key_id": " ",
-    "aws_secret_access_key": " ",
-    "region_name": " ",
-    "bucket": " ",
-    "key": " ",
-    "input_serialization": " "
+  "aws_access_key_id": " ",
+  "aws_secret_access_key": " ",
+  "region_name": " ",
+  "bucket": " ",
+  "key": " ",
+  "input_serialization": " "
 };
 ```
 
@@ -151,11 +151,33 @@ PARAMETERS = {
 CREATE DATABASE cassandra_datasource
 WITH ENGINE='cassandra',
 PARAMETERS={
-  "user": "cassandra",
-  "port": 9042,
-  "password": "cassandra",
   "host": "127.0.0.1",
-  "database": "keyspace"
+  "port": 9042,
+  "user": "cassandra",
+  "password": "cassandra",
+  "protocol_version": ,
+  "keyspace": " ",
+  "secure_connect_bundle": {
+    "path": " "
+  }
+};
+```
+
+The `secure_connect_bundle` parameter can be defined as a path or a URL.
+
+```sql
+CREATE DATABASE cassandra_datasource
+WITH ENGINE='cassandra',
+PARAMETERS={
+  "host": "127.0.0.1",
+  "port": 9042,
+  "user": "cassandra",
+  "password": "cassandra",
+  "protocol_version": ,
+  "keyspace": " ",
+  "secure_connect_bundle": {
+    "url": " "
+  }
 };
 ```
 
@@ -165,8 +187,8 @@ PARAMETERS={
 CREATE DATABASE ckan_datasource
 WITH ENGINE = 'ckan',
 PARAMETERS = {
-    "url": "http://demo.ckan.org/api/3/action/",
-    "apikey": " "
+  "url": "http://demo.ckan.org/api/3/action/",
+  "apikey": " "
 };
 ```
 
@@ -176,11 +198,11 @@ PARAMETERS = {
 CREATE DATABASE clickhouse_datasource
 WITH ENGINE='clickhouse',
 PARAMETERS={
-  "user": "default",
-  "port": 9000,
-  "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
-  "database": "default"
+  "port": 9000,
+  "database": "default",
+  "user": "default",
+  "password": "Mimzo3i-mxt@9CpThpBj"
 };
 ```
 
@@ -190,11 +212,11 @@ PARAMETERS={
 CREATE DATABASE cockroach_datasource
 WITH ENGINE='cockroachdb',
 PARAMETERS={
-  "user": "username",
-  "port": 26257,
-  "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
-  "database": "cockroachdb"
+  "port": 26257,
+  "database": "cockroachdb",
+  "user": "username",
+  "password": "Mimzo3i-mxt@9CpThpBj"
 };
 ```
 
@@ -204,11 +226,11 @@ PARAMETERS={
 CREATE DATABASE couchbase_datasource
 WITH ENGINE = 'couchbase',
 PARAMETERS = {
-    "host": "127.0.0.1",
-    "bucket": " ",
-    "user": "couchbase",
-    "password": "Mimzo3i-mxt@9CpThpBj",
-    "scope": " "
+  "host": "127.0.0.1",
+  "user": "couchbase",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "bucket": " ",
+  "scope": " "
 };
 ```
 
@@ -218,11 +240,11 @@ PARAMETERS = {
 CREATE DATABASE cratedb_datasource
 WITH ENGINE='crate',
 PARAMETERS={
-    "user": "crate",
-    "password": "Mimzo3i-mxt@9CpThpBj",
-    "host": "127.0.0.1",
-    "port": 4200,
-    "schema_name": " "
+  "host": "127.0.0.1",
+  "port": 4200,
+  "user": "crate",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "schema_name": " "
 };
 ```
 
@@ -232,11 +254,13 @@ PARAMETERS={
 CREATE DATABASE databricks_datasource
 WITH ENGINE='databricks',
 PARAMETERS={
-  "user": "databricks",
-  "port": 15001,
-  "password": "databricks",
-  "host": "127.0.0.1",
-  "database": "test"
+  "server_hostname": " ",
+  "http_path": " ",
+  "access_token": " ",
+  "session_configuration": " ",
+  "http_headers": " ",
+  "catalog": " ",
+  "schema": " "
 };
 ```
 
@@ -246,9 +270,33 @@ PARAMETERS={
 CREATE DATABASE datastax_datasource
 WITH ENGINE='astra',
 PARAMETERS={
-    "user": "datastax",
-    "password": "Mimzo3i-mxt@9CpThpBj",
-    "secure_connection_bundle": " "
+  "host": "127.0.0.1",
+  "port": 7077,
+  "user": "datastax",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "protocol_version": ,
+  "keyspace": " ",
+  "secure_connection_bundle": {
+    "path": " "
+  }
+};
+```
+
+The `secure_connection_bundle` parameter can be defined as a path or a URL.
+
+```sql
+CREATE DATABASE datastax_datasource
+WITH ENGINE='astra',
+PARAMETERS={
+  "host": "127.0.0.1",
+  "port": 7077,
+  "user": "datastax",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "protocol_version": ,
+  "keyspace": " ",
+  "secure_connection_bundle": {
+    "url": " "
+  }
 };
 ```
 
@@ -258,10 +306,12 @@ PARAMETERS={
 CREATE DATABASE druid_datasource
 WITH ENGINE = 'druid',
 PARAMETERS = {
-    "host": "127.0.0.1",
-    "port": "8888",
-    "path": " ",
-    "scheme": "http"
+  "host": "127.0.0.1",
+  "port": 8888,
+  "user": " ",
+  "password": " ",
+  "path": " ",
+  "scheme": "http"
 };
 ```
 
@@ -271,9 +321,9 @@ PARAMETERS = {
 CREATE DATABASE dynamodb_datasource
 WITH ENGINE='dynamodb',
 PARAMETERS={
-    "aws_access_key_id": " ",
-    "aws_secret_access_key": " ",
-    "region_name": " "
+  "aws_access_key_id": " ",
+  "aws_secret_access_key": " ",
+  "region_name": " "
 };
 ```
 
@@ -283,11 +333,45 @@ PARAMETERS={
 CREATE DATABASE d0lt_datasource
 WITH ENGINE = 'd0lt',
 PARAMETERS = {
-    "user": "d0lt",
-    "password": "Mimzo3i-mxt@9CpThpBj",
-    "host": "127.0.0.1",
-    "port": 3306,
-    "database": " "
+  "host": "127.0.0.1",
+  "port": 3306,
+  "database": " ",
+  "user": "d0lt",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "ssl": True,
+  "ssl_ca": {
+    "path": " "
+  },
+  "ssl_cert": {
+    "path": " "
+  },
+  "ssl_key": {
+    "path": " "
+  }
+};
+```
+
+The `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`). If it is enabled, then the `ssl_ca`, `ssl_cert`, and `ssl_key` paramaters can be defined as a path or a URL.
+
+```sql
+CREATE DATABASE d0lt_datasource
+WITH ENGINE = 'd0lt',
+PARAMETERS = {
+  "host": "127.0.0.1",
+  "port": 3306,
+  "database": " ",
+  "user": "d0lt",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "ssl": True,
+  "ssl_ca": {
+    "url": " "
+  },
+  "ssl_cert": {
+    "url": " "
+  },
+  "ssl_key": {
+    "url": " "
+  }
 };
 ```
 
@@ -297,7 +381,10 @@ PARAMETERS = {
 CREATE DATABASE elastic_datasource
 WITH ENGINE = 'elasticsearch',
 PARAMETERS = {
-    "host": "127.0.0.1"
+  "hosts": "127.0.0.1",
+  "username": " ",
+  "password": " ",
+  "cloud_id": " "
 };
 ```
 
@@ -307,11 +394,10 @@ PARAMETERS = {
 CREATE DATABASE firebird_datasource
 WITH ENGINE='firebird',
 PARAMETERS={
-  "user": "firebird",
-  "port": 3050,
-  "password": "firebird",
   "host": "127.0.0.1",
-  "database": "test"
+  "database": "test",
+  "user": "firebird",
+  "password": "firebird"
 };
 ```
 
@@ -321,22 +407,22 @@ PARAMETERS={
 CREATE DATABASE bigquery_datasource
 WITH ENGINE='bigquery',
 PARAMETERS={
-   "project_id": "badger-345908",
-   "service_account_keys": {
-      "path": "/home/Downloads/badger-345908.json"
+  "project_id": "badger-345908",
+  "service_account_keys": {
+    "path": "/home/Downloads/badger-345908.json"
   }
 };
 ```
 
-If you are using MindsDB Cloud, provide the `service_account_keys` as a URL:
+If you are using MindsDB Cloud, provide the `service_account_keys` parameter as a URL:
 
 ```sql
 CREATE DATABASE bigquery_datasource
 WITH ENGINE='bigquery',
 PARAMETERS={
-   "project_id": "badger-345908",
-   "service_account_keys": {
-      "url": "https://url/badger-345908.json"
+  "project_id": "badger-345908",
+  "service_account_keys": {
+    "url": "https://url/badger-345908.json"
   }
 };
 ```
@@ -347,12 +433,12 @@ PARAMETERS={
 CREATE DATABASE db2_datasource
 WITH ENGINE='DB2',
 PARAMETERS={
-    "user": "db2",
-    "password": "Mimzo3i-mxt@9CpThpBj",
-    "host": "127.0.0.1",
-    "port": 25000,
-    "schema_name": " ",
-    "database": " "
+  "host": "127.0.0.1",
+  "port": 25000,
+  "database": " ",
+  "user": "db2",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "schema_name": " "
 };
 ```
 
@@ -362,14 +448,14 @@ PARAMETERS={
 CREATE DATABASE informix_datasource
 WITH ENGINE = 'informix',
 PARAMETERS = {
-    "server": " ",
-    "host": "127.0.0.1",
-    "port": "9091",
-    "user": "informix",
-    "password": "Mimzo3i-mxt@9CpThpBj",
-    "database": " ",
-    "schema_name": " ",
-    "loging_enabled": False
+  "server": " ",
+  "host": "127.0.0.1",
+  "port": 9091,
+  "database": " ",
+  "user": "informix",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "schema_name": " ",
+  "logging_enabled": False
 };
 ```
 
@@ -379,11 +465,45 @@ PARAMETERS = {
 CREATE DATABASE maria_datasource
 WITH ENGINE='mariadb',
 PARAMETERS={
-  "user": "root",
-  "port": 3306,
-  "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
-  "database": "mariadb"
+  "port": 3306,
+  "database": "mariadb",
+  "user": "root",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "ssl": True,
+  "ssl_ca": {
+    "path": " "
+  },
+  "ssl_cert": {
+    "path": " "
+  },
+  "ssl_key": {
+    "path": " "
+  }
+};
+```
+
+The `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`). If it is enabled, then the `ssl_ca`, `ssl_cert`, and `ssl_key` paramaters can be defined as a path or a URL.
+
+```sql
+CREATE DATABASE maria_datasource
+WITH ENGINE='mariadb',
+PARAMETERS={
+  "host": "127.0.0.1",
+  "port": 3306,
+  "database": "mariadb",
+  "user": "root",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "ssl": True,
+  "ssl_ca": {
+    "url": " "
+  },
+  "ssl_cert": {
+    "url": " "
+  },
+  "ssl_key": {
+    "url": " "
+  }
 };
 ```
 
@@ -393,11 +513,45 @@ PARAMETERS={
 CREATE DATABASE matrixone_datasource
 WITH ENGINE = 'matrixone',
 PARAMETERS = {
-    "user": "matrixone",
-    "password": "Mimzo3i-mxt@9CpThpBj",
-    "host": "127.0.0.1",
-    "port": "6001",
-    "database": " "
+  "host": "127.0.0.1",
+  "port": 6001,
+  "database": " ",
+  "user": "matrixone",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "ssl": True,
+  "ssl_ca": {
+    "path": " "
+  },
+  "ssl_cert": {
+    "path": " "
+  },
+  "ssl_key": {
+    "path": " "
+  }
+};
+```
+
+The `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`). If it is enabled, then the `ssl_ca`, `ssl_cert`, and `ssl_key` paramaters can be defined as a path or a URL.
+
+```sql
+CREATE DATABASE matrixone_datasource
+WITH ENGINE = 'matrixone',
+PARAMETERS = {
+  "host": "127.0.0.1",
+  "port": 6001,
+  "database": " ",
+  "user": "matrixone",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "ssl": True,
+  "ssl_ca": {
+    "url": " "
+  },
+  "ssl_cert": {
+    "url": " "
+  },
+  "ssl_key": {
+    "url": " "
+  }
 };
 ```
 
@@ -407,7 +561,7 @@ PARAMETERS = {
 CREATE DATABASE access_datasource
 WITH ENGINE = 'access',
 PARAMETERS = {
-    "db_file": " "
+  "db_file": " "
 };
 ```
 
@@ -417,11 +571,11 @@ PARAMETERS = {
 CREATE DATABASE mssql_datasource
 WITH ENGINE='mssql',
 PARAMETERS={
-  "user": "sa",
-  "port": 1433,
-  "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
-  "database": "master"
+  "port": 1433,
+  "database": "master",
+  "user": "sa",
+  "password": "Mimzo3i-mxt@9CpThpBj"
 };
 ```
 
@@ -431,12 +585,12 @@ PARAMETERS={
 CREATE DATABASE monetdb_datasource
 WITH ENGINE = 'monetdb',
 PARAMETERS = {
-    "user": "monetdb",
-    "password": "Mimzo3i-mxt@9CpThpBj",
-    "host": "127.0.0.1",
-    "port": 50000,
-    "schema_name": " ",
-    "database": " "
+  "host": "127.0.0.1",
+  "port": 50000,
+  "database": " ",
+  "user": "monetdb",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "schema_name": " "
 };
 ```
 
@@ -446,10 +600,10 @@ PARAMETERS = {
 CREATE DATABASE mongo_datasource
 WITH ENGINE='mongo',
 PARAMETERS={
-  "user": "mongo",
-  "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
-  "port": 27017
+  "port": 27017,
+  "user": "mongo",
+  "password": "Mimzo3i-mxt@9CpThpBj"
 };
 ```
 
@@ -461,11 +615,45 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 CREATE DATABASE mysql_datasource
 WITH ENGINE='mysql',
 PARAMETERS={
-  "user": "root",
-  "port": 3306,
-  "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
-  "database": "mysql"
+  "port": 3306,
+  "database": "mysql",
+  "user": "root",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "ssl": True,
+  "ssl_ca": {
+    "path": " "
+  },
+  "ssl_cert": {
+    "path": " "
+  },
+  "ssl_key": {
+    "path": " "
+  }
+};
+```
+
+The `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`). If it is enabled, then the `ssl_ca`, `ssl_cert`, and `ssl_key` paramaters can be defined as a path or a URL.
+
+```sql
+CREATE DATABASE mysql_datasource
+WITH ENGINE='mysql',
+PARAMETERS={
+  "host": "127.0.0.1",
+  "port": 3306,
+  "database": "mysql",
+  "user": "root",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "ssl": True,
+  "ssl_ca": {
+    "url": " "
+  },
+  "ssl_cert": {
+    "url": " "
+  },
+  "ssl_key": {
+    "url": " "
+  }
 };
 ```
 
@@ -475,11 +663,12 @@ PARAMETERS={
 CREATE DATABASE oracle_datasource
 WITH ENGINE='oracle',
 PARAMETERS={
-    "host": "127.0.0.1",
-    "port": 1521,
-    "sid": " ",
-    "user": "sys",
-    "password": "Mimzo3i-mxt@9CpThpBj"
+  "host": "127.0.0.1",
+  "port": 1521,
+  "sid": " ",
+  "service_name": " ",
+  "user": "sys",
+  "password": "Mimzo3i-mxt@9CpThpBj"
 };
 ```
 
@@ -489,11 +678,14 @@ PARAMETERS={
 CREATE DATABASE pinot_datasource
 WITH ENGINE='pinot',
 PARAMETERS={
-    "host": "127.0.0.1",
-    "broker_port": 8000,
-    "controller_port": 9000,
-    "path": "4200",
-    "scheme": " "
+  "host": "127.0.0.1",
+  "broker_port": 8000,
+  "controller_port": 9000,
+  "path": "/query/sql",
+  "scheme": " ",
+  "username": " ",
+  "password": " ",
+  "verify_ssl": " "
 };
 ```
 
@@ -503,11 +695,11 @@ PARAMETERS={
 CREATE DATABASE psql_datasource
 WITH ENGINE='postgres',
 PARAMETERS={
-  "user": "postgres",
-  "port": 5432,
-  "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
-  "database": "postgres"
+  "port": 5432,
+  "database": "postgres",
+  "user": "postgres",
+  "password": "Mimzo3i-mxt@9CpThpBj"
 };
 ```
 
@@ -517,11 +709,11 @@ PARAMETERS={
 CREATE DATABASE questdb_datasource
 WITH ENGINE='questdb',
 PARAMETERS={
-  "user": "admin",
-  "port": 8812,
-  "password": "quest",
   "host": "127.0.0.1",
-  "database": "qdb"
+  "port": 8812,
+  "database": "qdb",
+  "user": "admin",
+  "password": "quest"
 };
 ```
 
@@ -531,9 +723,33 @@ PARAMETERS={
 CREATE DATABASE scylladb_datasource
 WITH ENGINE='scylladb',
 PARAMETERS={
+  "host": "127.0.0.1",
+  "port": 7199,
   "user": "user@mindsdb.com",
   "password": "pass",
-  "secure_connect_bundle": "/home/zoran/Downloads/secure-connect-mindsdb.zip"
+  "protocol_version": ,
+  "keyspace": " ",
+  "secure_connect_bundle": {
+    "path": "/home/zoran/Downloads/secure-connect-mindsdb.zip"
+  }
+};
+```
+
+The `secure_connect_bundle` parameter can be defined as a path or a URL.
+
+```sql
+CREATE DATABASE scylladb_datasource
+WITH ENGINE='scylladb',
+PARAMETERS={
+  "host": "127.0.0.1",
+  "port": 7199,
+  "user": "user@mindsdb.com",
+  "password": "pass",
+  "protocol_version": ,
+  "keyspace": " ",
+  "secure_connect_bundle": {
+    "url": " "
+  }
 };
 ```
 
@@ -541,13 +757,47 @@ PARAMETERS={
 
 ```sql
 CREATE DATABASE singlestore_datasource
-WITH ENGINE='singlestore',
+WITH ENGINE='mysql',
 PARAMETERS={
-  "user": "root",
-  "port": 3306,
-  "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
-  "database": "singlestore"
+  "port": 3306,
+  "database": "singlestore",
+  "user": "root",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "ssl": True,
+  "ssl_ca": {
+    "path": " "
+  },
+  "ssl_cert": {
+    "path": " "
+  },
+  "ssl_key": {
+    "path": " "
+  }
+};
+```
+
+The `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`). If it is enabled, then the `ssl_ca`, `ssl_cert`, and `ssl_key` paramaters can be defined as a path or a URL.
+
+```sql
+CREATE DATABASE singlestore_datasource
+WITH ENGINE='mysql',
+PARAMETERS={
+  "host": "127.0.0.1",
+  "port": 3306,
+  "database": "singlestore",
+  "user": "root",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "ssl": True,
+  "ssl_ca": {
+    "url": " "
+  },
+  "ssl_cert": {
+    "url": " "
+  },
+  "ssl_key": {
+    "url": " "
+  }
 };
 ```
 
@@ -557,11 +807,11 @@ PARAMETERS={
 CREATE DATABASE snowflake_datasource
 WITH ENGINE='snowflake',
 PARAMETERS={
-  "user": "user",
-  "port": 443,
-  "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
+  "port": 443,
   "database": "snowflake",
+  "user": "user",
+  "password": "Mimzo3i-mxt@9CpThpBj",
   "account": "account",
   "schema": "public",
   "protocol": "https",
@@ -575,7 +825,7 @@ PARAMETERS={
 CREATE DATABASE sqlite_datasource
 WITH ENGINE='sqlite',
 PARAMETERS={
-    "db_file": " "
+  "db_file": " "
 };
 ```
 
@@ -585,11 +835,11 @@ PARAMETERS={
 CREATE DATABASE supabase_datasource
 WITH ENGINE='supabase',
 PARAMETERS={
-  "user": "supabase",
-  "port": 54321,
-  "password": "supabase",
   "host": "127.0.0.1",
-  "database": "test"
+  "port": 54321,
+  "database": "test",
+  "user": "supabase",
+  "password": "supabase"
 };
 ```
 
@@ -599,11 +849,11 @@ PARAMETERS={
 CREATE DATABASE tidb_datasource
 WITH ENGINE='tidb',
 PARAMETERS={
-  "user": "root",
-  "port": 4000,
-  "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
-  "database": "tidb"
+  "port": 4000,
+  "database": "tidb",
+  "user": "root",
+  "password": "Mimzo3i-mxt@9CpThpBj"
 };
 ```
 
@@ -613,10 +863,10 @@ PARAMETERS={
 CREATE DATABASE trino_datasource
 WITH ENGINE='trinodb',
 PARAMETERS={
-  "user": "trino",
-  "port": 8080,
-  "password": "Mimzo3i-mxt@9CpThpBj",
   "host": "127.0.0.1",
+  "port": 8080,
+  "user": "trino",
+  "password": "Mimzo3i-mxt@9CpThpBj",
   "catalog": "default",
   "schema": "test"
 };
@@ -628,12 +878,12 @@ PARAMETERS={
 CREATE DATABASE vertica_datasource
 WITH ENGINE='vertica',
 PARAMETERS={
-    "user": "vertica",
-    "password": "Mimzo3i-mxt@9CpThpBj",
-    "host": "127.0.0.1",
-    "port": 5433,
-    "database": " ",
-    "schema": " "
+  "host": "127.0.0.1",
+  "port": 5433,
+  "database": " ",
+  "user": "vertica",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "schema_name": " "
 };
 ```
 

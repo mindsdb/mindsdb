@@ -256,10 +256,13 @@ class LightwoodHandler(PredictiveHandler):
         integration_meta = self.handler_controller.get(name=integration_name)
         problem_definition = ProblemDefinition.from_dict(problem_definition_dict)
 
+        lightwood_integration_meta = self.handler_controller.get(name='lightwood')
+
         predictor_record = db.Predictor(
             company_id=self.company_id,
             name=model_name,
-            integration_id=integration_meta['id'],
+            integration_id=lightwood_integration_meta['id'],
+            data_integration_id=integration_meta['id'],
             fetch_data_query=statement.query_str,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
@@ -308,10 +311,10 @@ class LightwoodHandler(PredictiveHandler):
         predictor_record.update_status = 'updating'
         db.session.commit()
 
-        handler_meta = self.handler_controller.get_by_id(predictor_record.integration_id)
-        handler = self.handler_controller.get_handler(handler_meta['name'])
+        data_handler_meta = self.handler_controller.get_by_id(predictor_record.data_integration_id)
+        data_handler = self.handler_controller.get_handler(data_handler_meta['name'])
         ast = self.parser(predictor_record.fetch_data_query, dialect=self.dialect)
-        response = handler.query(ast)
+        response = data_handler.query(ast)
         if response.type == RESPONSE_TYPE.ERROR:
             return response
 

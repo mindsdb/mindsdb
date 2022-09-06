@@ -607,7 +607,7 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_datasource(self, struct: dict):
-        ''' create new datasource (integration in old terms)
+        ''' create new handler (datasource/integration in old terms)
             Args:
                 struct: data for creating integration
         '''

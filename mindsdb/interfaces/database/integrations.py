@@ -12,7 +12,7 @@ from sqlalchemy import func
 
 from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.fs import FsStore, SpecificFSStore
+from mindsdb.interfaces.storage.fs import FsStore, SpecificFSStore, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
@@ -42,34 +42,36 @@ class IntegrationController:
         if engine in ['redis', 'kafka']:
             self._add_integration_record(name, engine, connection_args, company_id)
             return
-        
+
         handlers_meta = self.get_handlers_import_status()
         handler_meta = handlers_meta[engine]
         accept_connection_args = handler_meta.get('connection_args')
 
-        temp_dir = None
+        files_dir = None
         if accept_connection_args is not None:
             for arg_name, arg_value in connection_args.items():
                 if (
                     arg_name in accept_connection_args
                     and accept_connection_args[arg_name]['type'] == ARG_TYPE.PATH
                 ):
-                    if temp_dir is None:
-                        temp_dir = tempfile.mkdtemp(prefix='mindsdb_files_')
-                    shutil.copy(arg_value, temp_dir)
+                    if files_dir is None:
+                        files_dir = tempfile.mkdtemp(prefix='mindsdb_files_')
+                    shutil.copy(arg_value, files_dir)
                     connection_args[arg_name] = Path(arg_value).name
 
         integration_id = self._add_integration_record(name, engine, connection_args, company_id)
 
-        if temp_dir is not None:
-            folder_name = f'integration_files_{company_id}_{integration_id}'
-            integrations_dir = Config()['paths']['integrations']
-            integration_data_dir = os.path.join(integrations_dir, folder_name)
-            shutil.move(temp_dir, integration_data_dir)
-            FsStore().put(
-                folder_name,
-                base_dir=integrations_dir
+        if files_dir is not None:
+            store = SpecificFSStore(
+                resource_group=RESOURCE_GROUP.INTEGRATION,
+                resource_id=integration_id,
+                company_id=company_id,
+                sync=False
             )
+            store.add(files_dir, '')
+            store.push()
+
+        return integration_id
 
     def modify(self, name, data, company_id):
         integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
@@ -83,15 +85,16 @@ class IntegrationController:
 
     def delete(self, name, company_id=None):
         integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
-        integrations_dir = Config()['paths']['integrations']
-        folder_name = f'integration_files_{company_id}_{integration_record.id}'
-        integration_dir = os.path.join(integrations_dir, folder_name)
-        if os.path.isdir(integration_dir):
-            shutil.rmtree(integration_dir)
-        try:
-            FsStore().delete(folder_name)
-        except Exception:
-            pass
+        # TODO del files!
+        # integrations_dir = Config()['paths']['integrations']
+        # folder_name = f'integration_files_{company_id}_{integration_record.id}'
+        # integration_dir = os.path.join(integrations_dir, folder_name)
+        # if os.path.isdir(integration_dir):
+        #     shutil.rmtree(integration_dir)
+        # try:
+        #     FsStore().delete(folder_name)
+        # except Exception:
+        #     pass
         session.delete(integration_record)
         session.commit()
 
@@ -168,7 +171,7 @@ class IntegrationController:
     def check_connections(self):
         connections = {}
         for integration_name, integration_meta in self.get_all().items():
-            handler = self.create_handler(
+            handler = self.create_tmp_handler(
                 handler_type=integration_meta['engine'],
                 connection_data=integration_meta['connection_data']
             )
@@ -211,9 +214,8 @@ class IntegrationController:
                 Handler object
         """
         resource_id = int(time() * 10000)
-        name = f'handler_{resource_id}'
         fs_store = SpecificFSStore(
-            resource_name=name,
+            resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=resource_id,
             company_id=company_id,
             root_dir='tmp',
@@ -222,7 +224,7 @@ class IntegrationController:
         handler_ars = self._make_handler_args(handler_type, connection_data, company_id)
         handler_ars['fs_store'] = fs_store
         handler_ars = dict(
-            name=name,
+            name='tmp_handler',
             fs_store=fs_store,
             connection_data=connection_data
         )

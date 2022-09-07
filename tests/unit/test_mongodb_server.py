@@ -14,17 +14,6 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column
 #  env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
 
 
-def unload_module(path):
-    # remove all modules started with path
-    import sys
-    to_remove = []
-    for module_name in sys.modules:
-        if module_name.startswith(path):
-            to_remove.append(module_name)
-    for module_name in to_remove:
-        sys.modules.pop(module_name)
-
-
 class TestMongoDBServer(unittest.TestCase):
 
     def test_mongo_server(self):

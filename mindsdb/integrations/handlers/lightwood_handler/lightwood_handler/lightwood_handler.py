@@ -720,19 +720,6 @@ class LightwoodHandler(PredictiveHandler):
         model_input.columns = get_aliased_columns(list(model_input.columns), model_alias, stmt.targets, mode='input')
         predictions.columns = get_aliased_columns(list(predictions.columns), model_alias, stmt.targets, mode='output')
 
-        if into:
-            try:
-                dtypes = {}
-                for col in predictions.columns:
-                    if model.dtype_dict.get(col, False):
-                        dtypes[col] = self.lw_dtypes_to_sql.get(col, sqlalchemy.Text)
-                    else:
-                        dtypes[col] = self.lw_dtypes_overrides.get(col, sqlalchemy.Text)
-
-                data_handler.select_into(into, predictions, dtypes=dtypes)
-            except Exception:
-                print("Error when trying to store the JOIN output in data handler.")
-
         return predictions
 
     def _get_model(self, model_name):

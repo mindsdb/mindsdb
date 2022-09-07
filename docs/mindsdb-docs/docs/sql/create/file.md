@@ -1,22 +1,27 @@
-# Upload file to MindsDB Editor
+# Upload a File to MindsDB
 
 Follow the steps below to upload a file to MindsDB.
 
-1. Connect to the MindsDB Editor
-2. Navigate to `Add Data` located on the right navigation bar identified by a plug icon.
-3. Click on the tab `Files` and the card `Import File`
+1. Log in to your [MindsDB Cloud](https://cloud.mindsdb.com/login) account to open the MindsDB Editor.
+2. Navigate to `Add data` section by clicking the `Add data` button located in the top right corner.
 
-    <figure markdown>
-        ![Add File](/assets/sql/add-file-data.png){ width="800", loading=lazy}
-    </figure>
+    <p align="center">
+        <img src="/assets/sql/add-file-to-mindsdb-cloud-3.png" />
+    </p>
 
-4. Name your file in `Table name`.
-5. Click on `Save and Continue`.
+3. Choose the `Files` tab.
 
-    <figure markdown>
-        ![Upload Status](/assets/sql/file.png){ width="800", loading=lazy  }
-    </figure>
+    <p align="center">
+        <img src="/assets/sql/add-file-to-mindsdb-cloud.png" />
+    </p>
+
+4. Choose the `Import File` option.
+5. Upload a file (here it is `house_sales.csv`), name a table used to store the file data (here it is `house_sales`), and click the `Save and Continue` button.
+
+    <p align="center">
+        <img src="/assets/sql/add-file-to-mindsdb-cloud-2.png" />
+    </p>
     
 ## What's Next?
 
-Now, you are ready to create a predictor from file. Make sure to check out [this guide](https://docs.mindsdb.com/sql/create/predictor/#create-predictor-from-file) on how to do that.
+Now, you are ready to create a predictor from a file. Make sure to check out [this guide](https://docs.mindsdb.com/sql/create/predictor/#create-predictor-from-file) on how to do that.

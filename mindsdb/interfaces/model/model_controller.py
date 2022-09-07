@@ -127,6 +127,8 @@ class ModelController():
         return models
 
     def delete_model(self, model_name: str, company_id: int, integration_name: str = 'lightwood'):
+        if integration_name.lower() == 'mindsdb':
+            integration_name = 'lightwood'
         integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
         lw_handler = integration_controller.get_handler(integration_name)
         response = lw_handler.native_query(f'drop predictor {model_name}')

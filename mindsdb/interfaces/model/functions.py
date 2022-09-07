@@ -30,6 +30,14 @@ def get_integration_record(company_id: int, name: str):
     return record
 
 
+def get_predictor_integration(record: db.Predictor) -> db.Integration:
+    integration_record = (
+        db.session.query(db.Integration)
+        .filer_by(id=record.integration_id).first()
+    )
+    return integration_record
+
+
 def get_model_records(company_id: int, active: bool = True, deleted_at=null(),
                       ml_handler_name: str = None, **kwargs):
     if company_id is None:
@@ -50,7 +58,7 @@ def get_model_records(company_id: int, active: bool = True, deleted_at=null(),
         kwargs['integration_id'] = ml_handler_record.id
 
     return (
-        db.session.query(db.Predictor)
+        db.session.query(db.Predictor, db.Integration.name)
         .filter_by(**kwargs)
         .all()
     )

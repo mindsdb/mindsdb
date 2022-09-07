@@ -62,6 +62,10 @@ jobs:
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
+          # Unit tests
+          # echo -e "\n===============\nUnit tests\n===============\n"
+          pytest tests/unit
+
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
           sudo chmod 600 ~/.ssh/db_machine
@@ -100,10 +104,6 @@ jobs:
           echo -e "\n===============\ntest Redis Stream\n===============\n"
           python tests/integration_tests/flows/test_redis.py
         
-          # Unit tests
-          # echo -e "\n===============\nUnit tests\n===============\n"
-          # pytest tests/unit
-
         fi
       shell: bash
       env:

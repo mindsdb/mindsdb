@@ -248,7 +248,7 @@ class ResultSet:
 
             self.records.append(data_row)
 
-    def from_df(self, df, database, table_name):
+    def from_df(self, df, database, table_name):  #, dtypes={}):
 
         resp_dict = df.to_dict(orient='split')
 
@@ -259,6 +259,7 @@ class ResultSet:
                 name=col,
                 table_name=table_name,
                 database=database
+                # ,type=dtypes.get(col, None)
             ))
 
     def to_df(self):
@@ -825,6 +826,9 @@ class SQLQuery():
                     for table_name in self.fetched_data['columns']:
                         col_types = self.fetched_data.get('types', {}).get(table_name, {})
                         for column in self.fetched_data['columns'][table_name]:
+                            col_type = col_types.get(column[0])
+                            if not col_type:
+                                col_type = col_types.get(column)
                             self.columns_list.append(
                                 Column(
                                     database=table_name[0],
@@ -832,7 +836,7 @@ class SQLQuery():
                                     table_alias=table_name[2],
                                     name=column[0],
                                     alias=column[1],
-                                    type=col_types.get(column[0])
+                                    type=col_type
                                 )
                             )
 
@@ -1503,7 +1507,9 @@ class SQLQuery():
             result2 = ResultSet()
             # get database from first column
             database = result.columns[0].database
-            result2.from_df(res, database, table_name)
+            # TYPEMAP = {'datetime': np.datetime64}
+            # dtypes = {col.alias.parts[-1]: TYPEMAP.get(col.type_name, None) for col in query.targets}
+            result2.from_df(res, database, table_name) # , dtypes=dtypes)
 
             data = result2.to_step_data()
 

@@ -2,6 +2,7 @@ import copy
 
 import duckdb
 import numpy as np
+import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -24,6 +25,9 @@ def query_df(df, query, session=None):
         Returns:
             pandas.DataFrame
     """
+    TYPECAST_MAP = {
+        'datetime': pd.to_datetime
+    }
 
     if isinstance(query, str):
         query_ast = parse_sql(query, dialect='mysql')
@@ -72,7 +76,11 @@ def query_df(df, query, session=None):
     con = duckdb.connect(database=':memory:')
     con.register('df_table', df)
     result_df = con.execute(query_str).fetchdf()
-    result_df = result_df.replace({np.nan: None})
+    for col in query_ast.targets:
+        col_alias = col.alias.parts[-1]
+        if col.type_name in TYPECAST_MAP.keys():
+            result_df[col_alias] = result_df[col_alias].apply(lambda x: TYPECAST_MAP[col.type_name](x))
+    result_df = result_df.replace({np.nan: None}).dropna(how='all')
     description = con.description
     con.unregister('df_table')
     con.close()

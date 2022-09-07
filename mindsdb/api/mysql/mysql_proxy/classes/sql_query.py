@@ -248,7 +248,7 @@ class ResultSet:
 
             self.records.append(data_row)
 
-    def from_df(self, df, database, table_name):  #, dtypes={}):
+    def from_df(self, df, database, table_name):
 
         resp_dict = df.to_dict(orient='split')
 
@@ -259,7 +259,6 @@ class ResultSet:
                 name=col,
                 table_name=table_name,
                 database=database
-                # ,type=dtypes.get(col, None)
             ))
 
     def to_df(self):
@@ -1507,9 +1506,7 @@ class SQLQuery():
             result2 = ResultSet()
             # get database from first column
             database = result.columns[0].database
-            # TYPEMAP = {'datetime': np.datetime64}
-            # dtypes = {col.alias.parts[-1]: TYPEMAP.get(col.type_name, None) for col in query.targets}
-            result2.from_df(res, database, table_name) # , dtypes=dtypes)
+            result2.from_df(res, database, table_name)
 
             data = result2.to_step_data()
 

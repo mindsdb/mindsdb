@@ -8,7 +8,7 @@ import signal
 import psutil
 
 import torch.multiprocessing as mp
-# mp.set_start_method('spawn')
+mp.set_start_method('spawn')
 from packaging import version
 
 from mindsdb.api.http.start import start as start_http

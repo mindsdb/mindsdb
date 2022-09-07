@@ -78,7 +78,7 @@ def query_df(df, query, session=None):
     result_df = con.execute(query_str).fetchdf()
     for col in query_ast.targets:
         if isinstance(col, Identifier):
-            if hasattr(col, 'alias'):
+            if hasattr(col, 'alias') and col.alias is not None:
                 col_alias = col.alias.parts[-1]
             else:
                 col_alias = col.parts[-1]

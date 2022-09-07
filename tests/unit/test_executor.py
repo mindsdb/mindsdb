@@ -85,6 +85,25 @@ class Test(BaseTestCase):
         # is last datetime value of a = 1
         assert ret.data[0][1].isoformat() == dt.datetime(2020, 1, 3).isoformat()
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_drop_database(self, mock_handler):
+        self.set_handler(mock_handler, name='pg', tables={})
+
+        # remove existing
+        ret = self.command_executor.execute_command(parse_sql(f'''
+                drop database pg
+               ''', dialect='mindsdb'))
+        assert ret.error_code is None
+
+        # try one more time
+        from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
+        try:
+            self.command_executor.execute_command(parse_sql(f'''
+                    drop database pg
+                   ''', dialect='mindsdb'))
+        except SqlApiException as e:
+            assert 'not exists' in str(e)
+
 
 class TestCompexQueries(BaseTestCase):
     df = pd.DataFrame([

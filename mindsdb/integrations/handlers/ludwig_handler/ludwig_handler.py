@@ -328,10 +328,12 @@ class LudwigHandler(PredictiveHandler):
 
         # TODO: replace with new generic table
         integration_meta = self.handler_controller.get(name=integration_name)
+        ludwig_integration_meta = self.handler_controller.get(name='ludwig')
         predictor_record = db.Predictor(
             company_id=self.company_id,
             name=model_name,
-            integration_id=integration_meta['id'],
+            integration_id=ludwig_integration_meta['id'],
+            data_integration_id=integration_meta['id'],
             fetch_data_query=statement.query_str,
             mindsdb_version=mindsdb_version,
             lightwood_version=ludwig_version,

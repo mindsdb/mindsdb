@@ -11,7 +11,6 @@
 
 import re
 from collections import OrderedDict, defaultdict
-import datetime
 import time
 
 import duckdb
@@ -56,12 +55,11 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
 
-import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
-    get_model_record,
-    get_model_records
+    get_model_records,
+    get_predictor_integration
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
@@ -254,14 +252,13 @@ class SQLQuery():
             self.execute_query()
 
     def create_planner(self):
-
         integrations_names = self.session.datahub.get_integrations_names()
         integrations_names.append('information_schema')
         integrations_names.append('files')
         integrations_names.append('views')
 
         predictor_metadata = {}
-        predictors = get_model_records(company_id=self.session.company_id)
+        predictors_records = get_model_records(company_id=self.session.company_id)
 
         query_tables = []
 
@@ -271,17 +268,21 @@ class SQLQuery():
 
         query_traversal(self.query, get_all_query_tables)
 
-        # get all predictors
-        for p in predictors:
+        for p in predictors_records:
             model_name = p.name
 
             if model_name not in query_tables:
-                # skip
                 continue
+
+            integration_name = None
+            integration_record = get_predictor_integration(p)
+            if integration_record is not None:
+                integration_name = integration_record.name
 
             if isinstance(p.data, dict) and 'error' not in p.data:
                 ts_settings = p.learn_args.get('timeseries_settings', {})
                 predictor = {
+                    'integration_name': integration_name,
                     'timeseries': False,
                     'id': p.id
                 }
@@ -414,7 +415,6 @@ class SQLQuery():
             join_query_data(data, sub_data)
 
         return data
-
 
     def prepare_query(self, prepare=True):
         mindsdb_sql_struct = self.query

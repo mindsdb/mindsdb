@@ -220,6 +220,7 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
             company_id=company_id,
             name=old_predictor_record.name,
             integration_id=old_predictor_record.integration_id,
+            data_integration_id=old_predictor_record.data_integration_id,
             fetch_data_query=old_predictor_record.fetch_data_query,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,

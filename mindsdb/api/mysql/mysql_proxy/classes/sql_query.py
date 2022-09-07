@@ -268,17 +268,16 @@ class SQLQuery():
 
         query_traversal(self.query, get_all_query_tables)
 
-        # get all predictors
         for p in predictors_records:
+            model_name = p.name
+
+            if model_name not in query_tables:
+                continue
+
             integration_name = None
             integration_record = get_predictor_integration(p)
             if integration_record is not None:
                 integration_name = integration_record.name
-            model_name = p.name
-
-            if model_name not in query_tables:
-                # skip
-                continue
 
             if isinstance(p.data, dict) and 'error' not in p.data:
                 ts_settings = p.learn_args.get('timeseries_settings', {})

@@ -77,9 +77,10 @@ def query_df(df, query, session=None):
     con.register('df_table', df)
     result_df = con.execute(query_str).fetchdf()
     for col in query_ast.targets:
-        col_alias = col.alias.parts[-1]
-        if hasattr(col, 'type_name') and col.type_name in TYPECAST_MAP.keys():
-            result_df[col_alias] = result_df[col_alias].apply(lambda x: TYPECAST_MAP[col.type_name](x))
+        if isinstance(col, Identifier):
+            col_alias = col.alias.parts[-1] if hasattr(col, 'alias') else col.parts[-1]
+            if hasattr(col, 'type_name') and col.type_name in TYPECAST_MAP.keys():
+                result_df[col_alias] = result_df[col_alias].apply(lambda x: TYPECAST_MAP[col.type_name](x))
     result_df = result_df.replace({np.nan: None}).dropna(how='all')
     description = con.description
     con.unregister('df_table')

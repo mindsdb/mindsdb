@@ -77,11 +77,11 @@ def query_df(df, query, session=None):
     con.register('df_table', df)
     result_df = con.execute(query_str).fetchdf()
     for col in query_ast.targets:
-        if type(col) in (TypeCast, Identifier):
+        if isinstance(col, TypeCast):
             if hasattr(col, 'alias') and col.alias is not None:
                 col_alias = col.alias.parts[-1]
             else:
-                col_alias = col.parts[-1]
+                col_alias = col.arg.parts[-1]
             if hasattr(col, 'type_name') and col.type_name in TYPECAST_MAP.keys():
                 result_df[col_alias] = result_df[col_alias].apply(lambda x: TYPECAST_MAP[col.type_name](x))
     result_df = result_df.replace({np.nan: None}).dropna(how='all')

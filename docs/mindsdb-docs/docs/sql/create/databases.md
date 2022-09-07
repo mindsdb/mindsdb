@@ -102,15 +102,17 @@ The list of databases supported by MindsDB keeps growing. Here are the currently
   <img src="/assets/supported_integrations.png" />
 </p>
 
-Let's look at sample codes showing how to connect to each of the supported integrations. You can also have a look at the particular [databases' handler files here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers) to see their connection arguments.
+You can find particular [databases' handler files here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers) to see their connection arguments. For example, to see the latest updates to the Oracle handler, check [Oracle's `readme.md` file here](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/oracle_handler/README.md).
+
+Let's look at sample codes showing how to connect to each of the supported integrations.
 
 ### Airtable
 
 === "Template"
 
     ```sql
-    CREATE DATABASE airtable_datasource          --- display name for database
-    WITH ENGINE='airtable',                      --- name of the mindsdb handler
+    CREATE DATABASE airtable_datasource          --- display name for the database
+    WITH ENGINE='airtable',                      --- name of the MindsDB handler
     PARAMETERS={
       "base_id": " ",                            --- the Airtable base ID
       "table_name": " ",                         --- the Airtable table name
@@ -132,374 +134,596 @@ Let's look at sample codes showing how to connect to each of the supported integ
 
 ### Amazon Redshift
 
-```sql
-CREATE DATABASE amazonredshift_datasource
-WITH ENGINE='amazonredshift',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 5439,
-  "database": "test",
-  "user": "amazonredshift",
-  "password": "amazonredshift"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE amazonredshift_datasource         --- display name for the database
+    WITH ENGINE='amazonredshift',                     --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                                    --- host name or IP address of the Redshift cluster
+      "port": ,                                       --- port used when connecting to the Redshift cluster
+      "database": " ",                                --- name of the database used when connecting to the Redshift cluster
+      "user": " ",                                    --- user to authenticate with the Redshift cluster
+      "password": " "                                 --- password used to authenticate with the Redshift cluster
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE amazonredshift_datasource
+    WITH ENGINE='amazonredshift',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 5439,
+      "database": "test",
+      "user": "amazonredshift",
+      "password": "password"
+    };
+    ```
 
 ### Amazon S3
 
-```sql
-CREATE DATABASE amazons3_datasource
-WITH ENGINE = 's3',
-PARAMETERS = {
-  "aws_access_key_id": " ",
-  "aws_secret_access_key": " ",
-  "region_name": " ",
-  "bucket": " ",
-  "key": " ",
-  "input_serialization": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE amazons3_datasource     --- display name for the database
+    WITH ENGINE='s3',                       --- name of the MindsDB handler
+    PARAMETERS={
+      "aws_access_key_id": " ",             --- the AWS access key
+      "aws_secret_access_key": " ",         --- the AWS secret access key
+      "region_name": " ",                   --- the AWS region
+      "bucket": " ",                        --- name of the S3 bucket
+      "key": " ",                           --- key of the object to be queried
+      "input_serialization": " "            --- format of the data in the object to be queried
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE amazons3_datasource
+    WITH ENGINE='s3',
+    PARAMETERS={
+        "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
+        "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
+        "region_name": "us-east-1",
+        "bucket": "mindsdb-bucket",
+        "key": "iris.csv",
+        "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
+    };
+    ```
 
 ### cassandra
 
-```sql
-CREATE DATABASE cassandra_datasource
-WITH ENGINE='cassandra',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 9042,
-  "user": "cassandra",
-  "password": "cassandra",
-  "protocol_version": ,
-  "keyspace": " ",
-  "secure_connect_bundle": {
-    "path": " "
-  }
-};
-```
+=== "Template"
 
-The `secure_connect_bundle` parameter can be defined as a path or a URL.
+    ```sql
+    CREATE DATABASE cassandra_datasource        --- display name for the database
+    WITH ENGINE='cassandra',                    --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                              --- host name or IP address
+      "port": ,                                 --- port
+      "user": " ",                              --- the Keyspace user
+      "password": " ",                          --- the Keyspace password
+      "keyspace": " ",                          --- optional, database name
+      "protocol_version": ,                     --- optional, protocol version defaults to 4
+      "secure_connect_bundle": {                --- path or url to the secure connect bundle
+        "path": " "                             --- either "path" or "url"
+      }
+    };
+    ```
 
-```sql
-CREATE DATABASE cassandra_datasource
-WITH ENGINE='cassandra',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 9042,
-  "user": "cassandra",
-  "password": "cassandra",
-  "protocol_version": ,
-  "keyspace": " ",
-  "secure_connect_bundle": {
-    "url": " "
-  }
-};
-```
+=== "Example"
+
+    ```sql
+    CREATE DATABASE cassandra_datasource
+    WITH ENGINE='cassandra',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 9043,
+      "user": "user",
+      "password": "password",
+      "keyspace": "test_data",
+      "protocol_version": 4
+    };
+    ```
 
 ### ckan
 
-```sql
-CREATE DATABASE ckan_datasource
-WITH ENGINE = 'ckan',
-PARAMETERS = {
-  "url": "http://demo.ckan.org/api/3/action/",
-  "apikey": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE ckan_datasource          --- display name for the database
+    WITH ENGINE = 'ckan',                    --- name of the MindsDB handler
+    PARAMETERS = {
+      "url": " ",                            --- host name or IP address
+      "apikey": " "                          --- the API key used for authentication
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE ckan_datasource
+    WITH ENGINE = 'ckan',
+    PARAMETERS = {
+      "url": "http://demo.ckan.org/api/3/action/",
+      "apikey": "YOUR_API_KEY"
+    };
+    ```
 
 ### ClickHouse
 
-```sql
-CREATE DATABASE clickhouse_datasource
-WITH ENGINE='clickhouse',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 9000,
-  "database": "default",
-  "user": "default",
-  "password": "Mimzo3i-mxt@9CpThpBj"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE clickhouse_datasource       --- display name for the database
+    WITH ENGINE='clickhouse',                   --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                              --- host name or IP address
+      "port": ,                                 --- port
+      "database": " ",                          --- database name
+      "user": " ",                              --- database user
+      "password": " "                           --- database password
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE clickhouse_datasource
+    WITH ENGINE='clickhouse',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 9000,
+      "database": "test_data",
+      "user": "root",
+      "password": "password"
+    };
+    ```
 
 ### Cockroach Labs
 
-```sql
-CREATE DATABASE cockroach_datasource
-WITH ENGINE='cockroachdb',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 26257,
-  "database": "cockroachdb",
-  "user": "username",
-  "password": "Mimzo3i-mxt@9CpThpBj"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE cockroach_datasource        --- display name for the database
+    WITH ENGINE='cockroachdb',                  --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                              --- host name or IP address
+      "port": ,                                 --- port
+      "database": " ",                          --- optional, database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "publish": " "                            --- optional, publish
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE cockroach_datasource
+    WITH ENGINE='cockroachdb',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 26257,
+      "database": "cockroachdb",
+      "user": "username",
+      "password": "password"
+    };
+    ```
 
 ### Couchbase
 
-```sql
-CREATE DATABASE couchbase_datasource
-WITH ENGINE = 'couchbase',
-PARAMETERS = {
-  "host": "127.0.0.1",
-  "user": "couchbase",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "bucket": " ",
-  "scope": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE couchbase_datasource        --- display name for the database
+    WITH ENGINE = 'couchbase',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host name or IP address of the Couchbase server
+      "user": " ",                              --- user to authenticate with the Couchbase server
+      "password": " ",                          --- password used to authenticate with the Couchbase server
+      "bucket": " ",                            --- bucket name
+      "scope": " "                              --- scope used to write queries (defaults to `_default` when left blank); a scope in Couchbase is equivalent to a schema in MySQL
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE couchbase_datasource
+    WITH ENGINE = 'couchbase',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "user": "couchbase",
+      "password": "password",
+      "bucket": "test-bucket",
+      "scope": "_default"
+    };
+    ```
 
 ### CrateDB
 
-```sql
-CREATE DATABASE cratedb_datasource
-WITH ENGINE='crate',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 4200,
-  "user": "crate",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "schema_name": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE cratedb_datasource        --- display name for the database
+    WITH ENGINE='crate',                      --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "schema_name": " "                      --- name of the schema to be used
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE cratedb_datasource
+    WITH ENGINE='crate',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 4200,
+      "user": "crate",
+      "password": "password",
+      "schema_name": "doc"
+    };
+    ```
 
 ### databricks
 
-```sql
-CREATE DATABASE databricks_datasource
-WITH ENGINE='databricks',
-PARAMETERS={
-  "server_hostname": " ",
-  "http_path": " ",
-  "access_token": " ",
-  "session_configuration": " ",
-  "http_headers": " ",
-  "catalog": " ",
-  "schema": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE databricks_datasource         --- display name for the database
+    WITH ENGINE='databricks',                     --- name of the MindsDB handler
+    PARAMETERS={
+      "server_hostname": " ",                     --- server hostname of the cluster or SQL warehouse
+      "http_path": " ",                           --- http path to the cluster or SQL warehouse
+      "access_token": " ",                        --- personal databricks access token
+      "schema": " ",                              --- name of the schema to be used
+      "session_configuration": " ",               --- optional
+      "http_headers": " ",                        --- optional
+      "catalog": " "                              --- optional
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE databricks_datasource
+    WITH ENGINE='databricks',
+    PARAMETERS={
+      "server_hostname": "adb-1234567890123456.7.azuredatabricks.net",
+      "http_path": "sql/protocolv1/o/1234567890123456/1234-567890-test123",
+      "access_token": "dapi1234567890ab1cde2f3ab456c7d89efa",
+      "schema": "example_db"
+    };
+    ```
 
 ### DataStax
 
-```sql
-CREATE DATABASE datastax_datasource
-WITH ENGINE='astra',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 7077,
-  "user": "datastax",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "protocol_version": ,
-  "keyspace": " ",
-  "secure_connection_bundle": {
-    "path": " "
-  }
-};
-```
+=== "Template"
 
-The `secure_connection_bundle` parameter can be defined as a path or a URL.
+    ```sql
+    CREATE DATABASE datastax_datasource           --- display name for the database
+    WITH ENGINE='astra',                          --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                                --- optional
+      "port": ,                                   --- optional
+      "user": " ",                                --- user to be authenticated
+      "password": " ",                            --- password for authentication
+      "protocol_version": ,                       --- optional
+      "keyspace": " ",                            --- optional
+      "secure_connection_bundle": {               --- secure connection bundle zip file
+        "path": " "                               --- either "path" or "url"
+      }
+    };
+    ```
 
-```sql
-CREATE DATABASE datastax_datasource
-WITH ENGINE='astra',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 7077,
-  "user": "datastax",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "protocol_version": ,
-  "keyspace": " ",
-  "secure_connection_bundle": {
-    "url": " "
-  }
-};
-```
+=== "Example"
+
+    ```sql
+    CREATE DATABASE datastax_datasource
+    WITH ENGINE='astra',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 7077,
+      "user": "datastax",
+      "password": "password",
+      "secure_connection_bundle": {
+        "path": "/home/Downloads/file.zip"
+      }
+    };
+    ```
 
 ### druid
 
-```sql
-CREATE DATABASE druid_datasource
-WITH ENGINE = 'druid',
-PARAMETERS = {
-  "host": "127.0.0.1",
-  "port": 8888,
-  "user": " ",
-  "password": " ",
-  "path": " ",
-  "scheme": "http"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE druid_datasource        --- display name for the database
+    WITH ENGINE = 'druid',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address of Apache Druid
+      "port": ,                             --- port where Apache Druid runs
+      "user": " ",                          --- optional, user to authenticate with Apache Druid
+      "password": " ",                      --- optional, password used to authenticate with Apache Druid
+      "path": " ",                          --- the query path
+      "scheme": " "                         --- the URI scheme (defaults to `http` when left blank)
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE druid_datasource
+    WITH ENGINE = 'druid',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 8888,
+      "path": "/druid/v2/sql/",
+      "scheme": "http"
+    };
+    ```
 
 ### DynamoDB
 
-```sql
-CREATE DATABASE dynamodb_datasource
-WITH ENGINE='dynamodb',
-PARAMETERS={
-  "aws_access_key_id": " ",
-  "aws_secret_access_key": " ",
-  "region_name": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE dynamodb_datasource       --- display name for the database
+    WITH ENGINE='dynamodb',                   --- name of the MindsDB handler
+    PARAMETERS={
+      "aws_access_key_id": " ",               --- the AWS access key
+      "aws_secret_access_key": " ",           --- the AWS secret access key
+      "region_name": " "                      --- the AWS region
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE dynamodb_datasource
+    WITH ENGINE='dynamodb',
+    PARAMETERS={
+      "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
+      "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
+      "region_name": "us-east-1"
+    };
+    ```
 
 ### d0lt
 
-```sql
-CREATE DATABASE d0lt_datasource
-WITH ENGINE = 'd0lt',
-PARAMETERS = {
-  "host": "127.0.0.1",
-  "port": 3306,
-  "database": " ",
-  "user": "d0lt",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "ssl": True,
-  "ssl_ca": {
-    "path": " "
-  },
-  "ssl_cert": {
-    "path": " "
-  },
-  "ssl_key": {
-    "path": " "
-  }
-};
-```
+=== "Template"
 
-The `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`). If it is enabled, then the `ssl_ca`, `ssl_cert`, and `ssl_key` paramaters can be defined as a path or a URL.
+    ```sql
+    CREATE DATABASE d0lt_datasource             --- display name for the database
+    WITH ENGINE = 'd0lt',                       --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host name or IP address
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "ssl": True/False,                        --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl_ca": {                               --- optional, SSL Certificate Authority
+        "path": " "                             --- either "path" or "url"
+      },
+      "ssl_cert": {                             --- optional, SSL certificates
+        "url": " "                              --- either "path" or "url"
+      },
+      "ssl_key": {                              --- optional, SSL keys
+        "path": " "                             --- either "path" or "url"
+      }
+    };
+    ```
 
-```sql
-CREATE DATABASE d0lt_datasource
-WITH ENGINE = 'd0lt',
-PARAMETERS = {
-  "host": "127.0.0.1",
-  "port": 3306,
-  "database": " ",
-  "user": "d0lt",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "ssl": True,
-  "ssl_ca": {
-    "url": " "
-  },
-  "ssl_cert": {
-    "url": " "
-  },
-  "ssl_key": {
-    "url": " "
-  }
-};
-```
+=== "Example"
+
+    ```sql
+    CREATE DATABASE d0lt_datasource
+    WITH ENGINE='d0lt',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "information_schema",
+      "user": "root",
+      "password": "password"
+    };
+    ```
 
 ### elastic
 
-```sql
-CREATE DATABASE elastic_datasource
-WITH ENGINE = 'elasticsearch',
-PARAMETERS = {
-  "hosts": "127.0.0.1",
-  "username": " ",
-  "password": " ",
-  "cloud_id": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE elastic_datasource      --- display name for the database
+    WITH ENGINE = 'elasticsearch',          --- name of the MindsDB handler
+    PARAMETERS = {
+      "hosts": " ",                         --- one or more host names or IP addresses of the Elasticsearch server
+      "username": " ",                      --- optional, username to authenticate with the Elasticsearch server
+      "password": " ",                      --- optional, password used to authenticate with the Elasticsearch server
+      "cloud_id": " "                       --- optional, unique ID of your hosted Elasticsearch cluster
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE elastic_datasource
+    WITH ENGINE = 'elasticsearch',
+    PARAMETERS = {
+      "hosts": "localhost:9200"
+    };
+    ```
 
 ### Firebird
 
-```sql
-CREATE DATABASE firebird_datasource
-WITH ENGINE='firebird',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "database": "test",
-  "user": "firebird",
-  "password": "firebird"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE firebird_datasource         --- display name for the database
+    WITH ENGINE='firebird',                     --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                              --- host name or IP address of the Firebird server
+      "database": " ",                          --- database name
+      "user": " ",                              --- user to authenticate with the Firevird server
+      "password": " "                           --- password used to authenticate with the Firevird server
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE firebird_datasource
+    WITH ENGINE='firebird',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "database": "test",
+      "user": "firebird",
+      "password": "password"
+    };
+    ```
 
 ### Google Big Query
 
-```sql
-CREATE DATABASE bigquery_datasource
-WITH ENGINE='bigquery',
-PARAMETERS={
-  "project_id": "badger-345908",
-  "service_account_keys": {
-    "path": "/home/Downloads/badger-345908.json"
-  }
-};
-```
+=== "Template"
 
-If you are using MindsDB Cloud, provide the `service_account_keys` parameter as a URL:
+    ```sql
+    CREATE DATABASE bigquery_datasource       --- display name for the database
+    WITH ENGINE='bigquery',                   --- name of the MindsDB handler
+    PARAMETERS={
+      "project_id": " ",                      --- globally unique project identifier
+      "service_account_keys": {               --- file storing the service account keys
+        "path": " "                           --- either "path" or "url"
+      }
+    };
+    ```
 
-```sql
-CREATE DATABASE bigquery_datasource
-WITH ENGINE='bigquery',
-PARAMETERS={
-  "project_id": "badger-345908",
-  "service_account_keys": {
-    "url": "https://url/badger-345908.json"
-  }
-};
-```
+=== "Example for Self-Hosted MindsDB"
+
+    ```sql
+    CREATE DATABASE bigquery_datasource
+    WITH ENGINE='bigquery',
+    PARAMETERS={
+      "project_id": "badger-345908",
+      "service_account_keys": {
+        "path": "/home/Downloads/badger-345908.json"
+      }
+    };
+    ```
+
+=== "Example for MindsDB Cloud"
+
+    ```sql
+    CREATE DATABASE bigquery_datasource
+    WITH ENGINE='bigquery',
+    PARAMETERS={
+      "project_id": "badger-345908",
+      "service_account_keys": {
+        "url": "https://url/badger-345908.json"
+      }
+    };
+    ```
 
 ### IBM DB2
 
-```sql
-CREATE DATABASE db2_datasource
-WITH ENGINE='DB2',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 25000,
-  "database": " ",
-  "user": "db2",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "schema_name": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE db2_datasource        --- display name for the database
+    WITH ENGINE='DB2',                    --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                        --- host name or IP address
+      "port": ,                           --- port used to make TCP/IP connection
+      "database": " ",                    --- database name
+      "user": " ",                        --- database user
+      "password": " ",                    --- database password
+      "schema_name": " "                  --- database schema name
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE db2_datasource
+    WITH ENGINE='DB2',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 25000,
+      "database": "BOOKS",
+      "user": "db2admin",
+      "password": "password",
+      "schema_name": "db2admin"
+    };
+    ```
 
 ### Informix
 
-```sql
-CREATE DATABASE informix_datasource
-WITH ENGINE = 'informix',
-PARAMETERS = {
-  "server": " ",
-  "host": "127.0.0.1",
-  "port": 9091,
-  "database": " ",
-  "user": "informix",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "schema_name": " ",
-  "logging_enabled": False
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE informix_datasource       --- display name for the database
+    WITH ENGINE = 'informix',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "server": " ",                          --- server name
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "database": " ",                        --- database name
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "schema_name": " ",                     --- database schema name
+      "logging_enabled": True/False           --- indicates whether logging is enabled (defaults to `True` when left blank)
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE informix_datasource
+    WITH ENGINE = 'informix',
+    PARAMETERS = {
+      "server": "server",
+      "host": "127.0.0.1",
+      "port": 9091,
+      "database": "stores_demo",
+      "user": "informix",
+      "password": "password",
+      "schema_name": "love",
+      "logging_enabled": False
+    };
+    ```
 
 ### MariaDB
 
 === "Template"
 
     ```sql
-    CREATE DATABASE maria_datasource          --- display name for database
-    WITH ENGINE='mariadb',                    --- name of the mindsdb handler
+    CREATE DATABASE maria_datasource            --- display name for database
+    WITH ENGINE='mariadb',                      --- name of the MindsDB handler
     PARAMETERS={
-      "host": " ",                            --- host in the form of an ip address or a url
-      "port": ,                               --- default port value is 3306
-      "database": " ",                        --- optional, name of your database
-      "user": " ",                            --- database user
-      "password": " ",                        --- database password
-      "ssl": True/False,                      --- optional, enabling/disabling SSL
-      "ssl_ca": {                             --- optional, SSL Certificate Authority
-        "path": " "                           --- either "path" or "url"
+      "host": " ",                              --- host in the form of an ip address or a url
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- optional, database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "ssl": True/False,                        --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl_ca": {                               --- optional, SSL Certificate Authority
+        "path": " "                             --- either "path" or "url"
       },
-      "ssl_cert": {                           --- optional, SSL certificates
-        "path": " "                           --- either "path" or "url"
+      "ssl_cert": {                             --- optional, SSL certificates
+        "url": " "                              --- either "path" or "url"
       },
-      "ssl_key": {                            --- optional, SSL keys
-        "path": " "                           --- either "path" or "url"
+      "ssl_key": {                              --- optional, SSL keys
+        "path": " "                             --- either "path" or "url"
       }
     };
     ```
-
-    The `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`). If it is enabled, then the `ssl_ca`, `ssl_cert`, and `ssl_key` paramaters can be defined as a path or a URL.
 
 === "Example for MariaDB"
 
@@ -522,7 +746,7 @@ PARAMETERS = {
     WITH ENGINE = 'mariadb',
     PARAMETERS = {
       "host": "mindsdbtest.mdb0002956.db1.skysql.net",
-      "port": "5001",
+      "port": 5001,
       "database": "mindsdb_data",
       "user": "DB00007539",
       "password": "[DaS3I8g527n41637sFM|XtjjX",
@@ -535,383 +759,584 @@ PARAMETERS = {
 
 ### Matrixone
 
-```sql
-CREATE DATABASE matrixone_datasource
-WITH ENGINE = 'matrixone',
-PARAMETERS = {
-  "host": "127.0.0.1",
-  "port": 6001,
-  "database": " ",
-  "user": "matrixone",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "ssl": True,
-  "ssl_ca": {
-    "path": " "
-  },
-  "ssl_cert": {
-    "path": " "
-  },
-  "ssl_key": {
-    "path": " "
-  }
-};
-```
+=== "Template"
 
-The `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`). If it is enabled, then the `ssl_ca`, `ssl_cert`, and `ssl_key` paramaters can be defined as a path or a URL.
+    ```sql
+    CREATE DATABASE matrixone_datasource        --- display name for database
+    WITH ENGINE='matrixone',                    --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                              --- host in the form of an ip address or a url
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- optional, database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "ssl": True/False,                        --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl_ca": {                               --- optional, SSL Certificate Authority
+        "path": " "                             --- either "path" or "url"
+      },
+      "ssl_cert": {                             --- optional, SSL certificates
+        "url": " "                              --- either "path" or "url"
+      },
+      "ssl_key": {                              --- optional, SSL keys
+        "path": " "                             --- either "path" or "url"
+      }
+    };
+    ```
 
-```sql
-CREATE DATABASE matrixone_datasource
-WITH ENGINE = 'matrixone',
-PARAMETERS = {
-  "host": "127.0.0.1",
-  "port": 6001,
-  "database": " ",
-  "user": "matrixone",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "ssl": True,
-  "ssl_ca": {
-    "url": " "
-  },
-  "ssl_cert": {
-    "url": " "
-  },
-  "ssl_key": {
-    "url": " "
-  }
-};
-```
+=== "Example"
+
+    ```sql
+    CREATE DATABASE matrixone_datasource
+    WITH ENGINE = 'matrixone',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 6001,
+      "database": "mo_catalog",
+      "user": "matrixone",
+      "password": "password"
+    };
+    ```
 
 ### Microsoft Access
 
-```sql
-CREATE DATABASE access_datasource
-WITH ENGINE = 'access',
-PARAMETERS = {
-  "db_file": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE access_datasource       --- display name for database
+    WITH ENGINE = 'access',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "db_file": " "                        --- path to the database file to be used
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE access_datasource
+    WITH ENGINE = 'access',
+    PARAMETERS = {
+      "db_file": "C:\\Users\\minurap\\Documents\\example_db.accdb"
+    };
+    ```
 
 ### Microsoft SQL Server
 
-```sql
-CREATE DATABASE mssql_datasource
-WITH ENGINE='mssql',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 1433,
-  "database": "master",
-  "user": "sa",
-  "password": "Mimzo3i-mxt@9CpThpBj"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE mssql_datasource        --- display name for database
+    WITH ENGINE='mssql',                    --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                          --- host name or IP address
+      "port": ,                             --- port
+      "database": " ",                      --- optional, database name
+      "user": " ",                          --- database user
+      "password": " ",                      --- database password
+      "odbc_driver_name": " "               --- optional, MySQL ODBC 8.0 Unicode Driver
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE mssql_datasource
+    WITH ENGINE='mssql',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 1433,
+      "database": "master",
+      "user": "sa",
+      "password": "password"
+    };
+    ```
 
 ### monetdb
 
-```sql
-CREATE DATABASE monetdb_datasource
-WITH ENGINE = 'monetdb',
-PARAMETERS = {
-  "host": "127.0.0.1",
-  "port": 50000,
-  "database": " ",
-  "user": "monetdb",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "schema_name": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE monetdb_datasource          --- display name for database
+    WITH ENGINE = 'monetdb',                    --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host name or IP address
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "schema_name": " "                        --- database schema name (default to the current schema if left blank)
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE monetdb_datasource
+    WITH ENGINE = 'monetdb',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 50000,
+      "database": "demo",
+      "user": "monetdb",
+      "password": "password",
+      "schema_name": "sys"
+    };
+    ```
 
 ### mongoDB
 
-```sql
-CREATE DATABASE mongo_datasource
-WITH ENGINE='mongo',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 27017,
-  "user": "mongo",
-  "password": "Mimzo3i-mxt@9CpThpBj"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE mongo_datasource          --- display name for database
+    WITH ENGINE='mongo',                      --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port
+      "user": " ",                            --- database user
+      "password": " "                         --- database password
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE mongo_datasource
+    WITH ENGINE='mongo',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 27017,
+      "user": "mongo",
+      "password": "password"
+    };
+    ```
 
 Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 
 ### MySQL
 
-```sql
-CREATE DATABASE mysql_datasource
-WITH ENGINE='mysql',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 3306,
-  "database": "mysql",
-  "user": "root",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "ssl": True,
-  "ssl_ca": {
-    "path": " "
-  },
-  "ssl_cert": {
-    "path": " "
-  },
-  "ssl_key": {
-    "path": " "
-  }
-};
-```
+=== "Template"
 
-The `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`). If it is enabled, then the `ssl_ca`, `ssl_cert`, and `ssl_key` paramaters can be defined as a path or a URL.
+    ```sql
+    CREATE DATABASE mysql_datasource            --- display name for database
+    WITH ENGINE='mysql',                        --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                              --- host name or IP address
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- optional, database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "ssl": True/False,                        --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl_ca": {                               --- optional, SSL Certificate Authority
+        "path": " "                             --- either "path" or "url"
+      },
+      "ssl_cert": {                             --- optional, SSL certificates
+        "url": " "                              --- either "path" or "url"
+      },
+      "ssl_key": {                              --- optional, SSL keys
+        "path": " "                             --- either "path" or "url"
+      }
+    };
+    ```
 
-```sql
-CREATE DATABASE mysql_datasource
-WITH ENGINE='mysql',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 3306,
-  "database": "mysql",
-  "user": "root",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "ssl": True,
-  "ssl_ca": {
-    "url": " "
-  },
-  "ssl_cert": {
-    "url": " "
-  },
-  "ssl_key": {
-    "url": " "
-  }
-};
-```
+=== "Example"
+
+    ```sql
+    CREATE DATABASE mysql_datasource
+    WITH ENGINE='mysql',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "mysql",
+      "user": "root",
+      "password": "password"
+    };
+    ```
 
 ### Oracle
 
-```sql
-CREATE DATABASE oracle_datasource
-WITH ENGINE='oracle',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 1521,
-  "sid": " ",
-  "service_name": " ",
-  "user": "sys",
-  "password": "Mimzo3i-mxt@9CpThpBj"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE oracle_datasource         --- display name for database
+    WITH ENGINE='oracle',                     --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "sid": " ",                             --- unique identifier of the database instance
+      "service_name": " ",                    --- optional, the connection accepts either `sid` or `service_name` argument to target the right database instance
+      "user": " ",                            --- database user
+      "password": " "                         --- database password
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE oracle_datasource
+    WITH ENGINE='oracle',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 1521,
+      "sid": "ORCL",
+      "user": "sys",
+      "password": "password"
+    };
+    ```
 
 ### pinot
 
-```sql
-CREATE DATABASE pinot_datasource
-WITH ENGINE='pinot',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "broker_port": 8000,
-  "controller_port": 9000,
-  "path": "/query/sql",
-  "scheme": " ",
-  "username": " ",
-  "password": " ",
-  "verify_ssl": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE pinot_datasource        --- display name for database
+    WITH ENGINE='pinot',                    --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                          --- host name or IP address of the Apache Pinot cluster
+      "broker_port": ,                      --- port where the broker of the Apache Pinot cluster runs on
+      "controller_port": ,                  --- port where the controller of the Apache Pinot cluster runs on
+      "path": " ",                          --- query path
+      "scheme": " ",                        --- defaults to `http` when left blank
+      "username": " ",                      --- optional
+      "password": " ",                      --- optional
+      "verify_ssl": " "                     --- optional
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE pinot_datasource
+    WITH ENGINE='pinot',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "broker_port": 8000,
+      "controller_port": 9000,
+      "path": "/query/sql",
+      "scheme": "http"
+    };
+    ```
 
 ### PostgreSQL
 
-```sql
-CREATE DATABASE psql_datasource
-WITH ENGINE='postgres',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 5432,
-  "database": "postgres",
-  "user": "postgres",
-  "password": "Mimzo3i-mxt@9CpThpBj"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE psql_datasource         --- display name for database
+    WITH ENGINE='postgres',                 --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                          --- host name or IP address
+      "port": ,                             --- port
+      "database": " ",                      --- optional, database name
+      "user": " ",                          --- database user
+      "password": " "                       --- database password
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE psql_datasource
+    WITH ENGINE='postgres',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 5432,
+      "database": "postgres",
+      "user": "postgres",
+      "password": "password"
+    };
+    ```
 
 ### QuestDB
 
-```sql
-CREATE DATABASE questdb_datasource
-WITH ENGINE='questdb',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 8812,
-  "database": "qdb",
-  "user": "admin",
-  "password": "quest"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE questdb_datasource      --- display name for database
+    WITH ENGINE='questdb',                  --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                          --- host name or IP address
+      "port": ,                             --- port
+      "database": " ",                      --- optional, database name
+      "user": " ",                          --- database user
+      "password": " "                       --- database password
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE questdb_datasource
+    WITH ENGINE='questdb',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 8812,
+      "database": "qdb",
+      "user": "admin",
+      "password": "password"
+    };
+    ```
 
 ### Scylla
 
-```sql
-CREATE DATABASE scylladb_datasource
-WITH ENGINE='scylladb',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 7199,
-  "user": "user@mindsdb.com",
-  "password": "pass",
-  "protocol_version": ,
-  "keyspace": " ",
-  "secure_connect_bundle": {
-    "path": "/home/zoran/Downloads/secure-connect-mindsdb.zip"
-  }
-};
-```
+=== "Template"
 
-The `secure_connect_bundle` parameter can be defined as a path or a URL.
+    ```sql
+    CREATE DATABASE scylladb_datasource           --- display name for database
+    WITH ENGINE='scylladb',                       --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                                --- host name or IP address
+      "port": ,                                   --- port
+      "user": " ",                                --- user
+      "password": " ",                            --- password
+      "protocol_version": ,                       --- optional, protocol version defaults to 4
+      "keyspace": " ",                            --- keyspace name (it is the top level container for tables)
+      "secure_connect_bundle": {                  --- path or url to the secure connect bundle
+        "path": " "                               --- either "path" or "url"
+      }
+    };
+    ```
 
-```sql
-CREATE DATABASE scylladb_datasource
-WITH ENGINE='scylladb',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 7199,
-  "user": "user@mindsdb.com",
-  "password": "pass",
-  "protocol_version": ,
-  "keyspace": " ",
-  "secure_connect_bundle": {
-    "url": " "
-  }
-};
-```
+=== "Example"
+
+    ```sql
+    CREATE DATABASE scylladb_datasource
+    WITH ENGINE='scylladb',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 7199,
+      "user": "user@mindsdb.com",
+      "password": "password",
+      "protocol_version": 4,
+      "keyspace": "keyspace_name",
+      "secure_connect_bundle": {
+        "path": "/home/zoran/Downloads/secure-connect-mindsdb.zip"
+      }
+    };
+    ```
 
 ### SingleStore
 
-```sql
-CREATE DATABASE singlestore_datasource
-WITH ENGINE='mysql',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 3306,
-  "database": "singlestore",
-  "user": "root",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "ssl": True,
-  "ssl_ca": {
-    "path": " "
-  },
-  "ssl_cert": {
-    "path": " "
-  },
-  "ssl_key": {
-    "path": " "
-  }
-};
-```
+=== "Template"
 
-The `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`). If it is enabled, then the `ssl_ca`, `ssl_cert`, and `ssl_key` paramaters can be defined as a path or a URL.
+    ```sql
+    CREATE DATABASE singlestore_datasource          --- display name for database
+    WITH ENGINE='mysql',                            --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                                  --- host name or IP address
+      "port": ,                                     --- port used to make TCP/IP connection
+      "database": " ",                              --- optional, database name
+      "user": " ",                                  --- database user
+      "password": " ",                              --- database password
+      "ssl": True/False,                            --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl_ca": {                                   --- optional, SSL Certificate Authority
+        "path": " "                                 --- either "path" or "url"
+      },
+      "ssl_cert": {                                 --- optional, SSL certificates
+        "url": " "                                  --- either "path" or "url"
+      },
+      "ssl_key": {                                  --- optional, SSL keys
+        "path": " "                                 --- either "path" or "url"
+      }
+    };
+    ```
 
-```sql
-CREATE DATABASE singlestore_datasource
-WITH ENGINE='mysql',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 3306,
-  "database": "singlestore",
-  "user": "root",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "ssl": True,
-  "ssl_ca": {
-    "url": " "
-  },
-  "ssl_cert": {
-    "url": " "
-  },
-  "ssl_key": {
-    "url": " "
-  }
-};
-```
+=== "Example"
+
+    ```sql
+    CREATE DATABASE singlestore_datasource
+    WITH ENGINE='mysql',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "singlestore",
+      "user": "root",
+      "password": "password"
+    };
+    ```
 
 ### snowflake
 
-```sql
-CREATE DATABASE snowflake_datasource
-WITH ENGINE='snowflake',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 443,
-  "database": "snowflake",
-  "user": "user",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "account": "account",
-  "schema": "public",
-  "protocol": "https",
-  "warehouse": "warehouse"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE snowflake_datasource              --- display name for database
+    WITH ENGINE='snowflake',                          --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                                    --- host name or IP address
+      "port": ,                                       --- port
+      "database": " ",                                --- optional, database name
+      "user": " ",                                    --- database user
+      "password": " ",                                --- database password
+      "account": " ",                                 --- the Snowflake account
+      "schema": " ",                                  --- schema name (default to `public` when left blank)
+      "protocol": " ",                                --- protocol (defaults to `https` when left blank)
+      "warehouse": " "                                --- the warehouse account
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE snowflake_datasource
+    WITH ENGINE='snowflake',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 443,
+      "database": "snowflake",
+      "user": "user",
+      "password": "password",
+      "account": "account",
+      "schema": "public",
+      "protocol": "https",
+      "warehouse": "warehouse"
+    };
+    ```
 
 ### SQLite
 
-```sql
-CREATE DATABASE sqlite_datasource
-WITH ENGINE='sqlite',
-PARAMETERS={
-  "db_file": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE sqlite_datasource         --- display name for database
+    WITH ENGINE='sqlite',                     --- name of the MindsDB handler
+    PARAMETERS={
+      "db_file": " "                          --- path to the database file to be used
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE sqlite_datasource
+    WITH ENGINE='sqlite',
+    PARAMETERS={
+      "db_file": "example.db"
+    };
+    ```
 
 ### supabase
 
-```sql
-CREATE DATABASE supabase_datasource
-WITH ENGINE='supabase',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 54321,
-  "database": "test",
-  "user": "supabase",
-  "password": "supabase"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE supabase_datasource             --- display name for database
+    WITH ENGINE='supabase',                         --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                                  --- host name or IP address
+      "port": ,                                     --- port
+      "database": " ",                              --- database name
+      "user": " ",                                  --- database user
+      "password": " ",                              --- database password
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE supabase_datasource
+    WITH ENGINE='supabase',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 54321,
+      "database": "test",
+      "user": "supabase",
+      "password": "password"
+    };
+    ```
 
 ### TiDB
 
-```sql
-CREATE DATABASE tidb_datasource
-WITH ENGINE='tidb',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 4000,
-  "database": "tidb",
-  "user": "root",
-  "password": "Mimzo3i-mxt@9CpThpBj"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE tidb_datasource                 --- display name for database
+    WITH ENGINE='tidb',                             --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                                  --- host name or IP address
+      "port": ,                                     --- port
+      "database": " ",                              --- database name
+      "user": " ",                                  --- database user
+      "password": " ",                              --- database password
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE tidb_datasource
+    WITH ENGINE='tidb',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 4000,
+      "database": "tidb",
+      "user": "root",
+      "password": "password"
+    };
+    ```
 
 ### trino
 
-```sql
-CREATE DATABASE trino_datasource
-WITH ENGINE='trinodb',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 8080,
-  "user": "trino",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "catalog": "default",
-  "schema": "test"
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE trino_datasource          --- display name for database
+    WITH ENGINE='trinodb',                    --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "catalog": " ",                         --- optional
+      "schema": " "                           --- optional
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE trino_datasource
+    WITH ENGINE='trinodb',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 8080,
+      "user": "trino",
+      "password": "password",
+      "catalog": "default",
+      "schema": "test"
+    };
+    ```
 
 ### Vertica
 
-```sql
-CREATE DATABASE vertica_datasource
-WITH ENGINE='vertica',
-PARAMETERS={
-  "host": "127.0.0.1",
-  "port": 5433,
-  "database": " ",
-  "user": "vertica",
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "schema_name": " "
-};
-```
+=== "Template"
+
+    ```sql
+    CREATE DATABASE vertica_datasource        --- display name for database
+    WITH ENGINE='vertica',                    --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "database": " ",                        --- database name
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "schema_name": " "                      --- schema name
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE vertica_datasource
+    WITH ENGINE='vertica',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 5433,
+      "database": "VMart",
+      "user": "vertica",
+      "password": "password",
+      "schema_name": "public"
+    };
+    ```
 
 ## Connecting Through Ngrok
 

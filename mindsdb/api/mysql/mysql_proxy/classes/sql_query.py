@@ -26,6 +26,7 @@ from mindsdb_sql.parser.ast import (
     CreateTable,
     Identifier,
     Constant,
+    TypeCast,
     Select,
     Union,
     Join,
@@ -248,7 +249,7 @@ class ResultSet:
 
             self.records.append(data_row)
 
-    def from_df(self, df, database, table_name):
+    def from_df(self, df, database, table_name, dtypes={}):
 
         resp_dict = df.to_dict(orient='split')
 
@@ -258,7 +259,8 @@ class ResultSet:
             self.columns.append(Column(
                 name=col,
                 table_name=table_name,
-                database=database
+                database=database,
+                type=dtypes.get(col, None)
             ))
 
     def to_df(self):
@@ -1504,9 +1506,16 @@ class SQLQuery():
             res = query_df(df, query)
 
             result2 = ResultSet()
+
+            dtypes = {}
+            typecast_map = {'datetime': np.datetime64}
+            for col in query.targets:
+                if isinstance(col, TypeCast):
+                    dtypes[col.alias.parts[-1]] = typecast_map.get(col.type_name, None)
+
             # get database from first column
             database = result.columns[0].database
-            result2.from_df(res, database, table_name)
+            result2.from_df(res, database, table_name, dtypes=dtypes)
 
             data = result2.to_step_data()
 

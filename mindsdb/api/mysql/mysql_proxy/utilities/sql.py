@@ -8,7 +8,7 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner.utils import query_traversal
 from mindsdb_sql.parser.ast import (
-    Select, Identifier,
+    Select, Identifier, TypeCast,
     Function, Constant
 )
 
@@ -77,7 +77,7 @@ def query_df(df, query, session=None):
     con.register('df_table', df)
     result_df = con.execute(query_str).fetchdf()
     for col in query_ast.targets:
-        if isinstance(col, Identifier):
+        if type(col) in (TypeCast, Identifier):
             if hasattr(col, 'alias') and col.alias is not None:
                 col_alias = col.alias.parts[-1]
             else:

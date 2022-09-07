@@ -11,7 +11,6 @@
 
 import re
 from collections import OrderedDict, defaultdict
-import datetime
 import time
 
 import duckdb
@@ -56,12 +55,11 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
 
-import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
-    get_model_record,
-    get_model_records
+    get_model_records,
+    get_predictor_integration
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
@@ -254,13 +252,11 @@ class SQLQuery():
             self.execute_query()
 
     def create_planner(self):
-
-        integrations_meta = self.session.integration_controller.get_all()
-        integrations_names = list(integrations_meta.keys())
+        integrations_names = self.session.datahub.get_integrations_names()
         integrations_names.append('information_schema')
 
-        predictor_metadata = []
-        predictors = get_model_records(company_id=self.session.company_id)
+        predictor_metadata = {}
+        predictors_records = get_model_records(company_id=self.session.company_id)
 
         query_tables = []
 
@@ -270,20 +266,22 @@ class SQLQuery():
 
         query_traversal(self.query, get_all_query_tables)
 
-        # get all predictors
-        for p in predictors:
+        for p in predictors_records:
             model_name = p.name
 
             if model_name not in query_tables:
-                # skip
                 continue
+
+            integration_name = None
+            integration_record = get_predictor_integration(p)
+            if integration_record is not None:
+                integration_name = integration_record.name
 
             if isinstance(p.data, dict) and 'error' not in p.data:
                 ts_settings = p.learn_args.get('timeseries_settings', {})
                 predictor = {
-                    'name': model_name,
+                    'integration_name': integration_name,
                     'timeseries': False,
-                    'integration_name': 'lightwood',
                     'id': p.id
                 }
                 if ts_settings.get('is_timeseries') is True:
@@ -301,7 +299,7 @@ class SQLQuery():
                         'order_by_column': order_by,
                         'group_by_columns': group_by
                     })
-                predictor_metadata.append(predictor)
+                predictor_metadata[model_name] = predictor
 
                 self.model_types.update(p.data.get('dtypes', {}))
 

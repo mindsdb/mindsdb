@@ -96,6 +96,14 @@ On execution, we get:
 
 ## Supported Integrations
 
+The list of databases supported by MindsDB keeps growing. Here are the currently supported integrations:
+
+<p align="center">
+  <img src="/assets/supported_integrations.png" />
+</p>
+
+Let's look at sample codes showing how to connect to each of the supported integrations.
+
 ### Airtable
 
 ```sql
@@ -122,7 +130,22 @@ PARAMETERS={
 };
 ```
 
-### Cassandra
+### Amazon S3
+
+```sql
+CREATE DATABASE amazons3_datasource
+WITH ENGINE = 's3',
+PARAMETERS = {
+    "aws_access_key_id": " ",
+    "aws_secret_access_key": " ",
+    "region_name": " ",
+    "bucket": " ",
+    "key": " ",
+    "input_serialization": " "
+};
+```
+
+### cassandra
 
 ```sql
 CREATE DATABASE cassandra_datasource
@@ -136,7 +159,7 @@ PARAMETERS={
 };
 ```
 
-### Ckan
+### ckan
 
 ```sql
 CREATE DATABASE ckan_datasource
@@ -183,8 +206,8 @@ WITH ENGINE = 'couchbase',
 PARAMETERS = {
     "host": "127.0.0.1",
     "bucket": " ",
-    "user": " ",
-    "password": " ",
+    "user": "couchbase",
+    "password": "Mimzo3i-mxt@9CpThpBj",
     "scope": " "
 };
 ```
@@ -195,15 +218,15 @@ PARAMETERS = {
 CREATE DATABASE cratedb_datasource
 WITH ENGINE='crate',
 PARAMETERS={
-    "user": " ",
-    "password": " ",
+    "user": "crate",
+    "password": "Mimzo3i-mxt@9CpThpBj",
     "host": "127.0.0.1",
     "port": 4200,
     "schema_name": " "
 };
 ```
 
-### Databricks
+### databricks
 
 ```sql
 CREATE DATABASE databricks_datasource
@@ -223,9 +246,22 @@ PARAMETERS={
 CREATE DATABASE datastax_datasource
 WITH ENGINE='astra',
 PARAMETERS={
-    "user": " ",
-    "password": " ",
+    "user": "datastax",
+    "password": "Mimzo3i-mxt@9CpThpBj",
     "secure_connection_bundle": " "
+};
+```
+
+### druid
+
+```sql
+CREATE DATABASE druid_datasource
+WITH ENGINE = 'druid',
+PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": "8888",
+    "path": " ",
+    "scheme": "http"
 };
 ```
 
@@ -238,6 +274,30 @@ PARAMETERS={
     "aws_access_key_id": " ",
     "aws_secret_access_key": " ",
     "region_name": " "
+};
+```
+
+### d0lt
+
+```sql
+CREATE DATABASE d0lt_datasource
+WITH ENGINE = 'd0lt',
+PARAMETERS = {
+    "user": "d0lt",
+    "password": "Mimzo3i-mxt@9CpThpBj",
+    "host": "127.0.0.1",
+    "port": 3306,
+    "database": " "
+};
+```
+
+### elastic
+
+```sql
+CREATE DATABASE elastic_datasource
+WITH ENGINE = 'elasticsearch',
+PARAMETERS = {
+    "host": "127.0.0.1"
 };
 ```
 
@@ -267,7 +327,8 @@ PARAMETERS={
   }
 };
 ```
-Or if you are using MindsDB Cloud, provide the `service_account_keys` as url:
+
+If you are using MindsDB Cloud, provide the `service_account_keys` as a URL:
 
 ```sql
 CREATE DATABASE bigquery_datasource
@@ -286,12 +347,29 @@ PARAMETERS={
 CREATE DATABASE db2_datasource
 WITH ENGINE='DB2',
 PARAMETERS={
-    "user": " ",
-    "password": " ",
+    "user": "db2",
+    "password": "Mimzo3i-mxt@9CpThpBj",
     "host": "127.0.0.1",
     "port": 25000,
     "schema_name": " ",
     "database": " "
+};
+```
+
+### Informix
+
+```sql
+CREATE DATABASE informix_datasource
+WITH ENGINE = 'informix',
+PARAMETERS = {
+    "server": " ",
+    "host": "127.0.0.1",
+    "port": "9091",
+    "user": "informix",
+    "password": "Mimzo3i-mxt@9CpThpBj",
+    "database": " ",
+    "schema_name": " ",
+    "loging_enabled": False
 };
 ```
 
@@ -309,13 +387,27 @@ PARAMETERS={
 };
 ```
 
+### Matrixone
+
+```sql
+CREATE DATABASE matrixone_datasource
+WITH ENGINE = 'matrixone',
+PARAMETERS = {
+    "user": "matrixone",
+    "password": "Mimzo3i-mxt@9CpThpBj",
+    "host": "127.0.0.1",
+    "port": "6001",
+    "database": " "
+};
+```
+
 ### Microsoft Access
 
 ```sql
 CREATE DATABASE access_datasource
 WITH ENGINE = 'access',
 PARAMETERS = {
-    "db_file": " ",
+    "db_file": " "
 };
 ```
 
@@ -333,15 +425,30 @@ PARAMETERS={
 };
 ```
 
-### MongoDB
+### monetdb
+
+```sql
+CREATE DATABASE monetdb_datasource
+WITH ENGINE = 'monetdb',
+PARAMETERS = {
+    "user": "monetdb",
+    "password": "Mimzo3i-mxt@9CpThpBj",
+    "host": "127.0.0.1",
+    "port": 50000,
+    "schema_name": " ",
+    "database": " "
+};
+```
+
+### mongoDB
 
 ```sql
 CREATE DATABASE mongo_datasource
 WITH ENGINE='mongo',
 PARAMETERS={
-  "user": " ",
-  "password": " ",
-  "host": " ",
+  "user": "mongo",
+  "password": "Mimzo3i-mxt@9CpThpBj",
+  "host": "127.0.0.1",
   "port": 27017
 };
 ```
@@ -371,12 +478,12 @@ PARAMETERS={
     "host": "127.0.0.1",
     "port": 1521,
     "sid": " ",
-    "user": " ",
-    "password": " "
+    "user": "sys",
+    "password": "Mimzo3i-mxt@9CpThpBj"
 };
 ```
 
-### Pinot
+### pinot
 
 ```sql
 CREATE DATABASE pinot_datasource
@@ -444,7 +551,7 @@ PARAMETERS={
 };
 ```
 
-### Snowflake
+### snowflake
 
 ```sql
 CREATE DATABASE snowflake_datasource
@@ -472,7 +579,7 @@ PARAMETERS={
 };
 ```
 
-### Supabase
+### supabase
 
 ```sql
 CREATE DATABASE supabase_datasource
@@ -500,7 +607,7 @@ PARAMETERS={
 };
 ```
 
-### Trino
+### trino
 
 ```sql
 CREATE DATABASE trino_datasource
@@ -521,8 +628,8 @@ PARAMETERS={
 CREATE DATABASE vertica_datasource
 WITH ENGINE='vertica',
 PARAMETERS={
-    "user": " ",
-    "password": " ",
+    "user": "vertica",
+    "password": "Mimzo3i-mxt@9CpThpBj",
     "host": "127.0.0.1",
     "port": 5433,
     "database": " ",

@@ -61,6 +61,7 @@ class BaseTestCase:
     @staticmethod
     def clear_db(db):
         # drop
+        db.session.rollback()
         db.Base.metadata.drop_all(db.engine)
 
         # create

@@ -66,13 +66,13 @@ jobs:
           # echo -e "\n===============\nUnit tests\n===============\n"
           cat mindsdb/interfaces/storage/db.py | grep integration
           
-          env PYTHONPATH=./ env 
-          
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
-          pytest tests/unit/test_mongodb_handler.py
+          env PYTHONPATH=./ pytest pytest tests/unit/test_mongodb_handler.py
         
-          pytest tests/unit/test_mongodb_server.py
+          env PYTHONPATH=./ pytest pytest tests/unit/test_mongodb_server.py
+                
+          env PYTHONPATH=./ pytest pytest tests/unit/test_cache.py
 
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine

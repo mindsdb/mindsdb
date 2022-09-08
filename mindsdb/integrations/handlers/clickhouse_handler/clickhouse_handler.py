@@ -1,4 +1,3 @@
-import requests
 from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -42,13 +41,18 @@ class ClickHouseHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        connection = clickhouse_driver.connect(
-            host=self.connection_data['host'],
-            port=self.connection_data['port'],
-            database=self.connection_data['database'],
-            user=self.connection_data['user'],
-            password=self.connection_data['password']
-        )
+        protocol = "clickhouse+native" if self.protocol == 'native' else "clickhouse+http"
+        host = self.connection_data['host']
+        port = self.connection_data['port']
+        user = self.connection_data['user']
+        password = self.connection_data['password']
+        database = self.connection_data['database']
+        url = f'{protocol}://{user}:{password}@{host}:{port}/{database}'
+        if self.protocol == 'https':
+            url = url + "?protocol=https"
+
+        engine = create_engine(url)
+        connection = engine.raw_connection()
         self.is_connected = True
         self.connection = connection
         return self.connection
@@ -136,7 +140,7 @@ class ClickHouseHandler(DatabaseHandler):
         """
         Show details about the table
         """
-        q = f"DESCRIBE {table_name};"
+        q = f"DESCRIBE {table_name}"
         result = self.native_query(q)
         return result
 

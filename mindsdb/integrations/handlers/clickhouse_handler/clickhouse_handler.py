@@ -3,6 +3,7 @@ from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 import clickhouse_driver
+from sqlalchemy import create_engine
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
 import pandas as pd
 from mindsdb.integrations.libs.response import (
@@ -77,40 +78,7 @@ class ClickHouseHandler(DatabaseHandler):
 
         return response
 
-    def do_query_by_http(self, query: str) -> Response:
-        """
-        Receive SQL query and runs it in HTTP
-        :param query: The SQL query to run in ClickHouse
-        :return: returns the records from the current recordset
-        """
-        url = "{}://{}:{}@{}:{}/".format(
-            self.connection_data['protocol'],
-            self.connection_data['user'],
-            self.connection_data['password'],
-            self.connection_data['host'],
-            self.connection_data['port']
-        )
-        params = {
-            "database": self.connection_data['database'],
-            "query": self.connection_data['query'],
-        }
-        headers = {
-            "X-CLICKHOUSE-FORMAT": "NDJSON",
-        }
-        resp = requests.get(url, params=params, headers=headers)
-        if resp.status_code != 200:
-            log.error(f'Error running query: {query} on {self.connection_data["database"]}: {resp.content}')
-            return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(resp.content)
-            )
-        df = pd.read_json(resp.content, lines=True)
-        return Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-
-    def do_query_by_native(self, query: str) -> Response:
+    def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
         :param query: The SQL query to run in ClickHouse
@@ -146,14 +114,6 @@ class ClickHouseHandler(DatabaseHandler):
             self.disconnect()
 
         return response
-
-    def native_query(self, query: str) -> Response:
-        if self.protocol == 'native':
-            return self.do_query_by_native(query)
-        elif self.protocol in ['http', 'https']:
-            return self.do_query_by_http(query)
-        else:
-            return Response(RESPONSE_TYPE.ERROR, error_message="invalid protocol: %s, expected: native, http, https" % self.protocol)
 
     def query(self, query: ASTNode) -> Response:
         """

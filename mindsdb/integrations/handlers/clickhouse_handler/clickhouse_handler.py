@@ -75,6 +75,13 @@ class ClickHouseHandler(DatabaseHandler):
 
         return response
 
+    def http_query(self, query: str) -> Response:
+        """
+        Receive SQL query and runs it in HTTP
+        :param query: The SQL query to run in ClickHouse
+        :return: returns the records from the current recordset
+        """
+
     def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it

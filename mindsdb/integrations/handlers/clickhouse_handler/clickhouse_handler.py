@@ -28,6 +28,7 @@ class ClickHouseHandler(DatabaseHandler):
         self.connection_data = connection_data
         self.renderer = SqlalchemyRender(ClickHouseDialect)
         self.is_connected = False
+        self.protocol = connection_data.get('protocol', 'native')
 
     def __del__(self):
         if self.is_connected is True:
@@ -98,6 +99,7 @@ class ClickHouseHandler(DatabaseHandler):
         }
         resp = requests.get(url, params=params, headers=headers)
         if resp.status_code != 200:
+            log.error(f'Error running query: {query} on {self.connection_data["database"]}: {resp.content}')
             return Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(resp.content)
@@ -145,19 +147,27 @@ class ClickHouseHandler(DatabaseHandler):
 
         return response
 
+    def do_query(self, query: str) -> Response:
+        if self.protocol == 'native':
+            return self.native_query(query)
+        elif self.protocol in ['http', 'https']:
+            return self.http_query(query)
+        else:
+            return Response(RESPONSE_TYPE.ERROR, error_message="invalid protocol: %s, expected: native, http, https" % self.protocol)
+
     def query(self, query: ASTNode) -> Response:
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
         query_str = self.renderer.get_string(query, with_failback=True)
-        return self.native_query(query_str)
+        return self.do_query(query_str)
 
     def get_tables(self) -> Response:
         """
         Get a list with all of the tabels in ClickHouse db
         """
         q = f"SHOW TABLES FROM {self.connection_data['database']}"
-        result = self.native_query(q)
+        result = self.do_query(q)
         df = result.data_frame
         result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
         return result
@@ -167,11 +177,15 @@ class ClickHouseHandler(DatabaseHandler):
         Show details about the table
         """
         q = f"DESCRIBE {table_name};"
-        result = self.native_query(q)
+        result = self.do_query(q)
         return result
 
 
 connection_args = OrderedDict(
+    protocol={
+        'type': ARG_TYPE.STR,
+        'protocol': 'The protocol to query clickhouse. Supported: native, http, https. Default: native'
+    },
     user={
         'type': ARG_TYPE.STR,
         'description': 'The user name used to authenticate with the ClickHouse server.'
@@ -195,6 +209,7 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
+    protocol='native',
     host='127.0.0.1',
     port=9000,
     user='root',

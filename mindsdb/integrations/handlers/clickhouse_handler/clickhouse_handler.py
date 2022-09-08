@@ -77,7 +77,7 @@ class ClickHouseHandler(DatabaseHandler):
 
         return response
 
-    def http_query(self, query: str) -> Response:
+    def do_query_by_http(self, query: str) -> Response:
         """
         Receive SQL query and runs it in HTTP
         :param query: The SQL query to run in ClickHouse
@@ -110,7 +110,7 @@ class ClickHouseHandler(DatabaseHandler):
             df
         )
 
-    def native_query(self, query: str) -> Response:
+    def do_query_by_native(self, query: str) -> Response:
         """
         Receive SQL query and runs it
         :param query: The SQL query to run in ClickHouse
@@ -147,11 +147,11 @@ class ClickHouseHandler(DatabaseHandler):
 
         return response
 
-    def do_query(self, query: str) -> Response:
+    def native_query(self, query: str) -> Response:
         if self.protocol == 'native':
-            return self.native_query(query)
+            return self.do_query_by_native(query)
         elif self.protocol in ['http', 'https']:
-            return self.http_query(query)
+            return self.do_query_by_http(query)
         else:
             return Response(RESPONSE_TYPE.ERROR, error_message="invalid protocol: %s, expected: native, http, https" % self.protocol)
 
@@ -160,14 +160,14 @@ class ClickHouseHandler(DatabaseHandler):
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
         query_str = self.renderer.get_string(query, with_failback=True)
-        return self.do_query(query_str)
+        return self.native_query(query_str)
 
     def get_tables(self) -> Response:
         """
         Get a list with all of the tabels in ClickHouse db
         """
         q = f"SHOW TABLES FROM {self.connection_data['database']}"
-        result = self.do_query(q)
+        result = self.native_query(q)
         df = result.data_frame
         result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
         return result
@@ -177,7 +177,7 @@ class ClickHouseHandler(DatabaseHandler):
         Show details about the table
         """
         q = f"DESCRIBE {table_name};"
-        result = self.do_query(q)
+        result = self.native_query(q)
         return result
 
 

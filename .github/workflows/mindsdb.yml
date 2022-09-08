@@ -64,11 +64,11 @@ jobs:
         if [ "$RUNNER_OS" == "Linux" ]; then
           # Unit tests
           # echo -e "\n===============\nUnit tests\n===============\n"
-          env PYTHONPATH=./ pytest tests/unit/test_executor.py
+          pytest tests/unit/test_executor.py
 
-          env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
+          pytest tests/unit/test_mongodb_handler.py
         
-          env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
+          pytest tests/unit/test_mongodb_server.py
 
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
@@ -111,6 +111,7 @@ jobs:
         fi
       shell: bash
       env:
+        PYTHONPATH: ./
         CHECK_FOR_UPDATES: False
         DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
         DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}

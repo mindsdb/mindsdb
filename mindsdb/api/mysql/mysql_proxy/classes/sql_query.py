@@ -255,6 +255,7 @@ class SQLQuery():
         integrations_meta = self.session.integration_controller.get_all()
         integrations_names = list(integrations_meta.keys())
         integrations_names.append('information_schema')
+        integration_name = None
 
         predictor_metadata = []
         predictors_records = get_model_records(company_id=self.session.company_id)
@@ -305,14 +306,13 @@ class SQLQuery():
 
                 self.model_types.update(p.data.get('dtypes', {}))
 
-        mindsdb_database_name = 'mindsdb'
         database = None if self.session.database == '' else self.session.database.lower()
 
         self.predictor_metadata = predictor_metadata
         self.planner = query_planner.QueryPlanner(
             self.query,
             integrations=integrations_names,
-            predictor_namespace=mindsdb_database_name,
+            predictor_namespace=integration_name,
             predictor_metadata=predictor_metadata,
             default_namespace=database
         )

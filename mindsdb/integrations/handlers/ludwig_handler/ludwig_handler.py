@@ -16,6 +16,7 @@ from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.utilities.hooks import after_predict as after_predict_hook
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -200,7 +201,6 @@ class LudwigHandler(PredictiveHandler):
 
         elif type(query) == Select:
             model_name = query.from_table.parts[-1]
-            where_data = get_where_data(query.where)
 
             if not self._get_model(model_name):
                 return HandlerResponse(
@@ -208,10 +208,11 @@ class LudwigHandler(PredictiveHandler):
                     error_message=f"Error: model '{model_name}' does not exist!"
                 )
 
-            predictions_df = self.predict(model_name, where_data)
+            where_data = get_where_data(query.where)
+            predictions = self.predict(model_name, where_data)
             return HandlerResponse(
                 RESPONSE_TYPE.TABLE,
-                data_frame=predictions_df
+                data_frame=pd.DataFrame(predictions)
             )
         else:
             raise Exception(f"Query type {type(query)} not supported")
@@ -359,8 +360,20 @@ class LudwigHandler(PredictiveHandler):
             if isinstance(data, dict):
                 data = [data]
             df = pd.DataFrame(data)
-            model = self._get_model(model_name)  # TODO: use DB.record/get_model_record instead?
-            return self._call_model(df, model)
+            model = self._get_model(model_name)
+            predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name='ludwig')
+            predictions = self._call_model(df, model)
+            predictions = predictions.to_dict(orient='records')
+
+            after_predict_hook(
+                company_id=self.company_id,
+                predictor_id=predictor_record.id,
+                rows_in_count=df.shape[0],
+                columns_in_count=df.shape[1],
+                rows_out_count=len(predictions)
+            )
+
+            return predictions
 
 
 class RayConnection:

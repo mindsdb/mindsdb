@@ -260,7 +260,9 @@ class LudwigHandler(PredictiveHandler):
 
     def _call_model(self, df, model):
         predictions = dask.compute(model.predict(df)[0])[0]
-        predictions.columns = [model.config['output_features'][0]['column']]
+        target_name = model.config['output_features'][0]['column']
+        predictions.columns = [target_name]
+        predictions[f'{target_name}_explain'] = None
         joined = df.join(predictions)
         return joined
 

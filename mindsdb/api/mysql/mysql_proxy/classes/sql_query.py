@@ -878,6 +878,8 @@ class SQLQuery():
                 self.row_id += self.row_id + row_count * len(data['tables'])
 
                 ml_handler_name = step.namespace
+                if ml_handler_name == 'mindsdb':
+                    ml_handler_name = 'lightwood'
                 predictor_name = step.predictor.parts[0]
                 where_data = []
                 for row in steps_data[step.dataframe.step_num]['values']:

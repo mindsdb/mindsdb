@@ -30,6 +30,7 @@ class TestMongoDBServer(unittest.TestCase):
                     "mongodb": {"host": "127.0.0.1", "port": "47399", "database": "mindsdb"}
                 },
             }
+            # TODO run on own database
 
             from mindsdb.api.mongo.server import MongoServer
 

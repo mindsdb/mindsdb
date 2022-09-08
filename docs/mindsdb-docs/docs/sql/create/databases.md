@@ -142,7 +142,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
     PARAMETERS={
       "host": " ",                                    --- host name or IP address of the Redshift cluster
       "port": ,                                       --- port used when connecting to the Redshift cluster
-      "database": " ",                                --- name of the database used when connecting to the Redshift cluster
+      "database": " ",                                --- database name used when connecting to the Redshift cluster
       "user": " ",                                    --- user to authenticate with the Redshift cluster
       "password": " "                                 --- password used to authenticate with the Redshift cluster
     };
@@ -175,7 +175,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
       "region_name": " ",                   --- the AWS region
       "bucket": " ",                        --- name of the S3 bucket
       "key": " ",                           --- key of the object to be queried
-      "input_serialization": " "            --- format of the data in the object to be queried
+      "input_serialization": " "            --- format of the data to be queried
     };
     ```
 
@@ -203,13 +203,13 @@ Let's look at sample codes showing how to connect to each of the supported integ
     WITH ENGINE='cassandra',                    --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                              --- host name or IP address
-      "port": ,                                 --- port
-      "user": " ",                              --- the Keyspace user
-      "password": " ",                          --- the Keyspace password
-      "keyspace": " ",                          --- optional, database name
-      "protocol_version": ,                     --- optional, protocol version defaults to 4
-      "secure_connect_bundle": {                --- path or url to the secure connect bundle
-        "path": " "                             --- either "path" or "url"
+      "port": ,                                 --- port used to make TCP/IP connection
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "keyspace": " ",                          --- database name
+      "protocol_version": ,                     --- optional, protocol version (defaults to 4 if left blank)
+      "secure_connect_bundle": {                --- optional, secure connect bundle file
+        "path": " "                                 --- either "path" or "url"
       }
     };
     ```
@@ -262,7 +262,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
     WITH ENGINE='clickhouse',                   --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                              --- host name or IP address
-      "port": ,                                 --- port
+      "port": ,                                 --- port used to make TCP/IP connection
       "database": " ",                          --- database name
       "user": " ",                              --- database user
       "password": " "                           --- database password
@@ -292,8 +292,8 @@ Let's look at sample codes showing how to connect to each of the supported integ
     WITH ENGINE='cockroachdb',                  --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                              --- host name or IP address
-      "port": ,                                 --- port
-      "database": " ",                          --- optional, database name
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- database name
       "user": " ",                              --- database user
       "password": " ",                          --- database password
       "publish": " "                            --- optional, publish
@@ -326,8 +326,8 @@ Let's look at sample codes showing how to connect to each of the supported integ
       "user": " ",                              --- user to authenticate with the Couchbase server
       "password": " ",                          --- password used to authenticate with the Couchbase server
       "bucket": " ",                            --- bucket name
-      "scope": " "                              --- scope used to write queries (defaults to `_default` when left blank); a scope in Couchbase is equivalent to a schema in MySQL
-    };
+      "scope": " "                              --- scope used to query (defaults to `_default` if left blank)
+    };                                              --- a scope in Couchbase is equivalent to a schema in MySQL
     ```
 
 === "Example"
@@ -339,8 +339,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
       "host": "127.0.0.1",
       "user": "couchbase",
       "password": "password",
-      "bucket": "test-bucket",
-      "scope": "_default"
+      "bucket": "test-bucket"
     };
     ```
 
@@ -353,10 +352,10 @@ Let's look at sample codes showing how to connect to each of the supported integ
     WITH ENGINE='crate',                      --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                            --- host name or IP address
-      "port": ,                               --- port
+      "port": ,                               --- port used to make TCP/IP connection
       "user": " ",                            --- database user
       "password": " ",                        --- database password
-      "schema_name": " "                      --- name of the schema to be used
+      "schema_name": " "                      --- database schema name (defaults to `doc` if left blank)
     };
     ```
 
@@ -384,11 +383,11 @@ Let's look at sample codes showing how to connect to each of the supported integ
     PARAMETERS={
       "server_hostname": " ",                     --- server hostname of the cluster or SQL warehouse
       "http_path": " ",                           --- http path to the cluster or SQL warehouse
-      "access_token": " ",                        --- personal databricks access token
-      "schema": " ",                              --- name of the schema to be used
-      "session_configuration": " ",               --- optional
-      "http_headers": " ",                        --- optional
-      "catalog": " "                              --- optional
+      "access_token": " ",                        --- personal Databricks access token
+      "schema": " ",                              --- schema name (defaults to `default` if left blank)
+      "session_configuration": " ",               --- optional, dictionary of Spark session configuration parameters
+      "http_headers": " ",                        --- optional, additional (key, value) pairs to set in HTTP headers on every RPC request the client makes
+      "catalog": " "                              --- catalog (defaults to `hive_metastore` if left blank)
     };
     ```
 
@@ -413,15 +412,15 @@ Let's look at sample codes showing how to connect to each of the supported integ
     CREATE DATABASE datastax_datasource           --- display name for the database
     WITH ENGINE='astra',                          --- name of the MindsDB handler
     PARAMETERS={
-      "host": " ",                                --- optional
-      "port": ,                                   --- optional
       "user": " ",                                --- user to be authenticated
       "password": " ",                            --- password for authentication
-      "protocol_version": ,                       --- optional
-      "keyspace": " ",                            --- optional
       "secure_connection_bundle": {               --- secure connection bundle zip file
-        "path": " "                               --- either "path" or "url"
-      }
+        "path": " "                                   --- either "path" or "url"
+      },
+      "host": " ",                                --- optional, host name or IP address
+      "port": ,                                   --- optional, port used to make TCP/IP connection
+      "protocol_version": ,                       --- optional, protocol version
+      "keyspace": " "                             --- optional, keyspace
     };
     ```
 
@@ -453,8 +452,8 @@ Let's look at sample codes showing how to connect to each of the supported integ
       "port": ,                             --- port where Apache Druid runs
       "user": " ",                          --- optional, user to authenticate with Apache Druid
       "password": " ",                      --- optional, password used to authenticate with Apache Druid
-      "path": " ",                          --- the query path
-      "scheme": " "                         --- the URI scheme (defaults to `http` when left blank)
+      "path": " ",                          --- query path
+      "scheme": " "                         --- the URI scheme (defaults to `http` if left blank)
     };
     ```
 
@@ -512,13 +511,13 @@ Let's look at sample codes showing how to connect to each of the supported integ
       "password": " ",                          --- database password
       "ssl": True/False,                        --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
       "ssl_ca": {                               --- optional, SSL Certificate Authority
-        "path": " "                             --- either "path" or "url"
+        "path": " "                                 --- either "path" or "url"
       },
       "ssl_cert": {                             --- optional, SSL certificates
-        "url": " "                              --- either "path" or "url"
+        "url": " "                                  --- either "path" or "url"
       },
       "ssl_key": {                              --- optional, SSL keys
-        "path": " "                             --- either "path" or "url"
+        "path": " "                                 --- either "path" or "url"
       }
     };
     ```
@@ -548,7 +547,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
       "hosts": " ",                         --- one or more host names or IP addresses of the Elasticsearch server
       "username": " ",                      --- optional, username to authenticate with the Elasticsearch server
       "password": " ",                      --- optional, password used to authenticate with the Elasticsearch server
-      "cloud_id": " "                       --- optional, unique ID of your hosted Elasticsearch cluster
+      "cloud_id": " "                       --- optional, unique ID of your hosted Elasticsearch cluster (must be provided when "hosts" is left blank)
     };
     ```
 
@@ -572,8 +571,8 @@ Let's look at sample codes showing how to connect to each of the supported integ
     PARAMETERS={
       "host": " ",                              --- host name or IP address of the Firebird server
       "database": " ",                          --- database name
-      "user": " ",                              --- user to authenticate with the Firevird server
-      "password": " "                           --- password used to authenticate with the Firevird server
+      "user": " ",                              --- user to authenticate with the Firebird server
+      "password": " "                           --- password used to authenticate with the Firebird server
     };
     ```
 
@@ -599,8 +598,8 @@ Let's look at sample codes showing how to connect to each of the supported integ
     WITH ENGINE='bigquery',                   --- name of the MindsDB handler
     PARAMETERS={
       "project_id": " ",                      --- globally unique project identifier
-      "service_account_keys": {               --- file storing the service account keys
-        "path": " "                           --- either "path" or "url"
+      "service_account_keys": {               --- service account keys file
+        "path": " "                               --- either "path" or "url"
       }
     };
     ```
@@ -678,7 +677,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
       "user": " ",                            --- database user
       "password": " ",                        --- database password
       "schema_name": " ",                     --- database schema name
-      "logging_enabled": True/False           --- indicates whether logging is enabled (defaults to `True` when left blank)
+      "logging_enabled": True/False           --- indicates whether logging is enabled (defaults to `True` if left blank)
     };
     ```
 
@@ -694,7 +693,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
       "database": "stores_demo",
       "user": "informix",
       "password": "password",
-      "schema_name": "love",
+      "schema_name": "demo_schema",
       "logging_enabled": False
     };
     ```
@@ -704,23 +703,23 @@ Let's look at sample codes showing how to connect to each of the supported integ
 === "Template"
 
     ```sql
-    CREATE DATABASE maria_datasource            --- display name for database
+    CREATE DATABASE maria_datasource            --- display name for the database
     WITH ENGINE='mariadb',                      --- name of the MindsDB handler
     PARAMETERS={
-      "host": " ",                              --- host in the form of an ip address or a url
+      "host": " ",                              --- host IP address or URL
       "port": ,                                 --- port used to make TCP/IP connection
-      "database": " ",                          --- optional, database name
+      "database": " ",                          --- database name
       "user": " ",                              --- database user
       "password": " ",                          --- database password
       "ssl": True/False,                        --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
       "ssl_ca": {                               --- optional, SSL Certificate Authority
-        "path": " "                             --- either "path" or "url"
+        "path": " "                                 --- either "path" or "url"
       },
       "ssl_cert": {                             --- optional, SSL certificates
-        "url": " "                              --- either "path" or "url"
+        "url": " "                                  --- either "path" or "url"
       },
       "ssl_key": {                              --- optional, SSL keys
-        "path": " "                             --- either "path" or "url"
+        "path": " "                                 --- either "path" or "url"
       }
     };
     ```
@@ -735,7 +734,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
       "port": 3306,
       "database": "mariadb",
       "user": "root",
-      "password": "Mimzo3i-mxt@9CpThpBj"
+      "password": "password"
     };
     ```
 
@@ -749,7 +748,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
       "port": 5001,
       "database": "mindsdb_data",
       "user": "DB00007539",
-      "password": "[DaS3I8g527n41637sFM|XtjjX",
+      "password": "password",
       --- here, the SSL certificate is required
       "ssl-ca": {
         "url": "https://mindsdb-web-builds.s3.amazonaws.com/aws_skysql_chain.pem"
@@ -762,23 +761,23 @@ Let's look at sample codes showing how to connect to each of the supported integ
 === "Template"
 
     ```sql
-    CREATE DATABASE matrixone_datasource        --- display name for database
+    CREATE DATABASE matrixone_datasource        --- display name for the database
     WITH ENGINE='matrixone',                    --- name of the MindsDB handler
     PARAMETERS={
-      "host": " ",                              --- host in the form of an ip address or a url
+      "host": " ",                              --- host IP address or URL
       "port": ,                                 --- port used to make TCP/IP connection
-      "database": " ",                          --- optional, database name
+      "database": " ",                          --- database name
       "user": " ",                              --- database user
       "password": " ",                          --- database password
       "ssl": True/False,                        --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
       "ssl_ca": {                               --- optional, SSL Certificate Authority
-        "path": " "                             --- either "path" or "url"
+        "path": " "                                 --- either "path" or "url"
       },
       "ssl_cert": {                             --- optional, SSL certificates
-        "url": " "                              --- either "path" or "url"
+        "url": " "                                  --- either "path" or "url"
       },
       "ssl_key": {                              --- optional, SSL keys
-        "path": " "                             --- either "path" or "url"
+        "path": " "                                 --- either "path" or "url"
       }
     };
     ```
@@ -802,7 +801,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
 === "Template"
 
     ```sql
-    CREATE DATABASE access_datasource       --- display name for database
+    CREATE DATABASE access_datasource       --- display name for the database
     WITH ENGINE = 'access',                 --- name of the MindsDB handler
     PARAMETERS = {
       "db_file": " "                        --- path to the database file to be used
@@ -815,7 +814,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
     CREATE DATABASE access_datasource
     WITH ENGINE = 'access',
     PARAMETERS = {
-      "db_file": "C:\\Users\\minurap\\Documents\\example_db.accdb"
+      "db_file": "example_db.accdb"
     };
     ```
 
@@ -824,15 +823,14 @@ Let's look at sample codes showing how to connect to each of the supported integ
 === "Template"
 
     ```sql
-    CREATE DATABASE mssql_datasource        --- display name for database
+    CREATE DATABASE mssql_datasource        --- display name for the database
     WITH ENGINE='mssql',                    --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                          --- host name or IP address
-      "port": ,                             --- port
-      "database": " ",                      --- optional, database name
+      "port": ,                             --- port used to make TCP/IP connection
+      "database": " ",                      --- database name
       "user": " ",                          --- database user
-      "password": " ",                      --- database password
-      "odbc_driver_name": " "               --- optional, MySQL ODBC 8.0 Unicode Driver
+      "password": " "                       --- database password
     };
     ```
 
@@ -855,7 +853,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
 === "Template"
 
     ```sql
-    CREATE DATABASE monetdb_datasource          --- display name for database
+    CREATE DATABASE monetdb_datasource          --- display name for the database
     WITH ENGINE = 'monetdb',                    --- name of the MindsDB handler
     PARAMETERS = {
       "host": " ",                              --- host name or IP address
@@ -863,7 +861,7 @@ Let's look at sample codes showing how to connect to each of the supported integ
       "database": " ",                          --- database name
       "user": " ",                              --- database user
       "password": " ",                          --- database password
-      "schema_name": " "                        --- database schema name (default to the current schema if left blank)
+      "schema_name": " "                        --- database schema name (defaults to the current schema if left blank)
     };
     ```
 
@@ -887,11 +885,11 @@ Let's look at sample codes showing how to connect to each of the supported integ
 === "Template"
 
     ```sql
-    CREATE DATABASE mongo_datasource          --- display name for database
+    CREATE DATABASE mongo_datasource          --- display name for the database
     WITH ENGINE='mongo',                      --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                            --- host name or IP address
-      "port": ,                               --- port
+      "port": ,                               --- port used to make TCP/IP connection
       "user": " ",                            --- database user
       "password": " "                         --- database password
     };
@@ -917,23 +915,23 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE mysql_datasource            --- display name for database
+    CREATE DATABASE mysql_datasource            --- display name for the database
     WITH ENGINE='mysql',                        --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                              --- host name or IP address
       "port": ,                                 --- port used to make TCP/IP connection
-      "database": " ",                          --- optional, database name
+      "database": " ",                          --- database name
       "user": " ",                              --- database user
       "password": " ",                          --- database password
       "ssl": True/False,                        --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
       "ssl_ca": {                               --- optional, SSL Certificate Authority
-        "path": " "                             --- either "path" or "url"
+        "path": " "                                 --- either "path" or "url"
       },
       "ssl_cert": {                             --- optional, SSL certificates
-        "url": " "                              --- either "path" or "url"
+        "url": " "                                  --- either "path" or "url"
       },
       "ssl_key": {                              --- optional, SSL keys
-        "path": " "                             --- either "path" or "url"
+        "path": " "                                 --- either "path" or "url"
       }
     };
     ```
@@ -957,13 +955,13 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE oracle_datasource         --- display name for database
+    CREATE DATABASE oracle_datasource         --- display name for the database
     WITH ENGINE='oracle',                     --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                            --- host name or IP address
       "port": ,                               --- port used to make TCP/IP connection
       "sid": " ",                             --- unique identifier of the database instance
-      "service_name": " ",                    --- optional, the connection accepts either `sid` or `service_name` argument to target the right database instance
+      "service_name": " ",                    --- optional, database service name (must be provided when "sid" is left blank)
       "user": " ",                            --- database user
       "password": " "                         --- database password
     };
@@ -988,17 +986,17 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE pinot_datasource        --- display name for database
+    CREATE DATABASE pinot_datasource        --- display name for the database
     WITH ENGINE='pinot',                    --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                          --- host name or IP address of the Apache Pinot cluster
-      "broker_port": ,                      --- port where the broker of the Apache Pinot cluster runs on
-      "controller_port": ,                  --- port where the controller of the Apache Pinot cluster runs on
+      "broker_port": ,                      --- port where the broker of the Apache Pinot cluster runs
+      "controller_port": ,                  --- port where the controller of the Apache Pinot cluster runs
       "path": " ",                          --- query path
-      "scheme": " ",                        --- defaults to `http` when left blank
-      "username": " ",                      --- optional
-      "password": " ",                      --- optional
-      "verify_ssl": " "                     --- optional
+      "scheme": " ",                        --- scheme (defaults to `http` if left blank)
+      "username": " ",                      --- optional, user
+      "password": " ",                      --- optional, password
+      "verify_ssl": " "                     --- optional, verify SSL
     };
     ```
 
@@ -1021,12 +1019,12 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE psql_datasource         --- display name for database
+    CREATE DATABASE psql_datasource         --- display name for the database
     WITH ENGINE='postgres',                 --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                          --- host name or IP address
-      "port": ,                             --- port
-      "database": " ",                      --- optional, database name
+      "port": ,                             --- port used to make TCP/IP connection
+      "database": " ",                      --- database name
       "user": " ",                          --- database user
       "password": " "                       --- database password
     };
@@ -1051,14 +1049,15 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE questdb_datasource      --- display name for database
+    CREATE DATABASE questdb_datasource      --- display name for the database
     WITH ENGINE='questdb',                  --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                          --- host name or IP address
-      "port": ,                             --- port
-      "database": " ",                      --- optional, database name
+      "port": ,                             --- port used to make TCP/IP connection
+      "database": " ",                      --- database name
       "user": " ",                          --- database user
-      "password": " "                       --- database password
+      "password": " ",                      --- database password
+      "public": True/False                  --- public (defaults to `True` if left blank)
     };
     ```
 
@@ -1081,17 +1080,17 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE scylladb_datasource           --- display name for database
+    CREATE DATABASE scylladb_datasource           --- display name for the database
     WITH ENGINE='scylladb',                       --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                                --- host name or IP address
-      "port": ,                                   --- port
+      "port": ,                                   --- port used to make TCP/IP connection
       "user": " ",                                --- user
       "password": " ",                            --- password
-      "protocol_version": ,                       --- optional, protocol version defaults to 4
+      "protocol_version": ,                       --- optional, protocol version (defaults to 4 if left blank)
       "keyspace": " ",                            --- keyspace name (it is the top level container for tables)
-      "secure_connect_bundle": {                  --- path or url to the secure connect bundle
-        "path": " "                               --- either "path" or "url"
+      "secure_connect_bundle": {                  --- secure connect bundle file
+        "path": " "                                   --- either "path" or "url"
       }
     };
     ```
@@ -1119,23 +1118,23 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE singlestore_datasource          --- display name for database
+    CREATE DATABASE singlestore_datasource          --- display name for the database
     WITH ENGINE='mysql',                            --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                                  --- host name or IP address
       "port": ,                                     --- port used to make TCP/IP connection
-      "database": " ",                              --- optional, database name
+      "database": " ",                              --- database name
       "user": " ",                                  --- database user
       "password": " ",                              --- database password
       "ssl": True/False,                            --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
       "ssl_ca": {                                   --- optional, SSL Certificate Authority
-        "path": " "                                 --- either "path" or "url"
+        "path": " "                                     --- either "path" or "url"
       },
       "ssl_cert": {                                 --- optional, SSL certificates
-        "url": " "                                  --- either "path" or "url"
+        "url": " "                                      --- either "path" or "url"
       },
       "ssl_key": {                                  --- optional, SSL keys
-        "path": " "                                 --- either "path" or "url"
+        "path": " "                                     --- either "path" or "url"
       }
     };
     ```
@@ -1159,17 +1158,17 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE snowflake_datasource              --- display name for database
+    CREATE DATABASE snowflake_datasource              --- display name for the database
     WITH ENGINE='snowflake',                          --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                                    --- host name or IP address
-      "port": ,                                       --- port
-      "database": " ",                                --- optional, database name
+      "port": ,                                       --- port used to make TCP/IP connection
+      "database": " ",                                --- database name
       "user": " ",                                    --- database user
       "password": " ",                                --- database password
       "account": " ",                                 --- the Snowflake account
-      "schema": " ",                                  --- schema name (default to `public` when left blank)
-      "protocol": " ",                                --- protocol (defaults to `https` when left blank)
+      "schema": " ",                                  --- schema name (defaults to `public` if left blank)
+      "protocol": " ",                                --- protocol (defaults to `https` if left blank)
       "warehouse": " "                                --- the warehouse account
     };
     ```
@@ -1197,7 +1196,7 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE sqlite_datasource         --- display name for database
+    CREATE DATABASE sqlite_datasource         --- display name for the database
     WITH ENGINE='sqlite',                     --- name of the MindsDB handler
     PARAMETERS={
       "db_file": " "                          --- path to the database file to be used
@@ -1219,11 +1218,11 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE supabase_datasource             --- display name for database
+    CREATE DATABASE supabase_datasource             --- display name for the database
     WITH ENGINE='supabase',                         --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                                  --- host name or IP address
-      "port": ,                                     --- port
+      "port": ,                                     --- port used to make TCP/IP connection
       "database": " ",                              --- database name
       "user": " ",                                  --- database user
       "password": " ",                              --- database password
@@ -1249,11 +1248,11 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE tidb_datasource                 --- display name for database
+    CREATE DATABASE tidb_datasource                 --- display name for the database
     WITH ENGINE='tidb',                             --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                                  --- host name or IP address
-      "port": ,                                     --- port
+      "port": ,                                     --- port used to make TCP/IP connection
       "database": " ",                              --- database name
       "user": " ",                                  --- database user
       "password": " ",                              --- database password
@@ -1279,15 +1278,15 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE trino_datasource          --- display name for database
+    CREATE DATABASE trino_datasource          --- display name for the database
     WITH ENGINE='trinodb',                    --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                            --- host name or IP address
-      "port": ,                               --- port
+      "port": ,                               --- port used to make TCP/IP connection
       "user": " ",                            --- database user
       "password": " ",                        --- database password
-      "catalog": " ",                         --- optional
-      "schema": " "                           --- optional
+      "catalog": " ",                         --- optional, catalog
+      "schema": " "                           --- optional, schema
     };
     ```
 
@@ -1311,7 +1310,7 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 === "Template"
 
     ```sql
-    CREATE DATABASE vertica_datasource        --- display name for database
+    CREATE DATABASE vertica_datasource        --- display name for the database
     WITH ENGINE='vertica',                    --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                            --- host name or IP address
@@ -1319,7 +1318,7 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
       "database": " ",                        --- database name
       "user": " ",                            --- database user
       "password": " ",                        --- database password
-      "schema_name": " "                      --- schema name
+      "schema_name": " "                      --- database schema name
     };
     ```
 

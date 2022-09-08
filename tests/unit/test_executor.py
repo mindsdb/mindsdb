@@ -27,6 +27,7 @@ class Test(BaseTestCase):
         assert ret.data == data
 
         # check sql in query method
+        print(mock_handler().query.mock_calls[0].args)
         assert mock_handler().query.mock_calls[0].args[0].to_string() == 'SELECT * FROM tasks'
 
     def test_predictor_1_row(self):
@@ -312,6 +313,7 @@ class TestWithNativeQuery(BaseTestCase):
             dialect='mindsdb'))
 
         # native query was called
+        print(mock_handler().native_query.mock_calls)
         assert mock_handler().native_query.mock_calls[0].args[0] == 'select * from tasks'
         assert ret.data[0][0] == 3
 
@@ -351,6 +353,7 @@ class TestWithNativeQuery(BaseTestCase):
         assert ret.error_code is None
 
         # learn was called
+        print(self.mock_learn.mock_calls[0].args)
         assert self.mock_learn.mock_calls[0].args[0].name.to_string() == 'task_model'
         # integration was called
         # TODO: integration is not called during learn process because learn function is mocked

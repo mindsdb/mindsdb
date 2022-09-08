@@ -252,10 +252,11 @@ class SQLQuery():
             self.execute_query()
 
     def create_planner(self):
-        integrations_names = self.session.datahub.get_integrations_names()
+        integrations_meta = self.session.integration_controller.get_all()
+        integrations_names = list(integrations_meta.keys())
         integrations_names.append('information_schema')
 
-        predictor_metadata = {}
+        predictor_metadata = []
         predictors_records = get_model_records(company_id=self.session.company_id)
 
         query_tables = []
@@ -280,6 +281,7 @@ class SQLQuery():
             if isinstance(p.data, dict) and 'error' not in p.data:
                 ts_settings = p.learn_args.get('timeseries_settings', {})
                 predictor = {
+                    'name': model_name,
                     'integration_name': integration_name,
                     'timeseries': False,
                     'id': p.id
@@ -299,7 +301,7 @@ class SQLQuery():
                         'order_by_column': order_by,
                         'group_by_columns': group_by
                     })
-                predictor_metadata[model_name] = predictor
+                predictor_metadata.append(predictor)
 
                 self.model_types.update(p.data.get('dtypes', {}))
 

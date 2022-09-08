@@ -258,7 +258,8 @@ class ResultSet:
             self.columns.append(Column(
                 name=col,
                 table_name=table_name,
-                database=database
+                database=database,
+                type=df.dtypes[col]
             ))
 
     def to_df(self):
@@ -288,7 +289,7 @@ class ResultSet:
 
             step_data['columns'][table_key].append(col_key)
             if col.type is not None:
-                step_data['types'][table_key][col_key] = col.type
+                step_data['types'][table_key][col.name] = col.type
 
         for rec in self.records:
             row = {}

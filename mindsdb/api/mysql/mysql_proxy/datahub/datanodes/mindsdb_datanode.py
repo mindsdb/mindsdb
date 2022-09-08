@@ -88,8 +88,8 @@ class MindsDBDataNode(DataNode):
 
         return columns
 
-    def _select_predictors(self):
-        models = self.model_controller.get_models()
+    def _select_predictors(self, ml_handler_name='lightwood'):
+        models = self.model_controller.get_models(ml_handler_name=ml_handler_name)
         columns = ['name', 'status', 'accuracy', 'predict', 'update_status',
                    'mindsdb_version', 'error', 'select_data_query',
                    'training_options']
@@ -151,7 +151,7 @@ class MindsDBDataNode(DataNode):
         self.model_controller.delete_model(name, integration_name=integration_name)
 
     def get_predictors(self, query: ASTNode):
-        predictors_df = self._select_predictors()
+        predictors_df = self._select_predictors(ml_handler_name=query.from_table.parts[0])
 
         try:
             result_df = query_df(predictors_df, query)

@@ -261,7 +261,10 @@ class LudwigHandler(PredictiveHandler):
     def _call_model(self, df, model):
         predictions = dask.compute(model.predict(df)[0])[0]
         target_name = model.config['output_features'][0]['column']
-        predictions.columns = [target_name]
+        if target_name not in df:
+            predictions.columns = [target_name]
+        else:
+            predictions.columns = ['prediction']
         predictions[f'{target_name}_explain'] = None
         joined = df.join(predictions)
         return joined
@@ -364,8 +367,17 @@ class LudwigHandler(PredictiveHandler):
             df = pd.DataFrame(data)
             model = self._get_model(model_name)
             predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name='ludwig')
+            target = predictor_record.to_predict[0]
             predictions = self._call_model(df, model)
-            # predictions.rename({'prediction': predictor_record.to_predict[0]}, axis=1)
+            predictions = predictions.rename({
+                target: f'{target}_original',
+                'prediction': target
+            }, axis=1)
+
+            # TODO: convert in a common method to fill-in missing columns
+            for col_name in ['select_data_query', 'when_data', f'{target}_confidence',
+                             f'{target}_anomaly', f'{target}_min', f'{target}_max']:
+                predictions[col_name] = None
             predictions = predictions.to_dict(orient='records')
 
             after_predict_hook(

@@ -214,10 +214,6 @@ class IntegrationController:
                 & (func.lower(Integration.name) == func.lower(name))
             ).first()
 
-        # test override for ludwig, REMOVE LATER
-        # if name == 'lightwood':
-        #     name = 'ludwig'
-
         # TODO del in future
         if integration_record is None:
             if name == 'lightwood':
@@ -231,9 +227,6 @@ class IntegrationController:
             else:
                 raise Exception(f'Unknown integration: {name}')
 
-        # if integration_record.engine == 'lightwood':
-        #     integration_record.engine = 'ludwig'
-        #     integration_record.name = 'ludwig'
         integration_data = self._get_integration_record_data(integration_record, True)
         connection_data = integration_data.get('connection_data', {})
         integration_engine = integration_data['engine']
@@ -300,10 +293,6 @@ class IntegrationController:
     def _get_handler_meta(self, module):
         handler_dir = Path(module.__path__[0])
         handler_folder_name = handler_dir.name
-        handler_name = handler_folder_name
-        if handler_name.endswith('_handler'):
-            handler_name = handler_name[:-8]
-
         dependencies = self._read_dependencies(handler_dir)
 
         self.handler_modules[module.name] = module

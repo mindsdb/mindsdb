@@ -1,3 +1,4 @@
+import requests
 from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -81,6 +82,31 @@ class ClickHouseHandler(DatabaseHandler):
         :param query: The SQL query to run in ClickHouse
         :return: returns the records from the current recordset
         """
+        url = "{}://{}:{}@{}:{}/".format(
+            self.connection_data['protocol'],
+            self.connection_data['user'],
+            self.connection_data['password'],
+            self.connection_data['host'],
+            self.connection_data['port']
+        )
+        params = {
+            "database": self.connection_data['database'],
+            "query": self.connection_data['query'],
+        }
+        headers = {
+            "X-CLICKHOUSE-FORMAT": "NDJSON",
+        }
+        resp = requests.get(url, params=params, headers=headers)
+        if resp.status_code != 200:
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(resp.content)
+            )
+        df = pd.read_json(resp.content, lines=True)
+        return Response(
+            RESPONSE_TYPE.TABLE,
+            df
+        )
 
     def native_query(self, query: str) -> Response:
         """

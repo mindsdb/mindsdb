@@ -337,7 +337,7 @@ class LightwoodHandler(PredictiveHandler):
 
         if type(statement) == Show:
             if statement.category.lower() == 'tables':
-                all_models = self.model_controller.get_models()
+                all_models = self.model_controller.get_models(ml_handler_name='lightwood')
                 all_models_names = [[x['name']] for x in all_models]
                 response = Response(
                     RESPONSE_TYPE.TABLE,

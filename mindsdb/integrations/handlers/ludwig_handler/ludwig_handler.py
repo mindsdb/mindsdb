@@ -260,7 +260,7 @@ class LudwigHandler(PredictiveHandler):
 
     def _call_model(self, df, model):
         predictions = dask.compute(model.predict(df)[0])[0]
-        predictions.columns = ['prediction']
+        predictions.columns = [model.config['output_features'][0]['column']]
         joined = df.join(predictions)
         return joined
 
@@ -363,6 +363,7 @@ class LudwigHandler(PredictiveHandler):
             model = self._get_model(model_name)
             predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name='ludwig')
             predictions = self._call_model(df, model)
+            # predictions.rename({'prediction': predictor_record.to_predict[0]}, axis=1)
             predictions = predictions.to_dict(orient='records')
 
             after_predict_hook(

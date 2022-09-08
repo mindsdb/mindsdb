@@ -31,9 +31,9 @@ class ModelController():
         self.config = Config()
         self.fs_store = FsStore()
 
-    def get_model_data(self, company_id: int, name: str = None, predictor_record=None) -> dict:
+    def get_model_data(self, company_id: int, name: str = None, predictor_record=None, ml_handler_name='lightwood') -> dict:
         if predictor_record is None:
-            predictor_record = get_model_record(company_id=company_id, except_absent=True, name=name)
+            predictor_record = get_model_record(company_id=company_id, except_absent=True, name=name, ml_handler_name=ml_handler_name)
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -93,10 +93,10 @@ class ModelController():
 
         return model_description
 
-    def get_models(self, company_id: int, with_versions=False):
+    def get_models(self, company_id: int, with_versions=False, ml_handler_name='lightwood'):
         models = []
         show_active = True if with_versions is False else None
-        for predictor_record in get_model_records(company_id=company_id, active=show_active):
+        for predictor_record in get_model_records(company_id=company_id, active=show_active, ml_handler_name=ml_handler_name):
             model_data = self.get_model_data(predictor_record=predictor_record, company_id=company_id)
             reduced_model_data = {}
 

@@ -64,6 +64,8 @@ jobs:
         if [ "$RUNNER_OS" == "Linux" ]; then
           # Unit tests
           # echo -e "\n===============\nUnit tests\n===============\n"
+          cat mindsdb/interfaces/storage/db.py | grep integration
+
           pytest tests/unit/test_executor.py
 
           pytest tests/unit/test_mongodb_handler.py

@@ -27,3 +27,4 @@ mysql-connector-python
 clickhouse-driver
 charset-normalizer
 dill >= 0.3.4
+pyOpenSSL >= 22.0.0

@@ -159,7 +159,7 @@ PARAMETERS={
 };
 ```
 
-### Ckan
+### CKAN
 
 ```sql
 CREATE DATABASE ckan_datasource
@@ -425,7 +425,7 @@ PARAMETERS={
 };
 ```
 
-### Monetdb
+### MonetDB
 
 ```sql
 CREATE DATABASE monetdb_datasource

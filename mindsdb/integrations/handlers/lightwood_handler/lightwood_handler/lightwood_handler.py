@@ -2,7 +2,7 @@ import os
 import sys
 import json
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Union, Any
 import copy
 from dateutil.parser import parse as parse_datetime
@@ -348,7 +348,7 @@ class LightwoodHandler(PredictiveHandler):
                     is_cloud is True
                     and model_data.get('status') in ['generating', 'training']
                     and isinstance(model_data.get('created_at'), str) is True
-                    and (datetime.datetime.now() - parse_datetime(model_data.get('created_at'))) < datetime.timedelta(hours=1)
+                    and (datetime.now() - parse_datetime(model_data.get('created_at'))) < timedelta(hours=1)
                 ):
                     raise Exception('You are unable to delete models currently in progress, please wait before trying again')
 

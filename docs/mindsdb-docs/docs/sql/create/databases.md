@@ -2,11 +2,13 @@
 
 ## Description
 
-MindsDB enables connections to your favorite databases, data warehouses, data lakes, via the `#!sql CREATE DATABASE` syntax.
+MindsDB lets you connect to your favorite databases, data warehouses, data lakes, etc., via the `#!sql CREATE DATABASE` command.
 
-Our MindsDB SQL API supports creating a database connection by passing any credentials needed by each type of system that you are connecting to.
+The MindsDB SQL API supports creating connections to integrations by passing the connection parameters specific per integration. You can find more in the [Supported Integrations](#supported-integrations) chapter.
 
 ## Syntax
+
+Let's review the syntax for the `#!sql CREATE DATABASE` command.
 
 ```sql
 CREATE DATABASE [datasource_name]
@@ -27,13 +29,14 @@ Where:
 
 | Name                | Description                                                                              |
 | ------------------- | ---------------------------------------------------------------------------------------- |
-| `[datasource_name]` | Identifier for the datasource to be created                                              |
-| `[engine_string]`   | Engine to be selected depending on the database connection                               |
-| `parameters`        | `#!json {"key":"value"}` object with the connection parameters specific for each engine  |
+| `[datasource_name]` | Identifier for the data source to be created.                                            |
+| `[engine_string]`   | Engine to be selected depending on the database connection.                              |
+| `PARAMETERS`        | `#!json {"key":"value"}` object with the connection parameters specific for each engine. |
 
 ## Example
 
-Here is a concrete example on how to connect to a MySQL database.
+### Connecting a Data Source
+Here is an example of how to connect to a MySQL database.
 
 ```sql
 CREATE DATABASE mysql_datasource
@@ -41,7 +44,7 @@ WITH ENGINE='mariadb',
 PARAMETERS={
   "user":"root",
   "port": 3307,
-  "password": "Mimzo3i-mxt@9CpThpBj",
+  "password": "password",
   "host": "127.0.0.1",
   "database": "my_database"
 };
@@ -53,9 +56,9 @@ On execution, we get:
 Query OK, 0 rows affected (8.878 sec)
 ```
 
-## Listing Linked DATABASES
+### Listing Linked Databases
 
-You can list linked databases as follows:
+You can list all the linked databases using the command below.
 
 ```sql
 SHOW DATABASES;
@@ -71,13 +74,13 @@ On execution, we get:
 | mindsdb            |
 | files              |
 | views              |
-| example_db         |
+| mysql_datasource   |
 +--------------------+
 ```
 
-## Getting Linked DATABASES Metadata
+### Getting Linked Databases Metadata
 
-You can also get metadata about the linked databases in `mindsdb.datasources`:
+You can get metadata about the linked databases by querying the `mindsdb.datasources` table.
 
 ```sql
 SELECT *
@@ -87,12 +90,74 @@ FROM mindsdb.datasources;
 On execution, we get:
 
 ```sql
-+------------+---------------+--------------+------+-----------+
-| name       | database_type | host         | port | user      |
-+------------+---------------+--------------+------+-----------+
-| example_db | postgres      | 3.220.66.106 | 5432 | demo_user |
-+------------+---------------+--------------+------+-----------+
++------------------+---------------+--------------+------+-----------+
+| name             | database_type | host         | port | user      |
++------------------+---------------+--------------+------+-----------+
+| mysql_datasource | mysql         | 3.220.66.106 | 3306 | root      |
++------------------+---------------+--------------+------+-----------+
 ```
+
+## Making your Local Database Available to MindsDB
+
+When connecting your local database to MindsDB Cloud, you should expose the local database server to be publicly accessible. It is easy to accomplish using [Ngrok Tunnel](https://ngrok.com). The free tier offers all you need to get started.
+
+The installation instructions are easy to follow. Head over to the [downloads page](https://ngrok.com/download) and choose your operating system. Follow the instructions for installation.
+
+Then [create a free account at Ngrok](https://dashboard.ngrok.com/signup) to get an auth token that you can use to configure your Ngrok instance.
+
+Once installed and configured, run the following command to obtain the host and port for your localhost at `[port-number]`.
+
+```bash
+ngrok tcp [port-number]
+```
+
+Here is an example. Assuming that you run a PostgreSQL database at `localhost:5432`, use the following command:
+
+```bash
+ngrok tcp 5432
+```
+
+On execution, we get:
+
+```bash
+Session Status                online
+Account                       myaccount (Plan: Free)
+Version                       2.3.40
+Region                        United States (us)
+Web Interface                 http://127.0.0.1:4040
+Forwarding                    tcp://4.tcp.ngrok.io:15093 -> localhost 5432
+```
+
+Now you can access your local database at `4.tcp.ngrok.io:15093` instead of `localhost:5432`.
+
+So to connect your local database to the MindsDB GUI, use the `Forwarding` information. The host is `4.tcp.ngrok.io`, and the port is `15093`.
+
+Proceed to create a database connection in the MindsDB GUI by executing the `#!sql CREATE DATABASE` statement with the host and port number obtained from Ngrok.
+
+```sql
+CREATE DATABASE psql_datasource
+WITH ENGINE='postgres',
+PARAMETERS={
+  "user":"postgres",
+  "port": 15093,
+  "password": "password",
+  "host": "4.tcp.ngrok.io", 
+  "database": "postgres"
+};
+```
+
+Please note that the Ngrok tunnel loses connection when stopped or canceled. To reconnect your local database to MindsDB, you should create an Ngrok tunnel again. In the free tier, Ngrok changes the host and port values each time you launch the program, so you need to reconnect your database in the MindsDB Cloud by passing the new host and port values obtained from Ngrok.
+
+Before resetting the database connection, drop the previously connected data source using the `#!sql DROP DATABASE` statement.
+
+```sql
+DROP DATABASE psql_datasource;
+```
+
+After dropping the data source and reconnecting your local database, you can use the predictors that you trained using the previously connected data source. However, if you have to `RETRAIN` your predictors, please ensure the database connection has the same name you used when creating the predictor to avoid failing to retrain.
+
+!!! info "Work in progress"
+    Please note that this feature is a beta version. If you have questions about the supported data sources or experience some issues, [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or open a [GitHub issue](https://github.com/mindsdb/mindsdb/issues).
 
 ## Supported Integrations
 
@@ -102,7 +167,7 @@ The list of databases supported by MindsDB keeps growing. Here are the currently
   <img src="/assets/supported_integrations.png" />
 </p>
 
-Let's look at sample codes showing how to connect to each of the supported integrations.
+Let's look at sample codes showing how to connect to each supported integration.
 
 ### Airtable
 
@@ -145,7 +210,7 @@ PARAMETERS = {
 };
 ```
 
-### cassandra
+### Cassandra
 
 ```sql
 CREATE DATABASE cassandra_datasource
@@ -159,7 +224,7 @@ PARAMETERS={
 };
 ```
 
-### ckan
+### CKAN
 
 ```sql
 CREATE DATABASE ckan_datasource
@@ -226,7 +291,7 @@ PARAMETERS={
 };
 ```
 
-### databricks
+### Databricks
 
 ```sql
 CREATE DATABASE databricks_datasource
@@ -252,7 +317,7 @@ PARAMETERS={
 };
 ```
 
-### druid
+### Druid
 
 ```sql
 CREATE DATABASE druid_datasource
@@ -277,7 +342,7 @@ PARAMETERS={
 };
 ```
 
-### d0lt
+### D0lt
 
 ```sql
 CREATE DATABASE d0lt_datasource
@@ -291,7 +356,7 @@ PARAMETERS = {
 };
 ```
 
-### elastic
+### Elastic
 
 ```sql
 CREATE DATABASE elastic_datasource
@@ -425,7 +490,7 @@ PARAMETERS={
 };
 ```
 
-### monetdb
+### MonetDB
 
 ```sql
 CREATE DATABASE monetdb_datasource
@@ -440,7 +505,7 @@ PARAMETERS = {
 };
 ```
 
-### mongoDB
+### MongoDB
 
 ```sql
 CREATE DATABASE mongo_datasource
@@ -483,7 +548,7 @@ PARAMETERS={
 };
 ```
 
-### pinot
+### Pinot
 
 ```sql
 CREATE DATABASE pinot_datasource
@@ -551,7 +616,7 @@ PARAMETERS={
 };
 ```
 
-### snowflake
+### Snowflake
 
 ```sql
 CREATE DATABASE snowflake_datasource
@@ -579,7 +644,7 @@ PARAMETERS={
 };
 ```
 
-### supabase
+### Supabase
 
 ```sql
 CREATE DATABASE supabase_datasource
@@ -607,7 +672,7 @@ PARAMETERS={
 };
 ```
 
-### trino
+### Trino
 
 ```sql
 CREATE DATABASE trino_datasource
@@ -636,62 +701,3 @@ PARAMETERS={
     "schema": " "
 };
 ```
-
-## Connecting Through Ngrok
-
-When connecting your local database to MindsDB Cloud, you need to expose the local database server to be publicly accessible using [Ngrok Tunnel](https://ngrok.com). The free tier offers all you need to get started.
-
-The installation instructions are easy to follow, head over to the [downloads page](https://ngrok.com/download) and choose your operating system. Follow the instructions for installation.
-
-Then [create a free account](https://dashboard.ngrok.com/signup) to get an auth token that you can use to config your ngrok instance.
-
-Once installed and configured, run the following command to obtain the host and port number:
-
-```bash
-ngrok tcp [port-number]
-```
-
-Example:
-
-```bash
-ngrok tcp 5431  # assuming you are running a db on the port 5432, for example, postgres
-```
-
-At this point you will see a line saying something like this:
-```bash
-Session Status                online
-Account                       myaccount (Plan: Free)
-Version                       2.3.40
-Region                        United States (us)
-Web Interface                 http://127.0.0.1:4040
-Forwarding                    tcp://4.tcp.ngrok.io:15093 -> localhost 5432
-```
-
-The forwarded address information will be required when connecting to MindsDB's GUI. We will make use of the `Forwarding` information, in this case it is tcp://4.tcp.ngrok.io:15093 where where tcp://4.tcp.ngrok.io will be used for the host parameter and 15093 as the port number.
-
-Proceed to create a database connection in the MindsDB GUI. Once you have selected a database as a datasource, you can execute the syntax with the host and port number retrieved.
-
-Example:
-
-```sql
-CREATE DATABASE psql_datasource
-WITH ENGINE='postgres',
-PARAMETERS={
-  "user":"postgres",
-  "port": 15093,
-  "password": "Mimzo3i-mxt@9CpThpBj",
-  "host": "4.tcp.ngrok.io", 
-  "database": "postgres"
-};
-```
-
-Please note that when the tunnel loses connection(the ngrok tunnel is stopped or cancelled), you will have to reconnect your database again. In the free tier, Ngrok changes the url each time you launch the program, so if you need to reset the connection you will have to drop the datasource using the DROP DATABASE syntax:
-
-```sql
-DROP DATABASE example_db;
-```
-
-You can go ahead and set up the connection again. Your trained predictors won't be affected, however if you have to RETRAIN the predictors please ensure the database connection has the same name you used when creating the predictor to avoid it failing to retrain.
-
-!!! info "Work in progress"
-Note this feature is in beta version. If you have additional questions about other supported datasources or you experience some issues [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or open GitHub issue.

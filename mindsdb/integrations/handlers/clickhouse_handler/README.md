@@ -9,11 +9,11 @@ ClickHouse is a column-oriented database management system (DBMS) for online ana
 
 
 ## Implementation
-This handler was implemented using the standard `clickhouse-driver` library https://clickhouse-driver.readthedocs.io/en/latest/.
+This handler was implemented using the standard `clickhouse-sqlalchemy` library https://clickhouse-sqlalchemy.readthedocs.io/en/latest/.
 Please install it before using this handler:
 
 ```
-pip install clickhouse-driver
+pip install clickhouse-sqlalchemy
 ```
 
 ## Usage

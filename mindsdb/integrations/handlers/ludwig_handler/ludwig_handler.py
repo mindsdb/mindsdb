@@ -1,4 +1,4 @@
-from typing import Optional, Any, Dict
+from typing import Any, Dict
 
 import ray
 import dask
@@ -18,12 +18,13 @@ from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 import mindsdb.interfaces.storage.db as db
+from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant, Select, Show, Star, NativeQuery
-from mindsdb.integrations.utilities.utils import get_join_input, recur_get_conditionals, get_aliased_columns, default_data_gather, make_sql_session, get_where_data
+from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
-from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
+from mindsdb.integrations.libs.base_handler import PredictiveHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse,
     HandlerResponse,
@@ -185,6 +186,7 @@ class LudwigHandler(PredictiveHandler):
                 for predictor_record in predictors_records:
                     if is_cloud:
                         predictor_record.deleted_at = datetime.datetime.now()
+                        predictor_record.status = PREDICTOR_STATUS.DELETED
                     else:
                         db.session.delete(predictor_record)
                     self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
@@ -293,6 +295,29 @@ class LudwigHandler(PredictiveHandler):
         sql_session = make_sql_session(self.company_id)
         sqlquery = SQLQuery(query, session=sql_session)
         df = sqlquery.fetch(view='dataframe')['result']
+        user_config = {'hyperopt': {'executor': {'gpu_resources_per_trial': 0, 'num_samples': 3}}}  # no GPU for now
+
+        # TODO: turn into common method?
+        data_integration_meta = self.handler_controller.get(name=integration_name)
+        ludwig_integration_meta = self.handler_controller.get(name='ludwig')
+        predictor_record = db.Predictor(
+            company_id=self.company_id,
+            name=model_name,
+            integration_id=ludwig_integration_meta['id'],
+            data_integration_id=data_integration_meta['id'],
+            fetch_data_query=statement.query_str,
+            mindsdb_version=mindsdb_version,
+            lightwood_version=ludwig_version,
+            to_predict=target,
+            learn_args=user_config,
+            data={'name': model_name},
+            training_data_columns_count=len(df.columns),
+            training_data_rows_count=len(df),
+            training_start_at=datetime.datetime.now(),
+            status=PREDICTOR_STATUS.TRAINING
+        )
+
+        db.session.add(predictor_record)
 
         results = auto_train(
             dataset=df,
@@ -301,7 +326,7 @@ class LudwigHandler(PredictiveHandler):
             tune_for_memory=False,
             time_limit_s=120,
             # output_directory='./',
-            user_config={'hyperopt': {'executor': {'gpu_resources_per_trial': 0, 'num_samples': 3}}},  # no GPU for now
+            user_config=user_config,
             # random_seed=42,
             # use_reference_config=False,
             # kwargs={}

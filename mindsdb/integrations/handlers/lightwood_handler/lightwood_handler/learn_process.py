@@ -21,6 +21,7 @@ from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.log import log
+from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
 
 ctx = mp.get_context('spawn')
@@ -112,6 +113,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         config = Config()
 
         predictor_record.data = {'training_log': 'training'}
+        predictor_record.status = PREDICTOR_STATUS.TRAINING
         db.session.commit()
         predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
         predictor.learn(df)
@@ -194,9 +196,11 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
         error_message = format_exception_error(e)
 
         predictor_record.data = {"error": error_message}
+        predictor_record.status = PREDICTOR_STATUS.ERROR
         db.session.commit()
 
     predictor_record.training_stop_at = datetime.now()
+    predictor_record.status = PREDICTOR_STATUS.COMPLETE
     db.session.commit()
 
 
@@ -230,7 +234,8 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
             training_data_columns_count=len(df.columns),
             training_data_rows_count=len(df),
             training_start_at=datetime.now(),
-            active=False
+            active=False,
+            status=PREDICTOR_STATUS.GENERATING
         )
         session.add(predictor_record)
         session.commit()

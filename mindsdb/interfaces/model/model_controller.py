@@ -50,24 +50,7 @@ class ModelController():
         data['problem_definition'] = predictor_record.learn_args
         data['fetch_data_query'] = predictor_record.fetch_data_query
         data['active'] = predictor_record.active
-
-        # assume older models are complete, only temporary
-        if 'status' in predictor_record.data:
-            data['status'] = predictor_record.data['status']
-        elif 'error' in predictor_record.data:
-            data['status'] = 'error'
-        elif predictor_record.update_status == 'available':
-            data['status'] = 'complete'
-        elif predictor_record.json_ai is None and predictor_record.code is None:
-            data['status'] = 'generating'
-        elif predictor_record.data is None:
-            data['status'] = 'editable'
-        elif 'training_log' in predictor_record.data:
-            data['status'] = 'training'
-        elif 'error' not in predictor_record.data:
-            data['status'] = 'complete'
-        else:
-            data['status'] = 'error'
+        data['status'] = predictor_record.status
 
         if data.get('accuracies', None) is not None:
             if len(data['accuracies']) > 0:

@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
     if not is_cloud:
         # region creating permanent integrations
-        for integration_name in ['files', 'views']:
+        for integration_name in ['files', 'views', 'lightwood']:
             integration_meta = integration_controller.get(name=integration_name)
             if integration_meta is None:
                 integration_record = db.Integration(
@@ -126,7 +126,7 @@ if __name__ == '__main__':
 
         # region Mark old predictors as outdated
         is_modified = False
-        predictor_records = db.session.query(db.Predictor).all()
+        predictor_records = db.session.query(db.Predictor).filter(db.Predictor.deleted_at.is_(None)).all()
         if len(predictor_records) > 0:
             sucess, compatible_versions = get_versions_where_predictors_become_obsolete()
             if sucess is True:
@@ -137,7 +137,7 @@ if __name__ == '__main__':
                     last_compatible_version = compatible_versions[-1]
                     for predictor_record in predictor_records:
                         if (
-                            isinstance(predictor_record.mindsdb_version, str) is not None
+                            isinstance(predictor_record.mindsdb_version, str)
                             and version.parse(predictor_record.mindsdb_version) < last_compatible_version
                         ):
                             predictor_record.update_status = 'available'

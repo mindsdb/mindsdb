@@ -48,7 +48,7 @@ Where:
 | `status`            | Training status having one of the values: generating, training, complete, error.   |
 | `accuracy`          | The accuracy of the ML model.                                                      |
 | `predict`           | The name of the target variable column to be predicted.                            |
-| `update_status`     | Training update status (up_to_date, or updating).                                  |
+| `update_status`     | Training update status (up_to_date or updating).                                  |
 | `mindsdb_version`   | The version of MindsDB under which this ML model was created.                      |
 | `error`             | In the case of an error, it contains an error message.                             |
 | `select_data_query` | SQL select query to create the datasource.                                         |

@@ -33,7 +33,7 @@ class PredictorList(Resource):
 class Predictor(Resource):
     @ns_conf.doc('get_predictor')
     def get(self, name):
-        model = request.model_controller.get_model_data(name)
+        model = request.model_controller.get_model_data(name=name)
 
         for k in ['train_end_at', 'updated_at', 'created_at']:
             if k in model and model[k] is not None:

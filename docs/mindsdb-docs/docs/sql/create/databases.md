@@ -210,7 +210,7 @@ PARAMETERS = {
 };
 ```
 
-### cassandra
+### Cassandra
 
 ```sql
 CREATE DATABASE cassandra_datasource
@@ -224,7 +224,7 @@ PARAMETERS={
 };
 ```
 
-### ckan
+### CKAN
 
 ```sql
 CREATE DATABASE ckan_datasource
@@ -291,7 +291,7 @@ PARAMETERS={
 };
 ```
 
-### databricks
+### Databricks
 
 ```sql
 CREATE DATABASE databricks_datasource
@@ -317,7 +317,7 @@ PARAMETERS={
 };
 ```
 
-### druid
+### Druid
 
 ```sql
 CREATE DATABASE druid_datasource
@@ -342,7 +342,7 @@ PARAMETERS={
 };
 ```
 
-### d0lt
+### D0lt
 
 ```sql
 CREATE DATABASE d0lt_datasource
@@ -356,7 +356,7 @@ PARAMETERS = {
 };
 ```
 
-### elastic
+### Elastic
 
 ```sql
 CREATE DATABASE elastic_datasource
@@ -490,7 +490,7 @@ PARAMETERS={
 };
 ```
 
-### monetdb
+### MonetDB
 
 ```sql
 CREATE DATABASE monetdb_datasource
@@ -505,7 +505,7 @@ PARAMETERS = {
 };
 ```
 
-### mongoDB
+### MongoDB
 
 ```sql
 CREATE DATABASE mongo_datasource
@@ -548,7 +548,7 @@ PARAMETERS={
 };
 ```
 
-### pinot
+### Pinot
 
 ```sql
 CREATE DATABASE pinot_datasource
@@ -616,7 +616,7 @@ PARAMETERS={
 };
 ```
 
-### snowflake
+### Snowflake
 
 ```sql
 CREATE DATABASE snowflake_datasource
@@ -644,7 +644,7 @@ PARAMETERS={
 };
 ```
 
-### supabase
+### Supabase
 
 ```sql
 CREATE DATABASE supabase_datasource
@@ -672,7 +672,7 @@ PARAMETERS={
 };
 ```
 
-### trino
+### Trino
 
 ```sql
 CREATE DATABASE trino_datasource

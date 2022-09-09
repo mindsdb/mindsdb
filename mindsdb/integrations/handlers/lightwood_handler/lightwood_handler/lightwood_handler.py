@@ -24,8 +24,8 @@ from lightwood import __version__ as lightwood_version
 from lightwood.api import dtype
 import numpy as np
 
-from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
-from mindsdb.integrations.utilities.utils import get_aliased_columns, get_join_input, get_model_name, make_sql_session, get_where_data
+from mindsdb.integrations.libs.base_handler import PredictiveHandler
+from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
 from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
@@ -680,27 +680,6 @@ class LightwoodHandler(PredictiveHandler):
         predictor_record.code = code
         predictor_record.json_ai = None
         db.session.commit()
-
-    def join(self, stmt, data_handler: BaseHandler, into: Optional[str] = None) -> pd.DataFrame:
-        """
-        Batch prediction using the output of a query passed to a data handler as input for the model.
-        """  # noqa
-        model_name, model_alias, model_side = get_model_name(self, stmt)
-        data_side = 'right' if model_side == 'left' else 'left'
-        model = self._get_model(model_name)
-        is_ts = model.problem_definition.timeseries_settings.is_timeseries
-
-        if not is_ts:
-            model_input = get_join_input(stmt, model, [model_name, model_alias], data_handler, data_side)
-        else:
-            model_input = get_ts_join_input(stmt, model, data_handler, data_side)
-
-        # get model output and rename columns
-        predictions = self._call_predictor(model_input, model)
-        model_input.columns = get_aliased_columns(list(model_input.columns), model_alias, stmt.targets, mode='input')
-        predictions.columns = get_aliased_columns(list(predictions.columns), model_alias, stmt.targets, mode='output')
-
-        return predictions
 
     def _get_model(self, model_name):
         predictor_dict = self._get_model_info(model_name)

@@ -22,7 +22,7 @@ from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant, Select, Show, Star, NativeQuery
-from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
+from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data, format_exception_error
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.libs.base_handler import PredictiveHandler
 from mindsdb.integrations.libs.response import (
@@ -139,18 +139,6 @@ class LudwigHandler(PredictiveHandler):
         return self.query(statement)
 
     def query(self, query: ASTNode) -> HandlerResponse:
-        """old query body
-        values = recur_get_conditionals(query.where.args, {})
-        model_name, _, _ = self._get_model_name(query)
-        model = self._get_model(model_name)
-        df = pd.DataFrame.from_dict(values)
-        df = self._call_model(df, model)
-        r = HandlerResponse(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-        return r
-        """
         if type(query) == CreatePredictor:
             with RayConnection():
                 self._learn(query)
@@ -221,38 +209,6 @@ class LudwigHandler(PredictiveHandler):
 
         return HandlerResponse(RESPONSE_TYPE.OK)
 
-    # def join(self, stmt, data_handler, into: Optional[str]) -> HandlerResponse:
-    #     """
-    #     Batch prediction using the output of a query passed to a data handler as input for the model.
-    #     """  # noqa
-    #
-    #     model_name, model_alias, model_side = self._get_model_name(stmt)
-    #     data_side = 'right' if model_side == 'left' else 'left'
-    #     model = self._get_model(model_name)
-    #     model_input = get_join_input(stmt, model, [model_name, model_alias], data_handler, data_side)
-    #
-    #     # get model output and rename columns
-    #     predictions = self._call_model(model_input, model)
-    #     model_input.columns = get_aliased_columns(list(model_input.columns), model_alias, stmt.targets, mode='input')
-    #     predictions.columns = get_aliased_columns(list(predictions.columns), model_alias, stmt.targets, mode='output')
-    #
-    #     if into:
-    #         try:
-    #             dtypes = {}
-    #             for col in predictions.columns:
-    #                 if model.dtype_dict.get(col, False):
-    #                     dtypes[col] = self.dtypes_to_sql.get(col, sqlalchemy.Text)
-    #
-    #             data_handler.select_into(into, predictions, dtypes=dtypes)
-    #         except Exception as e:
-    #             print("Error when trying to store the JOIN output in data handler.")
-    #
-    #     r = HandlerResponse(
-    #         RESPONSE_TYPE.TABLE,
-    #         predictions
-    #     )
-    #     return r
-
     def _get_model(self, model_name):
         storage = self.storage.get('models')
         try:
@@ -316,22 +272,35 @@ class LudwigHandler(PredictiveHandler):
             training_start_at=datetime.datetime.now(),
             status=PREDICTOR_STATUS.TRAINING
         )
-
         db.session.add(predictor_record)
+        db.session.commit()
+        predictor_id = predictor_record.id
 
-        results = auto_train(
-            dataset=df,
-            target=target,
-            # TODO: add and enable custom values via SQL (mindful of local vs cloud) for these params:
-            tune_for_memory=False,
-            time_limit_s=120,
-            # output_directory='./',
-            user_config=user_config,
-            # random_seed=42,
-            # use_reference_config=False,
-            # kwargs={}
-        )
-        model = results.best_model
+        try:
+            results = auto_train(
+                dataset=df,
+                target=target,
+                # TODO: enable custom values via SQL (mindful of local vs cloud) for these params
+                tune_for_memory=False,
+                time_limit_s=120,
+                user_config=user_config,
+                # output_directory='./',
+                # random_seed=42,
+                # use_reference_config=False,
+                # kwargs={}
+            )
+            model = results.best_model
+        except Exception as e:
+            predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
+            error_message = format_exception_error(e)
+            predictor_record.data = {"error": error_message}
+            predictor_record.status = PREDICTOR_STATUS.ERROR
+            db.session.commit()
+
+        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
+        predictor_record.training_stop_at = datetime.datetime.now()
+        predictor_record.status = PREDICTOR_STATUS.COMPLETE
+        db.session.commit()
 
         all_models = self.storage.get('models')
         payload = {
@@ -343,7 +312,6 @@ class LudwigHandler(PredictiveHandler):
         else:
             all_models = {model_name: payload}
 
-
         dtypes = {f['name']: f['type'] for f in model.base_config['input_features']}
         model_data = {
             'name': model_name,
@@ -351,36 +319,22 @@ class LudwigHandler(PredictiveHandler):
             'dtype_dict': dtypes,
             'accuracies': {'metric': results.experiment_analysis.best_result['metric_score']}
         }
+
+        # update internal storage
         all_metadata = self.storage.get('metadata')
         if all_metadata is not None:
             all_metadata[model_name] = model_data
         else:
             all_metadata = {model_name: model_data}
 
-        # TODO: replace with new generic table
-        integration_meta = self.handler_controller.get(name=integration_name)
-        ludwig_integration_meta = self.handler_controller.get(name='ludwig')
-        predictor_record = db.Predictor(
-            company_id=self.company_id,
-            name=model_name,
-            integration_id=ludwig_integration_meta['id'],
-            data_integration_id=integration_meta['id'],
-            fetch_data_query=statement.query_str,
-            mindsdb_version=mindsdb_version,
-            lightwood_version=ludwig_version,
-            to_predict=target,
-            learn_args={},  # todo: match to user_config
-            data=model_data,
-            update_status='complete',
-            training_data_columns_count=len(df.columns),
-            training_data_rows_count=len(df),
-            training_start_at=datetime.datetime.now()
-        )
-
-        db.session.add(predictor_record)
-        db.session.commit()
         self.storage.set('metadata', all_metadata)
-        self.storage.set('models', all_models)  # commits to internal storage once db record has been committed
+        self.storage.set('models', all_models)
+
+        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
+        predictor_record.data = model_data
+        predictor_record.status = PREDICTOR_STATUS.COMPLETE
+        db.session.commit()
+
 
         log.info(f'Ludwig model {model_name} has finished training.')
 

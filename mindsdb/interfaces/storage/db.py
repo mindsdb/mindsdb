@@ -93,6 +93,7 @@ class Predictor(Base):
     is_custom = Column(Boolean)
     learn_args = Column(Json)
     update_status = Column(String, default='up_to_date')
+    status = Column(String)
     active = Column(Boolean, default=True)
     training_data_columns_count = Column(Integer)
     training_data_rows_count = Column(Integer)

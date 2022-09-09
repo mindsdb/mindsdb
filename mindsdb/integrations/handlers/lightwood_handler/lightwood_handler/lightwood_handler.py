@@ -2,7 +2,7 @@ import os
 import sys
 import json
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Union, Any
 import copy
 from dateutil.parser import parse as parse_datetime
@@ -38,6 +38,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb import __version__ as mindsdb_version
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
@@ -271,7 +272,8 @@ class LightwoodHandler(PredictiveHandler):
             data={'name': model_name},
             training_data_columns_count=len(training_data_df.columns),
             training_data_rows_count=len(training_data_df),
-            training_start_at=datetime.now()
+            training_start_at=datetime.now(),
+            status=PREDICTOR_STATUS.GENERATING
         )
 
         db.session.add(predictor_record)
@@ -346,13 +348,14 @@ class LightwoodHandler(PredictiveHandler):
                     is_cloud is True
                     and model_data.get('status') in ['generating', 'training']
                     and isinstance(model_data.get('created_at'), str) is True
-                    and (datetime.datetime.now() - parse_datetime(model_data.get('created_at'))) < datetime.timedelta(hours=1)
+                    and (datetime.now() - parse_datetime(model_data.get('created_at'))) < timedelta(hours=1)
                 ):
                     raise Exception('You are unable to delete models currently in progress, please wait before trying again')
 
         for predictor_record in predictors_records:
             if is_cloud:
                 predictor_record.deleted_at = datetime.now()
+                predictor_record.status = PREDICTOR_STATUS.DELETED
             else:
                 db.session.delete(predictor_record)
             self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
@@ -490,7 +493,7 @@ class LightwoodHandler(PredictiveHandler):
                 values['confidence_lower_bound'] = row.get('lower', None)
                 values['confidence_upper_bound'] = row.get('upper', None)
 
-            obj = { target: values }
+            obj = {target: values}
             explain_arr.append(obj)
 
             td = {'predicted_value': row['prediction']}

@@ -355,6 +355,7 @@ class LightwoodHandler(PredictiveHandler):
         for predictor_record in predictors_records:
             if is_cloud:
                 predictor_record.deleted_at = datetime.now()
+                predictor_record.status = PREDICTOR_STATUS.DELETED
             else:
                 db.session.delete(predictor_record)
             self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')

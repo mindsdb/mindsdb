@@ -52,9 +52,9 @@ def upgrade():
         elif 'training_log' in (data or {}):
             status = 'training'
         elif 'error' not in (data or {}):
-            data['status'] = 'complete'
+            status = 'complete'
         else:
-            data['status'] = 'error'
+            status = 'error'
 
         conn.execute(
             text("""

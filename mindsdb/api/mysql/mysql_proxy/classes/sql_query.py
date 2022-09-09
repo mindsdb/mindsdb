@@ -303,6 +303,10 @@ class SQLQuery():
                         'group_by_columns': group_by
                     })
                 predictor_metadata.append(predictor)
+                if predictor['integration_name'] == 'lightwood':
+                    default_predictor = predictor.copy()
+                    default_predictor['integration_name'] = 'mindsdb'
+                    predictor_metadata.append(default_predictor)
 
                 self.model_types.update(p.data.get('dtypes', {}))
 

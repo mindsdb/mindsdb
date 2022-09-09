@@ -67,9 +67,11 @@ class ClickHouseHandler(DatabaseHandler):
 
         try:
             connection = self.connect()
-
-            with connection.cursor() as cur:
+            cur = connection.cursor()
+            try:
                 cur.execute('select 1;')
+            finally:
+                cur.close()
             response.success = True
         except Exception as e:
             log.error(f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!')
@@ -91,28 +93,30 @@ class ClickHouseHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         connection = self.connect()
-        with connection.cursor() as cur:
-            try:
-                cur.execute(query)
-                result = cur.fetchall()
-                if result:
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        )
-                    )
-                else:
-                    response = Response(RESPONSE_TYPE.OK)
-                connection.commit()
-            except Exception as e:
-                log.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+        cur = connection.cursor()
+        try:
+            cur.execute(query)
+            result = cur.fetchall()
+            if result:
                 response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
+                    RESPONSE_TYPE.TABLE,
+                    pd.DataFrame(
+                        result,
+                        columns=[x[0] for x in cur.description]
+                    )
                 )
-                connection.rollback()
+            else:
+                response = Response(RESPONSE_TYPE.OK)
+            connection.commit()
+        except Exception as e:
+            log.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+            connection.rollback()
+        finally:
+            cur.close()
 
         if need_to_close is True:
             self.disconnect()

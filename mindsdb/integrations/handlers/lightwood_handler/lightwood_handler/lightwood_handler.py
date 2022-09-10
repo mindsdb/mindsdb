@@ -47,7 +47,7 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 
-from .utils import unpack_jsonai_old_args, load_predictor
+from .utils import unpack_jsonai_old_args
 from .functions import run_learn, run_update
 
 IS_PY36 = sys.version_info[1] <= 6

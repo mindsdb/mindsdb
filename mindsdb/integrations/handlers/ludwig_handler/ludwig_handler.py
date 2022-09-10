@@ -7,7 +7,7 @@ import pandas as pd
 from dateutil.parser import parse as parse_datetime
 
 from ludwig import __version__ as ludwig_version
-from ludwig.automl import auto_train
+
 
 from mindsdb_sql import parse_sql
 from mindsdb.utilities.log import log
@@ -21,7 +21,8 @@ from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant, Select, Show, Star, NativeQuery
-from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data, format_exception_error
+from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
+from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.integrations.libs.base_handler import PredictiveHandler
 from mindsdb.integrations.libs.response import (
@@ -41,6 +42,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
 )
 
 from .utils import RayConnection
+from .functions import learn_process
 
 
 class LudwigHandler(PredictiveHandler):
@@ -53,8 +55,9 @@ class LudwigHandler(PredictiveHandler):
         super().__init__(name)
         self.predictor_cache = {}
         self.config = Config()
-        storage_config = kwargs.get('storage_config', {'name': "ludwig_handler_storage"})
-        self.storage = SqliteStorageHandler(context={}, config=storage_config)
+        self.storage_context = {}
+        self.storage_config = kwargs.get('storage_config', {'name': "ludwig_handler_storage"})
+        self.storage = SqliteStorageHandler(context=self.storage_context, config=self.storage_config)
         for key in ('models', 'metadata'):
             try:
                 self.storage.get(key)
@@ -125,8 +128,7 @@ class LudwigHandler(PredictiveHandler):
 
     def query(self, query: ASTNode) -> HandlerResponse:
         if type(query) == CreatePredictor:
-            with RayConnection():
-                self._learn(query)
+            self._learn(query)
 
         elif type(query) == RetrainPredictor:
             msg = 'Warning: retraining Ludwig models is not yet supported!'  # TODO
@@ -261,67 +263,11 @@ class LudwigHandler(PredictiveHandler):
         db.session.commit()
         predictor_id = predictor_record.id
 
-        try:
-            results = auto_train(
-                dataset=df,
-                target=target,
-                # TODO: enable custom values via SQL (mindful of local vs cloud) for these params
-                tune_for_memory=False,
-                time_limit_s=120,
-                user_config=user_config,
-                # output_directory='./',
-                # random_seed=42,
-                # use_reference_config=False,
-                # kwargs={}
-            )
-            model = results.best_model
-        except Exception as e:
-            predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-            error_message = format_exception_error(e)
-            predictor_record.data = {"error": error_message}
-            predictor_record.status = PREDICTOR_STATUS.ERROR
-            db.session.commit()
+        p = HandlerProcess(learn_process, df, target, user_config, predictor_id, statement, self.storage_config, self.storage_context)  # noqa
+        p.start()
 
-        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-        predictor_record.training_stop_at = datetime.datetime.now()
-        predictor_record.status = PREDICTOR_STATUS.COMPLETE
-        db.session.commit()
-
-        all_models = self.storage.get('models')
-        payload = {
-            'stmt': statement,
-            'model': dill.dumps(model),
-        }
-        if all_models is not None:
-            all_models[model_name] = payload
-        else:
-            all_models = {model_name: payload}
-
-        dtypes = {f['name']: f['type'] for f in model.base_config['input_features']}
-        model_data = {
-            'name': model_name,
-            'status': 'complete',
-            'dtype_dict': dtypes,
-            'accuracies': {'metric': results.experiment_analysis.best_result['metric_score']}
-        }
-
-        # update internal storage
-        all_metadata = self.storage.get('metadata')
-        if all_metadata is not None:
-            all_metadata[model_name] = model_data
-        else:
-            all_metadata = {model_name: model_data}
-
-        self.storage.set('metadata', all_metadata)
-        self.storage.set('models', all_models)
-
-        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-        predictor_record.data = model_data
-        predictor_record.status = PREDICTOR_STATUS.COMPLETE
-        db.session.commit()
-
-
-        log.info(f'Ludwig model {model_name} has finished training.')
+        db.session.refresh(predictor_record)
+        return HandlerResponse(RESPONSE_TYPE.OK)
 
     @mark_process(name='predict')
     def predict(self, model_name, data):

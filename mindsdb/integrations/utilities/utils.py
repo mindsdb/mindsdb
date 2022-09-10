@@ -1,4 +1,4 @@
-import pandas as pd
+import sys
 from mindsdb_sql.parser.ast import Identifier, Constant, Star, Select, Join, BinaryOperation
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.database.integrations import IntegrationController

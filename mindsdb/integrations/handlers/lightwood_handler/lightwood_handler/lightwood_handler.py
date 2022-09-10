@@ -3,7 +3,7 @@ import sys
 import json
 
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Any
 import copy
 from dateutil.parser import parse as parse_datetime
 
@@ -26,6 +26,7 @@ import numpy as np
 
 from mindsdb.integrations.libs.base_handler import PredictiveHandler
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
+from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
@@ -47,9 +48,8 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 
-from .learn_process import LearnProcess, UpdateProcess
 from .utils import unpack_jsonai_old_args, load_predictor
-from .join_utils import get_ts_join_input
+from .functions import run_learn, run_update
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -250,7 +250,7 @@ class LightwoodHandler(PredictiveHandler):
 
         predictor_id = predictor_record.id
 
-        p = LearnProcess(training_data_df, problem_definition, predictor_id, json_ai_override)
+        p = HandlerProcess(run_learn, training_data_df, problem_definition, predictor_id, json_ai_override)
         p.start()
         if join_learn_process:
             p.join()
@@ -289,7 +289,7 @@ class LightwoodHandler(PredictiveHandler):
         if response.type == RESPONSE_TYPE.ERROR:
             return response
 
-        p = UpdateProcess(predictor_record.id, response.data_frame, self.company_id)
+        p = HandlerProcess(run_update, predictor_record.id, response.data_frame, self.company_id)
         p.start()
 
         return Response(RESPONSE_TYPE.OK)

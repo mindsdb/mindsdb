@@ -1,5 +1,4 @@
 import os
-import sys
 import traceback
 import tempfile
 from pathlib import Path
@@ -9,7 +8,6 @@ from datetime import datetime
 
 import pandas as pd
 from pandas.core.frame import DataFrame
-import torch.multiprocessing as mp
 import lightwood
 from lightwood.api.types import ProblemDefinition, JsonAI
 from lightwood import __version__ as lightwood_version
@@ -24,8 +22,7 @@ from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.utils import format_exception_error
 
-
-ctx = mp.get_context('spawn')
+from .utils import rep_recur, brack_to_mod
 
 
 def create_learn_mark():
@@ -40,49 +37,6 @@ def delete_learn_mark():
         p = Path(tempfile.gettempdir()).joinpath('mindsdb/learn_processes/').joinpath(f'{os.getpid()}')
         if p.exists():
             p.unlink()
-
-
-def rep_recur(org: dict, ovr: dict):
-    for k in ovr:
-        if k in org:
-            if isinstance(org[k], dict) and isinstance(ovr[k], dict):
-                rep_recur(org[k], ovr[k])
-            else:
-                org[k] = ovr[k]
-        else:
-            org[k] = ovr[k]
-
-
-def brack_to_mod(ovr):
-    if not isinstance(ovr, dict):
-        if isinstance(ovr, list):
-            for i in range(len(ovr)):
-                ovr[i] = brack_to_mod(ovr[i])
-        elif isinstance(ovr, str):
-            if '(' in ovr and ')' in ovr:
-                mod = ovr.split('(')[0]
-                args = {}
-                if '()' not in ovr:
-                    for str_pair in ovr.split('(')[1].split(')')[0].split(','):
-                        k = str_pair.split('=')[0].strip(' ')
-                        v = str_pair.split('=')[1].strip(' ')
-                        args[k] = v
-
-                ovr = {
-                    'module': mod,
-                    'args': args
-                }
-            elif '{' in ovr and '}' in ovr:
-                try:
-                    ovr = json.loads(ovr)
-                except Exception:
-                    pass
-        return ovr
-    else:
-        for k in ovr.keys():
-            ovr[k] = brack_to_mod(ovr[k])
-
-    return ovr
 
 
 @mark_process(name='learn')
@@ -273,69 +227,3 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
 
     predictor_record.training_stop_at = datetime.now()
     db.session.commit()
-
-
-class LearnRemoteProcess(ctx.Process):
-    deamon = True
-
-    def __init__(self, *args):
-        super(LearnRemoteProcess, self).__init__(args=args)
-
-    def run(self):
-        run_learn_remote(*self._args)
-
-
-class LearnProcess(ctx.Process):
-    daemon = True
-
-    def __init__(self, *args):
-        super(LearnProcess, self).__init__(args=args)
-
-    def run(self):
-        run_learn(*self._args)
-
-
-class GenerateProcess(ctx.Process):
-    daemon = True
-
-    def __init__(self, *args):
-        super(GenerateProcess, self).__init__(args=args)
-
-    def run(self):
-        run_generate(*self._args)
-
-
-class FitProcess(ctx.Process):
-    daemon = True
-
-    def __init__(self, *args):
-        super(FitProcess, self).__init__(args=args)
-
-    def run(self):
-        run_fit(*self._args)
-
-
-class AdjustProcess(ctx.Process):
-    daemon = True
-
-    def __init__(self, *args):
-        super(AdjustProcess, self).__init__(args=args)
-
-    def run(self):
-        '''
-        running at subprocess due to
-        ValueError: signal only works in main thread
-
-        this is work for celery worker here?
-        '''
-        run_adjust(*self._args)
-
-
-class UpdateProcess(ctx.Process):
-    daemon = True
-
-    def __init__(self, *args):
-        super(UpdateProcess, self).__init__(args=args)
-
-    def run(self):
-        run_update(*self._args)

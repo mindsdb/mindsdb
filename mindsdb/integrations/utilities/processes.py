@@ -2,8 +2,6 @@ import torch.multiprocessing as mp
 
 ctx = mp.get_context('spawn')
 
-# LearnRemoteProcess, LearnProcess, GenerateProcess, FitProcess, AdjustProcess, UpdateProcess
-
 
 class HandlerProcess(ctx.Process):
     daemon = True

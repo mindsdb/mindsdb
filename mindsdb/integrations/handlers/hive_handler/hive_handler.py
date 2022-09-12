@@ -107,7 +107,7 @@ class HiveHandler(DatabaseHandler):
                         RESPONSE_TYPE.TABLE,
                         pd.DataFrame(
                             result,
-                            columns=[x[0].split('.')[1] for x in cur.description]
+                            columns=[x[0].split('.')[-1] for x in cur.description]
                         )
                     )
                 else:

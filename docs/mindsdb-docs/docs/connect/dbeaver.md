@@ -29,7 +29,7 @@ There are two options, as below.
     You can connect to your MindsDB Cloud account. To do that, please use the connection details below:<br/>
 
     ```text
-    Hostname: `cloud-mysql.mindsdb.com`
+    Hostname: `cloud.mindsdb.com`
     Port: `3306`
     Username: *your MindsDB Cloud username*
     Password: *your MindsDB Cloud password*

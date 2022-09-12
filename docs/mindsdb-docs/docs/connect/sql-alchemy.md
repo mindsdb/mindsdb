@@ -15,7 +15,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
 
     user = 'MindsDB Cloud username' # replace this value
     password = 'MindsDB Cloud password' # replace this value
-    host = 'cloud-mysql.mindsdb.com'
+    host = 'cloud.mindsdb.com'
     port = 3306
     database = ''
 
@@ -36,14 +36,14 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
 
     - Username is your MindsDB Cloud username
     - Password is your MindsDB Cloud password
-    - Host is `cloud-mysql.mindsdb.com`
+    - Host is `cloud.mindsdb.com`
     - Port is `3306`
     - Database name is left empty
 
     To create a database connection, execute the code above. On success, the following output is expected:
 
     ```bash
-    Connection to the cloud-mysql.mindsdb.com for user MindsDB-Cloud-Username created successfully.
+    Connection to the cloud.mindsdb.com for user MindsDB-Cloud-Username created successfully.
     ```
 
 === "Connecting Local MindsDB to SQL Alchemy"

@@ -132,7 +132,7 @@ class LightwoodHandler(PredictiveHandler):
         }
 
         self.handler_controller = kwargs.get('handler_controller')
-        self.fs_store = kwargs.get('fs_store')
+        self.fs_store = kwargs.get('file storage')
         self.company_id = kwargs.get('company_id')
         self.model_controller = WithKWArgsWrapper(
             ModelController(),

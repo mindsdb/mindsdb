@@ -291,7 +291,7 @@ class IntegrationController:
 
         handler_ars = self._make_handler_args(integration_engine, connection_data, company_id)
         handler_ars['name'] = name
-        handler_ars['fs_store'] = fs_store
+        handler_ars['file storage'] = fs_store
 
         return self.handler_modules[integration_engine].Handler(**handler_ars)
 

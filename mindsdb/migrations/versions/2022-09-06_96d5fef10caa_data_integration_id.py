@@ -25,8 +25,17 @@ def upgrade():
 
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
+    result = conn.execute(text('''
+        select 1 from integration where name = 'lightwood';
+    ''')).fetchall()
+    if len(result) == 0:
+        conn.execute(text('''
+            insert into integration (name, engine, data)
+            values ('lightwood', 'lightwood', '{}')
+        '''))
     conn.execute(text('''
-        update predictor set data_integration_id = integration_id;
+        update predictor set data_integration_id = integration_id
+        where exists (select 1 from integration where integration.id = predictor.integration_id);
     '''))
     conn.execute(text('''
         update predictor set integration_id = (select id from integration where name = 'lightwood');

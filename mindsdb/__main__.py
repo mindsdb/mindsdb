@@ -25,7 +25,6 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
-from mindsdb.interfaces.model.functions import get_model_records
 
 
 COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)

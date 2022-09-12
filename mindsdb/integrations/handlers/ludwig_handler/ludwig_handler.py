@@ -137,6 +137,8 @@ class LudwigHandler(PredictiveHandler):
         elif type(query) == DropPredictor:
             to_drop = query.name.parts[-1]
             models = self.storage.get('models')
+            metadata = self.storage.get('metadata')
+
             if models:
                 # @TODO: [REFACTOR] common helper method
                 predictors_records = get_model_records(company_id=self.company_id, name=to_drop, active=None)
@@ -171,6 +173,8 @@ class LudwigHandler(PredictiveHandler):
 
                 del models[to_drop]
                 self.storage.set('models', models)
+                del metadata[to_drop]
+                self.storage.set('metadata', metadata)
 
                 return HandlerResponse(RESPONSE_TYPE.OK)
             else:
@@ -206,12 +210,20 @@ class LudwigHandler(PredictiveHandler):
     def _call_model(self, df, model):
         predictions = dask.compute(model.predict(df)[0])[0]
         target_name = model.config['output_features'][0]['column']
+
         if target_name not in df:
             predictions.columns = [target_name]
         else:
             predictions.columns = ['prediction']
+
         predictions[f'{target_name}_explain'] = None
         joined = df.join(predictions)
+
+        if 'prediction' in joined:
+            joined = joined.rename({
+                target_name: f'{target_name}_original',
+                'prediction': target_name
+            }, axis=1)
         return joined
 
     @mark_process(name='learn')
@@ -279,10 +291,6 @@ class LudwigHandler(PredictiveHandler):
             predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name='ludwig')
             target = predictor_record.to_predict[0]
             predictions = self._call_model(df, model)
-            predictions = predictions.rename({
-                target: f'{target}_original',
-                'prediction': target
-            }, axis=1)
 
             # TODO: convert in a common method to fill-in missing columns
             for col_name in ['select_data_query', 'when_data', f'{target}_confidence',

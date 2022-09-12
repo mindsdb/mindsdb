@@ -11,7 +11,6 @@
 
 import re
 from collections import OrderedDict, defaultdict
-import datetime
 import time
 
 import duckdb
@@ -56,12 +55,11 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
 
-import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
-    get_model_record,
-    get_model_records
+    get_model_records,
+    get_predictor_integration
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
@@ -71,10 +69,13 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErLogicError,
     ErSqlWrongArguments
 )
+from mindsdb.utilities.cache import get_cache, json_checksum
+
 from mindsdb_sql.parser.ast.base import ASTNode
 
-
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
+
+predictor_cache = get_cache('predict')
 
 
 def get_preditor_alias(step, mindsdb_database):
@@ -92,9 +93,12 @@ def get_table_alias(table_obj, default_db_name):
             name = (default_db_name, table_obj.parts[0])
         else:
             name = tuple(table_obj.parts)
-    else:
+    elif isinstance(table_obj, Select):
         # it is subquery
-        name = table_obj.alias.parts[0] or 't'
+        if table_obj.alias is None:
+            name = 't'
+        else:
+            name = table_obj.alias.parts[0]
         name = (default_db_name, name)
 
     if table_obj.alias is not None:
@@ -248,14 +252,13 @@ class SQLQuery():
             self.execute_query()
 
     def create_planner(self):
-
         integrations_names = self.session.datahub.get_integrations_names()
         integrations_names.append('information_schema')
         integrations_names.append('files')
         integrations_names.append('views')
 
         predictor_metadata = {}
-        predictors = get_model_records(company_id=self.session.company_id)
+        predictors_records = get_model_records(company_id=self.session.company_id)
 
         query_tables = []
 
@@ -265,16 +268,24 @@ class SQLQuery():
 
         query_traversal(self.query, get_all_query_tables)
 
-        # get all predictors
-        for p in predictors:
+        for p in predictors_records:
             model_name = p.name
 
             if model_name not in query_tables:
-                # skip
                 continue
+
+            integration_name = None
+            integration_record = get_predictor_integration(p)
+            if integration_record is not None:
+                integration_name = integration_record.name
 
             if isinstance(p.data, dict) and 'error' not in p.data:
                 ts_settings = p.learn_args.get('timeseries_settings', {})
+                predictor = {
+                    'integration_name': integration_name,
+                    'timeseries': False,
+                    'id': p.id
+                }
                 if ts_settings.get('is_timeseries') is True:
                     window = ts_settings.get('window')
                     order_by = ts_settings.get('order_by')
@@ -283,17 +294,15 @@ class SQLQuery():
                     group_by = ts_settings.get('group_by')
                     if isinstance(group_by, list) is False and group_by is not None:
                         group_by = [group_by]
-                    predictor_metadata[model_name] = {
+                    predictor.update({
                         'timeseries': True,
                         'window': window,
                         'horizon': ts_settings.get('horizon'),
                         'order_by_column': order_by,
                         'group_by_columns': group_by
-                    }
-                else:
-                    predictor_metadata[model_name] = {
-                        'timeseries': False
-                    }
+                    })
+                predictor_metadata[model_name] = predictor
+
                 self.model_types.update(p.data.get('dtypes', {}))
 
         mindsdb_database_name = 'mindsdb'
@@ -406,7 +415,6 @@ class SQLQuery():
             join_query_data(data, sub_data)
 
         return data
-
 
     def prepare_query(self, prepare=True):
         mindsdb_sql_struct = self.query
@@ -910,10 +918,17 @@ class SQLQuery():
                     columns[table_name] = [(c, c) for c in cols]
                     values = []
                 else:
-                    data = dn.query(
-                        table=predictor,
-                        where_data=where_data
-                    )
+                    # check cache
+                    predictor_id = self.planner.predictor_metadata[predictor]['id']
+                    key = f'{predictor}_{predictor_id}_{json_checksum(where_data)}'
+                    data = predictor_cache.get(key)
+
+                    if data is None:
+                        data = dn.query(
+                            table=predictor,
+                            where_data=where_data
+                        )
+                        predictor_cache.set(key, data)
 
                     data = [{(key, key): value for key, value in row.items()} for row in data]
 
@@ -1277,13 +1292,13 @@ class SQLQuery():
             cols = set()
             for _, col_list in step_data['columns'].items():
                 for col in col_list:
-                    cols.add(col[0])
+                    cols.add(col[1])
 
             for row in step_data['values']:
                 data_row = {}
                 for table, col_list in step_data['columns'].items():
                     for col in col_list:
-                        data_row[col[0]] = row[table][col]
+                        data_row[col[1]] = row[table][col]
                 result.append(data_row)
 
             df = pd.DataFrame(result, columns=list(cols))
@@ -1347,13 +1362,13 @@ class SQLQuery():
                 cols = set()
                 for _, col_list in step_data['columns'].items():
                     for col in col_list:
-                        cols.add(col[0])
+                        cols.add(col[1])
 
                 for row in step_data['values']:
                     data_row = {}
                     for table, col_list in step_data['columns'].items():
                         for col in col_list:
-                            data_row[col[0]] = row[table][col]
+                            data_row[col[1]] = row[table][col]
                     result.append(data_row)
                 df = pd.DataFrame(result, columns=list(cols))
 

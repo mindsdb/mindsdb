@@ -181,7 +181,7 @@ class LudwigHandler(PredictiveHandler):
         )
         return r
 
-    def join(self, stmt, data_handler, into: Optional[str]) -> HandlerResponse:
+    def join(self, stmt, data_handler) -> HandlerResponse:
         """
         Batch prediction using the output of a query passed to a data handler as input for the model.
         """  # noqa
@@ -195,17 +195,6 @@ class LudwigHandler(PredictiveHandler):
         predictions = self._call_model(model_input, model)
         model_input.columns = get_aliased_columns(list(model_input.columns), model_alias, stmt.targets, mode='input')
         predictions.columns = get_aliased_columns(list(predictions.columns), model_alias, stmt.targets, mode='output')
-
-        if into:
-            try:
-                dtypes = {}
-                for col in predictions.columns:
-                    if model.dtype_dict.get(col, False):
-                        dtypes[col] = self.dtypes_to_sql.get(col, sqlalchemy.Text)
-
-                data_handler.select_into(into, predictions, dtypes=dtypes)
-            except Exception as e:
-                print("Error when trying to store the JOIN output in data handler.")
 
         r = HandlerResponse(
             RESPONSE_TYPE.TABLE,

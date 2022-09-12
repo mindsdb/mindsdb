@@ -231,21 +231,6 @@ class IntegrationController:
 
         return self.handler_modules[handler_type].Handler(**handler_ars)
 
-    def create_handler(self, handler_id: int, name: str = None, handler_type: str = None,
-                       connection_data: dict = {}, company_id: int = None):
-        fs_store = SpecificFSStore(
-            resource_group=RESOURCE_GROUP.INTEGRATION,
-            resource_id=handler_id,
-            company_id=company_id,
-            sync=True
-        )
-
-        handler_ars = self._make_handler_args(handler_type, connection_data, company_id)
-        handler_ars['name'] = name
-        handler_ars['fs_store'] = fs_store
-
-        return self.handler_modules[handler_type].Handler(**handler_ars)
-
     def get_handler(self, name, company_id=None, case_sensitive=False):
         if case_sensitive:
             integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
@@ -297,15 +282,18 @@ class IntegrationController:
                         .joinpath(connection_data[file_name])
                     )
 
-        handler = self.create_handler(
-            handler_id=integration_record.id,
-            name=integration_name,
-            handler_type=integration_engine,
-            connection_data=connection_data,
-            company_id=company_id
+        fs_store = SpecificFSStore(
+            resource_group=RESOURCE_GROUP.INTEGRATION,
+            resource_id=integration_record.id,
+            company_id=company_id,
+            sync=True
         )
 
-        return handler
+        handler_ars = self._make_handler_args(integration_engine, connection_data, company_id)
+        handler_ars['name'] = name
+        handler_ars['fs_store'] = fs_store
+
+        return self.handler_modules[integration_engine].Handler(**handler_ars)
 
     def reload_handler_module(self, handler_name):
         importlib.reload(self.handler_modules[handler_name])

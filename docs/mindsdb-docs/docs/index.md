@@ -23,7 +23,7 @@ You can use the MindsDB Cloud SQL Editor or open your preferred SQL client, such
     ```txt
       "user":[your_mindsdb_cloud_username],
       "password":[your_mindsdb_cloud_password],
-      "host":"cloud-mysql.mindsdb.com",
+      "host":"cloud.mindsdb.com",
       "port":"3306"
     ```
 

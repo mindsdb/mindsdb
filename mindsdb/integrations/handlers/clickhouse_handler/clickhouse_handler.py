@@ -2,6 +2,7 @@ from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 import clickhouse_driver
+from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
 import pandas as pd
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -24,8 +25,7 @@ class ClickHouseHandler(DatabaseHandler):
         super().__init__(name)
         self.dialect = 'clickhouse'
         self.connection_data = connection_data
-        # @TODO: change to https://github.com/xzkostyan/clickhouse-sqlalchemy
-        self.renderer = SqlalchemyRender('mysql')
+        self.renderer = SqlalchemyRender(ClickHouseDialect)
         self.is_connected = False
 
     def __del__(self):

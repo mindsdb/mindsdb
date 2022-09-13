@@ -21,8 +21,25 @@ class MultiplePredictorRecordsFound(Exception):
         )
 
 
+def get_integration_record(company_id: int, name: str):
+    record = (
+        db.session.query(db.Integration)
+        .filter_by(company_id=company_id, name=name)
+        .first()
+    )
+    return record
+
+
+def get_predictor_integration(record: db.Predictor) -> db.Integration:
+    integration_record = (
+        db.session.query(db.Integration)
+        .filter_by(id=record.integration_id).first()
+    )
+    return integration_record
+
+
 def get_model_records(company_id: int, active: bool = True, deleted_at=null(),
-                      **kwargs):
+                      ml_handler_name: str = None, **kwargs):
     if company_id is None:
         kwargs['company_id'] = null()
     else:
@@ -30,6 +47,16 @@ def get_model_records(company_id: int, active: bool = True, deleted_at=null(),
     kwargs['deleted_at'] = deleted_at
     if active is not None:
         kwargs['active'] = active
+
+    if ml_handler_name is not None:
+        ml_handler_record = get_integration_record(
+            company_id=company_id,
+            name=ml_handler_name
+        )
+        if ml_handler_record is None:
+            raise Exception(f'unknown ml handler: {ml_handler_name}')
+        kwargs['integration_id'] = ml_handler_record.id
+
     return (
         db.session.query(db.Predictor)
         .filter_by(**kwargs)
@@ -37,7 +64,7 @@ def get_model_records(company_id: int, active: bool = True, deleted_at=null(),
     )
 
 
-def get_model_record(company_id: int, except_absent=False,
+def get_model_record(company_id: int, except_absent=False, ml_handler_name: str = None,
                      active: bool = True, deleted_at=null(), **kwargs):
     if company_id is None:
         kwargs['company_id'] = null()
@@ -46,6 +73,15 @@ def get_model_record(company_id: int, except_absent=False,
     kwargs['deleted_at'] = deleted_at
     if active is not None:
         kwargs['active'] = active
+
+    if ml_handler_name is not None:
+        ml_handler_record = get_integration_record(
+            company_id=company_id,
+            name=ml_handler_name
+        )
+        if ml_handler_record is None:
+            raise Exception(f'unknown ml handler: {ml_handler_name}')
+        kwargs['integration_id'] = ml_handler_record.id
 
     records = (
         db.session.query(db.Predictor)

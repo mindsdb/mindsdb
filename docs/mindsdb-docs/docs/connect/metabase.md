@@ -1,60 +1,84 @@
 # MindsDB and Metabase
 
-[Metabase](https://www.metabase.com/) is the easy, open source way to help everyone in your company work with data like an analyst. It lets you visualize your data easily and intuitively. Now that MindsDB supports the MySQL binary protocol, you can connect it to Metabase and train and explore there your models.
+Metabase is open-source software that facilitates data analysis. It lets you visualize your data easily and intuitively. Now that MindsDB supports the MySQL binary protocol, you can connect it to Metabase and see the forecasts by creating and training the models.
 
-!!! warning "For the time being, only local and on premise installations are stable." 
+For more information, visit [Metabase](https://www.metabase.com/).
 
-## Set up both platforms
+## Setup
 
-Refer to these guides to get both platforms up and running:
+### MindsDB
 
-- MindsDB: head over the **Deployment** section on the left hand side navigation and choose one of the approaches listed there. Recall that MindsDB Cloud is not supported yet.  
-- Metabase: [Metabase Open Source Edition](https://www.metabase.com/start/oss/)
+Let's set up the MindsDB following one of the guides from the **Deployment** section. Please note that the MindsDB Cloud is not yet supported.
 
-In this guide, we will be using the [docker approach](/setup/self-hosted/docker/) for MindsDB and the [jar approach](https://www.metabase.com/docs/latest/installation-and-operation/running-the-metabase-jar-file.html) for Metabase.
+!!! warning "Currently, only local and on-premise installations are stable."
 
-## Connect MindsDB in Metabase
+You can choose one of the following approaches to set up the MindsDB locally:
 
-Follow the steps below to connect together your MindsDB & Metabase installations.
+- [Docker](/setup/self-hosted/docker)
+- [Windows via pip](/setup/self-hosted/pip/windows)
+- [Linux via pip](/setup/self-hosted/pip/linux)
+- [MacOS via pip](/setup/self-hosted/pip/macos)
+- [Sourcecode via pip](/setup/self-hosted/pip/source)
 
-In metabase: 
+Here, we use the [Docker](/setup/self-hosted/docker) setup for MindsDB.
 
-- Navigate to the *Admin settings* by clicking the cog in the bottom left corner.  
-- Once there, in the navigation top bar, click on *Databases*  
-- Click on *Add database* in top right corner  
-- Fill the following data in the form:  
-    - Database type: MySQL  
-    - Display name: MindsDB    
-    - Host: localhost  
-    - Port: 47335  
-    - Database name: mindsdb  
-    - Username: mindsdb  
-    - Password: *leave it empty*  
+### Metabase
 
-<img src="/assets/metabase_add_database.png" />
+Now, let's set up the Metabase by following one of the approaches presented on [the Metabase Open Source Edition page](https://www.metabase.com/start/oss/).
 
-- Click on save
+Here, we use the [.jar approach](https://www.metabase.com/docs/latest/installation-and-operation/running-the-metabase-jar-file.html) for Metabase.
+
+## How to Connect
+
+Follow the steps below to connect your MindsDB to Metabase.
+
+1. Open your Metabase and navigate to the *Admin settings* by clicking the cog in the bottom left corner.
+2. Once there, click on *Databases* in the top navigation bar.
+3. Click on *Add database* in the top right corner.
+4. Fill in the form using the following data:
+    ```text
+    Database type: `MySQL`  
+    Display name: `MindsDB`   
+    Host: `localhost`
+    Port: `47335`
+    Database name: `mindsdb`
+    Username: `mindsdb`
+    Password: *leave it empty* 
+    ```
+
+    <p align="center">
+    <img src="/assets/metabase_add_database.png" />
+    </p>
+
+5. Click on *Save*.
 
 Now you're connected!
 
-<img src="/assets/metabase_connected.png" />
+<p align="center">
+    <img src="/assets/metabase_connected.png" />
+</p>
 
-## Testing that everything works
+## Example
 
-Now that you have the connection, most of the SQL statements that you usually perform on your [MindsDB SQL Editor](/connect/mindsdb_editor/) can be run on Metabase. For example, let's try something easy:
+Now that the connection between MindsDB and Metabase is established, let's do some examples.
 
-- In your Metabase's home page, click on *New > SQL query* in the top right corner.  
-- Select your MindsDB database
-- In the editor type the following
+Most of the SQL statements that you usually run in your [MindsDB SQL Editor](/connect/mindsdb_editor/) can be run in Metabase as well. Let's start with something easy.
+
+On your Metabase's home page, click on *New > SQL query* in the top right corner and then, select your MindsDB database.
+
+Let's execute the following command in the editor.
 
 ```sql
 SHOW TABLES;
 ```
 
-<img src="/assets/metabase_run_query_show_tables.png" />
+On execution, we get:
 
+<p align="center">
+    <img src="/assets/metabase_run_query_show_tables.png" />
+</p>
 
-However, creating a [database connection](sql/tutorials/home-rentals/#connecting-the-data) will fail as `{}` are used by JDBC as escape sequences.
+Please note that creating a [database connection](/sql/tutorials/home-rentals/#connecting-the-data) using the `CREATE DATABASE` statement fails because of the curly braces (`{}`) being used by JDBC as the escape sequences.
 
 ```sql
 CREATE DATABASE example_db
@@ -68,10 +92,15 @@ CREATE DATABASE example_db
 };
 ```
 
-<img src="/assets/metabase_run_query_failure.png" />
+On execution, we get:
 
+<p align="center">
+    <img src="/assets/metabase_run_query_failure.png" />
+</p>
 
-Still, once above table is created, for example through the [MindsDB SQL Editor](/connect/mindsdb_editor/), running queries against that database should be fine:
+You can overcome this issue using the [MindsDB SQL Editor](/connect/mindsdb_editor/) to create a database.
+
+Now, getting back to the Metabase, let's run some queries on the database created with the help of the [MindsDB SQL Editor](/connect/mindsdb_editor/).
 
 ```sql
 SELECT * 
@@ -79,8 +108,11 @@ FROM example_db.demo_data.home_rentals
 LIMIT 10;
 ```
 
+On execution, we get:
 
-<img src="/assets/metabase_run_query_home_rentals.png" />
+<p align="center">
+    <img src="/assets/metabase_run_query_home_rentals.png" />
+</p>
 
 ## What's Next?
 

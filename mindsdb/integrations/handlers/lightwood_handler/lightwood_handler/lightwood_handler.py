@@ -2,7 +2,7 @@ import os
 import sys
 import json
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Union, Any
 import copy
 from dateutil.parser import parse as parse_datetime
@@ -38,6 +38,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb import __version__ as mindsdb_version
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
@@ -164,7 +165,7 @@ class LightwoodHandler(PredictiveHandler):
 
     def get_columns(self, table_name: str) -> Response:
         """ For getting standard info about a table. e.g. data types """  # noqa
-        predictor_record = get_model_record(company_id=self.company_id, name=table_name)
+        predictor_record = get_model_record(company_id=self.company_id, name=table_name, ml_handler_name='lightwood')
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -256,10 +257,13 @@ class LightwoodHandler(PredictiveHandler):
         integration_meta = self.handler_controller.get(name=integration_name)
         problem_definition = ProblemDefinition.from_dict(problem_definition_dict)
 
+        lightwood_integration_meta = self.handler_controller.get(name='lightwood')
+
         predictor_record = db.Predictor(
             company_id=self.company_id,
             name=model_name,
-            integration_id=integration_meta['id'],
+            integration_id=lightwood_integration_meta['id'],
+            data_integration_id=integration_meta['id'],
             fetch_data_query=statement.query_str,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
@@ -268,7 +272,8 @@ class LightwoodHandler(PredictiveHandler):
             data={'name': model_name},
             training_data_columns_count=len(training_data_df.columns),
             training_data_rows_count=len(training_data_df),
-            training_start_at=datetime.now()
+            training_start_at=datetime.now(),
+            status=PREDICTOR_STATUS.GENERATING
         )
 
         db.session.add(predictor_record)
@@ -291,7 +296,7 @@ class LightwoodHandler(PredictiveHandler):
     def _retrain(self, statement):
         model_name = statement.name.parts[-1]
 
-        predictor_record = get_model_record(company_id=self.company_id, name=model_name)
+        predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name='lightwood')
 
         if predictor_record is None:
             return Response(
@@ -308,10 +313,10 @@ class LightwoodHandler(PredictiveHandler):
         predictor_record.update_status = 'updating'
         db.session.commit()
 
-        handler_meta = self.handler_controller.get_by_id(predictor_record.integration_id)
-        handler = self.handler_controller.get_handler(handler_meta['name'])
+        data_handler_meta = self.handler_controller.get_by_id(predictor_record.data_integration_id)
+        data_handler = self.handler_controller.get_handler(data_handler_meta['name'])
         ast = self.parser(predictor_record.fetch_data_query, dialect=self.dialect)
-        response = handler.query(ast)
+        response = data_handler.query(ast)
         if response.type == RESPONSE_TYPE.ERROR:
             return response
 
@@ -323,7 +328,12 @@ class LightwoodHandler(PredictiveHandler):
     def _drop(self, statement):
         model_name = statement.name.parts[-1]
 
-        predictors_records = get_model_records(company_id=self.company_id, name=model_name, active=None)
+        predictors_records = get_model_records(
+            company_id=self.company_id,
+            name=model_name,
+            active=None,
+            ml_handler_name='lightwood'
+        )
         if len(predictors_records) == 0:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -338,13 +348,14 @@ class LightwoodHandler(PredictiveHandler):
                     is_cloud is True
                     and model_data.get('status') in ['generating', 'training']
                     and isinstance(model_data.get('created_at'), str) is True
-                    and (datetime.datetime.now() - parse_datetime(model_data.get('created_at'))) < datetime.timedelta(hours=1)
+                    and (datetime.now() - parse_datetime(model_data.get('created_at'))) < timedelta(hours=1)
                 ):
                     raise Exception('You are unable to delete models currently in progress, please wait before trying again')
 
         for predictor_record in predictors_records:
             if is_cloud:
                 predictor_record.deleted_at = datetime.now()
+                predictor_record.status = PREDICTOR_STATUS.DELETED
             else:
                 db.session.delete(predictor_record)
             self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
@@ -400,7 +411,7 @@ class LightwoodHandler(PredictiveHandler):
         if isinstance(data, dict):
             data = [data]
         df = pd.DataFrame(data)
-        predictor_record = get_model_record(company_id=self.company_id, name=model_name)
+        predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name='lightwood')
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -482,7 +493,7 @@ class LightwoodHandler(PredictiveHandler):
                 values['confidence_lower_bound'] = row.get('lower', None)
                 values['confidence_upper_bound'] = row.get('upper', None)
 
-            obj = { target: values }
+            obj = {target: values}
             explain_arr.append(obj)
 
             td = {'predicted_value': row['prediction']}
@@ -675,7 +686,7 @@ class LightwoodHandler(PredictiveHandler):
         return analysis.to_dict()
 
     def edit_json_ai(self, name: str, json_ai: dict):
-        predictor_record = get_model_record(company_id=self.company_id, name=name)
+        predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
         assert predictor_record is not None
 
         json_ai = lightwood.JsonAI.from_dict(json_ai)
@@ -693,7 +704,7 @@ class LightwoodHandler(PredictiveHandler):
         if self.config.get('cloud', False):
             raise Exception('Code editing prohibited on cloud')
 
-        predictor_record = get_model_record(company_id=self.company_id, name=name)
+        predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
         assert predictor_record is not None
 
         lightwood.predictor_from_code(code)
@@ -719,19 +730,6 @@ class LightwoodHandler(PredictiveHandler):
         predictions = self._call_predictor(model_input, model)
         model_input.columns = get_aliased_columns(list(model_input.columns), model_alias, stmt.targets, mode='input')
         predictions.columns = get_aliased_columns(list(predictions.columns), model_alias, stmt.targets, mode='output')
-
-        if into:
-            try:
-                dtypes = {}
-                for col in predictions.columns:
-                    if model.dtype_dict.get(col, False):
-                        dtypes[col] = self.lw_dtypes_to_sql.get(col, sqlalchemy.Text)
-                    else:
-                        dtypes[col] = self.lw_dtypes_overrides.get(col, sqlalchemy.Text)
-
-                data_handler.select_into(into, predictions, dtypes=dtypes)
-            except Exception:
-                print("Error when trying to store the JOIN output in data handler.")
 
         return predictions
 

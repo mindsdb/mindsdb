@@ -6,7 +6,7 @@ This is the implementation of the TimeScaleDB handler for MindsDB.
 TimescaleDB is an open-source database designed to make SQL scalable for time-series data. It is engineered up from PostgreSQL and packaged as a PostgreSQL extension, providing automatic partitioning across time and space (partitioning key), as well as full SQL support. Build powerful data-intensive applications.
 
 ## Implementation
-This handler was implemented using the `psycopy`, this handler extends Postgres Handler and use it to perform all Queries.
+This handler was implemented using the `psycopg`, this handler extends Postgres Handler and use it to perform all Queries.
 
 The required arguments to establish a connection are,
 * `user`: username asscociated with database
@@ -20,7 +20,7 @@ In order to make use of this handler and connect to TimeScaleDB in MindsDB, the 
 ~~~~sql
 CREATE DATABASE timescaledb_datasource
 WITH
-engine='timescaledb_datasource',
+engine='timescaledb',
 parameters={
         "host": "127.0.0.1",
         "port": 36806,

@@ -35,8 +35,7 @@ class BaseTestCase:
         from mindsdb.interfaces.storage import db
         return db
 
-    @staticmethod
-    def clear_db(db):
+    def clear_db(self, db):
         # drop
         db.Base.metadata.drop_all(db.engine)
 
@@ -48,6 +47,10 @@ class BaseTestCase:
         db.session.add(r)
         r = db.Integration(name='views', data={}, engine='views')
         db.session.add(r)
+        r = db.Integration(name='lightwood', data={}, engine='lightwood')
+        db.session.add(r)
+        db.session.flush()
+        self.lw_integration_id = r.id
         db.session.commit()
         return db
 
@@ -114,7 +117,8 @@ class BaseTestCase:
             name=predictor['name'],
             data={},
             learn_args=predictor['problem_definition'],
-            to_predict=predictor['predict']
+            to_predict=predictor['predict'],
+            integration_id=self.lw_integration_id
         )
         self.db.session.add(r)
         self.db.session.commit()

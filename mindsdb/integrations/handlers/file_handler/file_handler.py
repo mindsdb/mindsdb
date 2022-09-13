@@ -41,7 +41,7 @@ class FileHandler(DatabaseHandler):
     """
     name = 'files'
 
-    def __init__(self, name=None, db_store=None, fs_store=None, connection_data=None, file_controller=None):
+    def __init__(self, name=None, db_store=None, fs_store=None, connection_data=None, file_controller=None, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
         self.fs_store = fs_store

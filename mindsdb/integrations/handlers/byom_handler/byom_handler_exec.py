@@ -83,15 +83,15 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
         """
         Handler for BYOM
         """  # noqa
-        super().__init__(name, **kwargs)
+        super().__init__(name)
 
         self.name = name
         self.config = Config()
         self.handler_controller = kwargs.get('handler_controller')
         self.company_id = kwargs.get('company_id')
-        self.fs_store = kwargs.get('fs_store'),
-        self.company_id = kwargs.get('company_id'),
-        self.integration_id = kwargs.get('integration_id'),
+        self.fs_store = kwargs.get('fs_store')
+        self.company_id = kwargs.get('company_id')
+        self.integration_id = kwargs.get('integration_id')
 
         self.handlerStorage = HandlerStorage(
             fs_store=self.fs_store,
@@ -110,7 +110,7 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
         self.is_connected = True
 
     def get_tables(self) -> Response:
-        all_models = self.model_controller.get_models()
+        all_models = self.model_controller.get_models(integration_id=self.integration_id)
         all_models_names = [[x['name']] for x in all_models]
         response = Response(
             RESPONSE_TYPE.TABLE,
@@ -225,6 +225,10 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
 
         integration_meta = self.handler_controller.get(name=integration_name)
 
+        problem_definition = {
+            'target': target
+        }
+
         predictor_record = db.Predictor(
             company_id=self.company_id,
             name=model_name,
@@ -233,6 +237,7 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
             fetch_data_query=statement.query_str,
             mindsdb_version=mindsdb_version,
             to_predict=target,
+            learn_args=problem_definition,
             data={'name': model_name},
             training_data_columns_count=len(training_data_df.columns),
             training_data_rows_count=len(training_data_df),
@@ -257,7 +262,10 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
         )
 
         # TODO run it in subprocess
+
         ml_handler.learn(training_data_df, target)
+
+        return Response(RESPONSE_TYPE.OK)
 
     def retrain(self, statement):
         # TODO

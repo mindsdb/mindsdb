@@ -48,13 +48,13 @@ class ModelStorage:
         file_name = self._get_file_name(name)
 
         self.fs_store.get(file_name, self.base_dir)
-        with open(os.path.join(self.base_dir, file_name)) as fd:
+        with open(os.path.join(self.base_dir, file_name), 'rb') as fd:
             return fd.read()
 
     def file_set(self, name, content):
         file_name = self._get_file_name(name)
 
-        with open(os.path.join(self.base_dir, file_name), 'w') as fd:
+        with open(os.path.join(self.base_dir, file_name), 'wb') as fd:
             fd.write(content)
 
         self.fs_store.put(file_name, self.base_dir)
@@ -97,13 +97,13 @@ class HandlerStorage:
         file_name = self._get_file_name(name)
 
         self.fs_store.get(file_name, self.base_dir)
-        with open(os.path.join(self.base_dir, file_name)) as fd:
+        with open(os.path.join(self.base_dir, file_name), 'rb') as fd:
             return fd.read()
 
     def file_set(self, name, content):
         file_name = self._get_file_name(name)
 
-        with open(os.path.join(self.base_dir, file_name), 'w') as fd:
+        with open(os.path.join(self.base_dir, file_name), 'wb') as fd:
             fd.write(content)
 
         self.fs_store.put(file_name, self.base_dir)

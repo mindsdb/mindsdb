@@ -3,6 +3,7 @@ import json
 import pandas as pd
 import numpy as np
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql import parse_sql
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -87,8 +88,8 @@ class MindsDBDataNode(DataNode):
 
         return columns
 
-    def _select_predictors(self):
-        models = self.model_controller.get_models()
+    def _select_predictors(self, ml_handler_name='lightwood'):
+        models = self.model_controller.get_models(ml_handler_name=ml_handler_name)
         columns = ['name', 'status', 'accuracy', 'predict', 'update_status',
                    'mindsdb_version', 'error', 'select_data_query',
                    'training_options']
@@ -150,7 +151,7 @@ class MindsDBDataNode(DataNode):
         self.model_controller.delete_model(name, integration_name=integration_name)
 
     def get_predictors(self, query: ASTNode):
-        predictors_df = self._select_predictors()
+        predictors_df = self._select_predictors(ml_handler_name=query.from_table.parts[0])
 
         try:
             result_df = query_df(predictors_df, query)
@@ -180,7 +181,7 @@ class MindsDBDataNode(DataNode):
             return [], []
         return result_df.to_dict(orient='records'), list(result_df.columns)
 
-    def query(self, table, where_data=None):
+    def query(self, table, where_data=None, ml_handler_name='lightwood'):
         if table == 'predictors':
             return self._select_predictors()
         if table == 'predictors_versions':
@@ -194,5 +195,13 @@ class MindsDBDataNode(DataNode):
         if len(where_data) == 0:
             return []
 
-        result = self.handler.predict(table, where_data)
+        if ml_handler_name.lower() == 'mindsdb':
+            ml_handler_name = 'lightwood'
+
+        if ml_handler_name != 'lightwood':
+            handler = self.integration_controller.get_handler(ml_handler_name)
+        else:
+            handler = self.handler
+
+        result = handler.predict(table, where_data)
         return result

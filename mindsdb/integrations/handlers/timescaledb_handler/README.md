@@ -26,7 +26,7 @@ parameters={
         "port": 36806,
         "user": "tsdbadmin",
         "password": "p455WorD",
-        "database": "tsdb",
+        "database": "tsdb"
 
 };
 ~~~~

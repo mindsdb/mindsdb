@@ -631,7 +631,7 @@ class ExecuteCommands:
             )
 
         # region check if there is already predictor retraing
-        is_cloud = self.config.get('cloud', False)
+        is_cloud = self.session.config.get('cloud', False)
         if is_cloud and self.session.user_class == 0:
             longest_training = None
             for p in models:

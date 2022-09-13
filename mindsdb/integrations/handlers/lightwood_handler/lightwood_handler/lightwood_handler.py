@@ -296,7 +296,12 @@ class LightwoodHandler(PredictiveHandler):
     def _retrain(self, statement):
         model_name = statement.name.parts[-1]
 
-        predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name='lightwood')
+        predictor_record = get_model_record(
+            name=model_name,
+            ml_handler_name='lightwood',
+            company_id=self.company_id,
+            active=True
+        )
 
         if predictor_record is None:
             return Response(
@@ -304,13 +309,13 @@ class LightwoodHandler(PredictiveHandler):
                 error_message=f"Error: model '{model_name}' does not exists!"
             )
 
-        if predictor_record.update_status == 'updating':
-            return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=f"Error: model '{model_name}' already retraining!"
-            )
+        # if predictor_record.update_status == 'updating':
+        #     return Response(
+        #         RESPONSE_TYPE.ERROR,
+        #         error_message=f"Error: model '{model_name}' already retraining!"
+        #     )
 
-        predictor_record.update_status = 'updating'
+        # predictor_record.update_status = 'updating'
         db.session.commit()
 
         data_handler_meta = self.handler_controller.get_by_id(predictor_record.data_integration_id)

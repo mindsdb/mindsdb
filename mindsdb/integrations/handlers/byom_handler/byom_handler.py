@@ -100,8 +100,8 @@ class BYOMHandler:
         pred_df = self._run_command(params)
 
         # rename target column
-        target = self.model_storage.get_info()['to_predict'][0]
-        pred_df = pred_df.rename(columns={target: 'prediction'})
+        # target = self.model_storage.get_info()['to_predict'][0]
+        # pred_df = pred_df.rename(columns={target: 'prediction'})
         return pred_df
 
 

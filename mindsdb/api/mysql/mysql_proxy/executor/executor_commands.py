@@ -73,6 +73,11 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE
+from mindsdb.interfaces.model.functions import (
+    get_model_record,
+    get_model_records
+)
+from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
 
 class ExecuteCommands:
@@ -604,8 +609,40 @@ class ExecuteCommands:
         )
 
     def answer_retrain_predictor(self, statement):
-        lw_handler = self.session.integration_controller.get_handler('lightwood')
-        result = lw_handler.query(statement)
+        handler_name = self.session.database
+        if len(statement.name.parts) > 1:
+            handler_name = statement.name.parts[0]
+            statement.name.parts = [statement.name.parts[1:]]
+        if handler_name.lower() == 'mindsdb':
+            handler_name = 'lightwood'
+        ml_handler = self.session.integration_controller.get_handler(handler_name)
+
+        models = get_model_records(
+            ml_handler_name=handler_name,
+            company_id=self.session.company_id,
+            active=None,
+            name=statement.name.parts[0]
+        )
+
+        # region check if there is already predictor retraing
+        is_cloud = self.config.get('cloud', False)
+        if is_cloud and self.session.user_class == 0:
+            longest_training = None
+            for p in models:
+                if (
+                    p.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
+                    and p.training_start_at is not None and p.training_stop_at is None
+                ):
+                    training_time = datetime.datetime.now() - p.training_start_at
+                    if longest_training is None or training_time > longest_training:
+                        longest_training = training_time
+            if longest_training is not None and longest_training > datetime.timedelta(hours=1):
+                raise SqlApiException(
+                    "Can't start retrain while exists predictor in status 'training' or 'generating'"
+                )
+        # endregion
+
+        result = ml_handler.query(statement)
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 

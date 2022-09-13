@@ -89,16 +89,18 @@ class BYOMHandler:
             self.model_storage.status_set(PREDICTOR_STATUS.ERROR, status_info=status_info)
 
     def predict(self, df):
+        encoded = self.model_storage.file_get('model')
+        model_params = pickle.loads(encoded)
         params = {
             'method': 'predict',
             'code': self._get_model_code(),
             'df': df,
-            'model': self.model_storage.file_get('model'),
+            'model': model_params,
         }
         pred_df = self._run_command(params)
 
         # rename target column
-        target = self.model_storage.get_info()['to_predict']
+        target = self.model_storage.get_info()['to_predict'][0]
         pred_df = pred_df.rename(columns={target: 'prediction'})
         return pred_df
 

@@ -176,14 +176,16 @@ class IntegrationController:
         return connections
 
     def create_handler(self, name: str = None, handler_type: str = None,
-                       connection_data: dict = {}, company_id: int = None):
+                       connection_data: dict = {}, company_id: int = None,
+                       integration_id: int = None):
         fs_store = FsStore()
 
         handler_ars = dict(
             name=name,
             db_store=None,
             fs_store=fs_store,
-            connection_data=connection_data
+            connection_data=connection_data,
+            integration_id=integration_id
         )
 
         if handler_type == 'files':
@@ -260,7 +262,8 @@ class IntegrationController:
             name=integration_name,
             handler_type=integration_engine,
             connection_data=connection_data,
-            company_id=company_id
+            company_id=company_id,
+            integration_id=integration_data['id'],
         )
 
         return handler

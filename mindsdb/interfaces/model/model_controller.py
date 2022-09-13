@@ -76,10 +76,10 @@ class ModelController():
 
         return model_description
 
-    def get_models(self, company_id: int, with_versions=False, ml_handler_name='lightwood'):
+    def get_models(self, company_id: int, with_versions=False, ml_handler_name='lightwood', integration_id=None):
         models = []
         show_active = True if with_versions is False else None
-        for predictor_record in get_model_records(company_id=company_id, active=show_active, ml_handler_name=ml_handler_name):
+        for predictor_record in get_model_records(company_id=company_id, active=show_active, ml_handler_name=ml_handler_name, integration_id=integration_id):
             model_data = self.get_model_data(predictor_record=predictor_record, company_id=company_id)
             reduced_model_data = {}
 

@@ -295,7 +295,6 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
             model_storage=model_storage,
         )
 
-        # TODO run it in subprocess
         predictions = ml_handler.predict(df)
         predictions = predictions.to_dict(orient='records')
 
@@ -306,99 +305,7 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
             columns_in_count=df.shape[1],
             rows_out_count=len(predictions)
         )
-
-        # region format result
-        target = predictor_record.to_predict[0]
-        explain_arr = []
-        pred_dicts = []
-        for i, row in enumerate(predictions):
-            values = {
-                'predicted_value': row['prediction'],
-                'confidence': row.get('confidence', None),
-                'anomaly': row.get('anomaly', None),
-                'truth': row.get('truth', None)
-            }
-
-            if 'lower' in row:
-                values['confidence_lower_bound'] = row.get('lower', None)
-                values['confidence_upper_bound'] = row.get('upper', None)
-
-            obj = {target: values}
-            explain_arr.append(obj)
-
-            td = {'predicted_value': row['prediction']}
-            for col in df.columns:
-                if col in row:
-                    td[col] = row[col]
-                elif f'order_{col}' in row:
-                    td[col] = row[f'order_{col}']
-                elif f'group_{col}' in row:
-                    td[col] = row[f'group_{col}']
-                else:
-                    orginal_index = row.get('original_index')
-                    if orginal_index is None:
-                        orginal_index = i
-                    td[col] = df.iloc[orginal_index][col]
-            pred_dicts.append({target: td})
-
-        new_pred_dicts = []
-        for row in pred_dicts:
-            new_row = {}
-            for key in row:
-                new_row.update(row[key])
-                new_row[key] = new_row['predicted_value']
-            del new_row['predicted_value']
-            new_pred_dicts.append(new_row)
-        pred_dicts = new_pred_dicts
-
-        columns = list(predictor_record.dtype_dict.keys())
-        predicted_columns = predictor_record.to_predict
-        if not isinstance(predicted_columns, list):
-            predicted_columns = [predicted_columns]
-        # endregion
-
-        original_target_values = {}
-        for col in predicted_columns:
-            df = df.reset_index()
-            original_target_values[col + '_original'] = []
-            for _index, row in df.iterrows():
-                original_target_values[col + '_original'].append(row.get(col))
-
-
-        if pred_format == 'explain':
-            return explain_arr
-
-        keys = [x for x in pred_dicts[0] if x in columns]
-
-
-        data = []
-        explains = []
-        keys_to_save = [*keys, '__mindsdb_row_id', 'select_data_query', 'when_data']
-        for i, el in enumerate(pred_dicts):
-            data.append({key: el.get(key) for key in keys_to_save})
-            explains.append(explain_arr[i])
-
-        for i, row in enumerate(data):
-            cast_row_types(row, predictor_record.dtype_dict)
-
-            for k in original_target_values:
-                try:
-                    row[k] = original_target_values[k][i]
-                except Exception:
-                    row[k] = None
-
-            for column_name in columns:
-                if column_name not in row:
-                    row[column_name] = None
-
-            explanation = explains[i]
-            for key in predicted_columns:
-                row[key + '_confidence'] = explanation[key]['confidence']
-                row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder, ensure_ascii=False)
-                if 'anomaly' in explanation[key]:
-                    row[key + '_anomaly'] = explanation[key]['anomaly']
-
-        return data
+        return predictions
 
     def drop(self, statement):
         model_name = statement.name.parts[-1]
@@ -433,3 +340,4 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
                 db.session.delete(predictor_record)
             self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
         db.session.commit()
+        return Response(RESPONSE_TYPE.OK)

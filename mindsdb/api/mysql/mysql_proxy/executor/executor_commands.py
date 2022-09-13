@@ -616,13 +616,19 @@ class ExecuteCommands:
         if handler_name.lower() == 'mindsdb':
             handler_name = 'lightwood'
         ml_handler = self.session.integration_controller.get_handler(handler_name)
+        model_name = statement.name.parts[0]
 
         models = get_model_records(
             ml_handler_name=handler_name,
             company_id=self.session.company_id,
             active=None,
-            name=statement.name.parts[0]
+            name=model_name
         )
+
+        if len(models) == 0:
+            raise SqlApiException(
+                f'There is no predictor {handler_name}.{model_name}'
+            )
 
         # region check if there is already predictor retraing
         is_cloud = self.config.get('cloud', False)

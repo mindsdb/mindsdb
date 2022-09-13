@@ -11,7 +11,6 @@
 
 import re
 from collections import OrderedDict, defaultdict
-import datetime
 import time
 
 import duckdb
@@ -56,12 +55,11 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
 
-import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
-    get_model_record,
-    get_model_records
+    get_model_records,
+    get_predictor_integration
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
@@ -254,14 +252,13 @@ class SQLQuery():
             self.execute_query()
 
     def create_planner(self):
-
-        integrations_names = self.session.datahub.get_integrations_names()
+        integrations_meta = self.session.integration_controller.get_all()
+        integrations_names = list(integrations_meta.keys())
         integrations_names.append('information_schema')
-        integrations_names.append('files')
-        integrations_names.append('views')
+        integration_name = None
 
-        predictor_metadata = {}
-        predictors = get_model_records(company_id=self.session.company_id)
+        predictor_metadata = []
+        predictors_records = get_model_records(company_id=self.session.company_id)
 
         query_tables = []
 
@@ -271,17 +268,22 @@ class SQLQuery():
 
         query_traversal(self.query, get_all_query_tables)
 
-        # get all predictors
-        for p in predictors:
+        for p in predictors_records:
             model_name = p.name
 
             if model_name not in query_tables:
-                # skip
                 continue
+
+            integration_name = None
+            integration_record = get_predictor_integration(p)
+            if integration_record is not None:
+                integration_name = integration_record.name
 
             if isinstance(p.data, dict) and 'error' not in p.data:
                 ts_settings = p.learn_args.get('timeseries_settings', {})
                 predictor = {
+                    'name': model_name,
+                    'integration_name': integration_name,
                     'timeseries': False,
                     'id': p.id
                 }
@@ -300,17 +302,21 @@ class SQLQuery():
                         'order_by_column': order_by,
                         'group_by_columns': group_by
                     })
-                predictor_metadata[model_name] = predictor
+                predictor_metadata.append(predictor)
+                if predictor['integration_name'] == 'lightwood':
+                    default_predictor = predictor.copy()
+                    default_predictor['integration_name'] = 'mindsdb'
+                    predictor_metadata.append(default_predictor)
 
                 self.model_types.update(p.data.get('dtypes', {}))
 
-        mindsdb_database_name = 'mindsdb'
         database = None if self.session.database == '' else self.session.database.lower()
 
+        self.predictor_metadata = predictor_metadata
         self.planner = query_planner.QueryPlanner(
             self.query,
             integrations=integrations_names,
-            predictor_namespace=mindsdb_database_name,
+            predictor_namespace=integration_name,
             predictor_metadata=predictor_metadata,
             default_namespace=database
         )
@@ -414,7 +420,6 @@ class SQLQuery():
             join_query_data(data, sub_data)
 
         return data
-
 
     def prepare_query(self, prepare=True):
         mindsdb_sql_struct = self.query
@@ -828,13 +833,16 @@ class SQLQuery():
                     data['values'].extend(subdata['values'])
         elif type(step) == ApplyPredictorRowStep:
             try:
-                predictor = '.'.join(step.predictor.parts)
+                ml_handler_name = step.namespace
+                predictor_name = step.predictor.parts[0]
+
                 dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
 
                 data = dn.query(
-                    table=predictor,
-                    where_data=where_data
+                    table=predictor_name,
+                    where_data=where_data,
+                    ml_handler_name=ml_handler_name
                 )
 
                 data = [{(key, key): value for key, value in row.items()} for row in data]
@@ -873,8 +881,10 @@ class SQLQuery():
                 # shift counter
                 self.row_id += self.row_id + row_count * len(data['tables'])
 
-                dn = self.datahub.get(self.mindsdb_database_name)
-                predictor = '.'.join(step.predictor.parts)
+                ml_handler_name = step.namespace
+                if ml_handler_name == 'mindsdb':
+                    ml_handler_name = 'lightwood'
+                predictor_name = step.predictor.parts[0]
                 where_data = []
                 for row in steps_data[step.dataframe.step_num]['values']:
                     new_row = {}
@@ -889,7 +899,12 @@ class SQLQuery():
 
                 where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
 
-                is_timeseries = self.planner.predictor_metadata[predictor]['timeseries']
+                predictor_metadata = {}
+                for pm in self.predictor_metadata:
+                    if pm['name'] == predictor_name and pm['integration_name'].lower() == ml_handler_name:
+                        predictor_metadata = pm
+                        break
+                is_timeseries = predictor_metadata['timeseries']
                 _mdb_forecast_offset = None
                 if is_timeseries:
                     if '> LATEST' in self.query_str:
@@ -912,21 +927,21 @@ class SQLQuery():
 
                 table_name = get_preditor_alias(step, self.database)
                 columns = {table_name: []}
+                dn = self.datahub.get(self.mindsdb_database_name)
                 if len(where_data) == 0:
-                    # no data, don't run predictor
-                    cols = dn.get_table_columns(predictor) + ['__mindsdb_row_id']
+                    cols = dn.get_table_columns(predictor_name) + ['__mindsdb_row_id']
                     columns[table_name] = [(c, c) for c in cols]
                     values = []
                 else:
-                    # check cache
-                    predictor_id = self.planner.predictor_metadata[predictor]['id']
-                    key = f'{predictor}_{predictor_id}_{json_checksum(where_data)}'
+                    predictor_id = predictor_metadata['id']
+                    key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
                     data = predictor_cache.get(key)
 
                     if data is None:
                         data = dn.query(
-                            table=predictor,
-                            where_data=where_data
+                            table=predictor_name,
+                            where_data=where_data,
+                            ml_handler_name=ml_handler_name
                         )
                         predictor_cache.set(key, data)
 

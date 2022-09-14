@@ -45,12 +45,6 @@ class CompanyIndependentTest(unittest.TestCase):
     def test_1_initial_state_http(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
-        # is no predictors
-        predictors_a = get_predictors_names_list(company_id=CID_A)
-        predictors_b = get_predictors_names_list(company_id=CID_A)
-        self.assertTrue(len(predictors_a) == 0)
-        self.assertTrue(len(predictors_b) == 0)
-
         # add permanent integrations
         for cid in [CID_A, CID_B]:
             for inegration_name in ['files', 'views', 'lightwood']:

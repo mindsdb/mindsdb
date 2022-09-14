@@ -1,13 +1,14 @@
-# `#!sql SELECT files.[file]` Statement
+# `#!sql SELECT from files.[file_name]` Statement
 
 ## Description
 
-The `#!sql SELECT from files.[file]` statement is used to select a `#!sql [file]` as a datasource. The main use is to create a predictor from a file that has been uploaded to MindsDB via the [MindsDB Editor](/connect/mindsdb_editor/).
+The `#!sql SELECT from files.[file_name]` statement is used to select data from a file.
 
-!!! warning "Before using the `#!sql SELECT files.[file]`"
-    Make sure to [upload the file via the MindsDB Editor](#upload-file-to-mindsdb-editor)
+First, you upload a file to the MindsDB Cloud Editor by following [this guide](/sql/create/file/). And then, you can [`CREATE PREDICTOR`](/sql/create/predictor/) from the uploaded file.
 
 ## Syntax
+
+Here is the syntax:
 
 ```sql
 SELECT *
@@ -26,17 +27,14 @@ On execution, we get:
 
 Where:
 
-| Name          | Description                                                                               |
-| ------------- | ----------------------------------------------------------------------------------------- |
-| `[file_name]` | Name of file uploaded to MindsDB via the [MindsDB SQL Editor](/connect/mindsdb_editor/)   |
-| column        | Name of the column depending on the file uploaded                                         |
-| value         | Value depending on the file uploaded                                                      |
+| Name          | Description                                                                                           |
+| ------------- | ----------------------------------------------------------------------------------------------------- |
+| `[file_name]` | Name of the file uploaded to the MindsDB Cloud Editor by following [this guide](/sql/create/file/).   |
+| `column`      | Name of the column from the file.                                                                     |
 
 ## Example
 
-This example shows how to use an uploaded file and create a predictor. But first, follow [this guide](https://docs.mindsdb.com/sql/create/file/) to upload a file to MindsDB Cloud.
-
-### Select the file as datasource
+Once you uploaded your file by following [this guide](/sql/create/file/), you can query it like a table.
 
 ```sql
 SELECT *
@@ -63,18 +61,7 @@ On execution, we get:
 +-----------------+---------------------+-------+----------+----------------+---------------+--------------+--------------+
 ```
 
-### Create a predictor from file
-
-Query:
-
-```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
-FROM files 
-    (SELECT * FROM [file_name])
-PREDICT [target_variable];
-```
-
-Example:
+Now let's create a predictor using the uploaded file. You can learn more about the [`CREATE PREDICTOR` command here](/sql/create/predictor/).
 
 ```sql
 CREATE PREDICTOR mindsdb.home_rentals_model

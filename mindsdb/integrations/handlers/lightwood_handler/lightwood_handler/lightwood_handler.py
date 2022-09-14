@@ -309,36 +309,53 @@ class LightwoodHandler(PredictiveHandler):
     def _retrain(self, statement):
         model_name = statement.name.parts[-1]
 
-        predictor_record = get_model_record(
+        base_predictor_record = get_model_record(
             name=model_name,
             ml_handler_name='lightwood',
             company_id=self.company_id,
             active=True
         )
 
-        if predictor_record is None:
+        if base_predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=f"Error: model '{model_name}' does not exists!"
             )
 
-        # if predictor_record.update_status == 'updating':
-        #     return Response(
-        #         RESPONSE_TYPE.ERROR,
-        #         error_message=f"Error: model '{model_name}' already retraining!"
-        #     )
-
-        # predictor_record.update_status = 'updating'
+        new_predictor_record = db.Predictor(
+            company_id=self.company_id,
+            name=base_predictor_record.name,
+            integration_id=base_predictor_record.integration_id,
+            data_integration_id=base_predictor_record.data_integration_id,
+            fetch_data_query=base_predictor_record.fetch_data_query,
+            mindsdb_version=mindsdb_version,
+            lightwood_version=lightwood_version,
+            to_predict=base_predictor_record.to_predict,
+            learn_args=base_predictor_record.learn_args,
+            data={'name': base_predictor_record.name},
+            active=False,
+            status=PREDICTOR_STATUS.GENERATING
+        )
+        db.session.add(new_predictor_record)
         db.session.commit()
 
-        data_handler_meta = self.handler_controller.get_by_id(predictor_record.data_integration_id)
+        data_handler_meta = self.handler_controller.get_by_id(base_predictor_record.data_integration_id)
         data_handler = self.handler_controller.get_handler(data_handler_meta['name'])
-        ast = self.parser(predictor_record.fetch_data_query, dialect=self.dialect)
+        ast = self.parser(base_predictor_record.fetch_data_query, dialect=self.dialect)
         response = data_handler.query(ast)
         if response.type == RESPONSE_TYPE.ERROR:
             return response
 
-        p = HandlerProcess(run_update, predictor_record.id, response.data_frame, self.company_id)
+        new_predictor_record.training_data_columns_count = len(response.data_frame.columns)
+        new_predictor_record.training_data_rows_count = len(response.data_frame)
+        db.session.commit()
+
+        p = HandlerProcess(
+            run_update,
+            new_predictor_record.id,
+            response.data_frame,
+            self.company_id
+        )
         p.start()
 
         return Response(RESPONSE_TYPE.OK)

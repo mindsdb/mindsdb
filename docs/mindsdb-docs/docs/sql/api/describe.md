@@ -1,19 +1,19 @@
 # `#!sql DESCRIBE` Statement
 
-## Description
-
 The `DESCRIBE` statement is used to display the attributes of an existing model.
 
 ## `#!sql DESCRIBE ... FEATURES` Statement
 
-### `#!sql DESCRIBE ... FEATURES` Description
+### Description
 
-The `DESCRIBE mindsdb.[name_of_your_predictor].features` statement is used to display the way that the model encoded the data prior to training.
+The `DESCRIBE mindsdb.[predictor_name].features` statement displays how the model encoded the data before the training process.
 
-### `#!sql DESCRIBE ... FEATURES` Syntax
+### Syntax
+
+Here is the syntax:
 
 ```sql
-DESCRIBE mindsdb.[name_of_your_predictor].features;
+DESCRIBE mindsdb.[predictor_name].features;
 ```
 
 On execution, we get:
@@ -28,15 +28,17 @@ On execution, we get:
 
 Where:
 
-| Name                       | Description                                           |
-| -------------------------- | ----------------------------------------------------- |
-| `[name_of_your_predictor]` | Name of the model to be described                     |
-| column                     | Columns used                                          |
-| type                       | Type of data inferred                                 |
-| encoder                    | Encoder used                                          |
-| role                       | Role for that column, it can be `feature` or `target` |
+| Name                 | Description                                           |
+| -------------------- | ----------------------------------------------------- |
+| `[predictor_name]`   | Name of the model to be described.                    |
+| `column`             | Data columns that were used to create the model.      |
+| `type`               | Data type of the column.                              |
+| `encoder`            | Encoder type used for the column.                     |
+| `role`               | Role of the column (`feature` or `target`).           |
 
-### `#!sql DESCRIBE ... FEATURES` Example
+### Example
+
+Let's look at an example using the `home_rentals_model` model.
 
 ```sql
 DESCRIBE mindsdb.home_rentals_model.features;
@@ -58,37 +60,46 @@ On execution, we get:
 +---------------------+-------------+----------------+---------+
 ```
 
+Here the `rental_price` column is the `target` column to be predicted. As for the `feature` columns, these are used to train the ML model to predict the value of the `rental_price` column.
+
 ## `#!sql DESCRIBE ... MODEL` Statement
 
-The `DESCRIBE mindsdb.[name_of_your_predictor].model` statement is used to display the performance of the candidate models.
+### Description
 
-### `#!sql DESCRIBE ... MODEL` Syntax
+The `DESCRIBE mindsdb.[predictor_name].model` statement displays the performance of the candidate models.
+
+### Syntax
+
+Here is the syntax:
 
 ```sql
-DESCRIBE mindsdb.[name_of_your_predictor].model;
+DESCRIBE mindsdb.[predictor_name].model;
 ```
 
 On execution, we get:
 
 ```sql
-+-----------------+-------------+---------------+-----------+
-| name            | performance | training_time | selected  |
-+-----------------+-------------+---------------+-----------+
-| candidate_model | performance  | training_time | selected |
-+-----------------+-------------+---------------+-----------+
++-----------------+-------------+---------------+-----------+---------------------+
+| name            | performance | training_time | selected  | accuracy_functions  |
++-----------------+-------------+---------------+-----------+---------------------+
+| candidate_model | performance | training_time | selected  | accuracy_functions  |
++-----------------+-------------+---------------+-----------+---------------------+
 ```
 
 Where:
 
-| Name                       | Description                                            |
-| -------------------------- | ------------------------------------------------------ |
-| `[name_of_your_predictor]` | Name of the model to be described                      |
-| name                       | Name of the candidate_model                            |
-| performance                | Accuracy From 0 - 1 depending on the type of the model |
-| training_time              | Time elapsed for the model training to be completed    |
-| selected                   | `1` for the best performing model `0` for the rest     |
+| Name                       | Description                                                     |
+| -------------------------- | --------------------------------------------------------------- |
+| `[predictor_name]`         | Name of the model to be described.                              |
+| `name`                     | Name of the candidate model.                                    |
+| `performance`              | Accuracy value from 0 to 1, depending on the type of the model. |
+| `training_time`            | Time elapsed for the training of the model.                     |
+| `selected`                 | `1` for the best performing model and `0` for the rest.         |
+| `accuracy_functions`       |                                                                 |
 
-### `#!sql DESCRIBE ... MODEL` Example
+### Example
+
+Let's look at an example using the `home_rentals_model` model.
 
 ```sql
 DESCRIBE mindsdb.home_rentals_model.model;
@@ -97,21 +108,27 @@ DESCRIBE mindsdb.home_rentals_model.model;
 On execution, we get:
 
 ```sql
-+------------+--------------------+----------------------+----------+
-| name       | performance        | training_time        | selected |
-+------------+--------------------+----------------------+----------+
-| Neural     | 0.9861694189913056 | 3.1538941860198975   | 0        |
-| LightGBM   | 0.9991920992432087 | 15.671080827713013   | 1        |
-| Regression | 0.9983390488042778 | 0.016761064529418945 | 0        |
-+------------+--------------------+----------------------+----------+
++------------+--------------------+----------------------+----------+---------------------+
+| name       | performance        | training_time        | selected | accuracy_functions  |
++------------+--------------------+----------------------+----------+---------------------+
+| Neural     | 0.9861694189913056 | 3.1538941860198975   | 0        | ['r2_score']        |
+| LightGBM   | 0.9991920992432087 | 15.671080827713013   | 1        | ['r2_score']        |
+| Regression | 0.9983390488042778 | 0.016761064529418945 | 0        | ['r2_score']        |
++------------+--------------------+----------------------+----------+---------------------+
 ```
 
-## `#!sql DESCRIBE ... ENSEMBLE`
+## `#!sql DESCRIBE ... ENSEMBLE` Statement
 
-### `#!sql DESCRIBE ... ENSEMBLE` Syntax
+### Description
+
+The `DESCRIBE mindsdb.[predictor_name].ensemble` statement displays the parameters used to select the best candidate model.
+
+### Syntax
+
+Here is the syntax:
 
 ```sql
-DESCRIBE mindsdb.[name_of_your_predictor].ensemble;
+DESCRIBE mindsdb.[predictor_name].ensemble;
 ```
 
 On execution, we get:
@@ -126,11 +143,14 @@ On execution, we get:
 
 Where:
 
-| Name     | Description                                                                    |
-| -------- | ------------------------------------------------------------------------------ |
-| ensemble | JSON type object describing the parameters used to select best model candidate |
+| Name                  | Description                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| `[predictor_name]`    | Name of the model to be described.                                                         |
+| `ensemble`            | Object of the JSON type describing the parameters used to select the best candidate model. |
 
-### `#!sql DESCRIBE ... ENSEMBLE` Example
+### Example
+
+Let's look at an example using the `home_rentals_model` model.
 
 ```sql
 DESCRIBE mindsdb.home_rentals_model.ensemble;
@@ -255,5 +275,5 @@ On execution, we get:
 +----------------------------------------------------------------------+
 ```
 
-!!! TIP "Unsure what it all means?"
-    If you're unsure on how to `#!sql DESCRIBE` your model or understand the results feel free to ask us how to do it on the community [Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).
+!!! TIP "Need More Info?"
+    If you need more information on how to `#!sql DESCRIBE` your model or understand the results, feel free to ask us on the [community Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).

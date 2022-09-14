@@ -218,10 +218,8 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
         predictor_record.dtype_dict = predictor.dtype_dict
         # old_predictor_record.update_status = 'up_to_date'
 
-        # old_predictor_record.active = False
-        # predictor_record.active = True
-        # TODO set active the last record
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
+        predictor_record.training_stop_at = datetime.now()
         session.commit()
 
         predictor_records = get_model_records(
@@ -251,5 +249,6 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
         # old_predictor_record.update_status = 'update_failed'   # TODO
         db.session.commit()
 
-    predictor_record.training_stop_at = datetime.now()
-    db.session.commit()
+    if predictor_record.training_stop_at is None:
+        predictor_record.training_stop_at = datetime.now()
+        db.session.commit()

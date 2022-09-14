@@ -60,32 +60,7 @@ class CompanyIndependentTest(unittest.TestCase):
                     headers={'company-id': f'{cid}'}
                 )
                 self.assertTrue(res.status_code == 200)
-
-        # res = requests.put(
-        #     f'{HTTP_API_ROOT}/config/integrations/files',
-        #     json={'params': {'type': 'files'}},
-        #     headers={'company-id': f'{CID_A}'}
-        # )
-        # self.assertTrue(res.status_code == 200)
-        # res = requests.put(
-        #     f'{HTTP_API_ROOT}/config/integrations/views',
-        #     json={'params': {'type': 'views'}},
-        #     headers={'company-id': f'{CID_A}'}
-        # )
-        # self.assertTrue(res.status_code == 200)
-
-        # res = requests.put(
-        #     f'{HTTP_API_ROOT}/config/integrations/files',
-        #     json={'params': {'type': 'files'}},
-        #     headers={'company-id': f'{CID_B}'}
-        # )
-        # self.assertTrue(res.status_code == 200)
-        # res = requests.put(
-        #     f'{HTTP_API_ROOT}/config/integrations/views',
-        #     json={'params': {'type': 'views'}},
-        #     headers={'company-id': f'{CID_B}'}
-        # )
-        # self.assertTrue(res.status_code == 200)
+                print(f"created integration '{inegration_name}' for company '{cid}'")
 
         # is no integrations
         integrations_a = get_integrations_names(company_id=CID_A)

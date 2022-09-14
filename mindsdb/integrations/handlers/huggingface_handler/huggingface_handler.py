@@ -1,8 +1,11 @@
+from typing import Dict, Any
 
 import os
-import numpy as np
 import pandas as pd
 from transformers import pipeline
+from dateutil.parser import parse as parse_datetime
+import dill
+import shutil
 import datetime
 
 from transformers import __version__ as transformers_version
@@ -40,11 +43,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropPredictor,
 )
 
-
-from .utils import RayConnection
-from .functions import learn_process
-
-
+# from .functions import learn_process
 
 
 class HuggingFaceHandler(PredictiveHandler):
@@ -57,15 +56,12 @@ class HuggingFaceHandler(PredictiveHandler):
         super().__init__(name)
         self.predictor_cache = {}
         self.config = Config()
-        #self.storage_context = {}
-        #self.storage_config = kwargs.get('storage_config', {'name': "ludwig_handler_storage"})
-        #self.storage = LocalFSStore()
 
         self.parser = parse_sql
         self.dialect = 'mindsdb'
 
         self.handler_controller = kwargs.get('handler_controller')
-        self.fs_store = kwargs.get('fs_store')
+        self.storage = kwargs.get('fs_store')
         self.company_id = kwargs.get('company_id')
         self.model_controller = WithKWArgsWrapper(
             ModelController(),
@@ -87,12 +83,13 @@ class HuggingFaceHandler(PredictiveHandler):
     def get_tables(self) -> HandlerResponse:
         """ Returns name list of trained models.  """  # noqa
 
-        models = self.storage.get('models', [])
+        models = os.listdir(os.path.join(self.config['paths']['predictors']))  # TODO: replace with FSStore usage
         if models:
-            df = pd.DataFrame(
-                list(models.keys()) if models else [],
-                columns=['table_name']
-            )
+            hf_models = []
+            for m in models:
+                if 'huggingface_' in m:
+                    hf_models.append(m)
+            df = pd.DataFrame(hf_models, columns=['table_name'])
         else:
             df = pd.DataFrame(columns=['table_name'])
 
@@ -130,12 +127,11 @@ class HuggingFaceHandler(PredictiveHandler):
             return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=msg)
 
         elif type(query) == DropPredictor:
+            # @TODO: [REFACTOR] common helper method
             to_drop = query.name.parts[-1]
-            models = self.storage.get('models')
-            metadata = self.storage.get('metadata')
+            models = self.get_tables().data_frame.values
 
             if models:
-                # @TODO: [REFACTOR] common helper method
                 predictors_records = get_model_records(company_id=self.company_id, name=to_drop, active=None)
                 if len(predictors_records) == 0:
                     return HandlerResponse(
@@ -161,15 +157,10 @@ class HuggingFaceHandler(PredictiveHandler):
                         predictor_record.status = PREDICTOR_STATUS.DELETED
                     else:
                         db.session.delete(predictor_record)
-                    self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
+                    # self.storage.delete(f'huggingface_{self.company_id}_{predictor_record.id}')  # TODO use this once implemented
+                    shutil.rmtree(os.path.join(self.config['paths']['predictors'], f'huggingface_{self.company_id}_{predictor_record.id}'))
                 db.session.commit()
-
                 # end common method
-
-                del models[to_drop]
-                self.storage.set('models', models)
-                del metadata[to_drop]
-                self.storage.set('metadata', metadata)
 
                 return HandlerResponse(RESPONSE_TYPE.OK)
             else:
@@ -203,7 +194,7 @@ class HuggingFaceHandler(PredictiveHandler):
             return None
 
     def _call_model(self, df, model):
-        predictions = dask.compute(model.predict(df)[0])[0]
+        predictions = pd.DataFrame()
         target_name = model.config['output_features'][0]['column']
 
         if target_name not in df:
@@ -232,23 +223,8 @@ class HuggingFaceHandler(PredictiveHandler):
         if statement.order_by:
             raise Exception("Ludwig handler does not support time series tasks yet!")
 
-        # TODO: potentially abstract this into a common utility?
-        # get data from integration  # TODO: custom dialect?
-        integration_name = statement.integration_name.parts[0]
-        query = Select(
-            targets=[Star()],
-            from_table=NativeQuery(
-                integration=Identifier(integration_name),
-                query=statement.query_str,
-            )
-        )
-        sql_session = make_sql_session(self.company_id)
-        sqlquery = SQLQuery(query, session=sql_session)
-        #df = sqlquery.fetch(view='dataframe')['result']
         user_config = statement.using
-        
-        # TODO: turn into common method?
-        data_integration_meta = self.handler_controller.get(name=integration_name)
+        data_integration_meta = self.handler_controller.get(name='files')
         huggingface_integration_meta = self.handler_controller.get(name='huggingface')
         predictor_record = db.Predictor(
             company_id=self.company_id,
@@ -271,47 +247,39 @@ class HuggingFaceHandler(PredictiveHandler):
         predictor_id = predictor_record.id
         
         # create dummy dataframe
-        df = pd.DataFrame() 
+        # df = pd.DataFrame()
 
+        # p = HandlerProcess(learn_process, df, target, user_config, predictor_id, statement, self.storage_config, self.storage_context)  # noqa
+        # p.start()
 
-        #p = HandlerProcess(learn_process, df, target, user_config, predictor_id, statement, self.storage_config, self.storage_context)  # noqa
-        #p.start()
-
-        ###################################################################
         task = user_config['task'] 
         model_url = user_config['model_url']
-        save_folder = 'huggingface_models'
-        
-        #predictor_name = user_config['predictor_name']
-        predictor_name = model_name
-        
+
         labels = user_config['labels']
-        #candidate_labels = user_config['candidate_labels']
-        
-        #max_length = user_config['max_length'] 
-        #min_output_length = user_config['min_output_length']
-        #max_output_length = user_config['max_output_length']
-        #lang_input = user_config['lang_input']
-        #lang_output = user_config['lang_output']
+        # candidate_labels = user_config['candidate_labels']
+        # max_length = user_config['max_length']
+        # min_output_length = user_config['min_output_length']
+        # max_output_length = user_config['max_output_length']
+        # lang_input = user_config['lang_input']
+        # lang_output = user_config['lang_output']
 
         # REF:
         #   user_config.get(key, default_value) 
 
         base_dir = self.config['paths']['predictors']
-        save_path = os.path.join(base_dir, save_folder, model_url)
+        save_path = os.path.join(base_dir, f'huggingface_{self.company_id}_{predictor_id}')
 
-        if task=='translation':
+        if task == 'translation':
+            lang_input = 'en'  # TODO: change
+            lang_output = 'es'  # TODO: change
             task_proper = f'translation_{lang_input}_to_{lang_output}'
         else:
             task_proper = task
-        
-        #print(f'Checking if {self.model_name} exists...')
-        
-        ####
-        
+
         print(f'Downloading {model_url}...')
-        pipeline = pipeline(task=task_proper, model=model_url)
-        pipeline.save_pretrained(save_path)
+        model_pipeline = pipeline(task=task_proper, model=model_url)
+        model_pipeline.save_pretrained(save_path)
+        # self.storage.put(f'huggingface_{}_{model_}', models)
         
         if False:  # commented out as not needed for first example
             if max_length:
@@ -322,49 +290,46 @@ class HuggingFaceHandler(PredictiveHandler):
                 max_length = pipeline.model.config.max_length
             else:
                 print('No max_length found!')
-        
 
         if labels:
-            labels_default = pipeline.model.config.id2label
+            labels_default = model_pipeline.model.config.id2label
             labels_map = {}
             for num in labels_default.keys():
                 labels_map[labels_default[num]] = labels[num]
             labels_map = labels_map
         else:
             labels_map = None
-        
-        pipeline = None
-
 
         print(f'Saved to {save_path}')
 
-        db.session.refresh(predictor_record)
+        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
+        predictor_record.status = PREDICTOR_STATUS.COMPLETE
+        predictor_record.training_stop_at = datetime.datetime.now()
+        db.session.commit()
         return HandlerResponse(RESPONSE_TYPE.OK)
-
 
     @mark_process(name='predict')
     def predict(self, model_name, data):
-        with RayConnection():
-            if isinstance(data, dict):
-                data = [data]
-            df = pd.DataFrame(data)
-            model = self._get_model(model_name)
-            predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name='ludwig')
-            target = predictor_record.to_predict[0]
-            predictions = self._call_model(df, model)
+        if isinstance(data, dict):
+            data = [data]
+        df = pd.DataFrame(data)
+        model = self._get_model(model_name)
+        predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name='ludwig')
+        target = predictor_record.to_predict[0]
+        predictions = self._call_model(df, model)
 
-            # TODO: convert in a common method to fill-in missing columns
-            for col_name in ['select_data_query', 'when_data', f'{target}_confidence',
-                             f'{target}_anomaly', f'{target}_min', f'{target}_max']:
-                predictions[col_name] = None
-            predictions = predictions.to_dict(orient='records')
+        # TODO: convert in a common method to fill-in missing columns
+        for col_name in ['select_data_query', 'when_data', f'{target}_confidence',
+                         f'{target}_anomaly', f'{target}_min', f'{target}_max']:
+            predictions[col_name] = None
+        predictions = predictions.to_dict(orient='records')
 
-            after_predict_hook(
-                company_id=self.company_id,
-                predictor_id=predictor_record.id,
-                rows_in_count=df.shape[0],
-                columns_in_count=df.shape[1],
-                rows_out_count=len(predictions)
-            )
+        after_predict_hook(
+            company_id=self.company_id,
+            predictor_id=predictor_record.id,
+            rows_in_count=df.shape[0],
+            columns_in_count=df.shape[1],
+            rows_out_count=len(predictions)
+        )
 
-            return predictions
+        return predictions

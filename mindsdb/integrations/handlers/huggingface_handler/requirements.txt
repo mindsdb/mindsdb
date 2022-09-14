@@ -1,5 +1,4 @@
-#mindsdb>=22.6.2.1
+mindsdb>=22.6.2.1
 mindsdb_sql >= 0.4.0
-
 pandas <=1.4.3
 transformers <=4.21.0

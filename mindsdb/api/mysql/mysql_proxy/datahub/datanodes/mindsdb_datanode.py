@@ -151,7 +151,13 @@ class MindsDBDataNode(DataNode):
         self.model_controller.delete_model(name, integration_name=integration_name)
 
     def get_predictors(self, query: ASTNode):
-        predictors_df = self._select_predictors(ml_handler_name=query.from_table.parts[0])
+        if len(query.from_table.parts) == 1:
+            ml_handler_name = 'lightwood'
+        else:
+            ml_handler_name = query.from_table.parts[0]
+            if ml_handler_name.lower() == 'mindsdb':
+                ml_handler_name = 'lightwood'
+        predictors_df = self._select_predictors(ml_handler_name=ml_handler_name)
 
         try:
             result_df = query_df(predictors_df, query)

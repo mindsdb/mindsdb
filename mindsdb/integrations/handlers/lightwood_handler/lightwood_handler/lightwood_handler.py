@@ -621,11 +621,11 @@ class LightwoodHandler(PredictiveHandler):
             if predictor_record.dtype_dict[order_by_column] == dtype.date:
                 for row in pred_dicts:
                     if isinstance(row[order_by_column], (int, float)):
-                        row[order_by_column] = str(datetime.fromtimestamp(row[order_by_column]).date())
+                        row[order_by_column] = datetime.fromtimestamp(row[order_by_column]).date()
             elif predictor_record.dtype_dict[order_by_column] == dtype.datetime:
                 for row in pred_dicts:
                     if isinstance(row[order_by_column], (int, float)):
-                        row[order_by_column] = str(datetime.fromtimestamp(row[order_by_column]))
+                        row[order_by_column] = datetime.fromtimestamp(row[order_by_column])
 
             explain_arr = explanations
         # endregion

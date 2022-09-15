@@ -12,7 +12,9 @@
 import re
 from collections import OrderedDict, defaultdict
 import time
+import datetime as dt
 
+import dateinfer
 import duckdb
 import pandas as pd
 import numpy as np
@@ -29,6 +31,8 @@ from mindsdb_sql.parser.ast import (
     Star,
     Insert,
     Delete,
+    Latest,
+    BetweenOperation,
 )
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
@@ -945,6 +949,10 @@ class SQLQuery():
                         )
                         predictor_cache.set(key, data)
 
+                    # apply filter
+                    if is_timeseries:
+                        data = self.apply_ts_filter(data, where_data, step, predictor_metadata)
+
                     data = [{(key, key): value for key, value in row.items()} for row in data]
 
                     values = [{table_name: x} for x in data]
@@ -958,7 +966,8 @@ class SQLQuery():
                     'values': values,
                     'columns': columns,
                     'tables': [table_name],
-                    'types': {table_name: self.model_types}
+                    'types': {table_name: self.model_types},
+                    'is_prediction': True  # for join step
                 }
             except Exception as e:
                 raise SqlApiUnknownError(f'error in apply predictor step: {e}') from e
@@ -976,8 +985,6 @@ class SQLQuery():
 
                 if step.query.condition is not None:
                     raise ErNotSupportedYet('At this moment supported only JOIN without condition')
-                if step.query.join_type.upper() not in ('LEFT JOIN', 'JOIN'):
-                    raise ErNotSupportedYet('At this moment supported only JOIN and LEFT JOIN')
 
                 if len(left_data['tables']) == 0 or len(right_data['tables']) == 0:
                     raise ErLogicError('Table for join is not found')
@@ -1036,13 +1043,22 @@ class SQLQuery():
                 df_a = pd.DataFrame(left_df_data, columns=left_columns_map.keys())
                 df_b = pd.DataFrame(right_df_data, columns=right_columns_map.keys())
 
-                a_name = f'a{round(time.time() * 1000)}'
-                b_name = f'b{round(time.time() * 1000)}'
+                a_name = f'table_a'
+                b_name = f'table_b'
                 con = duckdb.connect(database=':memory:')
                 con.register(a_name, df_a)
                 con.register(b_name, df_b)
+
+                join_type = step.query.join_type.lower()
+                if join_type == 'join':
+                    # join type is not specified. using join to prediction data
+                    if left_data.get('is_prediction'):
+                        join_type = 'left join'
+                    elif right_data.get('is_prediction'):
+                        join_type = 'right join'
+
                 resp_df = con.execute(f"""
-                    SELECT * FROM {a_name} as ta full join {b_name} as tb
+                    SELECT * FROM {a_name} as ta {join_type} {b_name} as tb
                     ON ta.{left_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                      = tb.{right_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                 """).fetchdf()
@@ -1062,32 +1078,6 @@ class SQLQuery():
                             new_row[right_key][right_columns_map[key]] = value
                     data['values'].append(new_row)
 
-                # remove all records with empty data from predictor from join result
-                # otherwise there are emtpy records in the final result:
-                # +------------+------------+-------+-----------+----------+
-                # | time       | time       | state | pnew_case | new_case |
-                # +------------+------------+-------+-----------+----------+
-                # | 2020-10-21 | 2020-10-24 | CA    | 0.0       | 5945.0   |
-                # | 2020-10-22 | 2020-10-23 | CA    | 0.0       | 6141.0   |
-                # | 2020-10-23 | 2020-10-22 | CA    | 0.0       | 2940.0   |
-                # | 2020-10-24 | 2020-10-21 | CA    | 0.0       | 3707.0   |
-                # | NULL       | 2020-10-20 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-19 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-18 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-17 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-16 | NULL  | nan       | nan      |
-                # +------------+------------+-------+-----------+----------+
-                # 9 rows in set (2.07 sec)
-
-                # if is_timeseries:
-                #     data_values = []
-                #     for row in data['values']:
-                #         for key in row:
-                #             if 'mindsdb' in key:
-                #                 if not is_empty_prediction_row(row[key]):
-                #                     data_values.append(row)
-                #                     break
-                #     data['values'] = data_values
             except Exception as e:
                 raise SqlApiUnknownError(f'error in join step: {e}') from e
 
@@ -1528,6 +1518,120 @@ class SQLQuery():
     #     args = [self._apply_where_filter(row, arg) for arg in where.args]
     #     result = op_fn(*args)
     #     return result
+
+    def apply_ts_filter(self, predictor_data, table_data, step, predictor_metadata):
+
+        # apply filter
+        group_cols = predictor_metadata['group_by_columns']
+        order_col = predictor_metadata['order_by_column']
+
+        filter_args = step.output_time_filter.args
+        filter_op = step.output_time_filter.op
+
+        # filter field must be order column
+        if not (
+            isinstance(filter_args[0], Identifier)
+            and filter_args[0].parts[-1] == order_col
+        ):
+            # exit otherwise
+            return predictor_data
+
+
+        def get_date_format(samples):
+            return dateinfer.infer(samples)
+
+        if self.model_types.get(order_col) in ('date', 'datetime'):
+            # convert strings to date
+            # it is making side effect on original data by changing it but let it be
+
+            # convert predictor_data
+            if len(predictor_data) > 0:
+                if isinstance(predictor_data[0][order_col], str):
+                    samples = [row[order_col] for row in predictor_data]
+                    date_format = get_date_format(samples)
+
+                    for row in predictor_data:
+                        row[order_col] = dt.datetime.strptime(row[order_col], date_format)
+                elif isinstance(predictor_data[0][order_col], dt.date):
+                    # convert to datetime
+                    for row in predictor_data:
+                        row[order_col] = dt.datetime.combine(row[order_col], dt.datetime.min.time())
+
+            # convert predictor_data
+            if isinstance(table_data[0][order_col], str):
+                samples = [row[order_col] for row in table_data]
+                date_format = get_date_format(samples)
+
+                for row in table_data:
+                    row[order_col] = dt.datetime.strptime(row[order_col], date_format)
+            elif isinstance(table_data[0][order_col], dt.date):
+                # convert to datetime
+                for row in table_data:
+                    row[order_col] = dt.datetime.combine(row[order_col], dt.datetime.min.time())
+
+            # convert args to date
+            samples = [
+                arg.value
+                for arg in filter_args
+                if isinstance(arg, Constant) and isinstance(arg.value, str)
+            ]
+            if len(samples) > 0:
+                date_format = get_date_format(samples)
+
+                for arg in filter_args:
+                    if isinstance(arg, Constant) and isinstance(arg.value, str):
+                        arg.value = dt.datetime.strptime(arg.value, date_format)
+            # TODO can be dt.date in args?
+
+        # first pass: get max values for Latest in table data
+        latest_vals = {}
+        if Latest() in filter_args:
+
+            for row in table_data:
+                key = tuple([str(row[i]) for i in group_cols])
+                val = row[order_col]
+                if key not in latest_vals or latest_vals[key] < val:
+                    latest_vals[key] = val
+
+        # second pass: do filter rows
+        data2 = []
+        for row in predictor_data:
+            val = row[order_col]
+
+            if isinstance(step.output_time_filter, BetweenOperation):
+                if val >= filter_args[1].value and val <= filter_args[2].value:
+                    data2.append(row)
+            elif isinstance(step.output_time_filter, BinaryOperation):
+                op_map = {
+                    '<': '__lt__',
+                    '<=': '__le__',
+                    '>': '__gt__',
+                    '>=': '__ge__',
+                    '=': '__eq__',
+                }
+                arg = filter_args[1]
+                if isinstance(arg, Latest):
+                    key = tuple([str(row[i]) for i in group_cols])
+                    if key not in latest_vals:
+                        # pass this row
+                        continue
+                    arg = latest_vals[key]
+                elif isinstance(arg, Constant):
+                    arg = arg.value
+
+                if filter_op not in op_map:
+                    # unknown operation, exit immediately
+                    return predictor_data
+
+                # check condition
+                filter_op2 = op_map[filter_op]
+                if getattr(val, filter_op2)(arg):
+                    data2.append(row)
+            else:
+                # unknown operation, add anyway
+                data2.append(row)
+
+        return data2
 
     def _make_list_result_view(self, data):
         if self.outer_query is not None:

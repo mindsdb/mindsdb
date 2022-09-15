@@ -1521,7 +1521,11 @@ class SQLQuery():
 
     def apply_ts_filter(self, predictor_data, table_data, step, predictor_metadata):
 
-        # apply filter
+        if step.output_time_filter is None:
+            # no filter, exit
+            return predictor_data
+
+            # apply filter
         group_cols = predictor_metadata['group_by_columns']
         order_col = predictor_metadata['order_by_column']
 

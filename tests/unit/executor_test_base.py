@@ -1,3 +1,4 @@
+import copy
 import json
 import tempfile
 import os
@@ -115,7 +116,9 @@ class BaseTestCase:
         # add predictor to table
         r = self.db.Predictor(
             name=predictor['name'],
-            data={},
+            data={
+                'dtypes': predictor['dtypes']
+            },
             learn_args=predictor['problem_definition'],
             to_predict=predictor['predict'],
             integration_id=self.lw_integration_id
@@ -139,6 +142,7 @@ class BaseTestCase:
                 'anomaly': None
             }
 
+            data = copy.deepcopy(data)
             for row in data:
                 # row = row.copy()
                 exp_row = {'predicted_value': predictor['predicted_value'],

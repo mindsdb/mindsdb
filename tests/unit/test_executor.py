@@ -84,6 +84,115 @@ class Test(BaseTestCase):
         # is last datetime value of a = 1
         assert ret.data[0][1].isoformat() == dt.datetime(2020, 1, 3).isoformat()
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_ts_predictor(self, mock_handler):
+        # set integration data
+
+        df = pd.DataFrame([
+            {'a': 1, 't': dt.datetime(2020, 1, 1), 'g': 'x'},
+            {'a': 2, 't': dt.datetime(2020, 1, 2), 'g': 'x'},
+            {'a': 3, 't': dt.datetime(2020, 1, 3), 'g': 'x'},
+        ])
+        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
+
+        # --- use TS predictor ---
+
+        predictor = {
+            'name': 'task_model',
+            'predict': 'a',
+            'problem_definition': {
+                'timeseries_settings': {
+                    'is_timeseries': True,
+                    'window': 2,
+                    'order_by': 't',
+                    'group_by': 'g',
+                    'horizon': 3
+                }
+            },
+            'dtypes': {
+                'a': dtype.integer,
+                't': dtype.date,
+                'g': dtype.categorical,
+            },
+            'predicted_value': ''
+        }
+        self.set_predictor(predictor)
+
+        # set predictor output
+        predict_result = [
+            # window
+            {'a': 2, 't': dt.datetime(2020, 1, 2), 'g': 'x', '__mindsdb_row_id': 2},
+            {'a': 3, 't': dt.datetime(2020, 1, 3), 'g': 'x', '__mindsdb_row_id': 3},
+            # horizon
+            {'a': 1, 't': dt.datetime(2020, 1, 4), 'g': 'x', '__mindsdb_row_id': None},
+            {'a': 1, 't': dt.datetime(2020, 1, 5), 'g': 'x', '__mindsdb_row_id': None},
+            {'a': 1, 't': dt.datetime(2020, 1, 6), 'g': 'x', '__mindsdb_row_id': None},
+        ]
+        self.mock_predict.side_effect = lambda *a, **b: predict_result
+
+        # = latest  ______________________
+        ret = self.command_executor.execute_command(parse_sql(f'''
+            select p.* from pg.tasks t
+            join mindsdb.task_model p
+            where t.t = latest
+        ''', dialect='mindsdb'))
+        assert ret.error_code is None
+
+        ret_df = self.ret_to_df(ret)
+        # one key with max value of a
+        assert ret_df.shape[0] == 1
+        assert ret_df.t[0] == dt.datetime(2020, 1, 3)
+
+        # > latest ______________________
+        ret = self.command_executor.execute_command(parse_sql(f'''
+            select p.* from pg.tasks t
+            join mindsdb.task_model p
+            where t.t > latest
+        ''', dialect='mindsdb'))
+        assert ret.error_code is None
+
+        ret_df = self.ret_to_df(ret)
+        assert ret_df.shape[0] == 3
+        assert ret_df.t.min() == dt.datetime(2020, 1, 4)
+
+        # > date ______________________
+        ret = self.command_executor.execute_command(parse_sql(f'''
+            select p.* from pg.tasks t
+            join mindsdb.task_model p
+            where t.t > '2020-01-02'
+        ''', dialect='mindsdb'))
+        assert ret.error_code is None
+
+        ret_df = self.ret_to_df(ret)
+        assert ret_df.shape[0] == 4
+        assert ret_df.t.min() == dt.datetime(2020, 1, 3)
+
+        # between ______________________
+        # set predictor output
+        predict_result = [
+            # window
+            {'a': 1, 't': dt.datetime(2020, 1, 1), 'g': 'x', '__mindsdb_row_id': 1},
+            {'a': 2, 't': dt.datetime(2020, 1, 2), 'g': 'x', '__mindsdb_row_id': 2},
+            {'a': 3, 't': dt.datetime(2020, 1, 3), 'g': 'x', '__mindsdb_row_id': 3},
+            # horizon
+            {'a': 1, 't': dt.datetime(2020, 1, 4), 'g': 'x', '__mindsdb_row_id': None},
+            {'a': 1, 't': dt.datetime(2020, 1, 5), 'g': 'x', '__mindsdb_row_id': None},
+            {'a': 1, 't': dt.datetime(2020, 1, 6), 'g': 'x', '__mindsdb_row_id': None},
+
+        ]
+        self.mock_predict.side_effect = lambda *a, **b: predict_result
+
+        ret = self.command_executor.execute_command(parse_sql(f'''
+            select p.* from pg.tasks t
+            join mindsdb.task_model p
+            where t.t between '2020-01-02' and '2020-01-03' 
+        ''', dialect='mindsdb'))
+        assert ret.error_code is None
+
+        ret_df = self.ret_to_df(ret)
+        assert ret_df.shape[0] == 2
+        assert ret_df.t.min() == dt.datetime(2020, 1, 2)
+        assert ret_df.t.max() == dt.datetime(2020, 1, 3)
 
 class TestTableau(BaseTestCase):
 
@@ -386,7 +495,7 @@ class TestWithNativeQuery(BaseTestCase):
            select task_model.*
            from views.{view_name}
            join mindsdb.task_model
-           where {view_name}.t > latest
+           where {view_name}.t = latest
         ''', dialect='mindsdb'))
         assert ret.error_code is None
 

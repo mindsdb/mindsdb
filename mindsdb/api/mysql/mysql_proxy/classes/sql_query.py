@@ -949,6 +949,10 @@ class SQLQuery():
                         )
                         predictor_cache.set(key, data)
 
+                    if len(data) > 0:
+                        row = data[0]
+                        columns[table_name] = [(key, key) for key in row.keys()]
+
                     # apply filter
                     if is_timeseries:
                         data = self.apply_ts_filter(data, where_data, step, predictor_metadata)
@@ -957,10 +961,6 @@ class SQLQuery():
 
                     values = [{table_name: x} for x in data]
 
-                    if len(data) > 0:
-                        row = data[0]
-                        columns[table_name] = list(row.keys())
-                    # TODO else
 
                 data = {
                     'values': values,
@@ -1538,6 +1538,19 @@ class SQLQuery():
 
 
         def get_date_format(samples):
+            # dateinfer reads sql date 2020-04-01 as yyyy-dd-mm. workaround for in
+            if re.match('[\d]{4}-[\d]{2}-[\d]{2}', samples[0]):
+                # suggested format
+                date_format = '%Y-%m-%d'
+                for sample in samples:
+                    try:
+                        dt.datetime.strptime(sample, date_format)
+                    except ValueError:
+                        date_format = None
+                        break
+                if date_format is not None:
+                    return date_format
+
             return dateinfer.infer(samples)
 
         if self.model_types.get(order_col) in ('date', 'datetime'):

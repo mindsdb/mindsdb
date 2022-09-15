@@ -435,16 +435,16 @@ class LightwoodHandler(PredictiveHandler):
                 self.predictor_cache = {}
 
             if model_data['status'] == 'complete':
-                self.fs_store.get(fs_name, base_dir=self.config['paths']['predictors'])
+                self.fs_store.pull()
                 self.predictor_cache[model_name] = {
                     'predictor': lightwood.predictor_from_state(
-                        os.path.join(self.config['paths']['predictors'], fs_name),
+                        os.path.join(self.fs_store.folder_path, fs_name),
                         predictor_record.code
                     ),
                     'updated_at': predictor_record.updated_at,
                     'created': datetime.now(),
                     'code': predictor_record.code,
-                    'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
+                    'pickle': str(os.path.join(self.fs_store.folder_path, fs_name))
                 }
             else:
                 raise Exception(

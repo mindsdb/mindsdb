@@ -41,10 +41,10 @@ class FileHandler(DatabaseHandler):
     """
     name = 'files'
 
-    def __init__(self, name=None, fs_store=None, connection_data={}, file_controller=None):
+    def __init__(self, name=None, file_storage=None, connection_data={}, file_controller=None):
         super().__init__(name)
         self.parser = parse_sql
-        self.fs_store = fs_store
+        self.fs_store = file_storage
         self.custom_parser = connection_data.get('custom_parser', None)
         self.clean_rows = connection_data.get('clean_rows', True)
         self.file_controller = file_controller

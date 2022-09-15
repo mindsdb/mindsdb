@@ -32,9 +32,10 @@ class BYOMHandler:
 
         p.stdin.write(params_enc)
         p.stdin.close()
+        ret_enc = p.stdout.read()
+
         p.wait()
 
-        ret_enc = p.stdout.read()
         try:
             ret = pickle.loads(ret_enc)
         except (pickle.UnpicklingError, EOFError):

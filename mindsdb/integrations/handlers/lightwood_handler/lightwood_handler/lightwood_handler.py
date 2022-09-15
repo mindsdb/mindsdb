@@ -85,7 +85,7 @@ class LightwoodHandler(PredictiveHandler):
         self.dialect = 'mindsdb'
 
         self.handler_controller = kwargs.get('handler_controller')
-        self.fs_store = kwargs.get('file storage')
+        self.fs_store = kwargs.get('file_storage')
         self.company_id = kwargs.get('company_id')
         self.model_controller = WithKWArgsWrapper(
             ModelController(),
@@ -294,7 +294,14 @@ class LightwoodHandler(PredictiveHandler):
 
         predictor_id = predictor_record.id
 
-        p = HandlerProcess(run_learn, training_data_df, problem_definition, predictor_id, json_ai_override)
+        p = HandlerProcess(
+            run_learn,
+            training_data_df,
+            problem_definition,
+            predictor_id,
+            json_ai_override,
+            str(self.fs_store.folder_path)
+        )
         p.start()
         if join_learn_process:
             p.join()
@@ -393,7 +400,7 @@ class LightwoodHandler(PredictiveHandler):
                 predictor_record.status = PREDICTOR_STATUS.DELETED
             else:
                 db.session.delete(predictor_record)
-            self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
+            self.fs_store.delete()
         db.session.commit()
 
         return Response(RESPONSE_TYPE.OK)

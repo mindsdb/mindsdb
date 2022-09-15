@@ -65,7 +65,7 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
 
 
 @mark_process(name='learn')
-def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
+def run_fit(predictor_id: int, df: pd.DataFrame, storage_path: str) -> None:
     try:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
         assert predictor_record is not None
@@ -82,7 +82,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         db.session.refresh(predictor_record)
 
         fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
-        pickle_path = os.path.join(config['paths']['predictors'], fs_name)
+        pickle_path = os.path.join(storage_path, fs_name)
         predictor.save(pickle_path)
 
         fs_store.put(fs_name, base_dir=config['paths']['predictors'])
@@ -128,7 +128,7 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
 
 @mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
-              json_ai_override: dict = None) -> None:
+              json_ai_override: dict = None, storage_path: str = None) -> None:
     if json_ai_override is None:
         json_ai_override = {}
 
@@ -138,7 +138,7 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
 
     try:
         run_generate(df, problem_definition, predictor_id, json_ai_override)
-        run_fit(predictor_id, df)
+        run_fit(predictor_id, df, storage_path)
     except Exception as e:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
         print(traceback.format_exc())

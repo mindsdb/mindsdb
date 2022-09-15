@@ -186,7 +186,10 @@ class SpecificFSStore:
         self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
 
     def pull(self):
-        self.fs_store.get(str(self.folder_name), str(self.resource_group_path))
+        try:
+            self.fs_store.get(str(self.folder_name), str(self.resource_group_path))
+        except Exception:
+            pass
 
     def add(self, path: Union[str, Path], dest_rel_path: Optional[Union[str, Path]] = None):
         """Copy file/folder to persist storage
@@ -258,17 +261,21 @@ class SpecificFSStore:
 
         return ret_path
 
-    def delete(self, relative_path: Union[str, Path]) -> Path:
-        if self.sync is True:
-            self.pull()
-
+    def delete(self, relative_path: Union[str, Path] = '.') -> Path:
         if isinstance(relative_path, str):
             relative_path = Path(relative_path)
 
         if relative_path.is_absolute():
             raise TypeError('FSStorage.delete() got absolute path as argument')
 
-        path = self.folder_path / relative_path
+        path = (self.folder_path / relative_path).resolve()
+
+        if path == self.folder_path:
+            return self.complete_removal()
+
+        if self.sync is True:
+            self.pull()
+
         if path.exists() is False:
             raise Exception('Path does not exists')
 
@@ -279,3 +286,7 @@ class SpecificFSStore:
 
         if self.sync is True:
             self.push()
+
+    def complete_removal(self):
+        shutil.rmtree(str(self.folder_path))
+        self.fs_store.delete(self.folder_name)

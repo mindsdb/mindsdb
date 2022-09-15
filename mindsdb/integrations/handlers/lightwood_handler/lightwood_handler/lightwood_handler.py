@@ -361,7 +361,8 @@ class LightwoodHandler(PredictiveHandler):
             run_update,
             new_predictor_record.id,
             response.data_frame,
-            self.company_id
+            self.company_id,
+            str(self.fs_store.folder_path)
         )
         p.start()
 

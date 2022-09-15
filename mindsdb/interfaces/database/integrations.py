@@ -16,7 +16,7 @@ from mindsdb.interfaces.storage.fs import FsStore, SpecificFSStore, RESOURCE_GRO
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
 
 
 class IntegrationController:
@@ -194,7 +194,7 @@ class IntegrationController:
                 ViewController(),
                 company_id=company_id
             )
-        elif handler_type == 'lightwood':
+        elif self.handler_modules.get(handler_type, False).type == HANDLER_TYPE.ML:
             handler_ars['handler_controller'] = WithKWArgsWrapper(
                 IntegrationController(),
                 company_id=company_id
@@ -323,10 +323,6 @@ class IntegrationController:
     def _get_handler_meta(self, module):
         handler_dir = Path(module.__path__[0])
         handler_folder_name = handler_dir.name
-        handler_name = handler_folder_name
-        if handler_name.endswith('_handler'):
-            handler_name = handler_name[:-8]
-
         dependencies = self._read_dependencies(handler_dir)
 
         self.handler_modules[module.name] = module

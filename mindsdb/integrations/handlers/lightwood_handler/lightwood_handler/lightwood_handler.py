@@ -1,21 +1,19 @@
 import os
 import sys
 import json
-import traceback
+
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Any
 import copy
 from dateutil.parser import parse as parse_datetime
 
 import psutil
-import sqlalchemy
 import pandas as pd
 import lightwood
-from lightwood.api.types import JsonAI
-from lightwood.api.high_level import json_ai_from_problem, predictor_from_code, ProblemDefinition
+from lightwood.api.high_level import ProblemDefinition
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Join, BinaryOperation, Identifier, Constant, Select, OrderBy, Show, Star, NativeQuery
+from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant, Select, Show, Star, NativeQuery
 from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
     CreatePredictor,
@@ -25,16 +23,15 @@ from lightwood import __version__ as lightwood_version
 from lightwood.api import dtype
 import numpy as np
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.interfaces.database.integrations import IntegrationController
-from mindsdb.interfaces.database.views import ViewController
-from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
-from mindsdb.integrations.libs.utils import recur_get_conditionals, get_aliased_columns, get_join_input, get_model_name
+from mindsdb.integrations.libs.base_handler import PredictiveHandler
+from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
+from mindsdb.integrations.utilities.processes import HandlerProcess
+from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
+    HandlerStatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
@@ -50,27 +47,10 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 
-from .learn_process import brack_to_mod, rep_recur, LearnProcess, UpdateProcess
-from .utils import unpack_jsonai_old_args, load_predictor
-from .join_utils import get_ts_join_input
+from .utils import unpack_jsonai_old_args
+from .functions import run_learn, run_update
 
 IS_PY36 = sys.version_info[1] <= 6
-
-
-def get_where_data(where):
-    result = {}
-    if type(where) != BinaryOperation:
-        raise Exception("Wrong 'where' statement")
-    if where.op == '=':
-        if type(where.args[0]) != Identifier or type(where.args[1]) != Constant:
-            raise Exception("Wrong 'where' statement")
-        result[where.args[0].parts[-1]] = where.args[1].value
-    elif where.op == 'and':
-        result.update(get_where_data(where.args[0]))
-        result.update(get_where_data(where.args[1]))
-    else:
-        raise Exception("Wrong 'where' statement")
-    return result
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -101,35 +81,8 @@ class LightwoodHandler(PredictiveHandler):
         super().__init__(name)
         self.predictor_cache = {}
         self.config = Config()
-        self.storage = None
         self.parser = parse_sql
         self.dialect = 'mindsdb'
-        self.handler_dialect = 'mysql'
-
-        self.lw_dtypes_to_sql = {
-            "integer": sqlalchemy.Integer,
-            "float": sqlalchemy.Float,
-            "quantity": sqlalchemy.Float,
-            "binary": sqlalchemy.Text,
-            "categorical": sqlalchemy.Text,
-            "tags": sqlalchemy.Text,
-            "date": sqlalchemy.DateTime,
-            "datetime": sqlalchemy.DateTime,
-            "short_text": sqlalchemy.Text,
-            "rich_text": sqlalchemy.Text,
-            "num_array": sqlalchemy.Text,
-            "cat_array": sqlalchemy.Text,
-            "num_tsarray": sqlalchemy.Text,
-            "cat_tsarray": sqlalchemy.Text,
-            "empty": sqlalchemy.Text,
-            "invalid": sqlalchemy.Text,
-        }  # image, audio, video not supported
-        self.lw_dtypes_overrides = {
-            'original_index': sqlalchemy.Integer,
-            'confidence': sqlalchemy.Float,
-            'lower': sqlalchemy.Float,
-            'upper': sqlalchemy.Float
-        }
 
         self.handler_controller = kwargs.get('handler_controller')
         self.fs_store = kwargs.get('file storage')
@@ -139,15 +92,16 @@ class LightwoodHandler(PredictiveHandler):
             company_id=self.company_id
         )
 
-    def check_connection(self) -> Dict[str, int]:
+    def check_connection(self) -> HandlerStatusResponse:
+        result = HandlerStatusResponse(False)
         try:
             year, major, minor, hotfix = lightwood.__version__.split('.')
             assert int(year) > 22 or (int(year) == 22 and int(major) >= 4)
-            print("Lightwood OK!")
-            return {'status': '200'}
+            result.success = True
         except AssertionError as e:
-            print("Cannot import lightwood!")
-            return {'status': '503', 'error': e}
+            log.error(f"Cannot import lightwood, {e}")
+            result.error_message = str(e)
+        return result
 
     def get_tables(self) -> Response:
         """ Returns list of model names (that have been succesfully linked with CREATE PREDICTOR) """  # noqa
@@ -185,19 +139,78 @@ class LightwoodHandler(PredictiveHandler):
         )
         return result
 
-    def make_sql_session(self, company_id):
+    def native_query(self, query: str) -> Response:
+        query_ast = self.parser(query, dialect=self.dialect)
+        return self.query(query_ast)
 
-        server_obj = type('', (), {})()
-        server_obj.original_integration_controller = IntegrationController()
-        server_obj.original_model_controller = ModelController()
-        server_obj.original_view_controller = ViewController()
+    def query(self, query: ASTNode) -> Response:
+        statement = query
 
-        sql_session = SessionController(
-            server=server_obj,
-            company_id=company_id
-        )
-        sql_session.database = 'mindsdb'
-        return sql_session
+        if type(statement) == Show:
+            if statement.category.lower() == 'tables':
+                all_models = self.model_controller.get_models(ml_handler_name='lightwood')
+                all_models_names = [[x['name']] for x in all_models]
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    pd.DataFrame(
+                        all_models_names,
+                        columns=['table_name']
+                    )
+                )
+                return response
+            else:
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Cant determine how to show '{statement.category}'"
+                )
+            return response
+        elif type(statement) == CreatePredictor:
+            return self._learn(statement)
+        elif type(statement) == RetrainPredictor:
+            return self._retrain(statement)
+        elif type(statement) == DropPredictor:
+            return self._drop(statement)
+        elif type(statement) == Select:
+            model_name = statement.from_table.parts[-1]
+            where_data = get_where_data(statement.where)
+            predictions = self.predict(model_name, where_data)
+            return Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=pd.DataFrame(predictions)
+            )
+        else:
+            raise Exception(f"Query type {type(statement)} not supported")
+
+    def analyze_dataset(self, data_frame: pd.DataFrame) -> dict:
+        analysis = lightwood.analyze_dataset(data_frame)
+        return analysis.to_dict()
+
+    def edit_json_ai(self, name: str, json_ai: dict):
+        predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
+        assert predictor_record is not None
+
+        json_ai = lightwood.JsonAI.from_dict(json_ai)
+        predictor_record.code = lightwood.code_from_json_ai(json_ai)
+        predictor_record.json_ai = json_ai.to_dict()
+        db.session.commit()
+
+    def code_from_json_ai(self, json_ai: dict):
+        json_ai = lightwood.JsonAI.from_dict(json_ai)
+        code = lightwood.code_from_json_ai(json_ai)
+        return code
+
+    def edit_code(self, name: str, code: str):
+        """Edit an existing predictor's code"""
+        if self.config.get('cloud', False):
+            raise Exception('Code editing prohibited on cloud')
+
+        predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
+        assert predictor_record is not None
+
+        lightwood.predictor_from_code(code)
+        predictor_record.code = code
+        predictor_record.json_ai = None
+        db.session.commit()
 
     @mark_process(name='learn')
     def _learn(self, statement):
@@ -246,7 +259,7 @@ class LightwoodHandler(PredictiveHandler):
                 query=statement.query_str
             )
         )
-        sql_session = self.make_sql_session(self.company_id)
+        sql_session = make_sql_session(self.company_id)
 
         # execute as query
         sqlquery = SQLQuery(query, session=sql_session)
@@ -281,7 +294,7 @@ class LightwoodHandler(PredictiveHandler):
 
         predictor_id = predictor_record.id
 
-        p = LearnProcess(training_data_df, problem_definition, predictor_id, json_ai_override)
+        p = HandlerProcess(run_learn, training_data_df, problem_definition, predictor_id, json_ai_override)
         p.start()
         if join_learn_process:
             p.join()
@@ -296,31 +309,53 @@ class LightwoodHandler(PredictiveHandler):
     def _retrain(self, statement):
         model_name = statement.name.parts[-1]
 
-        predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name='lightwood')
+        base_predictor_record = get_model_record(
+            name=model_name,
+            ml_handler_name='lightwood',
+            company_id=self.company_id,
+            active=True
+        )
 
-        if predictor_record is None:
+        if base_predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=f"Error: model '{model_name}' does not exists!"
             )
 
-        if predictor_record.update_status == 'updating':
-            return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=f"Error: model '{model_name}' already retraining!"
-            )
-
-        predictor_record.update_status = 'updating'
+        new_predictor_record = db.Predictor(
+            company_id=self.company_id,
+            name=base_predictor_record.name,
+            integration_id=base_predictor_record.integration_id,
+            data_integration_id=base_predictor_record.data_integration_id,
+            fetch_data_query=base_predictor_record.fetch_data_query,
+            mindsdb_version=mindsdb_version,
+            lightwood_version=lightwood_version,
+            to_predict=base_predictor_record.to_predict,
+            learn_args=base_predictor_record.learn_args,
+            data={'name': base_predictor_record.name},
+            active=False,
+            status=PREDICTOR_STATUS.GENERATING
+        )
+        db.session.add(new_predictor_record)
         db.session.commit()
 
-        data_handler_meta = self.handler_controller.get_by_id(predictor_record.data_integration_id)
+        data_handler_meta = self.handler_controller.get_by_id(base_predictor_record.data_integration_id)
         data_handler = self.handler_controller.get_handler(data_handler_meta['name'])
-        ast = self.parser(predictor_record.fetch_data_query, dialect=self.dialect)
+        ast = self.parser(base_predictor_record.fetch_data_query, dialect=self.dialect)
         response = data_handler.query(ast)
         if response.type == RESPONSE_TYPE.ERROR:
             return response
 
-        p = UpdateProcess(predictor_record.id, response.data_frame, self.company_id)
+        new_predictor_record.training_data_columns_count = len(response.data_frame.columns)
+        new_predictor_record.training_data_rows_count = len(response.data_frame)
+        db.session.commit()
+
+        p = HandlerProcess(
+            run_update,
+            new_predictor_record.id,
+            response.data_frame,
+            self.company_id
+        )
         p.start()
 
         return Response(RESPONSE_TYPE.OK)
@@ -363,49 +398,6 @@ class LightwoodHandler(PredictiveHandler):
 
         return Response(RESPONSE_TYPE.OK)
 
-    def native_query(self, query: str) -> Response:
-        query_ast = self.parser(query, dialect=self.dialect)
-        return self.query(query_ast)
-
-    def query(self, query: ASTNode) -> Response:
-        statement = query
-
-        if type(statement) == Show:
-            if statement.category.lower() == 'tables':
-                all_models = self.model_controller.get_models()
-                all_models_names = [[x['name']] for x in all_models]
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    pd.DataFrame(
-                        all_models_names,
-                        columns=['table_name']
-                    )
-                )
-                return response
-            else:
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=f"Cant determine how to show '{statement.category}'"
-                )
-            return response
-        if type(statement) == CreatePredictor:
-            # TODO cast columns to datasource case!
-            return self._learn(statement)
-        elif type(statement) == RetrainPredictor:
-            return self._retrain(statement)
-        elif type(statement) == DropPredictor:
-            return self._drop(statement)
-        elif type(statement) == Select:
-            model_name = statement.from_table.parts[-1]
-            where_data = get_where_data(statement.where)
-            predictions = self.predict(model_name, where_data)
-            return Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=pd.DataFrame(predictions)
-            )
-        else:
-            raise Exception(f"Query type {type(statement)} not supported")
-
     @mark_process(name='predict')
     def predict(self, model_name: str, data: list, pred_format: str = 'dict') -> pd.DataFrame:
         if isinstance(data, dict):
@@ -422,7 +414,7 @@ class LightwoodHandler(PredictiveHandler):
 
         model_data = self.model_controller.get_model_data(predictor_record=predictor_record)
 
-        # regon LoadCache
+        # region LoadCache
         if (
             model_name in self.predictor_cache
             and self.predictor_cache[model_name]['updated_at'] != predictor_record.updated_at
@@ -680,70 +672,3 @@ class LightwoodHandler(PredictiveHandler):
                     row[key + '_max'] = explanation[key]['confidence_upper_bound']
 
         return data
-
-    def analyze_dataset(self, data_frame: pd.DataFrame) -> dict:
-        analysis = lightwood.analyze_dataset(data_frame)
-        return analysis.to_dict()
-
-    def edit_json_ai(self, name: str, json_ai: dict):
-        predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
-        assert predictor_record is not None
-
-        json_ai = lightwood.JsonAI.from_dict(json_ai)
-        predictor_record.code = lightwood.code_from_json_ai(json_ai)
-        predictor_record.json_ai = json_ai.to_dict()
-        db.session.commit()
-
-    def code_from_json_ai(self, json_ai: dict):
-        json_ai = lightwood.JsonAI.from_dict(json_ai)
-        code = lightwood.code_from_json_ai(json_ai)
-        return code
-
-    def edit_code(self, name: str, code: str):
-        """Edit an existing predictor's code"""
-        if self.config.get('cloud', False):
-            raise Exception('Code editing prohibited on cloud')
-
-        predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
-        assert predictor_record is not None
-
-        lightwood.predictor_from_code(code)
-        predictor_record.code = code
-        predictor_record.json_ai = None
-        db.session.commit()
-
-    def join(self, stmt, data_handler: BaseHandler, into: Optional[str] = None) -> pd.DataFrame:
-        """
-        Batch prediction using the output of a query passed to a data handler as input for the model.
-        """  # noqa
-        model_name, model_alias, model_side = get_model_name(self, stmt)
-        data_side = 'right' if model_side == 'left' else 'left'
-        model = self._get_model(model_name)
-        is_ts = model.problem_definition.timeseries_settings.is_timeseries
-
-        if not is_ts:
-            model_input = get_join_input(stmt, model, [model_name, model_alias], data_handler, data_side)
-        else:
-            model_input = get_ts_join_input(stmt, model, data_handler, data_side)
-
-        # get model output and rename columns
-        predictions = self._call_predictor(model_input, model)
-        model_input.columns = get_aliased_columns(list(model_input.columns), model_alias, stmt.targets, mode='input')
-        predictions.columns = get_aliased_columns(list(predictions.columns), model_alias, stmt.targets, mode='output')
-
-        return predictions
-
-    def _get_model(self, model_name):
-        predictor_dict = self._get_model_info(model_name)
-        predictor = load_predictor(predictor_dict, model_name)
-        return predictor
-
-    def _get_model_info(self, model_name):
-        """ Returns a dictionary with three keys: 'jsonai', 'predictor' (serialized), and 'code'. """  # noqa
-        return self.storage.get('models')[model_name]
-
-    def _call_predictor(self, df, predictor):
-        predictions = predictor.predict(df)
-        if 'original_index' in predictions.columns:
-            predictions = predictions.sort_values(by='original_index')
-        return df.join(predictions)

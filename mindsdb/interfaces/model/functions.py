@@ -54,7 +54,8 @@ def get_model_records(company_id: int, integration_id=None, active: bool = True,
             name=ml_handler_name
         )
         if ml_handler_record is None:
-            raise Exception(f'unknown ml handler: {ml_handler_name}')
+            # raise Exception(f'unknown ml handler: {ml_handler_name}')
+            return []
         kwargs['integration_id'] = ml_handler_record.id
 
     if integration_id is not None:
@@ -83,7 +84,8 @@ def get_model_record(company_id: int, except_absent=False, ml_handler_name: str 
             name=ml_handler_name
         )
         if ml_handler_record is None:
-            raise Exception(f'unknown ml handler: {ml_handler_name}')
+            # raise Exception(f'unknown ml handler: {ml_handler_name}')
+            return []
         kwargs['integration_id'] = ml_handler_record.id
 
     records = (

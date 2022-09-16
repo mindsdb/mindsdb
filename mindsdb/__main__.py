@@ -11,6 +11,7 @@ import torch.multiprocessing as mp
 mp.set_start_method('spawn')
 from packaging import version
 
+from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
@@ -87,12 +88,7 @@ if __name__ == '__main__':
                 print(f"{'{0: <18}'.format(handler_name)} - error during dependencies installation: {result.get('error_message', 'unknown error')}")
         sys.exit(0)
 
-    # Switch to this once the native interface has it's own thread :/
-    ctx = mp.get_context('spawn')
-
-    from mindsdb.__about__ import __version__ as mindsdb_version
     print(f'Version {mindsdb_version}')
-
     print(f'Configuration file:\n   {config.config_path}')
     print(f"Storage path:\n   {config['paths']['root']}")
 
@@ -194,6 +190,7 @@ if __name__ == '__main__':
         'mongodb': start_mongo
     }
 
+    ctx = mp.get_context('spawn')
     for api_name, api_data in apis.items():
         if api_data['started']:
             continue

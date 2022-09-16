@@ -1,7 +1,8 @@
 import os
 import unittest
+import tempfile
 
-temp_dir = '/tmp/lightwood_handler_test_pzgaf7ky'
+temp_dir = tempfile.mkdtemp(dir='/tmp/', prefix='lightwood_handler_test_')
 os.environ['MINDSDB_STORAGE_DIR'] = temp_dir
 os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
 

@@ -1,4 +1,6 @@
 import os
+import sys
+import math
 import traceback
 import tempfile
 from pathlib import Path
@@ -21,6 +23,10 @@ from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.utils import format_exception_error
+from mindsdb.interfaces.model.functions import (
+    get_model_record,
+    get_model_records
+)
 
 from .utils import rep_recur, brack_to_mod
 
@@ -154,35 +160,12 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
 
 
 @mark_process(name='learn')
-def run_update(predictor_id: str, df: DataFrame, company_id: int):
+def run_update(predictor_id: int, df: DataFrame, company_id: int):
     fs_store = FsStore()
     config = Config()
 
     try:
-        old_predictor_record = Predictor.query.filter_by(id=predictor_id).first()
-        assert old_predictor_record is not None
-        old_predictor_record.update_status = 'updating'
-        session.commit()
-
-        predictor_record = db.Predictor(
-            company_id=company_id,
-            name=old_predictor_record.name,
-            integration_id=old_predictor_record.integration_id,
-            data_integration_id=old_predictor_record.data_integration_id,
-            fetch_data_query=old_predictor_record.fetch_data_query,
-            mindsdb_version=mindsdb_version,
-            lightwood_version=lightwood_version,
-            to_predict=old_predictor_record.to_predict,
-            learn_args=old_predictor_record.learn_args,
-            data={'name': old_predictor_record.name},
-            training_data_columns_count=len(df.columns),
-            training_data_rows_count=len(df),
-            training_start_at=datetime.now(),
-            active=False,
-            status=PREDICTOR_STATUS.GENERATING
-        )
-        session.add(predictor_record)
-        session.commit()
+        predictor_record = Predictor.query.filter_by(id=predictor_id).first()
 
         problem_definition = predictor_record.learn_args
         problem_definition['target'] = predictor_record.to_predict[0]
@@ -197,6 +180,8 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
         predictor_record.json_ai = json_ai.to_dict()
         predictor_record.code = lightwood.code_from_json_ai(json_ai)
         predictor_record.data = {'training_log': 'training'}
+        predictor_record.training_start_at = datetime.now()
+        predictor_record.status = PREDICTOR_STATUS.TRAINING
         session.commit()
         predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
         predictor.learn(df)
@@ -208,10 +193,24 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
         predictor_record.data = predictor.model_analysis.to_dict()
         predictor_record.update_status = 'up_to_date'
         predictor_record.dtype_dict = predictor.dtype_dict
-        old_predictor_record.update_status = 'up_to_date'
 
-        old_predictor_record.active = False
-        predictor_record.active = True
+        predictor_record.status = PREDICTOR_STATUS.COMPLETE
+        predictor_record.training_stop_at = datetime.now()
+        session.commit()
+
+        predictor_records = get_model_records(
+            active=None,
+            name=predictor_record.name,
+            company_id=company_id
+        )
+        predictor_records = [
+            x for x in predictor_records
+            if x.training_stop_at is not None
+        ]
+        predictor_records.sort(key=lambda x: x.training_stop_at)
+        for record in predictor_records:
+            record.active = False
+        predictor_records[-1].active = True
         session.commit()
     except Exception as e:
         log.error(e)
@@ -222,8 +221,9 @@ def run_update(predictor_id: str, df: DataFrame, company_id: int):
 
         predictor_record.data = {"error": error_message}
 
-        old_predictor_record.update_status = 'update_failed'   # TODO
+        # old_predictor_record.update_status = 'update_failed'   # TODO
         db.session.commit()
 
-    predictor_record.training_stop_at = datetime.now()
-    db.session.commit()
+    if predictor_record.training_stop_at is None:
+        predictor_record.training_stop_at = datetime.now()
+        db.session.commit()

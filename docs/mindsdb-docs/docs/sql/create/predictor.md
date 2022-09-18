@@ -7,10 +7,10 @@ The `CREATE PREDICTOR` statement is used to train a new model. The basic syntax 
 ## Syntax
 
 ```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
-FROM [integration_name]
-    (SELECT [column_name, ...] FROM [table_name])
-PREDICT [target_column];
+CREATE PREDICTOR _mindsdb.[predictor_name]_
+FROM _[integration_name]_
+    (SELECT _[column_name, ...] FROM [table_name]_)
+PREDICT _[target_column]_;
 ```
 
 On execution, we get:
@@ -33,8 +33,8 @@ After you run the `#!sql CREATE PREDICTOR` statement, you can check the status o
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
-WHERE name='[predictor_name]';
+FROM _mindsdb.predictors_
+WHERE _name='[predictor_name]'_;
 ```
 
 On execution, we get:
@@ -52,10 +52,10 @@ On execution, we get:
 This example shows how you can train a Machine Learning model called home_rentals_model to predict the rental prices for real estate properties inside the dataset.
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
-FROM db_integration 
-    (SELECT * FROM house_rentals_data) AS rentals
-PREDICT rental_price AS price;
+CREATE PREDICTOR _mindsdb.home_rentals_model_
+FROM _db_integration_ 
+    (SELECT * FROM _house_rentals_data_) AS _rentals_
+PREDICT _rental_price AS price_;
 ```
 
 On execution, we get:
@@ -68,8 +68,8 @@ To check the predictor status, query the [`#!sql mindsdb.predictors`](/sql/table
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
-WHERE name='home_rentals_model';
+FROM _mindsdb.predictors_
+WHERE _name='home_rentals_model'_;
 ```
 
 On execution, we get:
@@ -91,11 +91,11 @@ In MindsDB, the underlying AutoML models are based on [Lightwood](https://lightw
 ### `#!sql ... USING` Statement Syntax
 
 ```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
-FROM [integration_name]
-    (SELECT [column_name, ...] FROM [table_name])
-PREDICT [target_column]
-USING [parameter_key] = ['parameter_value'];
+CREATE PREDICTOR _mindsdb.[predictor_name]_
+FROM _[integration_name]_
+    (SELECT _[column_name, ...]_ FROM _[table_name]_)
+PREDICT _[target_column]_
+USING _[parameter_key] = ['parameter_value']_;
 ```
 
 On execution, we get:
@@ -153,10 +153,10 @@ To learn more about all the model options, please refer to [Lightwood's document
 We will use the home rentals dataset, specifying particular encoders for some of the columns and a LightGBM model.
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_predictor
-FROM my_db_integration
-    (SELECT * FROM home_rentals)
-PREDICT rental_price
+CREATE PREDICTOR _mindsdb.home_rentals_predictor_
+FROM _my_db_integration_
+    (SELECT * FROM _home_rentals_)
+PREDICT _rental_price_
 USING
     encoders.location.module='CategoricalAutoEncoder',
     encoders.rental_price.module = 'NumericEncoder',
@@ -188,10 +188,10 @@ This statement is used to create and train a model using a file or a database ta
 ### `#!sql CREATE PREDICTOR` Syntax
 
 ```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
-FROM files
-    (SELECT * FROM [file_name])
-PREDICT target_variable;
+CREATE PREDICTOR _mindsdb.[predictor_name]_
+FROM _files_
+    (SELECT * FROM _[file_name]_)
+PREDICT _target_variable_;
 ```
 
 On execution, we get:
@@ -212,10 +212,10 @@ Where:
 ### `#!sql CREATE PREDICTOR` Example
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
-FROM files
-    (SELECT * from home_rentals)
-PREDICT rental_price;
+CREATE PREDICTOR _mindsdb.home_rentals_model_
+FROM _files_
+    (SELECT * from _home_rentals_)
+PREDICT _rental_price_;
 ```
 
 On execution, we get:
@@ -233,14 +233,14 @@ To train a timeseries model, MindsDB provides additional statements.
 ### `#!sql CREATE PREDICTOR` For Time Series Models Syntax
 
 ```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
-FROM [integration_name]
-    (SELECT [sequential_column], [partition_column], [other_column], [target_column]
-     FROM [table_name])
-PREDICT [target_column]
+CREATE PREDICTOR _mindsdb.[predictor_name]_
+FROM _[integration_name]_
+    (SELECT _[sequential_column], [partition_column], [other_column], [target_column]_
+     FROM _[table_name]_)
+PREDICT _[target_column]_
 
-ORDER BY [sequential_column]
-GROUP BY [partition_column]
+ORDER BY _[sequential_column]_
+GROUP BY _[partition_column]_
 
 WINDOW [int]
 HORIZON [int];
@@ -267,13 +267,13 @@ Due to the nature of Time Series Forecasting you will need to use the [`#!sql JO
 ### `#!sql CREATE PREDICTOR` For Time Series Models Example
 
 ```sql
-CREATE PREDICTOR mindsdb.inventory_model
-FROM db_integration
-    (SELECT * FROM inventory) AS inventory
-PREDICT units_in_inventory AS predicted_units_in_inventory
+CREATE PREDICTOR _mindsdb.inventory_model_
+FROM _db_integration_
+    (SELECT * FROM _inventory_) AS _inventory_
+PREDICT _units_in_inventory_ AS _predicted_units_in_inventory_
 
-ORDER BY date
-GROUP BY product_id
+ORDER BY _date_
+GROUP BY _product_id_
 
 WINDOW 20
 HORIZON 7;

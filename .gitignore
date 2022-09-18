@@ -14,6 +14,7 @@ tests/integration_tests/flows/model.py
 tests/integration_tests/flows/my_model.zip
 distributions/docker-compose/*/storage
 venv/*
+env/*
 mindsdb-venv/*
 root
 static

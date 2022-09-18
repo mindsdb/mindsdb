@@ -55,7 +55,7 @@ class TrinoHandler(DatabaseHandler):
 
         # option configuration
         http_scheme='http'
-        auth='basic'
+        auth=None
         auth_config=None
         password=None
 

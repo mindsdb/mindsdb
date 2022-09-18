@@ -21,7 +21,7 @@ You can use the MindsDB Cloud SQL Editor or open your preferred SQL client, such
     To connect to MindsDB from a third-party SQL client, use the connection details below.
 
     ```txt
-      "user":[your_mindsdb_cloud_username],
+      "user":[your_mindsdb_cloud_username],   # your Mindsdb Cloud email address is your username
       "password":[your_mindsdb_cloud_password],
       "host":"cloud.mindsdb.com",
       "port":"3306"

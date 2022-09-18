@@ -13,7 +13,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     ```python
     from sqlalchemy import create_engine
 
-    user = 'MindsDB Cloud username' # replace this value
+    user = 'MindsDB Cloud username' # your Mindsdb Cloud email address is your username
     password = 'MindsDB Cloud password' # replace this value
     host = 'cloud.mindsdb.com'
     port = 3306
@@ -34,7 +34,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
 
     Please note that we use the following connection details:
 
-    - Username is your MindsDB Cloud username
+    - Username is your MindsDB Cloud email address
     - Password is your MindsDB Cloud password
     - Host is `cloud.mindsdb.com`
     - Port is `3306`
@@ -85,6 +85,9 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     ```bash
     Connection to the 127.0.0.1 for user mindsdb created successfully.
     ```
+!!! note
+    The Sqlachemy `create_engine` is lazy. This implies any human error when entering the connection details would be undetectable until an action becomes necessary, such as when calling the `execute` method to execute SQL commands.
+
 
 ## What's Next?
 

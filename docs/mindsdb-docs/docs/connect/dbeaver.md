@@ -31,7 +31,7 @@ There are two options, as below.
     ```text
     Hostname: `cloud.mindsdb.com`
     Port: `3306`
-    Username: *your MindsDB Cloud username*
+    Username: *your MindsDB Cloud username*  # your Mindsdb Cloud email address is your username
     Password: *your MindsDB Cloud password*
     Database: *leave it empty*
     ```

@@ -159,7 +159,7 @@ class RESOURCE_GROUP:
 RESOURCE_GROUP = RESOURCE_GROUP()
 
 
-class SpecificFSStore:
+class FileStorage:
     def __init__(self, resource_group: str, resource_id: int, company_id: Optional[int] = None,
                  root_dir: str = 'content', sync: bool = True):
         """
@@ -170,17 +170,22 @@ class SpecificFSStore:
                 root_dir (str)
                 sync (bool)
         """
-        self.fs_store = FsStore()
+
         self.resource_group = resource_group
+        self.resource_id = resource_id
+        self.company_id = company_id
+        self.root_dir = root_dir
+        self.sync = sync
+
         self.folder_name = f'{resource_group}_{company_id}_{resource_id}'
 
         config = Config()
+        self.fs_store = FsStore()
         self.content_path = Path(config['paths'][root_dir])
         self.resource_group_path = self.content_path / resource_group
         self.folder_path = self.resource_group_path / self.folder_name
         if self.folder_path.exists() is False:
             self.folder_path.mkdir(parents=True, exist_ok=True)
-        self.sync = sync
 
     def push(self):
         self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
@@ -290,3 +295,21 @@ class SpecificFSStore:
     def complete_removal(self):
         shutil.rmtree(str(self.folder_path))
         self.fs_store.delete(self.folder_name)
+
+
+class FileStorageFactory:
+    def __init__(self, resource_group: str, company_id: Optional[int] = None,
+                 root_dir: str = 'content', sync: bool = True):
+        self.resource_group = resource_group
+        self.company_id = company_id
+        self.root_dir = root_dir
+        self.sync = sync
+
+    def __call__(self, resource_id: int):
+        return FileStorage(
+            resource_group=self.resource_group,
+            company_id=self.company_id,
+            root_dir=self.root_dir,
+            sync=self.sync,
+            resource_id=resource_id
+        )

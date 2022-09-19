@@ -86,6 +86,7 @@ class LightwoodHandler(PredictiveHandler):
 
         self.handler_controller = kwargs.get('handler_controller')
         self.fs_store = kwargs.get('file_storage')
+        self.storage_factory = kwargs.get('storage_factory')
         self.company_id = kwargs.get('company_id')
         self.model_controller = WithKWArgsWrapper(
             ModelController(),
@@ -294,13 +295,15 @@ class LightwoodHandler(PredictiveHandler):
 
         predictor_id = predictor_record.id
 
+        predictor_storage = self.storage_factory(predictor_id)
+
         p = HandlerProcess(
             run_learn,
             training_data_df,
             problem_definition,
             predictor_id,
             json_ai_override,
-            str(self.fs_store.folder_path)
+            str(predictor_storage.folder_path)
         )
         p.start()
         if join_learn_process:
@@ -357,12 +360,14 @@ class LightwoodHandler(PredictiveHandler):
         new_predictor_record.training_data_rows_count = len(response.data_frame)
         db.session.commit()
 
+        predictor_storage = self.storage_factory(new_predictor_record.id)
+
         p = HandlerProcess(
             run_update,
             new_predictor_record.id,
             response.data_frame,
             self.company_id,
-            str(self.fs_store.folder_path)
+            str(predictor_storage.folder_path)
         )
         p.start()
 
@@ -401,7 +406,8 @@ class LightwoodHandler(PredictiveHandler):
                 predictor_record.status = PREDICTOR_STATUS.DELETED
             else:
                 db.session.delete(predictor_record)
-            self.fs_store.delete()
+            predictor_storage = self.storage_factory(predictor_record.id)
+            predictor_storage.delete()
         db.session.commit()
 
         return Response(RESPONSE_TYPE.OK)
@@ -434,17 +440,19 @@ class LightwoodHandler(PredictiveHandler):
             if psutil.virtual_memory().available < 1.2 * pow(10, 9):
                 self.predictor_cache = {}
 
+            predictor_storage = self.storage_factory(predictor_record.id)
+
             if model_data['status'] == 'complete':
-                self.fs_store.pull()
+                predictor_storage.pull()
                 self.predictor_cache[model_name] = {
                     'predictor': lightwood.predictor_from_state(
-                        os.path.join(self.fs_store.folder_path, fs_name),
+                        os.path.join(predictor_storage.folder_path, fs_name),
                         predictor_record.code
                     ),
                     'updated_at': predictor_record.updated_at,
                     'created': datetime.now(),
                     'code': predictor_record.code,
-                    'pickle': str(os.path.join(self.fs_store.folder_path, fs_name))
+                    'pickle': str(os.path.join(predictor_storage.folder_path, fs_name))
                 }
             else:
                 raise Exception(

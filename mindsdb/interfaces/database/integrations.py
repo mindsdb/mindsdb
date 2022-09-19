@@ -12,7 +12,7 @@ from sqlalchemy import func
 
 from mindsdb.interfaces.storage.db import session, Integration
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.fs import FsStore, SpecificFSStore, RESOURCE_GROUP
+from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
@@ -62,7 +62,7 @@ class IntegrationController:
         integration_id = self._add_integration_record(name, engine, connection_args, company_id)
 
         if files_dir is not None:
-            store = SpecificFSStore(
+            store = FileStorage(
                 resource_group=RESOURCE_GROUP.INTEGRATION,
                 resource_id=integration_id,
                 company_id=company_id,
@@ -214,7 +214,7 @@ class IntegrationController:
                 Handler object
         """
         resource_id = int(time() * 10000)
-        fs_store = SpecificFSStore(
+        fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=resource_id,
             company_id=company_id,
@@ -282,7 +282,7 @@ class IntegrationController:
                         .joinpath(connection_data[file_name])
                     )
 
-        fs_store = SpecificFSStore(
+        fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=integration_record.id,
             company_id=company_id,
@@ -292,6 +292,14 @@ class IntegrationController:
         handler_ars = self._make_handler_args(integration_engine, connection_data, company_id)
         handler_ars['name'] = name
         handler_ars['file_storage'] = fs_store
+
+        handler_type = self.handler_modules[integration_engine].type
+        if handler_type == 'ml':
+            handler_ars['storage_factory'] = FileStorageFactory(
+                resource_group=RESOURCE_GROUP.PREDICTOR,
+                company_id=company_id,
+                sync=True
+            )
 
         return self.handler_modules[integration_engine].Handler(**handler_ars)
 

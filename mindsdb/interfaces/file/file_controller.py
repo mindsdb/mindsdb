@@ -1,3 +1,4 @@
+import os
 import json
 from pathlib import Path
 import shutil
@@ -13,10 +14,7 @@ class FileController():
     def __init__(self):
         self.config = Config()
         self.fs_store = FsStore()
-        # FIXME !!!!
-        import os
-        self.dir = os.path.join(self.config['paths']['root'], 'datasources')
-        # self.dir = self.config['paths']['datasources']
+        self.dir = os.path.join(self.config.paths['content'], 'file')
 
     def get_files_names(self, company_id=None):
         """ return list of files names

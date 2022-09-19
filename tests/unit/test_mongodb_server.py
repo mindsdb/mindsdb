@@ -80,7 +80,7 @@ class TestMongoDBServer(unittest.TestCase):
         res = list(res)  # to fetch
         assert res == [{'a': 'test'}]
 
-        ast = mock_executor.mock_calls[0].args[0]
+        ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
           SELECT * FROM mindsdb.fish_model1
@@ -98,7 +98,7 @@ class TestMongoDBServer(unittest.TestCase):
         )
         res = list(res)
 
-        ast = mock_executor.mock_calls[0].args[0]
+        ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
           SELECT * FROM 
@@ -126,7 +126,7 @@ class TestMongoDBServer(unittest.TestCase):
         )
         res = list(res)
 
-        ast = mock_executor.mock_calls[0].args[0]
+        ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
           SELECT house_sales_model_h1w4.saledate as date, house_sales_model_h1w4.ma as forecast  FROM 
@@ -148,7 +148,7 @@ class TestMongoDBServer(unittest.TestCase):
         res = client_con.mongo.house_sales.find({'saledate': {'$gt': dt.datetime.fromisoformat("2018-03-31T00:00:00")}})
         res = list(res)
 
-        ast = mock_executor.mock_calls[0].args[0]
+        ast = mock_executor.call_args[0][0]
 
         expected_sql = "SELECT * FROM mongo.house_sales WHERE saledate > '2018-03-31 00:00:00'"
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
@@ -171,7 +171,7 @@ class TestMongoDBServer(unittest.TestCase):
                 }
             }
         )
-        ast = mock_executor.mock_calls[0].args[0]
+        ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
            CREATE PREDICTOR house_sales_model5 

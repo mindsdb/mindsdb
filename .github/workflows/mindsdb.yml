@@ -70,7 +70,7 @@ jobs:
 
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
         
-          # env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
+          env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
                 
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
 

@@ -536,7 +536,6 @@ class ExecuteCommands:
                 Column(name='column_importances', table_name='', type='str'),
                 Column(name='outputs', table_name='', type='str'),
                 Column(name='inputs', table_name='', type='str'),
-                Column(name='datasource', table_name='', type='str'),
                 Column(name='model', table_name='', type='str'),
             ]
             description = [
@@ -544,7 +543,6 @@ class ExecuteCommands:
                 description['column_importances'],
                 description['outputs'],
                 description['inputs'],
-                description['datasource'],
                 description['model']
             ]
             data = [description]

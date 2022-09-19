@@ -1,10 +1,10 @@
-lightwood >= 22.8.4.2, < 22.8.5.0
+lightwood >= 22.9.1.0, < 22.9.2.0
 markupsafe == 2.0.1
 flask-restx >= 0.2.0
 flask >= 1.0, < 2.0
 python-multipart >= 0.0.5
 pyparsing == 2.3.1
-cryptography >= 2.9.2, < 3.4
+cryptography>=35.0
 psycopg[binary] >= 1.15.3
 python-tds >= 1.10.0
 waitress >= 1.4.4
@@ -18,7 +18,7 @@ walrus==0.8.2
 flask-compress >= 1.0.0
 kafka-python >= 2.0.0
 appdirs >= 1.0.0
-mindsdb-sql >= 0.3.13, < 0.4.0
+mindsdb-sql >= 0.4.1
 checksumdir >= 1.2.0
 mindsdb-streams == 0.1.1
 duckdb == 0.4.0
@@ -27,3 +27,5 @@ mysql-connector-python
 clickhouse-driver
 charset-normalizer
 dill >= 0.3.4
+pyOpenSSL >= 22.0.0
+pydateinfer==0.3.0

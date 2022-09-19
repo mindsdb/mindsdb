@@ -1,65 +1,52 @@
 import os
+import time
 import unittest
 import tempfile
-import json
-from pathlib import Path
 
-from lightwood.mixer import LightGBM
-
-# temp_dir = tempfile.mkdtemp(dir='/tmp/', prefix='lightwood_handler_test_')
-temp_dir = '/tmp/lightwood_handler_test_pzgaf7ky'
-os.environ['MINDSDB_STORAGE_DIR'] = temp_dir
+temp_dir = tempfile.mkdtemp(dir='/tmp/', prefix='lightwood_handler_test_')
+os.environ['MINDSDB_STORAGE_DIR'] = os.environ.get('MINDSDB_STORAGE_DIR', temp_dir)
 os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
 
 from mindsdb.migrations import migrate
 migrate.migrate_to_head()
 
 from mindsdb.utilities.config import Config
+from mindsdb.integrations.utilities.test_utils import HandlerControllerMock, PG_HANDLER_NAME, PG_CONNECTION_DATA
+from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import LightwoodHandler
-from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.utils import load_predictor
-# from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
-from mindsdb.integrations.handlers.postgres_handler import Handler as PGHandler
+# from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.utils import load_predictor
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
-
-
-PG_CONNECTION_DATA = {
-    "user": "demo_user",
-    "password": "demo_password",
-    "host": "3.220.66.106",
-    "port": "5432",
-    "database": "demo"
-}
-
-PG_HANDLER_NAME = 'test_handler'
-
-
-class HandlerControllerMock:
-    def __init__(self):
-        self.handlers = {
-            PG_HANDLER_NAME: PGHandler(
-                PG_HANDLER_NAME,
-                **{"connection_data": PG_CONNECTION_DATA}
-            )
-        }
-
-    def get_handler(self, name):
-        return self.handlers[name]
-
-    def get(self, name):
-        return {
-            'id': 0,
-            'name': PG_HANDLER_NAME
-        }
+import mindsdb.interfaces.storage.db as db
 
 
 # TODO: drop all models and tables when closing tests
 class LightwoodHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        handler_controller = HandlerControllerMock()
+        # region create permanent integrations
+        for integration_name in ['files', 'views', 'lightwood']:
+            integration_record = db.Integration(
+                name=integration_name,
+                data={},
+                engine=integration_name,
+                company_id=None
+            )
+            db.session.add(integration_record)
+            db.session.commit()
+        integration_record = db.Integration(
+            name=PG_HANDLER_NAME,
+            data=PG_CONNECTION_DATA,
+            engine='postgres',
+            company_id=None
+        )
+        db.session.add(integration_record)
+        db.session.commit()
+        # endregion
+
+        handler_controller = IntegrationController()
 
         cls.handler = LightwoodHandler(
             'lightwood',
@@ -80,7 +67,7 @@ class LightwoodHandlerTest(unittest.TestCase):
 
     def test_00_check_connection(self):
         conn = self.handler.check_connection()
-        assert conn['status'] == '200'
+        assert conn.success
 
     def test_01_drop_predictor(self):
         if self.test_model_1 not in self.handler.get_tables().data_frame.values:
@@ -101,6 +88,7 @@ class LightwoodHandlerTest(unittest.TestCase):
             PREDICT rental_price
         """
         response = self.handler.native_query(query)
+        time.sleep(5)
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
     def test_03_retrain_predictor(self):
@@ -109,6 +97,7 @@ class LightwoodHandlerTest(unittest.TestCase):
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
     def test_04_query_predictor_single_where_condition(self):
+        time.sleep(120) # TODO 
         query = f"""
             SELECT target
             from {self.test_model_1}
@@ -151,17 +140,15 @@ class LightwoodHandlerTest(unittest.TestCase):
         # TODO assert
         # m = load_predictor(self.handler.storage.get('models')[self.test_model_1b], self.test_model_1b)
         # assert len(m.ensemble.mixers) == 1
-        # assert isinstance(m.ensemble.mixers[0], LightGBM)
+        # assert type(m.ensemble.mixers[0]).__name__ == 'LightGBM'
 
     def test_07_list_tables(self):
         response = self.handler.get_tables()
         self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
-        print(response.data_frame)
 
     def test_08_get_columns(self):
         response = self.handler.get_columns(f'{self.test_model_1}')
         self.assertTrue(response.type == RESPONSE_TYPE.TABLE)
-        print(response.data_frame)
 
     # TODO
     # def test_09_join_predictor_into_table(self):

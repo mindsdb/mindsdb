@@ -14,7 +14,9 @@ from collections import OrderedDict, defaultdict
 import datetime
 import time
 import hashlib
+import datetime as dt
 
+import dateinfer
 import duckdb
 import pandas as pd
 import numpy as np
@@ -32,6 +34,8 @@ from mindsdb_sql.parser.ast import (
     Star,
     Insert,
     Delete,
+    Latest,
+    BetweenOperation,
 )
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
@@ -62,8 +66,8 @@ import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
-    get_model_record,
-    get_model_records
+    get_model_records,
+    get_predictor_integration
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
@@ -359,14 +363,13 @@ class SQLQuery():
             self.execute_query()
 
     def create_planner(self):
-
-        integrations_names = self.session.datahub.get_integrations_names()
+        integrations_meta = self.session.integration_controller.get_all()
+        integrations_names = list(integrations_meta.keys())
         integrations_names.append('information_schema')
-        integrations_names.append('files')
-        integrations_names.append('views')
+        integration_name = None
 
-        predictor_metadata = {}
-        predictors = get_model_records(company_id=self.session.company_id)
+        predictor_metadata = []
+        predictors_records = get_model_records(company_id=self.session.company_id)
 
         query_tables = []
 
@@ -376,17 +379,22 @@ class SQLQuery():
 
         query_traversal(self.query, get_all_query_tables)
 
-        # get all predictors
-        for p in predictors:
+        for p in predictors_records:
             model_name = p.name
 
             if model_name not in query_tables:
-                # skip
                 continue
+
+            integration_name = None
+            integration_record = get_predictor_integration(p)
+            if integration_record is not None:
+                integration_name = integration_record.name
 
             if isinstance(p.data, dict) and 'error' not in p.data:
                 ts_settings = p.learn_args.get('timeseries_settings', {})
                 predictor = {
+                    'name': model_name,
+                    'integration_name': integration_name,
                     'timeseries': False,
                     'id': p.id
                 }
@@ -405,17 +413,21 @@ class SQLQuery():
                         'order_by_column': order_by,
                         'group_by_columns': group_by
                     })
-                predictor_metadata[model_name] = predictor
+                predictor_metadata.append(predictor)
+                if predictor['integration_name'] == 'lightwood':
+                    default_predictor = predictor.copy()
+                    default_predictor['integration_name'] = 'mindsdb'
+                    predictor_metadata.append(default_predictor)
 
                 self.model_types.update(p.data.get('dtypes', {}))
 
-        mindsdb_database_name = 'mindsdb'
         database = None if self.session.database == '' else self.session.database.lower()
 
+        self.predictor_metadata = predictor_metadata
         self.planner = query_planner.QueryPlanner(
             self.query,
             integrations=integrations_names,
-            predictor_namespace=mindsdb_database_name,
+            predictor_namespace=integration_name,
             predictor_metadata=predictor_metadata,
             default_namespace=database
         )
@@ -519,7 +531,6 @@ class SQLQuery():
             join_query_data(data, sub_data)
 
         return data
-
 
     def prepare_query(self, prepare=True):
         mindsdb_sql_struct = self.query
@@ -962,13 +973,16 @@ class SQLQuery():
                     data['values'].extend(subdata['values'])
         elif type(step) == ApplyPredictorRowStep:
             try:
-                predictor = '.'.join(step.predictor.parts)
+                ml_handler_name = step.namespace
+                predictor_name = step.predictor.parts[0]
+
                 dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
 
                 data = dn.query(
-                    table=predictor,
-                    where_data=where_data
+                    table=predictor_name,
+                    where_data=where_data,
+                    ml_handler_name=ml_handler_name
                 )
 
                 data = [{(key, key): value for key, value in row.items()} for row in data]
@@ -1007,8 +1021,10 @@ class SQLQuery():
                 # shift counter
                 self.row_id += self.row_id + row_count * len(data['tables'])
 
-                dn = self.datahub.get(self.mindsdb_database_name)
-                predictor = '.'.join(step.predictor.parts)
+                ml_handler_name = step.namespace
+                if ml_handler_name == 'mindsdb':
+                    ml_handler_name = 'lightwood'
+                predictor_name = step.predictor.parts[0]
                 where_data = []
                 for row in steps_data[step.dataframe.step_num]['values']:
                     new_row = {}
@@ -1023,7 +1039,12 @@ class SQLQuery():
 
                 where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
 
-                is_timeseries = self.planner.predictor_metadata[predictor]['timeseries']
+                predictor_metadata = {}
+                for pm in self.predictor_metadata:
+                    if pm['name'] == predictor_name and pm['integration_name'].lower() == ml_handler_name:
+                        predictor_metadata = pm
+                        break
+                is_timeseries = predictor_metadata['timeseries']
                 _mdb_forecast_offset = None
                 if is_timeseries:
                     if '> LATEST' in self.query_str:
@@ -1046,39 +1067,44 @@ class SQLQuery():
 
                 table_name = get_preditor_alias(step, self.database)
                 columns = {table_name: []}
+                dn = self.datahub.get(self.mindsdb_database_name)
                 if len(where_data) == 0:
-                    # no data, don't run predictor
-                    cols = dn.get_table_columns(predictor) + ['__mindsdb_row_id']
+                    cols = dn.get_table_columns(predictor_name) + ['__mindsdb_row_id']
                     columns[table_name] = [(c, c) for c in cols]
                     values = []
                 else:
-                    # check cache
-                    predictor_id = self.planner.predictor_metadata[predictor]['id']
-                    key = f'{predictor}_{predictor_id}_{json_checksum(where_data)}'
+                    predictor_id = predictor_metadata['id']
+                    key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
                     data = predictor_cache.get(key)
 
                     if data is None:
                         data = dn.query(
-                            table=predictor,
-                            where_data=where_data
+                            table=predictor_name,
+                            where_data=where_data,
+                            ml_handler_name=ml_handler_name
                         )
                         if data is not None and isinstance(data, list):
                             predictor_cache.set(key, data)
+
+                    if len(data) > 0:
+                        row = data[0]
+                        columns[table_name] = [(key, key) for key in row.keys()]
+
+                    # apply filter
+                    if is_timeseries:
+                        data = self.apply_ts_filter(data, where_data, step, predictor_metadata)
 
                     data = [{(key, key): value for key, value in row.items()} for row in data]
 
                     values = [{table_name: x} for x in data]
 
-                    if len(data) > 0:
-                        row = data[0]
-                        columns[table_name] = list(row.keys())
-                    # TODO else
 
                 data = {
                     'values': values,
                     'columns': columns,
                     'tables': [table_name],
-                    'types': {table_name: self.model_types}
+                    'types': {table_name: self.model_types},
+                    'is_prediction': True  # for join step
                 }
             except Exception as e:
                 raise SqlApiUnknownError(f'error in apply predictor step: {e}') from e
@@ -1096,8 +1122,6 @@ class SQLQuery():
 
                 if step.query.condition is not None:
                     raise ErNotSupportedYet('At this moment supported only JOIN without condition')
-                if step.query.join_type.upper() not in ('LEFT JOIN', 'JOIN'):
-                    raise ErNotSupportedYet('At this moment supported only JOIN and LEFT JOIN')
 
                 if len(left_data['tables']) == 0 or len(right_data['tables']) == 0:
                     raise ErLogicError('Table for join is not found')
@@ -1156,13 +1180,22 @@ class SQLQuery():
                 df_a = pd.DataFrame(left_df_data, columns=left_columns_map.keys())
                 df_b = pd.DataFrame(right_df_data, columns=right_columns_map.keys())
 
-                a_name = f'a{round(time.time() * 1000)}'
-                b_name = f'b{round(time.time() * 1000)}'
+                a_name = f'table_a'
+                b_name = f'table_b'
                 con = duckdb.connect(database=':memory:')
                 con.register(a_name, df_a)
                 con.register(b_name, df_b)
+
+                join_type = step.query.join_type.lower()
+                if join_type == 'join':
+                    # join type is not specified. using join to prediction data
+                    if left_data.get('is_prediction'):
+                        join_type = 'left join'
+                    elif right_data.get('is_prediction'):
+                        join_type = 'right join'
+
                 resp_df = con.execute(f"""
-                    SELECT * FROM {a_name} as ta full join {b_name} as tb
+                    SELECT * FROM {a_name} as ta {join_type} {b_name} as tb
                     ON ta.{left_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                      = tb.{right_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                 """).fetchdf()
@@ -1182,32 +1215,6 @@ class SQLQuery():
                             new_row[right_key][right_columns_map[key]] = value
                     data['values'].append(new_row)
 
-                # remove all records with empty data from predictor from join result
-                # otherwise there are emtpy records in the final result:
-                # +------------+------------+-------+-----------+----------+
-                # | time       | time       | state | pnew_case | new_case |
-                # +------------+------------+-------+-----------+----------+
-                # | 2020-10-21 | 2020-10-24 | CA    | 0.0       | 5945.0   |
-                # | 2020-10-22 | 2020-10-23 | CA    | 0.0       | 6141.0   |
-                # | 2020-10-23 | 2020-10-22 | CA    | 0.0       | 2940.0   |
-                # | 2020-10-24 | 2020-10-21 | CA    | 0.0       | 3707.0   |
-                # | NULL       | 2020-10-20 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-19 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-18 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-17 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-16 | NULL  | nan       | nan      |
-                # +------------+------------+-------+-----------+----------+
-                # 9 rows in set (2.07 sec)
-
-                # if is_timeseries:
-                #     data_values = []
-                #     for row in data['values']:
-                #         for key in row:
-                #             if 'mindsdb' in key:
-                #                 if not is_empty_prediction_row(row[key]):
-                #                     data_values.append(row)
-                #                     break
-                #     data['values'] = data_values
             except Exception as e:
                 raise SqlApiUnknownError(f'error in join step: {e}') from e
 
@@ -1590,6 +1597,137 @@ class SQLQuery():
         else:
             raise ErLogicError(F'Unknown planner step: {step}')
         return data
+
+    def apply_ts_filter(self, predictor_data, table_data, step, predictor_metadata):
+
+        if step.output_time_filter is None:
+            # no filter, exit
+            return predictor_data
+
+            # apply filter
+        group_cols = predictor_metadata['group_by_columns']
+        order_col = predictor_metadata['order_by_column']
+
+        filter_args = step.output_time_filter.args
+        filter_op = step.output_time_filter.op
+
+        # filter field must be order column
+        if not (
+            isinstance(filter_args[0], Identifier)
+            and filter_args[0].parts[-1] == order_col
+        ):
+            # exit otherwise
+            return predictor_data
+
+
+        def get_date_format(samples):
+            # dateinfer reads sql date 2020-04-01 as yyyy-dd-mm. workaround for in
+            if re.match('[\d]{4}-[\d]{2}-[\d]{2}', samples[0]):
+                # suggested format
+                date_format = '%Y-%m-%d'
+                for sample in samples:
+                    try:
+                        dt.datetime.strptime(sample, date_format)
+                    except ValueError:
+                        date_format = None
+                        break
+                if date_format is not None:
+                    return date_format
+
+            return dateinfer.infer(samples)
+
+        if self.model_types.get(order_col) in ('date', 'datetime'):
+            # convert strings to date
+            # it is making side effect on original data by changing it but let it be
+
+            # convert predictor_data
+            if len(predictor_data) > 0:
+                if isinstance(predictor_data[0][order_col], str):
+                    samples = [row[order_col] for row in predictor_data]
+                    date_format = get_date_format(samples)
+
+                    for row in predictor_data:
+                        row[order_col] = dt.datetime.strptime(row[order_col], date_format)
+                elif isinstance(predictor_data[0][order_col], dt.date):
+                    # convert to datetime
+                    for row in predictor_data:
+                        row[order_col] = dt.datetime.combine(row[order_col], dt.datetime.min.time())
+
+            # convert predictor_data
+            if isinstance(table_data[0][order_col], str):
+                samples = [row[order_col] for row in table_data]
+                date_format = get_date_format(samples)
+
+                for row in table_data:
+                    row[order_col] = dt.datetime.strptime(row[order_col], date_format)
+            elif isinstance(table_data[0][order_col], dt.date):
+                # convert to datetime
+                for row in table_data:
+                    row[order_col] = dt.datetime.combine(row[order_col], dt.datetime.min.time())
+
+            # convert args to date
+            samples = [
+                arg.value
+                for arg in filter_args
+                if isinstance(arg, Constant) and isinstance(arg.value, str)
+            ]
+            if len(samples) > 0:
+                date_format = get_date_format(samples)
+
+                for arg in filter_args:
+                    if isinstance(arg, Constant) and isinstance(arg.value, str):
+                        arg.value = dt.datetime.strptime(arg.value, date_format)
+            # TODO can be dt.date in args?
+
+        # first pass: get max values for Latest in table data
+        latest_vals = {}
+        if Latest() in filter_args:
+
+            for row in table_data:
+                key = tuple([str(row[i]) for i in group_cols])
+                val = row[order_col]
+                if key not in latest_vals or latest_vals[key] < val:
+                    latest_vals[key] = val
+
+        # second pass: do filter rows
+        data2 = []
+        for row in predictor_data:
+            val = row[order_col]
+
+            if isinstance(step.output_time_filter, BetweenOperation):
+                if val >= filter_args[1].value and val <= filter_args[2].value:
+                    data2.append(row)
+            elif isinstance(step.output_time_filter, BinaryOperation):
+                op_map = {
+                    '<': '__lt__',
+                    '<=': '__le__',
+                    '>': '__gt__',
+                    '>=': '__ge__',
+                    '=': '__eq__',
+                }
+                arg = filter_args[1]
+                if isinstance(arg, Latest):
+                    key = tuple([str(row[i]) for i in group_cols])
+                    if key not in latest_vals:
+                        # pass this row
+                        continue
+                    arg = latest_vals[key]
+                elif isinstance(arg, Constant):
+                    arg = arg.value
+
+                if filter_op not in op_map:
+                    # unknown operation, exit immediately
+                    return predictor_data
+
+                # check condition
+                filter_op2 = op_map[filter_op]
+                if getattr(val, filter_op2)(arg):
+                    data2.append(row)
+            else:
+                # unknown operation, add anyway
+                data2.append(row)
+
+        return data2
 
     def _make_list_result_view(self, data):
         if self.outer_query is not None:

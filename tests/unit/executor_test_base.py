@@ -1,3 +1,4 @@
+import copy
 import json
 import tempfile
 import os
@@ -58,8 +59,7 @@ class BaseTestCase:
         self.set_executor()
 
 
-    @staticmethod
-    def clear_db(db):
+    def clear_db(self, db):
         # drop
         db.session.rollback()
         db.Base.metadata.drop_all(db.engine)
@@ -72,6 +72,10 @@ class BaseTestCase:
         db.session.add(r)
         r = db.Integration(name='views', data={}, engine='views')
         db.session.add(r)
+        r = db.Integration(name='lightwood', data={}, engine='lightwood')
+        db.session.add(r)
+        db.session.flush()
+        self.lw_integration_id = r.id
         db.session.commit()
         return db
 
@@ -136,9 +140,12 @@ class BaseTestCase:
         # add predictor to table
         r = self.db.Predictor(
             name=predictor['name'],
-            data={},
+            data={
+                'dtypes': predictor['dtypes']
+            },
             learn_args=predictor['problem_definition'],
-            to_predict=predictor['predict']
+            to_predict=predictor['predict'],
+            integration_id=self.lw_integration_id
         )
         self.db.session.add(r)
         self.db.session.commit()
@@ -159,6 +166,7 @@ class BaseTestCase:
                 'anomaly': None
             }
 
+            data = copy.deepcopy(data)
             for row in data:
                 # row = row.copy()
                 exp_row = {'predicted_value': predictor['predicted_value'],

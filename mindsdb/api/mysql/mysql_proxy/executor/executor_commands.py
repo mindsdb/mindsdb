@@ -670,7 +670,7 @@ class ExecuteCommands:
             handlers_meta = self.session.integration_controller.get_handlers_import_status()
             handler_meta = handlers_meta[engine]
             if handler_meta.get('import', {}).get('success') is not True:
-                raise SqlApiException(f"Hanbdler '{engine}' can not be used")
+                raise SqlApiException(f"Handler '{engine}' can not be used")
 
             accept_connection_args = handler_meta.get('connection_args')
             if accept_connection_args is not None:

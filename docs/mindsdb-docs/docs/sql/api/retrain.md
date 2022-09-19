@@ -2,9 +2,9 @@
 
 ## Description
 
-The `#!sql RETRAIN` statement is used to retrain the already trained predictors with the new data.
+The `#!sql RETRAIN` statement is used to retrain the already trained predictors with the new data. The predictor is updated to leverage the new data in optimizing its predictive capabilities.
 
-The predictor is updated to leverage the new data in optimizing its predictive capabilities. Retraining takes less time than training the predictor from scratch, so it is useful when the new training data is available.
+Retraining takes at least as much time as the training process of the predictor did because now the dataset used to retrain has new or updated data.
 
 ## Syntax
 
@@ -22,15 +22,22 @@ Query OK, 0 rows affected (0.058 sec)
 
 ## When to `#!sql RETRAIN` the Model?
 
+It is advised to `RETRAIN` the predictor whenever the `update_status` column value from the `mindsdb.predictors` table is set to `available`.
+
+Here is when the `update_status` column value is set to `available`:
+
+- When the new version of MindsDB is available that causes the predictor to become obsolete.
+- When the new data is available in the table that was used to train the predictor.
+
 To find out whether you need to retrain your model, query the `mindsdb.predictors` table and look for the `update_status` column.
 
 Here are the possible values of the `update_status` column:
 
-| Name          | Description                                                                                                 |
-| ------------- | ----------------------------------------------------------------------------------------------------------- |
-| `available`   | It indicates that the new data for retraining the model is available, and the model should be updated.      |
-| `updating`    | It indicates that the retraining process of the model takes place.                                          |
-| `up_to_date`  | It indicates that your model is up to date and does not need to be retrained.                               |
+| Name          | Description                                                                          |
+| ------------- | ------------------------------------------------------------------------------------ |
+| `available`   | It indicates that the model should be updated.                                       |
+| `updating`    | It indicates that the retraining process of the model takes place.                   |
+| `up_to_date`  | It indicates that your model is up to date and does not need to be retrained.        |
 
 Let's run the query.
 

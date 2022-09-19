@@ -13,10 +13,12 @@ INSERT INTO [integration_name].[table_name]
     (SELECT ...);
 ```
 
+Please note that the destination table (`[integration_name].[table_name]`) must exist and contain all the columns where the data is to be inserted.
+
 And the steps followed by the syntax:
 
 - It executes a subselect query to get the output dataset.
-- It uses the `INSERT INTO` statement to insert the output of the `(SELECT ...)` query into the `[integration_name].[table_name]`.
+- It uses the `INSERT INTO` statement to insert the output of the `(SELECT ...)` query into the `[integration_name].[table_name]` table.
 
 On execution, we get:
 

@@ -4,7 +4,7 @@
 
 The `#!sql SELECT` statement fetches predictions from the model table. The data is returned on the fly and not saved.
 
-But there are ways to save predictions data! You can save your predictions as a view using the [`CREATE VIEW`](/sql/create/view/) statement. Another way is to insert your predictions into a table using the [`INSERT INTO`](/sql/api/insert/) statement.
+But there are ways to save predictions data! You can save your predictions as a view using the [`CREATE VIEW`](/sql/create/view/) statement. Please note that a view is a saved query and does not store data like a table. Another way is to insert your predictions into a table using the [`INSERT INTO`](/sql/api/insert/) statement.
 
 ## Syntax
 
@@ -21,7 +21,7 @@ AND [column]=[value];
 
 !!! warning "Grammar Matters"
     Here are some points to keep in mind while writing queries in MindsDB:<br/>
-    &nbsp;&nbsp;&nbsp;1. Ensure that there are no spaces between `[column]` and `=` and between `=` and `[value]`.<br/>
+    &nbsp;&nbsp;&nbsp;1. The `[column]=[value]` pairs may be joined by `AND` or `OR` keywords.<br/>
     &nbsp;&nbsp;&nbsp;2. Do not use any quotations for numerical values.<br/>
     &nbsp;&nbsp;&nbsp;3. Use single quotes for strings.
 

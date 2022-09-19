@@ -12,7 +12,8 @@ Here is the syntax:
 CREATE PREDICTOR mindsdb.[predictor_name]
 FROM [integration_name]
     (SELECT [column_name, ...] FROM [table_name])
-PREDICT [target_column];
+PREDICT [target_column]
+[USING [parameter_key]=['parameter_value']];
 ```
 
 On execution, we get:
@@ -56,8 +57,8 @@ This example shows how to create and train a machine learning model called `home
 ```sql
 CREATE PREDICTOR mindsdb.home_rentals_model
 FROM db_integration 
-    (SELECT * FROM house_rentals_data) AS rentals
-PREDICT rental_price AS price;
+    (SELECT * FROM house_rentals_data)
+PREDICT rental_price;
 ```
 
 On execution, we get:
@@ -88,7 +89,9 @@ On execution, we get:
 
 ### Description
 
-In MindsDB, the underlying AutoML models are based on the [Lightwood](https://lightwood.io/) engine. This library generates models automatically based on the data and declarative problem definition. But the default configuration can be overridden using the `#!sql USING` statement that provides an option to configure specific parameters of the training process.
+In MindsDB, the underlying AutoML models are based on the [Lightwood](https://lightwood.io/) engine by default. This library generates models automatically based on the data and declarative problem definition. But the default configuration can be overridden using the `#!sql USING` statement that provides an option to configure specific parameters of the training process.
+
+In the upcoming version of MindsDB, it will be possible to choose another ML framework. Please note that the Lightwood engine is used by default.
 
 ### Syntax
 
@@ -125,7 +128,7 @@ It allows you to specify the type of machine learning algorithm to learn from th
 
 ```sql
 ...
-USING model.args='{"key": value}';
+USING model.args={"key": value};
 ```
 
 Module options:
@@ -161,14 +164,14 @@ USING
     encoders.location.module='CategoricalAutoEncoder',
     encoders.rental_price.module = 'NumericEncoder',
     encoders.rental_price.args.positive_domain = 'True',
-    model.args='{"submodels":[
+    model.args={"submodels":[
                     {"module": "LightGBM",
                      "args": {
                           "stop_after": 12,
                           "fit_on_dev": true
                           }
                     }
-                ]}';
+                ]};
 ```
 
 On execution, we get:
@@ -277,8 +280,8 @@ Here is an example:
 ```sql
 CREATE PREDICTOR mindsdb.inventory_model
 FROM db_integration
-    (SELECT * FROM inventory) AS inventory
-PREDICT units_in_inventory AS predicted_units_in_inventory
+    (SELECT * FROM inventory)
+PREDICT units_in_inventory
 ORDER BY date
 GROUP BY product_id
 WINDOW 20

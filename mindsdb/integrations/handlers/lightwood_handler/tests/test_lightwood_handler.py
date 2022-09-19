@@ -1,28 +1,52 @@
 import os
+import time
 import unittest
+import tempfile
 
-temp_dir = '/tmp/lightwood_handler_test_pzgaf7ky'
-os.environ['MINDSDB_STORAGE_DIR'] = temp_dir
+temp_dir = tempfile.mkdtemp(dir='/tmp/', prefix='lightwood_handler_test_')
+os.environ['MINDSDB_STORAGE_DIR'] = os.environ.get('MINDSDB_STORAGE_DIR', temp_dir)
 os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
 
 from mindsdb.migrations import migrate
 migrate.migrate_to_head()
 
 from mindsdb.utilities.config import Config
-from mindsdb.integrations.utilities.test_utils import HandlerControllerMock, PG_HANDLER_NAME
+from mindsdb.integrations.utilities.test_utils import HandlerControllerMock, PG_HANDLER_NAME, PG_CONNECTION_DATA
+from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import LightwoodHandler
 # from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.utils import load_predictor
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
+import mindsdb.interfaces.storage.db as db
 
 
 # TODO: drop all models and tables when closing tests
 class LightwoodHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        handler_controller = HandlerControllerMock()
+        # region create permanent integrations
+        for integration_name in ['files', 'views', 'lightwood']:
+            integration_record = db.Integration(
+                name=integration_name,
+                data={},
+                engine=integration_name,
+                company_id=None
+            )
+            db.session.add(integration_record)
+            db.session.commit()
+        integration_record = db.Integration(
+            name=PG_HANDLER_NAME,
+            data=PG_CONNECTION_DATA,
+            engine='postgres',
+            company_id=None
+        )
+        db.session.add(integration_record)
+        db.session.commit()
+        # endregion
+
+        handler_controller = IntegrationController()
 
         cls.handler = LightwoodHandler(
             'lightwood',
@@ -64,6 +88,7 @@ class LightwoodHandlerTest(unittest.TestCase):
             PREDICT rental_price
         """
         response = self.handler.native_query(query)
+        time.sleep(5)
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
     def test_03_retrain_predictor(self):
@@ -72,6 +97,7 @@ class LightwoodHandlerTest(unittest.TestCase):
         self.assertTrue(response.type == RESPONSE_TYPE.OK)
 
     def test_04_query_predictor_single_where_condition(self):
+        time.sleep(120) # TODO 
         query = f"""
             SELECT target
             from {self.test_model_1}

@@ -1,8 +1,8 @@
-# `#!sql SELECT from files.[file_name]` Statement
+# `#!sql SELECT * FROM files.[file_name]` Statement
 
 ## Description
 
-The `#!sql SELECT from files.[file_name]` statement is used to select data from a file.
+The `#!sql SELECT * FROM files.[file_name]` statement is used to select data from a file.
 
 First, you upload a file to the MindsDB Cloud Editor by following [this guide](/sql/create/file/). And then, you can [`CREATE PREDICTOR`](/sql/create/predictor/) from the uploaded file.
 

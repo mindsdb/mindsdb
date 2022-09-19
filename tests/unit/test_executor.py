@@ -28,7 +28,8 @@ class Test(BaseTestCase):
 
         # check sql in query method
         print(mock_handler().query.mock_calls[0].args)
-        assert mock_handler().query.mock_calls[0].args[0].to_string() == 'SELECT * FROM tasks'
+        assert mock_handler().query.call_args[0][0].to_string() == 'SELECT * FROM tasks'
+        # assert mock_handler().query.mock_calls[0].args[0].to_string() == 'SELECT * FROM tasks'
 
     def test_predictor_1_row(self):
         predicted_value = 3.14
@@ -313,8 +314,9 @@ class TestWithNativeQuery(BaseTestCase):
             dialect='mindsdb'))
 
         # native query was called
-        print(mock_handler().native_query.mock_calls)
-        assert mock_handler().native_query.mock_calls[0].args[0] == 'select * from tasks'
+        print(mock_handler().native_query.call_args)
+        assert mock_handler().native_query.call_args[0][0] == 'select * from tasks'
+        # assert mock_handler().native_query.mock_calls[0].args[0] == 'select * from tasks'
         assert ret.data[0][0] == 3
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
@@ -354,7 +356,8 @@ class TestWithNativeQuery(BaseTestCase):
 
         # learn was called
         print(self.mock_learn.mock_calls[0].args)
-        assert self.mock_learn.mock_calls[0].args[0].name.to_string() == 'task_model'
+        assert self.mock_learn.call_args[0][0].name.to_string() == 'task_model'
+        # assert self.mock_learn.mock_calls[0].args[0].name.to_string() == 'task_model'
         # integration was called
         # TODO: integration is not called during learn process because learn function is mocked
         #   (data selected inside learn function)
@@ -407,7 +410,8 @@ class TestWithNativeQuery(BaseTestCase):
         assert ret.error_code is None
 
         # native query was called
-        assert mock_handler().native_query.mock_calls[0].args[0] == 'select * from tasks'
+        assert mock_handler().native_query.call_args[0][0] == 'select * from tasks'
+        # assert mock_handler().native_query.mock_calls[0].args[0] == 'select * from tasks'
 
         # check predictor call
 
@@ -480,11 +484,13 @@ class TestWithNativeQuery(BaseTestCase):
         assert ret.error_code is None
 
         # native query was called without filters
-        assert mock_handler().native_query.mock_calls[0].args[0] == 'select * from tasks'
+        assert mock_handler().native_query.call_args[0][0] == 'select * from tasks'
+        # assert mock_handler().native_query.mock_calls[0].args[0] == 'select * from tasks'
 
         # check predictor call
         # prediction was called
-        assert self.mock_predict.mock_calls[0].args[0] == 'task_model'
+        assert self.mock_predict.call_args[0][0] == 'task_model'
+        # assert self.mock_predict.mock_calls[0].args[0] == 'task_model'
 
         # input to predictor all 9 rows
         when_data = self.mock_predict.mock_calls[0].args[1]

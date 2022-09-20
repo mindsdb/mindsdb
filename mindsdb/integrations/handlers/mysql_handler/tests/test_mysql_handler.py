@@ -19,7 +19,7 @@ def get_certs():
 
 
 class MySQLNoSSLHandlerTest(unittest.TestCase):
-    image_name = "mindsdb-mysqlhandler-test"
+    image_name = "mindsdb/mysql-handler-test"
     kwargs = {"connection_data": {
                         "host": "localhost",
                         "port": "3307",

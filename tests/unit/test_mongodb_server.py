@@ -13,19 +13,10 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
 
-
-def unload_module(path):
-    # remove all modules started with path
-    import sys
-    to_remove = []
-    for module_name in sys.modules:
-        if module_name.startswith(path):
-            to_remove.append(module_name)
-    for module_name in to_remove:
-        sys.modules.pop(module_name)
+from .executor_test_base import BaseUnitTest
 
 
-class TestMongoDBServer(unittest.TestCase):
+class TestMongoDBServer(BaseUnitTest):
 
     def test_mongo_server(self):
 
@@ -41,6 +32,7 @@ class TestMongoDBServer(unittest.TestCase):
                     "mongodb": {"host": "127.0.0.1", "port": "47399", "database": "mindsdb"}
                 },
             }
+            # TODO run on own database
 
             from mindsdb.api.mongo.server import MongoServer
 
@@ -90,7 +82,7 @@ class TestMongoDBServer(unittest.TestCase):
         res = list(res)  # to fetch
         assert res == [{'a': 'test'}]
 
-        ast = mock_executor.mock_calls[0].args[0]
+        ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
           SELECT * FROM mindsdb.fish_model1
@@ -108,7 +100,7 @@ class TestMongoDBServer(unittest.TestCase):
         )
         res = list(res)
 
-        ast = mock_executor.mock_calls[0].args[0]
+        ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
           SELECT * FROM 
@@ -136,7 +128,7 @@ class TestMongoDBServer(unittest.TestCase):
         )
         res = list(res)
 
-        ast = mock_executor.mock_calls[0].args[0]
+        ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
           SELECT house_sales_model_h1w4.saledate as date, house_sales_model_h1w4.ma as forecast  FROM 
@@ -158,7 +150,7 @@ class TestMongoDBServer(unittest.TestCase):
         res = client_con.mongo.house_sales.find({'saledate': {'$gt': dt.datetime.fromisoformat("2018-03-31T00:00:00")}})
         res = list(res)
 
-        ast = mock_executor.mock_calls[0].args[0]
+        ast = mock_executor.call_args[0][0]
 
         expected_sql = "SELECT * FROM mongo.house_sales WHERE saledate > '2018-03-31 00:00:00'"
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
@@ -181,7 +173,7 @@ class TestMongoDBServer(unittest.TestCase):
                 }
             }
         )
-        ast = mock_executor.mock_calls[0].args[0]
+        ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
            CREATE PREDICTOR house_sales_model5 

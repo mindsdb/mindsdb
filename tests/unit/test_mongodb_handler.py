@@ -40,7 +40,7 @@ class TestMongoDBConverters(unittest.TestCase):
 
         # test parsing: mql to string and then string to mql
         mql_str = mql.to_string()
-
+        print(mql_str)
         assert MongodbParser().from_string(mql_str).to_string() == mql_str
 
 

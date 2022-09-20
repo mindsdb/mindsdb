@@ -1,5 +1,4 @@
 import copy
-import json
 import tempfile
 import os
 from unittest import mock
@@ -12,32 +11,54 @@ import duckdb
 
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
-class BaseTestCase:
+
+def unload_module(path):
+    # remove all modules started with path
+    import sys
+    to_remove = []
+    for module_name in sys.modules:
+        if module_name.startswith(path + '.') or module_name == path:
+            to_remove.append(module_name)
+    to_remove.sort(reverse=True)
+    for module_name in to_remove:
+        sys.modules.pop(module_name)
+
+
+class BaseUnitTest:
     @staticmethod
     def setup_class(cls):
+
+        # remove imports of mindsdb in previous tests
+        unload_module('mindsdb')
+
         # create tmp db file
         cls.db_file = tempfile.mkstemp(prefix='mindsdb_db_')[1]
-        cls.db = cls.init_db(cls.db_file)
+
+        # save to environ before import db module
+        os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + cls.db_file
+
+        from mindsdb.interfaces.storage import db
+        cls.db = db
 
     @staticmethod
     def teardown_class(cls):
+
         # remove tmp db file
         cls.db.session.close()
         os.unlink(cls.db_file)
 
+        # remove environ for next tests
+        del os.environ['MINDSDB_DB_CON']
+
+        # remove import of mindsdb for next tests
+        unload_module('mindsdb')
+
     def setup_method(self):
         self.clear_db(self.db)
-        self.set_executor()
-
-    @staticmethod
-    def init_db(db_file):
-        os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + db_file
-
-        from mindsdb.interfaces.storage import db
-        return db
 
     def clear_db(self, db):
         # drop
+        db.session.rollback()
         db.Base.metadata.drop_all(db.engine)
 
         # create
@@ -54,6 +75,13 @@ class BaseTestCase:
         self.lw_integration_id = r.id
         db.session.commit()
         return db
+
+
+class BaseExecutorTest(BaseUnitTest):
+
+    def setup_method(self):
+        super().setup_method()
+        self.set_executor()
 
     def set_executor(self):
         # creates executor instance with mocked model_interface

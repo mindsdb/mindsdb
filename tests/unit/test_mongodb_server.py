@@ -13,8 +13,10 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
 
+from .executor_test_base import BaseUnitTest
 
-class TestMongoDBServer(unittest.TestCase):
+
+class TestMongoDBServer(BaseUnitTest):
 
     def test_mongo_server(self):
 

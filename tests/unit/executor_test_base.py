@@ -1,5 +1,4 @@
 import copy
-import json
 import tempfile
 import os
 from unittest import mock
@@ -25,7 +24,7 @@ def unload_module(path):
         sys.modules.pop(module_name)
 
 
-class BaseTestCase:
+class BaseUnitTest:
     @staticmethod
     def setup_class(cls):
 
@@ -56,8 +55,6 @@ class BaseTestCase:
 
     def setup_method(self):
         self.clear_db(self.db)
-        self.set_executor()
-
 
     def clear_db(self, db):
         # drop
@@ -78,6 +75,13 @@ class BaseTestCase:
         self.lw_integration_id = r.id
         db.session.commit()
         return db
+
+
+class BaseExecutorTest(BaseUnitTest):
+
+    def setup_method(self):
+        super().setup_method()
+        self.set_executor()
 
     def set_executor(self):
         # creates executor instance with mocked model_interface

@@ -1,4 +1,7 @@
 import time
+import os
+import shutil
+import tarfile
 import unittest
 import docker
 
@@ -6,22 +9,25 @@ from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandl
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
-class MySQLHandlerTest(unittest.TestCase):
+class MySQLNoSSLHandlerTest(unittest.TestCase):
+    image_name = "mindsdb-mysqlhandler-test"
+    kwargs = {"connection_data": {
+                        "host": "localhost",
+                        "port": "3307",
+                        "user": "root",
+                        "password": "supersecret",
+                        "database": "test",
+                        "ssl": False
+                 }
+    }
+    certs_archive = "certs.tar"
+    certs_dir = "mysql"
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {"connection_data": {
-                            "host": "localhost",
-                            "port": "3307",
-                            "user": "root",
-                            "password": "supersecret",
-                            "database": "test",
-                            "ssl": False
-                     }
-        }
         cls.containers = list()
         cls.docker_client = docker.from_env()
         main_container = cls.docker_client.containers.run(
-                    "my-mysql",
+                    cls.image_name,
                     command="--secure-file-priv=/",
                     detach=True,
                     environment={"MYSQL_ROOT_PASSWORD":"supersecret"},
@@ -29,7 +35,12 @@ class MySQLHandlerTest(unittest.TestCase):
                 )
         cls.containers.append(main_container)
         cls.waitReadiness(main_container)
+        cls.get_certificates()
         cls.handler = MySQLHandler('test_mysql_handler', **cls.kwargs)
+
+    @classmethod
+    def get_certificates(cls):
+        pass
 
     @classmethod
     def waitReadiness(cls, container, timeout=15):
@@ -48,13 +59,17 @@ class MySQLHandlerTest(unittest.TestCase):
             if time.time() > threshold:
                 raise Exception("timeout exceeded, container still not ready")
 
-
-
     @classmethod
     def tearDownClass(cls):
         for c in cls.containers:
             c.kill()
         cls.docker_client.close()
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        try:
+            os.remove(os.path.join(cur_dir, cls.certs_archive))
+            shutil.rmtree(os.path.join(cur_dir, cls.certs_dir))
+        except Exception as e:
+            print(f"unable to delete .tar/files of certificates: {e}")
 
     def test_00_connect(self):
         self.handler.connect()
@@ -122,6 +137,51 @@ class MySQLHandlerTest(unittest.TestCase):
         assert tables is not None, "expected to have some tables in the db, but got None"
         assert 'table_name' in tables, f"expected to get 'table_name' column in the response:\n{tables}"
         return list(tables['table_name'])
+
+
+def get_certs():
+    certs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mysql")
+    certs = {}
+    for cert_key, fname in [("ssl_ca", "ca.pem"), ("ssl_cert", "client-cert.pem"), ("ssl_key", "client-key.pem")]:
+        cert_file = os.path.join(certs_dir, fname)
+        # with open(cert_file, 'rb') as f:
+        #     cert  = f.read()
+        #     certs[cert_key] = cert
+        certs[cert_key] = cert_file
+    return certs
+
+
+
+class MySQLSSLHandlerTest(MySQLNoSSLHandlerTest):
+    kwargs = {"connection_data": {
+                        "host": "localhost",
+                        "port": "3307",
+                        "user": "ssl_user",
+                        "password": "ssl",
+                        "database": "test",
+                        "ssl": True
+                 }
+    }
+
+    @classmethod
+    def get_certificates(cls):
+        c = cls.containers[0]
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        archive_path = os.path.join(cur_dir, cls.certs_archive)
+        with open(archive_path, "wb") as f:
+            bits, _ = c.get_archive('/var/lib/mysql')
+            for chunk in bits:
+                f.write(chunk)
+
+        with tarfile.open(archive_path) as tf:
+            tf.extractall(path=cur_dir)
+        certs = get_certs()
+        cls.kwargs.update(certs)
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
 
 
 if __name__ == "__main__":

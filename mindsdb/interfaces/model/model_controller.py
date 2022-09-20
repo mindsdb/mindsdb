@@ -131,8 +131,8 @@ class ModelController():
         predictor_record = get_model_record(company_id=company_id, name=name, except_absent=True)
 
         fs_name = f'predictor_{company_id}_{predictor_record.id}'
-        self.fs_store.get(fs_name, base_dir=self.config['paths']['predictors'])
-        local_predictor_savefile = os.path.join(self.config['paths']['predictors'], fs_name)
+        self.fs_store.pull()
+        local_predictor_savefile = os.path.join(self.fs_store.folder_path, fs_name)
         predictor_binary = open(local_predictor_savefile, 'rb').read()
 
         # Serialize a predictor record into a dictionary 
@@ -179,7 +179,7 @@ class ModelController():
 
         predictor_binary = base64.b64decode(prs['predictor_binary'])
         fs_name = f'predictor_{company_id}_{predictor_record.id}'
-        with open(os.path.join(self.config['paths']['predictors'], fs_name), 'wb') as fp:
+        with open(os.path.join(self.fs_store.folder_path, fs_name), 'wb') as fp:
             fp.write(predictor_binary)
 
-        self.fs_store.put(fs_name, base_dir=self.config['paths']['predictors'])
+        self.fs_store.push()

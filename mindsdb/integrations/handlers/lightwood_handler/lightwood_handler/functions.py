@@ -12,13 +12,9 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 import lightwood
 from lightwood.api.types import ProblemDefinition, JsonAI
-from lightwood import __version__ as lightwood_version
 
-from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.storage.db import session, Predictor
-from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
@@ -65,13 +61,10 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
 
 
 @mark_process(name='learn')
-def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
+def run_fit(predictor_id: int, df: pd.DataFrame, storage_path: str) -> None:
     try:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
         assert predictor_record is not None
-
-        fs_store = FsStore()
-        config = Config()
 
         predictor_record.data = {'training_log': 'training'}
         predictor_record.status = PREDICTOR_STATUS.TRAINING
@@ -82,10 +75,8 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         db.session.refresh(predictor_record)
 
         fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
-        pickle_path = os.path.join(config['paths']['predictors'], fs_name)
+        pickle_path = os.path.join(storage_path, fs_name)
         predictor.save(pickle_path)
-
-        fs_store.put(fs_name, base_dir=config['paths']['predictors'])
 
         predictor_record.data = predictor.model_analysis.to_dict()
 
@@ -128,7 +119,7 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
 
 @mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
-              json_ai_override: dict = None) -> None:
+              json_ai_override: dict = None, storage_path: str = None) -> None:
     if json_ai_override is None:
         json_ai_override = {}
 
@@ -138,7 +129,7 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
 
     try:
         run_generate(df, problem_definition, predictor_id, json_ai_override)
-        run_fit(predictor_id, df)
+        run_fit(predictor_id, df, storage_path)
     except Exception as e:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
         print(traceback.format_exc())
@@ -160,10 +151,7 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
 
 
 @mark_process(name='learn')
-def run_update(predictor_id: int, df: DataFrame, company_id: int):
-    fs_store = FsStore()
-    config = Config()
-
+def run_update(predictor_id: int, df: DataFrame, company_id: int, storage_path: str):
     try:
         predictor_record = Predictor.query.filter_by(id=predictor_id).first()
 
@@ -187,9 +175,8 @@ def run_update(predictor_id: int, df: DataFrame, company_id: int):
         predictor.learn(df)
 
         fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
-        pickle_path = os.path.join(config['paths']['predictors'], fs_name)
+        pickle_path = os.path.join(storage_path, fs_name)
         predictor.save(pickle_path)
-        fs_store.put(fs_name, base_dir=config['paths']['predictors'])
         predictor_record.data = predictor.model_analysis.to_dict()
         predictor_record.update_status = 'up_to_date'
         predictor_record.dtype_dict = predictor.dtype_dict

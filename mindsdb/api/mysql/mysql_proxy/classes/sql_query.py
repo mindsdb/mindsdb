@@ -33,6 +33,7 @@ from mindsdb_sql.parser.ast import (
     Join,
     Star,
     Insert,
+    Update,
     Delete,
     Latest,
     BetweenOperation,
@@ -50,6 +51,7 @@ from mindsdb_sql.planner.steps import (
     ProjectStep,
     SaveToTable,
     InsertToTable,
+    UpdateToTable,
     FilterStep,
     UnionStep,
     JoinStep,
@@ -1593,6 +1595,64 @@ class SQLQuery():
                 is_replace=is_replace,
                 is_create=is_create
             )
+            data = None
+        elif type(step) == UpdateToTable:
+
+            step_data = step.dataframe.result_data
+            integration_name = step.table.parts[0]
+            table_name_parts = step.table.parts[1:]
+
+            dn = self.datahub.get(integration_name)
+
+            result = ResultSet()
+            result.from_step_data(step_data)
+
+            # link nodes with parameters for fast replacing with values
+            input_table_alias = step.update_command.from_select_alias.parts[0]
+
+            params_map_index = []
+
+            def prepare_map_index(node, is_table, **kwargs):
+                if isinstance(node, Identifier) and not is_table:
+                    # is input table field
+                    if node.parts[0] == input_table_alias:
+                        node2 = Constant(None)
+                        param_name = node.parts[-1]
+                        params_map_index.append([param_name, node2])
+                        # replace node with constant
+                        return node2
+                    elif node.parts[0] == table_name_parts[0]:
+                        # remove updated table alias
+                        node.parts = node.parts[1:]
+
+            # make command
+            update_query = Update(
+                table=Identifier(parts=table_name_parts),
+                update_columns=step.update_command.update_columns,
+                where=step.update_command.where
+            )
+            # do mapping
+            query_traversal(update_query, prepare_map_index)
+
+            # check all params is input data:
+            data_header = [col.alias for col in result.columns]
+
+            for param_name, _ in params_map_index:
+                if param_name not in data_header:
+                    raise ErSqlWrongArguments(f'Field {param_name} not found in input data. Input fields: {data_header}')
+
+            # perform update
+            for values in result.records:
+                # run update from every row from input data
+                row = dict(zip(data_header, values))
+
+                # fill params:
+                for param_name, param in params_map_index:
+                    param.value = row[param_name]
+
+                # execute
+                dn.query(query=update_query)
+
             data = None
         else:
             raise ErLogicError(F'Unknown planner step: {step}')

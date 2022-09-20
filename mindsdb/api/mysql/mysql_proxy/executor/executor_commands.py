@@ -496,7 +496,16 @@ class ExecuteCommands:
                 )
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
-            raise ErNotSupportedYet('Update is not implemented')
+            if statement.from_select is None:
+                raise ErNotSupportedYet('Update is not implemented')
+            else:
+                # run with planner
+                SQLQuery(
+                    statement,
+                    session=self.session,
+                    execute=True
+                )
+                return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Alter and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Select:

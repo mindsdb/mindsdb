@@ -270,8 +270,12 @@ class BaseExecutorTest(BaseUnitTest):
 
             for table, df in tables.items():
                 con.register(table, df)
-            result_df = con.execute(query).fetchdf()
-            result_df = result_df.replace({np.nan: None})
+            try:
+                result_df = con.execute(query).fetchdf()
+                result_df = result_df.replace({np.nan: None})
+            except:
+                # it can be not supported command like update or insert
+                result_df = pd.DataFrame()
             for table in tables.keys():
                 con.unregister(table)
 

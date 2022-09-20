@@ -267,6 +267,53 @@ class TestCompexQueries(BaseExecutorTest):
         assert list(ret_df.columns) == ['a1', 'target']
         assert ret_df.shape[0] == 3
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_update_from_select(self, mock_handler):
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
+
+        # --- use predictor ---
+        predictor = {
+            'name': 'task_model',
+            'predict': 'p',
+            'dtypes': {
+                'p': dtype.float,
+                'a': dtype.integer,
+                'b': dtype.categorical,
+                'c': dtype.datetime
+            },
+            'predicted_value': 'ccc'
+        }
+        self.set_predictor(predictor)
+        sql = '''
+            update 
+                pg.table2                   
+            set
+                a1 = df.a,
+                c1 = df.c
+            from                            
+                (
+                    SELECT model.a as a, model.b as b, model.p as c
+                      FROM pg.tasks as t
+                     JOIN mindsdb.task_model as model
+                     WHERE t.a=1 
+                )
+                as df
+            where  
+                table2.a1 = df.a 
+                and table2.b1 = df.b     
+        '''
+
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb'))
+        assert ret.error_code is None
+
+        # 1 select and 2 updates
+        assert mock_handler().query.call_count == 3
+
+        # second is update
+        assert mock_handler().query.call_args_list[1][0][0].to_string() == "update table2 set a1=1, c1='ccc' where (a1 = 1) AND (b1 = 'ccc')"
+
+
     # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     # def test_union_type_mismatch(self, mock_handler):
     #     self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})

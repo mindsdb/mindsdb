@@ -55,7 +55,7 @@ WHERE `0`=2;
 
 ## Advanced Example of Keras NLP Model
 
-Before we start, download [the NLP dataset from Kaggle](https://www.kaggle.com/shahules/basic-eda-cleaning-and-glove) to reproduce the steps of this example.
+Before we start, download [the natural language processing (NLP) dataset from Kaggle](https://www.kaggle.com/c/nlp-getting-started) to reproduce the steps of this example.
 
 Here, we look at the best practices when your model needs custom data preprocessing, which is quite common.
 

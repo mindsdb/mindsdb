@@ -41,7 +41,7 @@ from mindsdb_sql.parser.ast import (
     Operation,
     ASTNode,
     DropView,
-    NativeQuery,
+    Union,
 )
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -508,6 +508,12 @@ class ExecuteCommands:
                 session=self.session
             )
             return self.answer_select(query)
+        elif type(statement) == Union:
+            query = SQLQuery(
+                statement,
+                session=self.session
+            )
+            return self.answer_select(query)
         elif type(statement) == Explain:
             return self.answer_show_columns(statement.target)
         elif type(statement) == CreateTable:
@@ -716,13 +722,10 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_datasource(self, ds_name):
-        try:
-            integration = self.session.integration_controller.get(ds_name)
-            if integration is None:
-                raise SqlApiException(f"Database '{ds_name}' does not exists.")
-            self.session.integration_controller.delete(integration['name'])
-        except Exception:
-            raise ErDbDropDelete(f"Something went wrong during deleting database '{ds_name}'.")
+        integration = self.session.integration_controller.get(ds_name)
+        if integration is None:
+            raise SqlApiException(f"Database '{ds_name}' does not exists.")
+        self.session.integration_controller.delete(integration['name'])
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):

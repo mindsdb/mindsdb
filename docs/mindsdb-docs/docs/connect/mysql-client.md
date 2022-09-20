@@ -21,7 +21,7 @@ Here are the commands that allow you to connect to either a local MindsDB instal
 === "MindsDB Cloud"
 
     ```bash
-    mysql -h cloud-mysql.mindsdb.com --port 3306 -u [mindsdb_cloud_username] -p [mindsdb_cloud_password]
+    mysql -h cloud.mindsdb.com --port 3306 -u [mindsdb_cloud_username] -p [mindsdb_cloud_password]
     ```
 
 On execution, we get:

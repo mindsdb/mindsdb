@@ -4,7 +4,7 @@
 
 The `stats()` method is used to display the attributes of an existing model. It accepts the `{scale: "attribute"}` object as an argument.
 
-Here is how to call the `stats()` method.
+Here is how to call the `stats()` method:
 
 ```sql
 db.predictor_name.stats({scale: "attribute"});
@@ -14,16 +14,18 @@ Where:
 
 | Name                       | Description                                                                                                                                       |
 | ---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| `predictor_name`   | The name of the predictor whose statistics you want to see                                                                                        |
-| `{scale: "attribute"}`   | The argument of the `stats()` method defines the type of statistics (`{scale: "features"}`, or `{scale: "model"}`, or `{scale: "ensemble"}`)   |
+| `predictor_name`   | The name of the predictor whose statistics you want to see.                                                                                        |
+| `{scale: "attribute"}`   | The argument of the `stats()` method defines the type of statistics (`{scale: "features"}`, or `{scale: "model"}`, or `{scale: "ensemble"}`).   |
 
-## Using the `stats()` Method with the `{scale: "features"}` Parameter
+## The `stats()` Method with the `{scale: "features"}` Parameter
 
 ### Description
 
 The `db.predictor_name.stats({scale: "features"})` method is used to display the way the model encoded the data before training.
 
 ### Syntax
+
+Here is the syntax:
 
 ```sql
 db.predictor_name.stats({scale: "features"});
@@ -48,12 +50,14 @@ Where:
 
 | Name            | Description                                      |
 | --------------- | ------------------------------------------------ |
-| `"column"`      | The name of the column                           |
-| `"type"`        | Type of the inferred data                        |
-| `"encoder"`     | Encoder used                                     |
-| `"role"`        | Role of the column (`feature` or `target`)       |
+| `"column"`      | The name of the column.                          |
+| `"type"`        | Type of the inferred data.                       |
+| `"encoder"`     | Encoder used.                                    |
+| `"role"`        | Role of the column (`feature` or `target`).      |
 
 ### Example
+
+Let's describe the `home_rentals_model` model.
 
 ```sql
 db.home_rentals_model.stats({scale: "features"});
@@ -117,13 +121,15 @@ On execution, we get:
 }
 ```
 
-## Using the `stats()` Method with the `{scale: "model"}` Parameter
+## The `stats()` Method with the `{scale: "model"}` Parameter
 
 ### Description
 
 The `db.predictor_name.stats({scale: "model"})` method is used to display the performance of the candidate models.
 
 ### Syntax
+
+Here is the syntax:
 
 ```sql
 db.predictor_name.stats({scale: "model"});
@@ -148,12 +154,14 @@ Where:
 
 | Name                       | Description                                                |
 | -------------------------- | ---------------------------------------------------------- |
-| `"name"`                   | Name of the candidate model                                |
-| `"performance"`            | Accuracy from 0 to 1 depending on the type of the model    |
-| `"training_time"`          | Time elapsed for the training of the model                 |
-| `"selected"`               | `1` for the best performing model and `0` for the rest     |
+| `"name"`                   | Name of the candidate model.                               |
+| `"performance"`            | Accuracy from 0 to 1 depending on the type of the model.   |
+| `"training_time"`          | Time elapsed for the training of the model.                |
+| `"selected"`               | `1` for the best performing model and `0` for the rest.    |
 
 ### Example
+
+Let's see the output for the `home_rentals_model` model.
 
 ```sql
 db.home_rentals_model.stats({scale: "model"});
@@ -187,13 +195,15 @@ On execution, we get:
 }
 ```
 
-## Using the `stats()` Method with the `{scale: "ensemble"}` Parameter
+## The `stats()` Method with the `{scale: "ensemble"}` Parameter
 
 ### Description
 
 The `db.predictor_name.stats({scale: "ensemble"})` method is used to display the parameters used to select the best candidate model.
 
 ### Syntax
+
+Here is the syntax:
 
 ```sql
 db.predictor_name.stats({scale: "ensemble"});
@@ -211,14 +221,14 @@ On execution, we get:
 
 Where:
 
-| Name       | Description                                                                               |
-| ---------- | ----------------------------------------------------------------------------------------- |
-| `ensemble` | Object of the JSON type describing the parameters used to select the best candidate model |
+| Name       | Description                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| `ensemble` | Object of the JSON type describing the parameters used to select the best candidate model. |
 
 ### Example
 
 !!! warning "Example WIP"
     This example is a work in progress.
 
-!!! TIP "Unsure what it all means?"
-    If you're unsure how to `#!sql DESCRIBE` your model or understand the results, feel free to ask us at the community [Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).
+!!! TIP "Need More Info?"
+    If you need more information on how to describe your model or understand the results, feel free to ask us on the [community Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).

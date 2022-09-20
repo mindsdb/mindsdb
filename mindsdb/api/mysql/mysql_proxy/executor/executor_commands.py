@@ -659,7 +659,7 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_datasource(self, struct: dict):
-        ''' create new datasource (integration in old terms)
+        ''' create new handler (datasource/integration in old terms)
             Args:
                 struct: data for creating integration
         '''
@@ -703,7 +703,7 @@ class ExecuteCommands:
                             raise SqlApiException(f"Argument '{arg_name}' must be path or url to the file")
                         connection_args[arg_name] = path
 
-            handler = self.session.integration_controller.create_handler(
+            handler = self.session.integration_controller.create_tmp_handler(
                 handler_type=engine,
                 connection_data=connection_args
             )

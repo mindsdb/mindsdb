@@ -42,7 +42,7 @@ class Responce(Responder):
 
                 status = HandlerStatusResponse(success=False)
                 try:
-                    handler = mindsdb_env['integration_controller'].create_handler(
+                    handler = mindsdb_env['integration_controller'].create_tmp_handler(
                         handler_type=doc['engine'],
                         connection_data=doc['connection_args']
                     )

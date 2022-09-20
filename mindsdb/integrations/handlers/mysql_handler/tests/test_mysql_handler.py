@@ -9,6 +9,15 @@ from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandl
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
+def get_certs():
+    certs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mysql")
+    certs = {}
+    for cert_key, fname in [("ssl_ca", "ca.pem"), ("ssl_cert", "client-cert.pem"), ("ssl_key", "client-key.pem")]:
+        cert_file = os.path.join(certs_dir, fname)
+        certs[cert_key] = cert_file
+    return certs
+
+
 class MySQLNoSSLHandlerTest(unittest.TestCase):
     image_name = "mindsdb-mysqlhandler-test"
     kwargs = {"connection_data": {
@@ -139,19 +148,6 @@ class MySQLNoSSLHandlerTest(unittest.TestCase):
         return list(tables['table_name'])
 
 
-def get_certs():
-    certs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mysql")
-    certs = {}
-    for cert_key, fname in [("ssl_ca", "ca.pem"), ("ssl_cert", "client-cert.pem"), ("ssl_key", "client-key.pem")]:
-        cert_file = os.path.join(certs_dir, fname)
-        # with open(cert_file, 'rb') as f:
-        #     cert  = f.read()
-        #     certs[cert_key] = cert
-        certs[cert_key] = cert_file
-    return certs
-
-
-
 class MySQLSSLHandlerTest(MySQLNoSSLHandlerTest):
     kwargs = {"connection_data": {
                         "host": "localhost",
@@ -176,12 +172,7 @@ class MySQLSSLHandlerTest(MySQLNoSSLHandlerTest):
         with tarfile.open(archive_path) as tf:
             tf.extractall(path=cur_dir)
         certs = get_certs()
-        cls.kwargs.update(certs)
-
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
+        cls.kwargs["connection_data"].update(certs)
 
 
 if __name__ == "__main__":

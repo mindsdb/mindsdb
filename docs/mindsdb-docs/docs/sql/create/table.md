@@ -2,23 +2,42 @@
 
 ## Description
 
-The `#!sql CREATE TABLE` is used to create a table and fill it with the result of a subselect, usually used to materialize predictions into tables.
+The `#!sql CREATE TABLE` statement creates a table and fills it with a subselect query output. It is usually used to materialize prediction results as tables.
 
 ## Syntax
 
+You can use the usual `CREATE TABLE` statement:
+
 ```sql
-CREATE [{REPLACE}] TABLE [integration_name].[table_name]
-    [SELECT ...]
+CREATE TABLE [integration_name].[table_name]
+    (SELECT ...);
 ```
 
-It performs a subselect `#!sql [SELECT ...]` and gets data from it, thereafter it creates a table `#!sql [table_name]` in `#!sql [integration_name]`. lastly it performs an `#!sql INSERT INTO [integration_name].[table_name]` with the contents of the `#!sql [SELECT ...]`
+Or the `CREATE OR REPLACE TABLE` statement:
 
-!!!warning "`#!sql REPLACE`"
-    If `#!sql REPLACE` is indicated then `#!sql [integration_name].[table_name]` will be **Dropped**
+```sql
+CREATE OR REPLACE TABLE [integration_name].[table_name]
+    (SELECT ...);
+```
+
+Here are the steps followed by the syntax:
+
+- It executes a subselect query to get the output dataset.
+- In the case of the `CREATE OR REPLACE TABLE` statement, the `[integration_name].[table_name]` table is dropped before recreating it.
+- It (re)creates the `[integration_name].[table_name]` table inside the `#!sql [integration_name]` integration.
+- It uses the [`#!sql INSERT INTO`](/sql/api/insert/) statement to insert the output of the `#!sql (SELECT ...)` query into the `[integration_name].[table_name]`.
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
 
 ## Example
 
-In this example we want to persist the predictions into a table `#!sql int1.tbl1`. Given the following schema:
+We want to save the prediction results into the `#!sql int1.tbl1` table.
+
+Here is the schema structure used throughout this example:
 
 ```bash
 int1
@@ -31,21 +50,27 @@ int2
 
 Where:
 
-|                  | Description                                                |
-| ---------------- | ---------------------------------------------------------- |
-| `int1`           | Integration for the table to be created in                 |
-| `tbl1`           | Table to be created                                        |
-| `predictor_name` | Name of the model to be used                               |
-| `int2`           | Database to be used as a source in the inner `#!sql SELECT` |
-| `tbl2`           | Table to be used as a source.                               |
+| Name             | Description                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| `int1`           | Integration where the table that stores prediction results resides.                         |
+| `tbl1`           | Table that stores prediction results.                                                       |
+| `predictor_name` | Name of the model.                                                                          |
+| `int2`           | Integration where the data source table used in the inner `#!sql SELECT` statement resides. |
+| `tbl2`           | Data source table used in the inner `#!sql SELECT` statement.                               |
 
-In order to achieve the desired result we could execute the following query:
+Let's execute the query.
 
 ```sql
-CREATE TABLE int1.tbl1 (
+CREATE OR REPLACE TABLE int1.tbl1 (
     SELECT *
     FROM int2.tbl2 AS ta
     JOIN mindsdb.predictor_name AS tb
     WHERE ta.date > '2015-12-31'
-)
+);
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
 ```

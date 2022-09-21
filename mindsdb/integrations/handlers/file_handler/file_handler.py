@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 import requests
 import pandas as pd
+from charset_normalizer import from_bytes
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -40,11 +41,11 @@ class FileHandler(DatabaseHandler):
     """
     name = 'files'
 
-    def __init__(self, name=None, db_store=None, fs_store=None, connection_data=None, file_controller=None):
+    def __init__(self, name=None, file_storage=None, connection_data={}, file_controller=None):
         super().__init__(name)
         self.parser = parse_sql
-        self.fs_store = fs_store
-        self.custom_parser = connection_data.get('custom_parser')
+        self.fs_store = file_storage
+        self.custom_parser = connection_data.get('custom_parser', None)
         self.clean_rows = connection_data.get('clean_rows', True)
         self.file_controller = file_controller
 
@@ -135,7 +136,7 @@ class FileHandler(DatabaseHandler):
     @staticmethod
     def _get_data_io(file_path):
         """
-        This gets a file either url or local file and defiens what the format is as well as dialect
+        This gets a file either url or local file and defines what the format is as well as dialect
         :param file: file path or url
         :return: data_io, format, dialect
         """
@@ -195,8 +196,18 @@ class FileHandler(DatabaseHandler):
             if byte_str.startswith(codecs.BOM_UTF8):
                 data = StringIO(byte_str.decode('utf-8-sig'))
             else:
-                data = StringIO(byte_str.decode('utf-8'))
-
+                file_encoding_meta = from_bytes(
+                    byte_str[:32 * 1024],
+                    steps=32,           # Number of steps/block to extract from my_byte_str
+                    chunk_size=1024,    # Set block size of each extraction)
+                    explain=False
+                )
+                best_meta = file_encoding_meta.best()
+                if best_meta is not None:
+                    encoding = file_encoding_meta.best().encoding
+                else:
+                    encoding = 'utf-8'
+                data = StringIO(byte_str.decode(encoding))
         except Exception:
             print(traceback.format_exc())
             print('Could not load into string')
@@ -220,7 +231,7 @@ class FileHandler(DatabaseHandler):
 
         # lets try to figure out if its a csv
         try:
-            dialect = FileHandler._get_csv_dialect(file_path)
+            dialect = FileHandler._get_csv_dialect(data)
             if dialect:
                 return data, 'csv', dialect
             return data, None, dialect
@@ -242,13 +253,14 @@ class FileHandler(DatabaseHandler):
         return path
 
     @staticmethod
-    def _get_csv_dialect(file_path) -> csv.Dialect:
-        with open(file_path, 'rt') as f:
-            try:
-                accepted_csv_delimiters = [',', '\t', ';']
-                dialect = csv.Sniffer().sniff(f.read(128 * 1024), delimiters=accepted_csv_delimiters)
-            except csv.Error:
-                dialect = None
+    def _get_csv_dialect(buffer) -> csv.Dialect:
+        sample = buffer.read(128 * 1024)
+        buffer.seek(0)
+        try:
+            accepted_csv_delimiters = [',', '\t', ';']
+            dialect = csv.Sniffer().sniff(sample, delimiters=accepted_csv_delimiters)
+        except csv.Error:
+            dialect = None
         return dialect
 
     @staticmethod

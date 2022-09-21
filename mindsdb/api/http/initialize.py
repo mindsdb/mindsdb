@@ -8,13 +8,15 @@ from zipfile import ZipFile
 from pathlib import Path
 import traceback
 import tempfile
+import mimetypes
+
 # import concurrent.futures
 from flask import Flask, url_for, make_response
 from flask.json import dumps
 from flask_restx import Api
 
 from mindsdb.__about__ import __version__ as mindsdb_version
-from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
@@ -214,20 +216,23 @@ def update_static():
 
 
 def initialize_flask(config, init_static_thread, no_studio):
-    # Apparently there's a bug that causes the static path not to work if it's '/' -- https://github.com/pallets/flask/issues/3134, I think '' should achieve the same thing (???)
-    if no_studio:
-        app = Flask(
-            __name__
-        )
-    else:
+    # region required for windows https://github.com/mindsdb/mindsdb/issues/2526
+    mimetypes.add_type('text/css', '.css')
+    mimetypes.add_type('text/javascript', '.js')
+    # endregion
+
+    kwargs = {}
+    if no_studio is not True:
         static_path = os.path.join(config['paths']['static'], 'static/')
         if os.path.isabs(static_path) is False:
             static_path = os.path.join(os.getcwd(), static_path)
-        app = Flask(
-            __name__,
-            static_url_path='/static',
-            static_folder=static_path
-        )
+        kwargs['static_url_path'] = '/static'
+        kwargs['static_folder'] = static_path
+
+    app = Flask(
+        __name__,
+        **kwargs
+    )
 
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
@@ -272,7 +277,7 @@ def initialize_flask(config, init_static_thread, no_studio):
 
 
 def initialize_interfaces(app):
-    app.original_model_interface = ModelInterface()
+    app.original_model_controller = ModelController()
     app.original_integration_controller = IntegrationController()
     app.original_file_controller = FileController()
     config = Config()

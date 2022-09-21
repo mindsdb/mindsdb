@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Any
 
 import pandas as pd
 from mindsdb_sql.parser.ast import Join
@@ -41,7 +41,7 @@ class BaseHandler:
         return
 
     def check_connection(self) -> HandlerStatusResponse:
-        """ Cehck connection to the handler
+        """ Check connection to the handler
 
         Returns:
             HandlerStatusResponse
@@ -114,33 +114,3 @@ class PredictiveHandler(BaseHandler):
     """
     def __init__(self, name: str):
         super().__init__(name)
-
-    def join(self, stmt, data_handler, into: Optional[str]) -> pd.DataFrame:
-        """
-        Join the output of some entity in the handler with output from some other handler.
-
-        Data from the external handler should be retrieved via the `select_query` method.
-
-        `into`: if provided, the resulting output will be stored in the specified data handler table via `handler.select_into()`. 
-        """
-        raise NotImplementedError()
-
-    def _get_model_name(self, stmt):
-        """ Discern between joined entities to retrieve model name, alias and the clause side it is on. """
-        side = None
-        models = self.get_tables().data_frame['model_name'].values
-        if type(stmt.from_table) == Join:
-            model_name = stmt.from_table.right.parts[-1]
-            side = 'right'
-            if model_name not in models:
-                model_name = stmt.from_table.left.parts[-1]
-                side = 'left'
-            alias = str(getattr(stmt.from_table, side).alias)
-        else:
-            model_name = stmt.from_table.parts[-1]
-            alias = None  # todo: fix this
-
-        if model_name not in models:
-            raise Exception("Error, not found. Please create this predictor first.")
-
-        return model_name, alias, side

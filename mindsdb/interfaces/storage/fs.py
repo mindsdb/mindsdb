@@ -1,8 +1,20 @@
-import shutil
 import os
-from mindsdb.utilities.config import Config
-from checksumdir import dirhash
+import shutil
 import hashlib
+from pathlib import Path
+from abc import ABC, abstractmethod
+from typing import Union, Optional
+from dataclasses import dataclass
+
+
+from checksumdir import dirhash
+try:
+    import boto3
+except Exception:
+    # Only required for remote storage on s3
+    pass
+
+from mindsdb.utilities.config import Config
 
 
 def copy(src, dst):
@@ -23,53 +35,281 @@ def copy(src, dst):
         shutil.copy2(src, dst)
 
 
-try:
-    import boto3
-except Exception:
-    # Only required for remote storage on s3
-    pass
+class BaseFSStore(ABC):
+    """Base class for file storage
+    """
 
-
-class FsStore():
     def __init__(self):
         self.config = Config()
-        self.location = self.config['permanent_storage']['location']
-        if self.location == 'local':
-            pass
-        elif self.location == 's3':
-            if 's3_credentials' in self.config['permanent_storage']:
-                self.s3 = boto3.client('s3', **self.config['permanent_storage']['s3_credentials'])
-            else:
-                self.s3 = boto3.client('s3')
-            self.bucket = self.config['permanent_storage']['bucket']
-        else:
-            raise Exception('Location: ' + self.location + ' not supported')
+        self.storage = self.config['paths']['storage']
 
-    def put(self, filename, remote_name, local_path):
-        if self.location == 'local':
-            print('From: ', os.path.join(local_path, filename))
-            print('To: ', os.path.join(self.config['paths']['storage'], remote_name))
-            copy(os.path.join(local_path, filename), os.path.join(self.config['paths']['storage'], remote_name))
-        elif self.location == 's3':
-            # NOTE: This `make_archive` function is implemente poorly and will create an empty archive file even if the file/dir to be archived doesn't exist or for some other reason can't be archived
-            shutil.make_archive(os.path.join(local_path, remote_name), 'gztar', root_dir=local_path, base_dir=filename)
-            self.s3.upload_file(os.path.join(local_path, f'{remote_name}.tar.gz'), self.bucket, f'{remote_name}.tar.gz')
-            os.remove(os.path.join(local_path, remote_name + '.tar.gz'))
+    @abstractmethod
+    def get(self, local_name, base_dir):
+        """Copy file/folder from storage to {base_dir}
 
-    def get(self, filename, remote_name, local_path):
-        if self.location == 'local':
-            copy(os.path.join(self.config['paths']['storage'], remote_name), os.path.join(local_path, filename))
-        elif self.location == 's3':
-            remote_ziped_name = f'{remote_name}.tar.gz'
-            local_ziped_name = f'{filename}.tar.gz'
-            local_ziped_path = os.path.join(local_path, local_ziped_name)
-            self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
-            shutil.unpack_archive(local_ziped_path, local_path)
-            os.system(f'chmod -R 777 {local_path}')
-            os.remove(local_ziped_path)
+        Args:
+            local_name (str): name of resource (file/folder)
+            base_dir (str): path to copy the resource
+        """
+        pass
+
+    @abstractmethod
+    def put(self, local_name, base_dir):
+        """Copy file/folder from {base_dir} to storage
+
+        Args:
+            local_name (str): name of resource (file/folder)
+            base_dir (str): path to folder with the resource
+        """
+        pass
+
+    @abstractmethod
+    def delete(self, remote_name):
+        """Delete file/folder from storage
+
+        Args:
+            remote_name (str): name of resource
+        """
+        pass
+
+
+class LocalFSStore(BaseFSStore):
+    """Storage that stores files locally
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def get(self, local_name, base_dir):
+        remote_name = local_name
+        copy(
+            os.path.join(self.storage, remote_name),
+            os.path.join(base_dir, local_name)
+        )
+
+    def put(self, local_name, base_dir):
+        remote_name = local_name
+        copy(
+            os.path.join(base_dir, local_name),
+            os.path.join(self.storage, remote_name)
+        )
 
     def delete(self, remote_name):
-        if self.location == 'local':
+        pass
+
+
+class S3FSStore(BaseFSStore):
+    """Storage that stores files in amazon s3
+    """
+
+    def __init__(self):
+        super().__init__()
+        if 's3_credentials' in self.config['permanent_storage']:
+            self.s3 = boto3.client('s3', **self.config['permanent_storage']['s3_credentials'])
+        else:
+            self.s3 = boto3.client('s3')
+        self.bucket = self.config['permanent_storage']['bucket']
+
+    def get(self, local_name, base_dir):
+        remote_name = local_name
+        remote_ziped_name = f'{remote_name}.tar.gz'
+        local_ziped_name = f'{local_name}.tar.gz'
+        local_ziped_path = os.path.join(base_dir, local_ziped_name)
+        self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
+        shutil.unpack_archive(local_ziped_path, base_dir)
+        os.system(f'chmod -R 777 {base_dir}')
+        os.remove(local_ziped_path)
+
+    def put(self, local_name, base_dir):
+        # NOTE: This `make_archive` function is implemente poorly and will create an empty archive file even if
+        # the file/dir to be archived doesn't exist or for some other reason can't be archived
+        remote_name = local_name
+        shutil.make_archive(
+            os.path.join(base_dir, remote_name),
+            'gztar',
+            root_dir=base_dir,
+            base_dir=local_name
+        )
+        self.s3.upload_file(
+            os.path.join(base_dir, f'{remote_name}.tar.gz'),
+            self.bucket,
+            f'{remote_name}.tar.gz'
+        )
+        os.remove(os.path.join(base_dir, remote_name + '.tar.gz'))
+
+    def delete(self, remote_name):
+        self.s3.delete_object(Bucket=self.bucket, Key=remote_name)
+
+
+storage_location = Config()['permanent_storage']['location']
+if storage_location == 'local':
+    FsStore = LocalFSStore
+elif storage_location == 's3':
+    FsStore = S3FSStore
+else:
+    raise Exception(f"Location: '{storage_location}' not supported")
+
+
+@dataclass(frozen=True)
+class RESOURCE_GROUP:
+    PREDICTOR = 'predictor'
+    INTEGRATION = 'integration'
+
+
+RESOURCE_GROUP = RESOURCE_GROUP()
+
+
+class FileStorage:
+    def __init__(self, resource_group: str, resource_id: int, company_id: Optional[int] = None,
+                 root_dir: str = 'content', sync: bool = True):
+        """
+            Args:
+                resource_group (str)
+                resource_id (int)
+                company_id (Optional[int])
+                root_dir (str)
+                sync (bool)
+        """
+
+        self.resource_group = resource_group
+        self.resource_id = resource_id
+        self.company_id = company_id
+        self.root_dir = root_dir
+        self.sync = sync
+
+        self.folder_name = f'{resource_group}_{company_id}_{resource_id}'
+
+        config = Config()
+        self.fs_store = FsStore()
+        self.content_path = Path(config['paths'][root_dir])
+        self.resource_group_path = self.content_path / resource_group
+        self.folder_path = self.resource_group_path / self.folder_name
+        if self.folder_path.exists() is False:
+            self.folder_path.mkdir(parents=True, exist_ok=True)
+
+    def push(self):
+        self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
+
+    def pull(self):
+        try:
+            self.fs_store.get(str(self.folder_name), str(self.resource_group_path))
+        except Exception:
             pass
-        elif self.location == 's3':
-            self.s3.delete_object(Bucket=self.bucket, Key=remote_name)
+
+    def add(self, path: Union[str, Path], dest_rel_path: Optional[Union[str, Path]] = None):
+        """Copy file/folder to persist storage
+
+        Examples:
+            Copy file 'args.json' to '{storage}/args.json'
+            >>> fs.add('/path/args.json')
+
+            Copy file 'args.json' to '{storage}/folder/opts.json'
+            >>> fs.add('/path/args.json', 'folder/opts.json')
+
+            Copy folder 'folder' to '{storage}/folder'
+            >>> fs.add('/path/folder')
+
+            Copy folder 'folder' to '{storage}/path/folder'
+            >>> fs.add('/path/folder', 'path/folder')
+
+        Args:
+            path (Union[str, Path]): path to the resource
+            dest_rel_path (Optional[Union[str, Path]]): relative path in storage to file or folder
+        """
+        if self.sync is True:
+            self.pull()
+
+        path = Path(path)
+        if isinstance(dest_rel_path, str):
+            dest_rel_path = Path(dest_rel_path)
+
+        if dest_rel_path is None:
+            dest_abs_path = self.folder_path / path.name
+        else:
+            dest_abs_path = self.folder_path / dest_rel_path
+
+        copy(
+            str(path),
+            str(dest_abs_path)
+        )
+
+        if self.sync is True:
+            self.push()
+
+    def get_path(self, relative_path: Union[str, Path]) -> Path:
+        """ Return path to file or folder
+
+        Examples:
+            get path to 'opts.json':
+            >>> fs.get_path('folder/opts.json')
+            ... /path/{storage}/folder/opts.json
+
+        Args:
+            relative_path (Union[str, Path]): Path relative to the storage folder
+
+        Returns:
+            Path: path to requested file or folder
+        """
+        if self.sync is True:
+            self.pull()
+
+        if isinstance(relative_path, str):
+            relative_path = Path(relative_path)
+        relative_path = relative_path.resolve()
+
+        if relative_path.is_absolute():
+            raise TypeError('FSStorage.get_path() got absolute path as argument')
+
+        ret_path = self.folder_path / relative_path
+        if ret_path.exists():
+            raise Exception('Path does not exists')
+
+        return ret_path
+
+    def delete(self, relative_path: Union[str, Path] = '.') -> Path:
+        if isinstance(relative_path, str):
+            relative_path = Path(relative_path)
+
+        if relative_path.is_absolute():
+            raise TypeError('FSStorage.delete() got absolute path as argument')
+
+        path = (self.folder_path / relative_path).resolve()
+
+        if path == self.folder_path:
+            return self.complete_removal()
+
+        if self.sync is True:
+            self.pull()
+
+        if path.exists() is False:
+            raise Exception('Path does not exists')
+
+        if path.is_file():
+            path.unlink()
+        else:
+            path.rmdir()
+
+        if self.sync is True:
+            self.push()
+
+    def complete_removal(self):
+        shutil.rmtree(str(self.folder_path))
+        self.fs_store.delete(self.folder_name)
+
+
+class FileStorageFactory:
+    def __init__(self, resource_group: str, company_id: Optional[int] = None,
+                 root_dir: str = 'content', sync: bool = True):
+        self.resource_group = resource_group
+        self.company_id = company_id
+        self.root_dir = root_dir
+        self.sync = sync
+
+    def __call__(self, resource_id: int):
+        return FileStorage(
+            resource_group=self.resource_group,
+            company_id=self.company_id,
+            root_dir=self.root_dir,
+            sync=self.sync,
+            resource_id=resource_id
+        )

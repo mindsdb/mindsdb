@@ -10,7 +10,7 @@ We will explore how MindsDB's machine learning predictive model can make it easi
 
 To ensure you can complete all the steps, make sure you have access to the following tools:
 
-1. A MindsDB instance. Check out the installation guide for [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPi](https://docs.mindsdb.com/deployment/pypi/). You can also use [MindsDB Cloud](https://docs.mindsdb.com/deployment/cloud/).
+1. A MindsDB instance. Check out the installation guide for [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [PyPi](https://docs.mindsdb.com/setup/self-hosted/pip/windows/). You can also use [MindsDB Cloud](https://docs.mindsdb.com/setup/cloud/).
 2. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/uciml/mushroom-classification)
 3. Optional: Access to ngrok. You can check the installation details at the [ngrok website](https://ngrok.com/).
 
@@ -104,7 +104,7 @@ The predictor we will and be trained to determine if a mushroom is edible or poi
 ```sql
 CREATE PREDICTOR mindsdb.predictor_name
 FROM integration_name
-(SELECT column_name, column_name2 FROM table_name)
+    (SELECT column_name, column_name2 FROM table_name)
 PREDICT column_name;
 ```
 The required values that we need to provide are:
@@ -117,7 +117,8 @@ Use the following query to create a predictor that will predict the `target_clas
 
 ```sql
 CREATE PREDICTOR mushroom_predictor
-FROM mindsdb_predictions ( SELECT * FROM mushrooms)
+FROM mindsdb_predictions
+    (SELECT * FROM mushrooms)
 PREDICT class;
 ```
 
@@ -128,7 +129,9 @@ Select the `Run` button or Shift+Enter to execute the syntax. Once the predictor
 The predictor was created successfully and has started training. To check the status of the model, use the below query.
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='mushroom_predictor';
+SELECT *
+FROM mindsdb.predictors
+WHERE name='mushroom_predictor';
 ```
 
 After the predictor has finished training, you will see a similar output. Note that MindsDB does model testing for you automatically, so you will immediately see if the predictor is accurate enough.
@@ -150,13 +153,28 @@ Use the following query using mock data with the predictor.
 ```sql
 SELECT class
 FROM mindsdb.mushroom_predictor
-WHERE cap_shape='x' AND cap_surface='s' AND cap_color='n' 
-AND bruises='t' AND odor='p' AND gill_attachment='f' AND gill_spacing='c' 
-AND gill_size='n' AND gill_color='k' AND stalk_shape='e' AND stalk_root='e' 
-AND stalk_surface_above_ring='s' AND stalk_surface_below_ring='s' 
-AND stalk_color_above_ring='w' AND stalk_color_below_ring='w' AND veil_type='p' 
-AND veil_color='w' AND ring_number='o' AND ring_type='p' AND spore_print_color='k' 
-AND population='s' AND habitat='u';
+WHERE cap_shape='x'
+AND cap_surface='s'
+AND cap_color='n' 
+AND bruises='t'
+AND odor='p'
+AND gill_attachment='f'
+AND gill_spacing='c' 
+AND gill_size='n'
+AND gill_color='k'
+AND stalk_shape='e'
+AND stalk_root='e' 
+AND stalk_surface_above_ring='s'
+AND stalk_surface_below_ring='s' 
+AND stalk_color_above_ring='w'
+AND stalk_color_below_ring='w'
+AND veil_type='p' 
+AND veil_color='w'
+AND ring_number='o'
+AND ring_type='p'
+AND spore_print_color='k' 
+AND population='s'
+AND habitat='u';
 ```
 
 The result:
@@ -171,4 +189,3 @@ Want to try it out for yourself? Sign up for a [free MindsDB account](https://cl
 Engage with MindsDB community on [Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or [Github](https://github.com/mindsdb/mindsdb/discussions) to ask questions, share and express ideas and thoughts!
 
 For more check out other [tutorials and MindsDB documentation](https://docs.mindsdb.com/).
-

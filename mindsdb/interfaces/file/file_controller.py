@@ -1,8 +1,9 @@
+import os
 import json
 from pathlib import Path
 import shutil
 
-from mindsdb.interfaces.storage.db import session, Semaphor, Predictor, File
+from mindsdb.interfaces.storage.db import session, File
 from mindsdb.integrations.handlers.file_handler import Handler as FileHandler
 from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
@@ -13,7 +14,7 @@ class FileController():
     def __init__(self):
         self.config = Config()
         self.fs_store = FsStore()
-        self.dir = self.config['paths']['datasources']
+        self.dir = os.path.join(self.config.paths['content'], 'file')
 
     def get_files_names(self, company_id=None):
         """ return list of files names
@@ -66,6 +67,7 @@ class FileController():
         if file_name is None:
             file_name = Path(file_path).name
 
+        file_dir = None
         try:
             df, _col_map = FileHandler._handle_source(file_path)
 
@@ -94,12 +96,13 @@ class FileController():
             # NOTE may be delay between db record exists and file is really in folder
             shutil.move(file_path, str(source))
 
-            self.fs_store.put(store_file_path, store_file_path, self.dir)
+            self.fs_store.put(store_file_path, base_dir=self.dir)
         except Exception as e:
             log.error(e)
             raise
         finally:
-            shutil.rmtree(file_dir)
+            if file_dir is not None:
+                shutil.rmtree(file_dir)
 
         return file_record.id
 
@@ -118,5 +121,5 @@ class FileController():
         if file_record is None:
             raise Exception(f"File '{name}' does not exists")
         file_dir = f'file_{company_id}_{file_record.id}'
-        self.fs_store.get(file_dir, file_dir, self.dir)
+        self.fs_store.get(file_dir, base_dir=self.dir)
         return str(Path(self.dir).joinpath(file_dir).joinpath(Path(file_record.source_file_path).name))

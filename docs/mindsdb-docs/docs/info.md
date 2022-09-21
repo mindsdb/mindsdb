@@ -10,9 +10,9 @@ Follow the below steps to get up and running with MindsDB.
 #### Steps:
 
 1.  Deploy MindsDB: 
-    1.  [Docker](/deployment/docker) OR
-    2.  [Pip](/deployment/pypi) OR
-    3.  [MindsDB Cloud](/deployment/cloud)
+    1.  [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) OR
+    2.  [Pip](https://docs.mindsdb.com/setup/self-hosted/pip/windows/) OR
+    3.  [MindsDB Cloud](https://docs.mindsdb.com/setup/cloud/)
 2. [Connect your Data to MindsDB:](/connect)
 3. Connect to MindsDB like it was a Database using your preferred DB Client
     1. Using [MindsDB Cloud](/sql/connect/cloud) OR

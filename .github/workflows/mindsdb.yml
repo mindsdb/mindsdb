@@ -7,7 +7,7 @@ on:
       - '**.md'
   # pull_request_target:
   pull_request:
-    branches: [stable]
+    branches: [stable, staging]
     paths-ignore:
       - 'docs/**'
       - 'README.md'
@@ -62,6 +62,18 @@ jobs:
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
+          # Unit tests
+          # echo -e "\n===============\nUnit tests\n===============\n"
+          cat mindsdb/interfaces/storage/db.py | grep integration
+          
+          env PYTHONPATH=./ pytest tests/unit/test_executor.py
+
+          env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
+        
+          env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
+                
+          env PYTHONPATH=./ pytest tests/unit/test_cache.py
+
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
           sudo chmod 600 ~/.ssh/db_machine
@@ -96,9 +108,10 @@ jobs:
           # echo -e "\n===============\ntest Kafka Stream\n===============\n"
           # python tests/integration_tests/flows/test_kafka.py
 
-          # # Redis Stream
-          # echo -e "\n===============\ntest Redis Stream\n===============\n"
-          # python tests/integration_tests/flows/test_redis.py
+          # Redis Stream
+          echo -e "\n===============\ntest Redis Stream\n===============\n"
+          python tests/integration_tests/flows/test_redis.py
+        
         fi
       shell: bash
       env:

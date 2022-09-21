@@ -1,5 +1,4 @@
 
-import json
 import ast as py_ast
 
 import dateutil.parser
@@ -10,11 +9,11 @@ from .mongodb_query import MongoQuery
 
 class MongodbParser:
     '''
-        converts string into MongoQuery
+        Converts string into MongoQuery
     '''
 
     def from_string(self, call_str):
-        tree = py_ast.parse(call_str, mode='eval')
+        tree = py_ast.parse(call_str.strip(), mode='eval')
         calls = self.process(tree.body)
         # first call contents collection
         method1 = calls[0]['method']
@@ -27,7 +26,7 @@ class MongodbParser:
         # keep only last name
         calls[0]['method'] = [method1[-1]]
 
-        # convert method names get first item of list
+        # convert method names: get first item of list
         for c in calls:
             mquery.add_step({
                 'method': c['method'][0],
@@ -35,11 +34,6 @@ class MongodbParser:
             })
 
         return mquery
-
-        # return {
-        #     'collection': collection,
-        #     'call': calls
-        # }
 
     def process(self, node):
         if isinstance(node, py_ast.Call):
@@ -84,9 +78,14 @@ class MongodbParser:
 
             keys = []
             for node2 in node.keys:
-                if not isinstance(node2, py_ast.Constant):
+                if isinstance(node2, py_ast.Constant):
+                    value = node2.value
+                elif isinstance(node2, py_ast.Str):  # py37
+                    value = node2.s
+                else:
                     raise NotImplementedError(f'Unknown dict key {node2}')
-                keys.append(node2.value)
+
+                keys.append(value)
 
             values = []
             for node2 in node.values:
@@ -106,6 +105,15 @@ class MongodbParser:
 
         if isinstance(node, py_ast.Constant):
             return node.value
+
+        # ---- python 3.7 objects -----
+        if isinstance(node, py_ast.Str):
+            return node.s
+
+        if isinstance(node, py_ast.Num):
+            return node.n
+
+        # -----------------------------
 
         if isinstance(node, py_ast.UnaryOp):
             if isinstance(node.op, py_ast.USub):

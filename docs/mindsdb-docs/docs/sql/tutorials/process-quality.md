@@ -23,17 +23,19 @@ In this tutorial you will learn how to predict the quality of a mining process u
 1. Fix headers: 
    - `sed -e 's/ /_/g' -e 's/\(.*\)/\L\1/' -e 's/%_//g' MiningProcess_Flotation_Plant_Database.csv > fixed_headers.csv` (for Linux/Unix)
    - edit headers manually: change `space` to `underscore`, upper case to lower case, remove `%` from headers (for Windows)
-2. Access MindsDB GUI either on cloud or local via URL 127.0.0.1:47334/.
-3. Select the `Add data` button or the plug icon on the left side bar.
-4. The page will navigate to the 'Select your data source' page. Select 'Files'.
-5. Under 'Import a file' select the tab 'Click here to browse local files' and select your data file.
-6. Once the file is uploaded 100%, provide a name for the data file that will be saved as a table.
-7. Select the button Save and Continue.
+2. Access MindsDB GUI on local via URL 127.0.0.1:47334/. 
+3. If you are using MindsDB Cloud, make sure to add the file to a database and create a database connection to MindsDB's GUI. Cloud has a file size limit of 10MB, therefore for this dataset it would be best to either use MindsDB local instance or if on Cloud [connect via a database.](https://docs.mindsdb.com/sql/create/databases/)
+4. Select the `Add data` button or the plug icon on the left side bar.
+5. The page will navigate to the 'Select your data source' page. Select 'Files'.
+6. Under 'Import a file' select the tab 'Click here to browse local files' and select your data file.
+7. Once the file is uploaded 100%, provide a name for the data file that will be saved as a table.
+8. Select the button Save and Continue.
 
 You can query the file that has been uploaded to see that the data does pull through.
 
 ```sql
-SELECT * from files.file_name;
+SELECT *
+FROM files.file_name;
 ```
 
 ## Connect to MindsDB SQL Sever
@@ -55,6 +57,7 @@ In this section you will connect to MindsDB with the MySql API and create a Pred
 
 Use the following query to create a Predictor that will foretell the silica_concentrate at the end of our mining process.
 > The row number is limited to 5000 to speed up training but you can keep the whole dataset.
+
 ```sql
 CREATE PREDICTOR mindsdb.process_quality_predictor
 FROM files (
@@ -66,26 +69,29 @@ FROM files (
            flotation_column_01_level, flotation_column_02_level,
            flotation_column_03_level, flotation_column_04_level,
            flotation_column_05_level, flotation_column_06_level, 
-           flotation_column_07_level, iron_concentrate, silica_concentrate from process_quality 
-    FROM process_quality LIMIT 5000
-) PREDICT silica_concentrate as quality USING;
+           flotation_column_07_level, iron_concentrate, silica_concentrate
+    FROM process_quality
+    LIMIT 5000
+) PREDICT silica_concentrate AS quality;
 ```
 
-After creating the Predictor you should see a similar output:
+On execution, we get:
 
-```console
+```sql
 Query OK, 0 rows affected (2 min 27.52 sec)
 ```
 
 Now the Predictor will begin training. You can check the status with the following query.
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='process_quality_predictor';
+SELECT *
+FROM mindsdb.predictors
+WHERE name='process_quality_predictor';
 ```
 
-After the Predictor has finished training, you will see a similar output.
+On execution, we get:
 
-```console
+```sql
 +-----------------------------+----------+----------+--------------------+-------------------+------------------+
 | name                        | status   | accuracy | predict            | select_data_query | training_options |
 +-----------------------------+----------+----------+--------------------+-------------------+------------------+
@@ -107,11 +113,18 @@ To run a prediction against new or existing data, you can use the following quer
 ```sql
 SELECT silica_concentrate, silica_concentrate_confidence, silica_concentrate_explain
 FROM mindsdb.process_quality_predictor
-WHERE iron_feed=48.81 AND silica_feed=25.31 AND starch_flow=2504.94 AND amina_flow=309.448 AND ore_pulp_flow=377.6511682692 AND ore_pulp_ph=10.0607 AND ore_pulp_density=1.68676;
+WHERE iron_feed=48.81
+AND silica_feed=25.31
+AND starch_flow=2504.94
+AND amina_flow=309.448
+AND ore_pulp_flow=377.6511682692
+AND ore_pulp_ph=10.0607
+AND ore_pulp_density=1.68676;
 ```
 
-The output should look similar to this.
-```console
+On execution, we get:
+
+```sql
 +--------------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
 | silica_concentrate | silica_concentrate_confidence | Info                                                                                                                                            |
 +--------------------+-------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -137,8 +150,8 @@ SELECT
     collected_data.ore_pulp_flow,
     collected_data.ore_pulp_ph,
     collected_data.ore_pulp_density,
-    predictions.silica_concentrate_confidence as confidence,
-    predictions.silica_concentrate as predicted_silica_concentrate
+    predictions.silica_concentrate_confidence AS confidence,
+    predictions.silica_concentrate AS predicted_silica_concentrate
 FROM process_quality_integration.process_quality AS collected_data
 JOIN mindsdb.process_quality_predictor AS predictions
 LIMIT 5;
@@ -146,7 +159,7 @@ LIMIT 5;
 
 As you can see below, the predictor has made multiple predictions for each data point in the `collected_data` table! You can also try selecting other fields to get more insight on the predictions. See the [JOIN clause documentation](https://docs.mindsdb.com/sql/api/join/) for more information.
 
-```console
+```sql
 +-----------+-------------+-------------+------------+---------------+-------------+------------------+------------+------------------------------+
 | iron_feed | silica_feed | starch_flow | amina_flow | ore_pulp_flow | ore_pulp_ph | ore_pulp_density | confidence | predicted_silica_concentrate |
 +-----------+-------------+-------------+------------+---------------+-------------+------------------+------------+------------------------------+
@@ -158,8 +171,12 @@ As you can see below, the predictor has made multiple predictions for each data 
 +-----------+-------------+-------------+------------+---------------+-------------+------------------+------------+------------------------------+
 ```
 
-You are now done with the tutorial! 🎉
+## What's Next?
 
-Please feel free to try it yourself. Sign up for a [free MindsDB account](https://cloud.mindsdb.com/signup?utm_medium=community&utm_source=ext.%20blogs&utm_campaign=blog-manufacturing-process-quality) to get up and running in 5 minutes, and if you need any help, feel free to ask in [Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or [Github](https://github.com/mindsdb/mindsdb/discussions).
+Have fun while trying it out yourself!
 
-For more tutorials like this, check out [MindsDB documentation](https://docs.mindsdb.com/).
+* Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
+* Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
+* Engage with the MindsDB community on [Slack](https://mindsdb.com/joincommunity) or [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and share your ideas and thoughts.
+
+If this tutorial was helpful, please give us a GitHub star [here](https://github.com/mindsdb/mindsdb).

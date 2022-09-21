@@ -1,4 +1,71 @@
 # MindsDB and Tableau
 
-!!! warning "Work in progress"
-    Tableau requires the MySQL binary protocol, which we are in the process of supporting. If you want to collaborate on this part, please connect with us on [Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).
+Tableau lets you visualize your data easily and intuitively. Now that MindsDB supports the MySQL binary protocol, you can connect it to Tableau and see the forecasts.
+
+## How to Connect
+
+Follow the steps below to connect your MindsDB to Tableau.
+
+First, create a new workbook in Tableau and open the *Connectors* tab in the *Connect to Data* window.
+
+<p align="center">
+  <img src="/assets/connect_tableau.png" />
+</p>
+
+Next, choose *MySQL* and provide the details of your MindsDB connection, such as the IP, port, and database name. Optionally, you can provide a username and password. Then, click *Sign In*.
+
+<p align="center">
+  <img src="/assets/connect_tableau_2.png" />
+</p>
+
+Now you're connected!
+
+## Overview of MindsDB in Tableau
+
+The content of your MindsDB is visible in the right-side pane.
+
+<p align="center">
+  <img src="/assets/connect_tableau_3.png" />
+</p>
+
+All the predictors are listed under the *Table* section. You can also switch between the integrations, such as *mindsdb* or *files*, in the *Database* section using the drop-down.
+
+<p align="center">
+  <img src="/assets/connect_tableau_4.png" />
+</p>
+
+Now, let's run some examples!
+
+## Examples
+
+### Example 1
+
+Previewing one of the tables from the *mysql* integration:
+
+<p align="center">
+  <img src="/assets/connect_tableau_5.png" />
+</p>
+
+### Example 2
+
+There is one technical limitation. Namely, we cannot join tables from different databases/integrations in Tableau. To overcome this challenge, you can use either views or custom SQL queries.
+
+* Previewing a view that joins a data table with a predictor table:
+
+<p align="center">
+  <img src="/assets/connect_tableau_6.png" />
+</p>
+
+* Using a custom SQL query by clicking the *New Custom SQL* button in the right-side pane:
+
+<p align="center">
+  <img src="/assets/connect_tableau_7.png" />
+</p>
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and **Community Tutorials** sections, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **SQL API** section, as they explain a common SQL syntax with examples.
+
+Have fun!

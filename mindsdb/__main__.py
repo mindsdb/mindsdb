@@ -6,13 +6,12 @@ import time
 import asyncio
 import signal
 import psutil
-import json
-import shutil
 
 import torch.multiprocessing as mp
 mp.set_start_method('spawn')
 from packaging import version
 
+from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
@@ -23,7 +22,7 @@ from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.log import log
 from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
-from mindsdb.interfaces.model.model_interface import ray_based, ModelInterface
+from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
@@ -46,8 +45,6 @@ def close_api_gracefully(apis):
             process.terminate()
             process.join()
             sys.stdout.flush()
-        if ray_based:
-            os.system('ray stop --force')
     except KeyboardInterrupt:
         sys.exit(0)
     except psutil.NoSuchProcess:
@@ -91,39 +88,23 @@ if __name__ == '__main__':
                 print(f"{'{0: <18}'.format(handler_name)} - error during dependencies installation: {result.get('error_message', 'unknown error')}")
         sys.exit(0)
 
-    os.environ['DEFAULT_LOG_LEVEL'] = config['log']['level']['console']
-    os.environ['LIGHTWOOD_LOG_LEVEL'] = config['log']['level']['console']
-
-    # Switch to this once the native interface has it's own thread :/
-    ctx = mp.get_context('spawn')
-
-    from mindsdb.__about__ import __version__ as mindsdb_version
     print(f'Version {mindsdb_version}')
-
     print(f'Configuration file:\n   {config.config_path}')
     print(f"Storage path:\n   {config['paths']['root']}")
 
-    # @TODO Backwards compatibiltiy for tests, remove later
-    model_interface = WithKWArgsWrapper(ModelInterface(), company_id=COMPANY_ID)
+    # @TODO Backwards compatibility for tests, remove later
+    model_controller = WithKWArgsWrapper(ModelController(), company_id=COMPANY_ID)
     integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
     for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
         import_meta = handler_meta.get('import', {})
+        dependencies = import_meta.get('dependencies')
         if import_meta.get('success', False) is not True:
-            print(f"Can't import handler '{handler_name}': {import_meta.get('error_message', 'unknown error')}")
-
-    raw_model_data_arr = model_interface.get_models()
-    model_data_arr = []
-    for model in raw_model_data_arr:
-        if model['status'] == 'complete':
-            x = model_interface.get_model_data(model['name'])
-            try:
-                model_data_arr.append(model_interface.get_model_data(model['name']))
-            except Exception:
-                pass
+            print(f"Dependencies for the handler '{handler_name}' are not installed by default.\n",
+                  f'If you want to use "{handler_name}" please install "{dependencies}"')
 
     if not is_cloud:
         # region creating permanent integrations
-        for integration_name in ['files', 'views']:
+        for integration_name in ['files', 'views', 'lightwood']:
             integration_meta = integration_controller.get(name=integration_name)
             if integration_meta is None:
                 integration_record = db.Integration(
@@ -138,7 +119,7 @@ if __name__ == '__main__':
 
         # region Mark old predictors as outdated
         is_modified = False
-        predictor_records = db.session.query(db.Predictor).all()
+        predictor_records = db.session.query(db.Predictor).filter(db.Predictor.deleted_at.is_(None)).all()
         if len(predictor_records) > 0:
             sucess, compatible_versions = get_versions_where_predictors_become_obsolete()
             if sucess is True:
@@ -149,7 +130,7 @@ if __name__ == '__main__':
                     last_compatible_version = compatible_versions[-1]
                     for predictor_record in predictor_records:
                         if (
-                            isinstance(predictor_record.mindsdb_version, str) is not None
+                            isinstance(predictor_record.mindsdb_version, str)
                             and version.parse(predictor_record.mindsdb_version) < last_compatible_version
                         ):
                             predictor_record.update_status = 'available'
@@ -182,8 +163,8 @@ if __name__ == '__main__':
                 stream_controller.setup(integration_name)
         del stream_controller
 
-    del model_interface
-    # @TODO Backwards compatibiltiy for tests, remove later
+    del model_controller
+    # @TODO Backwards compatibility for tests, remove later
 
     if args.api is None:
         api_arr = ['http', 'mysql']
@@ -209,6 +190,7 @@ if __name__ == '__main__':
         'mongodb': start_mongo
     }
 
+    ctx = mp.get_context('spawn')
     for api_name, api_data in apis.items():
         if api_data['started']:
             continue

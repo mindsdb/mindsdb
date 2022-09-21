@@ -10,13 +10,14 @@ from bson.codec_options import CodecOptions
 from bson.codec_options import TypeCodec
 from bson.codec_options import TypeRegistry
 import numpy as np
+import datetime as dt
 
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import RespondersCollection, Session
 from mindsdb.api.mongo.utilities import log
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.storage.db import session as db_session
-from mindsdb.interfaces.model.model_interface import ModelInterface
+from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
 
@@ -46,7 +47,17 @@ class NPIntCodec(TypeCodec):
         return np.int(value)
 
 
-type_registry = TypeRegistry([NPIntCodec()])
+class DateCodec(TypeCodec):
+    python_type = dt.date
+    bson_type = bson.datetime.datetime
+
+    def transform_python(self, value):
+        return dt.datetime(value.year, value.month, value.day)
+
+    def transform_bson(self, value):
+        return dt.datetime(value.year, value.month, value.day)
+
+type_registry = TypeRegistry([NPIntCodec(), DateCodec()])
 
 
 def unpack(format, buffer, start=0):
@@ -277,7 +288,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             if answer is not None:
                 self.request.send(answer)
 
-        db_session.close()
+            db_session.close()
 
     def get_answer(self, request_id, opcode, msg_bytes):
         if opcode not in self.server.operationsHandlersMap:
@@ -291,10 +302,10 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         except Exception as e:
             log.error(e)
             response = {
-                '$err': {
-                    'title': str(e),
-                    'info': traceback.format_exc()
-                }
+                "ok": 0,
+                "errmsg": f'{str(e)} : {traceback.format_exc()}',
+                "code": 2,
+                "codeName": "BadValue"
             }
             return responder.to_bytes(response, request_id, is_error=True)
 
@@ -325,12 +336,12 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         self.mindsdb_env = {
             'config': config,
-            'origin_model_interface': ModelInterface(),
+            'origin_model_controller': ModelController(),
             'origin_integration_controller': IntegrationController(),
             'origin_view_controller': ViewController()
         }
-        self.mindsdb_env['model_interface'] = WithKWArgsWrapper(
-            self.mindsdb_env['origin_model_interface'],
+        self.mindsdb_env['model_controller'] = WithKWArgsWrapper(
+            self.mindsdb_env['origin_model_controller'],
             company_id=None
         )
         self.mindsdb_env['integration_controller'] = WithKWArgsWrapper(

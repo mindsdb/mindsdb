@@ -1,14 +1,16 @@
-# Connect MindsDB MySQL API to MySQL CLI
+# MindsDB and MySQL CLI
 
-MindsDB provides a powerful MySQL API that allows users to connect to it using the [MySQL Command-Line Client](https://dev.mysql.com/doc/refman/8.0/en/mysql.html). Connecting to MySQL API is the same as connecting to a MySQL database:
+MindsDB provides a powerful MySQL API that allows users to connect to it using the [MySQL Command Line Client](https://dev.mysql.com/doc/refman/8.0/en/mysql.html). Please note that connecting to MindsDB's MySQL API is the same as connecting to a MySQL database.
 
 ## How to Connect
+
+To connect to MindsDB, run the below command in your MySQL CLI and provide the connection details, such as host, port, username, and password.
 
 ```bash
 mysql -h [hostname] --port [TCP/IP port number] -u [user] -p [password]
 ```
 
-You can either connect locally or to a MindsDB Cloud instance, depending on the case; open your terminal and run:
+Here are the commands that allow you to connect to either a local MindsDB installation or a MindsDB Cloud instance.
 
 === "Self-Hosted Local Deployment"
 
@@ -19,10 +21,10 @@ You can either connect locally or to a MindsDB Cloud instance, depending on the 
 === "MindsDB Cloud"
 
     ```bash
-    mysql -h cloud.mindsdb.com --port 3307 -u [mindsdb_cloud_email] -p [mindsdb_cloud_password]
+    mysql -h cloud.mindsdb.com --port 3306 -u [mindsdb_cloud_username] -p [mindsdb_cloud_password]
     ```
 
-On execution, you should get:
+On execution, we get:
 
 ```bash
 Welcome to the MariaDB monitor.  Commands end with ; or \g.
@@ -35,9 +37,13 @@ MySQL [(none)]>
 
 ## Example
 
+In this example, we connect to the MindsDB Cloud instance, as below.
+
 ``` bash
-mysql -h cloud.mindsdb.com --port 3306 -u zoran@mindsdb.com -p
+mysql -h cloud-mysql.mindsdb.com --port 3306 -u zoran@mindsdb.com -p
 ```
+
+On execution, we get:
 
 ```bash
 Enter password:
@@ -50,5 +56,10 @@ Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 MySQL [(none)]>
 ```
 
-!!! tip "What is next?"
-    We recommend you to follow one of our tutorials or jump more into detail understanding the [MindsDB Database](/sql/table-structure/)
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and **Community Tutorials** sections, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **SQL API** section, as they explain a common SQL syntax with examples.
+
+Have fun!

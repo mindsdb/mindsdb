@@ -108,8 +108,13 @@ Each DatabaseHandler should inherit from `DatabaseHandler` class.
 It will be used inside MindsDB as name of handler. For example, the name is used use an `ENGINE` in `CREATE DATABASE` statement:
 
 ```sql
-    CREATE DATABASE integration_name WITH ENGINE='postgres', +
-    PARAMETERS={'host': '127.0.0.1', 'user': 'root', 'password': 'password'}
+CREATE DATABASE integration_name
+WITH ENGINE='postgres', +
+PARAMETERS={
+  'host': '127.0.0.1',
+  'user': 'root',
+  'password': 'password'
+};
 ```
 
 #### Step 1.1: Implement `__init__`
@@ -160,7 +165,7 @@ The check_connection method is used to perform the health check for the connecti
 
 ```py
 def check_connection(self) -> HandlerStatusResponse:
-        """ Cehck connection to the handler
+        """ Check connection to the handler
         Returns:
             HandlerStatusResponse
         """
@@ -272,7 +277,8 @@ __all__ = [
 ```
 
 For real examples, we encourage you to inspect the following handlers inside the MindsDB repository:
-* MySQL
-* Postgres
-* MLflow
-* Lightwood
+
+* [MySQL](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler)
+* [Postgres](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/postgres_handler)
+* [MLflow](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mlflow_handler)
+* [Lightwood](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/lightwood_handler)

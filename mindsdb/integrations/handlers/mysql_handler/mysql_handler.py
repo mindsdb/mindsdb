@@ -164,18 +164,6 @@ class MySQLHandler(DatabaseHandler):
         result = self.native_query(q)
         return result
 
-    def select_into(self, table, dataframe: pd.DataFrame, dtypes=None):
-        """
-        TODO: Update this
-        """
-        try:
-            con = create_engine(f'mysql://{self.host}:{self.port}/{self.database}', echo=False)
-            dataframe.to_sql(table, con=con, if_exists='append', index=False, dtype=dtypes)
-            return True
-        except Exception as e:
-            print(e)
-            raise Exception(f"Could not select into table {table}, aborting.")
-
 
 connection_args = OrderedDict(
     user={
@@ -197,6 +185,22 @@ connection_args = OrderedDict(
     port={
         'type': ARG_TYPE.INT,
         'description': 'The TCP/IP port of the MySQL server. Must be an integer.'
+    },
+    ssl={
+        'type': ARG_TYPE.BOOL,
+        'description': 'Set it to False to disable ssl.'
+    },
+    ssl_ca={
+        'type': ARG_TYPE.PATH,
+        'description': 'Path or URL of the Certificate Authority (CA) certificate file'
+    },
+    ssl_cert={
+        'type': ARG_TYPE.PATH,
+        'description': 'Path name or URL of the server public key certificate file'
+    },
+    ssl_key={
+        'type': ARG_TYPE.PATH,
+        'description': 'The path name or URL of the server private key file'
     }
 )
 

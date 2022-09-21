@@ -31,7 +31,7 @@ class MySQLHandlerTest(unittest.TestCase):
     def test_3_get_views(self):
         views = self.handler.get_views()
         assert views['type'] is not RESPONSE_TYPE.ERROR
-    
+
     def test_5_drop_table(self):
         res = self.handler.native_query("DROP TABLE IF EXISTS test_mdb")
         assert res['type'] is not RESPONSE_TYPE.ERROR 
@@ -41,10 +41,11 @@ class MySQLHandlerTest(unittest.TestCase):
         assert res['type'] is not RESPONSE_TYPE.ERROR 
 
     def test_6_describe_table(self):
-        described = self.handler.describe_table("test_mdb")
+        described = self.handler.get_columns("test_mdb")
         assert described['type'] is RESPONSE_TYPE.TABLE
 
     def test_7_select_query(self):
         query = "SELECT * FROM test_mdb WHERE 'id'='a'"
-        result = self.handler.select_query(query)
+        result = self.handler.query(query)
         assert result['type'] is RESPONSE_TYPE.TABLE
+

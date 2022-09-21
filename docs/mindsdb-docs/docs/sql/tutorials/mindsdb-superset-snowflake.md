@@ -12,7 +12,7 @@ Let’s see how we can use machine learning with MindsDB to optimize the number 
 
 ## Set Up MindsDB
 
-First things first! You need to connect your database to MindsDB. One of the easy ways to do so is to create a [MindsDB cloud](https://docs.mindsdb.com/deployment/cloud/) account. If you prefer to deploy MindsDB locally, please refer to installation instructions via [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPI](https://docs.mindsdb.com/deployment/pypi/).
+First things first! You need to connect your database to MindsDB. One of the easy ways to do so is to create a [MindsDB cloud](https://docs.mindsdb.com/setup/cloud/) account. If you prefer to deploy MindsDB locally, please refer to installation instructions via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [PyPI](https://docs.mindsdb.com/setup/self-hosted/pip/windows/).
 
 Once an account is created you can connect to Snowflake using standard parameters like database name (in this case the Chicago Transit Authority), host, port, username, password, etc.
 
@@ -53,6 +53,8 @@ LIMIT 100;
 ![show dbs](/assets/sql/tutorials/snowflake-superset/13-info_schema.png)
 
 The training data consists of the number of rides per bus route and day. For example, on 2001-07-03, there were 7354 rides on bus route 3.
+
+You can download the dataset [here](https://github.com/mindsdb/benchmarks/blob/main/benchmarks/datasets/chicago_transit_ts/CTA_2019_2020.csv) and execute the SQL commands along with the tutorial!
 
 ### Step 2: Training the Predictive Model
 
@@ -174,3 +176,13 @@ The combination of MindsDB and your database covers all the phases of the ML lif
 MindsDB provides easy-to-use predictive models through AI Tables. You can create these predictive models using SQL statements and feeding the input data. Also, you can query them the same way you query a table. The easiest way to get started with Superset is with the free tier for [Preset Cloud](https://preset.io/product/), a hassle-free and fully hosted cloud service for Superset.
 
 We encourage you to try some predictions with your own data, so please sign up for a [free MindsDB cloud account](https://cloud.mindsdb.com/signup) and if you need any help with MindsDB, feel free to ask our [Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) and [Github](https://github.com/mindsdb/mindsdb/discussions) communities.
+
+## What's Next?
+
+Have fun while trying it out yourself!
+
+* Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
+* Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
+* Engage with the MindsDB community on [Slack](https://mindsdb.com/joincommunity) or [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and share your ideas and thoughts.
+
+If this tutorial was helpful, please give us a GitHub star [here](https://github.com/mindsdb/mindsdb).

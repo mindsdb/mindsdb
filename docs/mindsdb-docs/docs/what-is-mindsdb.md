@@ -1,25 +1,29 @@
 # What is MindsDB?
 
-Data is your single most important asset and your data lives in a database. By bringing machine learning to the database, MindsDB accelerates the speed of machine learning development.
+Data that lives in your database is a valuable asset. MindsDB enables you to use your data and make forecasts. It speeds up the ML development process by bringing machine learning into the database.
 
-With MindsDB, you will easily build, train, optimize and deploy your models. Your predictions will be available via the queries you already use.
+With MindsDB, you can build, train, optimize, and deploy your ML models without the need for other platforms. And to get the forecasts, simply query your data and ML models. Read along to see some examples.
 
 ![Machine Learning in Database using SQL](/assets/what_is_mindsdb.png)
 
 ## What are AI Tables?
 
-MindsDB brings machine learning to existing SQL databases with a concept called AI Tables. AI Tables integrate the machine learning models as virtual tables inside a database, create predictions, and can be queried with simple SQL statements. Almost instantly, time series, regression, and classification predictions can be done directly in your database.
+MindsDB brings machine learning into databases by employing the concept of AI Tables.
+
+AI Tables are machine learning models stored as virtual tables inside a database. They facilitate making predictions based on your data. You can perform the time series, regression, and classification predictions within your database and get the output almost instantly by querying an AI Table with simple SQL statements.
 
 ## Deep Dive into the AI Tables
 
-### The problem
+### Current Challenges
 
-Let’s consider the following income table that stores the income and debt values.
+Let’s consider the following `income_table` table that stores the `income` and `debt` values.
 
 ```sql
 SELECT income, debt 
 FROM income_table;
 ```
+
+On execution, we get:
 
 ```sql
 +------+-----+
@@ -32,22 +36,22 @@ FROM income_table;
 +------+-----+
 ```
 
-A simple visualization of the data present in the income table is as follows:
+A simple visualization of the data present in the `income_table` table is as follows:
 
 <figure markdown> 
     ![Income vs Debt](/assets/sql/income_vs_debt.png){ width="800", loading=lazy  }
     <figcaption></figcaption>
 </figure>
 
-
-
-Querying the income table to get the debt value for a particular income value results in the following:
+Querying the income table to get the `debt` value for a particular `income` value results in the following:
 
 ```sql
 SELECT income, debt 
 FROM income_table
 WHERE income = 80000;
 ```
+
+On execution, we get:
 
 ```sql
 +------+-----+
@@ -57,35 +61,37 @@ WHERE income = 80000;
 +------+-----+
 ```
 
+And here is what we get:
+
 <figure markdown> 
     ![Income vs Debt chart](/assets/sql/income_vs_debt_known_value.png){ width="800", loading=lazy  }
-    <figcaption>Green dot and dashed line as query result</figcaption>
 </figure>
 
-But what happens when we query the table for income value that is not present?
+But what happens when querying the table for an `income` value that is not present there?
 
 ```sql
 SELECT income, debt
-FROM income
+FROM income_table
 WHERE income = 90000;
 ```
+
+On execution, we get:
 
 ```sql
 Empty set (0.00 sec)
 ```
 
-In other words, Nothing! no valuable information at all.
+When the `WHERE` clause condition is not fulfilled for any of the rows, no value is returned.
 
 <figure markdown> 
     ![Income vs Debt query](/assets/sql/income_vs_debt_unknown_value.png){ width="800", loading=lazy  }
-    <figcaption>Dashed red line describing the absense of a value (blue dot) for the query</figcaption>
 </figure>
 
-When a table doesn’t have an exact match the query will return an empty set or null value. This is where the AI Tables come into play!
+When a table doesn’t have an exact match, the query returns an empty set or null value. This is where the AI Tables come into play!
 
-### The solution
+### Solution Offered by MindsDB
 
-Let’s create a debt model that allows us to approximate the debt value for any income value. We’ll train this debt model using the income table’s data.
+Let’s create a `debt_model` model that allows us to approximate the `debt` value for any `income` value. We train the `debt_model` model using the data from the `income_table` table.
 
 ```sql
 CREATE PREDICTOR mindsdb.debt_model
@@ -93,20 +99,27 @@ FROM income_table
 PREDICT debt;
 ```
 
-MindsDB provides the [`#!sql CREATE PREDICTOR`](/sql/create/predictor/) statement. When we execute this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows:
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+MindsDB provides the [`#!sql CREATE PREDICTOR`](/sql/create/predictor/) statement. On execution of this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows:
 
 <figure markdown> 
     ![Income vs Debt model](/assets/sql/income_vs_debt_predictor.png){ width="800", loading=lazy  }
-    <figcaption> Green line describing the Predictor (model) created</figcaption>
 </figure>
 
-Let’s now look for the debt value of some random income value. To get the approximated debt value, we query the `#!sql mindsdb.debt_model` instead of the `#!sql income_table`.
+Let’s now look for the `debt` value of some random `income` value. To get the approximated `debt` value, we query the `#!sql mindsdb.debt_model` model instead of the `#!sql income_table` table.
 
 ```sql
 SELECT income, debt
 FROM mindsdb.debt_model 
 WHERE income = 90000;
 ```
+
+On execution, we get:
 
 ```sql
 +------+-----+
@@ -116,56 +129,66 @@ WHERE income = 90000;
 +------+-----+
 ```
 
+And here is how it looks:
+
 <figure markdown> 
     ![Income vs Debt model](/assets/sql/income_vs_debt_prediction.png){ width="800", loading=lazy  }
-    <figcaption> Dashed blue line describing the query of the model with the predicted value (dark blue dot) </figcaption>
 </figure>
 
-## What is MindsDB, why is MindsDB important?
-### Shift on Data Analysis Paradigm
+## Why Choose MindsDB?
 
-There is an ongoing transformational shift within the modern business world from the “what happened and why” based on historical data analysis to the “what will we predict can happen and how can we make it happen” based on machine learning predictive modeling.
+### Shift to Data Analysis Paradigm
+
+There is an ongoing transformational shift within the modern business world from the “what happened and why” based on historical data analysis to the “what will happen and how can we make it happen” based on machine learning predictive modeling.
 
 <figure markdown> 
     ![Analytics](/assets/sql/analytics_shift.png){ width="600", loading=lazy  }
     <figcaption></figcaption>
 </figure>
 
-The success of your predictions depends both on the data you have available and the models you train this data on. Data Scientists and Data Engineers need best-in-class tools to prepare the data for feature engineering, the best training models, and the best way of deploying, monitoring, and managing these implementations for optimal prediction confidence.
+The success of your predictions depends both on the data you have available and the models trained with the data. Data Scientists and Data Engineers require efficient and easy-to-use tools to prepare the data for feature engineering, then training the models, and finally, deploying, monitoring, and managing these implementations for optimal prediction confidence.
 
-### The Machine Learning (ML) Lifecycle
+### The Machine Learning Lifecycle
 
-The ML lifecycle can be represented as a process that consists of the data preparation phase, modeling phase, and deployment phase. The diagram below presents all the steps included in each of the stages.
-
+The ML lifecycle is a process that consists of the data preparation phase, modeling phase, and deployment phase. The diagram below presents all the steps included in each of the stages.
 
 <figure markdown> 
     ![ML Workflow](/assets/sql/machine_learning_lifecycle.png){ width="600", loading=lazy  }
     <figcaption></figcaption>
 </figure>
 
-Companies looking to implement machine learning have found their current solutions require substantial amounts of data preparation, cleaning, and labeling, plus hard to find machine learning/AI data scientists to conduct feature engineering; build, train, and optimize models; assemble, verify, and deploy into production; and then monitor in real-time, improve, and refine. Machine learning models require multiple iterations with existing data to train. Additionally, extracting, transforming, and loading (ETL) data from one system to another is complicated, leads to multiple copies of information, and is a compliance and tracking nightmare.
+Current solutions for implementing machine learning encounter various challenges, such as time-consuming preparation, cleaning, and labeling of substantial amouts of data, and difficulties in finding qualified ML/AI data scientists.
 
-A recent study has shown it takes 64% of companies a month, to over a year, to deploy a machine learning model into production. Leveraging existing databases and automating the feature engineering, building, training, and optimization of models, assembling them, and deploying them into production is called AutoML and has been gaining traction within enterprises for enabling non-experts to use machine learning models for practical applications.
+The processes that must be followed by the ML/AI data scientists to implement machine learning include the following:
+- feature engineering,
+- building, training, and optimizing models,
+- assembling, verifying, and deploying models to production,
+- continuously monitoring and improving the models,
+- continuously training the models, as they require multiple training iterations with existing data,
+- extracting, transforming, and loading (ETL) data from one system to another, which is complicated and may lead to multiple copies of information.
 
-### Why is it called MindsDB?
+A recent study has shown it takes 64% of companies a month up to over a year to deploy a machine learning model into production. Leveraging existing databases and automating all the aforementioned processes is called AutoML. AutoML has been gaining traction within enterprises for enabling non-experts to use machine learning models for practical applications.
 
-Well, as most names, we needed one, we like science fiction, and the [culture series](https://en.wikipedia.org/wiki/The_Culture_(series)), where there are these AI super-smart entities called Minds.
+## Why MindsDB?
 
-How about the DB part? Although in the future we will support all kinds of data, currently our objective is to add intelligence to existing data stores/databases, hence the term DB.
-As to becoming a **Mind** to your **DB**.
+Well, as with most names, we needed one. We like science fiction and [The Culture](https://en.wikipedia.org/wiki/The_Culture_(series)) series, where the AI super-smart entities are called *Minds*. So that's for the first part of our name.
 
-Why the bear? We wanted to honor the open source tradition of animals related to projects! We went for a bear because of UC Berkeley where this all was initially coded. But we liked a cooler bear so went for a Polar Bear.
+As for the second part - the *DB*, it is quite self-explanatory. Although we will support all kinds of data in the future, but currently, our objective is to add intelligence to existing data stores and databases. Hence, the term *DB* comes along.
 
-### How Can You Help Democratize Machine Learning?
+So there we have it, MindsDB.
 
-You can help in the following ways:
+And why the bear? We wanted to honor the open-source tradition of animals related to projects. We went for a bear because MindsDB was born at UC Berkeley, where the first codes were written. Then, we went a step further and decided for a polar bear.
 
-- [X] Trying MindsDB and [reporting issues](https://github.com/mindsdb/mindsdb/issues/new/choose).
+## How to Help Democratize Machine Learning?
 
-- [X] If you know python, you can also help us debug open issues. Issues labels with the `good first issue` tag should be [the easiest to start with](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+Here is what you can do:
 
-- [X] You can help us with documentation, tutorial and examples.
+- [X] Go ahead and try out MindsDB by following our tutorials, and in case of problems, you can always [report an issue here](https://github.com/mindsdb/mindsdb/issues/new/choose).
 
-- [X] Tell your friends, to spread the word, i.e write a blog post about MindsDB.
+- [X] Are you familiar with Python? You can then help us out in resolving open issues. At first, have a look at [issues labeled with the `good first issue` tag](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22), as these should be easy to start.
 
-- [X] Join our team, we are growing fast so [we should have a few open positions](https://mindsdb.com/careers/).
+- [X] You can also help us with documentation and tutorials. Here is how you can contribute by writing [documentation](contribute/docs/) and [tutorials](contribute/tutorials/). Don't forget to follow the [style guide](docs-rules/).
+
+- [X] Share with your friends and spread the word about MindsDB.
+
+- [X] Join our team! We are a fast-growing company, so we always have [a few open positions](https://mindsdb.com/careers/).

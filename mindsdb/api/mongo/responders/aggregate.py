@@ -9,9 +9,11 @@ class Responce(Responder):
         db = query['$db']
         collection = query['aggregate']
 
+        # TODO use 'find' responder
+
         count = 0
         if db == 'mindsdb' and collection == 'predictors':
-            count = len(mindsdb_env['model_interface'].get_models())
+            count = len(mindsdb_env['model_controller'].get_models())
 
         return {
             'count': count,

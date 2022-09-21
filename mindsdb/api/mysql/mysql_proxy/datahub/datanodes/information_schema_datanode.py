@@ -38,7 +38,7 @@ class InformationSchemaDataNode(DataNode):
         self.view_interface = session.view_interface
         self.persis_datanodes = {
             'mindsdb': MindsDBDataNode(
-                session.model_interface,
+                session.model_controller,
                 session.integration_controller
             ),
             'files': IntegrationDataNode(
@@ -119,8 +119,7 @@ class InformationSchemaDataNode(DataNode):
                 if (
                     type(arg) == BinaryOperation and arg.op == '='
                     and type(arg.args[0]) == Identifier
-                    and arg.args[0].parts[0].upper() == 'TABLES'
-                    and arg.args[0].parts[1].upper() == 'TABLE_SCHEMA'
+                    and arg.args[0].parts[-1].upper() == 'TABLE_SCHEMA'
                     and type(arg.args[1]) == Constant
                 ):
                     target_table = arg.args[1].value
@@ -185,9 +184,10 @@ class InformationSchemaDataNode(DataNode):
                 result_row[4] = i
                 result.append(result_row)
 
-        mindsb_dn = self.get('MINDSDB')
-        for table_name in mindsb_dn.get_tables():
-            table_columns = mindsb_dn.get_table_columns(table_name)
+        mindsdb_dn = self.get('MINDSDB')
+        for table_row in mindsdb_dn.get_tables():
+            table_name = table_row.TABLE_NAME
+            table_columns = mindsdb_dn.get_table_columns(table_name)
             for i, column_name in enumerate(table_columns):
                 result_row = row_templates['text'].copy()
                 result_row[1] = 'mindsdb'
@@ -196,9 +196,9 @@ class InformationSchemaDataNode(DataNode):
                 result_row[4] = i
                 result.append(result_row)
 
-        mindsb_dn = self.get('FILES')
-        for table_name in mindsb_dn.get_tables():
-            table_columns = mindsb_dn.get_table_columns(table_name)
+        files_dn = self.get('FILES')
+        for table_name in files_dn.get_tables():
+            table_columns = files_dn.get_table_columns(table_name)
             for i, column_name in enumerate(table_columns):
                 result_row = row_templates['text'].copy()
                 result_row[1] = 'files'

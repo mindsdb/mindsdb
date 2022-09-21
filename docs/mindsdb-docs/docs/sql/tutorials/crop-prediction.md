@@ -12,7 +12,7 @@ In this tutorial, you will learn how to predict the best crop type based on fiel
 
 Before you start make sure you have:
 
-1. Access to MindsDB. In this tutorial, we will use [MindsDB Cloud GUI](https://docs.mindsdb.com/deployment/cloud/). If you want you can also deploy mindsdb on your premises, Check out the installation guide for [Docker](https://docs.mindsdb.com/deployment/docker/) or [PyPi](https://docs.mindsdb.com/deployment/pypi/). 
+1. Access to MindsDB. In this tutorial, we will use [MindsDB Cloud GUI](https://cloud.mindsdb.com/). If you want you can also deploy mindsdb on your premises, Check out the installation guide for [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [PyPi](https://docs.mindsdb.com/setup/self-hosted/pip/windows/). 
 
 2. Downloaded the dataset. You can get it from [Kaggle](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset).
 
@@ -20,7 +20,7 @@ Before you start make sure you have:
 
 MindsDB can integrates with many databases, in most scenarios your data will be stored in a database, if you decide to load this dataset into your database of choice, please follow instructions here as to how to connect mindsdb to your [database.](https://docs.mindsdb.com/sql/create/databases/)
 
-In this tutorial, we will be adding the dataset directly to MindsDB's GUI. For this example [MindsDB Cloud GUI](cloud.mindsdb.com) will be used.If you need to create an account you can find the guide on how to do it [here](https://docs.mindsdb.com/setup/cloud/).
+In this tutorial, we will be adding the dataset directly to MindsDB's GUI. For this example [MindsDB Cloud GUI](https://cloud.mindsdb.com/) will be used.If you need to create an account you can find the guide on how to do it [here](https://docs.mindsdb.com/setup/cloud/).
 Alternatively, you can also use MindsDB's local deployment and access the GUI in your browser with [127.0.0.1:47334](https://127.0.0.1:47334).
 
 **The first step will be to access MindsDB cloud where we will also make use of the SQL Editor:**
@@ -42,7 +42,8 @@ Alternatively, you can also use MindsDB's local deployment and access the GUI in
  In the SQL Editor,type in the following syntax and select the button `Run` or Shift+Enter to execute the code:
  
  ```sql
- SELECT * FROM files.crops;
+ SELECT *
+ FROM files.crops;
  ```
 ![file_select](/assets/tutorials/crops/selectfromfiles.png)
 
@@ -57,9 +58,9 @@ In the SQL Editor, type in the below syntax to create and train a machine learni
 
 ```sql
 CREATE PREDICTOR crop_predictor
-FROM files (
-    SELECT * FROM crops
-) PREDICT label as crop_type;
+FROM files
+    (SELECT * FROM crops)
+PREDICT label AS crop_type;
 ```
 
 Select the button `Run` or Shift+Enter to execute the code. If the predictor is successfully created the console will display a message `Query successfully completed`.
@@ -69,7 +70,9 @@ Select the button `Run` or Shift+Enter to execute the code. If the predictor is 
 Now the predictor will begin training. You can check the status of the predictor with the following query.
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name='crop_predictor';
+SELECT *
+FROM mindsdb.predictors
+WHERE name='crop_predictor';
 ```
 
 After the predictor has finished training, you will see a similar output. Note that MindsDB does model testing for you automatically, so you will immediately see if the predictor is accurate enough.
@@ -87,7 +90,13 @@ To run a prediction against new or existing data, you can use the following quer
 ```sql
 SELECT label
 FROM mindsdb.crop_predictor
-WHERE N = 77 and P = 52 and K = 17 and temperature = 24 and humidity = 20.74 and ph = 5.71 and  rainfall = 75.82;
+WHERE N = 77
+AND P = 52
+AND K = 17
+AND temperature = 24
+AND humidity = 20.74
+AND ph = 5.71
+AND rainfall = 75.82;
 ```
 
 ![statuscheck](/assets/tutorials/crops/cropprediction.png)
@@ -115,7 +124,7 @@ SELECT
     collected_data.humidity,
     collected_data.ph,
     collected_data.rainfall,
-    predictions.label as predicted_crop_type
+    predictions.label AS predicted_crop_type
 FROM crops_integration.crops AS collected_data
 JOIN mindsdb.crop_predictor AS predictions
 LIMIT 5;

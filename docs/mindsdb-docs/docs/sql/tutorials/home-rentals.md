@@ -96,7 +96,7 @@ Where:
 Let's create and train the machine learning model. For that, we use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) statement and specify the input columns used to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_predictor
+CREATE PREDICTOR mindsdb.home_rentals_model
 FROM example_db
   (SELECT * FROM demo_data.home_rentals)
 PREDICT rental_price;
@@ -111,7 +111,7 @@ A predictor may take a couple of minutes for the training to complete. You can m
 ```sql
 SELECT status
 FROM mindsdb.predictors
-WHERE name='home_rentals_predictor';
+WHERE name='home_rentals_model';
 ```
 
 If we run it right after creating a predictor, we get this output:

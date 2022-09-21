@@ -600,7 +600,7 @@ class LightwoodHandler(PredictiveHandler):
                         if isinstance(rows[i][order_by_column], list):
                             rows[i][order_by_column] = rows[i][order_by_column][0]
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if horizon > 1 and col in explanations[predict]:
+                        if horizon > 1 and col in explanations[i][predict]:
                             explanations[i][predict][col] = explanations[i][predict][col][0]
 
                 last_row = rows.pop()

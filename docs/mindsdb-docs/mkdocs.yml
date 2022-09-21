@@ -120,7 +120,7 @@ nav:
     - Find(): mongo/find.md
     - Delete(): mongo/delete.md
   - Using Custom Models:
-    - MLFlow: custom-model/mlflow.md
+    - MLflow: custom-model/mlflow.md
     - Ray Serve: custom-model/ray-serve.md
     - HuggingFace: custom-model/huggingface.md
     - OpenAI: custom-model/openai.md

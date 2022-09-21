@@ -62,8 +62,7 @@ Or you can use the template below and substitute your custom configuration value
     },
     "cache": {
         "type": "local"
-    },
-    "force_dataset_removing": false
+    }
 }
 ```
 

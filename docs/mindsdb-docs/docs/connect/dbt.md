@@ -52,7 +52,7 @@ You can install the [dbt-mindsdb](https://github.com/mindsdb/dbt-mindsdb) adapte
           host: 'cloud.mindsdb.com'
           port: 3306
           schema: '[dbt schema]'
-          username: '[mindsdb cloud username]'
+          username: '[mindsdb cloud username]'   # your Mindsdb Cloud email address is your username
           password: '[mindsdb cloud password]'
       target: dev
     ```

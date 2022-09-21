@@ -2,33 +2,33 @@
 
 ## Introduction
 
-In this tutorial, we'll create, train, and query a machine learning model, which, in MindsDB language, is an `AI Table` or a `predictor`. We aim to predict the `rental_price` value for new properties based on their attributes, such as the number of rooms, area, or neighborhood.
+In this tutorial, we'll create and train a machine learning model, or as we call it, an `AI Table` or a `predictor`. By querying the model, we'll predict the rental prices of the properties based on their attributes, such as the number of rooms, area, or neighborhood.
 
-Make sure you have access to a working MindsDB installation either locally or via [cloud.mindsdb.com](https://cloud.mindsdb.com/).
+Make sure you have access to a working MindsDB installation, either locally or at [MindsDB Cloud](https://cloud.mindsdb.com/).
 
-You can learn how to set up your account at MindsDB Cloud by following [this guide](https://docs.mindsdb.com/setup/cloud/). Another way is to set up MindsDB locally using [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [Python](https://docs.mindsdb.com/setup/self-hosted/pip/source/).
+If you want to learn how to set up your account at MindsDB Cloud, follow [this guide](https://docs.mindsdb.com/setup/cloud/). Another way is to set up MindsDB locally using [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [Python](https://docs.mindsdb.com/setup/self-hosted/pip/source/).
 
 Let's get started.
 
-## The Data
+## Data Setup
 
-### Connecting the data
+### Connecting the Data
 
 There are a couple of ways you can get the data to follow through with this tutorial.
 
-=== "Connecting as a database via `#!sql CREATE DATABASE`"
+=== "Connecting as a database"
 
-    You can connect to a demo database that we've prepared for you. It contains the data used throughout this tutorial which is the `#!sql example_db.demo_data.home_rentals` table.
+    You can connect to a demo database that we've prepared for you. It contains the data used throughout this tutorial (the `#!sql example_db.demo_data.home_rentals` table).
 
     ```sql
     CREATE DATABASE example_db
-        WITH ENGINE = "postgres",
-        PARAMETERS = {
-            "user": "demo_user",
-            "password": "demo_password",
-            "host": "3.220.66.106",
-            "port": "5432",
-            "database": "demo"
+    WITH ENGINE = "postgres",
+    PARAMETERS = {
+        "user": "demo_user",
+        "password": "demo_password",
+        "host": "3.220.66.106",
+        "port": "5432",
+        "database": "demo"
     };
     ```
 
@@ -42,9 +42,9 @@ There are a couple of ways you can get the data to follow through with this tuto
 
 === "Connecting as a file"
 
-    You can download [the source file as a `.CSV` here](https://mindsdb-test-file-dataset.s3.amazonaws.com/home_rentals.csv) and then upload it via [MindsDB SQL Editor](https://docs.mindsdb.com/connect/mindsdb_editor/).
+    You can download [the `CSV` data file here](https://mindsdb-test-file-dataset.s3.amazonaws.com/home_rentals.csv) and upload it via [MindsDB SQL Editor](/connect/mindsdb_editor/).
 
-    Follow [this guide](https://docs.mindsdb.com/sql/create/file/) to find out how to upload a file to MindsDB.
+    Follow [this guide](/sql/create/file/) to find out how to upload a file to MindsDB.
 
     Now you can run queries directly on the file as if it were a table. Let's preview the data that we'll use to train our predictor.
 
@@ -54,11 +54,12 @@ There are a couple of ways you can get the data to follow through with this tuto
     LIMIT 10;
     ```
 
-!!! Warning "From now on, we will use the `#!sql example_db.demo_data.home_rentals` table. Make sure you replace it with `files.home_rentals` if you connect the data as a file."
+!!! Warning "Pay Attention to the Queries"
+    From now on, we'll use the `#!sql example_db.demo_data.home_rentals` table. Make sure you replace it with `files.home_rentals` if you connect the data as a file.
 
 ### Understanding the Data
 
-We will use the home rentals dataset where each row represents one rental home. We will predict the `rental price` value for all the newly added properties in the following sections of this tutorial.
+We use the home rentals dataset, where each row is one property, to predict the `rental_price` column value for all the newly added properties.
 
 Below is the sample data stored in the `#!sql example_db.demo_data.home_rentals` table.
 
@@ -77,23 +78,22 @@ Below is the sample data stored in the `#!sql example_db.demo_data.home_rentals`
 Where:
 
 | Column                | Description                                                                                  | Data Type           | Usage   |
-| :-------------------- | :------------------------------------------------------------------------------------------- | ------------------- | ------- |
-| `number_of_rooms`     | Number of rooms in a given house `[0,1,2,3]`                                                 | `integer`           | Feature |
-| `number_of_bathrooms` | Number of bathrooms in a given house `[1,2]`                                                 | `integer`           | Feature |
-| `sqft`                | Area of a given house in square feet                                                         | `integer`           | Feature |
-| `location`            | Rating of the location of a given house `[poor, great, good]`                                | `character varying` | Feature |
-| `days_on_market`      | Number of days a given house has been open to be rented                                      | `integer`           | Feature |
-| `neighborhood`        | Neighborhood a given house is in `[alcatraz_ave, westbrae, ..., south_side, thowsand_oaks ]` | `character varying` | Feature |
-| `rental_price`        | Rental price of a given house in dollars                                                     | `integer`           | Label   |
+| --------------------- | -------------------------------------------------------------------------------------------- | ------------------- | ------- |
+| `number_of_rooms`     | Number of rooms in a property `[0,1,2,3]`.                                                   | `integer`           | Feature |
+| `number_of_bathrooms` | Number of bathrooms in a property `[1,2]`.                                                   | `integer`           | Feature |
+| `sqft`                | Area of a property in square feet.                                                           | `integer`           | Feature |
+| `location`            | Rating of the location of a property `[poor, great, good]`.                                  | `character varying` | Feature |
+| `days_on_market`      | Number of days a property has been on the market.                                            | `integer`           | Feature |
+| `neighborhood`        | Neighborhood `[alcatraz_ave, westbrae, ..., south_side, thowsand_oaks]`.                     | `character varying` | Feature |
+| `rental_price`        | Rental price of a property in USD.                                                           | `integer`           | Label   |
 
 !!!Info "Labels and Features"
+    A **label** is a column whose values will be predicted (the y variable in simple linear regression).<br/>
+    A **feature** is a column used to train the model (the x variable in simple linear regression).
 
-    A **label** is the thing we're predicting — the y variable in simple linear regression.
-    A **feature** is an input variable — the x variable in simple linear regression.
+## Training a Predictor
 
-## Training a Predictor Via [`#!sql CREATE PREDICTOR`](/sql/create/predictor)
-
-Let's create and train your first machine learning predictor. For that, we are going to use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) syntax where we specify what sub-query to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
+Let's create and train the machine learning model. For that, we use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) statement and specify the input columns used to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
 
 ```sql
 CREATE PREDICTOR mindsdb.home_rentals_predictor
@@ -102,11 +102,11 @@ FROM example_db
 PREDICT rental_price;
 ```
 
-We use all of the columns as features, except for the `rental_price` column whose value is going to be predicted.
+We use all of the columns as features, except for the `rental_price` column, whose values will be predicted.
 
-## Checking the Status of a Predictor
+## Status of a Predictor
 
-A predictor may take a couple of minutes for the training to complete. You can monitor the status of your predictor by using this SQL command:
+A predictor may take a couple of minutes for the training to complete. You can monitor the status of the predictor by using this SQL command:
 
 ```sql
 SELECT status
@@ -114,7 +114,17 @@ FROM mindsdb.predictors
 WHERE name='home_rentals_predictor';
 ```
 
-If we run it right after creating a predictor, we'll most probably get this output:
+If we run it right after creating a predictor, we get this output:
+
+```sql
++------------+
+| status     |
++------------+
+| generating |
++------------+
+```
+
+A bit later, this is the output:
 
 ```sql
 +----------+
@@ -124,7 +134,7 @@ If we run it right after creating a predictor, we'll most probably get this outp
 +----------+
 ```
 
-But if we wait a couple of minutes, this should be the output:
+And at last, this should be the output:
 
 ```sql
 +----------+
@@ -138,9 +148,9 @@ Now, if the status of our predictor says `complete`, we can start making predict
 
 ## Making Predictions
 
-### Making Predictions Via [`#!sql SELECT`](/sql/api/select)
+### Making a Single Prediction
 
-You can make predictions by querying the predictor as if it were a table. The [`SELECT`](/sql/api/select/) syntax lets you make predictions for the label based on the chosen features.
+You can make predictions by querying the predictor as if it were a table. The [`SELECT`](/sql/api/select/) statement lets you make predictions for the label based on the chosen features.
 
 ```sql
 SELECT rental_price, rental_price_explain
@@ -161,9 +171,9 @@ On execution, we get:
 +--------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
-### Making Batch Predictions Via [`#!sql JOIN`](/sql/api/join)
+### Making Batch Predictions
 
-Also, you can make bulk predictions by joining a table with your predictor.
+Also, you can make bulk predictions by joining a data table with your predictor using [`#!sql JOIN`](/sql/api/join).
 
 ```sql
 SELECT t.rental_price AS real_price, 

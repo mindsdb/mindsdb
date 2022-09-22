@@ -1,19 +1,23 @@
-import os
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.config import Config
 
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
+from mindsdb.interfaces.storage.fs import FileStorageFactory, RESOURCE_GROUP
+
 
 class ModelStorage:
-    def __init__(self, fs_store, company_id, integration_id, predictor_id):
-        config = Config()
+    def __init__(self, company_id, predictor_id):
 
-        self.fs_store = fs_store
-        self.base_dir = config['paths']['predictors']
+        storageFactory = FileStorageFactory(
+            resource_group=RESOURCE_GROUP.PREDICTOR,
+            company_id=company_id,
+            sync=True
+        )
+
+        self.fileStorage = storageFactory(predictor_id)
+
         self.company_id = company_id
         self.predictor_id = predictor_id
-        self.integration_id = integration_id
 
     # -- fields --
 
@@ -41,23 +45,11 @@ class ModelStorage:
 
     # files
 
-    def _get_file_name(self, name):
-        return f'predictor_{self.company_id}_{self.predictor_id}_{name}'
-
     def file_get(self, name):
-        file_name = self._get_file_name(name)
-
-        self.fs_store.get(file_name, self.base_dir)
-        with open(os.path.join(self.base_dir, file_name), 'rb') as fd:
-            return fd.read()
+        return self.fileStorage.file_get(name)
 
     def file_set(self, name, content):
-        file_name = self._get_file_name(name)
-
-        with open(os.path.join(self.base_dir, file_name), 'wb') as fd:
-            fd.write(content)
-
-        self.fs_store.put(file_name, self.base_dir)
+        self.fileStorage.file_set(name, content)
 
     def file_list(self):
         ...
@@ -77,11 +69,14 @@ class ModelStorage:
 
 
 class HandlerStorage:
-    def __init__(self, fs_store, company_id, integration_id):
-        config = Config()
+    def __init__(self, company_id, integration_id):
+        storageFactory = FileStorageFactory(
+            resource_group=RESOURCE_GROUP.INTEGRATION,
+            company_id=company_id,
+            sync=True
+        )
+        self.fileStorage = storageFactory(integration_id)
 
-        self.fs_store = fs_store
-        self.base_dir = config['paths']['predictors']
         self.company_id = company_id
         self.integration_id = integration_id
 
@@ -90,23 +85,12 @@ class HandlerStorage:
         return rec.data
 
     # files
-    def _get_file_name(self, name):
-        return f'predictor_{self.company_id}_int_{self.integration_id}_{name}'
 
     def file_get(self, name):
-        file_name = self._get_file_name(name)
-
-        self.fs_store.get(file_name, self.base_dir)
-        with open(os.path.join(self.base_dir, file_name), 'rb') as fd:
-            return fd.read()
+        return self.fileStorage.file_get(name)
 
     def file_set(self, name, content):
-        file_name = self._get_file_name(name)
-
-        with open(os.path.join(self.base_dir, file_name), 'wb') as fd:
-            fd.write(content)
-
-        self.fs_store.put(file_name, self.base_dir)
+        self.fileStorage.file_set(name, content)
 
     def file_list(self):
         ...

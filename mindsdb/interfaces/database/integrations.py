@@ -264,36 +264,28 @@ class IntegrationController:
 
         integration_meta = self.handlers_import_status[integration_engine]
         connection_args = integration_meta.get('connection_args')
-        if isinstance(connection_args, (dict, OrderedDict)):
-            files_to_get = [
-                arg_name for arg_name in connection_data
-                if connection_args.get(arg_name)['type'] == ARG_TYPE.PATH
-            ]
-            if len(files_to_get) > 0:
-                try:
-                    folder_name = f'integration_files_{company_id}_{integration_record.id}'
-                    integrations_dir = Config()['paths']['integrations']
-                    FsStore().get(folder_name, base_dir=integrations_dir)
-                except Exception:
-                    pass
-                for file_name in files_to_get:
-                    connection_data[file_name] = (
-                        Path(integrations_dir)
-                        .joinpath(folder_name)
-                        .joinpath(connection_data[file_name])
-                    )
 
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=integration_record.id,
             company_id=company_id,
             sync=True,
-            integration_id=integration_data['id'],
         )
+
+        if isinstance(connection_args, (dict, OrderedDict)):
+            files_to_get = [
+                arg_name for arg_name in connection_data
+                if arg_name in connection_args and connection_args.get(arg_name)['type'] == ARG_TYPE.PATH
+            ]
+            if len(files_to_get) > 0:
+
+                for file_name in files_to_get:
+                    connection_data[file_name] = fs_store.get_path(file_name)
 
         handler_ars = self._make_handler_args(integration_engine, connection_data, company_id)
         handler_ars['name'] = name
         handler_ars['file_storage'] = fs_store
+        handler_ars['integration_id'] = integration_data['id']
 
         handler_type = self.handler_modules[integration_engine].type
         if handler_type == 'ml':

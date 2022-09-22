@@ -48,10 +48,8 @@ class BYOMHandler:
 
     def _get_model_code(self):
         # TODO :
-        # return self.handler_storage.file_get('model_code')
-
-        # temporal solution
-        return self.handler_storage.get_connection_args()['model_code']
+        file_name = self.handler_storage.get_connection_args()['model_code']
+        return self.handler_storage.file_get(file_name)
 
     def learn(self, training_data_df, to_predict):
         params = {

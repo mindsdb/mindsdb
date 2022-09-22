@@ -127,11 +127,11 @@ class BYOMUpload(Resource):
             data = request.json
 
         file_path = os.path.join(temp_dir_path, data['file'])
-        with open(file_path) as fd:
-            connection_args = {
-                'model_code': fd.read()
-            }
-            request.integration_controller.add(name, 'byom', connection_args)
+
+        connection_args = {
+            'model_code': file_path
+        }
+        request.integration_controller.add(name, 'byom', connection_args)
 
         os.unlink(file_path)
         os.rmdir(temp_dir_path)

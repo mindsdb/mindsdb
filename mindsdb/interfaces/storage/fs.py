@@ -196,6 +196,28 @@ class FileStorage:
         except Exception:
             pass
 
+    def file_set(self, name, content):
+        if self.sync is True:
+            self.pull()
+
+        dest_abs_path = self.folder_path / name
+
+        with open(dest_abs_path, 'wb') as fd:
+            fd.write(content)
+
+        if self.sync is True:
+            self.push()
+
+    def file_get(self, name):
+
+        if self.sync is True:
+            self.pull()
+
+        dest_abs_path = self.folder_path / name
+
+        with open(dest_abs_path, 'rb') as fd:
+            return fd.read()
+
     def add(self, path: Union[str, Path], dest_rel_path: Optional[Union[str, Path]] = None):
         """Copy file/folder to persist storage
 
@@ -255,7 +277,7 @@ class FileStorage:
 
         if isinstance(relative_path, str):
             relative_path = Path(relative_path)
-        relative_path = relative_path.resolve()
+        # relative_path = relative_path.resolve()
 
         if relative_path.is_absolute():
             raise TypeError('FSStorage.get_path() got absolute path as argument')

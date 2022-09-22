@@ -1,6 +1,9 @@
+from collections import OrderedDict
+
 import datetime as dt
 from dateutil.parser import parse as parse_datetime
 import json
+import traceback
 
 import numpy as np
 import pandas as pd
@@ -14,6 +17,8 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropPredictor
 )
 
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
@@ -25,7 +30,6 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb import __version__ as mindsdb_version
-from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.model.model_controller import ModelController
@@ -36,6 +40,9 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
+from mindsdb.integrations.utilities.processes import HandlerProcess
+from mindsdb.utilities.functions import mark_process
+from mindsdb.integrations.utilities.utils import format_exception_error
 
 from .storage import ModelStorage, HandlerStorage
 from .byom_handler import BYOMHandler
@@ -75,6 +82,40 @@ class NumpyJSONEncoder(json.JSONEncoder):
             return super().default(obj)
 
 
+
+@mark_process(name='learn')
+def learn_process(company_id, integration_id, predictor_id, training_data_df, target):
+
+    predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
+
+    predictor_record.training_start_at = dt.datetime.now()
+    db.session.commit()
+
+    try:
+
+
+        handlerStorage = HandlerStorage(company_id, integration_id)
+        modelStorage = ModelStorage(company_id, predictor_id)
+
+        ml_handler = BYOMHandler(
+            handler_storage=handlerStorage,
+            model_storage=modelStorage,
+        )
+        ml_handler.learn(training_data_df, target)
+
+    except Exception as e:
+        print(traceback.format_exc())
+        error_message = format_exception_error(e)
+
+        predictor_record.data = {"error": error_message}
+        predictor_record.status = PREDICTOR_STATUS.ERROR
+        db.session.commit()
+
+    predictor_record.training_stop_at = dt.datetime.now()
+    predictor_record.status = PREDICTOR_STATUS.COMPLETE
+    db.session.commit()
+
+
 class BYOMHandler_EXECUTOR(PredictiveHandler):
 
     name = 'byom'
@@ -89,15 +130,9 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
         self.config = Config()
         self.handler_controller = kwargs.get('handler_controller')
         self.company_id = kwargs.get('company_id')
-        self.fs_store = kwargs.get('fs_store')
-        self.company_id = kwargs.get('company_id')
+        self.fs_store = kwargs.get('file_storage')
+        self.storage_factory = kwargs.get('storage_factory')
         self.integration_id = kwargs.get('integration_id')
-
-        self.handlerStorage = HandlerStorage(
-            fs_store=self.fs_store,
-            company_id=self.company_id,
-            integration_id=self.integration_id,
-        )
 
         self.model_controller = WithKWArgsWrapper(
             ModelController(),
@@ -248,22 +283,15 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
         db.session.add(predictor_record)
         db.session.commit()
 
-        db.session.refresh(predictor_record)
-
-        model_storage = ModelStorage(
-            fs_store=self.fs_store,
-            company_id=self.company_id,
-            integration_id=self.integration_id,
-            predictor_id=predictor_record.id
+        p = HandlerProcess(
+            learn_process,
+            self.company_id,
+            self.integration_id,
+            predictor_record.id,
+            training_data_df,
+            target
         )
-        ml_handler = BYOMHandler(
-            handler_storage=self.handlerStorage,
-            model_storage=model_storage,
-        )
-
-        # TODO run it in subprocess
-
-        ml_handler.learn(training_data_df, target)
+        p.start()
 
         return Response(RESPONSE_TYPE.OK)
 
@@ -284,15 +312,12 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
                 error_message=f"Error: model '{model_name}' does not exists!"
             )
 
-        model_storage = ModelStorage(
-            fs_store=self.fs_store,
-            company_id=self.company_id,
-            integration_id=self.integration_id,
-            predictor_id=predictor_record.id
-        )
+        handlerStorage = HandlerStorage(self.company_id, self.integration_id)
+        modelStorage = ModelStorage(self.company_id, predictor_record.id)
+
         ml_handler = BYOMHandler(
-            handler_storage=self.handlerStorage,
-            model_storage=model_storage,
+            handler_storage=handlerStorage,
+            model_storage=modelStorage,
         )
 
         predictions = ml_handler.predict(df)
@@ -341,3 +366,11 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
             self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
         db.session.commit()
         return Response(RESPONSE_TYPE.OK)
+
+
+connection_args = OrderedDict(
+    model_code={
+        'type': ARG_TYPE.PATH,
+        'description': 'The path name to model code'
+    }
+)

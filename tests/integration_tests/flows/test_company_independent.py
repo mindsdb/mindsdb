@@ -45,12 +45,6 @@ class CompanyIndependentTest(unittest.TestCase):
     def test_1_initial_state_http(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
-        # is no predictors
-        predictors_a = get_predictors_names_list(company_id=CID_A)
-        predictors_b = get_predictors_names_list(company_id=CID_A)
-        self.assertTrue(len(predictors_a) == 0)
-        self.assertTrue(len(predictors_b) == 0)
-
         # add permanent integrations
         for cid in [CID_A, CID_B]:
             for inegration_name in ['files', 'views', 'lightwood']:
@@ -60,32 +54,7 @@ class CompanyIndependentTest(unittest.TestCase):
                     headers={'company-id': f'{cid}'}
                 )
                 self.assertTrue(res.status_code == 200)
-
-        # res = requests.put(
-        #     f'{HTTP_API_ROOT}/config/integrations/files',
-        #     json={'params': {'type': 'files'}},
-        #     headers={'company-id': f'{CID_A}'}
-        # )
-        # self.assertTrue(res.status_code == 200)
-        # res = requests.put(
-        #     f'{HTTP_API_ROOT}/config/integrations/views',
-        #     json={'params': {'type': 'views'}},
-        #     headers={'company-id': f'{CID_A}'}
-        # )
-        # self.assertTrue(res.status_code == 200)
-
-        # res = requests.put(
-        #     f'{HTTP_API_ROOT}/config/integrations/files',
-        #     json={'params': {'type': 'files'}},
-        #     headers={'company-id': f'{CID_B}'}
-        # )
-        # self.assertTrue(res.status_code == 200)
-        # res = requests.put(
-        #     f'{HTTP_API_ROOT}/config/integrations/views',
-        #     json={'params': {'type': 'views'}},
-        #     headers={'company-id': f'{CID_B}'}
-        # )
-        # self.assertTrue(res.status_code == 200)
+                print(f"created integration '{inegration_name}' for company '{cid}'")
 
         # is no integrations
         integrations_a = get_integrations_names(company_id=CID_A)

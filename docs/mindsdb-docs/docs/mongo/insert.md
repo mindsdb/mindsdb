@@ -2,13 +2,15 @@
 
 Predictors are the machine learning models that enable us to forecast future data based on the available data. By using the `db.predictors.insert()` method, we create and train predictors in Mongo.
 
-## Using the `db.predictors.insert()` Method
+## The `db.predictors.insert()` Method
 
 ### Description
 
 The `db.predictors.insert()` method creates and trains a new model.
 
 ### Syntax
+
+Here is the syntax:
 
 ```sql
 db.predictors.insert({
@@ -37,10 +39,10 @@ Where:
 
 | Expressions                                     | Description                                                                                                                           |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                                | The name of the model to be created                                                                                                   |
-| `predict`                                 | The column name of the target variable                                                                                                |
-| `connection`                              | The name of the integration created via [`INSERT DATABASE`](/mongo/database/) or [file upload](/sql/api/select_files/)          |
-| `select_data_query`                             | Object that stores the data collection name to be used for training and validation and additional arguments for filtering the data   |
+| `name`                                          | The name of the model to be created.                                                                                                  |
+| `predict`                                       | The name of the target column to be predicted.                                                                                        |
+| `connection`                                    | The name of the integration created via [the `db.databases.insertOne()` method](/mongo/database/) or [file upload](/sql/create/file/).|
+| `select_data_query`                             | Object that stores the data collection name to be used for training and validation and additional arguments for filtering the data.   |
 
 !!! TIP "Checking Predictor Status"
     After running the `db.predictors.insert()` method, execute the `db.predictors.find()` method from the `mindsdb.predictors` collection to check the status of the model.

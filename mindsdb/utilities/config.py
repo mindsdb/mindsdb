@@ -31,18 +31,34 @@ class Config():
             with open(self.config_path, 'r') as fp:
                 self._override_config = json.load(fp)
 
+        paths = {
+            'root': os.environ['MINDSDB_STORAGE_DIR']
+        }
+
+        # content - temporary storage for entities
+        paths['content'] = os.path.join(paths['root'], 'content')
+        # storage - persist storage for entities
+        paths['storage'] = os.path.join(paths['root'], 'storage')
+        paths['static'] = os.path.join(paths['root'], 'static')
+        paths['tmp'] = os.path.join(paths['root'], 'tmp')
+        paths['log'] = os.path.join(paths['root'], 'log')
+        paths['cache'] = os.path.join(paths['root'], 'cache')
+
+        for path_name in paths:
+            create_directory(paths[path_name])
+
         self._default_config = {
             'permanent_storage': {
                 'location': 'local'
             },
-            'paths': {},
+            'storage_dir': os.environ['MINDSDB_STORAGE_DIR'],
+            'paths': paths,
             "log": {
                 "level": {
                     "console": "INFO",
                     "file": "DEBUG",
                     "db": "WARNING"
                 }
-
             },
             "debug": False,
             "integrations": {},
@@ -67,24 +83,8 @@ class Config():
             },
             "cache": {
                 "type": "local"
-            },
-            "force_dataset_removing": False
+            }
         }
-
-        self._default_config['paths']['root'] = os.environ['MINDSDB_STORAGE_DIR']
-        self._default_config['paths']['storage'] = os.path.join(self._default_config['paths']['root'], 'storage')
-        self._default_config['paths']['datasources'] = os.path.join(self._default_config['paths']['root'], 'datasources')
-        self._default_config['paths']['predictors'] = os.path.join(self._default_config['paths']['root'], 'predictors')
-        self._default_config['paths']['static'] = os.path.join(self._default_config['paths']['root'], 'static')
-        self._default_config['paths']['tmp'] = os.path.join(self._default_config['paths']['root'], 'tmp')
-        self._default_config['paths']['log'] = os.path.join(self._default_config['paths']['root'], 'log')
-        self._default_config['paths']['storage_dir'] = self._default_config['paths']['root']
-        self._default_config['paths']['cache'] = os.path.join(self._default_config['paths']['root'], 'cache')
-        self._default_config['paths']['integrations'] = os.path.join(self._default_config['paths']['root'], 'integrations')
-        self._default_config['storage_dir'] = self._default_config['paths']['root']
-
-        for path_name in self._default_config['paths']:
-            create_directory(self._default_config['paths'][path_name])
 
         self._config = _merge_configs(self._default_config, self._override_config)
 

@@ -27,6 +27,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     if __name__ == '__main__':
             try:
                     engine = get_connection()
+                    engine.connect()
                     print(f"Connection to the {host} for user {user} created successfully.")
             except Exception as ex:
                     print("Connection could not be made due to the following error: \n", ex)

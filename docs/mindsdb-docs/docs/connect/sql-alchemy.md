@@ -8,10 +8,10 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
 
 === "Connecting MindsDB Cloud to SQL Alchemy"
 
+    
     You can use the Python code below to connect your Cloud MindsDB database to SQL Alchemy.
-
+    Note : Run the command pip install pymysql
     ```python
-    pip install pymysql
     from sqlalchemy import create_engine
 
     user = 'MindsDB Cloud username' # your Mindsdb Cloud email address is your username

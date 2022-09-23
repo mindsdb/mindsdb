@@ -1,15 +1,21 @@
 from typing import Any, Dict
-
-import dask
-import dill
 import datetime
-import pandas as pd
 from dateutil.parser import parse as parse_datetime
 
+import pandas as pd
+import dask
+import dill
 from ludwig import __version__ as ludwig_version
 
-
 from mindsdb_sql import parse_sql
+from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant, Select, Show, Star, NativeQuery
+from mindsdb_sql.parser.dialects.mindsdb import (
+    CreatePredictor,
+    RetrainPredictor,
+    DropPredictor,
+)
+
 from mindsdb.utilities.log import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
@@ -19,8 +25,6 @@ import mindsdb.interfaces.storage.db as db
 from mindsdb import __version__ as mindsdb_version
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.model.model_controller import ModelController
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant, Select, Show, Star, NativeQuery
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
 from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
@@ -35,11 +39,6 @@ from mindsdb.interfaces.model.functions import (
     get_model_records
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
-from mindsdb_sql.parser.dialects.mindsdb import (
-    CreatePredictor,
-    RetrainPredictor,
-    DropPredictor,
-)
 
 from .utils import RayConnection
 from .functions import learn_process

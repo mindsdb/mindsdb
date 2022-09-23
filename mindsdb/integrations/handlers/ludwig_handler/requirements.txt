@@ -4,3 +4,4 @@ mindsdb>=22.6.2.1
 mindsdb_sql >= 0.4.0
 hyperopt
 dill
+dask

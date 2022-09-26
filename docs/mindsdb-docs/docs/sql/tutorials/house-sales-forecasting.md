@@ -2,23 +2,23 @@
 
 ## Introduction
 
-In this tutorial, we'll create, train, and query a machine learning model, which, in MindsDB language, is an `AI Table` or a `predictor`. We aim to predict sales forecasts for houses using a multivariate time series strategy.
+In this tutorial, we'll create and train a machine learning model, or as we call it, an `AI Table` or a `predictor`. By querying the model, we'll predict the sales forecasts for houses using a multivariate time series strategy.
 
-Make sure you have access to a working MindsDB installation either locally or via [cloud.mindsdb.com](https://cloud.mindsdb.com/).
+Make sure you have access to a working MindsDB installation, either locally or at [MindsDB Cloud](https://cloud.mindsdb.com/).
 
-You can learn how to set up your account at MindsDB Cloud by following [this guide](https://docs.mindsdb.com/setup/cloud/). Another way is to set up MindsDB locally using [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [Python](https://docs.mindsdb.com/setup/self-hosted/pip/source/).
+If you want to learn how to set up your account at MindsDB Cloud, follow [this guide](https://docs.mindsdb.com/setup/cloud/). Another way is to set up MindsDB locally using [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [Python](https://docs.mindsdb.com/setup/self-hosted/pip/source/).
 
 Let's get started.
 
-## The Data
+## Data Setup
 
-### Connecting the data
+### Connecting the Data
 
 There are a couple of ways you can get the data to follow through with this tutorial.
 
-=== "Connecting as a database via `#!sql CREATE DATABASE`"
+=== "Connecting as a database"
 
-    You can connect to a demo database that we've prepared for you. It contains the data used throughout this tutorial which is the `#!sql example_db.demo_data.house_sales` table.
+    You can connect to a demo database that we've prepared for you. It contains the data used throughout this tutorial (the `#!sql example_db.demo_data.house_sales` table).
 
     ```sql
     CREATE DATABASE example_db
@@ -42,11 +42,11 @@ There are a couple of ways you can get the data to follow through with this tuto
 
 === "Connecting as a file"
 
-    The dataset we use in this tutorial is the pre-processed version of the *House Property Sales* data. You can download it from [Kaggle](https://www.kaggle.com/datasets/htagholdings/property-sales). We use the *ma_lga_12345.csv* file.
+    The dataset we use in this tutorial is the pre-processed version of the *House Property Sales* data. You can download [the `CSV` data file here](https://www.kaggle.com/datasets/htagholdings/property-sales) (we use the *ma_lga_12345.csv* file) and upload it via [MindsDB SQL Editor](/connect/mindsdb_editor/).
 
-    And [this guide](https://docs.mindsdb.com/sql/create/file/) explains how to upload a file to MindsDB.
+    Follow [this guide](/sql/create/file/) to find out how to upload a file to MindsDB.
 
-    Now, you can query the uploaded file as if it were a table.
+    Now you can run queries directly on the file as if it were a table. Let's preview the data that we'll use to train our predictor.
 
     ```sql
     SELECT *
@@ -54,13 +54,14 @@ There are a couple of ways you can get the data to follow through with this tuto
     LIMIT 10;
     ```
 
-!!! Warning "From now on, we will use the `files.house_sales` file as a table. Make sure you replace it with `#!sql example_db.demo_data.house_sales` if you use the `demo` database."
+!!! Warning "Pay Attention to the Queries"
+    From now on, we'll use the `#!sql files.house_sales` table. Make sure you replace it with `example_db.demo_data.house_sales` if you connect the data as a database.
 
 ### Understanding the Data
 
-We will use the house sales dataset where each row represents one real estate (house or unit). It tracks quarterly moving averages of house sales aggregated by type and amount of bedrooms in each listing. These quarterly moving averages will be predicted in the following sections of this tutorial.
+We use the house sales dataset, where each row is one house or one unit, to predict the `MA` column values. It tracks quarterly moving averages of house sales aggregated by real estate type and number of bedrooms in each listing. These quarterly moving averages will be predicted in the following sections of this tutorial.
 
-Below is the sample data stored in the house sales dataset.
+Below is the sample data stored in the `#!sql files.house_sales` table.
 
 ```sql
 +----------+------+-----+--------+
@@ -77,20 +78,19 @@ Below is the sample data stored in the house sales dataset.
 Where:
 
 | Column                | Description                                                                                  | Data Type           | Usage   |
-| :-------------------- | :------------------------------------------------------------------------------------------- | ------------------- | ------- |
-| `saledate`            | The date of sale                                                                             | `date`              | Feature |
-| `MA`                  | Moving average of the historical median price of the house or unit                           | `integer`           | Label   |
-| `type`                | Type of property (either a house or a unit)                                                  | `character varying` | Feature |
-| `bedrooms`            | Number of bedrooms                                                                           | `integer`           | Feature |
+| --------------------- | -------------------------------------------------------------------------------------------- | ------------------- | ------- |
+| `saledate`            | The date of sale.                                                                            | `date`              | Feature |
+| `MA`                  | Moving average of the historical median price of the house or unit.                          | `integer`           | Label   |
+| `type`                | Type of property (`house` or `unit`).                                                        | `character varying` | Feature |
+| `bedrooms`            | Number of bedrooms.                                                                          | `integer`           | Feature |
 
 !!!Info "Labels and Features"
+    A **label** is a column whose values will be predicted (the y variable in simple linear regression).<br/>
+    A **feature** is a column used to train the model (the x variable in simple linear regression).
 
-    A **label** is the thing we're predicting — the y variable in simple linear regression.
-    A **feature** is an input variable — the x variable in simple linear regression.
+## Training a Predictor
 
-## Training a Predictor Via [`#!sql CREATE PREDICTOR`](/sql/create/predictor)
-
-Let's create and train your first machine learning predictor. For that, we are going to use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) syntax where we specify what sub-query to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
+Let's create and train the machine learning model. For that, we use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) statement and specify the input columns used to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
 
 ```sql
 CREATE PREDICTOR mindsdb.house_sales_predictor
@@ -99,19 +99,18 @@ FROM files
 PREDICT MA
 ORDER BY saledate
 GROUP BY bedrooms, type
--- as the target is quarterly,
--- we will look back two years to forecast the next one
-WINDOW 8
-HORIZON 4;
+-- the target column to be predicted stores one row per quarter
+WINDOW 8      -- using data from the last two years to make forecasts (last 8 rows)
+HORIZON 4;    -- making forecasts for the next year (next 4 rows)
 ```
 
-We use all of the columns as features, except for the `MA` column whose value is going to be predicted.
+We use all of the columns as features, except for the `MA` column, whose values will be predicted.
 
-MindsDB makes it simple so that we don't need to repeat the predictor creation process for every group, that is, for every number of bedrooms or for every type of a real estate. Instead, we just group by both the `bedrooms` and `type` columns and the predictor learns from all series and enables forecasts for all of them!
+MindsDB makes it simple so that we don't need to repeat the predictor creation process for every group, that is, for every distinct number of bedrooms or for every distinct type of a real estate. Instead, we just group by both the `bedrooms` and `type` columns and the predictor learns from all series and enables forecasts for all of them!
 
-## Checking the Status of a Predictor
+## Status of a Predictor
 
-A predictor may take a couple of minutes for the training to complete. You can monitor the status of your predictor by using this SQL command:
+A predictor may take a couple of minutes for the training to complete. You can monitor the status of the predictor by using this SQL command:
 
 ```sql
 SELECT status
@@ -119,7 +118,17 @@ FROM mindsdb.predictors
 WHERE name='house_sales_predictor';
 ```
 
-If we run it right after creating a predictor, we'll most probably get this output:
+If we run it right after creating a predictor, we get this output:
+
+```sql
++------------+
+| status     |
++------------+
+| generating |
++------------+
+```
+
+A bit later, this is the output:
 
 ```sql
 +----------+
@@ -129,7 +138,7 @@ If we run it right after creating a predictor, we'll most probably get this outp
 +----------+
 ```
 
-But if we wait a couple of minutes, this should be the output:
+And at last, this should be the output:
 
 ```sql
 +----------+
@@ -143,7 +152,9 @@ Now, if the status of our predictor says `complete`, we can start making predict
 
 ## Making Predictions
 
-You can make predictions by querying the predictor as if it were a table. The [`SELECT`](/sql/api/select/) syntax lets you make predictions for the label based on the chosen features for a given period of time. Usually, you want to know what happens right after the latest training data point that was fed. We have a special keyword for that: the `LATEST` keyword.
+### Making a Single Prediction
+
+You can make predictions by querying the predictor as if it were a table. The [`SELECT`](/sql/api/select/) statement lets you make predictions for the label based on the chosen features for a given time period. Usually, you want to know what happens right after the latest training data point that was fed. We have a special keyword for that, the `LATEST` keyword.
 
 ```sql
 SELECT m.saledate AS date, m.MA AS forecast
@@ -155,7 +166,27 @@ AND t.bedrooms = 2
 LIMIT 4;
 ```
 
+On execution, we get:
+
+```sql
+TODO
+```
+
 Now, try changing the `type` column value to *unit*, or the `bedrooms` column value to any number between 1 to 5, and check how the forecasts vary. This is because MindsDB recognizes each grouping as being its own different time series.
+
+### Making Batch Predictions
+
+Also, you can make bulk predictions by joining a data table with your predictor using [`#!sql JOIN`](/sql/api/join).
+
+```sql
+TODO
+```
+
+On execution, we get:
+
+```sql
+TODO
+```
 
 ## What's Next?
 

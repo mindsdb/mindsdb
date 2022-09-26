@@ -40,7 +40,7 @@ MySQL [(none)]>
 In this example, we connect to the MindsDB Cloud instance, as below.
 
 ``` bash
-mysql -h cloud-mysql.mindsdb.com --port 3306 -u zoran@mindsdb.com -p
+mysql -h cloud.mindsdb.com --port 3306 -u zoran@mindsdb.com -p
 ```
 
 On execution, we get:

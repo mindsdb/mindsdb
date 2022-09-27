@@ -116,7 +116,7 @@ FROM files
 PREDICT Churn;
 ```
 
-We use all of the columns as features, except for the `churn` column, whose values will be predicted.
+We use all of the columns as features, except for the `Churn` column, whose values will be predicted.
 
 ## Status of a Predictor
 
@@ -181,16 +181,16 @@ AND InternetService='DSL';
 On execution, we get:
 
 ```sql
-+-------+---------------------+-------------------------------------------------------------------------------------------------+
-| Churn | Churn_confidence    | Churn_explain                                                                                   |
-+-------+---------------------+-------------------------------------------------------------------------------------------------+
-| Yes   | 0.7865168539325843  | {"predicted_value": "Yes", "confidence": 0.7865168539325843, "anomaly": null, "truth": null}    |
-+-------+---------------------+-------------------------------------------------------------------------------------------------+
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Churn | Churn_confidence    | Churn_explain                                                                                                                                                    |
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Yes   | 0.7752808988764045  | {"predicted_value": "Yes", "confidence": 0.7752808988764045, "anomaly": null, "truth": null, "probability_class_No": 0.4756, "probability_class_Yes": 0.5244}    |
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
 Let's try another prediction.
 
-An important thing to check is the `important_missing_information` value, where MindsDB points to the important missing information that should be included to give a more accurate prediction. In this case, the `Contract`, `MonthlyCharges`, `TotalCharges`, and `OnlineBackup` columns are the important missing information. Let’s include those values in the `WHERE` clause, and run a new query.
+An important thing to check is the `important_missing_information` value, where MindsDB points to the important missing information that should be included to give a more accurate prediction. In this case, the `Contract`, `MonthlyCharges`, `TotalCharges`, and `OnlineBackup` columns are the important missing information. Let’s include them in the `WHERE` clause, and run a new query.
 
 TODO: what is `important_missing_information`?
 
@@ -203,28 +203,28 @@ AND Dependents='No'
 AND tenure=1 
 AND PhoneService='No' 
 AND MultipleLines='No phone service' 
-AND InternetService='DSL' 
+AND InternetService='DSL'
+AND Contract='Month-to-month'
+AND MonthlyCharges=29.85
+AND TotalCharges=29.85
+AND OnlineBackup='Yes'
 AND OnlineSecurity='No' 
-AND OnlineBackup='Yes' 
 AND DeviceProtection='No' 
 AND TechSupport='No' 
 AND StreamingTV='No' 
 AND StreamingMovies='No' 
-AND Contract='Month-to-month' 
 AND PaperlessBilling='Yes' 
-AND PaymentMethod='Electronic check' 
-AND MonthlyCharges=29.85 
-AND TotalCharges=29.85;
+AND PaymentMethod='Electronic check';
 ```
 
 On execution, we get:
 
 ```sql
-+-------+---------------------+-------------------------------------------------------------------------------------------------+
-| Churn | Churn_confidence    | Churn_explain                                                                                   |
-+-------+---------------------+-------------------------------------------------------------------------------------------------+
-| Yes   | 0.8202247191011236  | {"predicted_value": "Yes", "confidence": 0.8202247191011236, "anomaly": null, "truth": null}    |
-+-------+---------------------+-------------------------------------------------------------------------------------------------+
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Churn | Churn_confidence    | Churn_explain                                                                                                                                                    |
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Yes   | 0.8202247191011236  | {"predicted_value": "Yes", "confidence": 0.8202247191011236, "anomaly": null, "truth": null, "probability_class_No": 0.4098, "probability_class_Yes": 0.5902}    |
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
 Here, MindsDB predicted the probability of this customer churning with the confidence of around 82%.
@@ -233,11 +233,9 @@ Here, MindsDB predicted the probability of this customer churning with the confi
 
 Also, you can make bulk predictions by joining a data table with your predictor using [`#!sql JOIN`](/sql/api/join).
 
-TODO: make it for files.churn
-
 ```sql
-SELECT t.customerid, m.churn 
-FROM example_db.demo_data.customer_churn AS t 
+SELECT t.customerID, t.Contract, t.MonthlyCharges, m.Churn 
+FROM files.churn AS t 
 JOIN mindsdb.customer_churn_predictor AS m
 LIMIT 100;
 ```
@@ -245,7 +243,15 @@ LIMIT 100;
 On execution, we get:
 
 ```sql
-TODO
++----------------+-------------------+------------------+---------+
+| customerID     | Contract          | MonthlyCharges   | Churn   |
++----------------+-------------------+------------------+---------+
+| 7590-VHVEG     | Month-to-month    | 29.85            | Yes     |
+| 5575-GNVDE     | One year          | 56.95            | No      |
+| 3668-QPYBK     | Month-to-month    | 53.85            | Yes     |
+| 7795-CFOCW     | One year          | 42.3             | No      |
+| 9237-HQITU     | Month-to-month    | 70.7             | Yes     |
++----------------+-------------------+------------------+---------+
 ```
 
 ## What's Next?

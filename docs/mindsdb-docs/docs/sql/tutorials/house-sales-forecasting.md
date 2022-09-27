@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In this tutorial, we'll create and train a machine learning model, or as we call it, an `AI Table` or a `predictor`. By querying the model, we'll predict the sales forecasts for houses using a multivariate time series strategy.
+In this tutorial, we'll create and train a machine learning model, or as we call it, an `AI Table` or a `predictor`. By querying the model, we'll predict the real estate sales using a multivariate time series strategy.
 
 Make sure you have access to a working MindsDB installation, either locally or at [MindsDB Cloud](https://cloud.mindsdb.com/).
 
@@ -55,11 +55,11 @@ There are a couple of ways you can get the data to follow through with this tuto
     ```
 
 !!! Warning "Pay Attention to the Queries"
-    From now on, we'll use the `#!sql files.house_sales` table. Make sure you replace it with `example_db.demo_data.house_sales` if you connect the data as a database.
+    From now on, we'll use the `#!sql files.house_sales` file as a table. Make sure you replace it with `example_db.demo_data.house_sales` if you connect the data as a database.
 
 ### Understanding the Data
 
-We use the house sales dataset, where each row is one house or one unit, to predict the `MA` column values. It tracks quarterly moving averages of house sales aggregated by real estate type and number of bedrooms in each listing. These quarterly moving averages will be predicted in the following sections of this tutorial.
+We use the house sales dataset, where each row is one house or one unit, to predict the `MA` column values. It tracks quarterly moving averages (`MA`) of house sales aggregated by real estate type and the number of bedrooms in each listing.
 
 Below is the sample data stored in the `#!sql files.house_sales` table.
 
@@ -106,7 +106,7 @@ HORIZON 4;    -- making forecasts for the next year (next 4 rows)
 
 We use all of the columns as features, except for the `MA` column, whose values will be predicted.
 
-MindsDB makes it simple so that we don't need to repeat the predictor creation process for every group, that is, for every distinct number of bedrooms or for every distinct type of a real estate. Instead, we just group by both the `bedrooms` and `type` columns and the predictor learns from all series and enables forecasts for all of them!
+MindsDB makes it simple so that we don't need to repeat the predictor creation process for every group, that is, for every distinct number of bedrooms or for every distinct type of real estate. Instead, we just group by both the `bedrooms` and `type` columns, and the predictor learns from all series and enables forecasts for all of them!
 
 ## Status of a Predictor
 
@@ -152,12 +152,10 @@ Now, if the status of our predictor says `complete`, we can start making predict
 
 ## Making Predictions
 
-### Making a Single Prediction
-
-You can make predictions by querying the predictor as if it were a table. The [`SELECT`](/sql/api/select/) statement lets you make predictions for the label based on the chosen features for a given time period. Usually, you want to know what happens right after the latest training data point that was fed. We have a special keyword for that, the `LATEST` keyword.
+You can make predictions by querying the predictor joined with the data table. The [`SELECT`](/sql/api/select/) statement lets you make predictions for the label based on the chosen features for a given time period. Usually, you want to know what happens right after the latest training data point that was fed. We have a special keyword for that, the `LATEST` keyword.
 
 ```sql
-SELECT m.saledate AS date, m.MA AS forecast
+SELECT m.saledate AS date, m.MA AS forecast, MA_explain
 FROM mindsdb.house_sales_predictor AS m 
 JOIN files.house_sales AS t
 WHERE t.saledate > LATEST 
@@ -169,24 +167,19 @@ LIMIT 4;
 On execution, we get:
 
 ```sql
-TODO
++-------------+-------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| date        | forecast          | MA_explain                                                                                                                                                                                    |
++-------------+-------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| 2019-12-31  | 441413.5849598734 | {"predicted_value": 441413.5849598734, "confidence": 0.99, "anomaly": true, "truth": null, "confidence_lower_bound": 440046.28237074096, "confidence_upper_bound": 442780.88754900586}        |
+| 2020-04-01  | 443292.5194586229 | {"predicted_value": 443292.5194586229, "confidence": 0.9991, "anomaly": null, "truth": null, "confidence_lower_bound": 427609.3325864327, "confidence_upper_bound": 458975.7063308131}        |
+| 2020-07-02  | 443292.5194585953 | {"predicted_value": 443292.5194585953, "confidence": 0.9991, "anomaly": null, "truth": null, "confidence_lower_bound": 424501.59192981094, "confidence_upper_bound": 462083.4469873797}       |
+| 2020-10-02  | 443292.5194585953 | {"predicted_value": 443292.5194585953, "confidence": 0.9991, "anomaly": null, "truth": null, "confidence_lower_bound": 424501.59192981094, "confidence_upper_bound": 462083.4469873797}       |
++-------------+-------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
+
+Please note that in the [`SELECT`](/sql/api/select/) statement, we select `m.saledate` instead of `t.saledate` because we make predictions for future dates that are not in the data table.
 
 Now, try changing the `type` column value to *unit*, or the `bedrooms` column value to any number between 1 to 5, and check how the forecasts vary. This is because MindsDB recognizes each grouping as being its own different time series.
-
-### Making Batch Predictions
-
-Also, you can make bulk predictions by joining a data table with your predictor using [`#!sql JOIN`](/sql/api/join).
-
-```sql
-TODO
-```
-
-On execution, we get:
-
-```sql
-TODO
-```
 
 ## What's Next?
 

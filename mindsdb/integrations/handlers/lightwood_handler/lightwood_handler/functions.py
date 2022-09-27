@@ -81,7 +81,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame, company_id: int) -> None:
             company_id=company_id,
             sync=True
         )
-        predictor.save(fs.folder_path)
+        predictor.save(fs.folder_path / fs.folder_name)
         fs.push()
 
         predictor_record.data = predictor.model_analysis.to_dict()

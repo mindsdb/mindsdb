@@ -295,7 +295,7 @@ class LightwoodHandler(PredictiveHandler):
 
         predictor_id = predictor_record.id
 
-        predictor_storage = self.storage_factory(predictor_id)
+        # predictor_storage = self.storage_factory(predictor_id)
 
         p = HandlerProcess(
             run_learn,
@@ -303,7 +303,7 @@ class LightwoodHandler(PredictiveHandler):
             problem_definition,
             predictor_id,
             json_ai_override,
-            str(predictor_storage.folder_path)
+            self.company_id
         )
         p.start()
         if join_learn_process:

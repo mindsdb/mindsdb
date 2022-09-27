@@ -23,6 +23,7 @@ from mindsdb.interfaces.model.functions import (
     get_model_record,
     get_model_records
 )
+from mindsdb.interfaces.storage.fs import FileStorage, RESOURCE_GROUP
 
 from .utils import rep_recur, brack_to_mod
 
@@ -61,7 +62,7 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
 
 
 @mark_process(name='learn')
-def run_fit(predictor_id: int, df: pd.DataFrame, storage_path: str) -> None:
+def run_fit(predictor_id: int, df: pd.DataFrame, company_id: int) -> None:
     try:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
         assert predictor_record is not None
@@ -74,9 +75,14 @@ def run_fit(predictor_id: int, df: pd.DataFrame, storage_path: str) -> None:
 
         db.session.refresh(predictor_record)
 
-        fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
-        pickle_path = os.path.join(storage_path, fs_name)
-        predictor.save(pickle_path)
+        fs = FileStorage(
+            resource_group=RESOURCE_GROUP.INTEGRATION,
+            resource_id=predictor_id,
+            company_id=company_id,
+            sync=True
+        )
+        predictor.save(fs.folder_path)
+        fs.push()
 
         predictor_record.data = predictor.model_analysis.to_dict()
 
@@ -119,7 +125,7 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
 
 @mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
-              json_ai_override: dict = None, storage_path: str = None) -> None:
+              json_ai_override: dict = None, company_id: int = None) -> None:
     if json_ai_override is None:
         json_ai_override = {}
 
@@ -129,7 +135,7 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
 
     try:
         run_generate(df, problem_definition, predictor_id, json_ai_override)
-        run_fit(predictor_id, df, storage_path)
+        run_fit(predictor_id, df, company_id)
     except Exception as e:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
         print(traceback.format_exc())

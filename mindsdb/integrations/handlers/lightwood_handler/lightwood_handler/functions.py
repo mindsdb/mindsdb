@@ -76,7 +76,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame, company_id: int) -> None:
         db.session.refresh(predictor_record)
 
         fs = FileStorage(
-            resource_group=RESOURCE_GROUP.INTEGRATION,
+            resource_group=RESOURCE_GROUP.PREDICTOR,
             resource_id=predictor_id,
             company_id=company_id,
             sync=True

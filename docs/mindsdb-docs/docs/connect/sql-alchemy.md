@@ -8,8 +8,9 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
 
 === "Connecting MindsDB Cloud to SQL Alchemy"
 
+    
     You can use the Python code below to connect your Cloud MindsDB database to SQL Alchemy.
-
+    Note : Run the command pip install pymysql
     ```python
     from sqlalchemy import create_engine
 
@@ -57,7 +58,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     user = 'mindsdb'
     password = ''
     host = '127.0.0.1'
-    port = 47334
+    port = 47335
     database = ''
 
     def get_connection():
@@ -78,7 +79,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     - Username is `mindsdb`
     - Password is left empty
     - Host is `127.0.0.1`
-    - Port is `47334`
+    - Port is `47335`
     - Database name is left empty
 
     To create a database connection, execute the code above. On success, the following output is expected:

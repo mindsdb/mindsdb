@@ -157,7 +157,7 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
 
 
 @mark_process(name='learn')
-def run_update(predictor_id: int, df: DataFrame, company_id: int, storage_path: str):
+def run_update(predictor_id: int, df: DataFrame, company_id: int):
     try:
         predictor_record = Predictor.query.filter_by(id=predictor_id).first()
 
@@ -180,9 +180,15 @@ def run_update(predictor_id: int, df: DataFrame, company_id: int, storage_path: 
         predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
         predictor.learn(df)
 
-        fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
-        pickle_path = os.path.join(storage_path, fs_name)
-        predictor.save(pickle_path)
+        fs = FileStorage(
+            resource_group=RESOURCE_GROUP.PREDICTOR,
+            resource_id=predictor_id,
+            company_id=company_id,
+            sync=True
+        )
+        predictor.save(fs.folder_path / fs.folder_name)
+        fs.push()
+
         predictor_record.data = predictor.model_analysis.to_dict()
         predictor_record.update_status = 'up_to_date'
         predictor_record.dtype_dict = predictor.dtype_dict

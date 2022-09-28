@@ -360,14 +360,11 @@ class LightwoodHandler(PredictiveHandler):
         new_predictor_record.training_data_rows_count = len(response.data_frame)
         db.session.commit()
 
-        predictor_storage = self.storage_factory(new_predictor_record.id)
-
         p = HandlerProcess(
             run_update,
             new_predictor_record.id,
             response.data_frame,
-            self.company_id,
-            str(predictor_storage.folder_path)
+            self.company_id
         )
         p.start()
 

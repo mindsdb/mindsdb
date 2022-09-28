@@ -1182,8 +1182,8 @@ class SQLQuery():
                 df_a = pd.DataFrame(left_df_data, columns=left_columns_map.keys())
                 df_b = pd.DataFrame(right_df_data, columns=right_columns_map.keys())
 
-                a_name = f'table_a'
-                b_name = f'table_b'
+                a_name = 'table_a'
+                b_name = 'table_b'
                 con = duckdb.connect(database=':memory:')
                 con.register(a_name, df_a)
                 con.register(b_name, df_b)

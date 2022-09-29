@@ -1,20 +1,48 @@
 # Installing MindsDB for Development
 
-Before you contribute to MindsDB you will need to install it. There are a few options to do that by installing from source, PyPi or using our Docker image. Our preferred method for development is source install.
+If you want to contribute to the development of MindsDB, you need to install it first.
 
+There are a few installation options that you can choose as follows:
 
-### Installing MindsDB from the source
+- from [source](/setup/self-hosted/pip/source/),
+- using PyPi for [Windows](/setup/self-hosted/pip/windows/), [Linux](/setup/self-hosted/pip/linux/), or [MacOS](/setup/self-hosted/pip/macos/),
+- using [Docker image](/setup/self-hosted/docker/).
 
-Before installing MindsDB make sure you have `Git` and `Python 3.7.x or 3.8.x` versions installed.
+Our preferred MindsDB installation method for development is the installation from source.
 
-1. Fork MindsDB Repository from [GitHub](https://github.com/mindsdb/mindsdb/fork).
-2. Clone the fork locally `git@github.com:YOUR_USERNAME/mindsdb.git`.
-3. Create a new virtual environment as `python3 -m venv mindsdbenv`.
-4. Activate the virtual environment `source mindsdbenv/bin/activate`.
-5. Install dependencies `cd mindsdb & pip install -e .`
-6. Start MindsDB `python3 -m mindsdb`.
+## Installing MindsDB
 
-If everything works, in the console you should see a similar message:
+Here, we recall the steps of MindsDB installation from source. You can either follow the steps below or visit the provided link.
+
+Before proceeding, make sure you have `Git` and `Python 3.7.x` or `Python 3.8.x` installed.
+
+1. Fork the MindsDB repository from [GitHub](https://github.com/mindsdb/mindsdb/fork).
+2. Clone the fork locally:
+```bash
+git clone git@github.com:YOUR_USERNAME/mindsdb.git
+```
+3. Create a new virtual environment:
+```bash
+python3 -m venv mindsdb-venv
+```
+4. Activate the virtual environment:
+```bash
+source mindsdb-venv/bin/activate
+```
+5. Install dependencies:
+```bash
+cd mindsdb & pip install -r requirements.txt
+```
+6. Install MindsDB:
+```bash
+python setup.py develop
+```
+6. Start MindsDB:
+```bash
+python3 -m mindsdb
+```
+
+If everything works as expected, you should see the following message in the console:
 
 ```
 ...
@@ -24,3 +52,11 @@ If everything works, in the console you should see a similar message:
 mysql API: started on 47335
 http API: started on 47334
 ```
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and **Community Tutorials** sections, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **SQL API** section, as they explain a common SQL syntax with examples.
+
+Have fun!

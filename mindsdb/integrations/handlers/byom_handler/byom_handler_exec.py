@@ -19,6 +19,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
+from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
@@ -211,20 +212,6 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
         else:
             raise Exception(f"Query type {type(statement)} not supported")
 
-    def make_sql_session(self, company_id):
-
-        server_obj = type('', (), {})()
-        server_obj.original_integration_controller = IntegrationController()
-        server_obj.original_model_controller = ModelController()
-        server_obj.original_view_controller = ViewController()
-
-        sql_session = SessionController(
-            server=server_obj,
-            company_id=company_id
-        )
-        sql_session.database = 'mindsdb'
-        return sql_session
-
     def learn(self, statement):
         model_name = statement.name.parts[-1]
 
@@ -250,7 +237,7 @@ class BYOMHandler_EXECUTOR(PredictiveHandler):
                 query=statement.query_str
             )
         )
-        sql_session = self.make_sql_session(self.company_id)
+        sql_session = make_sql_session(self.company_id)
 
         # execute as query
         sqlquery = SQLQuery(query, session=sql_session)

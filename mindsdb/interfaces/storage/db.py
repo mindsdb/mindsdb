@@ -101,7 +101,6 @@ class Predictor(Base):
     training_start_at = Column(DateTime)
     training_stop_at = Column(DateTime)
 
-    json_ai = Column(Json, nullable=True)
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
     dtype_dict = Column(Json, nullable=True)

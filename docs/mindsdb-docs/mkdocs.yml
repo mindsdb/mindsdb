@@ -144,6 +144,7 @@ nav:
       - Email spam: sql/tutorials/spam_emails_tutorial.md
       - Mushrooms Hunting: sql/tutorials/mushrooms.md
       - Heart Disease: sql/tutorials/heart-disease.md
+    - Tutorials List: tutorials.md
   - Contributing Guide:
       - MindsDB Installation for Development: contribute/install.md
       - Bug Reports and Feature Requests: contribute/issues.md

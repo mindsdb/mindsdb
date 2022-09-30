@@ -1,6 +1,7 @@
 from typing import Optional
 
 from mindsdb.interfaces.storage.db import session, JsonStorage as JsonStorageTable
+from mindsdb.interfaces.storage.fs import RESOURCE_GROUP
 
 
 class JsonStorage:
@@ -69,8 +70,12 @@ class JsonStorage:
         if record is not None:
             session.delete(record)
 
+    def delete(self, key):
+        self.delete(key)
 
-def get_storage(resource_id, resource_group='predictor', company_id=None):
+
+def get_json_storage(resource_id: int, resource_group: str = RESOURCE_GROUP.PREDICTOR,
+                     company_id: int = None):
     return JsonStorage(
         resource_group=resource_group,
         resource_id=resource_id,

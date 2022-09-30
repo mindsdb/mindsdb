@@ -19,6 +19,7 @@ from mindsdb.interfaces.model.functions import (
     get_model_record,
     get_model_records
 )
+from mindsdb.interfaces.storage.json import get_json_storage
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -46,11 +47,16 @@ class ModelController():
         data['mindsdb_version'] = predictor_record.mindsdb_version
         data['name'] = predictor_record.name
         data['code'] = predictor_record.code
-        data['json_ai'] = predictor_record.json_ai
         data['problem_definition'] = predictor_record.learn_args
         data['fetch_data_query'] = predictor_record.fetch_data_query
         data['active'] = predictor_record.active
         data['status'] = predictor_record.status
+
+        json_storage = get_json_storage(
+            resource_id=predictor_record.id,
+            company_id=predictor_record.company_id
+        )
+        data['json_ai'] = json_storage.get('json_ai')
 
         if data.get('accuracies', None) is not None:
             if len(data['accuracies']) > 0:
@@ -137,6 +143,10 @@ class ModelController():
 
         # Serialize a predictor record into a dictionary 
         # move into the Predictor db class itself if we use it again somewhere
+        json_storage = get_json_storage(
+            resource_id=predictor_record.id,
+            company_id=predictor_record.company_id
+        )
         predictor_record_serialized = {
             'name': predictor_record.name,
             'data': predictor_record.data,
@@ -146,7 +156,7 @@ class ModelController():
             'is_custom': predictor_record.is_custom,
             'learn_args': predictor_record.learn_args,
             'update_status': predictor_record.update_status,
-            'json_ai': predictor_record.json_ai,
+            'json_ai': json_storage.get('json_ai'),
             'code': predictor_record.code,
             'lightwood_version': predictor_record.lightwood_version,
             'dtype_dict': predictor_record.dtype_dict,

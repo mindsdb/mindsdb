@@ -8,9 +8,9 @@ from pathlib import Path
 from copy import deepcopy
 from collections import OrderedDict
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
-from mindsdb.interfaces.storage.db import session, Integration
+from mindsdb.interfaces.storage.db import session, Integration, Predictor
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
@@ -84,8 +84,19 @@ class IntegrationController:
         session.commit()
 
     def delete(self, name, company_id=None):
+        if name in ('files', 'views', 'lightwood'):
+            raise Exception('Unable to drop: is system database')
+
         integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
-        # TODO del files!
+
+        # check linked predictors
+        predictor = session.query(Predictor.name).filter(or_(
+            Predictor.integration_id == integration_record.id,
+            Predictor.data_integration_id == integration_record.id
+        )).first()
+        if predictor is not None:
+            raise Exception(f'Unable to drop: is linked to predictor {predictor.name}')
+
         # integrations_dir = Config()['paths']['integrations']
         # folder_name = f'integration_files_{company_id}_{integration_record.id}'
         # integration_dir = os.path.join(integrations_dir, folder_name)

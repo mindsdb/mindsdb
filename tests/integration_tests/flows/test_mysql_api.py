@@ -50,7 +50,14 @@ class TestScenario:
             db_type.upper(),
             db_type,
             json.dumps(self.db_creds[db_type]))
-        return self.query(_query)
+
+        self.query(_query)
+        # and try to drop one of the datasources
+        if db_type == 'mysql':
+
+            self.query(f'drop datasource {db_type};')
+            # and create again
+            self.query(_query)
 
     @staticmethod
     def upload_ds(df, name):
@@ -152,9 +159,6 @@ class TestScenario:
             with self.subTest(msg=req):
                 print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{req}]")
                 self.query(req)
-
-    def test_6_drop_datasource(self):
-        self.query('drop datasource MYSQL;')
 
     def test_7_train_predictor_from_files(self):
         df = pd.DataFrame({

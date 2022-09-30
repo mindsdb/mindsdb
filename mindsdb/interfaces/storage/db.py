@@ -8,6 +8,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
 from sqlalchemy.sql.schema import ForeignKey
+from sqlalchemy import JSON
 
 
 if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
@@ -176,6 +177,15 @@ class View(Base):
         UniqueConstraint('name', 'company_id', name='unique_view_name_company_id'),
     )
 
+
+class JsonStorage(Base):
+    __tablename__ = 'json_storage'
+    id = Column(Integer, primary_key=True)
+    resource_group = Column(String)
+    resource_id = Column(Integer)
+    name = Column(String)
+    content = Column(JSON)
+    company_id = Column(Integer)
 
 # DDL is changing through migrations
 # Base.metadata.create_all(engine)

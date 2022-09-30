@@ -9,15 +9,7 @@ os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_S
 from mindsdb.migrations import migrate  # noqa
 migrate.migrate_to_head()
 
-from mindsdb.interfaces.storage.json import JsonStorage # noqa
-
-
-def get_storage(resource_id, resource_group='predictor', company_id=None):
-    return JsonStorage(
-        resource_group=resource_group,
-        resource_id=resource_id,
-        company_id=company_id
-    )
+from mindsdb.interfaces.storage.json import get_storage # noqa
 
 
 class Test(unittest.TestCase):
@@ -36,6 +28,16 @@ class Test(unittest.TestCase):
         another_storage_2 = get_storage(2)
         another_storage_2.set('x', {'y': 2})
         assert storage_2['x']['y'] == 2
+
+    def test_2_company_independent(self):
+        storage_1 = get_storage(1, company_id=1)
+        storage_1['x'] = {'y': 1}
+        assert storage_1['x']['y'] == 1
+
+        storage_2 = get_storage(1, company_id=2)
+        assert storage_2['x'] is None
+        storage_2['x'] = {'y': 2}
+        assert storage_1['x']['y'] != storage_2['x']['y']
 
 
 if __name__ == '__main__':

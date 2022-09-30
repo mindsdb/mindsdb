@@ -68,3 +68,11 @@ class JsonStorage:
         record = self.get_record(key)
         if record is not None:
             session.delete(record)
+
+
+def get_storage(resource_id, resource_group='predictor', company_id=None):
+    return JsonStorage(
+        resource_group=resource_group,
+        resource_id=resource_id,
+        company_id=company_id
+    )

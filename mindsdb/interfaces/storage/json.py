@@ -26,9 +26,17 @@ class JsonStorage:
             existing_record.content = value
         session.commit()
 
+    def set(self, key, value):
+        self[key] = value
+
     def __getitem__(self, key):
         record = self.get_record(key)
+        if record is None:
+            return None
         return record.content
+
+    def get(self, key):
+        return self[key]
 
     def get_record(self, key):
         record = session.query(JsonStorageTable).filter_by(

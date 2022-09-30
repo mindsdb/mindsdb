@@ -22,12 +22,20 @@ def get_storage(resource_id, resource_group='predictor', company_id=None):
 
 class Test(unittest.TestCase):
     def test_1_insert(self):
-        storage = get_storage(1)
-        storage['x'] = {'y': 1}
-        assert storage['x']['y'] == 1
+        storage_1 = get_storage(1)
+        storage_1['x'] = {'y': 1}
+        assert storage_1['x']['y'] == 1
+        assert storage_1['x']['y'] == storage_1.get('x')['y']
 
-        another_storage = get_storage(1)
-        assert another_storage['x']['y'] == storage['x']['y']
+        another_storage_1 = get_storage(1)
+        assert another_storage_1['x']['y'] == storage_1['x']['y']
+
+        storage_2 = get_storage(2)
+        assert storage_2['x'] is None
+
+        another_storage_2 = get_storage(2)
+        another_storage_2.set('x', {'y': 2})
+        assert storage_2['x']['y'] == 2
 
 
 if __name__ == '__main__':

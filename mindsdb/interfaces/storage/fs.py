@@ -1,4 +1,6 @@
+import json
 import os
+import re
 import shutil
 import hashlib
 from pathlib import Path
@@ -395,12 +397,17 @@ class ModelStorage:
 
     # jsons
 
-    def json_set(self, name, content):
-        ...
+    def json_set(self, name, data):
+        content = json.dumps(data)
+        self.file_set(f'json_{name}', content)
+
     def json_get(self, name):
-        ...
+        content = self.file_get(f'json_{name}')
+        return json.loads(content)
+
     def json_list(self):
         ...
+
     def json_del(self, name):
         ...
 
@@ -434,13 +441,28 @@ class HandlerStorage:
     def file_del(self, name):
         ...
 
+    # folder
+
+    def folder_get(self, name):
+        # pull folder and return path
+        name = name.lower().replace(' ', '_')
+        name = re.sub('[^a-z^_^.^\d]*', '', name)
+
+        return self.fileStorage.get_path(name)
+
+    def folder_sync(self, name):
+        # sync abs path
+        self.fileStorage.push()
+
     # jsons
 
     def json_set(self, name, content):
         ...
     def json_get(self, name):
         ...
+
     def json_list(self):
         ...
+
     def json_del(self, name):
         ...

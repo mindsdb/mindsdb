@@ -167,7 +167,7 @@ SELECT * FROM mongo (
 
 1. Subselect on data from integration.
 
-It can be useful in cases when ingration engine doesn't support some functions, for example grouping.
+It can be useful in cases when integration engine doesn't support some functions, for example grouping.
 In that case all data from raw select are passed to mindsdb and then subselect performs on them inside mindsdb
 
 ```sql

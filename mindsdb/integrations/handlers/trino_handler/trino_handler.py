@@ -4,7 +4,7 @@ from mindsdb_sql import parse_sql, ASTNode
 from trino.auth import KerberosAuthentication, BasicAuthentication
 from trino.dbapi import connect
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -52,16 +52,42 @@ class TrinoHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
-        conn = connect(
-            host=self.connection_data['host'],
-            port=self.connection_data['port'],
-            user=self.connection_data['user'],
-            catalog=self.connection_data['catalog'],
-            schema=self.connection_data['schema'],
-            # @TODO: Implement Kerberos or Basic auth
-            # http_scheme='https',
-            # auth=BasicAuthentication(self.connection_data['user'], self.connection_data['password'])
-        )
+
+        # option configuration
+        http_scheme='http'
+        auth=None
+        auth_config=None
+        password=None
+
+        if 'auth' in self.connection_data:
+            auth=self.connection_data['auth']
+        if 'password' in self.connection_data:
+            password=self.connection_data['password']
+        if 'http_scheme' in self.connection_data:
+           http_scheme=self.connection_data['http_scheme']
+
+        if password and auth=='kerberos':
+            raise Exception("Kerberos authorization doesn't support password.")
+        elif password:
+            auth_config=BasicAuthentication(self.connection_data['user'], password)
+
+        if auth:
+            conn = connect(
+                host=self.connection_data['host'],
+                port=self.connection_data['port'],
+                user=self.connection_data['user'],
+                catalog=self.connection_data['catalog'],
+                schema=self.connection_data['schema'],
+                http_scheme=http_scheme,
+                auth=auth_config)
+        else:
+            conn = connect(
+                host=self.connection_data['host'],
+                port=self.connection_data['port'],
+                user=self.connection_data['user'],
+                catalog=self.connection_data['catalog'],
+                schema=self.connection_data['schema'])
+
         self.is_connected = True
         self.connection = conn
         return conn

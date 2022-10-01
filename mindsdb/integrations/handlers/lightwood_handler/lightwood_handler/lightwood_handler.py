@@ -23,7 +23,7 @@ from lightwood import __version__ as lightwood_version
 from lightwood.api import dtype
 import numpy as np
 
-from mindsdb.integrations.libs.base_handler import PredictiveHandler
+from mindsdb.integrations.libs.base import PredictiveHandler
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
 from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.log import log
@@ -85,7 +85,8 @@ class LightwoodHandler(PredictiveHandler):
         self.dialect = 'mindsdb'
 
         self.handler_controller = kwargs.get('handler_controller')
-        self.fs_store = kwargs.get('fs_store')
+        self.fs_store = kwargs.get('file_storage')
+        self.storage_factory = kwargs.get('storage_factory')
         self.company_id = kwargs.get('company_id')
         self.model_controller = WithKWArgsWrapper(
             ModelController(),
@@ -294,7 +295,16 @@ class LightwoodHandler(PredictiveHandler):
 
         predictor_id = predictor_record.id
 
-        p = HandlerProcess(run_learn, training_data_df, problem_definition, predictor_id, json_ai_override)
+        # predictor_storage = self.storage_factory(predictor_id)
+
+        p = HandlerProcess(
+            run_learn,
+            training_data_df,
+            problem_definition,
+            predictor_id,
+            json_ai_override,
+            self.company_id
+        )
         p.start()
         if join_learn_process:
             p.join()
@@ -393,7 +403,8 @@ class LightwoodHandler(PredictiveHandler):
                 predictor_record.status = PREDICTOR_STATUS.DELETED
             else:
                 db.session.delete(predictor_record)
-            self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
+            predictor_storage = self.storage_factory(predictor_record.id)
+            predictor_storage.delete()
         db.session.commit()
 
         return Response(RESPONSE_TYPE.OK)
@@ -426,17 +437,19 @@ class LightwoodHandler(PredictiveHandler):
             if psutil.virtual_memory().available < 1.2 * pow(10, 9):
                 self.predictor_cache = {}
 
+            predictor_storage = self.storage_factory(predictor_record.id)
+
             if model_data['status'] == 'complete':
-                self.fs_store.get(fs_name, base_dir=self.config['paths']['predictors'])
+                predictor_storage.pull()
                 self.predictor_cache[model_name] = {
                     'predictor': lightwood.predictor_from_state(
-                        os.path.join(self.config['paths']['predictors'], fs_name),
+                        os.path.join(predictor_storage.folder_path, fs_name),
                         predictor_record.code
                     ),
                     'updated_at': predictor_record.updated_at,
                     'created': datetime.now(),
                     'code': predictor_record.code,
-                    'pickle': str(os.path.join(self.config['paths']['predictors'], fs_name))
+                    'pickle': str(os.path.join(predictor_storage.folder_path, fs_name))
                 }
             else:
                 raise Exception(
@@ -584,7 +597,7 @@ class LightwoodHandler(PredictiveHandler):
                         if isinstance(rows[i][order_by_column], list):
                             rows[i][order_by_column] = rows[i][order_by_column][0]
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if horizon > 1:
+                        if horizon > 1 and col in explanations[i][predict]:
                             explanations[i][predict][col] = explanations[i][predict][col][0]
 
                 last_row = rows.pop()
@@ -601,7 +614,7 @@ class LightwoodHandler(PredictiveHandler):
 
                     new_explanation = copy.deepcopy(last_explanation)
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if horizon > 1:
+                        if horizon > 1 and col in new_explanation[predict]:
                             new_explanation[predict][col] = new_explanation[predict][col][i]
                     if i != 0:
                         new_explanation[predict]['anomaly'] = None
@@ -621,11 +634,11 @@ class LightwoodHandler(PredictiveHandler):
             if predictor_record.dtype_dict[order_by_column] == dtype.date:
                 for row in pred_dicts:
                     if isinstance(row[order_by_column], (int, float)):
-                        row[order_by_column] = str(datetime.fromtimestamp(row[order_by_column]).date())
+                        row[order_by_column] = datetime.fromtimestamp(row[order_by_column]).date()
             elif predictor_record.dtype_dict[order_by_column] == dtype.datetime:
                 for row in pred_dicts:
                     if isinstance(row[order_by_column], (int, float)):
-                        row[order_by_column] = str(datetime.fromtimestamp(row[order_by_column]))
+                        row[order_by_column] = datetime.fromtimestamp(row[order_by_column])
 
             explain_arr = explanations
         # endregion

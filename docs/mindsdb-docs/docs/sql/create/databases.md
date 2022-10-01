@@ -1344,7 +1344,7 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 
     ```sql
     CREATE DATABASE trino_datasource          --- display name for the database
-    WITH ENGINE='trinodb',                    --- name of the MindsDB handler
+    WITH ENGINE='trino',                      --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                            --- host name or IP address
       "port": ,                               --- port used to make TCP/IP connection
@@ -1359,7 +1359,7 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 
     ```sql
     CREATE DATABASE trino_datasource
-    WITH ENGINE='trinodb',
+    WITH ENGINE='trino',
     PARAMETERS={
       "host": "127.0.0.1",
       "port": 8080,

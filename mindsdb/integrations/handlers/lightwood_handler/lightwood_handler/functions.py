@@ -12,13 +12,9 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 import lightwood
 from lightwood.api.types import ProblemDefinition, JsonAI
-from lightwood import __version__ as lightwood_version
 
-from mindsdb import __version__ as mindsdb_version
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.storage.db import session, Predictor
-from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
@@ -27,6 +23,7 @@ from mindsdb.interfaces.model.functions import (
     get_model_record,
     get_model_records
 )
+from mindsdb.interfaces.storage.fs import FileStorage, RESOURCE_GROUP
 
 from .utils import rep_recur, brack_to_mod
 
@@ -65,13 +62,10 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
 
 
 @mark_process(name='learn')
-def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
+def run_fit(predictor_id: int, df: pd.DataFrame, company_id: int) -> None:
     try:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
         assert predictor_record is not None
-
-        fs_store = FsStore()
-        config = Config()
 
         predictor_record.data = {'training_log': 'training'}
         predictor_record.status = PREDICTOR_STATUS.TRAINING
@@ -81,11 +75,14 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
 
         db.session.refresh(predictor_record)
 
-        fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
-        pickle_path = os.path.join(config['paths']['predictors'], fs_name)
-        predictor.save(pickle_path)
-
-        fs_store.put(fs_name, base_dir=config['paths']['predictors'])
+        fs = FileStorage(
+            resource_group=RESOURCE_GROUP.PREDICTOR,
+            resource_id=predictor_id,
+            company_id=company_id,
+            sync=True
+        )
+        predictor.save(fs.folder_path / fs.folder_name)
+        fs.push()
 
         predictor_record.data = predictor.model_analysis.to_dict()
 
@@ -128,7 +125,7 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
 
 @mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
-              json_ai_override: dict = None) -> None:
+              json_ai_override: dict = None, company_id: int = None) -> None:
     if json_ai_override is None:
         json_ai_override = {}
 
@@ -138,7 +135,7 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
 
     try:
         run_generate(df, problem_definition, predictor_id, json_ai_override)
-        run_fit(predictor_id, df)
+        run_fit(predictor_id, df, company_id)
     except Exception as e:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)
         print(traceback.format_exc())
@@ -161,9 +158,6 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
 
 @mark_process(name='learn')
 def run_update(predictor_id: int, df: DataFrame, company_id: int):
-    fs_store = FsStore()
-    config = Config()
-
     try:
         predictor_record = Predictor.query.filter_by(id=predictor_id).first()
 
@@ -186,10 +180,15 @@ def run_update(predictor_id: int, df: DataFrame, company_id: int):
         predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
         predictor.learn(df)
 
-        fs_name = f'predictor_{predictor_record.company_id}_{predictor_record.id}'
-        pickle_path = os.path.join(config['paths']['predictors'], fs_name)
-        predictor.save(pickle_path)
-        fs_store.put(fs_name, base_dir=config['paths']['predictors'])
+        fs = FileStorage(
+            resource_group=RESOURCE_GROUP.PREDICTOR,
+            resource_id=predictor_id,
+            company_id=company_id,
+            sync=True
+        )
+        predictor.save(fs.folder_path / fs.folder_name)
+        fs.push()
+
         predictor_record.data = predictor.model_analysis.to_dict()
         predictor_record.update_status = 'up_to_date'
         predictor_record.dtype_dict = predictor.dtype_dict

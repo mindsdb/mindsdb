@@ -1,12 +1,14 @@
 # Making Predictions using the ML Models
 
-## Using the `find()` Method
+## The `find()` Method
 
 ### Description
 
 The `find()` method is used to get predictions from the model table. The data is not persistent - it is returned on the fly as a result-document.
 
 ### Syntax
+
+Here is the syntax:
 
 ```sql
 db.predictor_name.find({column: "value", column: "value"});
@@ -34,12 +36,12 @@ Where:
 
 | Expressions                        | Description                                                                                                                      |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `"<target_variable>_original"`     | The real value of the target variable from the collection                                                                        |
-| `"<target_variable>_confidence"`   | Model confidence                                                                                                                 |
-| `"<target_variable>_explain"`      | JSON object that contains additional information, such as `confidence_lower_bound`, `confidence_upper_bound`, `anomaly`, `truth` |
-| `"<[target_variable>_anomaly"`     | Model anomaly                                                                                                                    |
-| `"<[target_variable>_min"`         | Lower bound value                                                                                                                |
-| `"<[target_variable>_max"`         | Upper bound value                                                                                                                |
+| `"<target_variable>_original"`     | The real value of the target variable from the collection.                                                                       |
+| `"<target_variable>_confidence"`   | Model confidence.                                                                                                                |
+| `"<target_variable>_explain"`      | JSON object that contains additional information, such as `predicted_value`, `confidence`, `anomaly`, `truth`, `confidence_lower_bound`, `confidence_upper_bound`.|
+| `"<[target_variable>_anomaly"`     | Model anomaly.                                                                                                                   |
+| `"<[target_variable>_min"`         | Lower bound value.                                                                                                               |
+| `"<[target_variable>_max"`         | Upper bound value.                                                                                                               |
 
 ## Example
 

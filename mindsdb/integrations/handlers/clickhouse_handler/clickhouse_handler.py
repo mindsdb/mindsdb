@@ -1,7 +1,8 @@
 from mindsdb.utilities.log import log
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 import clickhouse_driver
+from sqlalchemy import create_engine
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
 import pandas as pd
 from mindsdb.integrations.libs.response import (
@@ -27,6 +28,7 @@ class ClickHouseHandler(DatabaseHandler):
         self.connection_data = connection_data
         self.renderer = SqlalchemyRender(ClickHouseDialect)
         self.is_connected = False
+        self.protocol = connection_data.get('protocol', 'native')
 
     def __del__(self):
         if self.is_connected is True:
@@ -39,13 +41,18 @@ class ClickHouseHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        connection = clickhouse_driver.connect(
-            host=self.connection_data['host'],
-            port=self.connection_data['port'],
-            database=self.connection_data['database'],
-            user=self.connection_data['user'],
-            password=self.connection_data['password']
-        )
+        protocol = "clickhouse+native" if self.protocol == 'native' else "clickhouse+http"
+        host = self.connection_data['host']
+        port = self.connection_data['port']
+        user = self.connection_data['user']
+        password = self.connection_data['password']
+        database = self.connection_data['database']
+        url = f'{protocol}://{user}:{password}@{host}:{port}/{database}'
+        if self.protocol == 'https':
+            url = url + "?protocol=https"
+
+        engine = create_engine(url)
+        connection = engine.raw_connection()
         self.is_connected = True
         self.connection = connection
         return self.connection
@@ -60,9 +67,11 @@ class ClickHouseHandler(DatabaseHandler):
 
         try:
             connection = self.connect()
-
-            with connection.cursor() as cur:
+            cur = connection.cursor()
+            try:
                 cur.execute('select 1;')
+            finally:
+                cur.close()
             response.success = True
         except Exception as e:
             log.error(f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!')
@@ -84,28 +93,30 @@ class ClickHouseHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         connection = self.connect()
-        with connection.cursor() as cur:
-            try:
-                cur.execute(query)
-                result = cur.fetchall()
-                if result:
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        )
-                    )
-                else:
-                    response = Response(RESPONSE_TYPE.OK)
-                connection.commit()
-            except Exception as e:
-                log.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+        cur = connection.cursor()
+        try:
+            cur.execute(query)
+            result = cur.fetchall()
+            if result:
                 response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
+                    RESPONSE_TYPE.TABLE,
+                    pd.DataFrame(
+                        result,
+                        columns=[x[0] for x in cur.description]
+                    )
                 )
-                connection.rollback()
+            else:
+                response = Response(RESPONSE_TYPE.OK)
+            connection.commit()
+        except Exception as e:
+            log.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+            connection.rollback()
+        finally:
+            cur.close()
 
         if need_to_close is True:
             self.disconnect()
@@ -133,12 +144,16 @@ class ClickHouseHandler(DatabaseHandler):
         """
         Show details about the table
         """
-        q = f"DESCRIBE {table_name};"
+        q = f"DESCRIBE {table_name}"
         result = self.native_query(q)
         return result
 
 
 connection_args = OrderedDict(
+    protocol={
+        'type': ARG_TYPE.STR,
+        'protocol': 'The protocol to query clickhouse. Supported: native, http, https. Default: native'
+    },
     user={
         'type': ARG_TYPE.STR,
         'description': 'The user name used to authenticate with the ClickHouse server.'
@@ -162,6 +177,7 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
+    protocol='native',
     host='127.0.0.1',
     port=9000,
     user='root',

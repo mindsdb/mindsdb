@@ -11,11 +11,16 @@
 
 import re
 from collections import OrderedDict, defaultdict
+import datetime
 import time
+import hashlib
+import datetime as dt
 
+import dateinfer
 import duckdb
 import pandas as pd
 import numpy as np
+
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
@@ -28,7 +33,10 @@ from mindsdb_sql.parser.ast import (
     Join,
     Star,
     Insert,
+    Update,
     Delete,
+    Latest,
+    BetweenOperation,
 )
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
@@ -43,6 +51,7 @@ from mindsdb_sql.planner.steps import (
     ProjectStep,
     SaveToTable,
     InsertToTable,
+    UpdateToTable,
     FilterStep,
     UnionStep,
     JoinStep,
@@ -55,6 +64,7 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
 
+import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
@@ -209,6 +219,109 @@ class Column:
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.__dict__})'
+
+
+class ResultSet:
+    def __init__(self):
+        self.columns = []
+        # records is list of lists with the same length as columns
+        self.records = []
+
+    def from_step_data(self, step_data):
+
+        for table, col_list in step_data['columns'].items():
+            for col in col_list:
+                type = None
+                if 'types' in step_data:
+                    type = step_data['types'].get(table, {}).get(col[0])
+                self.columns.append(Column(
+                    name=col[0],
+                    alias=col[1],
+                    type=type,
+                    table_name=table[1],
+                    table_alias=table[2],
+                    database=table[0]
+                ))
+
+        for row in step_data['values']:
+            data_row = []
+            for col in self.columns:
+                col_key = (col.name, col.alias)
+                table_key = (col.database, col.table_name, col.table_alias)
+                val = row[table_key][col_key]
+
+                data_row.append(val)
+
+            self.records.append(data_row)
+
+    def from_df(self, df, database, table_name):
+
+        resp_dict = df.to_dict(orient='split')
+
+        self.records = resp_dict['data']
+
+        for col in resp_dict['columns']:
+            self.columns.append(Column(
+                name=col,
+                table_name=table_name,
+                database=database,
+                type=df.dtypes[col]
+            ))
+
+    def to_df(self):
+        columns = [
+            col.name if col.alias is None else col.alias
+            for col in self.columns
+        ]
+
+        return pd.DataFrame(self.records, columns=columns)
+
+    def to_step_data(self):
+        step_data = {
+            'values': [],
+            'columns': {},
+            'types': {},
+            'tables': []
+        }
+
+        for col in self.columns:
+            col_key = (col.name, col.alias)
+            table_key = (col.database, col.table_name, col.table_alias)
+
+            if not table_key in step_data['tables']:
+                step_data['tables'].append(table_key)
+                step_data['columns'][table_key] = []
+                step_data['types'][table_key] = {}
+
+            step_data['columns'][table_key].append(col_key)
+            if col.type is not None:
+                step_data['types'][table_key][col.name] = col.type
+
+        for rec in self.records:
+            row = {}
+            for table in step_data['tables']:
+                row[table] = {}
+            for i, col in enumerate(self.columns):
+                col_key = (col.name, col.alias)
+                table_key = (col.database, col.table_name, col.table_alias)
+
+                row[table_key][col_key] = rec[i]
+
+            step_data['values'].append(row)
+        return step_data
+
+    def clear_records(self):
+        self.records = []
+
+    def replace_records(self, records):
+        self.clear_records()
+        for rec in records:
+            self.add_record(rec)
+
+    def add_record(self, rec):
+        if len(rec) != len(self.columns):
+            raise ErSqlWrongArguments(f'Record length mismatch columns length: {len(rec)} != {len(self.columns)}')
+        self.records.append(rec)
 
 
 class SQLQuery():
@@ -775,11 +888,40 @@ class SQLQuery():
         elif type(step) == FetchDataframeStep:
             data = self._fetch_dataframe_step(step)
         elif type(step) == UnionStep:
-            raise ErNotSupportedYet('Union step is not implemented')
-            # TODO add union support
-            # left_data = steps_data[step.left.step_num]
-            # right_data = steps_data[step.right.step_num]
-            # data = left_data + right_data
+            left_result = ResultSet()
+            right_result = ResultSet()
+
+            left_result.from_step_data(steps_data[step.left.step_num])
+            right_result.from_step_data(steps_data[step.right.step_num])
+
+            # count of columns have to match
+            if len(left_result.columns) != len(right_result.columns):
+                raise ErSqlWrongArguments(
+                    f'UNION columns count mismatch: {len(left_result.columns)} != {len(right_result.columns)} ')
+
+            # types have to match
+            # TODO: return checking type later
+            # for i, left_col in enumerate(left_result.columns):
+            #     right_col = right_result.columns[i]
+            #     type1, type2 = left_col.type, right_col.type
+            #     if type1 is not None and type2 is not None:
+            #         if type1 != type2:
+            #             raise ErSqlWrongArguments(f'UNION types mismatch: {type1} != {type2}')
+
+            records = []
+            records_hashes = []
+            for rec in left_result.records + right_result.records:
+                if step.unique:
+                    checksum = hashlib.sha256(str(rec).encode()).hexdigest()
+                    if checksum in records_hashes:
+                        continue
+                    records_hashes.append(checksum)
+                records.append(rec)
+
+            left_result.replace_records(records)
+
+            data = left_result.to_step_data()
+
         elif type(step) == MapReduceStep:
             try:
                 if step.reduce != 'union':
@@ -943,22 +1085,28 @@ class SQLQuery():
                             where_data=where_data,
                             ml_handler_name=ml_handler_name
                         )
-                        predictor_cache.set(key, data)
+                        if data is not None and isinstance(data, list):
+                            predictor_cache.set(key, data)
+
+                    if len(data) > 0:
+                        row = data[0]
+                        columns[table_name] = [(key, key) for key in row.keys()]
+
+                    # apply filter
+                    if is_timeseries:
+                        data = self.apply_ts_filter(data, where_data, step, predictor_metadata)
 
                     data = [{(key, key): value for key, value in row.items()} for row in data]
 
                     values = [{table_name: x} for x in data]
 
-                    if len(data) > 0:
-                        row = data[0]
-                        columns[table_name] = list(row.keys())
-                    # TODO else
 
                 data = {
                     'values': values,
                     'columns': columns,
                     'tables': [table_name],
-                    'types': {table_name: self.model_types}
+                    'types': {table_name: self.model_types},
+                    'is_prediction': True  # for join step
                 }
             except Exception as e:
                 raise SqlApiUnknownError(f'error in apply predictor step: {e}') from e
@@ -976,8 +1124,6 @@ class SQLQuery():
 
                 if step.query.condition is not None:
                     raise ErNotSupportedYet('At this moment supported only JOIN without condition')
-                if step.query.join_type.upper() not in ('LEFT JOIN', 'JOIN'):
-                    raise ErNotSupportedYet('At this moment supported only JOIN and LEFT JOIN')
 
                 if len(left_data['tables']) == 0 or len(right_data['tables']) == 0:
                     raise ErLogicError('Table for join is not found')
@@ -1036,13 +1182,22 @@ class SQLQuery():
                 df_a = pd.DataFrame(left_df_data, columns=left_columns_map.keys())
                 df_b = pd.DataFrame(right_df_data, columns=right_columns_map.keys())
 
-                a_name = f'a{round(time.time() * 1000)}'
-                b_name = f'b{round(time.time() * 1000)}'
+                a_name = 'table_a'
+                b_name = 'table_b'
                 con = duckdb.connect(database=':memory:')
                 con.register(a_name, df_a)
                 con.register(b_name, df_b)
+
+                join_type = step.query.join_type.lower()
+                if join_type == 'join':
+                    # join type is not specified. using join to prediction data
+                    if left_data.get('is_prediction'):
+                        join_type = 'left join'
+                    elif right_data.get('is_prediction'):
+                        join_type = 'right join'
+
                 resp_df = con.execute(f"""
-                    SELECT * FROM {a_name} as ta full join {b_name} as tb
+                    SELECT * FROM {a_name} as ta {join_type} {b_name} as tb
                     ON ta.{left_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                      = tb.{right_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
                 """).fetchdf()
@@ -1062,32 +1217,6 @@ class SQLQuery():
                             new_row[right_key][right_columns_map[key]] = value
                     data['values'].append(new_row)
 
-                # remove all records with empty data from predictor from join result
-                # otherwise there are emtpy records in the final result:
-                # +------------+------------+-------+-----------+----------+
-                # | time       | time       | state | pnew_case | new_case |
-                # +------------+------------+-------+-----------+----------+
-                # | 2020-10-21 | 2020-10-24 | CA    | 0.0       | 5945.0   |
-                # | 2020-10-22 | 2020-10-23 | CA    | 0.0       | 6141.0   |
-                # | 2020-10-23 | 2020-10-22 | CA    | 0.0       | 2940.0   |
-                # | 2020-10-24 | 2020-10-21 | CA    | 0.0       | 3707.0   |
-                # | NULL       | 2020-10-20 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-19 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-18 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-17 | NULL  | nan       | nan      |
-                # | NULL       | 2020-10-16 | NULL  | nan       | nan      |
-                # +------------+------------+-------+-----------+----------+
-                # 9 rows in set (2.07 sec)
-
-                # if is_timeseries:
-                #     data_values = []
-                #     for row in data['values']:
-                #         for key in row:
-                #             if 'mindsdb' in key:
-                #                 if not is_empty_prediction_row(row[key]):
-                #                     data_values.append(row)
-                #                     break
-                #     data['values'] = data_values
             except Exception as e:
                 raise SqlApiUnknownError(f'error in join step: {e}') from e
 
@@ -1372,63 +1501,22 @@ class SQLQuery():
             else:
                 table_name = table_name
 
-            def step_data_to_df(step_data):
-                result = []
-                cols = set()
-                for _, col_list in step_data['columns'].items():
-                    for col in col_list:
-                        cols.add(col[1])
-
-                for row in step_data['values']:
-                    data_row = {}
-                    for table, col_list in step_data['columns'].items():
-                        for col in col_list:
-                            data_row[col[1]] = row[table][col]
-                    result.append(data_row)
-                df = pd.DataFrame(result, columns=list(cols))
-
-                return df
-
-            def df_to_step_data(res, step_data0, table_name):
-                resp_dict = res.to_dict(orient='records')
-
-                # get from first table
-                database = step_data0['tables'][0][0]
-                appropriate_table = (database, table_name, table_name)
-
-                columns = []
-                for key, dtyp in res.dtypes.items():
-
-                    columns.append((key, key))
-
-                values = []
-                for row in resp_dict:
-                    row2 = {
-                        (key, key): value
-                        for key, value in row.items()
-                    }
-
-                    values.append(
-                        {
-                            appropriate_table: row2
-                        }
-                    )
-
-                types = step_data0.get('types', {})
-                data = {
-                    'tables': [appropriate_table],
-                    'columns': {appropriate_table: columns},
-                    'values': values,
-                    'types': types  # copy
-                }
-                return data
+            result = ResultSet()
+            result.from_step_data(step_data)
 
             query = step.query
             query.from_table = Identifier('df_table')
-            df = step_data_to_df(step_data)
+
+            df = result.to_df()
             res = query_df(df, query)
 
-            data = df_to_step_data(res, step_data, table_name)
+            result2 = ResultSet()
+            # get database from first column
+            database = result.columns[0].database
+            result2.from_df(res, database, table_name)
+
+            data = result2.to_step_data()
+
 
         elif type(step) == SaveToTable or type(step) == InsertToTable:
             is_replace = False
@@ -1508,26 +1596,242 @@ class SQLQuery():
                 is_create=is_create
             )
             data = None
+        elif type(step) == UpdateToTable:
+
+            step_data = step.dataframe.result_data
+            integration_name = step.table.parts[0]
+            table_name_parts = step.table.parts[1:]
+
+            dn = self.datahub.get(integration_name)
+
+            result = ResultSet()
+            result.from_step_data(step_data)
+
+            # link nodes with parameters for fast replacing with values
+            input_table_alias = step.update_command.from_select_alias.parts[0]
+
+            params_map_index = []
+
+            def prepare_map_index(node, is_table, **kwargs):
+                if isinstance(node, Identifier) and not is_table:
+                    # is input table field
+                    if node.parts[0] == input_table_alias:
+                        node2 = Constant(None)
+                        param_name = node.parts[-1]
+                        params_map_index.append([param_name, node2])
+                        # replace node with constant
+                        return node2
+                    elif node.parts[0] == table_name_parts[0]:
+                        # remove updated table alias
+                        node.parts = node.parts[1:]
+
+            # make command
+            update_query = Update(
+                table=Identifier(parts=table_name_parts),
+                update_columns=step.update_command.update_columns,
+                where=step.update_command.where
+            )
+            # do mapping
+            query_traversal(update_query, prepare_map_index)
+
+            # check all params is input data:
+            data_header = [col.alias for col in result.columns]
+
+            for param_name, _ in params_map_index:
+                if param_name not in data_header:
+                    raise ErSqlWrongArguments(f'Field {param_name} not found in input data. Input fields: {data_header}')
+
+            # perform update
+            for values in result.records:
+                # run update from every row from input data
+                row = dict(zip(data_header, values))
+
+                # fill params:
+                for param_name, param in params_map_index:
+                    param.value = row[param_name]
+
+                # execute
+                dn.query(query=update_query)
+
+            data = None
         else:
             raise ErLogicError(F'Unknown planner step: {step}')
         return data
 
-    # Is not used
-    # def _apply_where_filter(self, row, where):
-    #     if isinstance(where, Identifier):
-    #         return row[where.value]
-    #     elif isinstance(where, Constant):
-    #         return where.value
-    #     elif not isinstance(where, (UnaryOperation, BinaryOperation)):
-    #         raise SqlApiException(f'Unknown operation type: {where}')
-    #
-    #     op_fn = operator_map.get(where.op)
-    #     if op_fn is None:
-    #         raise SqlApiException(f'unknown operator {where.op}')
-    #
-    #     args = [self._apply_where_filter(row, arg) for arg in where.args]
-    #     result = op_fn(*args)
-    #     return result
+    def apply_ts_filter(self, predictor_data, table_data, step, predictor_metadata):
+
+        if step.output_time_filter is None:
+            # no filter, exit
+            return predictor_data
+
+            # apply filter
+        group_cols = predictor_metadata['group_by_columns']
+        order_col = predictor_metadata['order_by_column']
+
+        filter_args = step.output_time_filter.args
+        filter_op = step.output_time_filter.op
+
+        # filter field must be order column
+        if not (
+            isinstance(filter_args[0], Identifier)
+            and filter_args[0].parts[-1] == order_col
+        ):
+            # exit otherwise
+            return predictor_data
+
+
+        def get_date_format(samples):
+            # dateinfer reads sql date 2020-04-01 as yyyy-dd-mm. workaround for in
+            for date_format, pattern in (
+                    ('%Y-%m-%d', '[\d]{4}-[\d]{2}-[\d]{2}'),
+                    # ('%Y', '[\d]{4}')
+            ):
+                if re.match(pattern, samples[0]):
+                    # suggested format
+                    for sample in samples:
+                        try:
+                            dt.datetime.strptime(sample, date_format)
+                        except ValueError:
+                            date_format = None
+                            break
+                    if date_format is not None:
+                        return date_format
+
+            return dateinfer.infer(samples)
+
+        if self.model_types.get(order_col) in ('float', 'integer'):
+            # convert strings to digits
+            fnc = {
+                'integer': int,
+                'float': float
+            }[self.model_types[order_col]]
+
+
+            # convert predictor_data
+            if len(predictor_data) > 0:
+                if isinstance(predictor_data[0][order_col], str):
+
+                    for row in predictor_data:
+                        row[order_col] = fnc(row[order_col])
+                elif isinstance(predictor_data[0][order_col], dt.date):
+                    # convert to datetime
+                    for row in predictor_data:
+                        row[order_col] = fnc(row[order_col])
+
+            # convert predictor_data
+            if isinstance(table_data[0][order_col], str):
+
+                for row in table_data:
+                    row[order_col] = fnc(row[order_col])
+            elif isinstance(table_data[0][order_col], dt.date):
+                # convert to datetime
+                for row in table_data:
+                    row[order_col] = fnc(row[order_col])
+
+            # convert args to date
+            samples = [
+                arg.value
+                for arg in filter_args
+                if isinstance(arg, Constant) and isinstance(arg.value, str)
+            ]
+            if len(samples) > 0:
+
+                for arg in filter_args:
+                    if isinstance(arg, Constant) and isinstance(arg.value, str):
+                        arg.value = fnc(arg.value)
+
+        if self.model_types.get(order_col) in ('date', 'datetime'):
+            # convert strings to date
+            # it is making side effect on original data by changing it but let it be
+
+            # convert predictor_data
+            if len(predictor_data) > 0:
+                if isinstance(predictor_data[0][order_col], str):
+                    samples = [row[order_col] for row in predictor_data]
+                    date_format = get_date_format(samples)
+
+                    for row in predictor_data:
+                        row[order_col] = dt.datetime.strptime(row[order_col], date_format)
+                elif isinstance(predictor_data[0][order_col], dt.date):
+                    # convert to datetime
+                    for row in predictor_data:
+                        row[order_col] = dt.datetime.combine(row[order_col], dt.datetime.min.time())
+
+            # convert predictor_data
+            if isinstance(table_data[0][order_col], str):
+                samples = [row[order_col] for row in table_data]
+                date_format = get_date_format(samples)
+
+                for row in table_data:
+                    row[order_col] = dt.datetime.strptime(row[order_col], date_format)
+            elif isinstance(table_data[0][order_col], dt.date):
+                # convert to datetime
+                for row in table_data:
+                    row[order_col] = dt.datetime.combine(row[order_col], dt.datetime.min.time())
+
+            # convert args to date
+            samples = [
+                arg.value
+                for arg in filter_args
+                if isinstance(arg, Constant) and isinstance(arg.value, str)
+            ]
+            if len(samples) > 0:
+                date_format = get_date_format(samples)
+
+                for arg in filter_args:
+                    if isinstance(arg, Constant) and isinstance(arg.value, str):
+                        arg.value = dt.datetime.strptime(arg.value, date_format)
+            # TODO can be dt.date in args?
+
+        # first pass: get max values for Latest in table data
+        latest_vals = {}
+        if Latest() in filter_args:
+
+            for row in table_data:
+                key = tuple([str(row[i]) for i in group_cols])
+                val = row[order_col]
+                if key not in latest_vals or latest_vals[key] < val:
+                    latest_vals[key] = val
+
+        # second pass: do filter rows
+        data2 = []
+        for row in predictor_data:
+            val = row[order_col]
+
+            if isinstance(step.output_time_filter, BetweenOperation):
+                if val >= filter_args[1].value and val <= filter_args[2].value:
+                    data2.append(row)
+            elif isinstance(step.output_time_filter, BinaryOperation):
+                op_map = {
+                    '<': '__lt__',
+                    '<=': '__le__',
+                    '>': '__gt__',
+                    '>=': '__ge__',
+                    '=': '__eq__',
+                }
+                arg = filter_args[1]
+                if isinstance(arg, Latest):
+                    key = tuple([str(row[i]) for i in group_cols])
+                    if key not in latest_vals:
+                        # pass this row
+                        continue
+                    arg = latest_vals[key]
+                elif isinstance(arg, Constant):
+                    arg = arg.value
+
+                if filter_op not in op_map:
+                    # unknown operation, exit immediately
+                    return predictor_data
+
+                # check condition
+                filter_op2 = op_map[filter_op]
+                if getattr(val, filter_op2)(arg):
+                    data2.append(row)
+            else:
+                # unknown operation, add anyway
+                data2.append(row)
+
+        return data2
 
     def _make_list_result_view(self, data):
         if self.outer_query is not None:

@@ -41,7 +41,7 @@ from mindsdb_sql.parser.ast import (
     Operation,
     ASTNode,
     DropView,
-    NativeQuery,
+    Union,
 )
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -496,13 +496,28 @@ class ExecuteCommands:
                 )
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
-            raise ErNotSupportedYet('Update is not implemented')
+            if statement.from_select is None:
+                raise ErNotSupportedYet('Update is not implemented')
+            else:
+                # run with planner
+                SQLQuery(
+                    statement,
+                    session=self.session,
+                    execute=True
+                )
+                return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Alter and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
 
+            query = SQLQuery(
+                statement,
+                session=self.session
+            )
+            return self.answer_select(query)
+        elif type(statement) == Union:
             query = SQLQuery(
                 statement,
                 session=self.session
@@ -536,7 +551,6 @@ class ExecuteCommands:
                 Column(name='column_importances', table_name='', type='str'),
                 Column(name='outputs', table_name='', type='str'),
                 Column(name='inputs', table_name='', type='str'),
-                Column(name='datasource', table_name='', type='str'),
                 Column(name='model', table_name='', type='str'),
             ]
             description = [
@@ -544,7 +558,6 @@ class ExecuteCommands:
                 description['column_importances'],
                 description['outputs'],
                 description['inputs'],
-                description['datasource'],
                 description['model']
             ]
             data = [description]
@@ -612,7 +625,7 @@ class ExecuteCommands:
         handler_name = self.session.database
         if len(statement.name.parts) > 1:
             handler_name = statement.name.parts[0]
-            statement.name.parts = [statement.name.parts[1:]]
+            statement.name.parts = statement.name.parts[1:]
         if handler_name.lower() == 'mindsdb':
             handler_name = 'lightwood'
         ml_handler = self.session.integration_controller.get_handler(handler_name)
@@ -655,7 +668,7 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_datasource(self, struct: dict):
-        ''' create new datasource (integration in old terms)
+        ''' create new handler (datasource/integration in old terms)
             Args:
                 struct: data for creating integration
         '''
@@ -672,7 +685,7 @@ class ExecuteCommands:
             handlers_meta = self.session.integration_controller.get_handlers_import_status()
             handler_meta = handlers_meta[engine]
             if handler_meta.get('import', {}).get('success') is not True:
-                raise SqlApiException(f"Hanbdler '{engine}' can not be used")
+                raise SqlApiException(f"Handler '{engine}' can not be used")
 
             accept_connection_args = handler_meta.get('connection_args')
             if accept_connection_args is not None:
@@ -699,7 +712,7 @@ class ExecuteCommands:
                             raise SqlApiException(f"Argument '{arg_name}' must be path or url to the file")
                         connection_args[arg_name] = path
 
-            handler = self.session.integration_controller.create_handler(
+            handler = self.session.integration_controller.create_tmp_handler(
                 handler_type=engine,
                 connection_data=connection_args
             )
@@ -718,13 +731,10 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_datasource(self, ds_name):
-        try:
-            integration = self.session.integration_controller.get(ds_name)
-            if integration is None:
-                raise SqlApiException(f"Database '{ds_name}' does not exists.")
-            self.session.integration_controller.delete(integration['name'])
-        except Exception:
-            raise ErDbDropDelete(f"Something went wrong during deleting database '{ds_name}'.")
+        integration = self.session.integration_controller.get(ds_name)
+        if integration is None:
+            raise SqlApiException(f"Database '{ds_name}' does not exists.")
+        self.session.integration_controller.delete(integration['name'])
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):

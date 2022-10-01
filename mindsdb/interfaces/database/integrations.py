@@ -309,7 +309,8 @@ class IntegrationController:
         from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
         klass = self.handler_modules[integration_engine].Handler
-        if issubclass(klass, BaseMLEngine):
+
+        if isinstance(klass, type) and issubclass(klass, BaseMLEngine):
             # need to wrapp it
             handler_ars['handler_class'] = klass
             inst = BaseMLEngineExec(**handler_ars)

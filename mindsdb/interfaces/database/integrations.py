@@ -305,8 +305,19 @@ class IntegrationController:
                 company_id=company_id,
                 sync=True
             )
+        from mindsdb.integrations.libs.base import BaseMLEngine
+        from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
-        return self.handler_modules[integration_engine].Handler(**handler_ars)
+        klass = self.handler_modules[integration_engine].Handler
+        if issubclass(klass, BaseMLEngine):
+            # need to wrapp it
+            handler_ars['handler_class'] = klass
+            inst = BaseMLEngineExec(**handler_ars)
+
+        else:
+            inst = klass(**handler_ars)
+
+        return inst
 
     def reload_handler_module(self, handler_name):
         importlib.reload(self.handler_modules[handler_name])

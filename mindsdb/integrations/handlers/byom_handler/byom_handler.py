@@ -2,20 +2,18 @@ import sys
 import os
 import pickle
 import subprocess
+from collections import OrderedDict
 
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.libs.base import BaseMLEngine
 from pandas.api import types as pd_types
 import numpy as np
 
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
-
-class BYOMHandler:
+class BYOMHandler(BaseMLEngine):
 
     name = 'byom'
-
-    def __init__(self, handler_storage, model_storage):
-        self.handler_storage = handler_storage
-        self.model_storage = model_storage
 
     def _run_command(self, params):
         params_enc = pickle.dumps(params)
@@ -42,21 +40,21 @@ class BYOMHandler:
             raise RuntimeError(p.stderr.read())
         return ret
 
-    def create_connection(self, connection_args):
+    def create_engine(self, connection_args):
         model_code = connection_args['model_code']
-        self.handler_storage.file_set('model_code', model_code)
+        self.engine_storage.file_set('model_code', model_code)
 
     def _get_model_code(self):
         # TODO :
-        file_name = self.handler_storage.get_connection_args()['model_code']
-        return self.handler_storage.file_get(file_name)
+        file_name = self.engine_storage.get_connection_args()['model_code']
+        return self.engine_storage.file_get(file_name)
 
-    def learn(self, training_data_df, to_predict):
+    def create(self, target, df):
         params = {
             'method': 'train',
-            'df': training_data_df,
+            'df': df,
             'code': self._get_model_code(),
-            'to_predict': to_predict
+            'to_predict': target
         }
         try:
             model_params = self._run_command(params)
@@ -76,7 +74,7 @@ class BYOMHandler:
                     return 'categorical'
 
             columns = {
-                to_predict: convert_type(np.object)
+                target: convert_type(np.object)
             }
 
             self.model_storage.columns_set(columns)
@@ -107,3 +105,10 @@ class BYOMHandler:
     def describe(self):
         # TODO should it be ml-handler depended?
         pass
+
+connection_args = OrderedDict(
+    model_code={
+        'type': ARG_TYPE.PATH,
+        'description': 'The path name to model code'
+    }
+)

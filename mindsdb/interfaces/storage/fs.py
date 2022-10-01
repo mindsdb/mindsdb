@@ -115,6 +115,7 @@ class S3FSStore(BaseFSStore):
         remote_ziped_name = f'{remote_name}.tar.gz'
         local_ziped_name = f'{local_name}.tar.gz'
         local_ziped_path = os.path.join(base_dir, local_ziped_name)
+        os.makedirs(base_dir, exist_ok=True)
         self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
         shutil.unpack_archive(local_ziped_path, base_dir)
         os.system(f'chmod -R 777 {base_dir}')

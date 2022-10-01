@@ -625,7 +625,7 @@ class ExecuteCommands:
         handler_name = self.session.database
         if len(statement.name.parts) > 1:
             handler_name = statement.name.parts[0]
-            statement.name.parts = [statement.name.parts[1:]]
+            statement.name.parts = statement.name.parts[1:]
         if handler_name.lower() == 'mindsdb':
             handler_name = 'lightwood'
         ml_handler = self.session.integration_controller.get_handler(handler_name)

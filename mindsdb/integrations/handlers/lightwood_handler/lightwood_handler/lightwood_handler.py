@@ -23,7 +23,7 @@ from lightwood import __version__ as lightwood_version
 from lightwood.api import dtype
 import numpy as np
 
-from mindsdb.integrations.libs.base_handler import PredictiveHandler
+from mindsdb.integrations.libs.base import PredictiveHandler
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
 from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.log import log
@@ -295,7 +295,7 @@ class LightwoodHandler(PredictiveHandler):
 
         predictor_id = predictor_record.id
 
-        predictor_storage = self.storage_factory(predictor_id)
+        # predictor_storage = self.storage_factory(predictor_id)
 
         p = HandlerProcess(
             run_learn,
@@ -303,7 +303,7 @@ class LightwoodHandler(PredictiveHandler):
             problem_definition,
             predictor_id,
             json_ai_override,
-            str(predictor_storage.folder_path)
+            self.company_id
         )
         p.start()
         if join_learn_process:
@@ -360,14 +360,11 @@ class LightwoodHandler(PredictiveHandler):
         new_predictor_record.training_data_rows_count = len(response.data_frame)
         db.session.commit()
 
-        predictor_storage = self.storage_factory(new_predictor_record.id)
-
         p = HandlerProcess(
             run_update,
             new_predictor_record.id,
             response.data_frame,
-            self.company_id,
-            str(predictor_storage.folder_path)
+            self.company_id
         )
         p.start()
 
@@ -600,7 +597,7 @@ class LightwoodHandler(PredictiveHandler):
                         if isinstance(rows[i][order_by_column], list):
                             rows[i][order_by_column] = rows[i][order_by_column][0]
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if horizon > 1:
+                        if horizon > 1 and col in explanations[i][predict]:
                             explanations[i][predict][col] = explanations[i][predict][col][0]
 
                 last_row = rows.pop()
@@ -617,7 +614,7 @@ class LightwoodHandler(PredictiveHandler):
 
                     new_explanation = copy.deepcopy(last_explanation)
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if horizon > 1:
+                        if horizon > 1 and col in new_explanation[predict]:
                             new_explanation[predict][col] = new_explanation[predict][col][i]
                     if i != 0:
                         new_explanation[predict]['anomaly'] = None

@@ -176,9 +176,7 @@ On execution, we get:
 +-------+---------------------+-------------------------------------------------------------------------------------------------+
 ```
 
-Let's try another prediction.
-
-An important thing to check is the `important_missing_information` value, where MindsDB points to the important missing information that should be included to give a more accurate prediction. In this case, the `Contract`, `MonthlyCharges`, `TotalCharges`, and `OnlineBackup` columns are the important missing information. Let’s include those values in the `WHERE` clause, and run a new query.
+To get more accurate predictions, we should provide as much data as possible in the `WHERE` clause. Let's run another query.
 
 ```sql
 SELECT Churn, Churn_confidence, Churn_explain
@@ -213,7 +211,7 @@ On execution, we get:
 +-------+---------------------+-------------------------------------------------------------------------------------------------+
 ```
 
-Here, MindsDB predicted the probability of this customer churning with the confidence of around 82%.
+MindsDB predicted the probability of this customer churning with confidence of around 82%. The previous query predicted it with confidence of around 79%. So providing more data improved the confidence level of predictions.
 
 ## What's Next?
 

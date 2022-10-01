@@ -13,7 +13,7 @@ The `DESCRIBE mindsdb.[predictor_name].features` statement displays how the mode
 Here is the syntax:
 
 ```sql
-DESCRIBE mindsdb.[predictor_name].features;
+DESCRIBE PREDICTOR mindsdb.[predictor_name].features;
 ```
 
 On execution, we get:
@@ -41,7 +41,7 @@ Where:
 Let's look at an example using the `home_rentals_model` model.
 
 ```sql
-DESCRIBE mindsdb.home_rentals_model.features;
+DESCRIBE PREDICTOR mindsdb.home_rentals_model.features;
 ```
 
 On execution, we get:
@@ -62,18 +62,18 @@ On execution, we get:
 
 Here the `rental_price` column is the `target` column to be predicted. As for the `feature` columns, these are used to train the ML model to predict the value of the `rental_price` column.
 
-## `#!sql DESCRIBE ... MODEL` Statement
+## `#!sql DESCRIBE PREDICTOR ... MODEL` Statement
 
 ### Description
 
-The `DESCRIBE mindsdb.[predictor_name].model` statement displays the performance of the candidate models.
+The `DESCRIBE PREDICTOR mindsdb.[predictor_name].model` statement displays the performance of the candidate models.
 
 ### Syntax
 
 Here is the syntax:
 
 ```sql
-DESCRIBE mindsdb.[predictor_name].model;
+DESCRIBE PREDICTOR mindsdb.[predictor_name].model;
 ```
 
 On execution, we get:
@@ -102,7 +102,7 @@ Where:
 Let's look at an example using the `home_rentals_model` model.
 
 ```sql
-DESCRIBE mindsdb.home_rentals_model.model;
+DESCRIBE PREDICTOR mindsdb.home_rentals_model.model;
 ```
 
 On execution, we get:
@@ -121,14 +121,14 @@ On execution, we get:
 
 ### Description
 
-The `DESCRIBE mindsdb.[predictor_name].ensemble` statement displays the parameters used to select the best candidate model.
+The `DESCRIBE PREDICTOR mindsdb.[predictor_name].ensemble` statement displays the parameters used to select the best candidate model.
 
 ### Syntax
 
 Here is the syntax:
 
 ```sql
-DESCRIBE mindsdb.[predictor_name].ensemble;
+DESCRIBE PREDICTOR mindsdb.[predictor_name].ensemble;
 ```
 
 On execution, we get:
@@ -153,7 +153,7 @@ Where:
 Let's look at an example using the `home_rentals_model` model.
 
 ```sql
-DESCRIBE mindsdb.home_rentals_model.ensemble;
+DESCRIBE PREDICTOR mindsdb.home_rentals_model.ensemble;
 ```
 
 On execution, we get:

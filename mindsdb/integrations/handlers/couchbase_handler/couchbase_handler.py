@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 
 from mindsdb.utilities.log import log
 from mindsdb_sql.parser.ast.base import ASTNode

@@ -10,6 +10,8 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
 
     You can use the Python code below to connect your Cloud MindsDB database to SQL Alchemy.
 
+    Make sure you have the *pymysql* module installed before executing the Python code. To install it, run the `pip install pymysql` command.
+
     ```python
     from sqlalchemy import create_engine
 
@@ -27,6 +29,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     if __name__ == '__main__':
             try:
                     engine = get_connection()
+                    engine.connect()
                     print(f"Connection to the {host} for user {user} created successfully.")
             except Exception as ex:
                     print("Connection could not be made due to the following error: \n", ex)
@@ -50,13 +53,15 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
 
     You can use the Python code below to connect your local MindsDB database to SQL Alchemy.
 
+    Make sure you have the *pymysql* module installed before executing the Python code. To install it, run the `pip install pymysql` command.
+
     ```python
     from sqlalchemy import create_engine
 
     user = 'mindsdb'
     password = ''
     host = '127.0.0.1'
-    port = 47334
+    port = 47335
     database = ''
 
     def get_connection():
@@ -67,6 +72,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     if __name__ == '__main__':
             try:
                     engine = get_connection()
+                    engine.connect()
                     print(f"Connection to the {host} for user {user} created successfully.")
             except Exception as ex:
                     print("Connection could not be made due to the following error: \n", ex)
@@ -77,7 +83,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     - Username is `mindsdb`
     - Password is left empty
     - Host is `127.0.0.1`
-    - Port is `47334`
+    - Port is `47335`
     - Database name is left empty
 
     To create a database connection, execute the code above. On success, the following output is expected:

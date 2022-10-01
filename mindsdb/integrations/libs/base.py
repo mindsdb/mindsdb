@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Union, Optional
 
 import pandas as pd
 from mindsdb_sql.parser.ast import Join
@@ -110,7 +110,74 @@ class DatabaseHandler(BaseHandler):
 
 class PredictiveHandler(BaseHandler):
     """
+    DEPRECATED.
+
     Base class for handlers associated to predictive systems.
     """
     def __init__(self, name: str):
         super().__init__(name)
+
+
+class BaseMLEngine:
+    """
+    Base class for integration engine to connect with other Machine Learning libraries/frameworks.
+
+    An instance of this class will be generated, used, and destroyed for each interaction with the underlying framework.
+    """
+
+    def __init__(self, model_storage, metadata_storage) -> None:
+        """
+        Initialize any objects, fields or parameters required by the ML engine.
+
+        At least, two storage objects should be available:
+            - model_storage: stores artifacts in the file system (path specified in MindsDB config).
+            - metadata_storage: stores all model metadata in an internal MindsDB database.
+        """
+        self.model_storage = model_storage
+        self.metadata_storage = metadata_storage
+
+    def create_engine(self, connection_args: dict):
+        """
+        Optional.
+
+        Used to connect with external sources (e.g. a REST API) that the engine will require to use any other methods.
+        """
+        raise NotImplementedError
+
+    def create(self, target: str, df: Optional = Union[None, pd.DataFrame], args: Optional = dict) -> None:
+        """
+        Registers a model inside the engine registry for later usage.
+
+        Normally, an input dataframe is required to train the model.
+        However, some integrations may merely require registering the model instead of training, in which case `df` can be omitted.
+
+        Any other arguments required to register the model can be passed in an `args` dictionary.
+        """
+        raise NotImplementedError
+
+    def update(self, df: Optional = Union[None, pd.DataFrame]) -> None:
+        """
+        Optional.
+
+        Used to update/fine-tune/adjust a pre-existing model without resetting the internal state (e.g. weights).
+
+        Its availability will depend on underlying integration support, as not all ML models can be partially updated.
+        """
+        raise NotImplementedError
+
+    def predict(self, df: pd.DataFrame, args: Optional = dict) -> pd.DataFrame:
+        """
+        Calls a model with some input dataframe `df`, and optionally some arguments `args`.
+
+        The expected output is a dataframe with the predicted values in the target-named column.
+        Additional columns can be present, and will be considered row-wise explanations if their names finish with `_explain`.
+        """
+        raise NotImplementedError
+
+    def describe(self, key: Optional[None]) -> pd.DataFrame:
+        """
+        Optional.
+
+        When called, this method provides global model insights, e.g. framework-level parameters used in training.
+        """
+        raise NotImplementedError

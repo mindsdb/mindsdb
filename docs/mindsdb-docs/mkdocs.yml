@@ -104,6 +104,7 @@ nav:
       - PREDICTOR: sql/create/predictor.md
       - TABLE: sql/create/table.md
       - VIEW: sql/create/view.md
+    - UPDATE: sql/api/update.md
     - INSERT INTO: sql/api/insert.md
     - DESCRIBE: sql/api/describe.md
     - RETRAIN: sql/api/retrain.md

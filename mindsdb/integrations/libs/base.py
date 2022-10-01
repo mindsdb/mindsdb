@@ -125,16 +125,16 @@ class BaseMLEngine:
     An instance of this class will be generated, used, and destroyed for each interaction with the underlying framework.
     """
 
-    def __init__(self, model_storage, metadata_storage) -> None:
+    def __init__(self, model_storage, engine_storage) -> None:
         """
         Initialize any objects, fields or parameters required by the ML engine.
 
         At least, two storage objects should be available:
-            - model_storage: stores artifacts in the file system (path specified in MindsDB config).
-            - metadata_storage: stores all model metadata in an internal MindsDB database.
+            - model_storage: stores models in the file system (path specified in MindsDB config).
+            - engine_storage: stores model-related metadata in an internal MindsDB database.
         """
         self.model_storage = model_storage
-        self.metadata_storage = metadata_storage
+        self.engine_storage = engine_storage
 
     def create_engine(self, connection_args: dict):
         """

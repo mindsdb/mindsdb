@@ -28,7 +28,7 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
 from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
-from mindsdb.integrations.libs.base_handler import PredictiveHandler
+from mindsdb.integrations.libs.base import PredictiveHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse,
     HandlerResponse,

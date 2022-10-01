@@ -1,5 +1,5 @@
 from mindsdb.utilities.log import log
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 import clickhouse_driver
 from sqlalchemy import create_engine

@@ -81,7 +81,7 @@ On execution, we get:
 Empty set (0.00 sec)
 ```
 
-When the `WHERE` clause condition is not fulfilled for any of the rows, no value is returned.
+When the `#!sql WHERE` clause condition is not fulfilled for any of the rows, no value is returned.
 
 <figure markdown> 
     ![Income vs Debt query](/assets/sql/income_vs_debt_unknown_value.png){ width="800", loading=lazy  }

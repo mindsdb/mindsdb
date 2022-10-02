@@ -4,7 +4,7 @@
 
 The `#!sql SELECT` statement fetches predictions from the model table. The data is returned on the fly and not saved.
 
-But there are ways to save predictions data! You can save your predictions as a view using the [`CREATE VIEW`](/sql/create/view/) statement. Please note that a view is a saved query and does not store data like a table. Another way is to insert your predictions into a table using the [`INSERT INTO`](/sql/api/insert/) statement.
+But there are ways to save predictions data! You can save your predictions as a view using the [`#!sql CREATE VIEW`](/sql/create/view/) statement. Please note that a view is a saved query and does not store data like a table. Another way is to insert your predictions into a table using the [`#!sql INSERT INTO`](/sql/api/insert/) statement.
 
 ## Syntax
 
@@ -179,7 +179,7 @@ FROM mongo (
 
 2. Unions
 
-It is possible to use UNION / UNION ALL operators.
+It is possible to use `#!sql UNION` / `#!sql UNION ALL` operators.
 It this case every subselect from union will be fetched and merged to one result-set on mindsdb side  
 
 ```sql

@@ -1,6 +1,6 @@
 # `#!sql DESCRIBE` Statement
 
-The `DESCRIBE` statement is used to display the attributes of an existing model.
+The `#!sql DESCRIBE` statement is used to display the attributes of an existing model.
 
 ## `#!sql DESCRIBE ... FEATURES` Statement
 

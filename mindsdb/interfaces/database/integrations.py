@@ -190,9 +190,10 @@ class IntegrationController:
             connections[integration_name] = status.get('success', False)
         return connections
 
-    def _make_handler_args(self, handler_type: str, connection_data: dict, company_id: int):
+    def _make_handler_args(self, handler_type: str, connection_data: dict, company_id: int, integration_id: int = None):
         handler_ars = dict(
-            connection_data=connection_data
+            connection_data=connection_data,
+            integration_id=integration_id
         )
 
         if handler_type == 'files':
@@ -274,35 +275,28 @@ class IntegrationController:
 
         integration_meta = self.handlers_import_status[integration_engine]
         connection_args = integration_meta.get('connection_args')
-        if isinstance(connection_args, (dict, OrderedDict)):
-            files_to_get = [
-                arg_name for arg_name in connection_data
-                if connection_args.get(arg_name)['type'] == ARG_TYPE.PATH
-            ]
-            if len(files_to_get) > 0:
-                try:
-                    folder_name = f'integration_files_{company_id}_{integration_record.id}'
-                    integrations_dir = Config()['paths']['integrations']
-                    FsStore().get(folder_name, base_dir=integrations_dir)
-                except Exception:
-                    pass
-                for file_name in files_to_get:
-                    connection_data[file_name] = (
-                        Path(integrations_dir)
-                        .joinpath(folder_name)
-                        .joinpath(connection_data[file_name])
-                    )
 
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=integration_record.id,
             company_id=company_id,
-            sync=True
+            sync=True,
         )
+
+        if isinstance(connection_args, (dict, OrderedDict)):
+            files_to_get = [
+                arg_name for arg_name in connection_data
+                if arg_name in connection_args and connection_args.get(arg_name)['type'] == ARG_TYPE.PATH
+            ]
+            if len(files_to_get) > 0:
+
+                for file_name in files_to_get:
+                    connection_data[file_name] = fs_store.get_path(file_name)
 
         handler_ars = self._make_handler_args(integration_engine, connection_data, company_id)
         handler_ars['name'] = name
         handler_ars['file_storage'] = fs_store
+        handler_ars['integration_id'] = integration_data['id']
 
         handler_type = self.handler_modules[integration_engine].type
         if handler_type == 'ml':
@@ -311,8 +305,20 @@ class IntegrationController:
                 company_id=company_id,
                 sync=True
             )
+        from mindsdb.integrations.libs.base import BaseMLEngine
+        from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
-        return self.handler_modules[integration_engine].Handler(**handler_ars)
+        klass = self.handler_modules[integration_engine].Handler
+
+        if isinstance(klass, type) and issubclass(klass, BaseMLEngine):
+            # need to wrapp it
+            handler_ars['handler_class'] = klass
+            inst = BaseMLEngineExec(**handler_ars)
+
+        else:
+            inst = klass(**handler_ars)
+
+        return inst
 
     def reload_handler_module(self, handler_name):
         importlib.reload(self.handler_modules[handler_name])

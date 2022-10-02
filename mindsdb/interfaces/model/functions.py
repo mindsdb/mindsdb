@@ -38,7 +38,7 @@ def get_predictor_integration(record: db.Predictor) -> db.Integration:
     return integration_record
 
 
-def get_model_records(company_id: int, active: bool = True, deleted_at=null(),
+def get_model_records(company_id: int, integration_id=None, active: bool = True, deleted_at=null(),
                       ml_handler_name: str = None, **kwargs):
     if company_id is None:
         kwargs['company_id'] = null()
@@ -57,6 +57,9 @@ def get_model_records(company_id: int, active: bool = True, deleted_at=null(),
             # raise Exception(f'unknown ml handler: {ml_handler_name}')
             return []
         kwargs['integration_id'] = ml_handler_record.id
+
+    if integration_id is not None:
+        kwargs['integration_id'] = integration_id
 
     return (
         db.session.query(db.Predictor)

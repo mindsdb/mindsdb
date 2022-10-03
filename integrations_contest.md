@@ -95,7 +95,7 @@ Here are the requirements for an implementation to be accepted.
 
 ## ML Frameworks Ideas Challenge 📖 📝 🚧
 
-We believe that offering a simple way to implement Machine Learning where the data lives, can bring improvements to the design of the ML aplications and their adoption. That's why we want to hear your ideas and bring different ML Frameworks to different data sources. Currently, MindsDB supports +40 different data sources and few ML Frameworks. Some examples of the current ideas we have and the supported ML integrations:
+We believe that offering a simple way to implement Machine Learning where the data lives, can bring improvements to the design of the ML applications and their adoption. That's why we want to hear your ideas and bring different ML Frameworks to different data sources. Currently, MindsDB supports +40 different data sources and few ML Frameworks. Some examples of the current ideas we have and the supported ML integrations:
 
 * [MLFlow](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mlflow_handler)
 * [Lightwood](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/lightwood_handler)

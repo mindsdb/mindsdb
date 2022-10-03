@@ -133,7 +133,7 @@ nav:
     - Time Series:
       #- AI powered forecasts with MindsDB: sql/tutorials/mindsdb-superset-snowflake.md
       - House Sales: sql/tutorials/house-sales-forecasting.md
-      - Brain activity: sql/tutorials/eeg-forecasting.md
+      - Brain Activity: sql/tutorials/eeg-forecasting.md
   - Community Tutorials:
     - Regression:
       - Insurance Cost: sql/tutorials/insurance-cost-prediction.md

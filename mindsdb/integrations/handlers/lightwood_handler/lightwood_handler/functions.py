@@ -1,6 +1,4 @@
 import os
-import sys
-import math
 import traceback
 import tempfile
 from pathlib import Path
@@ -24,6 +22,7 @@ from mindsdb.interfaces.model.functions import (
     get_model_records
 )
 from mindsdb.interfaces.storage.fs import FileStorage, RESOURCE_GROUP
+from mindsdb.interfaces.storage.json import get_json_storage
 
 from .utils import rep_recur, brack_to_mod
 
@@ -56,9 +55,14 @@ def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor
     code = lightwood.code_from_json_ai(json_ai)
 
     predictor_record = Predictor.query.with_for_update().get(predictor_id)
-    predictor_record.json_ai = json_ai.to_dict()
     predictor_record.code = code
     db.session.commit()
+
+    json_storage = get_json_storage(
+        resource_id=predictor_id,
+        company_id=predictor_record.company_id
+    )
+    json_storage.set('json_ai', json_ai.to_dict())
 
 
 @mark_process(name='learn')
@@ -171,12 +175,18 @@ def run_update(predictor_id: int, df: DataFrame, company_id: int):
             problem_definition['time_aim'] = problem_definition['stop_training_in_x_seconds']
 
         json_ai = lightwood.json_ai_from_problem(df, problem_definition)
-        predictor_record.json_ai = json_ai.to_dict()
         predictor_record.code = lightwood.code_from_json_ai(json_ai)
         predictor_record.data = {'training_log': 'training'}
         predictor_record.training_start_at = datetime.now()
         predictor_record.status = PREDICTOR_STATUS.TRAINING
         session.commit()
+
+        json_storage = get_json_storage(
+            resource_id=predictor_id,
+            company_id=predictor_record.company_id
+        )
+        json_storage.set('json_ai', json_ai.to_dict())
+
         predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
         predictor.learn(df)
 

@@ -28,7 +28,7 @@ Where:
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `[predictor_name]`                              | Name of the model to be created.                                                                                                                |
 | `[integration_name]`                            | Name of the integration created using the [`#!sql CREATE DATABASE`](/sql/create/databases/) statement or [file upload](/sql/api/select_files/). |
-| `(SELECT [column_name, ...] FROM [table_name])` | `SELECT` statement for selecting data to be used for training and validation.                                                                   |
+| `(SELECT [column_name, ...] FROM [table_name])` | `#!sql SELECT` statement for selecting data to be used for training and validation.                                                                   |
 | `PREDICT [target_column]`                       | `target_column` is the column to be predicted.                                                                                                  |
 
 !!! TIP "Checking Model Status"
@@ -265,10 +265,10 @@ Where:
 
 | Expressions                              | Description                                                                                                                                                                                                                                                        |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ORDER BY [sequential_column]`           | The column by which time series is ordered. It can be a date or anything that defines the sequence of events.                                                                                                                                                      |
-| `GROUP BY [partition_column]`            | It is optional. The column by which rows that make a partition are grouped. For example, if you want to forecast the inventory for all items in the store, you can partition the data by `product_id`, so each distinct `product_id` has its own time series.      |
-| `WINDOW [int]`                           | The number of rows to look back at when making a prediction. It comes after the rows are ordered by the column defined in `ORDER BY` and split into groups by the column(s) defined in `GROUP BY`. This could be interpreted as "Always use the previous 10 rows". |
-| `HORIZON [int]`                          | It is optional. The number of future predictions (it is 1 by default).                                                                                                                                                                                             |
+| `#!sql ORDER BY [sequential_column]`           | The column by which time series is ordered. It can be a date or anything that defines the sequence of events.                                                                                                                                                      |
+| `#!sql GROUP BY [partition_column]`            | It is optional. The column by which rows that make a partition are grouped. For example, if you want to forecast the inventory for all items in the store, you can partition the data by `product_id`, so each distinct `product_id` has its own time series.      |
+| `#!sql WINDOW [int]`                           | The number of rows to look back at when making a prediction. It comes after the rows are ordered by the column defined in `#!sql ORDER BY` and split into groups by the column(s) defined in `#!sql GROUP BY`. This could be interpreted as "Always use the previous 10 rows". |
+| `#!sql HORIZON [int]`                          | It is optional. The number of future predictions (it is 1 by default).                                                                                                                                                                                             |
 
 !!! warning "Getting a Prediction from a Time Series Model"
     Due to the nature of time series forecasting, you need to use the [`#!sql JOIN`](/sql/api/join) statement to get results.

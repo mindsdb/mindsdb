@@ -332,11 +332,14 @@ class IntegrationController:
 
     def _read_dependencies(self, path):
         dependencies = []
-        requirements_txt = Path(path).joinpath('requirements.txt')
-        if requirements_txt.is_file():
-            with open(str(requirements_txt), 'rt') as f:
-                dependencies = [x.strip(' \t\n') for x in f.readlines()]
-                dependencies = [x for x in dependencies if len(x) > 0]
+        pyproject_toml = Path(path).joinpath('pyproject.toml')
+        if pyproject_toml.is_file():
+            with open(str(pyproject_toml), 'rt') as f:
+                meta_data = [x.strip(' \t\n') for x in f.readlines()]
+                dependencies_start = meta_data.index('dependencies = [') + 1
+                dependencies_end = meta_data.index('[project.urls]') - 2
+                dependencies = meta_data[dependencies_start: dependencies_end]
+                dependencies = [dependency[1:-2] for dependency in dependencies]
         return dependencies
 
     def _get_handler_meta(self, module):

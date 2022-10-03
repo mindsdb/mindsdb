@@ -132,7 +132,7 @@ Let's list the required data fields.
 1. Install dev requirements:
 
    ```bash
-   pip install -r dev_requirements.txt
+   pip install .
    ```
 
 2. Run tests:

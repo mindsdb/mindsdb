@@ -42,7 +42,7 @@ jobs:
         pip install 'pymssql >= 2.1.4'
         pip install boto3
         pip install --no-cache-dir .
-        pip install -r requirements_test.txt
+        pip install -e ".[test]"
       shell: bash
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
@@ -139,13 +139,13 @@ jobs:
       run: |
         echo ${{ github.ref }}
         python -m pip install --upgrade pip
-        pip install setuptools wheel twine
+        pip install build twine
     - name: Build and publish
       env:
         TWINE_USERNAME:  __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
-        python setup.py sdist
+        python -m build --sdist
         twine upload dist/*
     - name: Install latest version from pypi to see that all is working
       run: |

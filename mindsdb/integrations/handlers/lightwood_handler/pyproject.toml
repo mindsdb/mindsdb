@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.8.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mindsdb_lightwood_handler"
+dynamic = ["version"]
+description = "MindsDB handler for Lightwood"
+license = "GPL-3.0"
+requires-python = ">=3.7"
+authors = [
+    { name = "MindsDB Inc", email = "jorge@mindsdb.com" },
+]
+keywords = [
+    "pdf",
+    "reference",
+    "linkrot",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "docker >= 5.0.3",
+    "netifaces >= 0.11.0",
+    "mysql-connector-python==8.0.29",
+    "pytest",
+    "lightwood[all_extras] >= 22.8.1.0",
+    "mindsdb_sql >= 0.4.0",
+    "mindsdb >= 22.7.5.0",
+    "build==0.8.0",
+]
+
+[project.urls]
+homepage = "https://pypi.org/project/mindsdb/"
+repository = "https://github.com/mindsdb/mindsdb"
+
+[tool.hatch.version]
+path = "lightwood_handler/__about__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/lightwood_handler",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "/lightwood_handler",
+]

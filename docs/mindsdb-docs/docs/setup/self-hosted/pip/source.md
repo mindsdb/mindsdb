@@ -48,25 +48,19 @@ If you encounter the `This site can’t be reached. 127.0.0.1 refused to connect
     source mindsdb-venv/bin/activate
     ```
 
-3. Install MindsDB prerequisites:
+3. Install MindsDB prerequisites and MindsDB:
 
     ```bash
-    cd mindsdb && pip install -r requirements.txt
+    cd mindsdb && pip install .
     ```
 
-4. Install MindsDB:
-
-    ```bash
-    python setup.py develop
-    ```
-
-5. Verify MindsDB installation by starting the MindsDB server:
+4. Verify MindsDB installation by starting the MindsDB server:
 
     ```bash
     python -m mindsdb
     ```
 
-6. Now, you can access the following:
+5. Now, you can access the following:
 
     === "MindsDB APIs"
         ```

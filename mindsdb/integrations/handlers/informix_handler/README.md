@@ -80,12 +80,12 @@ export LD_LIBRARY_PATH=${INFORMIXDIR}/lib:${INFORMIXDIR}/lib/esql:${INFORMIXDIR}
 
 ```bash
 
-pip install wheel
+pip install build
 mkdir Temp
 cd Temp
 git clone https://github.com/OpenInformix/IfxPy.git
 cd IfxPy/IfxPy
-python setup.py bdist_wheel
+python -m build --wheel
 pip install --find-links=./dist IfxPy
 cd ..
 cd ..
@@ -121,12 +121,12 @@ del OneDB-Win64-ODBC-Driver.zip
 
 * Below code will clone, build and install wheel
 ```cmd
-pip install wheel
+pip install build
 mkdir Temp
 cd Temp
 git clone https://github.com/OpenInformix/IfxPy.git
 cd IfxPy/IfxPy
-python setup.py bdist_wheel
+python -m build --wheel
 pip install --find-links=./dist IfxPy
 cd ..
 cd ..

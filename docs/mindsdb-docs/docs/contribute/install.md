@@ -29,13 +29,9 @@ python3 -m venv mindsdb-venv
 ```bash
 source mindsdb-venv/bin/activate
 ```
-5. Install dependencies:
+5. Install dependencies and MindsDB:
 ```bash
-cd mindsdb & pip install -r requirements.txt
-```
-6. Install MindsDB:
-```bash
-python setup.py develop
+cd mindsdb & pip install .
 ```
 6. Start MindsDB:
 ```bash

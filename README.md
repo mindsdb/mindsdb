@@ -105,7 +105,7 @@ Check our [docs](https://docs.mindsdb.com/?utm_medium=community&utm_source=githu
 * Automatic data pre-processing, feature engineering and encoding
 * Classification, regression, time-series tasks
 * Bring models to production without “traditional deployment” as AI Tables
-* Get mModels’ accuracy scoring and confidence intervals for each prediction
+* Get models’ accuracy scoring and confidence intervals for each prediction
 * Join ML models with existing data
 * Anomaly detection
 * Model explainability analysis 

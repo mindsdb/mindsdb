@@ -1,8 +1,11 @@
+import os.path
 from unittest.mock import patch
 import pandas as pd
 import datetime as dt
 import pytest
+import tempfile
 
+import numpy as np
 from lightwood.api import dtype
 
 from mindsdb_sql import parse_sql
@@ -195,6 +198,70 @@ class Test(BaseExecutorTest):
         assert ret_df.t.min() == dt.datetime(2020, 1, 2)
         assert ret_df.t.max() == dt.datetime(2020, 1, 3)
 
+    def test_ts_predictor_file(self):
+        # set integration data
+
+        # save as file
+        df = pd.DataFrame([
+            {'a': 1, 't': '2021', 'g': 'x'},
+            {'a': 2, 't': '2022', 'g': 'x'},
+            {'a': 3, 't': '2023', 'g': 'x'},
+        ])
+
+        file_path = tempfile.mkstemp(prefix='file_')[1]
+
+        df.to_csv(file_path)
+
+        self.file_controller.save_file('tasks', file_path, 'tasks')
+
+        # --- use TS predictor ---
+
+        predictor = {
+            'name': 'task_model',
+            'predict': 'a',
+            'problem_definition': {
+                'timeseries_settings': {
+                    'is_timeseries': True,
+                    'window': 2,
+                    'order_by': 't',
+                    'group_by': 'g',
+                    'horizon': 3
+                }
+            },
+            'dtypes': {
+                'a': dtype.integer,
+                't': dtype.float,
+                'g': dtype.categorical,
+            },
+            'predicted_value': ''
+        }
+        self.set_predictor(predictor)
+
+        # set predictor output
+        predict_result = [
+            # window
+            {'a': 2, 't': np.float64(2022.), 'g': 'x', '__mindsdb_row_id': 2},
+            {'a': 3, 't': np.float64(2023.), 'g': 'x', '__mindsdb_row_id': 3},
+            # horizon
+            {'a': 1, 't': np.float64(2024.), 'g': 'x', '__mindsdb_row_id': None},
+            {'a': 1, 't': np.float64(2024.), 'g': 'x', '__mindsdb_row_id': None},
+            {'a': 1, 't': np.float64(2025.), 'g': 'x', '__mindsdb_row_id': None},
+        ]
+        self.mock_predict.side_effect = lambda *a, **b: predict_result
+
+        # > latest ______________________
+        ret = self.command_executor.execute_command(parse_sql(f'''
+                select p.* from files.tasks t
+                join mindsdb.task_model p
+                where t.t > latest
+            ''', dialect='mindsdb'))
+        assert ret.error_code is None
+
+        ret_df = self.ret_to_df(ret)
+        assert ret_df.shape[0] == 3
+        assert ret_df.t.min() == 2024.
+
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_drop_database(self, mock_handler):
         self.set_handler(mock_handler, name='pg', tables={})
@@ -213,6 +280,18 @@ class Test(BaseExecutorTest):
                    ''', dialect='mindsdb'))
         except SqlApiException as e:
             assert 'not exists' in str(e)
+        else:
+            raise Exception('SqlApiException expected')
+
+        # try files
+        try:
+            self.command_executor.execute_command(parse_sql(f'''
+                    drop database files
+                   ''', dialect='mindsdb'))
+        except Exception as e:
+            assert 'is system database' in str(e)
+        else:
+            raise Exception('SqlApiException expected')
 
 
 class TestCompexQueries(BaseExecutorTest):
@@ -619,7 +698,7 @@ class TestWithNativeQuery(BaseExecutorTest):
             'dtypes': {
                 'p': dtype.categorical,
                 'a': dtype.integer,
-                't': dtype.integer,
+                't': dtype.date,
                 'g': dtype.categorical,
             },
             'predicted_value': predicted_value

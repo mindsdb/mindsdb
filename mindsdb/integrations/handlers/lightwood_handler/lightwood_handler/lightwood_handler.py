@@ -46,6 +46,7 @@ from mindsdb.interfaces.model.functions import (
     get_model_records
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
+from mindsdb.interfaces.storage.json import get_json_storage
 
 from .utils import unpack_jsonai_old_args
 from .functions import run_learn, run_update
@@ -192,8 +193,13 @@ class LightwoodHandler(PredictiveHandler):
 
         json_ai = lightwood.JsonAI.from_dict(json_ai)
         predictor_record.code = lightwood.code_from_json_ai(json_ai)
-        predictor_record.json_ai = json_ai.to_dict()
         db.session.commit()
+
+        json_storage = get_json_storage(
+            resource_id=predictor_record.id,
+            company_id=predictor_record.company_id
+        )
+        json_storage.set('json_ai', json_ai.to_dict())
 
     def code_from_json_ai(self, json_ai: dict):
         json_ai = lightwood.JsonAI.from_dict(json_ai)
@@ -210,8 +216,13 @@ class LightwoodHandler(PredictiveHandler):
 
         lightwood.predictor_from_code(code)
         predictor_record.code = code
-        predictor_record.json_ai = None
         db.session.commit()
+
+        json_storage = get_json_storage(
+            resource_id=predictor_record.id,
+            company_id=predictor_record.company_id
+        )
+        json_storage.delete('json_ai')
 
     @mark_process(name='learn')
     def _learn(self, statement):
@@ -295,7 +306,7 @@ class LightwoodHandler(PredictiveHandler):
 
         predictor_id = predictor_record.id
 
-        predictor_storage = self.storage_factory(predictor_id)
+        # predictor_storage = self.storage_factory(predictor_id)
 
         p = HandlerProcess(
             run_learn,
@@ -303,7 +314,7 @@ class LightwoodHandler(PredictiveHandler):
             problem_definition,
             predictor_id,
             json_ai_override,
-            str(predictor_storage.folder_path)
+            self.company_id
         )
         p.start()
         if join_learn_process:
@@ -360,14 +371,11 @@ class LightwoodHandler(PredictiveHandler):
         new_predictor_record.training_data_rows_count = len(response.data_frame)
         db.session.commit()
 
-        predictor_storage = self.storage_factory(new_predictor_record.id)
-
         p = HandlerProcess(
             run_update,
             new_predictor_record.id,
             response.data_frame,
-            self.company_id,
-            str(predictor_storage.folder_path)
+            self.company_id
         )
         p.start()
 

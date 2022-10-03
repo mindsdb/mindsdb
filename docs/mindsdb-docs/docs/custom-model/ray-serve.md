@@ -95,9 +95,9 @@ USING
     format='ray_server';
 ```
 
-Now, you can fetch predictions using the standard MindsDB syntax. Follow the guide on the [`SELECT`](/sql/api/select/) statement to learn more.
+Now, you can fetch predictions using the standard MindsDB syntax. Follow the guide on the [`#!sql SELECT`](/sql/api/select/) statement to learn more.
 
-You can directly pass input data in the `WHERE` clause to get a single prediction.
+You can directly pass input data in the `#!sql WHERE` clause to get a single prediction.
 
 ```sql
 SELECT *
@@ -106,7 +106,7 @@ WHERE initial_price=3000
 AND rental_price=3000;
 ```
 
-Or you can `JOIN` the model wth a data table to get bulk predictions.
+Or you can `#!sql JOIN` the model wth a data table to get bulk predictions.
 
 ```sql
 SELECT tb.number_of_rooms, t.rental_price

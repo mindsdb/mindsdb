@@ -45,8 +45,8 @@ Below is the query that creates and trains the `home_rentals_model` model to pre
 ```sql
 CREATE PREDICTOR mindsdb.home_rentals_model
 FROM integration
-    (SELECT * FROM house_rentals_data) AS rentals
-PREDICT rental_price AS price;
+    (SELECT * FROM house_rentals_data)
+PREDICT rental_price;
 ```
 
 On execution, we get:
@@ -105,3 +105,37 @@ Query OK, 0 rows affected (x.xxx sec)
         JOIN mindsdb.data_model AS p
     );
     ```
+
+## USING VIEW
+
+Examples to use view
+
+1. Complex select on view (it is grouping in this example). It performs on mindsdb side
+
+```sql
+SELECT type, last(bedrooms) 
+FROM views.house_v
+GROUP BY 1
+```
+
+2. Creating predictor from view
+
+```sql
+CREATE predictor house_sales_model
+FROM views (
+  SELECT * FROM house_v
+) PREDICT ma
+ORDER BY saledate
+GROUP BY bedrooms, type
+WINDOW 1 HORIZON 4
+```
+
+3. Using predictor with view
+
+```sql
+SELECT * FROM views.house_v
+JOIN mindsdb.house_sales_model
+WHERE house_v.saledate > latest 
+```
+
+

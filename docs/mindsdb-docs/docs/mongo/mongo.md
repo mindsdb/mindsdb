@@ -139,10 +139,7 @@ You should get a response from MindsDB similar to:
     },
     "predicted_value": "Yes",
     "confidence": 0.8,
-    "prediction_quality": "very confident",
-    "important_missing_information": [
-      "Contract"
-    ]
+    "prediction_quality": "very confident"
   }
 }
 ```

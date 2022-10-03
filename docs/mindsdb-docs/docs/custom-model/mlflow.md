@@ -45,7 +45,7 @@ USING
     data_dtype={"0": "integer", "1": "integer"};
 ```
 
-Now, you can fetch predictions using the standard MindsDB syntax. Follow the guide on the [`SELECT`](/sql/api/select/) statement to learn more.
+Now, you can fetch predictions using the standard MindsDB syntax. Follow the guide on the [`#!sql SELECT`](/sql/api/select/) statement to learn more.
 
 ```sql
 SELECT `1`
@@ -154,9 +154,9 @@ USING
     dtype_dict={"text": "rich text", "target": "binary"};
 ```
 
-Now, you can fetch predictions using the standard MindsDB syntax. Follow the guide on the [`SELECT`](/sql/api/select/) statement to learn more.
+Now, you can fetch predictions using the standard MindsDB syntax. Follow the guide on the [`#!sql SELECT`](/sql/api/select/) statement to learn more.
 
-You can directly pass input data in the `WHERE` clause to get a single prediction.
+You can directly pass input data in the `#!sql WHERE` clause to get a single prediction.
 
 ```sql
 SELECT target
@@ -164,7 +164,7 @@ FROM mindsdb.byom_mlflow_nlp
 WHERE text='The tsunami is coming, seek high ground';
 ```
 
-Or you can `JOIN` the model with a data table to get bulk predictions. Here, ensure that the data table exists and the database it belongs to is connected to your MindsDB instance.
+Or you can `#!sql JOIN` the model with a data table to get bulk predictions. Here, ensure that the data table exists and the database it belongs to is connected to your MindsDB instance.
 
 ```sql
 SELECT ta.text,

@@ -1182,8 +1182,8 @@ class SQLQuery():
                 df_a = pd.DataFrame(left_df_data, columns=left_columns_map.keys())
                 df_b = pd.DataFrame(right_df_data, columns=right_columns_map.keys())
 
-                a_name = f'table_a'
-                b_name = f'table_b'
+                a_name = 'table_a'
+                b_name = 'table_b'
                 con = duckdb.connect(database=':memory:')
                 con.register(a_name, df_a)
                 con.register(b_name, df_b)
@@ -1682,19 +1682,63 @@ class SQLQuery():
 
         def get_date_format(samples):
             # dateinfer reads sql date 2020-04-01 as yyyy-dd-mm. workaround for in
-            if re.match('[\d]{4}-[\d]{2}-[\d]{2}', samples[0]):
-                # suggested format
-                date_format = '%Y-%m-%d'
-                for sample in samples:
-                    try:
-                        dt.datetime.strptime(sample, date_format)
-                    except ValueError:
-                        date_format = None
-                        break
-                if date_format is not None:
-                    return date_format
+            for date_format, pattern in (
+                    ('%Y-%m-%d', '[\d]{4}-[\d]{2}-[\d]{2}'),
+                    # ('%Y', '[\d]{4}')
+            ):
+                if re.match(pattern, samples[0]):
+                    # suggested format
+                    for sample in samples:
+                        try:
+                            dt.datetime.strptime(sample, date_format)
+                        except ValueError:
+                            date_format = None
+                            break
+                    if date_format is not None:
+                        return date_format
 
             return dateinfer.infer(samples)
+
+        if self.model_types.get(order_col) in ('float', 'integer'):
+            # convert strings to digits
+            fnc = {
+                'integer': int,
+                'float': float
+            }[self.model_types[order_col]]
+
+
+            # convert predictor_data
+            if len(predictor_data) > 0:
+                if isinstance(predictor_data[0][order_col], str):
+
+                    for row in predictor_data:
+                        row[order_col] = fnc(row[order_col])
+                elif isinstance(predictor_data[0][order_col], dt.date):
+                    # convert to datetime
+                    for row in predictor_data:
+                        row[order_col] = fnc(row[order_col])
+
+            # convert predictor_data
+            if isinstance(table_data[0][order_col], str):
+
+                for row in table_data:
+                    row[order_col] = fnc(row[order_col])
+            elif isinstance(table_data[0][order_col], dt.date):
+                # convert to datetime
+                for row in table_data:
+                    row[order_col] = fnc(row[order_col])
+
+            # convert args to date
+            samples = [
+                arg.value
+                for arg in filter_args
+                if isinstance(arg, Constant) and isinstance(arg.value, str)
+            ]
+            if len(samples) > 0:
+
+                for arg in filter_args:
+                    if isinstance(arg, Constant) and isinstance(arg.value, str):
+                        arg.value = fnc(arg.value)
 
         if self.model_types.get(order_col) in ('date', 'datetime'):
             # convert strings to date

@@ -88,7 +88,7 @@ Query OK, 0 rows affected (x.xxx sec)
     ```sql
     CREATE PREDICTOR mindsdb.data_model
     FROM integration
-        (SELECT * FROM old_data) AS dataset
+        (SELECT * FROM old_data)
     PREDICT column;
     ```
 

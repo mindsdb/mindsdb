@@ -45,8 +45,8 @@ Below is the query that creates and trains the `home_rentals_model` model to pre
 ```sql
 CREATE PREDICTOR mindsdb.home_rentals_model
 FROM integration
-    (SELECT * FROM house_rentals_data) AS rentals
-PREDICT rental_price AS price;
+    (SELECT * FROM house_rentals_data)
+PREDICT rental_price;
 ```
 
 On execution, we get:

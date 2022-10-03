@@ -99,7 +99,7 @@ Once the database integration is successful we can query the table from the data
 
 Now we are ready to create our own predictor. We will start by using the SQL Editor to execute simple SQL syntax to create and train a machine learning predictive model.
 
-The predictor we will and be trained to determine if a mushroom is edible or poisonous.The following CREATE PREDICTOR statement is used to create predictors:
+The predictor we will and be trained to determine if a mushroom is edible or poisonous.The following `#!sql CREATE PREDICTOR` statement is used to create predictors:
 
 ```sql
 CREATE PREDICTOR mindsdb.predictor_name

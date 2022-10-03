@@ -152,7 +152,7 @@ Now, if the status of our predictor says `complete`, we can start making predict
 
 ## Making Predictions
 
-You can make predictions by querying the predictor joined with the data table. The [`SELECT`](/sql/api/select/) statement lets you make predictions for the label based on the chosen features for a given time period. Usually, you want to know what happens right after the latest training data point that was fed. We have a special keyword for that, the `LATEST` keyword.
+You can make predictions by querying the predictor joined with the data table. The [`#!sql SELECT`](/sql/api/select/) statement lets you make predictions for the label based on the chosen features for a given time period. Usually, you want to know what happens right after the latest training data point that was fed. We have a special keyword for that, the `LATEST` keyword.
 
 ```sql
 SELECT m.saledate AS date, m.MA AS forecast, MA_explain
@@ -177,7 +177,7 @@ On execution, we get:
 +-------------+-------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
-Please note that in the [`SELECT`](/sql/api/select/) statement, we select `m.saledate` instead of `t.saledate` because we make predictions for future dates that are not in the data table.
+Please note that in the [`#!sql SELECT`](/sql/api/select/) statement, we select `m.saledate` instead of `t.saledate` because we make predictions for future dates that are not in the data table.
 
 Now, try changing the `type` column value to *unit*, or the `bedrooms` column value to any number between 1 to 5, and check how the forecasts vary. This is because MindsDB recognizes each grouping as being its own different time series.
 

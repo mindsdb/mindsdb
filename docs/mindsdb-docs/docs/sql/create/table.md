@@ -6,14 +6,14 @@ The `#!sql CREATE TABLE` statement creates a table and fills it with a subselect
 
 ## Syntax
 
-You can use the usual `CREATE TABLE` statement:
+You can use the usual `#!sql CREATE TABLE` statement:
 
 ```sql
 CREATE TABLE [integration_name].[table_name]
     (SELECT ...);
 ```
 
-Or the `CREATE OR REPLACE TABLE` statement:
+Or the `#!sql CREATE OR REPLACE TABLE` statement:
 
 ```sql
 CREATE OR REPLACE TABLE [integration_name].[table_name]
@@ -23,7 +23,7 @@ CREATE OR REPLACE TABLE [integration_name].[table_name]
 Here are the steps followed by the syntax:
 
 - It executes a subselect query to get the output dataset.
-- In the case of the `CREATE OR REPLACE TABLE` statement, the `[integration_name].[table_name]` table is dropped before recreating it.
+- In the case of the `#!sql CREATE OR REPLACE TABLE` statement, the `[integration_name].[table_name]` table is dropped before recreating it.
 - It (re)creates the `[integration_name].[table_name]` table inside the `#!sql [integration_name]` integration.
 - It uses the [`#!sql INSERT INTO`](/sql/api/insert/) statement to insert the output of the `#!sql (SELECT ...)` query into the `[integration_name].[table_name]`.
 

@@ -65,7 +65,7 @@ Once you have confirmed the file has successfully uploaded and the data can be r
 
 ## Create and train a machine learning model.
 
-With the CREATE PREDICTOR statement, we can create a machine learning model:
+With the `#!sql CREATE PREDICTOR` statement, we can create a machine learning model:
 
 ```sql
 CREATE PREDICTOR mindsdb.predictor_name
@@ -143,7 +143,7 @@ As you can see, with around 99% confidence, MindsDB predicted the body fat perce
 
 ### Making Batch Predictions using the JOIN syntax
 
-The above example showed how to make predictions for a single individual's bodyfat, but what if you had a table of bodypart measurements for a number of individuals, and wanted to make predictions for them all?  This is possible using the [JOIN command](https://docs.mindsdb.com/sql/api/join/), which allows for the combining of rows from a database table and the prediction model table on a related column.  
+The above example showed how to make predictions for a single individual's bodyfat, but what if you had a table of bodypart measurements for a number of individuals, and wanted to make predictions for them all?  This is possible using the [`#!sql JOIN` command](https://docs.mindsdb.com/sql/api/join/), which allows for the combining of rows from a database table and the prediction model table on a related column.  
 
 The basic syntax to use the JOIN syntax is:
 

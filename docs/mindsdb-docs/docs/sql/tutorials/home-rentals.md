@@ -150,7 +150,7 @@ Now, if the status of our predictor says `complete`, we can start making predict
 
 ### Making a Single Prediction
 
-You can make predictions by querying the predictor as if it were a table. The [`SELECT`](/sql/api/select/) statement lets you make predictions for the label based on the chosen features.
+You can make predictions by querying the predictor as if it were a table. The [`#!sql SELECT`](/sql/api/select/) statement lets you make predictions for the label based on the chosen features.
 
 ```sql
 SELECT rental_price, rental_price_explain

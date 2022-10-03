@@ -2,7 +2,7 @@
 
 ## Description
 
-The `CREATE PREDICTOR` statement creates and trains a new ML model.
+The `#!sql CREATE PREDICTOR` statement creates and trains a new ML model.
 
 ## Syntax
 

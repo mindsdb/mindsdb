@@ -10,7 +10,7 @@ It lets you explore the queried data by initially displaying and analyzing a sub
 
 The data used here comes from one of our tutorials. For details, click [here](/sql/tutorials/home-rentals/).
 
-Before you see the Data Insights pane, you must run a `SELECT` query on your dataset. Let's have a look at the available features.
+Before you see the Data Insights pane, you must run a `#!sql SELECT` query on your dataset. Let's have a look at the available features.
 
 ## Features
 
@@ -56,7 +56,7 @@ It is helpful to determine the exact data value counts from the histograms.
 
 Let's do a full data analysis step by step.
 
-First, we need to query data for analysis in the MindsDB Cloud editor. Please note that you need to query your dataset without using a `LIMIT` keyword to be able to perform a complete data analysis.
+First, we need to query data for analysis in the MindsDB Cloud editor. Please note that you need to query your dataset without using a `#!sql LIMIT` keyword to be able to perform a complete data analysis.
 
 ```sql
 SELECT *

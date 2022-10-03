@@ -84,8 +84,8 @@ PREDICT RIDES ORDER BY DATE GROUP BY ROUTE
 WINDOW 10 HORIZON 7;
 ```
 
-Let’s discuss the statement above. We create a predictor table using the `CREATE PREDICTOR` statement and specifying the database from which the training data comes. The code in `yellow` selects the filtered training data. After that, we use the `PREDICT` keyword to define the column whose data we want to forecast.
-Next, there are standard SQL clauses, such as `ORDER BY, GROUP BY, WINDOW, and HORIZON`. We use the `ORDER BY` clause and the DATE column as its argument. By doing so, we emphasize that we deal with a time-series problem. We order the rows by date. The `GROUP BY` clause divides the data into partitions. Here, each of them relates to a particular bus route. We take into account just the last ten rows for every given prediction. Hence, we use `WINDOW` 10. To prepare the forecast of the number of bus rides for the next week, we define `HORIZON` 7.
+Let’s discuss the statement above. We create a predictor table using the `#!sql CREATE PREDICTOR` statement and specifying the database from which the training data comes. The code in `yellow` selects the filtered training data. After that, we use the `#!sql PREDICT` keyword to define the column whose data we want to forecast.
+Next, there are standard SQL clauses, such as `#!sql ORDER BY, GROUP BY, WINDOW, and HORIZON`. We use the `#!sql ORDER BY` clause and the DATE column as its argument. By doing so, we emphasize that we deal with a time-series problem. We order the rows by date. The `#!sql GROUP BY` clause divides the data into partitions. Here, each of them relates to a particular bus route. We take into account just the last ten rows for every given prediction. Hence, we use `#!sql WINDOW` 10. To prepare the forecast of the number of bus rides for the next week, we define `#!sql HORIZON` 7.
 Now, you can execute the CREATE PREDICTOR statement and wait until your predictive model is complete. The MINDSDB.PREDICTORS table stores its name as rides_forecaster_demo and its status as training. Once your predictive model is ready, the status changes to complete.
 
 ## Step 3: Getting the Forecasts

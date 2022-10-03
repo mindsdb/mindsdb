@@ -40,7 +40,7 @@ First we need to switch to using the mindsdb database.
 USE mindsdb;
 ```
 
-We will start by training a model with the CREATE PREDICTOR command using all columns from the dataset we uploaded.
+We will start by training a model with the `#!sql CREATE PREDICTOR` command using all columns from the dataset we uploaded.
 
 ```sql
 CREATE PREDICTOR mindsdb.spam_predictor

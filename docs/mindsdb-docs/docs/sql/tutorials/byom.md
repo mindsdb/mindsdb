@@ -327,7 +327,7 @@ dtype_dict={"text": "rich_text", "target": "integer"},
 format='ray_server';
 ```
 
-Training will take a while given that this model is a neural network rather than a simple logistic regression. You can check its status with the query `SELECT * FROM mindsdb.predictors WHERE name = 'byom_ray_serve_nlp';`, much like you'd do with a "normal" MindsDB predictor.
+Training will take a while given that this model is a neural network rather than a simple logistic regression. You can check its status with the query `#!sql SELECT * FROM mindsdb.predictors WHERE name = 'byom_ray_serve_nlp';`, much like you'd do with a "normal" MindsDB predictor.
 
 Once the predictor's status becomes `trained` we can query it for predictions as usual:
 
@@ -374,7 +374,7 @@ format='mlflow',
 data_dtype={"0": "integer", "1": "integer"}
 ```
 
-We can now run predictions as usual, by using the `WHERE` statement or joining on a data table with an appropriate schema:
+We can now run predictions as usual, by using the `#!sql WHERE` statement or joining on a data table with an appropriate schema:
 
 ```sql
 SELECT `1` FROM byom_mlflow WHERE `0`=2;
@@ -475,7 +475,7 @@ USING
     dtype_dict={"text": "rich text", "target": "binary"};
 ```
 
-To get predictions, you can directly pass input data using the `WHERE` clause:
+To get predictions, you can directly pass input data using the `#!sql WHERE` clause:
 
 ```sql
 SELECT target
@@ -483,7 +483,7 @@ FROM mindsdb.byom_mlflow_nlp
 WHERE text='The tsunami is coming, seek high ground';
 ```
 
-Or you can `JOIN` with a data table. For this, you should ensure the table actually exists and that the database it belongs to has been connected to your MindsDB instance. For more details, refer to the same steps in the Ray Serve example (section 1.2).
+Or you can `#!sql JOIN` with a data table. For this, you should ensure the table actually exists and that the database it belongs to has been connected to your MindsDB instance. For more details, refer to the same steps in the Ray Serve example (section 1.2).
 
 ```sql
 SELECT

@@ -74,7 +74,7 @@ Select the `Run` button or Shift+Enter to execute the syntax. Once the Database 
 
 We can create a machine learning predictive model by using simple SQL statements executed in the SQL Editor.
 
-To create and train a new machine learning model we will need to use the CREATE PREDICTOR statement:
+To create and train a new machine learning model we will need to use the `#!sql CREATE PREDICTOR` statement:
 
 ```sql
 CREATE PREDICTOR mindsdb.predictor_name
@@ -116,7 +116,7 @@ The complete status means that the model training has successfully finished.
  
 ## Using SQL Statements to make predictions
 
-The next steps would be to query the model and predict the heart disease risk. Let’s imagine a patient. This patient’s age is 30, she has a cholesterol level of 177 mg/dl, with slope of the peak exercise ST segment as 2, and thal as 2. Add all of this information to the `WHERE` clause.
+The next steps would be to query the model and predict the heart disease risk. Let’s imagine a patient. This patient’s age is 30, she has a cholesterol level of 177 mg/dl, with slope of the peak exercise ST segment as 2, and thal as 2. Add all of this information to the `#!sql WHERE` clause.
 
 ```sql
 SELECT target AS prediction,

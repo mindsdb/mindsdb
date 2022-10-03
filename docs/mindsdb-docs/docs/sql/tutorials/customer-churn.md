@@ -152,7 +152,7 @@ Now, if the status of our predictor says `complete`, we can start making predict
 
 ## Making Predictions
 
-You can make predictions by querying the predictor as if it were a table. The [`SELECT`](/sql/api/select/) syntax lets you make predictions for the label based on the chosen features.
+You can make predictions by querying the predictor as if it were a table. The [`#!sql SELECT`](/sql/api/select/) syntax lets you make predictions for the label based on the chosen features.
 
 ```sql
 SELECT Churn, Churn_confidence, Churn_explain
@@ -176,7 +176,7 @@ On execution, we get:
 +-------+---------------------+-------------------------------------------------------------------------------------------------+
 ```
 
-To get more accurate predictions, we should provide as much data as possible in the `WHERE` clause. Let's run another query.
+To get more accurate predictions, we should provide as much data as possible in the `#!sql WHERE` clause. Let's run another query.
 
 ```sql
 SELECT Churn, Churn_confidence, Churn_explain

@@ -63,7 +63,7 @@ Let’s create a debt model that allows us to approximate the debt value for any
 CREATE PREDICTOR mindsdb.debt_model FROM income_table PREDICT debt;
 ```
 
-MindsDB provides the **CREATE PREDICTOR** statement. When we execute this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows.
+MindsDB provides the `#!sql CREATE PREDICTOR` statement. When we execute this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows.
 
 ![Income vs Debt model](/assets/sql/tutorials/snowflake-superset/7-debt-income-query-ml.jpg)
 

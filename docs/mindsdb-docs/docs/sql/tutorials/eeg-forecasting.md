@@ -1,72 +1,190 @@
-# Forecast Eye State From Electroencephalogram Readings
+# Forecasting Eye State from Electroencephalogram Readings with MindsDB
 
 ## Introduction
 
-In this short example we will produce categorical forecasts for a multivariate time series.
+In this tutorial, we'll create and train a machine learning model, or as we call it, an `AI Table` or a `predictor`. By querying the model, we'll produce categorical forecasts for a multivariate time series.
 
-## Data and Setup
+Make sure you have access to a working MindsDB installation, either locally or at [MindsDB Cloud](https://cloud.mindsdb.com/).
 
-The dataset we will use is the UCI "EEG Eye State" found [here](https://archive.ics.uci.edu/ml/datasets/EEG+Eye+State). Each row contains 15 different electroencephalogram (EEG) readings plus the current state of one of the patient's eye (0: closed, 1: open). We want to know ahead of time when the eye is going to change state, let's try!
+If you want to learn how to set up your account at MindsDB Cloud, follow [this guide](https://docs.mindsdb.com/setup/cloud/). Another way is to set up MindsDB locally using [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [Python](https://docs.mindsdb.com/setup/self-hosted/pip/source/).
 
-Make sure you have access to a working MindsDB installation (either local or via [cloud.mindsdb.com](https://cloud.mindsdb.com)), and either load it into a table in your database of choice or upload the file directly to the special `FILES` datasource (via SQL or GUI). Once you've done this, proceed to the next step. For the rest of the tutorial we'll assume you've opted for the latter option and uploaded the file with the name `EEGEye`:
+Let's get started.
+
+## Data Setup
+
+### Connecting the Data
+
+There are a couple of ways you can get the data to follow through with this tutorial.
+
+=== "Connecting as a database"
+
+    You can connect to a demo database that we've prepared for you. It contains the data used throughout this tutorial (the `#!sql example_db.demo_data.eeg_eye` table).
+
+    ```sql
+    CREATE DATABASE example_db
+        WITH ENGINE = "postgres",
+        PARAMETERS = {
+            "user": "demo_user",
+            "password": "demo_password",
+            "host": "3.220.66.106",
+            "port": "5432",
+            "database": "demo"
+    };
+    ```
+
+    Now you can run queries directly on the demo database. Let's preview the data that we'll use to train our predictor.
+
+    ```sql
+    SELECT * 
+    FROM example_db.demo_data.eeg_eye
+    LIMIT 10;
+    ```
+
+=== "Connecting as a file"
+
+    The dataset we use in this tutorial is the UCI's *EEG Eye State* dataset. You can download it [here](https://archive.ics.uci.edu/ml/datasets/EEG+Eye+State) in the `ARFF` format that shoud be converted to the `CSV` format before uploading it via [MindsDB SQL Editor](/connect/mindsdb_editor/).
+
+    Follow [this guide](/sql/create/file/) to find out how to upload a file to MindsDB.
+
+    Now you can run queries directly on the file as if it were a table. Let's preview the data that we'll use to train our predictor.
+
+    ```sql
+    SELECT *
+    FROM files.eeg_eye
+    LIMIT 10;
+    ```
+
+!!! Warning "Pay Attention to the Queries"
+    From now on, we'll use the `#!sql files.eeg_eye` file as a table. Make sure you replace it with `example_db.demo_data.eeg_eye` if you connect the data as a database.
+
+### Understanding the Data
+
+We use the UCI's *EEG Eye State* dataset, where each row contains data of one electroencephalogram (EEG) reading plus the current state of the patient's eye, where `0` indicates open eye and `1` indicates closed eye. We want to know ahead of time when the eye state will change, so we predict the `eyeDetection` column.
+
+Below is the sample data stored in the `#!sql files.eeg_eye` table.
 
 ```sql
-SHOW TABLES FROM files;
-
-SELECT * FROM files.EEGEye LIMIT 10;
++----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+--------------+
+| AF3      | F7       | F3       | FC5      | T7       | P7       | O1       | O2       | P8       | T8       | FC6      | F4       | F8       | AF4      | eyeDetection |
++----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+--------------+
+| 4329.23  | 4009.23  | 4289.23  | 4148.21  | 4350.26  | 4586.15  | 4096.92  | 4641.03  | 4222.05  | 4238.46  | 4211.28  | 4280.51  | 4635.9   | 4393.85  | 0            |
+| 4324.62  | 4004.62  | 4293.85  | 4148.72  | 4342.05  | 4586.67  | 4097.44  | 4638.97  | 4210.77  | 4226.67  | 4207.69  | 4279.49  | 4632.82  | 4384.1   | 0            |
+| 4327.69  | 4006.67  | 4295.38  | 4156.41  | 4336.92  | 4583.59  | 4096.92  | 4630.26  | 4207.69  | 4222.05  | 4206.67  | 4282.05  | 4628.72  | 4389.23  | 0            |
+| 4328.72  | 4011.79  | 4296.41  | 4155.9   | 4343.59  | 4582.56  | 4097.44  | 4630.77  | 4217.44  | 4235.38  | 4210.77  | 4287.69  | 4632.31  | 4396.41  | 0            |
+| 4326.15  | 4011.79  | 4292.31  | 4151.28  | 4347.69  | 4586.67  | 4095.9   | 4627.69  | 4210.77  | 4244.1   | 4212.82  | 4288.21  | 4632.82  | 4398.46  | 0            |
++----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+--------------+
 ```
 
-## Create a Time Series Predictor
+Where:
 
-Let's specify the `eyeDetection` column as our target variable. The interesting thing about this example is that we are aiming to forecast "labels" that are not strictly numerical. Even though this example is simple (because the variable is a binary category, either "Open"ed or "Close"d eye), this can easily be generalized to more categories.
+| Column                | Description                                                                                  | Data Type           | Usage   |
+| --------------------- | -------------------------------------------------------------------------------------------- | ------------------- | ------- |
+| `AF3`,`F7`,`F3`,`FC5`,`T7`,`P7`,`O1`,`O2`,`P8`,`T8`,`FC6`,`F4`,`F8`,`AF4` | The EEG measurement data.                | `float`             | Feature |
+| `eyeDetectin`         | The state of the patient's eye where `0` indicates open eye and `1` indicates closed eye.    | `binary`            | Label   |
 
-We will order the measurements by the `Timestamps` column, which shows readings a frequency of approximately 8 miliseconds.
+!!!Info "Labels and Features"
+    A **label** is a column whose values will be predicted (the y variable in simple linear regression).<br/>
+    A **feature** is a column used to train the model (the x variable in simple linear regression).
 
-To create our predictor, we can execute the following statement:
+## Training a Predictor
+
+Let's create and train the machine learning model. For that, we use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) statement and specify the input columns used to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
+
+The `eyeDetection` column is our target variable. The interesting thing about this example is that we aim to forecast *labels* that are not strictly numerical. Even though this example is simple (because the variable is a binary category), this can easily be generalized to more than two categories.
+
+We order the measurements by the `Timestamps` column that shows readings frequency of approximately 8 miliseconds.
 
 ```sql
-CREATE PREDICTOR 
-  mindsdb.eeg_eye_forecast
+CREATE PREDICTOR mindsdb.eeg_eye_forecast
 FROM files
-  (SELECT * FROM EEGEye)
+  (SELECT * FROM eeg_eye)
 PREDICT eyeDetection
 ORDER BY Timestamps
 WINDOW 50
 HORIZON 10;
 ```
 
-As the sampling frequency is 8 ms, this predictor will use be trained using a historical context of roughly `(50 * 8) = 400 [ms]` to predict the following `(10 * 8) = 80 [ms]`.
+As the sampling frequency is 8 ms, this predictor is trained using a historical context of roughly 400 ms (`(50 * 8) = 400 [ms]`) to predict the following 80 ms (`(10 * 8) = 80 [ms]`).
 
-You can check the status of the predictor:
+## Status of a Predictor
+
+A predictor may take a couple of minutes for the training to complete. You can monitor the status of the predictor by using this SQL command:
 
 ```sql
-SELECT * FROM mindsdb.predictors
+SELECT status
+FROM mindsdb.predictors
 WHERE name='eeg_eye_forecast';
 ```
 
-## Generating Forecasts
+If we run it right after creating a predictor, we get this output:
 
-Once the predictor has been successfully trained, you can query it to get predictions for the next `#!sql HORIZON` timesteps into the future, which in this case is roughly 80 miliseconds. Usually, in forecasting scenarios you'll want to know what happens right after the latest data measurement, for which we have a special bit of syntax, the `#!sql LATEST` key word:
-
+```sql
++------------+
+| status     |
++------------+
+| generating |
++------------+
 ```
+
+A bit later, this is the output:
+
+```sql
++----------+
+| status   |
++----------+
+| training |
++----------+
+```
+
+And at last, this should be the output:
+
+```sql
++----------+
+| status   |
++----------+
+| complete |
++----------+
+```
+
+Now, if the status of our predictor says `complete`, we can start making predictions!
+
+## Making Predictions
+
+You can make predictions by querying the predictor joined with the data table. The [`SELECT`](/sql/api/select/) statement lets you make predictions for the label based on the chosen features for a given time period. Usually, you want to know what happens right after the latest training data point that was fed. We have a special keyword for that, the `LATEST` keyword.
+
+Let's run a query to get predictions for the next `#!sql HORIZON` timesteps into the future, which in this case is roughly 80 miliseconds.
+
+```sql
 SELECT m.Timestamps as timestamps,
        m.eyeDetection as eye_status
-FROM files.EEGEye as t
+FROM files.eeg_eye as t
 JOIN mindsdb.eeg_eye_forecast as m  
 WHERE t.timestamps > LATEST
 LIMIT 10;
 ```
 
-That's it. We can now `#!sql JOIN` any set of `#!sql WINDOW` rows worth of measurements with this predictor, and forecasts will be emitted to help us expect a change in the state of the patient's eye based on her EEG readings.
+On execution, we get:
+
+```sql
+
+```
+
+That's it. We can now `#!sql JOIN` any set of `#!sql WINDOW` rows worth of measurements with this predictor, and forecasts will be emitted to help us expect a change in the state of the patient's eye based on the EEG readings.
 
 ## Alternate Problem Framings
 
-It is also possible to reframe this task as a "normal" forecasting scenario where the variable is numeric. There are a few options here, and it boils down to what the broader scenario is, and what format would maximize value of any specific prediction.
+It is also possible to reframe this task as a *normal* forecasting scenario where the variable is numeric. There are a few options here. It boils down to what the broader scenario is and what format would maximize the value of any specific prediction.
 
-For example, a simple mapping of "eye is closed" to zero, and "eye is open" to one, would be enough to replicate the above behavior.
+For example, a simple mapping of `eye is open` to `0` and `eye is closed` to `1` would be enough to replicate the above behavior.
 
-We could also explore other options. With some data transformations on the data layer, we could get a countdown to the next change in state, effectively predicting a "date" if we cast this back into the timestamp domain.
+We could also explore other options. With some data transformations on the data layer, we could get a countdown to the next change in state, effectively predicting a *date* if we cast this back into the timestamp domain.
 
-## Next Steps
+## What's Next?
 
-We invite you to try this tutorial with your own time series data. If you have any questions or feedback, be sure to join our slack community or make an issue in the github repository!
+Have fun while trying it out yourself!
+
+* Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
+* Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
+* Engage with the MindsDB community on [Slack](https://mindsdb.com/joincommunity) or [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and share your ideas and thoughts.
+
+If this tutorial was helpful, please give us a GitHub star [here](https://github.com/mindsdb/mindsdb).

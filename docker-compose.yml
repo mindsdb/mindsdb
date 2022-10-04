@@ -1,4 +1,4 @@
-version: "3.8"
+version: "3"
 
 services:
 
@@ -18,11 +18,11 @@ services:
   mysql_db:
     image: "mindsdb/mysql-handler-test"
     ports:
-      - 3306:3307
+      - 3307:3306
+    command: --secure-file-priv=/
     environment:
-      - MYSQL_ROOT_PASSWORD: "supersecret"
-      - MYSQL_USER: "root"
-      - MYSQL_DATABASE: "test"
+      MYSQL_ROOT_PASSWORD: "supersecret"
+      MYSQL_DATABASE: "test"
     healthcheck:
       test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD' ]
       interval: 5s
@@ -33,18 +33,16 @@ services:
   db_handler:
     image: "db_handler"
     environment:
-      - 'PARAMS={"connection_data": {"host": "mysql_db", "port": "3307", "user": "root", "password": "supersecret", "database": "test", "ssl": false}, "name": "foo", "type": "mysql"}'
+      - 'PARAMS={"connection_data": {"host": "mysql_db", "port": "3306", "user": "root", "password": "supersecret", "database": "test", "ssl": false}, "name": "foo", "type": "mysql"}'
 
     ports:
       - 5000:5000
     depends_on:
-      mindsdb:
-        condition: service_healthy
-      mysql_db:
-        condition: service_healthy
+      - mindsdb
+      - mysql_db
 
     healthcheck:
-      test:  ["CMD", "curl", "-f", "http://localhost:5000/index"]
+      test:  ["CMD", "curl", "-f", "http://localhost:5000"]
       interval: 5s
       timeout: 4s
       retries: 100

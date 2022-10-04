@@ -106,7 +106,7 @@ nav:
       - VIEW: sql/create/view.md
     - UPDATE: sql/api/update.md
     - INSERT INTO: sql/api/insert.md
-    - DESCRIBE: sql/api/describe.md
+    - DESCRIBE PREDICTOR: sql/api/describe.md
     - RETRAIN: sql/api/retrain.md
     - DROP PREDICTOR: sql/api/drop.md
     - SELECT: sql/api/select.md

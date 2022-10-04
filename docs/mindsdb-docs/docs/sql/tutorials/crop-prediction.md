@@ -60,7 +60,7 @@ In the SQL Editor, type in the below syntax to create and train a machine learni
 CREATE PREDICTOR crop_predictor
 FROM files
     (SELECT * FROM crops)
-PREDICT label AS crop_type;
+PREDICT label;
 ```
 
 Select the button `Run` or Shift+Enter to execute the code. If the predictor is successfully created the console will display a message `Query successfully completed`.

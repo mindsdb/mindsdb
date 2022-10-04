@@ -232,7 +232,7 @@ Each database handler should inherit from the [`DatabaseHandler`](https://github
 
 * Implementing the `get_columns()` method:
 
-    The `get_tables()` method lists all columns of a specified table.
+    The `get_columns()` method lists all columns of a specified table.
 
     ```py
     def get_columns(self, table_name: str) -> HandlerStatusResponse:

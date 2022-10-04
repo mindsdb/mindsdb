@@ -88,8 +88,8 @@ Query OK, 0 rows affected (x.xxx sec)
     ```sql
     CREATE PREDICTOR mindsdb.data_model
     FROM integration
-        (SELECT * FROM old_data) AS dataset
-    PREDICT column AS predicted_column;
+        (SELECT * FROM old_data)
+    PREDICT column;
     ```
 
     Now, having the `data_model` model trained using the `old_data` dataset, we can join this model with the `new_data` dataset to make predictions like this:

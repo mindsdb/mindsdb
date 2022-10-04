@@ -1,7 +1,7 @@
 import json
 import pickle
 from flask import Flask, request
-from mindsdb.integrations.handlers_wrapper.helper import define_handler
+from mindsdb.integrations.libs.handler_helpers import define_handler
 from mindsdb.utilities.log import log
 
 class BaseDBWrapper:
@@ -56,7 +56,8 @@ class DBHandlerWrapper(BaseDBWrapper):
     def check_connection(self):
         try:
             result =  self.handler.check_connection()
-            return {"success": result.success}
+            return result.to_json(), 200
+            # return {"success": result.success}
         except Exception as e:
             return {"status": "FAIL" ,"error": str(e)}, 500
 
@@ -64,7 +65,7 @@ class DBHandlerWrapper(BaseDBWrapper):
         query = request.json.get("query")
         try:
             result = self.handler.native_query(query)
-            return {"query": result.query, "data": result.data_frame.to_json(orient="split")}, 200
+            return result.to_json(), 200
         except Exception as e:
             return {"status": "FAIL" ,"error": str(e)}, 500
 
@@ -73,14 +74,15 @@ class DBHandlerWrapper(BaseDBWrapper):
         query = pickle.loads(s_query)
         try:
             result = self.handler.query(query)
-            return result, 200
+            return result.to_json(), 200
         except Exception as e:
             return {"status": "FAIL" ,"error": str(e)}, 500
 
     def get_tables(self):
         try:
             result = self.handler.get_tables()
-            return {"query": result.query, "data": result.data_frame.to_json(orient="split")}, 200
+            # return {"query": result.query, "data": result.data_frame.to_json(orient="split")}, 200
+            return result.to_json(), 200
         except Exception as e:
             return {"status": "FAIL" ,"error": str(e)}, 500
 
@@ -89,7 +91,8 @@ class DBHandlerWrapper(BaseDBWrapper):
         try:
             log.debug("get_columns: table - %s", table)
             result = self.handler.get_columns(table)
-            log.debug("get_columns: result - %s", result.data_frame)
-            return {"query": result.query, "data": result.data_frame.to_json(orient="split")}, 200
+            return result.to_json(), 200
+            # log.debug("get_columns: result - %s", result.data_frame)
+            # return {"query": result.query, "data": result.data_frame.to_json(orient="split")}, 200
         except Exception as e:
             return {"status": "FAIL" ,"error": str(e)}, 500

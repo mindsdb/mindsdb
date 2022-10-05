@@ -122,7 +122,7 @@ class HanaHandler(DatabaseHandler):
         try:
             connection = self.connect()
             with connection.cursor() as cur:
-                cur.execute('SELECT * FROM SYS.M_DATABASE')
+                cur.execute('SELECT 1 FROM SYS.DUMMY')
             response.success = True
         except dbapi.Error as e:
             log.error(f'Error connecting to SAP HANA {self.address}, {e}!')

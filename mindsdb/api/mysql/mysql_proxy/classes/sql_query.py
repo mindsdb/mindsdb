@@ -109,6 +109,9 @@ class ColumnsCollection:
         else:
             raise StopIteration
 
+    def __len__(self):
+        return len(self.__columns)
+
     def from_dict(self, columns_dict):
         for table_name in columns_dict:
             for columns_name in columns_dict[table_name]:

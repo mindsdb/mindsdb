@@ -10,5 +10,11 @@
 * [How To Visualize MindsDB Predictions with Tableau](https://dev.to/ephraimx/how-to-visualize-mindsdb-predictions-with-tableau-2bpd) by [Ephraimx](https://dev.to/ephraimx)
 * [Predicting Supermarket Future Sales Using Machine Learning with MindsDB](https://dev.to/ephraimx/predicting-future-sales-using-machine-learning-with-mindsdb-3p70) by [Ephraimx](https://dev.to/ephraimx)
 * [Predicting Home Rental Prices with MindsDB in Python](https://curiousprogrammer.hashnode.dev/predicting-home-rental-prices-with-mindsdb-in-python) by [Temidayo](https://hashnode.com/@Temicoder)
+* [How To Forecast Purchase Orders for Shopify Stores Using Open-Source](https://medium.com/towards-data-science/how-to-forecast-purchase-orders-for-shopify-stores-using-open-source-db82afec12fe) by [John Lafleur](https://medium.com/@jeanlafleur)
+* [Easy machine learning with MindsDB](https://medium.com/codesight/easy-machine-learning-with-mindsdb-664e27c974f9) by [Liron Navon](https://medium.com/@codesight)
 * [MindsDB: Your introduction to creating machine learning predictive models.](https://dev.to/chandrevdw31/mindsdb-your-introduction-to-creating-machine-learning-predictive-models-12d3) by [Chandre Van Der Westhuizen](https://dev.to/chandrevdw31)
+* [Machine Learning in 5 Lines with MindsDB](https://thecleverprogrammer.com/2020/11/07/machine-learning-in-5-lines-with-mindsdb/) by [Aman Kharwal](https://thecleverprogrammer.com/about/)
+* [Predicting Loan Default using Machine Learning with MindsDB](https://medium.com/@godsenteliel/predicting-loan-default-using-machine-learning-with-mindsdb-187ae59da5d) by [Eliel Godsent](https://medium.com/@godsenteliel)
+* [Introduction to AI Tables](https://medium.com/towards-data-science/introduction-to-ai-tables-a719251e1a58) by [Javi Sánchez](https://medium.com/@javi_sanchez)
 * [Predict insurance cost using MindsDB](https://medium.com/@kinkusuma/predict-insurance-cost-using-mindsdb-54b6a331fea8) by [Kinie K Kusuma](https://medium.com/@kinkusuma)
+

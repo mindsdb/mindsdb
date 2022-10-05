@@ -1,5 +1,6 @@
 # Community Tutorials
 
+* [Deploying MindsDB on Civo Compute](https://community.ops.io/rutamhere/deploying-mindsdb-on-civo-compute-2kgo) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Deploying MindsDB on Google Cloud Platform](https://community.ops.io/rutamhere/deploying-mindsdb-on-google-cloud-platform-41h9) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [How To Maintain ML-Analytics Cycle With Headless BI](https://medium.com/gooddata-developers/how-to-maintain-ml-analytics-cycle-with-headless-bi-815aceac5027?source=friends_link&sk=45f102ce4a54a6ae8c4dddc900aeebb9) by [Jan Kadlec](https://medium.com/@jkadlec)
 * [How To Visualize MindsDB Predictions with Tableau](https://dev.to/ephraimx/how-to-visualize-mindsdb-predictions-with-tableau-2bpd) by [Ephraimx](https://dev.to/ephraimx)

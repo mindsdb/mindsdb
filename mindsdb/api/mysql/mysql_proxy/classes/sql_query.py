@@ -10,7 +10,7 @@
 """
 
 import re
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 import hashlib
 import datetime as dt
 
@@ -23,7 +23,6 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     UnaryOperation,
-    CreateTable,
     Identifier,
     Constant,
     Select,
@@ -61,8 +60,8 @@ from mindsdb_sql.exceptions import PlanningException
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
+from mindsdb_sql.parser.ast.base import ASTNode
 
-import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
@@ -79,7 +78,6 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 )
 from mindsdb.utilities.cache import get_cache, json_checksum
 
-from mindsdb_sql.parser.ast.base import ASTNode
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
 

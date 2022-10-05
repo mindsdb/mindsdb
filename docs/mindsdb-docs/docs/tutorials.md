@@ -16,6 +16,7 @@
 * [Machine Learning in 5 Lines with MindsDB](https://thecleverprogrammer.com/2020/11/07/machine-learning-in-5-lines-with-mindsdb/) by [Aman Kharwal](https://thecleverprogrammer.com/about/)
 * [Predicting Loan Default using Machine Learning with MindsDB](https://medium.com/@godsenteliel/predicting-loan-default-using-machine-learning-with-mindsdb-187ae59da5d) by [Eliel Godsent](https://medium.com/@godsenteliel)
 * [MindsDB - The Superpowers of Machine learning in your regular DataBase](https://hashnode.prathamprasoon.com/mindsdb-the-superpowers-of-machine-learning-in-your-regular-database) by [Pratham Prasoon](https://hashnode.com/@PrasoonPratham)
+* [Multivariate time series forecasts inside databases with MindsDB and PyTorch](https://medium.com/mindsdb/multivariate-time-series-forecasts-inside-databases-with-mindsdb-and-pytorch-13745ada6b7e) by [Patricio Cerda Mardini](https://medium.com/@paxcema)
+* [How to bring your own machine learning model to databases](https://medium.com/mindsdb/how-to-bring-your-own-machine-learning-model-to-databases-47a188d6db00) by [Patricio Cerda Mardini](https://medium.com/@paxcema)
 * [Introduction to AI Tables](https://medium.com/towards-data-science/introduction-to-ai-tables-a719251e1a58) by [Javi Sánchez](https://medium.com/@javi_sanchez)
 * [Predict insurance cost using MindsDB](https://medium.com/@kinkusuma/predict-insurance-cost-using-mindsdb-54b6a331fea8) by [Kinie K Kusuma](https://medium.com/@kinkusuma)
-

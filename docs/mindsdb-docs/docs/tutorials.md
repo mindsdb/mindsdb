@@ -17,3 +17,4 @@
 * [Predicting Loan Default using Machine Learning with MindsDB](https://medium.com/@godsenteliel/predicting-loan-default-using-machine-learning-with-mindsdb-187ae59da5d) by [Eliel Godsent](https://medium.com/@godsenteliel)
 * [MindsDB - The Superpowers of Machine learning in your regular DataBase](https://hashnode.prathamprasoon.com/mindsdb-the-superpowers-of-machine-learning-in-your-regular-database) by [Pratham Prasoon](https://hashnode.com/@PrasoonPratham)
 * [Multivariate time series forecasts inside databases with MindsDB and PyTorch](https://medium.com/mindsdb/multivariate-time-series-forecasts-inside-databases-with-mindsdb-and-pytorch-13745ada6b7e) by [Patricio Cerda Mardini](https://medium.com/@paxcema)
+* [How to bring your own machine learning model to databases](https://medium.com/mindsdb/how-to-bring-your-own-machine-learning-model-to-databases-47a188d6db00) by [Patricio Cerda Mardini](https://medium.com/@paxcema)

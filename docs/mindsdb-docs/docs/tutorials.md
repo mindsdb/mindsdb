@@ -18,3 +18,5 @@
 * [MindsDB - The Superpowers of Machine learning in your regular DataBase](https://hashnode.prathamprasoon.com/mindsdb-the-superpowers-of-machine-learning-in-your-regular-database) by [Pratham Prasoon](https://hashnode.com/@PrasoonPratham)
 * [Multivariate time series forecasts inside databases with MindsDB and PyTorch](https://medium.com/mindsdb/multivariate-time-series-forecasts-inside-databases-with-mindsdb-and-pytorch-13745ada6b7e) by [Patricio Cerda Mardini](https://medium.com/@paxcema)
 * [How to bring your own machine learning model to databases](https://medium.com/mindsdb/how-to-bring-your-own-machine-learning-model-to-databases-47a188d6db00) by [Patricio Cerda Mardini](https://medium.com/@paxcema)
+* [Introduction to AI Tables](https://medium.com/towards-data-science/introduction-to-ai-tables-a719251e1a58) by [Javi Sánchez](https://medium.com/@javi_sanchez)
+* [Predict insurance cost using MindsDB](https://medium.com/@kinkusuma/predict-insurance-cost-using-mindsdb-54b6a331fea8) by [Kinie K Kusuma](https://medium.com/@kinkusuma)

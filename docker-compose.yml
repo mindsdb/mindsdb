@@ -9,8 +9,8 @@ services:
       - '47334:47334'
       - '47335:47335'
     healthcheck:
-      test:  ["CMD", "curl", "-f", "http://localhost:47334/ping"]
-      interval: 5s
+      test:  ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
+      interval: 10s
       timeout: 4s
       retries: 100
 
@@ -25,7 +25,7 @@ services:
       MYSQL_DATABASE: "test"
     healthcheck:
       test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD' ]
-      interval: 5s
+      interval: 20s
       timeout: 4s
       retries: 100
 
@@ -43,6 +43,6 @@ services:
 
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:5000"]
-      interval: 5s
+      interval: 15s
       timeout: 4s
       retries: 100

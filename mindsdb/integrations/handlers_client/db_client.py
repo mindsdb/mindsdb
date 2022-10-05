@@ -7,7 +7,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.handlers_client.base import BaseClient
 from mindsdb.integrations.libs.handler_helpers import define_handler as define_db_handler
-
+from mindsdb.utilities.log import log
 
 class DBServiceClient(BaseClient):
     def __init__(self, handler_type, as_service=False, **kwargs):
@@ -15,8 +15,8 @@ class DBServiceClient(BaseClient):
         connection_data = kwargs.get("connection_data", None)
         if connection_data is None:
             raise Exception("No connection data provided.")
-        host = kwargs.get("host", None)
-        port = kwargs.get("port", None)
+        host = connection_data.get("host", None)
+        port = connection_data.get("port", None)
         if self.as_service and (host is None or port is None):
             raise Exception("No host/port provided to DBHandler service connect to.")
 
@@ -41,15 +41,18 @@ class DBServiceClient(BaseClient):
         Check the connection of the PostgreSQL database
         :return: success status and error message if error occurs
         """
+        log.info("calling 'check_connection'")
         status = None
         try:
             r = self._do("/check_connection")
             r = r.json()
             status = StatusResponse(success=r.get("success", False), error_message=r.get("error_message", ""))
+            log.info("db service has replied")
 
         except Exception as e:
             # do some logging
             status = StatusResponse(success=False, error_message=str(e))
+            log.error("call to db service has finished with an error: %s", str(e))
 
         return status
 
@@ -61,14 +64,16 @@ class DBServiceClient(BaseClient):
         """
 
         response = None
+        log.info("calling 'native_query'")
         try:
-            r = self._do("/native_query", json={"context": self.context, "query": query})
+            r = self._do("/native_query", _type="post", json={"query": query})
             r = r.json()
             response = Response(data_frame=r.get("data_frame", None),
                                 resp_type=r.get("resp_type"),
                                 error_code=r.get("error_code", 0),
                                 error_message=r.get("error_message", None),
                                 query=r.get("query"))
+            log.info("db service has replied")
 
         except Exception as e:
             # do some logging
@@ -76,6 +81,7 @@ class DBServiceClient(BaseClient):
                                 error_code=1,
                                 resp_type=RESPONSE_TYPE.ERROR)
 
+            log.error("call to db service has finished with an error: %s", str(e))
         return response
 
     def query(self, query):
@@ -110,7 +116,7 @@ class DBServiceClient(BaseClient):
         response = None
 
         try:
-            r = self._do("/get_tables", json={"context": self.context})
+            r = self._do("/get_tables")
             r = r.json()
             response = Response(data_frame=r.get("data_frame", None),
                                 resp_type=r.get("resp_type"),
@@ -130,7 +136,7 @@ class DBServiceClient(BaseClient):
         response = None
 
         try:
-            r = self._do("/get_columns", json={"context": self.context, "table": table_name})
+            r = self._do("/get_columns", json={"table": table_name})
             r = r.json()
             response = Response(data_frame=r.get("data_frame", None),
                                 resp_type=r.get("resp_type"),

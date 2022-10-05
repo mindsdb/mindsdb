@@ -1,5 +1,7 @@
 import requests
 from mindsdb.integrations.libs.net_helpers import sending_attempts
+from mindsdb.utilities.log import log
+
 
 
 class BaseClient:
@@ -10,8 +12,11 @@ class BaseClient:
     # Make the wrapper a very thin layout between user and LightwoodHandler
     # in case of local lightwood installation
     def __getattr__(self, attr):
+        log.info("calling '%s' as: ", attr)
         if self.__dict__["as_service"]:
+            log.info("service")
             return getattr(self, attr)
+        log.info("handler")
         handler = self.__dict__["handler"]
         return getattr(handler, attr)
 

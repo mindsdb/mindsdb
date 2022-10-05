@@ -1,5 +1,6 @@
 # Community Tutorials
 
+* [Predicting Data Science Job Salaries using MindsDB Cloud](https://community.ops.io/rutamhere/predicting-data-science-job-salaries-using-mindsdb-cloud-1lgn) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Used Car Prices using MindsDB](https://tealfeed.com/predicting-used-car-prices-using-mindsdb-idzuc) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Deploying MindsDB on a Digital Ocean Droplet](https://dev.to/heyrutam/deploying-mindsdb-on-a-digital-ocean-droplet-31ed) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Deploying MindsDB on a Vultr Cloud Instance](https://community.ops.io/rutamhere/deploying-mindsdb-on-a-vultr-cloud-instance-40bm) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)

@@ -109,6 +109,11 @@ class ColumnsCollection:
         else:
             raise StopIteration
 
+    def from_dict(self, columns_dict):
+        for table_name in columns_dict:
+            for columns_name in columns_dict[table_name]:
+                self.add(table_name, columns_name)
+
 
 def get_preditor_alias(step, mindsdb_database):
     predictor_name = '.'.join(step.predictor.parts)
@@ -851,9 +856,12 @@ class SQLQuery():
                                            table_alias=table_key[2],
                                            name=column_name)
                                 )
-
             if self.columns_list is None:
                 self.columns_list = []
+                if isinstance(self.fetched_data['columns'], ColumnsCollection) is False:
+                    columns_collection = ColumnsCollection()
+                    columns_collection.from_dict(self.fetched_data['columns'])
+                    self.fetched_data['columns'] = columns_collection
                 for table_name, column in self.fetched_data['columns']:
                     col_types = self.fetched_data.get('types', {}).get(table_name, {})
                     self.columns_list.append(

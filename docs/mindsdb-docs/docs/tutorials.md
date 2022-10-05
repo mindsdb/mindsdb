@@ -16,3 +16,6 @@
 * [Machine Learning in 5 Lines with MindsDB](https://thecleverprogrammer.com/2020/11/07/machine-learning-in-5-lines-with-mindsdb/) by [Aman Kharwal](https://thecleverprogrammer.com/about/)
 * [Predicting Loan Default using Machine Learning with MindsDB](https://medium.com/@godsenteliel/predicting-loan-default-using-machine-learning-with-mindsdb-187ae59da5d) by [Eliel Godsent](https://medium.com/@godsenteliel)
 * [MindsDB - The Superpowers of Machine learning in your regular DataBase](https://hashnode.prathamprasoon.com/mindsdb-the-superpowers-of-machine-learning-in-your-regular-database) by [Pratham Prasoon](https://hashnode.com/@PrasoonPratham)
+* [Introduction to AI Tables](https://medium.com/towards-data-science/introduction-to-ai-tables-a719251e1a58) by [Javi Sánchez](https://medium.com/@javi_sanchez)
+* [Predict insurance cost using MindsDB](https://medium.com/@kinkusuma/predict-insurance-cost-using-mindsdb-54b6a331fea8) by [Kinie K Kusuma](https://medium.com/@kinkusuma)
+

@@ -14,3 +14,4 @@
 * [Machine Learning in 5 Lines with MindsDB](https://thecleverprogrammer.com/2020/11/07/machine-learning-in-5-lines-with-mindsdb/) by [Aman Kharwal](https://thecleverprogrammer.com/about/)
 * [Predicting Loan Default using Machine Learning with MindsDB](https://medium.com/@godsenteliel/predicting-loan-default-using-machine-learning-with-mindsdb-187ae59da5d) by [Eliel Godsent](https://medium.com/@godsenteliel)
 * [Introduction to AI Tables](https://medium.com/towards-data-science/introduction-to-ai-tables-a719251e1a58) by [Javi Sánchez](https://medium.com/@javi_sanchez)
+* [Model agnostic confidence estimation with conformal predictors for AutoML](https://medium.com/mindsdb/model-agnostic-confidence-estimation-with-conformal-predictors-for-automl-55fce87ef42a) by [Patricio Cerda Mardini](https://medium.com/@paxcema)

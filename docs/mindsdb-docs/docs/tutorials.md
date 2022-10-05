@@ -1,5 +1,6 @@
 # Community Tutorials
 
+* [Deploying MindsDB on a Digital Ocean Droplet](https://dev.to/heyrutam/deploying-mindsdb-on-a-digital-ocean-droplet-31ed) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Deploying MindsDB on a Vultr Cloud Instance](https://community.ops.io/rutamhere/deploying-mindsdb-on-a-vultr-cloud-instance-40bm) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Deploying MindsDB on Civo Compute](https://community.ops.io/rutamhere/deploying-mindsdb-on-civo-compute-2kgo) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Deploying MindsDB on Google Cloud Platform](https://community.ops.io/rutamhere/deploying-mindsdb-on-google-cloud-platform-41h9) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)

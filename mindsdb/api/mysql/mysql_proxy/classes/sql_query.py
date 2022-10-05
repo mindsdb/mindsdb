@@ -11,8 +11,6 @@
 
 import re
 from collections import OrderedDict, defaultdict
-import datetime
-import time
 import hashlib
 import datetime as dt
 
@@ -86,6 +84,32 @@ from mindsdb_sql.parser.ast.base import ASTNode
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
 
 predictor_cache = get_cache('predict')
+
+
+class ColumnsCollection:
+    def __init__(self):
+        self.__columns = []
+
+    def add(self, table, column):
+        self.__columns.append(table + column)
+
+    def __getitem__(self, key):
+        return self.__columns[key]
+
+    def __setitem__(self, key, value):
+        self.__columns[key] = value
+
+    def __iter__(self):
+        self.__n = 0
+        return self
+
+    def __next__(self):
+        n = self.__n
+        if n < len(self.__columns):
+            self.__n += 1
+            return self.__columns[n][:3], self.__columns[n][3:]
+        else:
+            raise StopIteration
 
 
 def get_preditor_alias(step, mindsdb_database):
@@ -288,7 +312,7 @@ class ResultSet:
             col_key = (col.name, col.alias)
             table_key = (col.database, col.table_name, col.table_alias)
 
-            if not table_key in step_data['tables']:
+            if table_key not in step_data['tables']:
                 step_data['tables'].append(table_key)
                 step_data['columns'][table_key] = []
                 step_data['types'][table_key] = {}
@@ -437,15 +461,13 @@ class SQLQuery():
     def fetch(self, view='list'):
         data = self.fetched_data
 
+        result = self._make_list_result_view(data)
         if view == 'dataframe':
-            result = self._make_list_result_view(data)
             col_names = [
                 col.alias if col.alias is not None else col.name
                 for col in self.columns_list
             ]
             result = pd.DataFrame(result, columns=col_names)
-        else:
-            result = self._make_list_result_view(data)
 
         # this is not used
         # elif view == 'dict':
@@ -832,23 +854,20 @@ class SQLQuery():
                                            name=column_name)
                                 )
 
-            # if there was no 'ProjectStep', then get columns list from last step:
             if self.columns_list is None:
                 self.columns_list = []
-                if self.fetched_data is not None:
-                    for table_name in self.fetched_data['columns']:
-                        col_types = self.fetched_data.get('types', {}).get(table_name, {})
-                        for column in self.fetched_data['columns'][table_name]:
-                            self.columns_list.append(
-                                Column(
-                                    database=table_name[0],
-                                    table_name=table_name[1],
-                                    table_alias=table_name[2],
-                                    name=column[0],
-                                    alias=column[1],
-                                    type=col_types.get(column[0])
-                                )
-                            )
+                for table_name, column in self.fetched_data['columns']:
+                    col_types = self.fetched_data.get('types', {}).get(table_name, {})
+                    self.columns_list.append(
+                        Column(
+                            database=table_name[0],
+                            table_name=table_name[1],
+                            table_alias=table_name[2],
+                            name=column[0],
+                            alias=column[1],
+                            type=col_types.get(column[0])
+                        )
+                    )
 
             self.columns_list = [x for x in self.columns_list if x.name != '__mindsdb_row_id']
         except Exception as e:
@@ -1100,7 +1119,6 @@ class SQLQuery():
 
                     values = [{table_name: x} for x in data]
 
-
                 data = {
                     'values': values,
                     'columns': columns,
@@ -1326,14 +1344,12 @@ class SQLQuery():
             try:
                 step_data = steps_data[step.dataframe.step_num]
 
-                columns = defaultdict(list)
+                columns = ColumnsCollection()
                 for column_identifier in step.columns:
-
                     if type(column_identifier) == Star:
                         for table_name, table_columns_list in step_data['columns'].items():
                             for column in table_columns_list:
-
-                                columns[table_name].append(column)
+                                columns.add(table_name, column)
 
                     elif type(column_identifier) == Identifier:
                         appropriate_table = None
@@ -1364,7 +1380,7 @@ class SQLQuery():
                                         new_col = (column_name, column_alias)
                                         cur_col = table_col_idx[column_exists]
 
-                                        columns[appropriate_table].append(new_col)
+                                        columns.add(appropriate_table, new_col)
                                         if cur_col != new_col:
                                             columns_to_copy = cur_col, new_col
                                         break
@@ -1384,7 +1400,7 @@ class SQLQuery():
                                         # add all by table
                                         appropriate_table = table_name
                                         for column in step_data['columns'][appropriate_table]:
-                                            columns[appropriate_table].append(column)
+                                            columns.add(appropriate_table, column)
                                         break
 
                                     table_col_idx = {}
@@ -1398,7 +1414,7 @@ class SQLQuery():
                                         new_col = (column_name, column_alias)
                                         cur_col = table_col_idx[column_exists]
 
-                                        columns[appropriate_table].append(new_col)
+                                        columns.add(appropriate_table, new_col)
                                         if cur_col != new_col:
                                             columns_to_copy = cur_col, new_col
 
@@ -1492,7 +1508,6 @@ class SQLQuery():
             }
 
         elif type(step) == SubSelectStep:
-
             step_data = steps_data[step.dataframe.step_num]
 
             table_name = step.table_name
@@ -1516,7 +1531,6 @@ class SQLQuery():
             result2.from_df(res, database, table_name)
 
             data = result2.to_step_data()
-
 
         elif type(step) == SaveToTable or type(step) == InsertToTable:
             is_replace = False
@@ -1679,7 +1693,6 @@ class SQLQuery():
             # exit otherwise
             return predictor_data
 
-
         def get_date_format(samples):
             # dateinfer reads sql date 2020-04-01 as yyyy-dd-mm. workaround for in
             for date_format, pattern in (
@@ -1705,7 +1718,6 @@ class SQLQuery():
                 'integer': int,
                 'float': float
             }[self.model_types[order_col]]
-
 
             # convert predictor_data
             if len(predictor_data) > 0:

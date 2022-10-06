@@ -2,33 +2,33 @@
 
 ## Introduction
 
-In this tutorial, we'll create, train, and query a machine learning model, which, in MindsDB language, is an `AI Table` or a `predictor`. We aim to predict the probability of churn for new customers of a telecom company.
+In this tutorial, we'll create and train a machine learning model, or as we call it, an `AI Table` or a `predictor`. By querying the model, we'll predict the probability of churn for new customers of a telecom company.
 
-Make sure you have access to a working MindsDB installation either locally or via [cloud.mindsdb.com](https://cloud.mindsdb.com/).
+Make sure you have access to a working MindsDB installation, either locally or at [MindsDB Cloud](https://cloud.mindsdb.com/).
 
-You can learn how to set up your account at MindsDB Cloud by following [this guide](https://docs.mindsdb.com/setup/cloud/). Another way is to set up MindsDB locally using [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [Python](https://docs.mindsdb.com/setup/self-hosted/pip/source/).
+If you want to learn how to set up your account at MindsDB Cloud, follow [this guide](https://docs.mindsdb.com/setup/cloud/). Another way is to set up MindsDB locally using [Docker](https://docs.mindsdb.com/setup/self-hosted/docker/) or [Python](https://docs.mindsdb.com/setup/self-hosted/pip/source/).
 
 Let's get started.
 
-## The Data
+## Data Setup
 
-### Connecting the data
+### Connecting the Data
 
 There are a couple of ways you can get the data to follow through with this tutorial.
 
-=== "Connecting as a database via `#!sql CREATE DATABASE`"
+=== "Connecting as a database"
 
-    You can connect to a demo database that we've prepared for you. It contains the data used throughout this tutorial which is the `#!sql example_db.demo_data.customer_churn` table.
+    You can connect to a demo database that we've prepared for you. It contains the data used throughout this tutorial (the `#!sql example_db.demo_data.customer_churn` table).
 
     ```sql
     CREATE DATABASE example_db
-        WITH ENGINE = "postgres",
-        PARAMETERS = {
-            "user": "demo_user",
-            "password": "demo_password",
-            "host": "3.220.66.106",
-            "port": "5432",
-            "database": "demo"
+    WITH ENGINE = "postgres",
+    PARAMETERS = {
+        "user": "demo_user",
+        "password": "demo_password",
+        "host": "3.220.66.106",
+        "port": "5432",
+        "database": "demo"
     };
     ```
 
@@ -36,17 +36,17 @@ There are a couple of ways you can get the data to follow through with this tuto
 
     ```sql
     SELECT * 
-    FROM example_db.demo_data.customer_churn 
+    FROM example_db.demo_data.customer_churn
     LIMIT 10;
     ```
 
 === "Connecting as a file"
 
-    In this tutorial, we use the customer churn dataset. You can download it [here](https://github.com/mindsdb/mindsdb-examples/blob/master/classics/customer_churn/raw_data/WA_Fn-UseC_-Telco-Customer-Churn.csv).
+    You can download [the `CSV` data file here](https://github.com/mindsdb/mindsdb-examples/blob/master/classics/customer_churn/raw_data/WA_Fn-UseC_-Telco-Customer-Churn.csv) and upload it via [MindsDB SQL Editor](/connect/mindsdb_editor/).
 
-    And [this guide](https://docs.mindsdb.com/sql/create/file/) explains how to upload a file to MindsDB.
+    Follow [this guide](/sql/create/file/) to find out how to upload a file to MindsDB.
 
-    Now, you can query the uploaded file as if it were a table.
+    Now you can run queries directly on the file as if it were a table. Let's preview the data that we'll use to train our predictor.
 
     ```sql
     SELECT *
@@ -54,13 +54,14 @@ There are a couple of ways you can get the data to follow through with this tuto
     LIMIT 10;
     ```
 
-!!! Warning "From now on, we will use the `files.churn` file as a table. Make sure you replace it with `#!sql example_db.demo_data.customer_churn` if you use the `demo` database."
+!!! Warning "Pay Attention to the Queries"
+    From now on, we'll use the `#!sql files.churn` file as a table. Make sure you replace it with `example_db.demo_data.customer_churn` if you connect the data as a database.
 
 ### Understanding the Data
 
-We will use the customer churn dataset where each row represents one customer. In the following sections of this tutorial, we will predict if the customer is going to stop using the company products.
+We use the customer churn dataset, where each row is one customer, to predict whether the customer is going to stop using the company products.
 
-Below is the sample data stored in the customer churn dataset.
+Below is the sample data stored in the `#!sql files.churn` table.
 
 ```sql
 +----------+------+-------------+-------+----------+------+------------+----------------+---------------+--------------+------------+----------------+-----------+-----------+---------------+--------------+----------------+-------------------------+--------------+------------+-----+
@@ -76,38 +77,37 @@ Below is the sample data stored in the customer churn dataset.
 
 Where:
 
-| Column                | Description                                                                                                      | Data Type           | Usage   |
-| :-------------------- | :--------------------------------------------------------------------------------------------------------------- | ------------------- | ------- |
-| `CustomerId`          | The identification number per customer                                                                           | `character varying` | Feature |
-| `Gender`              | The gender of a customer                                                                                         | `character varying` | Feature |
-| `SeniorCitizen`       | It indicates whether the customer is a senior citizen (1) or not (0)                                             | `integer`           | Feature |
-| `Partner`             | It indicates whether the customer has a partner (Yes) or not (No)                                                | `character varying` | Feature |
-| `Dependents`          | It indicates whether the customer has dependents (Yes) or not (No)                                               | `character varying` | Feature |
-| `Tenure`              | Number of months the customer has stayed with the company                                                        | `integer`           | Feature |
-| `PhoneService`        | It indicates whether the customer has a phone service (Yes) or not (No)                                          | `character varying` | Feature |
-| `MultipleLines`       | It indicates whether the customer has multiple lines (Yes) or not (No, No phone service)                         | `character varying` | Feature |
-| `InternetService`     | Customer’s internet service provider (DSL, Fiber optic, No)                                                      | `character varying` | Feature |
-| `OnlineSecurity`      | It indicates whether the customer has online security (Yes) or not (No, No internet service)                     | `character varying` | Feature |
-| `OnlineBackup`        | It indicates whether the customer has online backup (Yes) or not (No, No internet service)                       | `character varying` | Feature |
-| `DeviceProtection`    | It indicates whether the customer has device protection (Yes) or not (No, No internet service)                   | `character varying` | Feature |
-| `TechSupport`         | It indicates whether the customer has tech support (Yes) or not (No, No internet service)                        | `character varying` | Feature |
-| `StreamingTv`         | It indicates whether the customer has streaming TV (Yes) or not (No, No internet service)                        | `character varying` | Feature |
-| `StreamingMovies`     | It indicates whether the customer has streaming movies (Yes) or not (No, No internet service)                    | `character varying` | Feature |
-| `Contract`            | The contract term of the customer (Month-to-month, One year, Two year)                                           | `character varying` | Feature |
-| `PaperlessBilling`    | It indicates whether the customer has paperless billinig (Yes) or not (No)                                       | `character varying` | Feature |
-| `PaymentMethod`       | Customer’s payment method (Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic))   | `character varying` | Feature |
-| `MonthlyCharges`      | The monthly charge amount                                                                                        | `money`             | Feature |
-| `TotalCharges`        | The total amount charged to the customer                                                                         | `money`             | Feature |
-| `Churn`               | It indicates whether the customer churned (Yes) or not (No)                                                      | `character varying` | Label   |
+| Column                | Description                                                                                                              | Data Type           | Usage   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------- | ------- |
+| `CustomerId`          | The identification number of a customer.                                                                                 | `character varying` | Feature |
+| `Gender`              | The gender of a customer.                                                                                                | `character varying` | Feature |
+| `SeniorCitizen`       | It indicates whether the customer is a senior citizen (`1`) or not (`0`).                                                | `integer`           | Feature |
+| `Partner`             | It indicates whether the customer has a partner (`Yes`) or not (`No`).                                                   | `character varying` | Feature |
+| `Dependents`          | It indicates whether the customer has dependents (`Yes`) or not (`No`).                                                  | `character varying` | Feature |
+| `Tenure`              | Number of months the customer has been staying with the company.                                                         | `integer`           | Feature |
+| `PhoneService`        | It indicates whether the customer has a phone service (`Yes`) or not (`No`).                                             | `character varying` | Feature |
+| `MultipleLines`       | It indicates whether the customer has multiple lines (`Yes`) or not (`No`, `No phone service`).                          | `character varying` | Feature |
+| `InternetService`     | Customer’s internet service provider (`DSL`, `Fiber optic`, `No`).                                                       | `character varying` | Feature |
+| `OnlineSecurity`      | It indicates whether the customer has online security (`Yes`) or not (`No`, `No internet service`).                      | `character varying` | Feature |
+| `OnlineBackup`        | It indicates whether the customer has online backup (`Yes`) or not (`No`, `No internet service`).                        | `character varying` | Feature |
+| `DeviceProtection`    | It indicates whether the customer has device protection (`Yes`) or not (`No`, `No internet service`).                    | `character varying` | Feature |
+| `TechSupport`         | It indicates whether the customer has tech support (`Yes`) or not (`No`, `No internet service`).                         | `character varying` | Feature |
+| `StreamingTv`         | It indicates whether the customer has streaming TV (`Yes`) or not (`No`, `No internet service`).                         | `character varying` | Feature |
+| `StreamingMovies`     | It indicates whether the customer has streaming movies (`Yes`) or not (`No`, `No internet service`).                     | `character varying` | Feature |
+| `Contract`            | The contract term of the customer (`Month-to-month`, `One year`, `Two year`).                                            | `character varying` | Feature |
+| `PaperlessBilling`    | It indicates whether the customer has paperless billinig (`Yes`) or not (`No`).                                          | `character varying` | Feature |
+| `PaymentMethod`       | Customer’s payment method (`Electronic check`, `Mailed check`, `Bank transfer (automatic)`, `Credit card (automatic)`).  | `character varying` | Feature |
+| `MonthlyCharges`      | The monthly charge amount.                                                                                               | `money`             | Feature |
+| `TotalCharges`        | The total amount charged to the customer.                                                                                | `money`             | Feature |
+| `Churn`               | It indicates whether the customer churned (`Yes`) or not (`No`).                                                         | `character varying` | Label   |
 
 !!!Info "Labels and Features"
+    A **label** is a column whose values will be predicted (the y variable in simple linear regression).<br/>
+    A **feature** is a column used to train the model (the x variable in simple linear regression).
 
-    A **label** is the thing we're predicting — the y variable in simple linear regression.
-    A **feature** is an input variable — the x variable in simple linear regression.
+## Training a Predictor
 
-## Training a Predictor Via [`#!sql CREATE PREDICTOR`](/sql/create/predictor)
-
-Let's create and train your first machine learning predictor. For that, we are going to use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) syntax where we specify what sub-query to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
+Let's create and train the machine learning model. For that, we use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) statement and specify the input columns used to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
 
 ```sql
 CREATE PREDICTOR mindsdb.customer_churn_predictor
@@ -116,11 +116,11 @@ FROM files
 PREDICT Churn;
 ```
 
-We use all of the columns as features, except for the `Churn` column whose value is going to be predicted.
+We use all of the columns as features, except for the `Churn` column, whose values will be predicted.
 
-## Checking the Status of a Predictor
+## Status of a Predictor
 
-A predictor may take a couple of minutes for the training to complete. You can monitor the status of your predictor by using this SQL command:
+A predictor may take a couple of minutes for the training to complete. You can monitor the status of the predictor by using this SQL command:
 
 ```sql
 SELECT status
@@ -128,7 +128,17 @@ FROM mindsdb.predictors
 WHERE name='customer_churn_predictor';
 ```
 
-If we run it right after creating a predictor, we'll most probably get this output:
+If we run it right after creating a predictor, we get this output:
+
+```sql
++------------+
+| status     |
++------------+
+| generating |
++------------+
+```
+
+A bit later, this is the output:
 
 ```sql
 +----------+
@@ -138,7 +148,7 @@ If we run it right after creating a predictor, we'll most probably get this outp
 +----------+
 ```
 
-But if we wait a couple of minutes, this should be the output:
+And at last, this should be the output:
 
 ```sql
 +----------+
@@ -152,7 +162,9 @@ Now, if the status of our predictor says `complete`, we can start making predict
 
 ## Making Predictions
 
-You can make predictions by querying the predictor as if it were a table. The [`SELECT`](/sql/api/select/) syntax lets you make predictions for the label based on the chosen features.
+### Making a Single Prediction
+
+You can make predictions by querying the predictor as if it were a table. The [`SELECT`](/sql/api/select/) statement lets you make predictions for the label based on the chosen features.
 
 ```sql
 SELECT Churn, Churn_confidence, Churn_explain
@@ -169,13 +181,12 @@ AND InternetService='DSL';
 On execution, we get:
 
 ```sql
-+-------+---------------------+-------------------------------------------------------------------------------------------------+
-| Churn | Churn_confidence    | Churn_explain                                                                                   |
-+-------+---------------------+-------------------------------------------------------------------------------------------------+
-| Yes   | 0.7865168539325843  | {"predicted_value": "Yes", "confidence": 0.7865168539325843, "anomaly": null, "truth": null}    |
-+-------+---------------------+-------------------------------------------------------------------------------------------------+
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Churn | Churn_confidence    | Churn_explain                                                                                                                                                    |
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Yes   | 0.7752808988764045  | {"predicted_value": "Yes", "confidence": 0.7752808988764045, "anomaly": null, "truth": null, "probability_class_No": 0.4756, "probability_class_Yes": 0.5244}    |
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
-
 To get more accurate predictions, we should provide as much data as possible in the `WHERE` clause. Let's run another query.
 
 ```sql
@@ -187,31 +198,56 @@ AND Dependents='No'
 AND tenure=1 
 AND PhoneService='No' 
 AND MultipleLines='No phone service' 
-AND InternetService='DSL' 
+AND InternetService='DSL'
+AND Contract='Month-to-month'
+AND MonthlyCharges=29.85
+AND TotalCharges=29.85
+AND OnlineBackup='Yes'
 AND OnlineSecurity='No' 
-AND OnlineBackup='Yes' 
 AND DeviceProtection='No' 
 AND TechSupport='No' 
 AND StreamingTV='No' 
 AND StreamingMovies='No' 
-AND Contract='Month-to-month' 
 AND PaperlessBilling='Yes' 
-AND PaymentMethod='Electronic check' 
-AND MonthlyCharges=29.85 
-AND TotalCharges=29.85;
+AND PaymentMethod='Electronic check';
 ```
 
 On execution, we get:
 
 ```sql
-+-------+---------------------+-------------------------------------------------------------------------------------------------+
-| Churn | Churn_confidence    | Churn_explain                                                                                   |
-+-------+---------------------+-------------------------------------------------------------------------------------------------+
-| Yes   | 0.8202247191011236  | {"predicted_value": "Yes", "confidence": 0.8202247191011236, "anomaly": null, "truth": null}    |
-+-------+---------------------+-------------------------------------------------------------------------------------------------+
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Churn | Churn_confidence    | Churn_explain                                                                                                                                                    |
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Yes   | 0.8202247191011236  | {"predicted_value": "Yes", "confidence": 0.8202247191011236, "anomaly": null, "truth": null, "probability_class_No": 0.4098, "probability_class_Yes": 0.5902}    |
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
 MindsDB predicted the probability of this customer churning with confidence of around 82%. The previous query predicted it with confidence of around 79%. So providing more data improved the confidence level of predictions.
+
+### Making Batch Predictions
+
+Also, you can make bulk predictions by joining a data table with your predictor using [`#!sql JOIN`](/sql/api/join).
+
+```sql
+SELECT t.customerID, t.Contract, t.MonthlyCharges, m.Churn 
+FROM files.churn AS t 
+JOIN mindsdb.customer_churn_predictor AS m
+LIMIT 100;
+```
+
+On execution, we get:
+
+```sql
++----------------+-------------------+------------------+---------+
+| customerID     | Contract          | MonthlyCharges   | Churn   |
++----------------+-------------------+------------------+---------+
+| 7590-VHVEG     | Month-to-month    | 29.85            | Yes     |
+| 5575-GNVDE     | One year          | 56.95            | No      |
+| 3668-QPYBK     | Month-to-month    | 53.85            | Yes     |
+| 7795-CFOCW     | One year          | 42.3             | No      |
+| 9237-HQITU     | Month-to-month    | 70.7             | Yes     |
++----------------+-------------------+------------------+---------+
+```
 
 ## What's Next?
 

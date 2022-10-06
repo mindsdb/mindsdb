@@ -88,10 +88,13 @@ nav:
       - Deepnote: connect/deepnote.md
       - MindsDB SQL Editor: connect/mindsdb_editor.md
       - Metabase: connect/metabase.md
+      - Mongo Compass: connect/mongo-compass.md
+      - Mongo Shell: connect/mongo-shell.md
       - Kafka: connect/kafka.md
       - MySQL CLI: connect/mysql-client.md
       - SQL Alchemy: connect/sql-alchemy.md
       - Tableau: connect/tableau.md
+      - MariaDB Cloud Service: connect/mariadb-cloud.md
   - Data Setup in MindsDB: sql/create/databases.md
   - Upload a File to MindsDB: sql/create/file.md
   - MindsDB Data Insights: sql/data-insights.md
@@ -106,7 +109,7 @@ nav:
       - VIEW: sql/create/view.md
     - UPDATE: sql/api/update.md
     - INSERT INTO: sql/api/insert.md
-    - DESCRIBE: sql/api/describe.md
+    - DESCRIBE PREDICTOR: sql/api/describe.md
     - RETRAIN: sql/api/retrain.md
     - DROP PREDICTOR: sql/api/drop.md
     - SELECT: sql/api/select.md
@@ -133,7 +136,7 @@ nav:
     - Time Series:
       #- AI powered forecasts with MindsDB: sql/tutorials/mindsdb-superset-snowflake.md
       - House Sales: sql/tutorials/house-sales-forecasting.md
-      - Brain activity: sql/tutorials/eeg-forecasting.md
+      - Brain Activity: sql/tutorials/eeg-forecasting.md
   - Community Tutorials:
     - Regression:
       - Insurance Cost: sql/tutorials/insurance-cost-prediction.md

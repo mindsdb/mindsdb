@@ -1,5 +1,7 @@
+import re
 from typing import Dict
 import pandas as pd
+from pyhive import (trino, sqlalchemy_trino)
 from mindsdb_sql import parse_sql, ASTNode
 from trino.auth import KerberosAuthentication, BasicAuthentication
 from trino.dbapi import connect
@@ -17,7 +19,8 @@ from .trino_config_provider import TrinoConfigProvider
 class TrinoHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Trino statements
-    using kerberos authentication
+
+    kerberos is not implemented yet
     """
 
     name = 'trino'
@@ -45,6 +48,7 @@ class TrinoHandler(DatabaseHandler):
         '''
         self.connection = None
         self.is_connected = False
+        self.with_clause = ""
 
     def connect(self):
         """"
@@ -65,6 +69,8 @@ class TrinoHandler(DatabaseHandler):
             password=self.connection_data['password']
         if 'http_scheme' in self.connection_data:
            http_scheme=self.connection_data['http_scheme']
+        if 'with' in self.connection_data:
+           self.with_clause=self.connection_data['with']
 
         if password and auth=='kerberos':
             raise Exception("Kerberos authorization doesn't support password.")
@@ -143,10 +149,20 @@ class TrinoHandler(DatabaseHandler):
         return response
 
     def query(self, query: ASTNode) -> Response:
-        # @TODO: Detect to which DB is trino connected and use that dialect?
-        renderer = SqlalchemyRender('mysql')
+        # Utilize trino dialect from sqlalchemy
+        # implement WITH clause as default for all table
+        # in future, this behavior should be changed to support more detail
+        # level
+        # also, for simple the current implement is using rendered query string
+        # another method that directly manipulate ASTNOde is prefered
+        renderer = SqlalchemyRender(sqlalchemy_trino.TrinoDialect)
         query_str = renderer.get_string(query, with_failback=True)
-        return self.native_query(query_str)
+        modified_query_str = re.sub(
+            "(?is)(CREATE.+TABLE.+\(.*\))",
+            f"\\1 {self.with_clause}",
+            query_str
+        )
+        return self.native_query(modified_query_str)
 
     def get_tables(self) -> Response:
         """

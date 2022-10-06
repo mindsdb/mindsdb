@@ -26,7 +26,7 @@
     <span> | </span>
     <a href="https://cloud.mindsdb.com">Demo</a>
     <span> | </span>
-    <a href="https://github.com/mindsdb/mindsdb/blob/staging/integrations_contest.md">Integrations Contest</a>
+    <a href="https://mindsdb.com/hacktoberfest">Hacktoberfest</a>
   </h3>
   
 </div>
@@ -38,7 +38,7 @@
 * Data Scientists can streamline MLOps by deploying ML models as AI Tables.
 * Data Analysts can easily make forecasts on complex data (like multivariate time-series with high cardinality) and visualize them in BI tools like Tableau.
 
-**NEW!** Check-out the new MindsDB [Dev 💡 challenge](https://github.com/mindsdb/mindsdb/blob/staging/integrations_contest.md) (and the cash:dollar: prizes) for democratizing machine learning!
+**NEW!** Check-out the new Hacktoberfest [challenges](https://mindsdb.com/hacktoberfest) (and the cash:dollar: , laptop:computer: and many other prizes)!
 
 If you like our project then we would really appreciate **a Star ⭐!**
 
@@ -105,7 +105,7 @@ Check our [docs](https://docs.mindsdb.com/?utm_medium=community&utm_source=githu
 * Automatic data pre-processing, feature engineering and encoding
 * Classification, regression, time-series tasks
 * Bring models to production without “traditional deployment” as AI Tables
-* Get mModels’ accuracy scoring and confidence intervals for each prediction
+* Get models’ accuracy scoring and confidence intervals for each prediction
 * Join ML models with existing data
 * Anomaly detection
 * Model explainability analysis 
@@ -131,9 +131,11 @@ MindsDB works with most of the SQL and NoSQL databases and data Streams for real
 | <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="Connect PostgreSQL"></a> |
 | <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/QuestDB-d14671?style=for-the-badge&logo=questdb&logoColor=white" alt="Connect QuestDB"></a> |
 | <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/redis-%23DD0031.svg?&style=for-the-badge&logo=redis&logoColor=white" alt="Connect Redis"></a> |
+| <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/SAP%20HANA-1661BE?style=for-the-badge&logo=sap&logoColor=white" alt="Connect SAP HANA"></a> |
 | <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/ScyllaDB-53CADD?style=for-the-badge&logo=scylladbb&logoColor=white" alt="Connect ScyllaDB"></a> |
 | <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/Singlestore-5f07b4?style=for-the-badge&logo=singlestore&logoColor=white" alt="Connect Singlestore"></a> |
 | <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/Snowflake-35aedd?style=for-the-badge&logo=snowflake&logoColor=blue" alt="Connect Snowflake"></a> |
+| <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/Teradata-e36c42?style=for-the-badge&logo=teradata&logoColor=white" alt="Connect Teradata"></a> |
 | <a href="https://docs.mindsdb.com/"><img src="https://img.shields.io/badge/Trino-dd00a1?style=for-the-badge&logo=trino&logoColor=white" alt="Connect Trino"></a> |
 
 [:question: :wave: Missing integration?](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=&template=feature-mindsdb-request.yaml)

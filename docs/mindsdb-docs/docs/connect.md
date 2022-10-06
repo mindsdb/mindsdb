@@ -3,7 +3,7 @@
 #### Connect to database
 
 1. From the left navigation menu, select Database Integration.
-2. Click on the `ADD DATABASE` button.
+2. Click on the `#!sql ADD DATABASE` button.
 3. In the `Connect to Database` modal window:
     1. Select the Supported Database that you want to connect to.
     2. Add the Integration name(how you want to name the integration between your database and MindsDB).

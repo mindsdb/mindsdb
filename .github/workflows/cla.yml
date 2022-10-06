@@ -2,7 +2,6 @@ name: "MindsDB CLA Assistant"
 on:
   issue_comment:
     types: [created]
-  pull_request:
   pull_request_review:
     
 jobs:

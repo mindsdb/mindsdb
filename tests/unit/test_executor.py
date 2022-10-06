@@ -14,10 +14,10 @@ from mindsdb_sql import parse_sql
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
-from .executor_test_base import BaseExecutorTest
+from .executor_test_base import BaseExecutorTestMockModel
 
 
-class Test(BaseExecutorTest):
+class Test(BaseExecutorTestMockModel):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_integration_select(self, mock_handler):
 
@@ -294,7 +294,7 @@ class Test(BaseExecutorTest):
             raise Exception('SqlApiException expected')
 
 
-class TestCompexQueries(BaseExecutorTest):
+class TestCompexQueries(BaseExecutorTestMockModel):
     df = pd.DataFrame([
         {'a': 1, 'b': 'aaa', 'c': dt.datetime(2020, 1, 1)},
         {'a': 2, 'b': 'bbb', 'c': dt.datetime(2020, 1, 2)},
@@ -407,7 +407,7 @@ class TestCompexQueries(BaseExecutorTest):
     #         self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
 
 
-class TestTableau(BaseExecutorTest):
+class TestTableau(BaseExecutorTestMockModel):
 
     task_table = pd.DataFrame([
         {'a': 1, 'b': 'one'},
@@ -535,7 +535,7 @@ class TestTableau(BaseExecutorTest):
         assert ret.data[0] == [2]
 
 
-class TestWithNativeQuery(BaseExecutorTest):
+class TestWithNativeQuery(BaseExecutorTestMockModel):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_integration_native_query(self, mock_handler):
 

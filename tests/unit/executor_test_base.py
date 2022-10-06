@@ -69,14 +69,23 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='views', data={}, engine='views')
         db.session.add(r)
-        r = db.Integration(name='lightwood', data={}, engine='lightwood')
-        db.session.add(r)
         r = db.Integration(name='huggingface', data={}, engine='huggingface')
+        db.session.add(r)
+        r = db.Integration(name='lightwood', data={}, engine='lightwood')
         db.session.add(r)
         db.session.flush()
         self.lw_integration_id = r.id
         db.session.commit()
         return db
+
+    @staticmethod
+    def ret_to_df(ret):
+        # converts executor response to dataframe
+        columns = [
+            col.alias if col.alias is not None else col.name
+            for col in ret.columns
+        ]
+        return pd.DataFrame(ret.data, columns=columns)
 
 
 class BaseExecutorTest(BaseUnitTest):
@@ -85,7 +94,7 @@ class BaseExecutorTest(BaseUnitTest):
         super().setup_method()
         self.set_executor()
 
-    def set_executor(self):
+    def set_executor(self, to_mock_model_controller=False):
         # creates executor instance with mocked model_interface
         from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 
@@ -99,13 +108,18 @@ class BaseExecutorTest(BaseUnitTest):
 
         integration_controller = IntegrationController()
         self.file_controller = FileController()
-        # self.mock_model_controller = mock.Mock()
+
+        if to_mock_model_controller:
+            model_controller = mock.Mock()
+            self.mock_model_controller = model_controller
+        else:
+            model_controller = ModelController()
 
         # no predictors yet
         # self.mock_model_controller.get_models.side_effect = lambda: []
 
         server_obj.original_integration_controller = integration_controller
-        server_obj.original_model_controller = ModelController()
+        server_obj.original_model_controller = model_controller
         server_obj.original_view_controller = ViewController()
 
         predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
@@ -126,6 +140,88 @@ class BaseExecutorTest(BaseUnitTest):
         config_patch = mock.patch('mindsdb.utilities.cache.FileCache.get')
         self.mock_config = config_patch.__enter__()
         self.mock_config.side_effect = lambda x: None
+
+    def set_handler(self, mock_handler, name, tables, engine='postgres'):
+        # integration
+        # delete by name
+        r = self.db.Integration.query.filter_by(name=name).first()
+        if r is not None:
+            self.db.session.delete(r)
+
+        # create
+        r = self.db.Integration(name=name, data={}, engine=engine)
+        self.db.session.add(r)
+        self.db.session.commit()
+
+        from mindsdb.integrations.libs.response import (
+            HandlerResponse as Response,
+            RESPONSE_TYPE
+        )
+
+        def handler_response(df):
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                df
+            )
+            return response
+
+        def get_tables_f():
+            tables_ar = []
+            for table in tables:
+                tables_ar.append({'table_schema': 'public', 'table_name': table, 'table_type': 'BASE TABLE'})
+
+            return handler_response(
+                pd.DataFrame([{'table_schema': 'public', 'table_name': 'table1', 'table_type': 'BASE TABLE'}])
+            )
+        mock_handler().get_tables.side_effect = get_tables_f
+
+        def get_columns_f(table_name):
+            type = 'varchar'
+            cols = []
+            for col, typ in tables[table_name].dtypes.items():
+                if pd.api.types.is_integer_dtype(typ):
+                    type = 'integer'
+                elif pd.api.types.is_float_dtype(typ):
+                    type = 'float'
+                elif pd.api.types.is_datetime64_dtype(typ):
+                    type = 'datetime'
+                cols.append({'Field': col, 'Type': type})
+            return handler_response(pd.DataFrame(cols))
+
+        mock_handler().get_columns.side_effect = get_columns_f
+
+        # use duckdb to execute query for integrations
+        def native_query_f(query):
+            con = duckdb.connect(database=':memory:')
+
+            for table, df in tables.items():
+                con.register(table, df)
+            try:
+                result_df = con.execute(query).fetchdf()
+                result_df = result_df.replace({np.nan: None})
+            except:
+                # it can be not supported command like update or insert
+                result_df = pd.DataFrame()
+            for table in tables.keys():
+                con.unregister(table)
+
+            con.close()
+            return handler_response(result_df)
+
+        def query_f(query):
+            renderer = SqlalchemyRender('postgres')
+            query_str = renderer.get_string(query, with_failback=True)
+            return native_query_f(query_str)
+
+        mock_handler().native_query.side_effect = native_query_f
+
+        mock_handler().query.side_effect = query_f
+
+class BaseExecutorTestMockModel(BaseExecutorTest):
+
+    def setup_method(self):
+        super().setup_method()
+        self.set_executor(to_mock_model_controller=True)
 
     def set_predictor(self, predictor):
         # fill model_interface mock with predictor data for test case
@@ -218,89 +314,3 @@ class BaseExecutorTest(BaseUnitTest):
         self.mock_model_controller.get_models.side_effect = lambda: [predictor_record]
         self.mock_model_controller.get_model_data.side_effect = get_model_data_f
         self.mock_model_controller.get_model_description.side_effect = get_model_data_f
-
-    def set_handler(self, mock_handler, name, tables, engine='postgres'):
-        # integration
-        # delete by name
-        r = self.db.Integration.query.filter_by(name=name).first()
-        if r is not None:
-            self.db.session.delete(r)
-
-        # create
-        r = self.db.Integration(name=name, data={}, engine=engine)
-        self.db.session.add(r)
-        self.db.session.commit()
-
-        from mindsdb.integrations.libs.response import (
-            HandlerResponse as Response,
-            RESPONSE_TYPE
-        )
-
-        def handler_response(df):
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                df
-            )
-            return response
-
-        def get_tables_f():
-            tables_ar = []
-            for table in tables:
-                tables_ar.append({'table_schema': 'public', 'table_name': table, 'table_type': 'BASE TABLE'})
-
-            return handler_response(
-                pd.DataFrame([{'table_schema': 'public', 'table_name': 'table1', 'table_type': 'BASE TABLE'}])
-            )
-        mock_handler().get_tables.side_effect = get_tables_f
-
-        def get_columns_f(table_name):
-            type = 'varchar'
-            cols = []
-            for col, typ in tables[table_name].dtypes.items():
-                if pd.api.types.is_integer_dtype(typ):
-                    type = 'integer'
-                elif pd.api.types.is_float_dtype(typ):
-                    type = 'float'
-                elif pd.api.types.is_datetime64_dtype(typ):
-                    type = 'datetime'
-                cols.append({'Field': col, 'Type': type})
-            return handler_response(pd.DataFrame(cols))
-
-        mock_handler().get_columns.side_effect = get_columns_f
-
-        # use duckdb to execute query for integrations
-        def native_query_f(query):
-            con = duckdb.connect(database=':memory:')
-
-            for table, df in tables.items():
-                con.register(table, df)
-            try:
-                result_df = con.execute(query).fetchdf()
-                result_df = result_df.replace({np.nan: None})
-            except:
-                # it can be not supported command like update or insert
-                result_df = pd.DataFrame()
-            for table in tables.keys():
-                con.unregister(table)
-
-            con.close()
-            return handler_response(result_df)
-
-        def query_f(query):
-            renderer = SqlalchemyRender('postgres')
-            query_str = renderer.get_string(query, with_failback=True)
-            return native_query_f(query_str)
-
-        mock_handler().native_query.side_effect = native_query_f
-
-        mock_handler().query.side_effect = query_f
-
-    @staticmethod
-    def ret_to_df(ret):
-        # converts executor response to dataframe
-        columns = [
-            col.alias if col.alias is not None else col.name
-            for col in ret.columns
-        ]
-        return pd.DataFrame(ret.data, columns=columns)
-

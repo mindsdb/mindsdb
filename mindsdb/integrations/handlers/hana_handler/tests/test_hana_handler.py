@@ -36,6 +36,7 @@ class HanaHandlerTest(unittest.TestCase):
             "user": "DBADMIN",
             "password": os.environ.get('HANA_PASSWORD'),
             "schema": "MINDSDB",
+            "encrypt": True
         }
         cls.handler = HanaHandler('test_hana_handler', cls.kwargs)
 

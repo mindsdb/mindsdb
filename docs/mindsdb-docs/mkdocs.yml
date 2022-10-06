@@ -88,6 +88,7 @@ nav:
       - Deepnote: connect/deepnote.md
       - MindsDB SQL Editor: connect/mindsdb_editor.md
       - Metabase: connect/metabase.md
+      - Mongo Shell: connect/mongo-shell.md
       - Kafka: connect/kafka.md
       - MySQL CLI: connect/mysql-client.md
       - SQL Alchemy: connect/sql-alchemy.md

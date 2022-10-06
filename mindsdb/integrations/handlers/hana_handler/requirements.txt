@@ -1,0 +1,2 @@
+sqlalchemy-hana >= 1.4.0
+hdbcli >= 2.4.140

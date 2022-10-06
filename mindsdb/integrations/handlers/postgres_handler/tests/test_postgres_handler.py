@@ -34,3 +34,6 @@ class PostgresHandlerTest(unittest.TestCase):
         query = "SELECT * FROM data.test_mdb WHERE 'id'='1'"
         result = self.handler.query(query)
         assert result['type'] is RESPONSE_TYPE.TABLE
+
+if __name__ == "__main__":
+    unittest.main(failfast=True)

@@ -97,8 +97,8 @@ To train a new machine learning model we will need to CREATE PREDICTOR as a new 
 ```sql
 CREATE PREDICTOR mindsdb.predictor_name
 FROM integration_name
-    (SELECT column_name, column_name2 FROM table_name) AS ds_name
-PREDICT column_name AS column_alias;
+    (SELECT column_name, column_name2 FROM table_name)
+PREDICT column_name;
 ```
 
 The values that we need to provide are:

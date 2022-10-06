@@ -127,7 +127,7 @@ Now you are in the last step of this tutorial, creating the prediction. To creat
 
 ```sql
 SELECT target_variable, target_variable_explain FROM model_table 
-WHERE when_data='{"column3": "value", "column2": "value"}';
+WHERE when_data={"column3": "value", "column2": "value"};
 ```
 
 And you need to set these values:

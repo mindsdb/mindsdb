@@ -1,12 +1,12 @@
-# `#!sql DESCRIBE` Statement
+# `#!sql DESCRIBE PREDICTOR` Statement
 
-The `DESCRIBE` statement is used to display the attributes of an existing model.
+The `#!sql DESCRIBE PREDICTOR` statement is used to display the attributes of an existing model.
 
-## `#!sql DESCRIBE ... FEATURES` Statement
+## `#!sql DESCRIBE PREDICTOR ... FEATURES` Statement
 
 ### Description
 
-The `DESCRIBE mindsdb.[predictor_name].features` statement displays how the model encoded the data before the training process.
+The `DESCRIBE PREDICTOR mindsdb.[predictor_name].features` statement displays how the model encoded the data before the training process.
 
 ### Syntax
 
@@ -117,7 +117,9 @@ On execution, we get:
 +------------+--------------------+----------------------+----------+---------------------+
 ```
 
-## `#!sql DESCRIBE ... ENSEMBLE` Statement
+The value of the `accuracy_functions` column is stored in the `performance` column. For example, the `r2_score` value of the `Neural` model is `0.9861694189913056`.
+
+## `#!sql DESCRIBE PREDICTOR ... ENSEMBLE` Statement
 
 ### Description
 
@@ -276,4 +278,4 @@ On execution, we get:
 ```
 
 !!! TIP "Need More Info?"
-    If you need more information on how to `#!sql DESCRIBE` your model or understand the results, feel free to ask us on the [community Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).
+    If you need more information on how to `#!sql DESCRIBE PREDICTOR` or understand the results, feel free to ask us on the [community Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).

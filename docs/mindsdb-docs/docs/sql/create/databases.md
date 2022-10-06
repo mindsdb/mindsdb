@@ -1348,12 +1348,17 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
     PARAMETERS={
       "host": " ",                            --- host name or IP address
       "port": ,                               --- port used to make TCP/IP connection
+      "auth": " ",                            --- optional, authentication method, currently only `basic` is supported
+      "http_scheme": " ",                     --- optional, `http`(default) or `https`
       "user": " ",                            --- database user
       "password": " ",                        --- database password
       "catalog": " ",                         --- optional, catalog
       "schema": " "                           --- optional, schema
+      "with":                                 --- optional, default WITH-clause(properties) for ALL tables(*)
     };
     ```
+
+(*): this parameter is experimental and might be changed or removed in future release
 
 === "Example"
 
@@ -1367,6 +1372,23 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
       "password": "password",
       "catalog": "default",
       "schema": "test"
+    };
+    ```
+or
+
+    ```sql
+    CREATE DATABASE trino_datasource
+    WITH ENGINE='trino',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 443,
+      "auth": "basic",
+      "http_scheme": "https",
+      "user": "trino",
+      "password": "password",
+      "catalog": "default",
+      "schema": "test",
+      "with": "with (transactional = true)"
     };
     ```
 

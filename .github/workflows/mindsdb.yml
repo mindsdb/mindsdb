@@ -83,6 +83,9 @@ jobs:
           sudo chmod 644 ~/.mindsdb_credentials.json
 
           export USE_EXTERNAL_DB_SERVER="1"
+          echo -e "\n===============\nDB HANDLERS\n===============\n"
+          echo -e "\n===============\nMySQL Handler\n===============\n"
+          python mindsdb/integrations/handlers/mysql_handler/tests/test_mysql_handler.py
 
           # MySQL API
           echo -e "\n===============\ntest MySQL API\n===============\n"

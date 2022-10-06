@@ -32,7 +32,7 @@ And the steps followed by the syntax:
 In our example it is join of table *table1* (from integration *int1*) with predictor *pred1*.
 It also can be select from integration
 - *source* is the alias for fetched data
-- then it updates *table2* from *int2* using conditions from WHERE block and fields for update from SET block
+- then it updates *table2* from *int2* using conditions from `#!sql WHERE` block and fields for update from `#!sql SET` block
   - under the hood it splits input data to rows and executed this query for every row:
   ```sql
   UPDATE 
@@ -44,7 +44,7 @@ It also can be select from integration
       and shop_id = <row.shop_id>
   ```    
 
-Note: in WHERE block it is better to use primary key for table
+Note: in `#!sql WHERE` block it is better to use primary key for table
 or set of rows that can be a primary key (and identifies every row in table). 
 Otherwise, it can lead to unexpected results when one row in destination table was updated several times 
 from different rows in source table (because conditions from different rows are fit).

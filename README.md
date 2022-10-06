@@ -26,7 +26,7 @@
     <span> | </span>
     <a href="https://cloud.mindsdb.com">Demo</a>
     <span> | </span>
-    <a href="https://github.com/mindsdb/mindsdb/blob/staging/integrations_contest.md">Integrations Contest</a>
+    <a href="https://mindsdb.com/hacktoberfest">Hacktoberfest</a>
   </h3>
   
 </div>
@@ -38,7 +38,7 @@
 * Data Scientists can streamline MLOps by deploying ML models as AI Tables.
 * Data Analysts can easily make forecasts on complex data (like multivariate time-series with high cardinality) and visualize them in BI tools like Tableau.
 
-**NEW!** Check-out the new MindsDB [Dev 💡 challenge](https://github.com/mindsdb/mindsdb/blob/staging/integrations_contest.md) (and the cash:dollar: prizes) for democratizing machine learning!
+**NEW!** Check-out the new Hacktoberfest [challenges](https://mindsdb.com/hacktoberfest) (and the cash:dollar: , laptop:computer: and many other prizes)!
 
 If you like our project then we would really appreciate **a Star ⭐!**
 
@@ -105,7 +105,7 @@ Check our [docs](https://docs.mindsdb.com/?utm_medium=community&utm_source=githu
 * Automatic data pre-processing, feature engineering and encoding
 * Classification, regression, time-series tasks
 * Bring models to production without “traditional deployment” as AI Tables
-* Get mModels’ accuracy scoring and confidence intervals for each prediction
+* Get models’ accuracy scoring and confidence intervals for each prediction
 * Join ML models with existing data
 * Anomaly detection
 * Model explainability analysis 

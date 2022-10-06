@@ -184,7 +184,7 @@ class HanaHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        List all tabese in SAP HANA in the current schema
+        List all tables in SAP HANA in the current schema
         """
 
         return self.native_query(f"""

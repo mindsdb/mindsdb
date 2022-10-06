@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn import linear_model
 
-data=pd.read_csv("Bitcoin.csv")
+data=pd.read_csv("https://www.kaggle.com/datasets/sudalairajkumar/cryptocurrency-historical-prices-coingecko")
 # with sklearn
 X = data[['Open','High','Low']] # here we have 3 variables for multiple regression.
 Y = data['Close']

@@ -49,7 +49,7 @@ class BYOMHandler(BaseMLEngine):
         file_name = self.engine_storage.get_connection_args()['model_code']
         return self.engine_storage.file_get(file_name)
 
-    def create(self, target, df):
+    def create(self, target, df, **kwargs):
         params = {
             'method': 'train',
             'df': df,

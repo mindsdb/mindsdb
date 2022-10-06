@@ -44,9 +44,11 @@ from mindsdb.integrations.utilities.utils import format_exception_error
 
 from mindsdb.interfaces.storage.fs import ModelStorage, HandlerStorage
 
+import torch.multiprocessing as mp
+ctx = mp.get_context('spawn')
 
 @mark_process(name='learn')
-def learn_process(class_path, company_id, integration_id, predictor_id, training_data_df, target):
+def learn_process(class_path, company_id, integration_id, predictor_id, training_data_df, target, problem_definition):
 
     predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
 
@@ -65,7 +67,7 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
             engine_storage=handlerStorage,
             model_storage=modelStorage,
         )
-        ml_handler.create(target, training_data_df)
+        ml_handler.create(target, df=training_data_df, args=problem_definition)
 
     except Exception as e:
         print(traceback.format_exc())
@@ -79,6 +81,35 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
     predictor_record.status = PREDICTOR_STATUS.COMPLETE
     db.session.commit()
 
+
+@mark_process(name='predict')
+def predict_process(class_path, company_id, integration_id, predictor_id, df, res_queue=None):
+
+    module_name, class_name = class_path
+    module = importlib.import_module(module_name)
+    klass = getattr(module, class_name)
+
+    handlerStorage = HandlerStorage(company_id, integration_id)
+    modelStorage = ModelStorage(company_id, predictor_id)
+
+    ml_handler = klass(
+        engine_storage=handlerStorage,
+        model_storage=modelStorage,
+    )
+
+    predictions = ml_handler.predict(df)
+
+    # mdb indexes
+    if '__mindsdb_row_id' not in predictions.columns:
+        predictions['__mindsdb_row_id'] = df['__mindsdb_row_id']
+
+    predictions = predictions.to_dict(orient='records')
+
+    if res_queue is not None:
+        # subprocess mode
+        res_queue.put(predictions)
+    else:
+        return predictions
 
 class BaseMLEngineExec:
 
@@ -187,38 +218,44 @@ class BaseMLEngineExec:
             )
 
         target = statement.targets[0].parts[-1]
-
+        training_data_df = pd.DataFrame()
+        fetch_data_query = None
+        data_integration_id = None
         # get data for learn
-        integration_name = statement.integration_name.parts[0]
+        if statement.integration_name is not None:
+            fetch_data_query = statement.query_str
+            integration_name = statement.integration_name.parts[0]
 
-        # get data from integration
-        query = Select(
-            targets=[Star()],
-            from_table=NativeQuery(
-                integration=Identifier(integration_name),
-                query=statement.query_str
+            # get data from integration
+            query = Select(
+                targets=[Star()],
+                from_table=NativeQuery(
+                    integration=Identifier(integration_name),
+                    query=statement.query_str
+                )
             )
-        )
-        sql_session = make_sql_session(self.company_id)
+            sql_session = make_sql_session(self.company_id)
 
-        # execute as query
-        sqlquery = SQLQuery(query, session=sql_session)
-        result = sqlquery.fetch(view='dataframe')
+            # execute as query
+            sqlquery = SQLQuery(query, session=sql_session)
+            result = sqlquery.fetch(view='dataframe')
 
-        training_data_df = result['result']
+            training_data_df = result['result']
 
-        integration_meta = self.handler_controller.get(name=integration_name)
+            data_integration_id = self.handler_controller.get(name=integration_name)['id']
 
-        problem_definition = {
-            'target': target
-        }
+        problem_definition = statement.using
+        if problem_definition is None:
+            problem_definition = {}
+
+        problem_definition['target'] = target
 
         predictor_record = db.Predictor(
             company_id=self.company_id,
             name=model_name,
             integration_id=self.integration_id,
-            data_integration_id=integration_meta['id'],
-            fetch_data_query=statement.query_str,
+            data_integration_id=data_integration_id,
+            fetch_data_query=fetch_data_query,
             mindsdb_version=mindsdb_version,
             to_predict=target,
             learn_args=problem_definition,
@@ -241,7 +278,8 @@ class BaseMLEngineExec:
             self.integration_id,
             predictor_record.id,
             training_data_df,
-            target
+            target,
+            problem_definition,
         )
         p.start()
 
@@ -253,7 +291,7 @@ class BaseMLEngineExec:
         #  create new predictor and run learn
         raise NotImplementedError()
 
-    def predict(self, model_name: str, data: list, pred_format: str = 'dict') -> pd.DataFrame:
+    def predict(self, model_name: str, data: list, pred_format: str = 'dict'):
         if isinstance(data, dict):
             data = [data]
         df = pd.DataFrame(data)
@@ -264,16 +302,33 @@ class BaseMLEngineExec:
                 error_message=f"Error: model '{model_name}' does not exists!"
             )
 
-        handlerStorage = HandlerStorage(self.company_id, self.integration_id)
-        modelStorage = ModelStorage(self.company_id, predictor_record.id)
+        class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
-        ml_handler = self.handler_class(
-            engine_storage=handlerStorage,
-            model_storage=modelStorage,
-        )
+        is_subprocess = False
+        if is_subprocess:
 
-        predictions = ml_handler.predict(df)
-        predictions = predictions.to_dict(orient='records')
+            res_queue = ctx.SimpleQueue()
+            p = HandlerProcess(
+                predict_process,
+                class_path,
+                self.company_id,
+                self.integration_id,
+                predictor_record.id,
+                df,
+                res_queue,
+            )
+            p.start()
+            p.join()
+            predictions = res_queue.get()
+
+        else:
+            predictions = predict_process(
+                class_path,
+                self.company_id,
+                self.integration_id,
+                predictor_record.id,
+                df
+            )
 
         after_predict_hook(
             company_id=self.company_id,

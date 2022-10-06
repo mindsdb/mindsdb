@@ -11,6 +11,7 @@ except Exception as e:
 title = 'Hugging Face'
 name = 'huggingface'
 type = HANDLER_TYPE.ML
+permanent = True
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error'

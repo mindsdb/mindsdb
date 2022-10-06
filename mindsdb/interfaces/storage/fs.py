@@ -290,8 +290,9 @@ class FileStorage:
             raise TypeError('FSStorage.get_path() got absolute path as argument')
 
         ret_path = self.folder_path / relative_path
-        if ret_path.exists():
-            raise Exception('Path does not exists')
+        if not ret_path.exists():
+            # raise Exception('Path does not exists')
+            os.makedirs(ret_path)
 
         return ret_path
 
@@ -398,11 +399,11 @@ class ModelStorage:
     # jsons
 
     def json_set(self, name, data):
-        content = json.dumps(data)
+        content = json.dumps(data).encode()
         self.file_set(f'json_{name}', content)
 
     def json_get(self, name):
-        content = self.file_get(f'json_{name}')
+        content = self.file_get(f'json_{name}').decode()
         return json.loads(content)
 
     def json_list(self):
@@ -446,9 +447,9 @@ class HandlerStorage:
     def folder_get(self, name):
         # pull folder and return path
         name = name.lower().replace(' ', '_')
-        name = re.sub('[^a-z^_^.^\d]*', '', name)
+        name = re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
 
-        return self.fileStorage.get_path(name)
+        return str(self.fileStorage.get_path(name))
 
     def folder_sync(self, name):
         # sync abs path

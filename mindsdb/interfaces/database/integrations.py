@@ -390,11 +390,13 @@ class IntegrationController:
                 with open(str(icon_path), 'rb') as f:
                     handler_meta['icon']['data'] = base64.b64encode(f.read()).decode('utf-8')
         # endregion
-
-        if handler_meta.get('name') in ('files', 'views', 'lightwood'):
-            handler_meta['permanent'] = True
+        if hasattr(module, 'permanent'):
+            handler_meta['permanent'] = module.permanent
         else:
-            handler_meta['permanent'] = False
+            if handler_meta.get('name') in ('files', 'views', 'lightwood'):
+                handler_meta['permanent'] = True
+            else:
+                handler_meta['permanent'] = False
 
         return handler_meta
 

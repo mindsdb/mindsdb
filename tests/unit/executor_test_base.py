@@ -71,6 +71,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='lightwood', data={}, engine='lightwood')
         db.session.add(r)
+        r = db.Integration(name='huggingface', data={}, engine='huggingface')
+        db.session.add(r)
         db.session.flush()
         self.lw_integration_id = r.id
         db.session.commit()
@@ -91,20 +93,20 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.interfaces.database.integrations import IntegrationController
         from mindsdb.interfaces.database.views import ViewController
         from mindsdb.interfaces.file.file_controller import FileController
+        from mindsdb.interfaces.model.model_controller import ModelController
 
         server_obj = type('', (), {})()
 
         integration_controller = IntegrationController()
-        view_controller = ViewController()
         self.file_controller = FileController()
-        self.mock_model_controller = mock.Mock()
+        # self.mock_model_controller = mock.Mock()
 
         # no predictors yet
-        self.mock_model_controller.get_models.side_effect = lambda: []
+        # self.mock_model_controller.get_models.side_effect = lambda: []
 
         server_obj.original_integration_controller = integration_controller
-        server_obj.original_model_controller = self.mock_model_controller
-        server_obj.original_view_controller = view_controller
+        server_obj.original_model_controller = ModelController()
+        server_obj.original_view_controller = ViewController()
 
         predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
         self.mock_predict = predict_patcher.__enter__()

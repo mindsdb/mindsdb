@@ -20,3 +20,4 @@
 * [How to bring your own machine learning model to databases](https://medium.com/mindsdb/how-to-bring-your-own-machine-learning-model-to-databases-47a188d6db00) by [Patricio Cerda Mardini](https://medium.com/@paxcema)
 * [Introduction to AI Tables](https://medium.com/towards-data-science/introduction-to-ai-tables-a719251e1a58) by [Javi Sánchez](https://medium.com/@javi_sanchez)
 * [Predict insurance cost using MindsDB](https://medium.com/@kinkusuma/predict-insurance-cost-using-mindsdb-54b6a331fea8) by [Kinie K Kusuma](https://medium.com/@kinkusuma)
+* [SQL Just Got Machine Learning](https://medium.com/mindsdb/sql-just-got-machine-learning-cc29a2ce8cdf) by [Allan Campopiano](https://medium.com/@alcampopiano)

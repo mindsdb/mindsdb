@@ -50,6 +50,8 @@ class BYOMHandler(BaseMLEngine):
         return self.engine_storage.file_get(file_name)
 
     def create(self, target, df, **kwargs):
+        raise RuntimeError('BYOM disabled yet')
+
         params = {
             'method': 'train',
             'df': df,

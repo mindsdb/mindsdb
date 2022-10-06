@@ -1,9 +1,9 @@
 
-# Connenting to MariaDB Cloud Service
+# Connecting to MariaDB Cloud Service
 
-## Steps on [MariaDB Cloud](https://cloud.mariadb.com/)
+## Steps on [MariaDB Cloud](https://cloud.MariaDB.com/)
 
-### 1. Safelisting MindsDB on MariaDb Cloud Service
+### 1. Safelisting MindsDB on MariaDB Cloud Service
 
 Once you have identified the service to be enabled with MindsDB, make sure to allowlist the following IP addresses, do this by clicking on the cog icon (service settings) and navigating to Security Access, then input as prompted, one by one, the following IPs.
 
@@ -15,25 +15,23 @@ Once you have identified the service to be enabled with MindsDB, make sure to al
 
 ### 2. Downloading your .pem from MariaDB Cloud
 
-Under the same service, click on the world icon (connect to service) and after on the Download link under Login Credentials, Certificate authority chain.
-
-This will download on you machine a `aws_skysql_chain.pem` file, we recomend you to store it securely as you will need it on a working public URL or localpath, later on the MindsDB configuration.
+Under the same service, click on the world icon (connect to service) and after on the Download link under Login Credentials, Certificate authority chain; This will download on your machine an `aws_skysql_chain.pem` file; We recommend storing it securely as you will need it on a working public URL or local path, later, on the MindsDB configuration.
 
 ## Steps on [MindsDB](https://cloud.mindsdb.com/)
 
 ### 1. Navigate and log into [cloud.mindsdb.com](https://cloud.mindsdb.com/)
 
-Navigate to [cloud.mindsdb.com](https://cloud.mindsdb.com/) to get access to MindsDB. Make sure you have an account, if you are unsure on how log in or sing in, please check the following doc.
+Navigate to [cloud.mindsdb.com](https://cloud.mindsdb.com/) to get access to MindsDB. Make sure you have an account, if you are unsure how to log in or sign in, please check the following doc.
 
-### 3. Use the [`#!sql CREATE DATABASE`](/sql/create/databases/) to connect to your MariaDB Cloud Service
+### 2. Use the [`#!sql CREATE DATABASE`](/sql/create/databases/) to connect to your MariaDB Cloud Service
 
-Once logged into the MindsDB Graphical User Interface, use the following template to fill and  executa a query that will connect you MariaDB instance with your MindsDB unlocking the ML capabilities.  
+Once logged into the MindsDB Graphical User Interface, use the following template to fill and execute a query connecting your MariaDB instance with your MindsDB unlocking the ML capabilities.  
 
 === "Template"
 
     ```sql
     CREATE DATABASE maria_datasource            --- display name for the database
-    WITH ENGINE='mariadb',                      --- name of the MindsDB handler
+    WITH ENGINE='MariaDB',                      --- name of the MindsDB handler
     PARAMETERS={
       "host": " ",                              --- host IP address or URL
       "port": ,                                 --- port used to make TCP/IP connection
@@ -57,7 +55,7 @@ Once logged into the MindsDB Graphical User Interface, use the following templat
 
     ```sql
     CREATE DATABASE skysql_datasource
-    WITH ENGINE = 'mariadb',
+    WITH ENGINE = 'MariaDB',
     PARAMETERS = {
       "host": "mindsdbtest.mdb0002956.db1.skysql.net",
       "port": 5001,

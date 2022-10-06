@@ -113,20 +113,20 @@ class HuggingFaceHandler(BaseMLEngine):
 
         task = args['task']
         if task == 'text-classification':
-            output_list_messy = pipeline(input_list_str, truncation=True, max_length=args['max_length'])
+            output_list_messy = pipeline(input_list_str, truncation=True, num_workers=1, max_length=args['max_length'])
             output_list_tidy = [tidy_output_classification(args, x) for x in output_list_messy]
 
         elif task == 'zero-shot-classification':
-            output_list_messy = pipeline(input_list_str, candidate_labels=args['candidate_labels'],
+            output_list_messy = pipeline(input_list_str, num_workers=1, candidate_labels=args['candidate_labels'],
                                          truncation=True, top_k=1000, max_length=args['max_length'])
             output_list_tidy = [tidy_output_zero_shot(args, x) for x in output_list_messy]
 
         elif task == 'translation':
-            output_list_messy = pipeline(input_list_str, max_length=args['max_length'])
+            output_list_messy = pipeline(input_list_str, num_workers=1, max_length=args['max_length'])
             output_list_tidy = [tidy_output_translation(args, x) for x in output_list_messy]
 
         elif task == 'summarization':
-            output_list_messy = pipeline(input_list_str,
+            output_list_messy = pipeline(input_list_str, num_workers=1,
                                          min_length=args['min_output_length'],
                                          max_length=args['max_output_length'])
             output_list_tidy = [tidy_output_summarization(args, x) for x in output_list_messy]

@@ -21,6 +21,8 @@
 * [Multivariate time series forecasts inside databases with MindsDB and PyTorch](https://medium.com/mindsdb/multivariate-time-series-forecasts-inside-databases-with-mindsdb-and-pytorch-13745ada6b7e) by [Patricio Cerda Mardini](https://medium.com/@paxcema)
 * [How to bring your own machine learning model to databases](https://medium.com/mindsdb/how-to-bring-your-own-machine-learning-model-to-databases-47a188d6db00) by [Patricio Cerda Mardini](https://medium.com/@paxcema)
 * [Introduction to AI Tables](https://medium.com/towards-data-science/introduction-to-ai-tables-a719251e1a58) by [Javi Sánchez](https://medium.com/@javi_sanchez)
+* [Model agnostic confidence estimation with conformal predictors for AutoML](https://medium.com/mindsdb/model-agnostic-confidence-estimation-with-conformal-predictors-for-automl-55fce87ef42a) by [Patricio Cerda Mardini](https://medium.com/@paxcema)
 * [Predict insurance cost using MindsDB](https://medium.com/@kinkusuma/predict-insurance-cost-using-mindsdb-54b6a331fea8) by [Kinie K Kusuma](https://medium.com/@kinkusuma)
 * [Forecast bitcoin price using MindsDB](https://medium.com/@kinkusuma/forecast-bitcoin-price-using-mindsdb-75f9f0500e86) by [Kinie K Kusuma](https://medium.com/@kinkusuma)
 * [Predicting car prices using MindsDB](https://medium.com/@pipboyguy/predicting-car-prices-using-mindsdb-c7dd51919b83) by [Marcel Coetzee](https://medium.com/@pipboyguy)
+

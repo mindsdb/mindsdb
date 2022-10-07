@@ -184,7 +184,7 @@ class HanaHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        List all tabese in SAP HANA in the current schema
+        List all tables in SAP HANA in the current schema
         """
 
         return self.native_query(f"""
@@ -205,12 +205,7 @@ class HanaHandler(DatabaseHandler):
         :return: returns the columns in the table
         """
 
-        return self.native_query(f"""
-            SELECT COLUMN_NAME    AS "Field",
-                   DATA_TYPE_NAME AS "Type"
-            FROM SYS.TABLE_COLUMNS
-            WHERE TABLE_NAME = '{table_name}'
-        """)
+        return self.renderer.dialect.get_columns(table_name)
 
 
 connection_args = OrderedDict(

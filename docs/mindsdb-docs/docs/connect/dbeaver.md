@@ -7,19 +7,19 @@ DBeaver is a database tool that allows you to connect to and work with various d
 First, create a new database connection in DBeaver by clicking the icon, as shown below.
 
 <p align="center">
-  <img src="/assets/sql/dbeaver_1.png" />
+  <img src="../assets/sql/dbeaver_1.png" />
 </p>
 
 Next, choose the MySQL database engine and click the *Next* button.
 
 <p align="center">
-  <img src="/assets/sql/dbeaver_2.png" />
+  <img src="../assets/sql/dbeaver_2.png" />
 </p>
 
 Now it's time to fill in the connection details.
 
 <p align="center">
-  <img src="/assets/sql/dbeaver_3.png" />
+  <img src="../assets/sql/dbeaver_3.png" />
 </p>
 
 There are two options, as below.
@@ -57,7 +57,7 @@ Click on the `Test Connection...` button to check if all the provided data allow
 On success, you should see the message, as below.
 
 <p align="center">
-  <img src="/assets/sql/dbeaver_4.png" />
+  <img src="../assets/sql/dbeaver_4.png" />
 </p>
 
 ## Let's Run Some Queries
@@ -84,7 +84,7 @@ On execution, we get:
 Here is how it looks in DBeaver:
 
 <p align="center">
-  <img src="/assets/sql/dbeaver_5.png" />
+  <img src="../assets/sql/dbeaver_5.png" />
 </p>
 
 !!! tip "Whitelist MindsDB Cloud IP address"

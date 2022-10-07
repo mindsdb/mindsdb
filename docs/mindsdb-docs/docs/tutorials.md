@@ -25,4 +25,4 @@
 * [Predict insurance cost using MindsDB](https://medium.com/@kinkusuma/predict-insurance-cost-using-mindsdb-54b6a331fea8) by [Kinie K Kusuma](https://medium.com/@kinkusuma)
 * [Forecast bitcoin price using MindsDB](https://medium.com/@kinkusuma/forecast-bitcoin-price-using-mindsdb-75f9f0500e86) by [Kinie K Kusuma](https://medium.com/@kinkusuma)
 * [Predicting car prices using MindsDB](https://medium.com/@pipboyguy/predicting-car-prices-using-mindsdb-c7dd51919b83) by [Marcel Coetzee](https://medium.com/@pipboyguy)
-
+* [MindsDB: Predicting Supply Chain Demand with Machine Learning using SQL](https://www.devforce.one/18303637/mindsdb-predicting-supply-chain-demand-with-machine-learning-using-sql#/) by [Chandre Van Der Westhuizen](https://github.com/chandrevdw31)

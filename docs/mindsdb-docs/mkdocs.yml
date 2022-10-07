@@ -86,15 +86,15 @@ nav:
       - DBeaver: connect/dbeaver.md
       - DBT: connect/dbt.md
       - Deepnote: connect/deepnote.md
-      - MindsDB SQL Editor: connect/mindsdb_editor.md
+      - Kafka: connect/kafka.md
+      - MariaDB SkySQL: connect/connect-mariadb-skysql.md
       - Metabase: connect/metabase.md
+      - MindsDB SQL Editor: connect/mindsdb_editor.md
       - Mongo Compass: connect/mongo-compass.md
       - Mongo Shell: connect/mongo-shell.md
-      - Kafka: connect/kafka.md
       - MySQL CLI: connect/mysql-client.md
       - SQL Alchemy: connect/sql-alchemy.md
       - Tableau: connect/tableau.md
-      - MariaDB SkySQL: connect/connect-mariadb-skysql.md
   - Data Setup in MindsDB: sql/create/databases.md
   - Upload a File to MindsDB: sql/create/file.md
   - MindsDB Data Insights: sql/data-insights.md

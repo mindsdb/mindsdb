@@ -1,5 +1,7 @@
 # Show your 💚 for MindsDB on Twitter
 
+- A Twitter Thread by [@TheBilalAamer](https://twitter.com/TheBilalAamer/status/1577646790869852161)
+
 - A Twitter Thread by [Don Heshanthaka](https://twitter.com/DonHeshanthaka/status/1577702467428417538?s=20&t=wbBhPCbIVKcDh8Gf8_fykg)
 
 - A Twitter Thread by [Michael Lantz](https://twitter.com/MichaelLantzIST/status/1577794052673703938)

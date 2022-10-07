@@ -345,6 +345,8 @@ class FileStorageFactory:
         )
 
 
+from .json import get_json_storage
+
 class ModelStorage:
     def __init__(self, company_id, predictor_id):
 
@@ -399,12 +401,20 @@ class ModelStorage:
     # jsons
 
     def json_set(self, name, data):
-        content = json.dumps(data).encode()
-        self.file_set(f'json_{name}', content)
+        json_storage = get_json_storage(
+            resource_id=self.predictor_id,
+            resource_group=RESOURCE_GROUP.PREDICTOR,
+            company_id=self.company_id
+        )
+        return json_storage.set(name, data)
 
     def json_get(self, name):
-        content = self.file_get(f'json_{name}').decode()
-        return json.loads(content)
+        json_storage = get_json_storage(
+            resource_id=self.predictor_id,
+            resource_group=RESOURCE_GROUP.PREDICTOR,
+            company_id=self.company_id
+        )
+        return json_storage.get(name)
 
     def json_list(self):
         ...

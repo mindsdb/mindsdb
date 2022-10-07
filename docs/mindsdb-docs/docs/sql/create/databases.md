@@ -1445,7 +1445,7 @@ or
 
   ```sql
     CREATE DATABASE sap_hana_trial
-    WITH ENGINE = 'hana',\
+    WITH ENGINE = 'hana',
     PARAMETERS = {
       "user": "DBADMIN",
       "password": "password",

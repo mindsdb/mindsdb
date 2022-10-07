@@ -90,8 +90,9 @@ class DBHandlerWrapper(BaseDBWrapper):
                               error_message=msg)
             return result.to_json(), 500
 
-    def query(self, query):
-        s_query = request.data("query")
+    def query(self):
+        # s_query = request.data("query")
+        s_query = request.get_data()
         query = pickle.loads(s_query)
         log.info("%s: calling 'query' with query - %s", self.__class__.__name__, query)
         try:

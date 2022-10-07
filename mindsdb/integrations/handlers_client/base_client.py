@@ -1,4 +1,5 @@
 import requests
+from pandas import read_json
 from mindsdb.integrations.libs.net_helpers import sending_attempts
 from mindsdb.utilities.log import log
 
@@ -19,6 +20,13 @@ class BaseClient:
         log.info("handler")
         handler = self.__dict__["handler"]
         return getattr(handler, attr)
+
+    def _convert_response(self, resp):
+        if isinstance(resp, dict) and "data_frame" in resp and resp["data_frame"] is not None:
+            df = read_json(resp["data_frame"], orient="split")
+            resp["data_frame"] = df
+        return resp
+
 
     @sending_attempts()
     def _do(self, endpoint, _type="get", **params):

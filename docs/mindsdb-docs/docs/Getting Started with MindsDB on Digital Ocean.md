@@ -108,7 +108,7 @@ You may encounter a few errors with regards to the versioning of `pandas` and `s
 
 ![MindsDB GUI](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/o74amk99g2txrrtjeba9.PNG)
 
-**Step 11:** This step enables us to connect a database client to our MindsDB server. For now, I would be using [DBeaver](https://dbeaver.io/) to do the same. You can also connect your local MySQL server following the steps [here](https://docs.mindsdb.com/sql/connect/cloud/).
+**Step 11:** This step enables us to connect a database client to our MindsDB server. For now, I would be using [DBeaver](https://dbeaver.io/) to do the same. You can also connect your local MySQL server following the steps [here](https://docs.mindsdb.com/connect/mysql-client/).
 
 > **NOTE:** You should follow the local deployment steps instead of cloud as this is a local instance hosted on the cloud and not the official MindsDB cloud edition. The default username is `mindsdb` and the default password is empty.
 
@@ -140,7 +140,7 @@ Now hit the `Test Connection` and once it returns success, click on `Finish`.
 ![Tables in MindsDB](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/05jp9kzkc971irjd2h0i.PNG)
 
 Once connected to the mindsdb database, it will contain 3 tables `predictors`, `commands` and `datasources`. You can simply run a query `show tables;` to see these as shown in the snippet above.
-The `Predictors` table contains all the newly trained ML models as a new record. Each column in the `Predictors` table contains information about each of these models. You can always find more information by visiting [MindsDB Documentation](https://docs.mindsdb.com/sql/connect/dbeaver/) page.
+The `Predictors` table contains all the newly trained ML models as a new record. Each column in the `Predictors` table contains information about each of these models. You can always find more information by visiting [MindsDB Documentation](https://docs.mindsdb.com/) page.
 
 This concludes the tutorial on how to deploy the MindsDB server on a Digital Ocean Droplet and connect to it using a local client. Please drop a like let me know in the comments if you found this useful or have any other suggestions.
 

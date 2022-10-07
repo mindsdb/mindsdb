@@ -1,11 +1,16 @@
 
-# Connecting to MariaDB SkySQL Service
+# [MariaDB SkySQL](https://cloud.MariaDB.com/) Setup Guide
 
-## Steps on [MariaDB SkySQL](https://cloud.MariaDB.com/)
+## 1. Select your service for MindsDB
 
-### 1. Safelisting MindsDB on MariaDB SkySQL Service
+If you haven’t already, identify the service to be enabled with MindsDB and make sure it is running. Otherwise skip to step 2.
 
-Once you have identified the service to be enabled with MindsDB, make sure to allowlist the following IP addresses, do this by clicking on the cog icon (service settings) and navigating to Security Access, then input as prompted, one by one, the following IPs.
+![type:video](https://youtube.com/embed/TgzK4WpUzwE)
+
+## 2. Add MindsDB to your service Allowlist
+
+Access to MariaDB SkySQL services is [restricted on a per-service basis](https://mariadb.com/products/skysql/docs/security/firewalls/ip-allowlist-services/).
+Add the following IP addresses to allow MindsDB to connect to your MariaDB service, do this by clicking on the cog icon and navigating to Security Access. In the dialog, input as prompted – one by one – the following IPs:
 
 ```
 18.220.205.95
@@ -13,19 +18,19 @@ Once you have identified the service to be enabled with MindsDB, make sure to al
 52.14.91.162
 ```
 
-### 2. Downloading your .pem from MariaDB SkySQL
+## 3. Download your service .pem file
 
-Under the same service, click on the world icon (connect to service) and after on the Download link under Login Credentials, Certificate authority chain; This will download on your machine an `aws_skysql_chain.pem` file; We recommend storing it securely as you will need it on a working public URL or local path, later, on the MindsDB configuration.
+A [certificate authority chain](https://mariadb.com/products/skysql/docs/connect/connection-parameters-portal/#certificate-authority-chain) (.pem file) must be provided for proper TLS certificate validation.
 
-## Steps on [MindsDB](https://cloud.mindsdb.com/)
+From your selected service, click on the world globe icon (Connect to service). In the Login Credentials section, click Download. The `aws_skysql_chain.pem` file will download onto your machine.
 
-### 1. Navigate and log into [cloud.mindsdb.com](https://cloud.mindsdb.com/)
+## 4. Publically Expose your service .pem File
 
-Navigate to [cloud.mindsdb.com](https://cloud.mindsdb.com/) to get access to MindsDB. Make sure you have an account, if you are unsure how to log in or sign in, please check the following doc.
+Select secure storage for the `aws_skysql_chain.pem` file that allows a working public URL or localpath.
 
-### 2. Use the [`#!sql CREATE DATABASE`](/sql/create/databases/) to connect to your MariaDB SkySQL Service
+## 5. Link [MindsDB](https://cloud.mindsdb.com) to your MariaDB SkySQL Service
 
-Once logged into the MindsDB Graphical User Interface, use the following template to fill and execute a query connecting your MariaDB SkySQL instance with your MindsDB unlocking the ML capabilities.  
+To print the query template, select Add Data in either the top or side navigation and choose MariaDB SkySQL from the list. Fill in the values and run query to complete the setup.
 
 === "Template"
 

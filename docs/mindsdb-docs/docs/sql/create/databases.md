@@ -1424,6 +1424,38 @@ or
     };
     ```
 
+### SAP Hana Handler
+
+=== "Template"
+
+  ```sql
+    CREATE DATABASE sap_hana_trial --- display name for the database
+    WITH ENGINE = 'hana',   --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": "",   --- user name
+      "password": "", --- password
+      "host": "",  --- host name or IP address
+      "port": "", --- port used to make TCP/IP connection
+      "schema": "", --- name of database schema
+      "encrypt":   -- set to true or false
+  };
+  ```
+
+=== "Example"
+
+  ```sql
+    CREATE DATABASE sap_hana_trial
+    WITH ENGINE = 'hana',\
+    PARAMETERS = {
+      "user": "DBADMIN",
+      "password": "password",
+      "host": "<uuid>.hana.trial-us10.hanacloud.ondemand.com",
+      "port": "443", 
+      "schema": "MINDSDB",
+      "encrypt": true
+  };
+  ```
+    
 ## Connecting Through Ngrok
 
 When connecting your local database to MindsDB Cloud, you need to expose the local database server to be publicly accessible using [Ngrok Tunnel](https://ngrok.com). The free tier offers all you need to get started.

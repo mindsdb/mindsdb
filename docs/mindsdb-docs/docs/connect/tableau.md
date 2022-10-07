@@ -9,13 +9,13 @@ Follow the steps below to connect your MindsDB to Tableau.
 First, create a new workbook in Tableau and open the *Connectors* tab in the *Connect to Data* window.
 
 <p align="center">
-  <img src="/assets/connect_tableau.png" />
+  <img src="../assets/connect_tableau.png" />
 </p>
 
 Next, choose *MySQL* and provide the details of your MindsDB connection, such as the IP, port, and database name. Optionally, you can provide a username and password. Then, click *Sign In*.
 
 <p align="center">
-  <img src="/assets/connect_tableau_2.png" />
+  <img src="../assets/connect_tableau_2.png" />
 </p>
 
 Now you're connected!
@@ -25,13 +25,13 @@ Now you're connected!
 The content of your MindsDB is visible in the right-side pane.
 
 <p align="center">
-  <img src="/assets/connect_tableau_3.png" />
+  <img src="../assets/connect_tableau_3.png" />
 </p>
 
 All the predictors are listed under the *Table* section. You can also switch between the integrations, such as *mindsdb* or *files*, in the *Database* section using the drop-down.
 
 <p align="center">
-  <img src="/assets/connect_tableau_4.png" />
+  <img src="../assets/connect_tableau_4.png" />
 </p>
 
 Now, let's run some examples!
@@ -43,7 +43,7 @@ Now, let's run some examples!
 Previewing one of the tables from the *mysql* integration:
 
 <p align="center">
-  <img src="/assets/connect_tableau_5.png" />
+  <img src="../assets/connect_tableau_5.png" />
 </p>
 
 ### Example 2
@@ -53,13 +53,13 @@ There is one technical limitation. Namely, we cannot join tables from different 
 * Previewing a view that joins a data table with a predictor table:
 
 <p align="center">
-  <img src="/assets/connect_tableau_6.png" />
+  <img src="../assets/connect_tableau_6.png" />
 </p>
 
 * Using a custom SQL query by clicking the *New Custom SQL* button in the right-side pane:
 
 <p align="center">
-  <img src="/assets/connect_tableau_7.png" />
+  <img src="../assets/connect_tableau_7.png" />
 </p>
 
 ## What's Next?

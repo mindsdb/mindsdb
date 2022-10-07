@@ -92,8 +92,8 @@ To try out MindsDB right away without bringing in your own data or models, follo
 
 1. The [`SELECT`](/sql/api/select) statement allows you to make predictions based on features.
 
-    ![DBeaver Home Rentals Prediction](/assets/dbeaver-home-rentals-prediction.png)
-    ![DBeaver Home Rentals Prediction Results](/assets/dbeaver-home-rentals-prediction-results.png)
+    ![DBeaver Home Rentals Prediction](./assets/dbeaver-home-rentals-prediction.png)
+    ![DBeaver Home Rentals Prediction Results](./assets/dbeaver-home-rentals-prediction-results.png)
 
 1. To integrate your predictions into your DBT workflow, you will need to make four changes:
 

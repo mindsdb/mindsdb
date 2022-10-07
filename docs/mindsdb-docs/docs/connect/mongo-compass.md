@@ -9,13 +9,13 @@ First, create a new connection in Compass by clicking the `New Connection` from 
 Next, paste the connection string:
 
 <p align="center">
-  <img src="/assets/connect_compass_srv.png" />
+  <img src="../assets/connect_compass_srv.png" />
 </p>
 
 Or, fill in connection fields individualy:
 
 <p align="center">
-  <img src="/assets/connect_compassm.png" />
+  <img src="../assets/connect_compassm.png" />
 </p>
 
 In the above images we've connected to local MindsDB. Check the option bellow to connect to MindsDB cloud.

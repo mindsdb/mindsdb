@@ -4,7 +4,7 @@ Data that lives in your database is a valuable asset. MindsDB enables you to use
 
 With MindsDB, you can build, train, optimize, and deploy your ML models without the need for other platforms. And to get the forecasts, simply query your data and ML models. Read along to see some examples.
 
-![Machine Learning in Database using SQL](/assets/what_is_mindsdb.png)
+![Machine Learning in Database using SQL](./assets/what_is_mindsdb.png)
 
 ## What are AI Tables?
 

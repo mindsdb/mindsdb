@@ -47,7 +47,7 @@ Follow the steps below to connect your MindsDB to Metabase.
     ```
 
     <p align="center">
-    <img src="/assets/metabase_add_database.png" />
+    <img src="../assets/metabase_add_database.png" />
     </p>
 
 5. Click on *Save*.
@@ -55,7 +55,7 @@ Follow the steps below to connect your MindsDB to Metabase.
 Now you're connected!
 
 <p align="center">
-    <img src="/assets/metabase_connected.png" />
+    <img src="../assets/metabase_connected.png" />
 </p>
 
 ## Example
@@ -75,7 +75,7 @@ SHOW TABLES;
 On execution, we get:
 
 <p align="center">
-    <img src="/assets/metabase_run_query_show_tables.png" />
+    <img src="../assets/metabase_run_query_show_tables.png" />
 </p>
 
 Please note that creating a [database connection](/sql/tutorials/home-rentals/#connecting-the-data) using the `CREATE DATABASE` statement fails because of the curly braces (`{}`) being used by JDBC as the escape sequences.
@@ -95,7 +95,7 @@ CREATE DATABASE example_db
 On execution, we get:
 
 <p align="center">
-    <img src="/assets/metabase_run_query_failure.png" />
+    <img src="../assets/metabase_run_query_failure.png" />
 </p>
 
 You can overcome this issue using the [MindsDB SQL Editor](/connect/mindsdb_editor/) to create a database.
@@ -111,7 +111,7 @@ LIMIT 10;
 On execution, we get:
 
 <p align="center">
-    <img src="/assets/metabase_run_query_home_rentals.png" />
+    <img src="../assets/metabase_run_query_home_rentals.png" />
 </p>
 
 ## What's Next?

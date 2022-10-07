@@ -1,5 +1,7 @@
 # Show your 💚 for MindsDB on Twitter
 
+- A Twitter Thread by [Michael Lantz](https://twitter.com/MichaelLantzIST/status/1577794052673703938)
+
 - A Twitter Thread by [reachtoana](https://twitter.com/reachtoana/status/1578117675229728768)
 
 - A Twitter Thread by [Mateus Elias](https://twitter.com/mateuseliaas/status/1578150552659107840)

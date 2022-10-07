@@ -1,4 +1,4 @@
-from typing import Any, Union, Optional
+from typing import Any, Union, Optional, Dict
 
 import pandas as pd
 from mindsdb_sql.parser.ast import Join
@@ -137,7 +137,7 @@ class BaseMLEngine:
         self.model_storage = model_storage
         self.engine_storage = engine_storage
 
-    def create(self, target: str, df: Optional = Union[None, pd.DataFrame], args: Optional = dict) -> None:
+    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
         Saves a model inside the engine registry for later usage.
 
@@ -148,7 +148,7 @@ class BaseMLEngine:
         """
         raise NotImplementedError
 
-    def predict(self, df: pd.DataFrame, args: Optional = dict) -> pd.DataFrame:
+    def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
         Calls a model with some input dataframe `df`, and optionally some arguments `args` that may modify the model behavior.
 
@@ -157,15 +157,7 @@ class BaseMLEngine:
         """
         raise NotImplementedError
 
-    def create_engine(self, connection_args: dict):
-        """
-        Optional.
-
-        Used to connect with external sources (e.g. a REST API) that the engine will require to use any other methods.
-        """
-        raise NotImplementedError
-
-    def update(self, df: Optional = Union[None, pd.DataFrame]) -> None:
+    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
         Optional.
 
@@ -175,10 +167,18 @@ class BaseMLEngine:
         """
         raise NotImplementedError
 
-    def describe(self, key: Optional[None]) -> pd.DataFrame:
+    def describe(self, key: Optional[str] = None) -> pd.DataFrame:
         """
         Optional.
 
         When called, this method provides global model insights, e.g. framework-level parameters used in training.
+        """
+        raise NotImplementedError
+
+    def create_engine(self, connection_args: dict):
+        """
+        Optional.
+
+        Used to connect with external sources (e.g. a REST API) that the engine will require to use any other methods.
         """
         raise NotImplementedError

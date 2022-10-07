@@ -47,6 +47,7 @@ plugins:
             'installation/macos/': '/deployment/macos.md'
             'installation/linux/': '/deployment/linux.md'
     - table-reader
+    - mkdocs-video
 markdown_extensions:
   - attr_list
   - md_in_html

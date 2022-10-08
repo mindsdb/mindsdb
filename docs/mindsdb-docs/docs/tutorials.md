@@ -29,4 +29,4 @@
 * [Predicting Type of Glass using MindsDB](https://medium.com/@ketansingh918/predicting-the-type-of-glass-using-mindsdb-9bbab203a214) by [Ketan Singh](https://medium.com/@ketansingh918)
 * [MindsDB: Predicting Supply Chain Demand with Machine Learning using SQL](https://www.devforce.one/18303637/mindsdb-predicting-supply-chain-demand-with-machine-learning-using-sql#/) by [Chandre Van Der Westhuizen](https://github.com/chandrevdw31)
 * [Why Your Database Needs a Machine Learning Brain](https://medium.com/mindsdb/why-your-database-needs-a-machine-learning-brain-fc580fac47e4) by [James Wilson](https://medium.com/@jameswilsonai)
-
+* [Machine Learning for a Shopify store — a step-by-step guide](https://medium.com/mindsdb/machine-learning-for-a-shopify-store-a-step-by-step-guide-13d192532697) by [James Wilson](https://medium.com/@jameswilsonai)

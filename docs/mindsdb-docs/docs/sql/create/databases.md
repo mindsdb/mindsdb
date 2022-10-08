@@ -1140,6 +1140,38 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
     };
     ```
 
+### SAP HANA
+
+=== "Template"
+
+    ```sql
+    CREATE DATABASE sap_hana_datasource           --- display name for the database
+    WITH ENGINE='hana',                           --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                                --- host name or IP address
+      "port": ,                                   --- port used to make TCP/IP connection
+      "user": " ",                                --- user
+      "password": " ",                            --- password
+      "schema": " ",                              --- database schema name (defaults to the current schema if left blank)
+      "encrypt":                                  --- whether connection is encrypted (required for cloud usage)
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE sap_hana_datasource
+    WITH ENGINE='hana',
+    PARAMETERS={
+      "host": "<uuid>.hana.trial-us10.hanacloud.ondemand.com",
+      "port": "443",
+      "user": "DBADMIN",
+      "password": "password",
+      "schema": "MINDSDB",
+      "encrypt": true
+    };
+    ```
+
 ### Scylla
 
 === "Template"

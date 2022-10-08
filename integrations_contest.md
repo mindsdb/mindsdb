@@ -93,7 +93,7 @@ Here are the requirements for an implementation to be accepted.
 
 </details>
 
-## ML Frameworks Ideas Challenge 📖 📝 🚧
+##  ~~ML Frameworks Ideas Challenge~~ (Finished - October 1st) 📖 📝 🚧
 
 We believe that offering a simple way to implement Machine Learning where the data lives, can bring improvements to the design of the ML applications and their adoption. That's why we want to hear your ideas and bring different ML Frameworks to different data sources. Currently, MindsDB supports +40 different data sources and few ML Frameworks. Some examples of the current ideas we have and the supported ML integrations:
 
@@ -127,6 +127,12 @@ This challenge is similar to the Phase 1 Ideas challenge, but here we consider o
 * Make sure you complete all the steps above to be considered for a prize. After the deadline, We move the issues with the ideas to the `Implementation` phase, where the number of votes they scored is added as a comment. Note that we only count the votes from the accounts created at least a month before the contest started to avoid vote-rigging.
 
 📣 We will announce the winners on our [Community Slack](https://mindsdb.com/joincommunity) during the first couple of days after the submission deadline.
+
+📢 🎉
+* 1st Prize 🥇: [Arman Chand, who suggested integration with Tensorflow](https://github.com/mindsdb/mindsdb/issues/2933) with 67 👍
+* 2nd Prize 🥈: [Rutam Prita Mishra, who suggested integration with Apache SINGA](https://github.com/mindsdb/mindsdb/issues/3040) with 50 👍
+* 3rd Prize 🥉: [Noel Jacob, who suggested integration with Fast.ai](https://github.com/mindsdb/mindsdb/issues/2941) with 40 👍
+
 
 ### What’s coming soon? ⌛
 

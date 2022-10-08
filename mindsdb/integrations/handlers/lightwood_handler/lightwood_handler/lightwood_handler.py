@@ -554,7 +554,7 @@ class LightwoodHandler(PredictiveHandler):
         timeseries_settings = predictor_record.learn_args['timeseries_settings']
 
         if timeseries_settings['is_timeseries'] is True:
-            __no_forecast_offset = set([row.get('__mdb_forecast_offset', None) for row in pred_dicts]) == {None}
+            __no_forecast_offset = set([row.get('__mdb_forecast_offset', None) for row in pred_dicts]) == {1}
 
             predict = predictor_record.to_predict[0]
             group_by = timeseries_settings['group_by'] or []

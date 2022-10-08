@@ -28,3 +28,4 @@
 * [Predicting Type of Glass using MindsDB](https://medium.com/@ketansingh918/predicting-the-type-of-glass-using-mindsdb-9bbab203a214) by [Ketan Singh](https://medium.com/@ketansingh918)
 * [MindsDB: Predicting Supply Chain Demand with Machine Learning using SQL](https://www.devforce.one/18303637/mindsdb-predicting-supply-chain-demand-with-machine-learning-using-sql#/) by [Chandre Van Der Westhuizen](https://github.com/chandrevdw31)
 * [Why Your Database Needs a Machine Learning Brain](https://medium.com/mindsdb/why-your-database-needs-a-machine-learning-brain-fc580fac47e4) by [James Wilson](https://medium.com/@jameswilsonai)
+* [Predicting Machine Failure Rates using MindsDB](https://community.ops.io/rutamhere/predicting-machine-failure-rates-using-mindsdb-4dkn) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)

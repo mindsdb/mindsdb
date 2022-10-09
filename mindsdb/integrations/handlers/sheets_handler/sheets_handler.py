@@ -3,6 +3,8 @@ from collections import OrderedDict
 
 import pandas as pd
 import requests
+import urllib
+import json
 
 from mindsdb_sql import parse_sql
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
@@ -53,14 +55,8 @@ class SheetsHandler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        if self.is_connected is True:
-            return self.connection
-
-        self.connection = None
-
-        self.is_connected = True
-
-        return self.connection
+        self.connection = f"https://docs.google.com/spreadsheets/d/{self.connection_data['spreadsheet_id']}/gviz/tq?sheet={self.connection_data['sheet_name']}"
+        return
 
     def disconnect(self):
         """ Close any existing connections
@@ -81,9 +77,10 @@ class SheetsHandler(DatabaseHandler):
 
         try:
             self.connect()
+            self.native_query("SELECT 1")
             response.success = True
         except Exception as e:
-            log.error(f'Error connecting to the Google Sheet with ID {self.connection_data["base_id"]}, {e}!')
+            log.error(f'Error connecting to the Google Sheet with ID {self.connection_data["sheet_id"]}, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -104,17 +101,16 @@ class SheetsHandler(DatabaseHandler):
 
         need_to_close = self.is_connected is False
 
-        connection = self.connect()
-        cursor = connection.cursor()
         try:
-            cursor.execute(query)
-            result = cursor.fetchall()
+            self.connection = self.connection + f"&tq={urllib.parse.quote(query)}"
+            result = requests.get(self.connection_data)
             if result:
+                columns, data = self.parse_response(result)
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cursor.description]
+                        data,
+                        columns=columns
                     )
                 )
 
@@ -132,6 +128,20 @@ class SheetsHandler(DatabaseHandler):
 
         return response
 
+    def parse_response(self, response):
+        records = json.loads(response.text.split('(', maxsplit=1)[1].rsplit(')', maxsplit=1)[0])
+
+        columns = [col['label'] for col in records['table']['cols'] if col['label']]
+
+        data = []
+        for record in records['table']['rows']:
+            for item in record['c'][:-1]:
+                if item is not None:
+                    data.append(item['v'])
+
+        return columns, data
+
+
     def query(self, query: ASTNode) -> StatusResponse:
         """
         Receive query as AST (abstract syntax tree) and act upon it somehow.
@@ -143,3 +153,43 @@ class SheetsHandler(DatabaseHandler):
         """
 
         return self.native_query(query.to_string())
+
+    def get_tables(self) -> StatusResponse:
+        """
+        Return list of entities that will be accessible as tables.
+        Returns:
+            HandlerResponse
+        """
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                [self.connection_data['sheet_name']],
+                columns=['table_name']
+            )
+        )
+
+        return response
+
+    def get_columns(self) -> StatusResponse:
+        """
+        Returns a list of entity columns.
+        Args:
+            table_name (str): name of one of tables returned by self.get_tables()
+        Returns:
+            HandlerResponse
+        """
+
+        df = self.native_query("SELECT *").data_frame
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                {
+                    'column_name': list(df.columns),
+                    'data_type': df.dtypes
+                }
+            )
+        )
+
+        return response

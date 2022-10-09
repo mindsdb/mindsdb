@@ -25,3 +25,4 @@
 * [Predict insurance cost using MindsDB](https://medium.com/@kinkusuma/predict-insurance-cost-using-mindsdb-54b6a331fea8) by [Kinie K Kusuma](https://medium.com/@kinkusuma)
 * [Forecast bitcoin price using MindsDB](https://medium.com/@kinkusuma/forecast-bitcoin-price-using-mindsdb-75f9f0500e86) by [Kinie K Kusuma](https://medium.com/@kinkusuma)
 * [Predicting car prices using MindsDB](https://medium.com/@pipboyguy/predicting-car-prices-using-mindsdb-c7dd51919b83) by [Marcel Coetzee](https://medium.com/@pipboyguy)
+* [Predict Gold Prices Using MindsDB](https://medium.com/@alissatroianonyc/predict-gold-prices-using-mindsdb-9da57d24ddab) by [Alissa Troiano](https://github.com/alissatroiano)

@@ -31,3 +31,4 @@
 * [Predicting Poker Hand Strength with MindsDB](https://teslimodus.medium.com/predicting-poker-hand-strength-with-mindsdb-d541c73009a2) by [Teslim Odumuyiwa](https://medium.com/@teslimodus)
 * [Why Your Database Needs a Machine Learning Brain](https://medium.com/mindsdb/why-your-database-needs-a-machine-learning-brain-fc580fac47e4) by [James Wilson](https://medium.com/@jameswilsonai)
 * [Machine Learning for a Shopify store — a step-by-step guide](https://medium.com/mindsdb/machine-learning-for-a-shopify-store-a-step-by-step-guide-13d192532697) by [James Wilson](https://medium.com/@jameswilsonai)
+* [Predicting Home Rental Prices with MindsDB in Java](https://curiousprogrammer.hashnode.dev/machine-learning-with-mindsdb-in-java) by [Temidayo](https://hashnode.com/@Temicoder)

@@ -52,7 +52,7 @@ class MySQLNoSSLHandlerTest(unittest.TestCase):
         pass
 
     @classmethod
-    def waitReadiness(cls, container, timeout=15):
+    def waitReadiness(cls, container, timeout=30):
         logs_inter = container.logs(stream=True)
         threshold = time.time() + timeout
         ready_event_num = 0
@@ -66,7 +66,7 @@ class MySQLNoSSLHandlerTest(unittest.TestCase):
                 if ready_event_num > 1:
                     break
             if time.time() > threshold:
-                raise Exception("timeout exceeded, container still not ready")
+                raise Exception("timeout exceeded, container is still not ready")
 
     @classmethod
     def tearDownClass(cls):

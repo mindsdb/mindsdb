@@ -16,7 +16,7 @@ Here are the commands that allow you to connect to either a local MindsDB instal
 === "Self-Hosted Local Deployment"
 
     ```bash
-    mongo --host 127.0.0.1 --port 47336 -u mindsdb
+    mongo --host 127.0.0.1 --port 47336
     ```
 
 === "MindsDB Cloud"

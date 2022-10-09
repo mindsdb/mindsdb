@@ -3,23 +3,21 @@ version: "3.2"
 services:
 
   mindsdb:
-    # image: "mindsdb/mindsdb"
-    build: .
-      # hostname: mindsdb
-      # container_name: mindsdb
+    build:
+      context: ../
+      dockerfile: ./docker/mindsdb.Dockerfile
     restart: always
     ports:
       - '47334:47334'
       - '47335:47335'
     command: bash -c "cd /mindsdb && python -m mindsdb"
     environment:
-      #   PYTHONPATH: "/mindsdb"
       FLASK_DEBUG: "1"
       FLASK_ENV: "development"
       FLASK_APP: "/mindsdb/mindsdb/__main__.py"
     volumes:
       - type: bind
-        source: .
+        source: ../
         target: /mindsdb
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
@@ -30,8 +28,6 @@ services:
 
   mysql_db:
     image: "mindsdb/mysql-handler-test"
-      # hostname: mysql_db
-      # container_name: mysql_db
     ports:
       - 3307:3306
     command: --secure-file-priv=/
@@ -45,9 +41,11 @@ services:
       retries: 100
 
 
-  db_handler:
-    image: "db_handler"
-      # container_name: mysql_db_handler
+  mysql_db_handler:
+    # image: "db_handler"
+    build:
+      context: ../
+      dockerfile: ./docker/db_handler.Dockerfile
     environment:
       - 'PARAMS={"connection_data": {"host": "mysql_db", "port": "3306", "user": "root", "password": "supersecret", "database": "test", "ssl": false}, "name": "foo", "type": "mysql"}'
     ports:

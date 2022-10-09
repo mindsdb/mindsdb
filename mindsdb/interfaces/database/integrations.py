@@ -232,10 +232,10 @@ class IntegrationController:
         """
         as_service = False
         if 'as_service' in connection_data:
+            as_service = connection_data["as_service"]
             connection_data = copy.deepcopy(connection_data)
             del connection_data['as_service']
             log.debug("%s create_tmp_handler: delete 'as_service' key from connection args - %s", self.__class__.__name__, connection_data)
-            as_service = True
         resource_id = int(time() * 10000)
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
@@ -254,7 +254,7 @@ class IntegrationController:
 
         if as_service:
             log.debug("%s create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-            return DBServiceClient(handler_type, as_service=True, **handler_ars)
+            return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
         return self.handler_modules[handler_type].Handler(**handler_ars)
 
     def get_handler(self, name, company_id=None, case_sensitive=False):
@@ -292,8 +292,8 @@ class IntegrationController:
         connection_args = integration_meta.get('connection_args')
         as_service = False
         if 'as_service' in connection_data:
+            as_service = connection_data['as_service']
             del connection_data['as_service']
-            as_service = True
         log.debug("%s get_handler: connection args - %s", self.__class__.__name__, connection_args)
         if isinstance(connection_args, (dict, OrderedDict)):
             files_to_get = [
@@ -333,10 +333,9 @@ class IntegrationController:
                 sync=True
             )
 
-        log.debug("%s get_handler: final handler args - %s", self.__class__.__name__, handler_ars)
         if as_service:
-            log.info("%s get_handler: create a client to db service of %s type", self.__class__.__name__, handler_type)
-            return DBServiceClient(handler_type, as_service=True, **handler_ars)
+            log.debug("%s get_handler: create a client to db service of %s type", self.__class__.__name__, handler_type)
+            return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
         return self.handler_modules[integration_engine].Handler(**handler_ars)
 
     def reload_handler_module(self, handler_name):

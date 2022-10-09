@@ -1,3 +1,21 @@
+""" Implementation of client to any supported DBHandler service
+
+The module provide an opportunity to not just create an instance of DBHanlder locallly
+but communicate to a separate service of DBHandler using DBServiceClient.
+DBServiceClient must provide same set of public API methods as DBHandlers do,
+including calling params and returning types.
+
+    Typical usage example:
+    client = DBServiceClient("mysql",
+                             as_service=True,
+                             {"connection_data":
+                                {"host": "SERVICE(OR_CONTAINER)HOST",
+                                 "port": "SERVICE_PORTS"}
+                             })
+    status_response = client.check_connection()
+    print(status_response.status, status_response.error_message)
+
+"""
 import traceback
 import pickle
 
@@ -6,12 +24,35 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.handlers_client.base_client import BaseClient
 from mindsdb.integrations.libs.handler_helpers import define_handler as define_db_handler
 from mindsdb.utilities.log import log
 
 class DBServiceClient(BaseClient):
-    def __init__(self, handler_type, as_service=False, **kwargs):
+    """The client to connect to DBHanlder service
+
+    DBServiceClient must provide same set of public API methods as DBHandlers do,
+    including calling params and returning types.
+
+    Attributes:
+        as_service: supports back compatibility with the legacy.
+            if False - the DBServiceClient will be just a thin wrapper of DBHanlder instance
+            and will redirect all requests to it.
+            Connects to a specified DBHandler otherwise
+        handler_type: type of DBHandler if as_service=False or DBHandler service type otherwise
+        kwargs: connection args for db if as_service=False or to DBHandler service otherwise
+    """
+    def __init__(self, handler_type: str, as_service: bool=False, **kwargs: dict):
+        """Init DBServiceClient
+
+        Args:
+            as_service: supports back compatibility with the legacy.
+                if False - the DBServiceClient will be just a thin wrapper of DBHanlder instance and will redirect all requests to it.
+                    Connects to a specified DBHandler otherwise
+            handler_type: type of DBHandler if as_service=False or DBHandler service type otherwise
+            kwargs: dict connection args for db if as_service=False or to DBHandler service otherwise
+        """
         super().__init__(as_service=as_service)
         connection_data = kwargs.get("connection_data", None)
         if connection_data is None:
@@ -26,7 +67,11 @@ class DBServiceClient(BaseClient):
             handler_class = define_db_handler(handler_type)
             self.handler = handler_class(handler_class.name, **kwargs)
 
-    def connect(self):
+    def connect(self) -> bool: 
+        """Establish a connection.
+
+        Returns: True if the connection success, False otherwise
+        """
         try:
             r = self._do("/connect", json={"context": self.context})
             if r.status_code == 200 and r.json()["status"] is True:
@@ -37,10 +82,12 @@ class DBServiceClient(BaseClient):
 
         return False
 
-    def check_connection(self):
+    def check_connection(self) -> StatusResponse:
         """
-        Check the connection of the PostgreSQL database
-        :return: success status and error message if error occurs
+        Check a connection to the DBHandler.
+
+        Returns:
+            success status and error message if error occurs
         """
         log.info("%s: calling 'check_connection'", self.__class__.__name__)
         status = None
@@ -57,11 +104,15 @@ class DBServiceClient(BaseClient):
 
         return status
 
-    def native_query(self, query: str):
-        """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in db
-        :return: returns the records from the current recordset
+    def native_query(self, query: str) -> Response:
+        """Send SQL query to DBHandler service and wait a response
+
+        Args:
+            query: query string
+
+        Returns:
+            A records from the current recordset in case of success
+            An error message and error code if case of fail
         """
 
         response = None
@@ -85,9 +136,15 @@ class DBServiceClient(BaseClient):
             log.error("call to db service has finished with an error: %s", traceback.format_exc())
         return response
 
-    def query(self, query):
-        """
-        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
+    def query(self, query: ASTNode) -> Response:
+        """Serializes query object, send it to DBHandler service and waits a response.
+
+        Args:
+            query: query object
+
+        Returns:
+            A records from the current recordset in case of success
+            An error message and error code if case of fail
         """
         s_query = pickle.dumps(query)
         response = None
@@ -112,9 +169,12 @@ class DBServiceClient(BaseClient):
 
         return response
 
-    def get_tables(self):
-        """
-        List all tabels in the database without the system data.
+    def get_tables(self) -> Response:
+        """List all tabels in the database without the system data.
+
+        Returns:
+            A list of all records in the database in case of success
+            An error message and error code if case of fail
         """
 
         response = None
@@ -131,7 +191,6 @@ class DBServiceClient(BaseClient):
             log.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
 
         except Exception as e:
-            # do some logging
             response = Response(error_message=str(e),
                                 error_code=1,
                                 resp_type=RESPONSE_TYPE.ERROR)
@@ -139,7 +198,15 @@ class DBServiceClient(BaseClient):
 
         return response
 
-    def get_columns(self, table_name):
+    def get_columns(self, table_name: str) -> Response:
+        """List all columns of the specific tables
+
+        Args:
+            table_name: table
+        Returns:
+            A list of all columns in the table in case of success
+            An error message and error code if case of fail
+        """
         response = None
 
         log.info("%s: calling 'get_columns' for table - %s", self.__class__.__name__, table_name)
@@ -154,7 +221,6 @@ class DBServiceClient(BaseClient):
 
             log.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
         except Exception as e:
-            # do some logging
             response = Response(error_message=str(e),
                                 error_code=1,
                                 resp_type=RESPONSE_TYPE.ERROR)

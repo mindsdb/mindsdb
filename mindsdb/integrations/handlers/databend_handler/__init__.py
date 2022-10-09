@@ -5,8 +5,8 @@ try:
     from .databend_handler import (
         DatabendHandler as Handler,
         connection_args_example,
+        connection_args
     )
-    from ..clickhouse_handler import connection_args
     import_error = None
 except Exception as e:
     Handler = None

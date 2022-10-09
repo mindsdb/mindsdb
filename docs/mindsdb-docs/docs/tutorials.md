@@ -1,5 +1,5 @@
 # Community Tutorials
-
+* [Predicting the Genre of Books with MindsDB](https://dev.to/f2010126/mindsdb-tutorial-predicting-the-genre-of-books-2ifh) by [Dipti Sengupta](https://www.linkedin.com/in/dipti-s-894831b2/)
 * [Predicting Data Science Job Salaries using MindsDB Cloud](https://community.ops.io/rutamhere/predicting-data-science-job-salaries-using-mindsdb-cloud-1lgn) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Used Car Prices using MindsDB](https://tealfeed.com/predicting-used-car-prices-using-mindsdb-idzuc) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Deploying MindsDB on a Digital Ocean Droplet](https://dev.to/heyrutam/deploying-mindsdb-on-a-digital-ocean-droplet-31ed) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
@@ -26,3 +26,10 @@
 * [Forecast bitcoin price using MindsDB](https://medium.com/@kinkusuma/forecast-bitcoin-price-using-mindsdb-75f9f0500e86) by [Kinie K Kusuma](https://medium.com/@kinkusuma)
 * [Predicting car prices using MindsDB](https://medium.com/@pipboyguy/predicting-car-prices-using-mindsdb-c7dd51919b83) by [Marcel Coetzee](https://medium.com/@pipboyguy)
 * [Predict Gold Prices Using MindsDB](https://medium.com/@alissatroianonyc/predict-gold-prices-using-mindsdb-9da57d24ddab) by [Alissa Troiano](https://github.com/alissatroiano)
+* [Machine Learning in ClickHouse](https://youtu.be/lTswa9Vf8ig) by [Jorges Torres](https://medium.com/@torrmal)
+* [Predicting Type of Glass using MindsDB](https://medium.com/@ketansingh918/predicting-the-type-of-glass-using-mindsdb-9bbab203a214) by [Ketan Singh](https://medium.com/@ketansingh918)
+* [MindsDB: Predicting Supply Chain Demand with Machine Learning using SQL](https://www.devforce.one/18303637/mindsdb-predicting-supply-chain-demand-with-machine-learning-using-sql#/) by [Chandre Van Der Westhuizen](https://github.com/chandrevdw31)
+* [Predicting Poker Hand Strength with MindsDB](https://teslimodus.medium.com/predicting-poker-hand-strength-with-mindsdb-d541c73009a2) by [Teslim Odumuyiwa](https://medium.com/@teslimodus)
+* [Why Your Database Needs a Machine Learning Brain](https://medium.com/mindsdb/why-your-database-needs-a-machine-learning-brain-fc580fac47e4) by [James Wilson](https://medium.com/@jameswilsonai)
+* [Machine Learning for a Shopify store — a step-by-step guide](https://medium.com/mindsdb/machine-learning-for-a-shopify-store-a-step-by-step-guide-13d192532697) by [James Wilson](https://medium.com/@jameswilsonai)
+* [Predicting Home Rental Prices with MindsDB in Java](https://curiousprogrammer.hashnode.dev/machine-learning-with-mindsdb-in-java) by [Temidayo](https://hashnode.com/@Temicoder)

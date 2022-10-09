@@ -690,6 +690,8 @@ class ExecuteCommands:
             accept_connection_args = handler_meta.get('connection_args')
             if accept_connection_args is not None:
                 for arg_name, arg_value in connection_args.items():
+                    if arg_name == 'as_service':
+                        continue
                     if arg_name not in accept_connection_args:
                         raise SqlApiException(f"Unknown connection argument: {arg_name}")
                     arg_meta = accept_connection_args[arg_name]

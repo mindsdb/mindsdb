@@ -68,7 +68,6 @@ class DBHandlerWrapper(BaseDBWrapper):
         try:
             result =  self.handler.check_connection()
             return result.to_json(), 200
-            # return {"success": result.success}
         except Exception as e:
             msg = traceback.format_exc()
             log.error(msg)

@@ -80,7 +80,7 @@ class SheetsHandler(DatabaseHandler):
             self.native_query("SELECT 1")
             response.success = True
         except Exception as e:
-            log.error(f'Error connecting to the Google Sheet with ID {self.connection_data["sheet_id"]}, {e}!')
+            log.error(f'Error connecting to the Google Sheet with ID {self.connection_data["spreadsheet_id"]}, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -117,7 +117,7 @@ class SheetsHandler(DatabaseHandler):
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            log.error(f'Error running query: {query} on the Google Sheet with ID {self.connection_data["base_id"]}!')
+            log.error(f'Error running query: {query} on the Google Sheet with ID {self.connection_data["spreadsheet_id"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

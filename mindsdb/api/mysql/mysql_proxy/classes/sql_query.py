@@ -153,7 +153,7 @@ class ColumnsCollection:
     def del_table_columns(self, table_name):
         self.__columns = [
             x for x in self.__columns
-            if x[:3] == table_name
+            if x[:3] != table_name
         ]
 
     def from_dict(self, columns_dict):
@@ -1655,7 +1655,7 @@ class SQLQuery():
                     table_name = table[1]
                     col_map = []
                     col_list = []
-                    for column in step_data['columns'].table_columns():
+                    for column in step_data['columns'].table_columns(table):
                         alias = column[1]
                         if alias not in col_names:
                             col_names.add(alias)
@@ -1666,7 +1666,7 @@ class SQLQuery():
                             col_map.append([column, column_new])
 
                     # replace columns
-                    step_data['columns'].del_table_columns()
+                    step_data['columns'].del_table_columns(table)
                     for column in col_list:
                         step_data['columns'].add(table, column)
 

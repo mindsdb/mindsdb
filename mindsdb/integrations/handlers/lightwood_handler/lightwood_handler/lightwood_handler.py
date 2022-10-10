@@ -295,7 +295,7 @@ class LightwoodHandler(PredictiveHandler):
             name=model_name,
             integration_id=lightwood_integration_meta['id'],
             data_integration_id=integration_meta['id'],
-            fetch_data_query=query_str,  # This is not string,
+            fetch_data_query=query_str,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,

@@ -56,14 +56,18 @@ class SheetsHandler(DatabaseHandler):
         """
 
         self.connection = f"https://docs.google.com/spreadsheets/d/{self.connection_data['spreadsheet_id']}/gviz/tq?sheet={self.connection_data['sheet_name']}"
-        return
+        return self.connection
 
     def disconnect(self):
         """ Close any existing connections
         Should switch self.is_connected.
         """
+        if self.is_connected is False:
+            return
+
+        self.connection = None
         self.is_connected = False
-        return
+        return self.is_connected
 
     def check_connection(self) -> StatusResponse:
         """
@@ -101,11 +105,13 @@ class SheetsHandler(DatabaseHandler):
 
         need_to_close = self.is_connected is False
 
+        connection = self.connect()
         try:
-            self.connection = self.connection + f"&tq={urllib.parse.quote(query)}"
+            connection += f"&tq={urllib.parse.quote(query)}"
             result = requests.get(self.connection)
             if result:
                 columns, data = self.parse_response(result)
+
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.DataFrame(
@@ -136,7 +142,7 @@ class SheetsHandler(DatabaseHandler):
         data = []
         for record in records['table']['rows']:
             row = []
-            for item in record['c'][:-1]:
+            for item in record['c']:
                 if item is not None:
                     row.append(item['v'])
 

@@ -10,7 +10,7 @@ class SheetsHandlerTest(unittest.TestCase):
             "spreadsheet_id": "12wgS-1KJ9ymUM-6VYzQ0nJYGitONxay7cMKLnEE2_d0",
             "sheet_name": "iris_original"
         }
-        cls.handler = SheetsHandler('test_databricks_handler', cls.kwargs)
+        cls.handler = SheetsHandler('test_sheets_handler', cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()

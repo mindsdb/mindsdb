@@ -33,7 +33,7 @@ In our example it is join of table *table1* (from integration *int1*) with predi
 It also can be select from integration
 - *source* is the alias for fetched data
 - then it updates *table2* from *int2* using conditions from `#!sql WHERE` block and fields for update from `#!sql SET` block
-  - under the hood it splits input data to rows and executed this query for every row:
+  - under the hood it splits input data to rows and execute this query for every row:
   ```sql
   UPDATE 
       table2 

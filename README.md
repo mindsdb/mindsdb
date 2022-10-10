@@ -33,14 +33,14 @@
 
 ----------------------------------------
 
-[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)  ML-SQL Server enables machine learning workflows for the most powerful databases and datawarehouses using SQL.  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20inside%20Databases%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks,databases,sql)
+[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)  ML-SQL Server enables machine learning workflows for the most powerful databases and data warehouses using SQL.  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Machine%20Learning%20inside%20Databases%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,machine_learning,neural_networks,databases,sql)
 * Developers can quickly add AI capabilities to your applications.
 * Data Scientists can streamline MLOps by deploying ML models as AI Tables.
 * Data Analysts can easily make forecasts on complex data (like multivariate time-series with high cardinality) and visualize them in BI tools like Tableau.
 
 **NEW!** Check-out the new Hacktoberfest [challenges](https://mindsdb.com/hacktoberfest) (and the cash:dollar: , laptop:computer: and many other prizes)!
 
-If you like our project then we would really appreciate **a Star ⭐!**
+If you like our project then we would truly appreciate **a Star ⭐!**
 
 Also, check-out the [rewards and community programs.](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)
 
@@ -62,7 +62,7 @@ Also, check-out the [rewards and community programs.](https://mindsdb.com/commun
 
 ## Demo
 
-You can try Mindsdb ML SQL server here [(demo)](https://cloud.mindsdb.com).
+You can try the Mindsdb ML SQL server here [(demo)](https://cloud.mindsdb.com).
 
 ## Installation
 
@@ -82,7 +82,7 @@ pip install mindsdb
 
 MindsDB automates and abstracts machine learning models through virtual AI Tables:
 
-Apart from abstracting ML models as AI Tables inside databases, MindsDB has a set of unique capabilities as:
+Apart from abstracting ML models as AI Tables inside databases, MindsDB has a set of unique capabilities:
 
 * Easily make predictions over very complex multivariate time-series data with high cardinality
 
@@ -93,7 +93,7 @@ Apart from abstracting ML models as AI Tables inside databases, MindsDB has a se
 
 1. Let MindsDB connect to your database.
 
-2. Train a Predictor using a single SQL statement (make MindsDB learn from historical data automatically) or import your own ML model to a Predictor via JSON-AI . 
+2. Train a Predictor using a single SQL statement (make MindsDB learn from historical data automatically) or import your ML model to a Predictor via JSON-AI. 
 
 3. Make predictions with SQL statements (Predictor is exposed as virtual AI Tables). There’s no need to deploy models since they are already part of the data layer.
 
@@ -102,7 +102,7 @@ Check our [docs](https://docs.mindsdb.com/?utm_medium=community&utm_source=githu
 
 ## Features
 
-* Automatic data pre-processing, feature engineering and encoding
+* Automatic data pre-processing, feature engineering, and encoding
 * Classification, regression, time-series tasks
 * Bring models to production without “traditional deployment” as AI Tables
 * Get models’ accuracy scoring and confidence intervals for each prediction
@@ -110,7 +110,7 @@ Check our [docs](https://docs.mindsdb.com/?utm_medium=community&utm_source=githu
 * Anomaly detection
 * Model explainability analysis 
 * GPU support for models’ training
-* Open JSON-AI syntax to build models and bring your own ML blocks in a declarative way 
+* Open JSON-AI syntax to build models and bring your ML blocks in a declarative way 
 
 
 ## Database Integrations
@@ -158,15 +158,15 @@ To get community support, you can:
 * Ask for help at our [Github Discussions](https://github.com/mindsdb/mindsdb/discussions).
 * Ask a question at [Stackoverflow](https://stackoverflow.com/questions/tagged/mindsdb) with a MindsDB tag.
 
-If you need commercial support, please [contact](https://mindsdb.com/contact/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) the MindsDB team.
+If you need commercial support, please [contact](https://mindsdb.com/contact/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) MindsDB team.
 
 ## Contributing
 
-A great place to start contributing to MindsDB will be our GitHub projects for :checkered_flag:
+A great place to start contributing to MindsDB will be our GitHub projects for checkered_flag:
 * Community writers [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/7).
 * Community code contributors [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/8).
 
-Also, we are always open to suggestions so feel free to open new issues with your ideas and we can give you guidance!
+Also, we are always open to suggestions so feel free to open new issues with your ideas and we can guide you!
 
 Being part of the core team is accessible to anyone who is motivated and wants to be part of that journey!
 If you'd like to contribute to the project, refer to the [contributing documentation](https://docs.mindsdb.com/contribute/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).

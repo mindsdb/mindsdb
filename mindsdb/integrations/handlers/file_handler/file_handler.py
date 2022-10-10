@@ -41,11 +41,11 @@ class FileHandler(DatabaseHandler):
     """
     name = 'files'
 
-    def __init__(self, name=None, db_store=None, fs_store=None, connection_data=None, file_controller=None):
+    def __init__(self, name=None, file_storage=None, connection_data={}, file_controller=None):
         super().__init__(name)
         self.parser = parse_sql
-        self.fs_store = fs_store
-        self.custom_parser = connection_data.get('custom_parser')
+        self.fs_store = file_storage
+        self.custom_parser = connection_data.get('custom_parser', None)
         self.clean_rows = connection_data.get('clean_rows', True)
         self.file_controller = file_controller
 
@@ -203,11 +203,13 @@ class FileHandler(DatabaseHandler):
                     explain=False
                 )
                 best_meta = file_encoding_meta.best()
+                errors = 'strict'
                 if best_meta is not None:
                     encoding = file_encoding_meta.best().encoding
                 else:
                     encoding = 'utf-8'
-                data = StringIO(byte_str.decode(encoding))
+                    errors = 'replace'
+                data = StringIO(byte_str.decode(encoding, errors))
         except Exception:
             print(traceback.format_exc())
             print('Could not load into string')

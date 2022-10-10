@@ -19,6 +19,7 @@ from mindsdb.interfaces.model.functions import (
     get_model_record,
     get_model_records
 )
+from mindsdb.interfaces.storage.json import get_json_storage
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -31,9 +32,9 @@ class ModelController():
         self.config = Config()
         self.fs_store = FsStore()
 
-    def get_model_data(self, company_id: int, name: str = None, predictor_record=None) -> dict:
+    def get_model_data(self, company_id: int, name: str = None, predictor_record=None, ml_handler_name='lightwood') -> dict:
         if predictor_record is None:
-            predictor_record = get_model_record(company_id=company_id, except_absent=True, name=name)
+            predictor_record = get_model_record(company_id=company_id, except_absent=True, name=name, ml_handler_name=ml_handler_name)
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -46,28 +47,16 @@ class ModelController():
         data['mindsdb_version'] = predictor_record.mindsdb_version
         data['name'] = predictor_record.name
         data['code'] = predictor_record.code
-        data['json_ai'] = predictor_record.json_ai
         data['problem_definition'] = predictor_record.learn_args
         data['fetch_data_query'] = predictor_record.fetch_data_query
         data['active'] = predictor_record.active
+        data['status'] = predictor_record.status
 
-        # assume older models are complete, only temporary
-        if 'status' in predictor_record.data:
-            data['status'] = predictor_record.data['status']
-        elif 'error' in predictor_record.data:
-            data['status'] = 'error'
-        elif predictor_record.update_status == 'available':
-            data['status'] = 'complete'
-        elif predictor_record.json_ai is None and predictor_record.code is None:
-            data['status'] = 'generating'
-        elif predictor_record.data is None:
-            data['status'] = 'editable'
-        elif 'training_log' in predictor_record.data:
-            data['status'] = 'training'
-        elif 'error' not in predictor_record.data:
-            data['status'] = 'complete'
-        else:
-            data['status'] = 'error'
+        json_storage = get_json_storage(
+            resource_id=predictor_record.id,
+            company_id=predictor_record.company_id
+        )
+        data['json_ai'] = json_storage.get('json_ai')
 
         if data.get('accuracies', None) is not None:
             if len(data['accuracies']) > 0:
@@ -93,10 +82,10 @@ class ModelController():
 
         return model_description
 
-    def get_models(self, company_id: int, with_versions=False):
+    def get_models(self, company_id: int, with_versions=False, ml_handler_name='lightwood'):
         models = []
         show_active = True if with_versions is False else None
-        for predictor_record in get_model_records(company_id=company_id, active=show_active):
+        for predictor_record in get_model_records(company_id=company_id, active=show_active, ml_handler_name=ml_handler_name):
             model_data = self.get_model_data(predictor_record=predictor_record, company_id=company_id)
             reduced_model_data = {}
 
@@ -127,9 +116,11 @@ class ModelController():
         return models
 
     def delete_model(self, model_name: str, company_id: int, integration_name: str = 'lightwood'):
+        if integration_name.lower() == 'mindsdb':
+            integration_name = 'lightwood'
         integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
-        lw_handler = integration_controller.get_handler(integration_name)
-        response = lw_handler.native_query(f'drop predictor {model_name}')
+        ml_handler = integration_controller.get_handler(integration_name)
+        response = ml_handler.native_query(f'drop predictor {model_name}')
         if response.type == RESPONSE_TYPE.ERROR:
             raise Exception(response.error_message)
 
@@ -146,12 +137,16 @@ class ModelController():
         predictor_record = get_model_record(company_id=company_id, name=name, except_absent=True)
 
         fs_name = f'predictor_{company_id}_{predictor_record.id}'
-        self.fs_store.get(fs_name, base_dir=self.config['paths']['predictors'])
-        local_predictor_savefile = os.path.join(self.config['paths']['predictors'], fs_name)
+        self.fs_store.pull()
+        local_predictor_savefile = os.path.join(self.fs_store.folder_path, fs_name)
         predictor_binary = open(local_predictor_savefile, 'rb').read()
 
         # Serialize a predictor record into a dictionary 
         # move into the Predictor db class itself if we use it again somewhere
+        json_storage = get_json_storage(
+            resource_id=predictor_record.id,
+            company_id=predictor_record.company_id
+        )
         predictor_record_serialized = {
             'name': predictor_record.name,
             'data': predictor_record.data,
@@ -161,7 +156,7 @@ class ModelController():
             'is_custom': predictor_record.is_custom,
             'learn_args': predictor_record.learn_args,
             'update_status': predictor_record.update_status,
-            'json_ai': predictor_record.json_ai,
+            'json_ai': json_storage.get('json_ai'),
             'code': predictor_record.code,
             'lightwood_version': predictor_record.lightwood_version,
             'dtype_dict': predictor_record.dtype_dict,
@@ -194,7 +189,7 @@ class ModelController():
 
         predictor_binary = base64.b64decode(prs['predictor_binary'])
         fs_name = f'predictor_{company_id}_{predictor_record.id}'
-        with open(os.path.join(self.config['paths']['predictors'], fs_name), 'wb') as fp:
+        with open(os.path.join(self.fs_store.folder_path, fs_name), 'wb') as fp:
             fp.write(predictor_binary)
 
-        self.fs_store.put(fs_name, base_dir=self.config['paths']['predictors'])
+        self.fs_store.push()

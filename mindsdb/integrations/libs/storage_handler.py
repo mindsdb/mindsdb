@@ -22,12 +22,14 @@ class KVStorageHandler:
         serialized_key = self.serializer.dumps(key)
         return md5(serialized_key).hexdigest() + md5(self.context).hexdigest()
 
-    def get(self, key):
+    def get(self, key, default_value=None):
         serialized_value = self._get(self._get_context_key(key))
         if serialized_value:
             return self.serializer.loads(serialized_value)
+        elif default_value is not None:
+            return default_value
         else:
-            return None
+            raise KeyError(f"Key not found: {key}")
 
     def set(self, key: str, value: object):
         serialized_value = self.serializer.dumps(value)
@@ -62,7 +64,7 @@ class SqliteStorageHandler(KVStorageHandler):
         if results:
             return results[0][0]  # should always be a single match, hence the [0]s
         else:
-            return []
+            return None
 
     def _set(self, serialized_key, serialized_value):
         cur = self.connection.cursor()

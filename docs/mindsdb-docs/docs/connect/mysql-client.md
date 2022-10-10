@@ -1,14 +1,16 @@
-# Connect MindsDB MySQL API to MySQL CLI
+# MindsDB and MySQL CLI
 
-MindsDB provides a powerful MySQL API that allows users to connect to it using the [MySQL Command-Line Client](https://dev.mysql.com/doc/refman/8.0/en/mysql.html). Connecting to MySQL API is the same as connecting to a MySQL database:
+MindsDB provides a powerful MySQL API that allows users to connect to it using the [MySQL Command Line Client](https://dev.mysql.com/doc/refman/8.0/en/mysql.html). Please note that connecting to MindsDB's MySQL API is the same as connecting to a MySQL database.
 
 ## How to Connect
+
+To connect to MindsDB, run the below command in your MySQL CLI and provide the connection details, such as host, port, username, and password.
 
 ```bash
 mysql -h [hostname] --port [TCP/IP port number] -u [user] -p [password]
 ```
 
-You can either connect locally or to a MindsDB Cloud instance, depending on the case; open your terminal and run:
+Here are the commands that allow you to connect to either a local MindsDB installation or a MindsDB Cloud instance.
 
 === "Self-Hosted Local Deployment"
 
@@ -19,7 +21,7 @@ You can either connect locally or to a MindsDB Cloud instance, depending on the 
 === "MindsDB Cloud"
 
     ```bash
-    mysql -h cloud.mindsdb.com --port 3306 -u [mindsdb_cloud_email] -p [mindsdb_cloud_password]
+    mysql -h cloud.mindsdb.com --port 3306 -u [mindsdb_cloud_username] -p [mindsdb_cloud_password]
     ```
 
 On execution, we get:
@@ -35,9 +37,13 @@ MySQL [(none)]>
 
 ## Example
 
+In this example, we connect to the MindsDB Cloud instance, as below.
+
 ``` bash
 mysql -h cloud.mindsdb.com --port 3306 -u zoran@mindsdb.com -p
 ```
+
+On execution, we get:
 
 ```bash
 Enter password:

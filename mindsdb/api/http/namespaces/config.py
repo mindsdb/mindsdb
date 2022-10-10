@@ -88,9 +88,8 @@ class Integration(Resource):
         if is_test:
             del params['test']
 
-            db_type = params.get('type')
-            handler = request.integration_controller.create_handler(
-                handler_type=db_type,
+            handler = request.integration_controller.create_tmp_handler(
+                handler_type=params.get('type'),
                 connection_data=params
             )
             status = handler.check_connection()

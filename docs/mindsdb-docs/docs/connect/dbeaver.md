@@ -4,17 +4,23 @@ DBeaver is a database tool that allows you to connect to and work with various d
 
 ## Data Setup
 
-First, you create a new database connection in DBeaver by clicking the icon, as shown below.
+First, create a new database connection in DBeaver by clicking the icon, as shown below.
 
-![New Database Connection](/assets/sql/dbeaver_1.png)
+<p align="center">
+  <img src="/assets/sql/dbeaver_1.png" />
+</p>
 
 Next, choose the MySQL database engine and click the *Next* button.
 
-![Choose database engine](/assets/sql/dbeaver_2.png)
+<p align="center">
+  <img src="/assets/sql/dbeaver_2.png" />
+</p>
 
-Now it's the time to fill in the connection details.
+Now it's time to fill in the connection details.
 
-![Connection details](/assets/sql/dbeaver_3.png)
+<p align="center">
+  <img src="/assets/sql/dbeaver_3.png" />
+</p>
 
 There are two options, as below.
 
@@ -22,31 +28,37 @@ There are two options, as below.
 
     You can connect to your MindsDB Cloud account. To do that, please use the connection details below:<br/>
 
-    &emsp;&emsp;Hostname: `cloud-mysql.mindsdb.com`<br/>
-    &emsp;&emsp;Port: `3306`<br/>
-    &emsp;&emsp;Username: *your MindsDB Cloud username*<br/>
-    &emsp;&emsp;Password: *your MindsDB Cloud password*<br/>
-    &emsp;&emsp;Database: *leave it empty*<br/>
+    ```text
+    Hostname: `cloud.mindsdb.com`
+    Port: `3306`
+    Username: *your MindsDB Cloud username*  # your Mindsdb Cloud email address is your username
+    Password: *your MindsDB Cloud password*
+    Database: *leave it empty*
+    ```
 
 === "Connecting to your local MindsDB"
 
     You can connect to your local MindsDB. To do that, please use the connection details below:<br/>
 
-    &emsp;&emsp;Hostname: `127.0.0.1`<br/>
-    &emsp;&emsp;Port: `47334`<br/>
-    &emsp;&emsp;Username: `mindsdb`<br/>
-    &emsp;&emsp;Password: *leave it empty*<br/>
-    &emsp;&emsp;Database: *leave it empty*<br/>
+    ```text
+    Hostname: `127.0.0.1`
+    Port: `47334`
+    Username: `mindsdb`
+    Password: *leave it empty*
+    Database: *leave it empty*
+    ```
 
 Now we are ready to test the connection.
 
 ## Testing the Connection
 
-Click on the `Test Connection...` button to check if all the provided data allows you to connect to MindsDB
+Click on the `Test Connection...` button to check if all the provided data allows you to connect to MindsDB.
 
-![Connection test](/assets/sql/dbeaver_4.png)
+On success, you should see the message, as below.
 
-On success, you should see the message, as shown above.
+<p align="center">
+  <img src="/assets/sql/dbeaver_4.png" />
+</p>
 
 ## Let's Run Some Queries
 
@@ -71,7 +83,9 @@ On execution, we get:
 
 Here is how it looks in DBeaver:
 
-![Query test](/assets/sql/dbeaver_5.png)
+<p align="center">
+  <img src="/assets/sql/dbeaver_5.png" />
+</p>
 
 !!! tip "Whitelist MindsDB Cloud IP address"
     If you need to whitelist the MindsDB Cloud IP address to gain access to your database, reach out to the MindsDB team, and we'll share the MindsDB Cloud static IP address with you.

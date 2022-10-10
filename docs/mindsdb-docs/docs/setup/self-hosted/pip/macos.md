@@ -119,3 +119,6 @@ installed on your machine.
 You can try to replicate your issue using the [Docker setup](/setup/self-hosted/docker/).
 
 Also, please create an issue with detailed description in the [MindsDB GitHub repository](https://github.com/mindsdb/mindsdb/issues) so we can help you. Usually, we review issues and respond within a few hours.
+
+!!! tip "What's next?"
+    We recommend you follow one of our tutorials or learn more about the [MindsDB Database](/sql/table-structure/).

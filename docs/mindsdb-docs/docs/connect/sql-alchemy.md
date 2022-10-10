@@ -10,12 +10,14 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
 
     You can use the Python code below to connect your Cloud MindsDB database to SQL Alchemy.
 
+    Make sure you have the *pymysql* module installed before executing the Python code. To install it, run the `pip install pymysql` command.
+
     ```python
     from sqlalchemy import create_engine
 
-    user = 'MindsDB Cloud username' # replace this value
+    user = 'MindsDB Cloud username' # your Mindsdb Cloud email address is your username
     password = 'MindsDB Cloud password' # replace this value
-    host = 'cloud-mysql.mindsdb.com'
+    host = 'cloud.mindsdb.com'
     port = 3306
     database = ''
 
@@ -27,6 +29,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     if __name__ == '__main__':
             try:
                     engine = get_connection()
+                    engine.connect()
                     print(f"Connection to the {host} for user {user} created successfully.")
             except Exception as ex:
                     print("Connection could not be made due to the following error: \n", ex)
@@ -34,21 +37,23 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
 
     Please note that we use the following connection details:
 
-    - Username is your MindsDB Cloud username
+    - Username is your MindsDB Cloud email address
     - Password is your MindsDB Cloud password
-    - Host is `cloud-mysql.mindsdb.com`
+    - Host is `cloud.mindsdb.com`
     - Port is `3306`
     - Database name is left empty
 
     To create a database connection, execute the code above. On success, the following output is expected:
 
     ```bash
-    Connection to the cloud-mysql.mindsdb.com for user MindsDB-Cloud-Username created successfully.
+    Connection to the cloud.mindsdb.com for user MindsDB-Cloud-Username created successfully.
     ```
 
 === "Connecting Local MindsDB to SQL Alchemy"
 
     You can use the Python code below to connect your local MindsDB database to SQL Alchemy.
+
+    Make sure you have the *pymysql* module installed before executing the Python code. To install it, run the `pip install pymysql` command.
 
     ```python
     from sqlalchemy import create_engine
@@ -56,7 +61,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     user = 'mindsdb'
     password = ''
     host = '127.0.0.1'
-    port = 47334
+    port = 47335
     database = ''
 
     def get_connection():
@@ -67,6 +72,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     if __name__ == '__main__':
             try:
                     engine = get_connection()
+                    engine.connect()
                     print(f"Connection to the {host} for user {user} created successfully.")
             except Exception as ex:
                     print("Connection could not be made due to the following error: \n", ex)
@@ -77,7 +83,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     - Username is `mindsdb`
     - Password is left empty
     - Host is `127.0.0.1`
-    - Port is `47334`
+    - Port is `47335`
     - Database name is left empty
 
     To create a database connection, execute the code above. On success, the following output is expected:
@@ -85,6 +91,9 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     ```bash
     Connection to the 127.0.0.1 for user mindsdb created successfully.
     ```
+!!! note
+    The Sqlachemy `create_engine` is lazy. This implies any human error when entering the connection details would be undetectable until an action becomes necessary, such as when calling the `execute` method to execute SQL commands.
+
 
 ## What's Next?
 

@@ -30,7 +30,7 @@ class MySQLHandler(DatabaseHandler):
         self.mysql_url = None
         self.parser = parse_sql
         self.dialect = 'mysql'
-        self.connection_data = kwargs.get('connection_data')
+        self.connection_data = kwargs.get('connection_data', {})
         self.database = self.connection_data.get('database')
 
         self.connection = None
@@ -163,18 +163,6 @@ class MySQLHandler(DatabaseHandler):
         q = f"DESCRIBE {table_name};"
         result = self.native_query(q)
         return result
-
-    def select_into(self, table, dataframe: pd.DataFrame, dtypes=None):
-        """
-        TODO: Update this
-        """
-        try:
-            con = create_engine(f'mysql://{self.host}:{self.port}/{self.database}', echo=False)
-            dataframe.to_sql(table, con=con, if_exists='append', index=False, dtype=dtypes)
-            return True
-        except Exception as e:
-            print(e)
-            raise Exception(f"Could not select into table {table}, aborting.")
 
 
 connection_args = OrderedDict(

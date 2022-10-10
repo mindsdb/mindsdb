@@ -2,7 +2,7 @@
 
 Integrations, or external databases, provide data to be used for making forecasts. Here, we use the `databases.insertOne()` method to connect the integrations to Mongo.
 
-## Using the `db.databases.insertOne()` Method
+## The `db.databases.insertOne()` Method
 
 ### Description
 
@@ -11,6 +11,8 @@ MindsDB enables adding databases to your Mongo instance using the `db.databases.
 Our MindsDB Mongo API supports creating a connection by passing the database credentials.
 
 ### Syntax
+
+Here is the syntax:
 
 ```sql
 db.databases.insertOne({
@@ -37,9 +39,9 @@ Where:
 
 | Name                   | Description                                                                                     |
 | ---------------------- | ----------------------------------------------------------------------------------------------- |
-| `name`                 | Identifier for the data source to be created                                                     |
-| `engine`               | Engine to be selected (for Mongo API, it is always `mongodb`)                                   |
-| `connection_args`      | `#!json {"key":"value"}` object storing the connection parameters such as port, host, database  |
+| `name`                 | Identifier for the data source to be created.                                                   |
+| `engine`               | Database engine to be selected.                                                                 |
+| `connection_args`      | `#!json {"key":"value"}` object storing the connection parameters such as port, host, database. |
 
 ## Example
 

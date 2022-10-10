@@ -46,10 +46,10 @@ Let's go over some examples.
     Now, to launch your MindsDB, run the following command:
 
     ```bash
-    python -m mindsdb --config=YOURCONFIGFILE.JSON
+    python -m mindsdb --config=/path-to-the-config-file/your-config-file.json
     ```
 
-    Please note that the config file must be in the JSON format. It must include [this part](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/utilities/config.py#L35,L72) of the config file from the MindsDB repository in a proper JSON format.
+    Please note that the config file must be in JSON format. It must include [this part](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/utilities/config.py#L35,L72) of the config file from the MindsDB repository in a proper JSON format.
 
 - Train a new model. You may use [this tutorial](/sql/tutorials/bodyfat) as an example.
 
@@ -57,7 +57,7 @@ Let's go over some examples.
 
 ### Create the Connector Instance
 
-To create a connector, you need to send a POST request to a specific `connectors` URL with connector configuration in JSON format, as below.
+To create a connector, you need to send a POST request to a specific `CONNECTORS_URL` with connector configuration in JSON format, as below.
 
 ```python
 import requests

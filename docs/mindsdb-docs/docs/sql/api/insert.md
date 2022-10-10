@@ -1,17 +1,24 @@
-# INSERT INTO Statement
+# `#!sql INSERT INTO` Statement
 
 ## Description
 
-The `#!sql INSERT INTO` statement is used to insert data into a table. This inserted data comes from the subselect statement. It is commonly used to input predictions into the database.
+The `#!sql INSERT INTO` statement inserts data into a table. The data comes from a subselect query. It is commonly used to input prediction results into a database table.
 
 ## Syntax
+
+Here is the syntax:
 
 ```sql
 INSERT INTO [integration_name].[table_name]
     (SELECT ...);
 ```
 
-It performs a subselect `#!sql (SELECT ...)` and gets data from there. Then, this data is inserted into a table of integration `#!sql [integration_name]` using `#!sql INSERT INTO TABLE [table_name]` statement.
+Please note that the destination table (`[integration_name].[table_name]`) must exist and contain all the columns where the data is to be inserted.
+
+And the steps followed by the syntax:
+
+- It executes a subselect query to get the output dataset.
+- It uses the `#!sql INSERT INTO` statement to insert the output of the `#!sql (SELECT ...)` query into the `[integration_name].[table_name]` table.
 
 On execution, we get:
 
@@ -21,7 +28,9 @@ Query OK, 0 row(s) updated - x.xxxs
 
 ## Example
 
-In this example, we want to input the predictions into a table `#!sql int1.tbl1`. Given is the following schema:
+We want to save the prediction results into the `#!sql int1.tbl1` table.
+
+Here is the schema structure used throughout this example:
 
 ```bash
 int1
@@ -34,15 +43,15 @@ int2
 
 Where:
 
-|                  | Description                                                 |
-| ---------------- | ----------------------------------------------------------- |
-| `int1`           | Integration name where the table `tbl1` resides             |
-| `tbl1`           | Table where data will be inserted                           |
-| `predictor_name` | Name of the ML model                                        |
-| `int2`           | Database to be used as a source in the inner `#!sql SELECT` |
-| `tbl2`           | Table to be used as a source                                |
+| Name             | Description                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------- |
+| `int1`           | Integration where the table that stores prediction results resides.                          |
+| `tbl1`           | Table that stores prediction results.                                                        |
+| `predictor_name` | Name of the model.                                                                           |
+| `int2`           | Integration where the data source table used in the inner `#!sql SELECT` statement resides.  |
+| `tbl2`           | Data source table used in the inner `#!sql SELECT` statement.                                |
 
-In order to achieve the desired result, we execute the following query:
+Let's execute the query.
 
 ```sql
 INSERT INTO int1.tbl1 (

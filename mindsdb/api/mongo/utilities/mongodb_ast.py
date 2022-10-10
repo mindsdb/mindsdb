@@ -215,6 +215,15 @@ class MongoWhereParser:
             # it is constant
             return Constant(value=node.value)
 
+        # ---- python 3.7 objects -----
+        if isinstance(node, py_ast.Str):
+            return Constant(value=node.s)
+
+        if isinstance(node, py_ast.Num):
+            return Constant(value=node.n)
+
+        # -----------------------------
+
         if isinstance(node, py_ast.Attribute):
             # is 'this.field' - is attribute
             if node.value.id != 'this':

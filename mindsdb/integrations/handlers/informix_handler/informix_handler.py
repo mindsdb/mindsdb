@@ -263,7 +263,7 @@ class InformixHandler(DatabaseHandler):
 
 
 connection_args = OrderedDict(
-    erver={
+    server={
         'type': ARG_TYPE.STR,
         'description': '''
             The server name you want to get connected.
@@ -295,7 +295,7 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.STR,
         'description': 'Specify the schema name for showing tables '
     },
-    loging_enabled={
+    logging_enabled={
         'type': ARG_TYPE.BOOL,
         'description': '''
         Used for COMMIT and ROLLBACK as this command works only for logging enabled database.

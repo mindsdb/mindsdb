@@ -84,3 +84,6 @@ If you experience any issues related to MKL or your training process does not co
 ```bash
 docker run -e MKL_SERVICE_FORCE_INTEL=1 -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
+
+!!! tip "What's next?"
+    We recommend you follow one of our tutorials or learn more about the [MindsDB Database](/sql/table-structure/).

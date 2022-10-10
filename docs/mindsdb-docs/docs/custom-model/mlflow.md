@@ -1,23 +1,40 @@
-# MLFLow and MindsDB
+# MindsDB and MLflow
 
+MLflow allows you to create, train, and serve machine learning models, apart from other features, such as organizing experiments, tracking metrics, and more.
 
-## Simple example - Logistic Regression
+Here, we present two usage examples of the MLflow.
 
-MLFlow is a tool that you can use to train and serve models, among other features like organizing experiments, tracking metrics, etc.
+## Simple Example of Logistic Regression
 
-Given there is no way to train an MLflow-wrapped model using its API, you will have to train your models outside of MindsDB by pulling your data manually (i.e. with a script), ideally using a MLflow run or experiment.
+Currently, there is no way to train an MLflow-wrapped model using the API. The training of the model takes place outside of MindsDB. The data must be pulled manually, for example, with a script. It is a good idea to use an MLflow run or experiment.
 
-The first step would be to create a script where you train a model and save it using one of the saving methods that MLflow exposes. For this example, we will use the model in this [simple tutorial](https://github.com/mlflow/mlflow#saving-and-serving-models) where the method is `mlflow.sklearn.log_model` ([here](https://github.com/mlflow/mlflow/blob/9781af9c0898827bf616a8f159168477a69036dd/examples/sklearn_logistic_regression/train.py#L15)), given that the model is built with scikit-learn.
+### Creating the MLflow Model
 
-Once trained, you need to make sure the model is served and listening for input in a URL of your choice (note, this can mean your model can run on a different machine than the one executing MindsDB). Let's assume this URL to be `http://localhost:5000/invocations` for now.
+We start by writing a script that creates and trains the model. After that, the script is saved using one of the saving methods offered by MLflow.
 
-This means you would execute the following command in your terminal, from the directory where the model was stored:
+Here, we use the model from [this simple tutorial](https://github.com/mlflow/mlflow#saving-and-serving-models) and [the `mlflow.sklearn.log_model` method](https://github.com/mlflow/mlflow/blob/9781af9c0898827bf616a8f159168477a69036dd/examples/sklearn_logistic_regression/train.py#L15). Please note that the model must be a scikit-learn model.
 
-`mlflow models serve --model-uri runs:/<run-id>/model`
+Once your model is trained, ensure that it is served and listens for input at a URL of your choice. Please note that your model may run on a different machine than the one where MindsDB runs. Here, we assume the URL to be `http://localhost:5000/invocations`, as in the tutorial.
 
-With `<run-id>` given in the output of the command `python train.py` used for actually training the model.
+Let's run the `train.py` script that provides us with the `<run-id>` value for the model.
 
-Next, we're going to bring this model into MindsDB:
+```bash
+$ python examples/sklearn_logistic_regression/train.py
+Score: 0.666
+Model saved in run <run-id>
+```
+
+Now, let's execute the following command from the directory where the model resides, providing the `<run-id>` value.
+
+```bash
+$ mlflow models serve --model-uri runs:/<run-id>/model
+```
+
+We're ready to move to MindsDB.
+
+### Bringing the MLflow Model to MindsDB
+
+We execute the command below to create a predictor in MindsDB based on the created model.
 
 ```sql
 CREATE PREDICTOR mindsdb.byom_mlflow 
@@ -28,7 +45,7 @@ USING
     data_dtype={"0": "integer", "1": "integer"};
 ```
 
-We can now run predictions as usual, by using the `WHERE` statement or joining on a data table with an appropriate schema:
+Now, you can fetch predictions using the standard MindsDB syntax. Follow the guide on the [`#!sql SELECT`](/sql/api/select/) statement to learn more.
 
 ```sql
 SELECT `1`
@@ -36,15 +53,20 @@ FROM byom_mlflow
 WHERE `0`=2;
 ```
 
-## Advanced example - Keras NLP model
+## Advanced Example of Keras NLP Model
 
-Same use case as in section 1.2, be sure to download the dataset to reproduce the steps here. In this case, we will take a look at the best practices when your model needs custom data preprocessing code (which, realistically, will be fairly common).
+Before we start, download [the natural language processing (NLP) dataset from Kaggle](https://www.kaggle.com/c/nlp-getting-started) to reproduce the steps of this example.
 
-The key difference is that we now need to use the `mlflow.pyfunc` module to both 1) save the model using `mlflow.pyfunc.save_model` and 2) subclass `mlflow.pyfunc.PythonModel` to wrap the model in an MLflow-compatible way that will enable our custom inference logic to be called.
+Here, we look at the best practices when your model needs custom data preprocessing, which is quite common.
 
-### Saving the model
+We use the `mlflow.pyfunc` module to complete the following:
 
-In the same script where you train the model (which you can find in the final section of 2.2) there should be a call at the end where you actually use mlflow to save every produced artifact:
+- Save the model using `mlflow.pyfunc.save_model`.
+- Subclass `mlflow.pyfunc.PythonModel` to wrap the model in a way compatible with MLflow that enables our custom inference logic to be called.
+
+### Creating the MLflow Model
+
+In the script that trains the model, like [this one](/custom-model/ray-serve/#example-keras-nlp-model) or [that one](#full-script), there should be a call to the `mlflow.pyfunc.save_model` function at the end. It is to save every produced artifact.
 
 ```python
 mlflow.pyfunc.save_model(
@@ -55,16 +77,16 @@ mlflow.pyfunc.save_model(
 )
 ```
 
-Here, `artifacts` will be a dictionary with all expected produced outputs when running the training phase. In this case, we want both a model and a tokenizer to preprocess the input text. On the other hand, `conda_env` specifies the environment under which your model should be executed once served in a self-contained conda environment, so it should include all required packages and dependencies. For this example, they look like this:
+Here, `artifacts` is a dictionary storing all the expected output after running the training phase. In this case, we want both a model and a tokenizer to preprocess the input text. And `conda_env` specifies the environment in which your model is executed when it is served in a self-contained conda environment. It should include all the required packages and dependencies, like below:
 
 ```python
-# these will be accessible inside the Model() wrapper
+# these are accessible inside the Model() wrapper
 artifacts = {
     'model': model_path,
     'tokenizer_path': tokenizer_path,
 }
 
-# specs for environment that will be created when serving the model
+# specs for an environment that is created when serving the model
 conda_env = {
     'name': 'nlp_keras_env',
     'channels': ['defaults'],
@@ -87,7 +109,7 @@ conda_env = {
 }
 ```
 
-Finally, to actually store the model you need to provide the wrapper class that will 1) load all produced artifacts into an accessible "context" and 2) implement all required inference logic:
+Finally, to store the model, you need to provide the wrapper class that loads all the produced artifacts into an accessible "context" and implements all the required inference logic.
 
 ```python
 class Model(mlflow.pyfunc.PythonModel):
@@ -115,11 +137,13 @@ class Model(mlflow.pyfunc.PythonModel):
         return list(y_pre)
 ```
 
-As you can see, here we are loading multiple artifacts and using them to guarantee the input data will be in the same format that was used when training. Ideally, you would abstract this even further into a single `preprocess` method that is called both at training time and inference time.
+Here, we load multiple artifacts and use them to guarantee the input data is in the same format that was used for training. Ideally, you would abstract this even further into a single `preprocess` method that is called both at the training time and at the inference time.
 
-Finally, serving is simple. Go to the directory where you called the above script, and execute `mlflow models serve --model-uri ./nlp_kaggle`.
+Finally, we start serving by going to the directory where you called the script above and executing the `mlflow models serve --model-uri ./nlp_kaggle` command.
 
-At this point, the rest is essentially the same as in the previous example. You can link the MLflow model with these SQL statements:
+### Bringing the MLflow Model to MindsDB
+
+We execute the command below to create a predictor in MindsDB based on the created model.
 
 ```sql
 CREATE PREDICTOR mindsdb.byom_mlflow_nlp
@@ -130,7 +154,9 @@ USING
     dtype_dict={"text": "rich text", "target": "binary"};
 ```
 
-To get predictions, you can directly pass input data using the `WHERE` clause:
+Now, you can fetch predictions using the standard MindsDB syntax. Follow the guide on the [`#!sql SELECT`](/sql/api/select/) statement to learn more.
+
+You can directly pass input data in the `#!sql WHERE` clause to get a single prediction.
 
 ```sql
 SELECT target
@@ -138,19 +164,18 @@ FROM mindsdb.byom_mlflow_nlp
 WHERE text='The tsunami is coming, seek high ground';
 ```
 
-Or you can `JOIN` with a data table. For this, you should ensure the table actually exists and that the database it belongs to has been connected to your MindsDB instance. For more details, refer to the same steps in the Ray Serve example (section 1.2).
+Or you can `#!sql JOIN` the model with a data table to get bulk predictions. Here, ensure that the data table exists and the database it belongs to is connected to your MindsDB instance.
 
 ```sql
-SELECT
-    ta.text,
-    tb.target AS predicted
+SELECT ta.text,
+       tb.target AS predicted
 FROM db_byom.test.nlp_kaggle_test AS ta
 JOIN mindsdb.byom_mlflow_nlp AS tb;
 ```
 
 ### Full Script
 
-Finally, for reference, here's the full script that trains and saves the model. The model is exactly the same as in section 1.2, so it may seem familiar.
+For your reference, here is the full script that trains and saves the model.
 
 ```python
 import re

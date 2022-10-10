@@ -1,10 +1,14 @@
 # MindsDB and Ray Serve
 
+Ray Serve is a simple high-throughput model serving library that can wrap around your ML model.
 
+## Simple Example of Logistic Regression
 
-## Simple example - Logistic regression
+In this example, we train an external scikit-learn model to use for making predictions.
 
-Ray serve is a simple high-throughput service that can wrap over your own ml models. In this example, we will train and predict with an external scikit-learn model. First, let's look at the actual model wrapped inside a class that complies with the above requirements:
+### Creating the Ray Serve Model
+
+Let's look at an actual model wrapped by a class that complies with the requirements.
 
 ```python
 import ray
@@ -58,19 +62,24 @@ while True:
     time.sleep(1)
 ```
 
-The important bits here are having train and predict endpoints.
+It is important to have the `/train` and `/predict` endpoints.
 
-The `train` endpoint accept two parameters in the JSON sent via POST:
-- `df` -- a serialized dictionary that can be converted into a pandas dataframe
-- `target` -- the name of the target column
+The `/train` endpoint accepts two parameters to be sent via POST:
 
-The `predict` endpoint needs only one parameter:
-- `df` -- a serialized dictionary that can be converted into a pandas dataframe
+- `df` is a serialized dictionary that can be converted into a pandas dataframe.
+- `target` is the name of the target column to be predicted.
 
+It returns a JSON object containing the `status` key and the `ok` value.
 
-The training endpoints must return a JSON that contains the keys `status` set to `ok`. The predict endpoint must return a dictionary containing the `prediction` key, storing the predictions. Additional keys can be returned for confidence and confidence intervals.
+The `/predict` endpoint requires one parameter to be sent via POST:
 
-Once you start this RayServe-wrapped model you can train it using a query like this one:
+- `df` is a serialized dictionary that can be converted into a pandas dataframe.
+
+It returns a dictionary containing the `prediction` key. It stores the predictions. Additional keys can be returned for confidence and confidence intervals.
+
+### Bringing the Ray Serve Model to MindsDB
+
+Once you start the RayServe-wrapped model, you can create and train it in MindsDB.
 
 ```sql
 CREATE PREDICTOR mindsdb.byom_ray_serve
@@ -86,7 +95,9 @@ USING
     format='ray_server';
 ```
 
-And you can query predictions as usual, either by conditioning on a subset of input columns:
+Now, you can fetch predictions using the standard MindsDB syntax. Follow the guide on the [`#!sql SELECT`](/sql/api/select/) statement to learn more.
+
+You can directly pass input data in the `#!sql WHERE` clause to get a single prediction.
 
 ```sql
 SELECT *
@@ -95,7 +106,7 @@ WHERE initial_price=3000
 AND rental_price=3000;
 ```
 
-Or by `JOINING` to do batch predictions:
+Or you can `#!sql JOIN` the model wth a data table to get bulk predictions.
 
 ```sql
 SELECT tb.number_of_rooms, t.rental_price
@@ -104,13 +115,16 @@ JOIN mindsdb.byom_ray_serve AS tb
 WHERE t.rental_price > 5300;
 ```
 
-*Please note that, if your model is behind a reverse proxy (e.g. nginx) you might have to increase the maximum limit for POST requests in order to receive the training data. MindsDB itself can send as much as you'd like and has been stress-tested with over a billion rows.*
+!!! TIP "Limit for POST Requests"
+    Please note that if your model is behind a reverse proxy like nginx, you might have to increase the maximum limit for POST requests in order to receive the training data. MindsDB can send as much as you'd like - it has been stress-tested with over a billion rows.
 
-### Example - Keras NLP model
+## Example of Keras NLP Model
 
-For this example, we will consider a natural language processing (NLP) [task](https://www.kaggle.com/c/nlp-getting-started) where we want to train a neural network with [Keras](https://keras.io) to detect if a tweet is related to a natural disaster (fires, earthquakes, etc.). Please download this dataset to follow the example.
+Here, we consider a [natural language processing (NLP) task](https://www.kaggle.com/c/nlp-getting-started) where we want to train a neural network using [Keras](https://keras.io) to detect if a tweet is related to a natural disaster, such as fires, earthquakes, etc. Please download [this dataset](https://www.kaggle.com/c/nlp-getting-started) to follow the example.
 
-The code for the model here is a bit more complex than in section 1.1, but the same rules apply: we create a Ray Server based service that wraps around a [Kaggle NLP Model](https://www.kaggle.com/shahules/basic-eda-cleaning-and-glove) which can be trained and then used for predictions:
+### Creating the Ray Serve Model
+
+We create a Ray Serve service that wraps around the [Kaggle NLP Model](https://www.kaggle.com/shahules/basic-eda-cleaning-and-glove) that can be trained and used for making predictions.
 
 ```python
 import re
@@ -286,9 +300,7 @@ if __name__ == '__main__':
         time.sleep(1)
 ```
 
-We need access to the training data, so we'll create a table called `nlp_kaggle_train` to load the [dataset](https://www.kaggle.com/c/nlp-getting-started) that the original model uses.
-
-And ingest it into a table with the following schema:
+Now, we need access to the training data. For that, we create a table called `nlp_kaggle_train` to load the [dataset](https://www.kaggle.com/c/nlp-getting-started) that the original model uses. The `nlp_kaggle_train` table contains the following columns:
 
 ```sql
 id INT,
@@ -298,9 +310,11 @@ text VARCHAR(5000),
 target INT
 ```
 
-*Note: specifics of the schema and how to ingest the csv will vary depending on your database.*
+Please note that the specifics of the schema/table and how to ingest the CSV data vary depending on your database.
 
-Next, we can register and train the above custom model using the following query:
+### Bringing the Ray Serve Model to MindsDB
+
+Now, we can create and train this custom model in MindsDB.
 
 ```sql
 CREATE PREDICTOR mindsdb.byom_ray_serve_nlp
@@ -315,9 +329,17 @@ USING
     format='ray_server';
 ```
 
-Training will take a while given that this model is a neural network rather than a simple logistic regression. You can check its status with the query `SELECT * FROM mindsdb.predictors WHERE name = 'byom_ray_serve_nlp';`, much like you'd do with a "normal" MindsDB predictor.
+The training process takes some time, considering that this model is a neural network rather than a simple logistic regression.
 
-Once the predictor's status becomes `trained` we can query it for predictions as usual:
+You can check the model status using this query:
+
+```sql
+SELECT *
+FROM mindsdb.predictors
+WHERE name='byom_ray_serve_nlp';
+```
+
+Once the status of the predictor has a value of `trained`, you can fetch predictions using the standard MindsDB syntax. Follow the guide on the [`SELECT`](/sql/api/select/) statement to learn more.
 
 ```sql
 SELECT *
@@ -325,7 +347,7 @@ FROM mindsdb.byom_ray_serve_nlp
 WHERE text='The tsunami is coming, seek high ground';
 ```
 
-Which would, hopefully, output `1`. Alternatively, we can try out this tweet to expect `0` as an output:
+The expected output of the query above is `1`.
 
 ```sql
 SELECT *
@@ -333,6 +355,7 @@ FROM mindsdb.byom_ray_serve_nlp
 WHERE text='This is lovely dear friend';
 ```
 
-If your results do not match this example, it could help to train the model for a longer amount of epochs.
+The expected output of the query above is `0`.
 
-* * *
+!!! TIP "Wrong Results?"
+    If your results do not match this example, try training the model for a longer amount of epochs.

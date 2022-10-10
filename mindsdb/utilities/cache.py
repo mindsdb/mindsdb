@@ -1,120 +1,270 @@
+"""
+How to use it:
+
+    from mindsdb.utilities.cache import get_cache, dataframe_checksum, json_checksum
+
+    # namespace of cache
+    cache = get_cache('predict')
+
+    key = dataframe_checksum(df) # or json_checksum, depends on object type
+    df_predict = cache(key)
+
+    if df_predict is None:
+        # no cache, save it
+        df_predict = predictor.predict(df)
+        cache.set(key, df_predict)
+
+
+
+Configuration:
+
+- max_size size of cache in count of records, default is 50
+- serializer, module for serialization, default is dill
+
+It can be set via:
+- get_cache function:
+    cache = get_cache('predict', max_size=2)
+- using specific cache class:
+    cache = FileCache('predict', max_size=2)
+- using mindsdb config file:
+    "cache": {
+        "type": "redis",
+        "max_size": 2
+    }
+
+Cache engines:
+
+Can be specified in mindsdb config json. Possible values:
+- local - for FileCache, default
+- redis - for RedisCache
+By default is used local redis server. You can specify
+    "cache": {
+        "type": "redis",
+        "connection": {
+            "host": "127.0.0.1",
+            "port": 6379
+        }
+    }
+
+How to test:
+
+    env PYTHONPATH=./ pytest tests/unit/test_cache.py
+
+"""
+
 import os
-import shelve
+import time
+from abc import ABC
+from pathlib import Path
+import hashlib
 import json
-from abc import ABC, abstractmethod
-
+import dill
+import pandas as pd
 import walrus
-from mindsdb.utilities.config import Config
 
-CONFIG = Config()
+from mindsdb.utilities.config import Config
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
+
+
+def dataframe_checksum(df: pd.DataFrame):
+    checksum = str_checksum(df.to_json())
+    return checksum
+
+
+def json_checksum(obj: [dict, list]):
+    checksum = str_checksum(CustomJSONEncoder().encode(obj))
+    return checksum
+
+
+def str_checksum(obj: str):
+    checksum = hashlib.sha256(obj.encode()).hexdigest()
+    return checksum
 
 
 class BaseCache(ABC):
-    def __init__(self):
+    def __init__(self, max_size=None, serializer=None):
         self.config = Config()
+        if max_size is None:
+            max_size = self.config["cache"].get("max_size", 50)
+        self.max_size = max_size
+        if serializer is None:
+            serializer_module = self.config["cache"].get('serializer')
+            if serializer_module == 'pickle':
+                import pickle as s_module
+            else:
+                import dill as s_module
+            self.serializer = s_module
 
-    @abstractmethod
-    def delete(self):
-        pass
+    # default functions
 
-    @abstractmethod
-    def __getitem__(self, key):
-        pass
+    def set_df(self, name, df):
+        return self.set(name, df)
 
-    @abstractmethod
-    def __setitem__(self, key, value):
-        pass
+    def get_df(self, name):
+        return self.get(name)
+
+    def serialize(self, value):
+        return self.serializer.dumps(value)
+
+    def deserialize(self, value):
+        return self.serializer.loads(value)
 
 
-class LocalCache(BaseCache):
-    def __init__(self, name, *args, **kwargs):
-        super().__init__()
-        self.kwargs = kwargs
-        self.cache_file = os.path.join(self.config['paths']['cache'], name)
-        self.cache = shelve.open(self.cache_file, **kwargs)
+class FileCache(BaseCache):
+    def __init__(self, category, path=None, **kwargs):
+        super().__init__(**kwargs)
 
-    def __getattr__(self, name):
-        return getattr(self.cache, name)
+        if path is None:
+            path = self.config['paths']['cache']
 
-    def __getitem__(self, key):
-        return self.cache.__getitem__(key)
+        # include category
+        cache_path = Path(path) / category
+        if not os.path.exists(cache_path):
+            os.makedirs(cache_path)
 
-    def __setitem__(self, key, value):
-        return self.cache.__setitem__(key, value)
+        self.path = cache_path
 
-    def __enter__(self):
-        if self.cache is None:
-            self.cache = shelve.open(self.cache_file, **self.kwargs)
-        return self.cache.__enter__()
+    def clear_old_cache(self):
+        # buffer to delete, to not run delete on every adding
+        buffer_size = 5
 
-    def __exit__(self, _type, value, traceback):
-        if self.cache is None:
+        if self.max_size is None:
+            return
+
+        cur_count = len(os.listdir(self.path))
+
+        # remove oldest
+        if cur_count > self.max_size + buffer_size:
+
+            files = sorted(Path(self.path).iterdir(), key=os.path.getmtime)
+            for file in files[:cur_count-self.max_size]:
+                self.delete_file(file)
+
+    def file_path(self, name):
+        return self.path / name
+
+    def set_df(self, name, df):
+        path = self.file_path(name)
+        df.to_pickle(path)
+        self.clear_old_cache()
+
+    def set(self, name, value):
+        path = self.file_path(name)
+        value = self.serialize(value)
+
+        with open(path, 'wb') as fd:
+            fd.write(value)
+        self.clear_old_cache()
+
+    def get_df(self, name):
+        path = self.file_path(name)
+
+        if not os.path.exists(path):
             return None
-        res = self.cache.__exit__(_type, value, traceback)
-        self.cache = None
-        return res
+        return pd.read_pickle(path)
 
-    def __contains__(self, key):
-        return key in self.cache
+    def get(self, name):
+        path = self.file_path(name)
 
-    def delete(self):
-        try:
-            self.cache.close()
-        except Exception:
-            pass
-        os.remove(self.cache_file)
+        if not os.path.exists(path):
+            return None
+        with open(path, 'rb') as fd:
+            value = fd.read()
+        value = self.deserialize(value)
+        return value
+
+    def delete(self, name):
+        path = self.file_path(name)
+        self.delete_file(path)
+
+    def delete_file(self, path):
+        os.unlink(path)
 
 
 class RedisCache(BaseCache):
-    def __init__(self, prefix, *args, **kwargs):
-        super().__init__()
-        self.prefix = prefix
-        if self.config["cache"]["type"] != "redis":
-            raise Exception(f"wrong cache type in config. expected 'redis', but got {self.config['cache']['type']}.")
-        connection_info = self.config["cache"]["params"]
+    def __init__(self, category, connection_info=None, **kwargs):
+        super().__init__(**kwargs)
+
+        self.category = category
+
+        if connection_info is None:
+            # if no params will be used local redis
+            connection_info = self.config["cache"].get("connection", {})
         self.client = walrus.Database(**connection_info)
 
-    def __decode(self, data):
+    def clear_old_cache(self, key_added):
 
-        if isinstance(data, dict):
-            return dict((self.__decode(x), self.__decode(data[x])) for x in data)
-        if isinstance(data, list):
-            return list(self.__decode(x) for x in data)
-        # assume it is string
-        return data.decode("utf8")
+        if self.max_size is None:
+            return
 
-    def __contains__(self, key):
-        key = f"{self.prefix}_{key}"
-        return key in self.__decode(self.client.keys())
+        # buffer to delete, to not run delete on every adding
+        buffer_size = 5
 
-    def __getitem__(self, key):
-        key = f"{self.prefix}_{key}"
-        raw = self.client.get(key)
-        if raw is None:
-            raise KeyError(key)
-        try:
-            res = json.loads(raw)
-        except json.JSONDecodeError:
-            res = raw.decode('utf8')
-        return res
+        cur_count = self.client.hlen(self.category)
 
-    def __setitem__(self, key, value):
-        key = f"{self.prefix}_{key}"
-        self.client.set(key, json.dumps(value))
+        # remove oldest
+        if cur_count > self.max_size + buffer_size:
+            # 5 is buffer to delete, to not run delete on every adding
 
-    def __iter__(self):
-        return iter(self.__decode(self.client.keys()))
+            keys = self.client.hgetall(self.category)
+            # to list
+            keys = list(keys.items())
+            # sort by timestamp
+            keys.sort(key=lambda x: x[1])
 
-    def __next__(self):
-        for i in self.__decode(self.client.keys()):
-            yield i
+            for key, _ in keys[:cur_count - self.max_size]:
+                self.delete_key(key)
 
-    def __delitem__(self, key):
-        key = f"{self.prefix}_key"
+    def redis_key(self, name):
+        return f'{self.category}_{name}'
+
+    def set(self, name, value):
+        key = self.redis_key(name)
+        value = self.serialize(value)
+
+        self.client.set(key, value)
+        # using key with category name to store all keys with modify time
+        self.client.hset(self.category, key, int(time.time()*1000))
+
+        self.clear_old_cache(key)
+
+    def get(self, name):
+        key = self.redis_key(name)
+        value = self.client.get(key)
+        if value is None:
+            # no value in cache
+            return None
+        return self.deserialize(value)
+
+    def delete(self, name):
+        key = self.redis_key(name)
+
+        self.delete_key(key)
+
+    def delete_key(self, key):
         self.client.delete(key)
+        self.client.hdel(self.category, key)
 
-    def delete(self):
+
+class NoCache:
+    '''
+        class for no cache mode
+    '''
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def get(self, name):
+        return None
+
+    def set(self, name, value):
         pass
 
 
-Cache = RedisCache if CONFIG['cache']['type'] == 'redis' else LocalCache
+def get_cache(category, **kwargs):
+    config = Config()
+    if config.get('cache')['type'] == 'redis':
+        return RedisCache(category, **kwargs)
+    if config.get('cache')['type'] == 'none':
+        return NoCache(category, **kwargs)
+    else:
+        return FileCache(category, **kwargs)

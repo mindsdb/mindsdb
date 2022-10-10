@@ -1,11 +1,13 @@
 from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
-from mindsdb_sql.parser.ast import Identifier
+from mindsdb_sql.parser.ast import Identifier, OrderBy
 
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mongo.utilities import log
 from mindsdb.integrations.libs.response import HandlerStatusResponse
+
+from mindsdb.api.mongo.classes.query_sql import run_sql_command
 
 
 class Responce(Responder):
@@ -40,7 +42,7 @@ class Responce(Responder):
 
                 status = HandlerStatusResponse(success=False)
                 try:
-                    handler = mindsdb_env['integration_controller'].create_handler(
+                    handler = mindsdb_env['integration_controller'].create_tmp_handler(
                         handler_type=doc['engine'],
                         connection_data=doc['connection_args']
                     )
@@ -73,8 +75,6 @@ class Responce(Responder):
                 'connection'
             ]
 
-            models = mindsdb_env['model_controller'].get_models()
-
             if len(query['documents']) != 1:
                 raise Exception("Must be inserted just one predictor at time")
 
@@ -92,51 +92,59 @@ class Responce(Responder):
                 if 'predict' not in doc:
                     raise Exception("Please, specify 'predict' field")
 
-                if doc['name'] in [x['name'] for x in models]:
-                    raise Exception(f"Predictor with name '{doc['name']}' already exists")
-
                 select_data_query = doc.get('select_data_query')
                 if select_data_query is None:
                     raise Exception("'select_data_query' must be in query")
-
-                kwargs = doc.get('training_options', {})
-                if 'timeseries_settings' in kwargs:
-                    # mongo shell client sends int as float. need to convert it to int
-                    for key in ('window', 'horizon'):
-                        val = kwargs['timeseries_settings'].get(key)
-                        if val is not None:
-                            kwargs['timeseries_settings'][key] = int(val)
-
-                integrations = mindsdb_env['integration_controller'].get_all().keys()
-                connection = doc.get('connection')
-                if connection is None:
-                    if 'default_mongodb' in integrations:
-                        connection = 'default_mongodb'
-                    else:
-                        for integration in integrations:
-                            if integration.startswith('mongodb_'):
-                                connection = integration
-                                break
-
-                if connection is None:
-                    raise Exception("Can't find connection for data source")
 
                 predict = doc['predict']
                 if not isinstance(predict, list):
                     predict = [x.strip() for x in predict.split(',')]
 
+                order_by = None
+                group_by = None
+                ts_settings = {}
+
+                kwargs = doc.get('training_options', {})
+
+                if 'timeseries_settings' in kwargs:
+                    ts_settings = kwargs.pop('timeseries_settings')
+
+                    # mongo shell client sends int as float. need to convert it to int
+                    for key in ('window', 'horizon'):
+                        val = ts_settings.get(key)
+                        if val is not None:
+                            ts_settings[key] = int(val)
+
+                    if 'order_by' in ts_settings:
+                        order_by = ts_settings['order_by']
+                        if not isinstance(order_by, list):
+                            order_by = [order_by]
+
+                        order_by = [
+                            OrderBy(Identifier(x))
+                            for x in order_by
+                        ]
+                    if 'group_by' in ts_settings:
+                        group_by = [
+                            Identifier(x)
+                            for x in ts_settings.get('group_by', [])
+                        ]
+
+                using = dict(kwargs)
+
                 create_predictor_ast = CreatePredictor(
                     name=Identifier(doc['name']),
-                    integration_name=Identifier(connection),
+                    integration_name=Identifier(doc['connection']),
                     query_str=select_data_query,
                     targets=[Identifier(x) for x in predict],
-                    # TODO add TS settings!!!
+                    order_by=order_by,
+                    group_by=group_by,
+                    window=ts_settings.get('window'),
+                    horizon=ts_settings.get('horizon'),
+                    using=using,
                 )
 
-                lw_handler = mindsdb_env['integration_controller'].get_handler('lightwood')
-                result = lw_handler.query(create_predictor_ast)
-                if result.type == RESPONSE_TYPE.ERROR:
-                    raise Exception(result.error_message)
+                run_sql_command(mindsdb_env, create_predictor_ast)
 
             result = {
                 "n": len(query['documents']),

@@ -2,9 +2,11 @@
 
 ## Description
 
-The `#!sql DROP PREDICTOR` statement is used to delete the model table:
+The `#!sql DROP PREDICTOR` statement deletes the model table.
 
 ## Syntax
+
+Here is the syntax:
 
 ```sql
 DROP PREDICTOR [predictor_name];
@@ -18,27 +20,13 @@ Query OK, 0 rows affected (0.058 sec)
 
 Where:
 
-| Name               | Description                     |
-| ------------------ | ------------------------------- |
-| `[predictor_name]` | Name of the model to be deleted |
-
-## Validation
-
-```sql
-SELECT name
-FROM mindsdb.predictors
-WHERE name = '[predictor_name]';
-```
-
-On execution, we get:
-
-```sql
-Empty set (0.026 sec)
-```
+| Name               | Description                      |
+| ------------------ | -------------------------------- |
+| `[predictor_name]` | Name of the model to be deleted. |
 
 ## Example
 
-The following SQL statement drops the model table called `home_rentals_model`. Given the following query to list all predictors by name
+Let's list all the available predictor tables.
 
 ```sql
 SELECT name
@@ -52,12 +40,11 @@ On execution, we get:
 | name                |
 +---------------------+
 | other_model         |
-+---------------------+
 | home_rentals_model  |
 +---------------------+
 ```
 
-Execute the `#!sql DROP PREDICTOR` statement as:
+Now we delete the `home_rentals_model` table.
 
 ```sql
 DROP PREDICTOR home_rentals_model;
@@ -69,7 +56,7 @@ On execution, we get:
 Query OK, 0 rows affected (0.058 sec)
 ```
 
-Validate that the model has been deleted by listing again all predictors by name:
+We can check if the deletion was successful by querying the `mindsdb.predictors` table again.
 
 ```sql
 SELECT name

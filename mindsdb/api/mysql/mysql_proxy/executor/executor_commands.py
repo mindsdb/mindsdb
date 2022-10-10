@@ -41,7 +41,7 @@ from mindsdb_sql.parser.ast import (
     Operation,
     ASTNode,
     DropView,
-    NativeQuery,
+    Union,
 )
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -73,6 +73,11 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE
+from mindsdb.interfaces.model.functions import (
+    get_model_record,
+    get_model_records
+)
+from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
 
 class ExecuteCommands:
@@ -102,9 +107,14 @@ class ExecuteCommands:
             }
             return self.answer_create_datasource(struct)
         if type(statement) == DropPredictor:
+            ml_integration_name = self.session.database
+            if len(statement.name.parts) > 1:
+                ml_integration_name = statement.name.parts[0].lower()
             predictor_name = statement.name.parts[-1]
+            ml_integration_name = ml_integration_name.lower()
             try:
-                self.session.datahub['mindsdb'].delete_predictor(predictor_name)
+                self.session.datahub['mindsdb']\
+                    .delete_predictor(predictor_name, integration_name=ml_integration_name)
             except Exception as e:
                 if not statement.if_exists:
                     raise e
@@ -486,13 +496,28 @@ class ExecuteCommands:
                 )
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
-            raise ErNotSupportedYet('Update is not implemented')
+            if statement.from_select is None:
+                raise ErNotSupportedYet('Update is not implemented')
+            else:
+                # run with planner
+                SQLQuery(
+                    statement,
+                    session=self.session,
+                    execute=True
+                )
+                return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Alter and ('disable keys' in sql_lower) or ('enable keys' in sql_lower):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
 
+            query = SQLQuery(
+                statement,
+                session=self.session
+            )
+            return self.answer_select(query)
+        elif type(statement) == Union:
             query = SQLQuery(
                 statement,
                 session=self.session
@@ -526,7 +551,6 @@ class ExecuteCommands:
                 Column(name='column_importances', table_name='', type='str'),
                 Column(name='outputs', table_name='', type='str'),
                 Column(name='inputs', table_name='', type='str'),
-                Column(name='datasource', table_name='', type='str'),
                 Column(name='model', table_name='', type='str'),
             ]
             description = [
@@ -534,7 +558,6 @@ class ExecuteCommands:
                 description['column_importances'],
                 description['outputs'],
                 description['inputs'],
-                description['datasource'],
                 description['model']
             ]
             data = [description]
@@ -599,15 +622,53 @@ class ExecuteCommands:
         )
 
     def answer_retrain_predictor(self, statement):
-        lw_handler = self.session.integration_controller.get_handler('lightwood')
-        result = lw_handler.query(statement)
+        handler_name = self.session.database
+        if len(statement.name.parts) > 1:
+            handler_name = statement.name.parts[0]
+            statement.name.parts = statement.name.parts[1:]
+        if handler_name.lower() == 'mindsdb':
+            handler_name = 'lightwood'
+        ml_handler = self.session.integration_controller.get_handler(handler_name)
+        model_name = statement.name.parts[0]
+
+        models = get_model_records(
+            ml_handler_name=handler_name,
+            company_id=self.session.company_id,
+            active=None,
+            name=model_name
+        )
+
+        if len(models) == 0:
+            raise SqlApiException(
+                f'There is no predictor {handler_name}.{model_name}'
+            )
+
+        # region check if there is already predictor retraing
+        is_cloud = self.session.config.get('cloud', False)
+        if is_cloud and self.session.user_class == 0:
+            longest_training = None
+            for p in models:
+                if (
+                    p.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
+                    and p.training_start_at is not None and p.training_stop_at is None
+                ):
+                    training_time = datetime.datetime.now() - p.training_start_at
+                    if longest_training is None or training_time > longest_training:
+                        longest_training = training_time
+            if longest_training is not None and longest_training > datetime.timedelta(hours=1):
+                raise SqlApiException(
+                    "Can't start retrain while exists predictor in status 'training' or 'generating'"
+                )
+        # endregion
+
+        result = ml_handler.query(statement)
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_datasource(self, struct: dict):
-        ''' create new datasource (integration in old terms)
+        ''' create new handler (datasource/integration in old terms)
             Args:
                 struct: data for creating integration
         '''
@@ -624,7 +685,7 @@ class ExecuteCommands:
             handlers_meta = self.session.integration_controller.get_handlers_import_status()
             handler_meta = handlers_meta[engine]
             if handler_meta.get('import', {}).get('success') is not True:
-                raise SqlApiException(f"Hanbdler '{engine}' can not be used")
+                raise SqlApiException(f"Handler '{engine}' can not be used")
 
             accept_connection_args = handler_meta.get('connection_args')
             if accept_connection_args is not None:
@@ -651,7 +712,7 @@ class ExecuteCommands:
                             raise SqlApiException(f"Argument '{arg_name}' must be path or url to the file")
                         connection_args[arg_name] = path
 
-            handler = self.session.integration_controller.create_handler(
+            handler = self.session.integration_controller.create_tmp_handler(
                 handler_type=engine,
                 connection_data=connection_args
             )
@@ -670,13 +731,10 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_datasource(self, ds_name):
-        try:
-            integration = self.session.integration_controller.get(ds_name)
-            if integration is None:
-                raise SqlApiException(f"Database '{ds_name}' does not exists.")
-            self.session.integration_controller.delete(integration['name'])
-        except Exception:
-            raise ErDbDropDelete(f"Something went wrong during deleting database '{ds_name}'.")
+        integration = self.session.integration_controller.get(ds_name)
+        if integration is None:
+            raise SqlApiException(f"Database '{ds_name}' does not exists.")
+        self.session.integration_controller.delete(integration['name'])
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):

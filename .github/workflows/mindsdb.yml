@@ -62,6 +62,18 @@ jobs:
     - name: Run integration api and flow tests
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
+          # Unit tests
+          # echo -e "\n===============\nUnit tests\n===============\n"
+          cat mindsdb/interfaces/storage/db.py | grep integration
+          
+          env PYTHONPATH=./ pytest tests/unit/test_executor.py
+
+          env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
+        
+          env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
+                
+          env PYTHONPATH=./ pytest tests/unit/test_cache.py
+
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
           sudo chmod 600 ~/.ssh/db_machine
@@ -71,6 +83,9 @@ jobs:
           sudo chmod 644 ~/.mindsdb_credentials.json
 
           export USE_EXTERNAL_DB_SERVER="1"
+          echo -e "\n===============\nDB HANDLERS\n===============\n"
+          echo -e "\n===============\nMySQL Handler\n===============\n"
+          python mindsdb/integrations/handlers/mysql_handler/tests/test_mysql_handler.py
 
           # MySQL API
           echo -e "\n===============\ntest MySQL API\n===============\n"
@@ -100,10 +115,6 @@ jobs:
           echo -e "\n===============\ntest Redis Stream\n===============\n"
           python tests/integration_tests/flows/test_redis.py
         
-          # Unit tests
-          # echo -e "\n===============\nUnit tests\n===============\n"
-          # pytest tests/unit
-
         fi
       shell: bash
       env:

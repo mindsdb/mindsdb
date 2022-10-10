@@ -1,12 +1,14 @@
 # Deleting a Predictor
 
-## Using the `db.predictors.deleteOne()` Method
+## The `db.predictors.deleteOne()` Method
 
 ### Description
 
 The `db.predictors.deleteOne()` method deletes an ML model specified in its argument.
 
 ### Syntax
+
+Here is the syntax:
 
 ```sql
 db.predictors.deleteOne({name: "predictor_name"});
@@ -23,9 +25,9 @@ On execution, we get:
 
 Where:
 
-| Name               | Description                     |
-| ------------------ | ------------------------------- |
-| `name`             | Name of the model to be deleted |
+| Name               | Description                      |
+| ------------------ | -------------------------------- |
+| `name`             | Name of the model to be deleted. |
 
 ## Example
 
@@ -55,7 +57,7 @@ On execution, we get:
     "name": "other_model",
     "status": "complete",
     "accuracy": "1.0",
-    "predict": "rental_price",
+    "predict": "value_to_be_predicted",
     "update_status": "up_to_date",
     "mindsdb_version": "22.8.3.1",
     "error": null,
@@ -96,7 +98,7 @@ On execution, we get:
     "name": "other_model",
     "status": "complete",
     "accuracy": "1.0",
-    "predict": "rental_price",
+    "predict": "value_to_be_predicted",
     "update_status": "up_to_date",
     "mindsdb_version": "22.8.3.1",
     "error": null,

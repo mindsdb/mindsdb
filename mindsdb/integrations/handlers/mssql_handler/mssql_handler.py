@@ -26,6 +26,7 @@ class SqlServerHandler(DatabaseHandler):
         super().__init__(name)
         self.parser = parse_sql
         self.connection_args = kwargs
+        self.connection_data = self.connection_args.get('connection_data')
         self.dialect = 'mssql'
         self.database = kwargs.get('database')
 
@@ -43,7 +44,7 @@ class SqlServerHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.connection = pymssql.connect(**self.connection_args)
+        self.connection = pymssql.connect(**self.connection_data)
         self.is_connected = True
 
         return self.connection

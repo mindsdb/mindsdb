@@ -135,9 +135,12 @@ class SheetsHandler(DatabaseHandler):
 
         data = []
         for record in records['table']['rows']:
+            row = []
             for item in record['c'][:-1]:
                 if item is not None:
-                    data.append(item['v'])
+                    row.append(item['v'])
+
+            data.append(row)
 
         return columns, data
 

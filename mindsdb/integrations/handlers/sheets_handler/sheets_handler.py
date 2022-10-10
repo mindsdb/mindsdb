@@ -103,7 +103,7 @@ class SheetsHandler(DatabaseHandler):
 
         try:
             self.connection = self.connection + f"&tq={urllib.parse.quote(query)}"
-            result = requests.get(self.connection_data)
+            result = requests.get(self.connection)
             if result:
                 columns, data = self.parse_response(result)
                 response = Response(

@@ -1,6 +1,6 @@
 # MindsDB and MongoDB Shell
 
-MindsDB provides a powerful MongoDB API that allows users to connect to it using the [MongoDB Shell](https://www.mongodb.com/try/download/shell). MongoDB Shell is the quickest way to connect and work with MongoDB. Please note that connection to MindsDB's MongoDB API is the same as connectiong to a MongoDB database.
+MindsDB provides a powerful MongoDB API that allows users to connect to it using the [MongoDB Shell](https://www.mongodb.com/try/download/shell). MongoDB Shell is the quickest way to connect and work with MongoDB. Please note that connection to MindsDB's MongoDB API is the same as connection to a MongoDB database.
 
 
 # How to Connect

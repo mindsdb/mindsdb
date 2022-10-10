@@ -167,7 +167,7 @@ if __name__ == '__main__':
     # @TODO Backwards compatibility for tests, remove later
 
     if args.api is None:
-        api_arr = ['http', 'mysql']
+        api_arr = ['http', 'mysql', 'mongodb']
     else:
         api_arr = args.api.split(',')
 

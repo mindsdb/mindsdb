@@ -1,4 +1,5 @@
 # Community Tutorials
+* [Predict Purchasing Power per Country using MindsDB](https://dev.to/rutamhere/predict-purchasing-power-per-country-using-mindsdb-1oh7) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting the Genre of Books with MindsDB](https://dev.to/f2010126/mindsdb-tutorial-predicting-the-genre-of-books-2ifh) by [Dipti Sengupta](https://www.linkedin.com/in/dipti-s-894831b2/)
 * [Predicting Data Science Job Salaries using MindsDB Cloud](https://community.ops.io/rutamhere/predicting-data-science-job-salaries-using-mindsdb-cloud-1lgn) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Used Car Prices using MindsDB](https://tealfeed.com/predicting-used-car-prices-using-mindsdb-idzuc) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)

@@ -30,7 +30,7 @@ class MySQLHandler(DatabaseHandler):
         self.mysql_url = None
         self.parser = parse_sql
         self.dialect = 'mysql'
-        self.connection_data = kwargs.get('connection_data')
+        self.connection_data = kwargs.get('connection_data', {})
         self.database = self.connection_data.get('database')
 
         self.connection = None

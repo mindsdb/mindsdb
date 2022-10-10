@@ -4,7 +4,7 @@
 
 The `#!sql SELECT` statement fetches predictions from the model table. The data is returned on the fly and not saved.
 
-But there are ways to save predictions data! You can save your predictions as a view using the [`CREATE VIEW`](/sql/create/view/) statement. Please note that a view is a saved query and does not store data like a table. Another way is to insert your predictions into a table using the [`INSERT INTO`](/sql/api/insert/) statement.
+But there are ways to save predictions data! You can save your predictions as a view using the [`#!sql CREATE VIEW`](/sql/create/view/) statement. Please note that a view is a saved query and does not store data like a table. Another way is to insert your predictions into a table using the [`#!sql INSERT INTO`](/sql/api/insert/) statement.
 
 ## Syntax
 
@@ -128,4 +128,68 @@ On execution, we get:
 | 503   | good     | downtown        | 10             | 3026         | 3020                        |
 | 1066  | good     | thowsand_oaks   | 13             | 4774         | 4748                        |
 +-------+----------+-----------------+----------------+--------------+-----------------------------+
+```
+
+## Select from integration
+
+### Simple select
+
+In this example query contains only tables from one integration 
+and therefore will be sent to integration database
+(integration name will be cut from table name)
+```sql
+SELECT location, max(sqft)
+FROM example_db.demo_data.home_rentals 
+GROUP BY location
+LIMIT 5;
+```
+
+
+### Raw select from integration
+
+It is also possible to send raw query to integration. 
+It can be useful when query to integration can not be parsed as sql
+
+Syntax:
+
+```sql
+SELECT ... FROM <integration_name> ( <raw query> ) 
+```
+
+Example of select from mongo integration using mongo query
+```sql
+SELECT * FROM mongo (
+ db.house_sales2.find().limit(1) 
+)
+```
+
+## Complex queries
+
+1. Subselect on data from integration.
+
+It can be useful in cases when integration engine doesn't support some functions, for example grouping.
+In that case all data from raw select are passed to mindsdb and then subselect performs on them inside mindsdb
+
+```sql
+SELECT type, max(bedrooms), last(MA)
+FROM mongo (
+ db.house_sales2.find().limit(300) 
+) GROUP BY 1
+```
+
+2. Unions
+
+It is possible to use `#!sql UNION` / `#!sql UNION ALL` operators.
+It this case every subselect from union will be fetched and merged to one result-set on mindsdb side  
+
+```sql
+ SELECT 
+  data.time as date, data.target
+ FROM datasource.table_name as data
+UNION ALL
+ SELECT
+  model.time as date, model.target as target
+ FROM mindsdb.model as model 
+  JOIN datasource.table_name as t
+ WHERE t.time > LATEST AND t.group = 'value';
 ```

@@ -28,3 +28,10 @@ https://public.api.mindsdb.com/installer/beta/docker___success___None
 
 The `build.py <beta|release>` script is used in CI to build and push images
 on release.
+
+## Running local docker compose environment (in development)
+
+Run `docker-compose up` or `docker-compose up -d` (for `detach` mode) to launch mindsdb environment in docker compose
+
+
+

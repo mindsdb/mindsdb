@@ -11,8 +11,6 @@
 
 import re
 from collections import OrderedDict, defaultdict
-import datetime
-import time
 import hashlib
 import datetime as dt
 
@@ -25,7 +23,6 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     UnaryOperation,
-    CreateTable,
     Identifier,
     Constant,
     Select,
@@ -63,8 +60,8 @@ from mindsdb_sql.exceptions import PlanningException
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
+from mindsdb_sql.parser.ast.base import ASTNode
 
-import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
@@ -81,11 +78,94 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 )
 from mindsdb.utilities.cache import get_cache, json_checksum
 
-from mindsdb_sql.parser.ast.base import ASTNode
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
 
 predictor_cache = get_cache('predict')
+
+
+class ColumnsCollection:
+    def __init__(self):
+        self.__columns = []
+
+    def add(self, table, column):
+        self.__columns.append(tuple(table) + tuple(column))
+
+    def __getitem__(self, key):
+        return self.__columns[key]
+
+    def __setitem__(self, key, value):
+        self.__columns[key] = value
+
+    def __iter__(self):
+        self.__n = 0
+        return self
+
+    def __next__(self):
+        n = self.__n
+        if n < len(self.__columns):
+            self.__n += 1
+            return self.__columns[n][:3], self.__columns[n][3:]
+        else:
+            raise StopIteration
+
+    def __len__(self):
+        return len(self.__columns)
+
+    def items(self):
+        collection = defaultdict(list)
+        for el in self.__columns:
+            collection[el[:3]].append(el[3:])
+        return collection.items()
+
+    def tables(self):
+        return set(
+            x[:3] for x in self.__columns
+        )
+
+    def table_columns(self, table_name):
+        return [x[3:] for x in self.__columns if x[:3] == table_name]
+
+    def extend(self, columns_collection):
+        for table_name, column_name in columns_collection:
+            self.add(table_name, column_name)
+
+    def group_by_table(self):
+        groups = defaultdict(list)
+        for x in self.__columns:
+            groups[x[:3]].append(x[3:])
+        return list(groups.items())
+
+    def del_duplicate_columns(self, table_name=None):
+        if table_name is None:
+            self.__columns = list(set(self.__columns))
+        else:
+            new_columns = []
+            for x in self.__columns:
+                if (
+                    x[:3] != table_name or (
+                        x not in new_columns
+                    )
+                ):
+                    new_columns.append(x)
+            self.__columns = new_columns
+
+    def del_table_columns(self, table_name):
+        self.__columns = [
+            x for x in self.__columns
+            if x[:3] == table_name
+        ]
+
+    def from_dict(self, columns_dict):
+        for table_name in columns_dict:
+            for columns_name in columns_dict[table_name]:
+                self.add(table_name, columns_name)
+
+    def copy(self):
+        new_obj = ColumnsCollection()
+        for x in self.__columns:
+            new_obj.add(x[:3], x[3:])
+        return new_obj
 
 
 def get_preditor_alias(step, mindsdb_database):
@@ -183,12 +263,9 @@ def join_query_data(target, source):
     target['values'].extend(source['values'])
     target['tables'].extend(source['tables'])
     target['tables'] = list(set(target['tables']))
-    for table_name in source['columns']:
-        if table_name not in target['columns']:
-            target['columns'][table_name] = source['columns'][table_name]
-        else:
-            target['columns'][table_name].extend(source['columns'][table_name])
-            target['columns'][table_name] = list(set(target['columns'][table_name]))
+
+    target['columns'].extend(source['columns'])
+    target['columns'].del_duplicate_columns()
 
 
 def is_empty_prediction_row(predictor_value):
@@ -279,7 +356,7 @@ class ResultSet:
     def to_step_data(self):
         step_data = {
             'values': [],
-            'columns': {},
+            'columns': ColumnsCollection(),
             'types': {},
             'tables': []
         }
@@ -288,12 +365,11 @@ class ResultSet:
             col_key = (col.name, col.alias)
             table_key = (col.database, col.table_name, col.table_alias)
 
-            if not table_key in step_data['tables']:
+            if table_key not in step_data['tables']:
                 step_data['tables'].append(table_key)
-                step_data['columns'][table_key] = []
                 step_data['types'][table_key] = {}
 
-            step_data['columns'][table_key].append(col_key)
+            step_data['columns'].add(table_key, col_key)
             if col.type is not None:
                 step_data['types'][table_key][col.name] = col.type
 
@@ -437,15 +513,13 @@ class SQLQuery():
     def fetch(self, view='list'):
         data = self.fetched_data
 
+        result = self._make_list_result_view(data)
         if view == 'dataframe':
-            result = self._make_list_result_view(data)
             col_names = [
                 col.alias if col.alias is not None else col.name
                 for col in self.columns_list
             ]
             result = pd.DataFrame(result, columns=col_names)
-        else:
-            result = self._make_list_result_view(data)
 
         # this is not used
         # elif view == 'dict':
@@ -492,9 +566,12 @@ class SQLQuery():
             column['name']: column['type']
             for column in columns_info
         }
+        columns_collection = ColumnsCollection()
+        for column in columns:
+            columns_collection.add(table_alias, column)
         data = {
             'values': data,
-            'columns': {table_alias: columns},
+            'columns': columns_collection,
             'tables': [table_alias],
             'types': {table_alias: col_types}
         }
@@ -503,7 +580,7 @@ class SQLQuery():
     def _multiple_steps(self, step):
         data = {
             'values': [],
-            'columns': {},
+            'columns': ColumnsCollection(),
             'tables': []
         }
         for substep in step.steps:
@@ -517,7 +594,7 @@ class SQLQuery():
 
         data = {
             'values': [],
-            'columns': {},
+            'columns': ColumnsCollection(),
             'tables': []
         }
 
@@ -567,11 +644,13 @@ class SQLQuery():
                         for column_name in columns
                     ]
 
-                    columns = [(column_name, column_name) for column_name in columns]
+                    columns_collection = ColumnsCollection()
+                    for column_name in columns:
+                        columns_collection.add(table_name, (column_name, column_name))
 
                     self.fetched_data = {
                         'values': data,
-                        'columns': {table_name: columns},
+                        'columns': columns_collection,
                         'tables': [table_name]
                     }
                     return
@@ -596,11 +675,13 @@ class SQLQuery():
                         for column_name in columns
                     ]
 
-                    columns = [(column_name, column_name) for column_name in columns]
+                    columns_collection = ColumnsCollection()
+                    for column_name in columns:
+                        columns_collection.add(table_name, (column_name, column_name))
 
                     self.fetched_data = {
                         'values': data,
-                        'columns': {table_name: columns},
+                        'columns': columns_collection,
                         'tables': [table_name]
                     }
                     return
@@ -627,11 +708,13 @@ class SQLQuery():
                         for column_name in columns
                     ]
 
-                    columns = [(column_name, column_name) for column_name in columns]
+                    columns_collection = ColumnsCollection()
+                    for column_name in columns:
+                        columns_collection.add(table_name, (column_name, column_name))
 
                     self.fetched_data = {
                         'values': data,
-                        'columns': {table_name: columns},
+                        'columns': columns_collection,
                         'tables': [table_name]
                     }
                     return
@@ -663,11 +746,13 @@ class SQLQuery():
                     for column_name in columns
                 ]
 
-                columns = [(column_name, column_name) for column_name in columns]
+                columns_collection = ColumnsCollection()
+                for column_name in columns:
+                    columns_collection.add(table_name, (column_name, column_name))
 
                 self.fetched_data = {
                     'values': data,
-                    'columns': {table_name: columns},
+                    'columns': columns_collection,
                     'tables': [table_name]
                 }
                 return
@@ -701,11 +786,13 @@ class SQLQuery():
                     for column_name in columns
                 ]
 
-                columns = [(column_name, column_name) for column_name in columns]
+                columns_collection = ColumnsCollection()
+                for column_name in columns:
+                    columns_collection.add(table_name, (column_name, column_name))
 
                 self.fetched_data = {
                     'values': data,
-                    'columns': {table_name: columns},
+                    'columns': columns_collection,
                     'tables': [table_name]
                 }
                 return
@@ -831,24 +918,25 @@ class SQLQuery():
                                            table_alias=table_key[2],
                                            name=column_name)
                                 )
-
-            # if there was no 'ProjectStep', then get columns list from last step:
             if self.columns_list is None:
                 self.columns_list = []
                 if self.fetched_data is not None:
-                    for table_name in self.fetched_data['columns']:
+                    if isinstance(self.fetched_data['columns'], ColumnsCollection) is False:  # <<< del???
+                        columns_collection = ColumnsCollection()
+                        columns_collection.from_dict(self.fetched_data['columns'])
+                        self.fetched_data['columns'] = columns_collection
+                    for table_name, column in self.fetched_data['columns']:
                         col_types = self.fetched_data.get('types', {}).get(table_name, {})
-                        for column in self.fetched_data['columns'][table_name]:
-                            self.columns_list.append(
-                                Column(
-                                    database=table_name[0],
-                                    table_name=table_name[1],
-                                    table_alias=table_name[2],
-                                    name=column[0],
-                                    alias=column[1],
-                                    type=col_types.get(column[0])
-                                )
+                        self.columns_list.append(
+                            Column(
+                                database=table_name[0],
+                                table_name=table_name[1],
+                                table_alias=table_name[2],
+                                name=column[0],
+                                alias=column[1],
+                                type=col_types.get(column[0])
                             )
+                        )
 
             self.columns_list = [x for x in self.columns_list if x.name != '__mindsdb_row_id']
         except Exception as e:
@@ -859,15 +947,14 @@ class SQLQuery():
             predictor_name = step.predictor.parts[-1]
             dn = self.datahub.get(self.mindsdb_database_name)
             columns = dn.get_table_columns(predictor_name)
-            columns = [
-                (column_name, column_name) for column_name in columns
-            ]
+            table_name = (self.mindsdb_database_name, predictor_name, predictor_name)
+            columns_collection = ColumnsCollection()
+            for column_name in columns:
+                columns_collection.add(table_name, (column_name, column_name))
             data = {
                 'values': [],
-                'columns': {
-                    (self.mindsdb_database_name, predictor_name, predictor_name): columns
-                },
-                'tables': [(self.mindsdb_database_name, predictor_name, predictor_name)]
+                'columns': columns_collection,
+                'tables': [table_name]
             }
         elif type(step) == GetTableColumns:
             table = step.table
@@ -878,11 +965,13 @@ class SQLQuery():
 
             table_alias = (self.database, table, table)
 
+            columns_collection = ColumnsCollection()
+            for column in columns_info:
+                columns_collection.add(table_name, column)
+
             data = {
                 'values': [],
-                'columns': {
-                    table_alias: columns_info
-                },
+                'columns': columns_collection,
                 'tables': [table_alias]
             }
         elif type(step) == FetchDataframeStep:
@@ -940,7 +1029,7 @@ class SQLQuery():
 
                 data = {
                     'values': [],
-                    'columns': {},
+                    'columns': ColumnsCollection(),
                     'tables': []
                 }
                 substep = step.step
@@ -991,15 +1080,17 @@ class SQLQuery():
 
                 table_name = get_preditor_alias(step, self.database)
                 values = [{table_name: x} for x in data]
-                columns = {table_name: []}
+
+                columns_collection = ColumnsCollection()
                 if len(data) > 0:
                     row = data[0]
-                    columns[table_name] = list(row.keys())
+                    for key in row.keys():
+                        columns_collection.add(table_name, key)
                 # TODO else
 
                 data = {
                     'values': values,
-                    'columns': columns,
+                    'columns': columns_collection,
                     'tables': [table_name]
                 }
             except Exception as e:
@@ -1012,8 +1103,8 @@ class SQLQuery():
                 # set row_id
                 data = steps_data[step.dataframe.step_num]
                 row_id_col = ('__mindsdb_row_id', '__mindsdb_row_id')
-                for table in data['columns']:
-                    data['columns'][table].append(row_id_col)
+                for table in data['columns'].tables():
+                    data['columns'].add(table, row_id_col)
 
                 row_count = len(data['values'])
 
@@ -1068,11 +1159,12 @@ class SQLQuery():
                 #             row[key] = str(row[key])
 
                 table_name = get_preditor_alias(step, self.database)
-                columns = {table_name: []}
+                columns_collection = ColumnsCollection()
                 dn = self.datahub.get(self.mindsdb_database_name)
                 if len(where_data) == 0:
                     cols = dn.get_table_columns(predictor_name) + ['__mindsdb_row_id']
-                    columns[table_name] = [(c, c) for c in cols]
+                    for col in cols:
+                        columns_collection.add(table_name, (col, col))
                     values = []
                 else:
                     predictor_id = predictor_metadata['id']
@@ -1090,7 +1182,8 @@ class SQLQuery():
 
                     if len(data) > 0:
                         row = data[0]
-                        columns[table_name] = [(key, key) for key in row.keys()]
+                        for key in row.keys():
+                            columns_collection.add(table_name, (key, key))
 
                     # apply filter
                     if is_timeseries:
@@ -1100,10 +1193,9 @@ class SQLQuery():
 
                     values = [{table_name: x} for x in data]
 
-
                 data = {
                     'values': values,
-                    'columns': columns,
+                    'columns': columns_collection,
                     'tables': [table_name],
                     'types': {table_name: self.model_types},
                     'is_prediction': True  # for join step
@@ -1136,36 +1228,34 @@ class SQLQuery():
 
                 data = {
                     'values': [],
-                    'columns': {},
+                    'columns': ColumnsCollection(),
                     'tables': list(set(left_data['tables'] + right_data['tables'])),
                     'types': {}
                 }
 
                 for data_part in [left_data, right_data]:
-                    for table_name in data_part['columns']:
-                        if table_name not in data['columns']:
-                            data['columns'][table_name] = data_part['columns'][table_name]
-                            # keep types
+                    data['columns'].extend(data_part['columns'])
+                    for table_name in data_part['columns'].tables():
+                        if table_name not in data['types']:
+                            data['types'][table_name] = {}
+                        if table_name not in data['columns'].tables():
                             data['types'][table_name] = data_part.get('types', {}).get(table_name, {}).copy()
                         else:
-                            data['columns'][table_name].extend(data_part['columns'][table_name])
-                            # keep types
                             data['types'][table_name].update(data_part.get('types', {}).get(table_name, {}))
-                for table_name in data['columns']:
-                    data['columns'][table_name] = list(set(data['columns'][table_name]))
+                data['columns'].del_duplicate_columns()
 
                 left_key = left_data['tables'][0]
                 right_key = right_data['tables'][0]
 
                 left_columns_map = OrderedDict()
                 left_columns_map_reverse = OrderedDict()
-                for i, column_name in enumerate(left_data['columns'][left_key]):
+                for i, column_name in enumerate(left_data['columns'].table_columns(left_key)):
                     left_columns_map[f'a{i}'] = column_name
                     left_columns_map_reverse[column_name] = f'a{i}'
 
                 right_columns_map = {}
                 right_columns_map_reverse = {}
-                for i, column_name in enumerate(right_data['columns'][right_key]):
+                for i, column_name in enumerate(right_data['columns'].table_columns(right_key)):
                     right_columns_map[f'b{i}'] = column_name
                     right_columns_map_reverse[column_name] = f'b{i}'
 
@@ -1182,8 +1272,8 @@ class SQLQuery():
                 df_a = pd.DataFrame(left_df_data, columns=left_columns_map.keys())
                 df_b = pd.DataFrame(right_df_data, columns=right_columns_map.keys())
 
-                a_name = f'table_a'
-                b_name = f'table_b'
+                a_name = 'table_a'
+                b_name = 'table_b'
                 con = duckdb.connect(database=':memory:')
                 con.register(a_name, df_a)
                 con.register(b_name, df_b)
@@ -1230,7 +1320,7 @@ class SQLQuery():
 
             # prepare columns for dataframe. column name contains table name
             cols = set()
-            for table, col_list in step_data['columns'].items():
+            for table, col_list in step_data['columns'].group_by_table():
                 _, t_name, t_alias = table
 
                 tables_idx[t_name] = t_name
@@ -1249,7 +1339,7 @@ class SQLQuery():
             result = []
             for row in step_data['values']:
                 data_row = {}
-                for table, col_list in step_data['columns'].items():
+                for table, col_list in step_data['columns'].group_by_table():
                     for col in col_list:
                         col_name = f'{table[1]}^{col[0]}'
                         data_row[col_name] = row[table][col]
@@ -1326,14 +1416,12 @@ class SQLQuery():
             try:
                 step_data = steps_data[step.dataframe.step_num]
 
-                columns = defaultdict(list)
+                columns = ColumnsCollection()
                 for column_identifier in step.columns:
-
                     if type(column_identifier) == Star:
-                        for table_name, table_columns_list in step_data['columns'].items():
+                        for table_name, table_columns_list in step_data['columns'].group_by_table():
                             for column in table_columns_list:
-
-                                columns[table_name].append(column)
+                                columns.add(table_name, column)
 
                     elif type(column_identifier) == Identifier:
                         appropriate_table = None
@@ -1348,7 +1436,7 @@ class SQLQuery():
                         elif len(column_name_parts) == 1:
                             column_name = column_name_parts[0]
 
-                            for table_name, table_columns in step_data['columns'].items():
+                            for table_name, table_columns in step_data['columns'].group_by_table():
                                 table_col_idx = {}
                                 for x in table_columns:
                                     name = x[1] or x[0]
@@ -1364,7 +1452,7 @@ class SQLQuery():
                                         new_col = (column_name, column_alias)
                                         cur_col = table_col_idx[column_exists]
 
-                                        columns[appropriate_table].append(new_col)
+                                        columns.add(appropriate_table, new_col)
                                         if cur_col != new_col:
                                             columns_to_copy = cur_col, new_col
                                         break
@@ -1376,15 +1464,15 @@ class SQLQuery():
                             table_name_or_alias = column_name_parts[0]
                             column_name = column_name_parts[1]
 
-                            for table_name, table_columns in step_data['columns'].items():
+                            for table_name, table_columns in step_data['columns'].group_by_table():
                                 checking_table_name_or_alias = table_name[2] or table_name[1]
                                 if table_name_or_alias.lower() == checking_table_name_or_alias.lower():
                                     # support select table.*
                                     if isinstance(column_name, Star):
                                         # add all by table
                                         appropriate_table = table_name
-                                        for column in step_data['columns'][appropriate_table]:
-                                            columns[appropriate_table].append(column)
+                                        for column in step_data['columns'].table_columns(appropriate_table):
+                                            columns.add(appropriate_table, column)
                                         break
 
                                     table_col_idx = {}
@@ -1398,7 +1486,7 @@ class SQLQuery():
                                         new_col = (column_name, column_alias)
                                         cur_col = table_col_idx[column_exists]
 
-                                        columns[appropriate_table].append(new_col)
+                                        columns.add(appropriate_table, new_col)
                                         if cur_col != new_col:
                                             columns_to_copy = cur_col, new_col
 
@@ -1434,13 +1522,13 @@ class SQLQuery():
 
             result = []
             cols = set()
-            for _, col_list in step_data['columns'].items():
+            for _, col_list in step_data['columns'].group_by_table():
                 for col in col_list:
                     cols.add(col[1])
 
             for row in step_data['values']:
                 data_row = {}
-                for table, col_list in step_data['columns'].items():
+                for table, col_list in step_data['columns'].group_by_table():
                     for col in col_list:
                         data_row[col[1]] = row[table][col]
                 result.append(data_row)
@@ -1484,15 +1572,17 @@ class SQLQuery():
             # columns are changed
             self.columns_list = columns_list
             types = step_data.get('types', {})
+            columns_collection = ColumnsCollection()
+            for column in columns:
+                columns_collection.add(appropriate_table, column)
             data = {
                 'tables': [appropriate_table],
-                'columns': {appropriate_table: columns},
+                'columns': columns_collection,
                 'values': values,
                 'types': types  # copy
             }
 
         elif type(step) == SubSelectStep:
-
             step_data = steps_data[step.dataframe.step_num]
 
             table_name = step.table_name
@@ -1517,7 +1607,6 @@ class SQLQuery():
 
             data = result2.to_step_data()
 
-
         elif type(step) == SaveToTable or type(step) == InsertToTable:
             is_replace = False
             is_create = False
@@ -1538,25 +1627,23 @@ class SQLQuery():
                 raise ErNotSupportedYet(f"Creating table in '{integration_name}' is not supporting")
 
             # region del 'service' columns
-            for table in step_data['columns']:
-                new_table_columns = []
-                for column in step_data['columns'][table]:
-                    if column[-1] not in ('__mindsdb_row_id', '__mdb_forecast_offset'):
-                        new_table_columns.append(column)
-                step_data['columns'][table] = new_table_columns
+            new_columns = ColumnsCollection()
+            for table, column in step_data['columns']:
+                if column[-1] not in ('__mindsdb_row_id', '__mdb_forecast_offset'):
+                    new_columns.add(table, column)
+            step_data['columns'] = new_columns
             # endregion
 
             # region del columns filtered at projection step
             if self.columns_list is not None:
                 filtered_column_names = [x.name for x in self.columns_list]
-                for table in step_data['columns']:
-                    new_table_columns = []
-                    for column in step_data['columns'][table]:
-                        if column[0].startswith('predictor.'):
-                            new_table_columns.append(column)
-                        elif column[0] in filtered_column_names:
-                            new_table_columns.append(column)
-                    step_data['columns'][table] = new_table_columns
+                new_table_columns = ColumnsCollection()
+                for table, column in step_data['columns']:
+                    if column[0].startswith('predictor.'):
+                        new_table_columns.append(column)
+                    elif column[0] in filtered_column_names:
+                        new_table_columns.append(column)
+                    step_data['columns'] = new_table_columns
             # endregion
 
             # drop double names
@@ -1568,7 +1655,7 @@ class SQLQuery():
                     table_name = table[1]
                     col_map = []
                     col_list = []
-                    for column in step_data['columns'][table]:
+                    for column in step_data['columns'].table_columns():
                         alias = column[1]
                         if alias not in col_names:
                             col_names.add(alias)
@@ -1579,7 +1666,9 @@ class SQLQuery():
                             col_map.append([column, column_new])
 
                     # replace columns
-                    step_data['columns'][table] = col_list
+                    step_data['columns'].del_table_columns()
+                    for column in col_list:
+                        step_data['columns'].add(table, column)
 
                     # replace in values
                     for row in step_data['values']:
@@ -1679,7 +1768,6 @@ class SQLQuery():
             # exit otherwise
             return predictor_data
 
-
         def get_date_format(samples):
             # dateinfer reads sql date 2020-04-01 as yyyy-dd-mm. workaround for in
             for date_format, pattern in (
@@ -1705,7 +1793,6 @@ class SQLQuery():
                 'integer': int,
                 'float': float
             }[self.model_types[order_col]]
-
 
             # convert predictor_data
             if len(predictor_data) > 0:
@@ -1845,7 +1932,6 @@ class SQLQuery():
                 if table_name in row is False:
                     # try without alias
                     table_name = (table_name[0], table_name[1], None)
-
                 data_row.append(row[table_name][column_name])
             result.append(data_row)
         return result

@@ -22,7 +22,7 @@ Query OK, 0 rows affected (0.058 sec)
 
 ## When to `#!sql RETRAIN` the Model?
 
-It is advised to `RETRAIN` the predictor whenever the `update_status` column value from the `mindsdb.predictors` table is set to `available`.
+It is advised to `#!sql RETRAIN` the predictor whenever the `update_status` column value from the `mindsdb.predictors` table is set to `available`.
 
 Here is when the `update_status` column value is set to `available`:
 

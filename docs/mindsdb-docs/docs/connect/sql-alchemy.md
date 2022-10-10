@@ -8,9 +8,10 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
 
 === "Connecting MindsDB Cloud to SQL Alchemy"
 
-    
     You can use the Python code below to connect your Cloud MindsDB database to SQL Alchemy.
-    Note : Run the command pip install pymysql
+
+    Make sure you have the *pymysql* module installed before executing the Python code. To install it, run the `pip install pymysql` command.
+
     ```python
     from sqlalchemy import create_engine
 
@@ -52,6 +53,8 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
 
     You can use the Python code below to connect your local MindsDB database to SQL Alchemy.
 
+    Make sure you have the *pymysql* module installed before executing the Python code. To install it, run the `pip install pymysql` command.
+
     ```python
     from sqlalchemy import create_engine
 
@@ -69,6 +72,7 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
     if __name__ == '__main__':
             try:
                     engine = get_connection()
+                    engine.connect()
                     print(f"Connection to the {host} for user {user} created successfully.")
             except Exception as ex:
                     print("Connection could not be made due to the following error: \n", ex)

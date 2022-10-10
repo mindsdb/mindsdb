@@ -72,7 +72,7 @@ FROM files (
            flotation_column_07_level, iron_concentrate, silica_concentrate
     FROM process_quality
     LIMIT 5000
-) PREDICT silica_concentrate AS quality;
+) PREDICT silica_concentrate;
 ```
 
 On execution, we get:

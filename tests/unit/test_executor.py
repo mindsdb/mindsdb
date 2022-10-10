@@ -280,6 +280,18 @@ class Test(BaseExecutorTest):
                    ''', dialect='mindsdb'))
         except SqlApiException as e:
             assert 'not exists' in str(e)
+        else:
+            raise Exception('SqlApiException expected')
+
+        # try files
+        try:
+            self.command_executor.execute_command(parse_sql(f'''
+                    drop database files
+                   ''', dialect='mindsdb'))
+        except Exception as e:
+            assert 'is system database' in str(e)
+        else:
+            raise Exception('SqlApiException expected')
 
 
 class TestCompexQueries(BaseExecutorTest):

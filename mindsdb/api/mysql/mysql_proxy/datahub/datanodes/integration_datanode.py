@@ -1,11 +1,11 @@
-import pandas as pd
+import numpy as np
+
 from sqlalchemy.types import (
     Integer, Float, Text
 )
 from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn, DropTables
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 
@@ -137,6 +137,7 @@ class IntegrationDataNode(DataNode):
             return
 
         df = result.data_frame
+        df = df.replace({np.nan: None})
         columns_info = [
             {
                 'name': k,

@@ -18,7 +18,7 @@ Please note that the destination table (`[integration_name].[table_name]`) must 
 And the steps followed by the syntax:
 
 - It executes a subselect query to get the output dataset.
-- It uses the `INSERT INTO` statement to insert the output of the `(SELECT ...)` query into the `[integration_name].[table_name]` table.
+- It uses the `#!sql INSERT INTO` statement to insert the output of the `#!sql (SELECT ...)` query into the `[integration_name].[table_name]` table.
 
 On execution, we get:
 

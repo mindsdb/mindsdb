@@ -1,14 +1,17 @@
+from pandas import DataFrame
 from snowflake import connector
+from snowflake.sqlalchemy import snowdialect
+
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql.parser.ast.base import ASTNode
+
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from pandas import DataFrame
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.utilities.log import log
-from mindsdb_sql.parser.ast.base import ASTNode
 
 
 class SnowflakeHandler(DatabaseHandler):
@@ -127,6 +130,6 @@ class SnowflakeHandler(DatabaseHandler):
         """
         Retrieve the data from the SQL statement.
         """
-        renderer = SqlalchemyRender('mysql')
+        renderer = SqlalchemyRender(snowdialect.dialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)

@@ -1,4 +1,5 @@
 import os
+import copy
 import base64
 import shutil
 import tempfile
@@ -8,15 +9,17 @@ from pathlib import Path
 from copy import deepcopy
 from collections import OrderedDict
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
-from mindsdb.interfaces.storage.db import session, Integration
+from mindsdb.interfaces.storage.db import session, Integration, Predictor
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
+from mindsdb.utilities.log import log
+from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 
 
 class IntegrationController:
@@ -43,9 +46,12 @@ class IntegrationController:
             self._add_integration_record(name, engine, connection_args, company_id)
             return
 
+        log.debug("%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
+                 self.__class__.__name__, name, engine, connection_args, company_id)
         handlers_meta = self.get_handlers_import_status()
         handler_meta = handlers_meta[engine]
         accept_connection_args = handler_meta.get('connection_args')
+        log.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
 
         files_dir = None
         if accept_connection_args is not None:
@@ -84,8 +90,19 @@ class IntegrationController:
         session.commit()
 
     def delete(self, name, company_id=None):
+        if name in ('files', 'views', 'lightwood'):
+            raise Exception('Unable to drop: is system database')
+
         integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
-        # TODO del files!
+
+        # check linked predictors
+        predictor = session.query(Predictor.name).filter(or_(
+            Predictor.integration_id == integration_record.id,
+            Predictor.data_integration_id == integration_record.id
+        )).first()
+        if predictor is not None:
+            raise Exception(f'Unable to drop: is linked to predictor {predictor.name}')
+
         # integrations_dir = Config()['paths']['integrations']
         # folder_name = f'integration_files_{company_id}_{integration_record.id}'
         # integration_dir = os.path.join(integrations_dir, folder_name)
@@ -213,6 +230,12 @@ class IntegrationController:
             Returns:
                 Handler object
         """
+        as_service = False
+        if 'as_service' in connection_data:
+            as_service = connection_data["as_service"]
+            connection_data = copy.deepcopy(connection_data)
+            del connection_data['as_service']
+            log.debug("%s create_tmp_handler: delete 'as_service' key from connection args - %s", self.__class__.__name__, connection_data)
         resource_id = int(time() * 10000)
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
@@ -229,6 +252,9 @@ class IntegrationController:
             connection_data=connection_data
         )
 
+        if as_service:
+            log.debug("%s create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
+            return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
         return self.handler_modules[handler_type].Handler(**handler_ars)
 
     def get_handler(self, name, company_id=None, case_sensitive=False):
@@ -257,12 +283,18 @@ class IntegrationController:
         connection_data = integration_data.get('connection_data', {})
         integration_engine = integration_data['engine']
         integration_name = integration_data['name']
+        log.debug("%s get_handler: connection_data=%s, engine=%s", self.__class__.__name__, connection_data, integration_engine)
 
         if integration_engine not in self.handler_modules:
             raise Exception(f"Cant find handler for '{integration_name}' ({integration_engine})")
 
         integration_meta = self.handlers_import_status[integration_engine]
         connection_args = integration_meta.get('connection_args')
+        as_service = False
+        if 'as_service' in connection_data:
+            as_service = connection_data['as_service']
+            del connection_data['as_service']
+        log.debug("%s get_handler: connection args - %s", self.__class__.__name__, connection_args)
         if isinstance(connection_args, (dict, OrderedDict)):
             files_to_get = [
                 arg_name for arg_name in connection_data
@@ -301,6 +333,9 @@ class IntegrationController:
                 sync=True
             )
 
+        if as_service:
+            log.debug("%s get_handler: create a client to db service of %s type", self.__class__.__name__, handler_type)
+            return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
         return self.handler_modules[integration_engine].Handler(**handler_ars)
 
     def reload_handler_module(self, handler_name):

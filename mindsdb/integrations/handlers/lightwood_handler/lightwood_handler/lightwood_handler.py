@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any
 import copy
 from dateutil.parser import parse as parse_datetime
-from collections import OrderedDict
+
 import psutil
 import pandas as pd
 import lightwood
@@ -63,7 +63,6 @@ class NumpyJSONEncoder(json.JSONEncoder):
     x = np.float32(5)
     json.dumps(x, cls=NumpyJSONEncoder)
     """
-
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
@@ -285,17 +284,12 @@ class LightwoodHandler(PredictiveHandler):
 
         lightwood_integration_meta = self.handler_controller.get(name='lightwood')
 
-        if isinstance(statement.query_str, (OrderedDict, dict,)):
-            query_str = str(dict(statement.query_str))
-        else:
-            query_str = statement.query_str
-
         predictor_record = db.Predictor(
             company_id=self.company_id,
             name=model_name,
             integration_id=lightwood_integration_meta['id'],
             data_integration_id=integration_meta['id'],
-            fetch_data_query=query_str,  # This is not string,
+            fetch_data_query=statement.query_str,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,

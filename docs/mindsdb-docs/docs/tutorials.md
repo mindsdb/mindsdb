@@ -1,4 +1,5 @@
 # Community Tutorials
+* [Predict Purchasing Power per Country using MindsDB](https://dev.to/rutamhere/predict-purchasing-power-per-country-using-mindsdb-1oh7) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting the Genre of Books with MindsDB](https://dev.to/f2010126/mindsdb-tutorial-predicting-the-genre-of-books-2ifh) by [Dipti Sengupta](https://www.linkedin.com/in/dipti-s-894831b2/)
 * [Predicting Data Science Job Salaries using MindsDB Cloud](https://community.ops.io/rutamhere/predicting-data-science-job-salaries-using-mindsdb-cloud-1lgn) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Used Car Prices using MindsDB](https://tealfeed.com/predicting-used-car-prices-using-mindsdb-idzuc) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
@@ -34,3 +35,5 @@
 * [Machine Learning for a Shopify store — a step-by-step guide](https://medium.com/mindsdb/machine-learning-for-a-shopify-store-a-step-by-step-guide-13d192532697) by [James Wilson](https://medium.com/@jameswilsonai)
 * [Predicting Home Rental Prices with MindsDB in Java](https://curiousprogrammer.hashnode.dev/machine-learning-with-mindsdb-in-java) by [Temidayo](https://hashnode.com/@Temicoder)
 * [Predicting Mobile Phone Price using MindsDB Cloud](https://dev.to/armanchand/predicting-mobile-phone-price-using-mindsdb-cloud-23d5) by [Arman Chand](https://dev.to/armanchand)
+* [Predicting Machine Failure Rates using MindsDB](https://community.ops.io/rutamhere/predicting-machine-failure-rates-using-mindsdb-4dkn) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
+

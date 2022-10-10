@@ -153,7 +153,7 @@ class ColumnsCollection:
     def del_table_columns(self, table_name):
         self.__columns = [
             x for x in self.__columns
-            if x[:3] == table_name
+            if x[:3] != table_name
         ]
 
     def from_dict(self, columns_dict):

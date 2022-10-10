@@ -9,7 +9,7 @@ import numpy as np
 from lightwood.api import dtype
 
 from mindsdb_sql import parse_sql
-
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_executor.py
@@ -301,24 +301,25 @@ class TestCompexQueries(BaseExecutorTest):
         {'a': 1, 'b': 'ccc', 'c': dt.datetime(2020, 1, 3)},
     ])
 
+    task_predictor = {
+        'name': 'task_model',
+        'predict': 'p',
+        'dtypes': {
+            'p': dtype.float,
+            'a': dtype.integer,
+            'b': dtype.categorical,
+            'c': dtype.datetime
+        },
+        'predicted_value': 'ccc'
+    }
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_union(self, mock_handler):
 
         self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
 
         # --- use predictor ---
-        predictor = {
-            'name': 'task_model',
-            'predict': 'p',
-            'dtypes': {
-                'p': dtype.float,
-                'a': dtype.integer,
-                'b': dtype.categorical,
-                'c': dtype.datetime
-            },
-            'predicted_value': 'ccc'
-        }
-        self.set_predictor(predictor)
+        self.set_predictor(self.task_predictor)
         sql = '''
              SELECT a as a1, b as target
               FROM pg.tasks
@@ -351,18 +352,7 @@ class TestCompexQueries(BaseExecutorTest):
         self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
 
         # --- use predictor ---
-        predictor = {
-            'name': 'task_model',
-            'predict': 'p',
-            'dtypes': {
-                'p': dtype.float,
-                'a': dtype.integer,
-                'b': dtype.categorical,
-                'c': dtype.datetime
-            },
-            'predicted_value': 'ccc'
-        }
-        self.set_predictor(predictor)
+        self.set_predictor(self.task_predictor)
         sql = '''
             update 
                 pg.table2                   
@@ -392,6 +382,80 @@ class TestCompexQueries(BaseExecutorTest):
         # second is update
         assert mock_handler().query.call_args_list[1][0][0].to_string() == "update table2 set a1=1, c1='ccc' where (a1 = 1) AND (b1 = 'ccc')"
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_create_table(self, mock_handler):
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
+
+        self.set_predictor(self.task_predictor)
+        sql = '''
+              create table pg.table1                          
+              (
+                      SELECT model.a as a, model.b as b, model.p as c
+                        FROM pg.tasks as t
+                       JOIN mindsdb.task_model as model
+                       WHERE t.a=1 
+             )
+          '''
+
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb'))
+        assert ret.error_code is None
+
+        calls = mock_handler().query.call_args_list
+
+        render = SqlalchemyRender('postgres')
+
+        def to_str(query):
+            s = render.get_string(query)
+            s = s.strip().replace('\n', ' ').replace('\t', '').replace('  ', ' ')
+            return s
+
+        # select for predictor
+        assert to_str(calls[0][0][0]) == 'SELECT * FROM tasks AS t WHERE t.a = 1'
+
+        # create table
+        assert to_str(calls[1][0][0]) == 'CREATE TABLE table1 ( a INTEGER, b TEXT, c TEXT )'
+
+        # load table
+        assert to_str(calls[2][0][0]) == "INSERT INTO table1 (a, b, c) VALUES (1, 'aaa', 'ccc'), (1, 'ccc', 'ccc')"
+
+        assert len(calls) == 3
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_create_insert(self, mock_handler):
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
+
+        self.set_predictor(self.task_predictor)
+        sql = '''
+               insert into pg.table1                          
+               (
+                       SELECT model.a as a, model.b as b, model.p as c
+                         FROM pg.tasks as t
+                        JOIN mindsdb.task_model as model
+                        WHERE t.a=1 
+              )
+           '''
+
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb'))
+        assert ret.error_code is None
+
+        calls = mock_handler().query.call_args_list
+
+        render = SqlalchemyRender('postgres')
+
+        def to_str(query):
+            s = render.get_string(query)
+            s = s.strip().replace('\n', ' ').replace('\t', '').replace('  ', ' ')
+            return s
+
+        # select for predictor
+        assert to_str(calls[0][0][0]) == 'SELECT * FROM tasks AS t WHERE t.a = 1'
+
+        # load table
+        assert to_str(calls[1][0][0]) == "INSERT INTO table1 (a, b, c) VALUES (1, 'aaa', 'ccc'), (1, 'ccc', 'ccc')"
+
+        assert len(calls) == 2
 
     # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     # def test_union_type_mismatch(self, mock_handler):

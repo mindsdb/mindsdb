@@ -43,6 +43,15 @@ class TestHuggingface(BaseExecutorTest):
         '''
         self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
 
+        # one line prediction
+        predict_sql = '''
+            SELECT * from huggingface.spam_classifier
+            where text_spammy= 'It is the best time to launch the Robot to get more money. https:\\/\\/Gof.bode-roesch.de\\/Gof'
+        '''
+        # use predictor
+        ret = self.command_executor.execute_command(parse_sql(predict_sql, dialect='mindsdb'))
+        assert ret.error_code is None
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_hf_classification_multy(self, mock_handler):
 

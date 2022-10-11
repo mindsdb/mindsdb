@@ -1,4 +1,3 @@
-import json
 import os
 import re
 import shutil
@@ -11,6 +10,7 @@ from dataclasses import dataclass
 import mindsdb.interfaces.storage.db as db
 
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
+from .json import get_json_storage
 
 
 from checksumdir import dirhash
@@ -345,9 +345,10 @@ class FileStorageFactory:
         )
 
 
-from .json import get_json_storage
-
 class ModelStorage:
+    """
+    This class deals with all model-related storage requirements, from setting status to storing artifacts.
+    """
     def __init__(self, company_id, predictor_id):
 
         storageFactory = FileStorageFactory(
@@ -395,6 +396,7 @@ class ModelStorage:
 
     def file_list(self):
         ...
+
     def file_del(self, name):
         ...
 
@@ -424,6 +426,10 @@ class ModelStorage:
 
 
 class HandlerStorage:
+    """
+    This class deals with all handler-related storage requirements, from storing metadata to synchronizing folders
+    across instances.
+    """
     def __init__(self, company_id, integration_id):
         storageFactory = FileStorageFactory(
             resource_group=RESOURCE_GROUP.INTEGRATION,
@@ -449,6 +455,7 @@ class HandlerStorage:
 
     def file_list(self):
         ...
+
     def file_del(self, name):
         ...
 
@@ -469,6 +476,7 @@ class HandlerStorage:
 
     def json_set(self, name, content):
         ...
+
     def json_get(self, name):
         ...
 

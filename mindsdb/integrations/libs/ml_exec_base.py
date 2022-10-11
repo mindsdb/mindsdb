@@ -1,3 +1,21 @@
+"""
+This module defines the wrapper for ML engines which abstracts away a lot of complexity.
+
+In particular, three big components are included:
+
+    - `BaseMLEngineExec` class: this class wraps any object that inherits from `BaseMLEngine` and exposes some endpoints
+      normally associated with a DB handler (e.g. `native_query`, `get_tables`), as well as other ML-specific behaviors,
+      like `learn()` or `predict()`. Note that while these still have to be implemented at the engine level, the burden
+      on that class is lesser given that it only needs to return a pandas DataFrame. It's this class that will take said
+      output and format it into the HandlerResponse instance that MindsDB core expects.
+
+    - `learn_process` method: handles async dispatch of the `learn` method in an engine, as well as registering all
+      models inside of the internal MindsDB registry.
+
+    - `predict_process` method: handles async dispatch of the `predict` method in an engine.
+
+"""
+
 from collections import OrderedDict
 
 import datetime as dt
@@ -46,6 +64,7 @@ from mindsdb.interfaces.storage.fs import ModelStorage, HandlerStorage
 
 import torch.multiprocessing as mp
 ctx = mp.get_context('spawn')
+
 
 @mark_process(name='learn')
 def learn_process(class_path, company_id, integration_id, predictor_id, training_data_df, target, problem_definition):
@@ -111,6 +130,7 @@ def predict_process(class_path, company_id, integration_id, predictor_id, df, re
     else:
         return predictions
 
+
 class BaseMLEngineExec:
 
     def __init__(self, name, **kwargs):
@@ -139,6 +159,7 @@ class BaseMLEngineExec:
         self.handler_class = kwargs['handler_class']
 
     def get_tables(self) -> Response:
+        """ Returns all models currently registered that belong to the ML engine."""
         all_models = self.model_controller.get_models(integration_id=self.integration_id)
         all_models_names = [[x['name']] for x in all_models]
         response = Response(
@@ -151,12 +172,12 @@ class BaseMLEngineExec:
         return response
 
     def get_columns(self, table_name: str) -> Response:
-        """ For getting standard info about a table. e.g. data types """  # noqa
+        """ Retrieves standard info about a model, e.g. data types. """  # noqa
         predictor_record = get_model_record(company_id=self.company_id, name=table_name, ml_handler_name=self.name)
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
-                error_message=f"Error: model '{table_name}' does not exists!"
+                error_message=f"Error: model '{table_name}' does not exist!"
             )
 
         data = []
@@ -173,10 +194,12 @@ class BaseMLEngineExec:
         return result
 
     def native_query(self, query: str) -> Response:
+        """ Intakes a raw SQL query and returns the answer given by the ML engine. """
         query_ast = self.parser(query, dialect=self.dialect)
         return self.query(query_ast)
 
     def query(self, query: ASTNode) -> Response:
+        """ Intakes a pre-parsed SQL query (via `mindsdb_sql`) and returns the answer given by the ML engine. """
         statement = query
 
         if type(statement) == Show:
@@ -206,6 +229,7 @@ class BaseMLEngineExec:
             raise Exception(f"Query type {type(statement)} not supported")
 
     def learn(self, statement):
+        """ Trains a model given some data-gathering SQL statement. """
         model_name = statement.name.parts[-1]
 
         data = self.get_tables().data_frame.to_dict(orient='records')
@@ -286,12 +310,11 @@ class BaseMLEngineExec:
         return Response(RESPONSE_TYPE.OK)
 
     def retrain(self, statement):
-        # TODO
-        #  mark current predictor as inactive
-        #  create new predictor and run learn
+        # TODO: mark current predictor as inactive, create new predictor and run learn
         raise NotImplementedError()
 
     def predict(self, model_name: str, data: list, pred_format: str = 'dict'):
+        """ Generates predictions with some model and input data. """
         if isinstance(data, dict):
             data = [data]
         df = pd.DataFrame(data)
@@ -340,6 +363,7 @@ class BaseMLEngineExec:
         return predictions
 
     def drop(self, statement):
+        """ Deletes a model from the MindsDB registry. """
         model_name = statement.name.parts[-1]
 
         predictors_records = get_model_records(
@@ -373,8 +397,3 @@ class BaseMLEngineExec:
             self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
         db.session.commit()
         return Response(RESPONSE_TYPE.OK)
-
-
-
-
-

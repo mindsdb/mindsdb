@@ -1,6 +1,16 @@
-import os, sys
-import pickle
+"""
+Utility functions used in the 'Bring Your Own Model' (BYOM) engine.
+
+These functions interact with:
+    - interfaces (stdin, stdout),
+    - python files,
+    - and the actual BYOM engine.
+"""
+
+import os
 import re
+import sys
+import pickle
 import inspect
 
 

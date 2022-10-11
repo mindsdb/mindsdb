@@ -119,7 +119,7 @@ def predict_process(class_path, company_id, integration_id, predictor_id, df, re
     predictions = ml_handler.predict(df)
 
     # mdb indexes
-    if '__mindsdb_row_id' not in predictions.columns:
+    if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
         predictions['__mindsdb_row_id'] = df['__mindsdb_row_id']
 
     predictions = predictions.to_dict(orient='records')

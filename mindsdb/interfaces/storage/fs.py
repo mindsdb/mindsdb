@@ -10,7 +10,6 @@ from dataclasses import dataclass
 import mindsdb.interfaces.storage.db as db
 
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
-from .json import get_json_storage
 
 
 from checksumdir import dirhash
@@ -343,6 +342,9 @@ class FileStorageFactory:
             sync=self.sync,
             resource_id=resource_id
         )
+
+
+from .json import get_json_storage
 
 
 class ModelStorage:

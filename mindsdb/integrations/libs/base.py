@@ -140,8 +140,8 @@ class BaseMLEngine:
 
         Initialize storage objects required by the ML engine.
 
-        - engine_storage: persists global engine-related internals.
-        - model_storage: stores artifacts for any given model.
+        - engine_storage: persists global engine-related internals or artifacts that may be used by all models from the engine.
+        - model_storage: stores artifacts for any single given model.
         """
         self.model_storage = model_storage
         self.engine_storage = engine_storage

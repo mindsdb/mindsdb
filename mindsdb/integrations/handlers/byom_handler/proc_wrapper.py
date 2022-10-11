@@ -1,6 +1,27 @@
-import os, sys
-import pickle
+"""
+Utility functions used in the 'Bring Your Own Model' (BYOM) engine.
+
+These functions interact with interfaces (stdin, stdout), python files, and the actual BYOM engine.
+
+In particular, they:
+    - Wrap and run python code in separate python proceess.
+    - Communicate with parent process throughout stdin/out using pickle to serialize objects.
+
+
+The flow is as follows:
+
+    1. Receive module code, method with parameters and stored attributes from parent process
+    2. A python class object is created from the code
+    3. Class is instanced and filled with stored attributes
+    4. A calls to the chosen method of the class is performed with any relevant parameters that were passed
+    5. Response is generated, appropriately packaged and sent to stdout
+    6. Exit
+"""
+
+import os
 import re
+import sys
+import pickle
 import inspect
 
 

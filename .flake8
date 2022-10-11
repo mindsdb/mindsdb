@@ -1,6 +1,6 @@
 [flake8]
-# E701: multiple statements on one line (colon)
-ignore = E701
-max-line-length = 160
-# W503: Line break occurred before a binary operator
-extend-ignore = W503
+max-line-length = 88
+select = C,E,F,W,B,B9
+ignore = E203, E501, W503
+exclude = __init__.py
+max-complexity = 18

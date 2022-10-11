@@ -15,11 +15,11 @@ repos:
       - id: check-added-large-files
       - id: check-toml
       - id: check-yaml
+        exclude: "^helm/"
+        args: [--unsafe]
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-merge-conflict
-      - id: check-yaml
-        args: [ --unsafe ]
   - repo: https://github.com/pre-commit/mirrors-isort
     rev: v5.10.1
     hooks:

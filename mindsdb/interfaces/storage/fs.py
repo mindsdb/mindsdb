@@ -1,10 +1,16 @@
+import json
 import os
+import re
 import shutil
 import hashlib
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Union, Optional
 from dataclasses import dataclass
+
+import mindsdb.interfaces.storage.db as db
+
+from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
 
 from checksumdir import dirhash
@@ -197,6 +203,28 @@ class FileStorage:
         except Exception:
             pass
 
+    def file_set(self, name, content):
+        if self.sync is True:
+            self.pull()
+
+        dest_abs_path = self.folder_path / name
+
+        with open(dest_abs_path, 'wb') as fd:
+            fd.write(content)
+
+        if self.sync is True:
+            self.push()
+
+    def file_get(self, name):
+
+        if self.sync is True:
+            self.pull()
+
+        dest_abs_path = self.folder_path / name
+
+        with open(dest_abs_path, 'rb') as fd:
+            return fd.read()
+
     def add(self, path: Union[str, Path], dest_rel_path: Optional[Union[str, Path]] = None):
         """Copy file/folder to persist storage
 
@@ -256,14 +284,15 @@ class FileStorage:
 
         if isinstance(relative_path, str):
             relative_path = Path(relative_path)
-        relative_path = relative_path.resolve()
+        # relative_path = relative_path.resolve()
 
         if relative_path.is_absolute():
             raise TypeError('FSStorage.get_path() got absolute path as argument')
 
         ret_path = self.folder_path / relative_path
-        if ret_path.exists():
-            raise Exception('Path does not exists')
+        if not ret_path.exists():
+            # raise Exception('Path does not exists')
+            os.makedirs(ret_path)
 
         return ret_path
 
@@ -314,3 +343,137 @@ class FileStorageFactory:
             sync=self.sync,
             resource_id=resource_id
         )
+
+
+from .json import get_json_storage
+
+class ModelStorage:
+    def __init__(self, company_id, predictor_id):
+
+        storageFactory = FileStorageFactory(
+            resource_group=RESOURCE_GROUP.PREDICTOR,
+            company_id=company_id,
+            sync=True
+        )
+
+        self.fileStorage = storageFactory(predictor_id)
+
+        self.company_id = company_id
+        self.predictor_id = predictor_id
+
+    # -- fields --
+
+    def get_info(self):
+        rec = db.Predictor.query.get(self.predictor_id)
+        return dict(status=rec.status, to_predict=rec.to_predict)
+
+    def status_set(self, status, status_info=None):
+        rec = db.Predictor.query.get(self.predictor_id)
+        rec.status = status
+        if status == PREDICTOR_STATUS.ERROR and status_info is not None:
+            rec.data = status_info
+        db.session.commit()
+
+    def columns_get(self):
+        rec = db.Predictor.query.get(self.predictor_id)
+        return rec.dtype_dict
+
+    def columns_set(self, columns):
+        # columns: {name: dtype}
+
+        rec = db.Predictor.query.get(self.predictor_id)
+        rec.dtype_dict = columns
+        db.session.commit()
+
+    # files
+
+    def file_get(self, name):
+        return self.fileStorage.file_get(name)
+
+    def file_set(self, name, content):
+        self.fileStorage.file_set(name, content)
+
+    def file_list(self):
+        ...
+    def file_del(self, name):
+        ...
+
+    # jsons
+
+    def json_set(self, name, data):
+        json_storage = get_json_storage(
+            resource_id=self.predictor_id,
+            resource_group=RESOURCE_GROUP.PREDICTOR,
+            company_id=self.company_id
+        )
+        return json_storage.set(name, data)
+
+    def json_get(self, name):
+        json_storage = get_json_storage(
+            resource_id=self.predictor_id,
+            resource_group=RESOURCE_GROUP.PREDICTOR,
+            company_id=self.company_id
+        )
+        return json_storage.get(name)
+
+    def json_list(self):
+        ...
+
+    def json_del(self, name):
+        ...
+
+
+class HandlerStorage:
+    def __init__(self, company_id, integration_id):
+        storageFactory = FileStorageFactory(
+            resource_group=RESOURCE_GROUP.INTEGRATION,
+            company_id=company_id,
+            sync=True
+        )
+        self.fileStorage = storageFactory(integration_id)
+
+        self.company_id = company_id
+        self.integration_id = integration_id
+
+    def get_connection_args(self):
+        rec = db.Integration.query.get(self.integration_id)
+        return rec.data
+
+    # files
+
+    def file_get(self, name):
+        return self.fileStorage.file_get(name)
+
+    def file_set(self, name, content):
+        self.fileStorage.file_set(name, content)
+
+    def file_list(self):
+        ...
+    def file_del(self, name):
+        ...
+
+    # folder
+
+    def folder_get(self, name):
+        # pull folder and return path
+        name = name.lower().replace(' ', '_')
+        name = re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
+
+        return str(self.fileStorage.get_path(name))
+
+    def folder_sync(self, name):
+        # sync abs path
+        self.fileStorage.push()
+
+    # jsons
+
+    def json_set(self, name, content):
+        ...
+    def json_get(self, name):
+        ...
+
+    def json_list(self):
+        ...
+
+    def json_del(self, name):
+        ...

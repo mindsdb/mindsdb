@@ -394,6 +394,10 @@ class BaseMLEngineExec:
                 predictor_record.deleted_at = dt.datetime.now()
             else:
                 db.session.delete(predictor_record)
-            self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
+            try:
+                self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
+            except Exception as e:
+                if 'Path does not exists' in e:
+                    pass
         db.session.commit()
         return Response(RESPONSE_TYPE.OK)

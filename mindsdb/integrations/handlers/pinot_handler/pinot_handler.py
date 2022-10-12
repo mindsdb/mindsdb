@@ -9,7 +9,7 @@ import json
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 from pinotdb.sqlalchemy import PinotDialect
 
 from mindsdb_sql.parser.ast.base import ASTNode

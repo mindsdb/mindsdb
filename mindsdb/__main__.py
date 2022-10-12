@@ -104,17 +104,18 @@ if __name__ == '__main__':
 
     if not is_cloud:
         # region creating permanent integrations
-        for integration_name in ['files', 'views', 'lightwood']:
-            integration_meta = integration_controller.get(name=integration_name)
-            if integration_meta is None:
-                integration_record = db.Integration(
-                    name=integration_name,
-                    data={},
-                    engine=integration_name,
-                    company_id=None
-                )
-                db.session.add(integration_record)
-                db.session.commit()
+        for integration_name, handler in integration_controller.get_handlers_import_status().items():
+            if handler.get('permanent'):
+                integration_meta = integration_controller.get(name=integration_name)
+                if integration_meta is None:
+                    integration_record = db.Integration(
+                        name=integration_name,
+                        data={},
+                        engine=integration_name,
+                        company_id=None
+                    )
+                    db.session.add(integration_record)
+                    db.session.commit()
         # endregion
 
         # region Mark old predictors as outdated

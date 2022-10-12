@@ -1,4 +1,5 @@
 import os
+import copy
 import base64
 import shutil
 import tempfile
@@ -17,6 +18,8 @@ from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
+from mindsdb.utilities.log import log
+from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 
 
 class IntegrationController:
@@ -43,9 +46,12 @@ class IntegrationController:
             self._add_integration_record(name, engine, connection_args, company_id)
             return
 
+        log.debug("%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
+                 self.__class__.__name__, name, engine, connection_args, company_id)
         handlers_meta = self.get_handlers_import_status()
         handler_meta = handlers_meta[engine]
         accept_connection_args = handler_meta.get('connection_args')
+        log.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
 
         files_dir = None
         if accept_connection_args is not None:
@@ -190,9 +196,10 @@ class IntegrationController:
             connections[integration_name] = status.get('success', False)
         return connections
 
-    def _make_handler_args(self, handler_type: str, connection_data: dict, company_id: int):
+    def _make_handler_args(self, handler_type: str, connection_data: dict, company_id: int, integration_id: int = None):
         handler_ars = dict(
-            connection_data=connection_data
+            connection_data=connection_data,
+            integration_id=integration_id
         )
 
         if handler_type == 'files':
@@ -224,6 +231,12 @@ class IntegrationController:
             Returns:
                 Handler object
         """
+        as_service = False
+        if 'as_service' in connection_data:
+            as_service = connection_data["as_service"]
+            connection_data = copy.deepcopy(connection_data)
+            del connection_data['as_service']
+            log.debug("%s create_tmp_handler: delete 'as_service' key from connection args - %s", self.__class__.__name__, connection_data)
         resource_id = int(time() * 10000)
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
@@ -240,6 +253,9 @@ class IntegrationController:
             connection_data=connection_data
         )
 
+        if as_service:
+            log.debug("%s create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
+            return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
         return self.handler_modules[handler_type].Handler(**handler_ars)
 
     def get_handler(self, name, company_id=None, case_sensitive=False):
@@ -268,41 +284,40 @@ class IntegrationController:
         connection_data = integration_data.get('connection_data', {})
         integration_engine = integration_data['engine']
         integration_name = integration_data['name']
+        log.debug("%s get_handler: connection_data=%s, engine=%s", self.__class__.__name__, connection_data, integration_engine)
 
         if integration_engine not in self.handler_modules:
             raise Exception(f"Cant find handler for '{integration_name}' ({integration_engine})")
 
         integration_meta = self.handlers_import_status[integration_engine]
         connection_args = integration_meta.get('connection_args')
-        if isinstance(connection_args, (dict, OrderedDict)):
-            files_to_get = [
-                arg_name for arg_name in connection_data
-                if connection_args.get(arg_name)['type'] == ARG_TYPE.PATH
-            ]
-            if len(files_to_get) > 0:
-                try:
-                    folder_name = f'integration_files_{company_id}_{integration_record.id}'
-                    integrations_dir = Config()['paths']['integrations']
-                    FsStore().get(folder_name, base_dir=integrations_dir)
-                except Exception:
-                    pass
-                for file_name in files_to_get:
-                    connection_data[file_name] = (
-                        Path(integrations_dir)
-                        .joinpath(folder_name)
-                        .joinpath(connection_data[file_name])
-                    )
+        as_service = False
+        if 'as_service' in connection_data:
+            as_service = connection_data['as_service']
+            del connection_data['as_service']
+        log.debug("%s get_handler: connection args - %s", self.__class__.__name__, connection_args)
 
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=integration_record.id,
             company_id=company_id,
-            sync=True
+            sync=True,
         )
+
+        if isinstance(connection_args, (dict, OrderedDict)):
+            files_to_get = [
+                arg_name for arg_name in connection_data
+                if arg_name in connection_args and connection_args.get(arg_name)['type'] == ARG_TYPE.PATH
+            ]
+            if len(files_to_get) > 0:
+
+                for file_name in files_to_get:
+                    connection_data[file_name] = fs_store.get_path(file_name)
 
         handler_ars = self._make_handler_args(integration_engine, connection_data, company_id)
         handler_ars['name'] = name
         handler_ars['file_storage'] = fs_store
+        handler_ars['integration_id'] = integration_data['id']
 
         handler_type = self.handler_modules[integration_engine].type
         if handler_type == 'ml':
@@ -311,8 +326,24 @@ class IntegrationController:
                 company_id=company_id,
                 sync=True
             )
+        from mindsdb.integrations.libs.base import BaseMLEngine
+        from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
-        return self.handler_modules[integration_engine].Handler(**handler_ars)
+        klass = self.handler_modules[integration_engine].Handler
+
+        if isinstance(klass, type) and issubclass(klass, BaseMLEngine):
+            # need to wrapp it
+            handler_ars['handler_class'] = klass
+            inst = BaseMLEngineExec(**handler_ars)
+
+        else:
+            inst = klass(**handler_ars)
+
+        if as_service:
+            log.debug("%s get_handler: create a client to db service of %s type", self.__class__.__name__, handler_type)
+            return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
+
+        return inst
 
     def reload_handler_module(self, handler_name):
         importlib.reload(self.handler_modules[handler_name])
@@ -384,11 +415,13 @@ class IntegrationController:
                 with open(str(icon_path), 'rb') as f:
                     handler_meta['icon']['data'] = base64.b64encode(f.read()).decode('utf-8')
         # endregion
-
-        if handler_meta.get('name') in ('files', 'views', 'lightwood'):
-            handler_meta['permanent'] = True
+        if hasattr(module, 'permanent'):
+            handler_meta['permanent'] = module.permanent
         else:
-            handler_meta['permanent'] = False
+            if handler_meta.get('name') in ('files', 'views', 'lightwood'):
+                handler_meta['permanent'] = True
+            else:
+                handler_meta['permanent'] = False
 
         return handler_meta
 

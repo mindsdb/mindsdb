@@ -46,8 +46,8 @@ class IntegrationDataNode(DataNode):
 
         table_columns_meta = []
         table_columns = []
-        for table in columns:
-            for column in columns[table]:
+        for table in columns.tables():
+            for column in columns.table_columns(table):
                 column_type = None
                 for row in data:
                     column_value = row[table][column]

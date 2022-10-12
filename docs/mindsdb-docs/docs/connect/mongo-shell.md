@@ -1,0 +1,64 @@
+# MindsDB and MongoDB Shell
+
+MindsDB provides a powerful MongoDB API that allows users to connect to it using the [MongoDB Shell](https://www.mongodb.com/try/download/shell). MongoDB Shell is the quickest way to connect and work with MongoDB. Please note that connection to MindsDB's MongoDB API is the same as connection to a MongoDB database.
+
+
+# How to Connect
+
+To connect to MindsDB, run the below command in your Mongo Shell and provide the connection details, such as host, port, username, and password.
+
+```bash
+mongo --host [hostname] --port [TCP/IP port number] -u [user] -p [password]
+```
+
+Here are the commands that allow you to connect to either a local MindsDB installation or a MindsDB Cloud instance.
+
+=== "Self-Hosted Local Deployment"
+
+    ```bash
+    mongo --host 127.0.0.1 --port 47336
+    ```
+
+=== "MindsDB Cloud"
+
+    ```bash
+    mongo --host cloud.mindsdb.com -u [mindsdb_cloud_username] -p [mindsdb_cloud_password]
+    ```
+
+On execution, we get:
+
+```bash
+MongoDB shell version v4.0.28
+Enter password: 
+connecting to: mongodb://cloud.mindsdb.com:27017/?gssapiServiceName=mongodb
+Implicit session: session { "id" : UUID("b2afbba1-ddfd-4379-944f-ca2eadsdas") }
+MongoDB server version: 4.0.28
+>
+```
+
+
+## Example
+
+In this example, we connect to the MindsDB Cloud instance, as below.
+
+``` bash
+mongo --host cloud.mindsdb.com -u zoran@mindsdb.com -p
+```
+
+On execution, we get:
+
+```bash
+MongoDB shell version v4.0.28
+Enter password: 
+connecting to: mongodb://cloud.mindsdb.com:27017/?gssapiServiceName=mongodb
+Implicit session: session { "id" : UUID("b2afbba1-ddfd-4379-944f-asdasaasd") }
+MongoDB server version: 4.0.28
+```
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and **Community Tutorials** sections, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB collection structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **Mongo API** section, as they explain a common MQL syntax with examples.
+
+Have fun!

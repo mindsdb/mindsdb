@@ -36,4 +36,5 @@
 * [Predicting Home Rental Prices with MindsDB in Java](https://curiousprogrammer.hashnode.dev/machine-learning-with-mindsdb-in-java) by [Temidayo](https://hashnode.com/@Temicoder)
 * [Predicting Mobile Phone Price using MindsDB Cloud](https://dev.to/armanchand/predicting-mobile-phone-price-using-mindsdb-cloud-23d5) by [Arman Chand](https://dev.to/armanchand)
 * [Predicting Machine Failure Rates using MindsDB](https://community.ops.io/rutamhere/predicting-machine-failure-rates-using-mindsdb-4dkn) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
-
+* [Predicting Turbine Yield Energy using MindsDB](https://medium.com/@dhaneshvijay10/want-to-do-ml-without-knowing-ml-5f4934942019) by [DhaneshRagu](https://medium.com/@dhaneshvijay10)
+* [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI) by [Posterizedsoul](https://github.com/Posterizedsoul)

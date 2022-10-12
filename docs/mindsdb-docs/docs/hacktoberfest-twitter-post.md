@@ -13,3 +13,6 @@
 - A Twitter Thread by [Aditya Das](https://twitter.com/ADITYA90546170/status/1578227619396726784?t=vMgXWKje0d7czZDe8d3qJQ&s=03)
 
 - A Twitter Thread by [@DevHellFire](https://twitter.com/DevHellfire/status/1580132923025788929)
+
+- A Twitter Thread by [Craig Gehrig](https://twitter.com/CraigGehrig/status/1579322580347109376)
+

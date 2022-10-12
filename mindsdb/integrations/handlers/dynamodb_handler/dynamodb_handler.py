@@ -7,7 +7,7 @@ from boto3.dynamodb.types import TypeDeserializer
 
 from mindsdb_sql import parse_sql
 
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
 

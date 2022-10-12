@@ -16,7 +16,7 @@ from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import DropTables, Select
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -41,7 +41,7 @@ class FileHandler(DatabaseHandler):
     """
     name = 'files'
 
-    def __init__(self, name=None, file_storage=None, connection_data={}, file_controller=None):
+    def __init__(self, name=None, file_storage=None, connection_data={}, file_controller=None, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
         self.fs_store = file_storage
@@ -203,11 +203,13 @@ class FileHandler(DatabaseHandler):
                     explain=False
                 )
                 best_meta = file_encoding_meta.best()
+                errors = 'strict'
                 if best_meta is not None:
                     encoding = file_encoding_meta.best().encoding
                 else:
                     encoding = 'utf-8'
-                data = StringIO(byte_str.decode(encoding))
+                    errors = 'replace'
+                data = StringIO(byte_str.decode(encoding, errors))
         except Exception:
             print(traceback.format_exc())
             print('Could not load into string')

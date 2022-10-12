@@ -23,7 +23,7 @@ from lightwood import __version__ as lightwood_version
 from lightwood.api import dtype
 import numpy as np
 
-from mindsdb.integrations.libs.base_handler import PredictiveHandler
+from mindsdb.integrations.libs.base import PredictiveHandler
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
 from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.log import log

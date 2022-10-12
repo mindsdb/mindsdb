@@ -9,6 +9,7 @@ class HandlerResponse:
                  query: ASTNode = 0, error_code: int = 0, error_message: str = None) -> None:
         self.resp_type = resp_type
         self.query = query
+
         self.data_frame = data_frame
         self.error_code = error_code
         self.error_message = error_message
@@ -24,10 +25,9 @@ class HandlerResponse:
             data = None
         return  {"type": self.resp_type,
                  "query": self.query,
-                 "data": data,
+                 "data_frame": data,
                  "error_code": self.error_code,
                  "error": self.error_message}
-
 
 class HandlerStatusResponse:
     def __init__(self, success: bool = True, error_message: str = None) -> None:

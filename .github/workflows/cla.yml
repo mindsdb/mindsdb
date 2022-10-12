@@ -2,9 +2,7 @@ name: "MindsDB CLA Assistant"
 on:
   issue_comment:
     types: [created]
-  pull_request:
-  pull_request_target:
-    types: [opened,closed,synchronize]
+  pull_request_review:
     
 jobs:
   CLAssistant:
@@ -22,4 +20,4 @@ jobs:
           # Add path to the CLA here
           path-to-document: 'https://github.com/mindsdb/mindsdb_native/blob/stable/assets/contributions-agreement/individual-contributor.md'
           branch: 'staging'
-          allowlist: bot*, ZoranPandovski, torrmal, Stpmax, paxcema, mindsdbadmin, Ricram2, ea-rus, ilia-tsyplenkov
+          allowlist: bot*, ZoranPandovski, torrmal, Stpmax, paxcema, mindsdbadmin, Ricram2, ea-rus, ilia-tsyplenkov, tomhuds

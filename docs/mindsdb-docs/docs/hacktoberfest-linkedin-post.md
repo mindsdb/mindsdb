@@ -9,3 +9,5 @@
 - A LinkedIn post by [Abdulrahman Olamilekan](https://www.linkedin.com/feed/update/urn:li:activity:6984003219572068353/)
 
 - A LinkedIn post by [Hell Fire](https://www.linkedin.com/posts/hell-fire-7a8544253_machinelearning-activity-6985893709196185600-dp3U?utm_source=share&utm_medium=member_desktop)
+
+- A LinkedIn post by [Shrey Parekh](https://www.linkedin.com/posts/shrey-parekh-a16644200_quickstart-activity-6985973943211814912-Mulk?utm_source=share&utm_medium=member_desktop)

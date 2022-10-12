@@ -62,7 +62,7 @@ class HuggingFaceHandler(BaseMLEngine):
         ###### persist changes to handler folder
         self.engine_storage.folder_sync(model_name)
 
-    def predict(self, df):
+    def predict(self, df, args=None):
 
         def tidy_output_classification(args, result):
             final = {}

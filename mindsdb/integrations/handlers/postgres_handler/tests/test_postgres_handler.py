@@ -9,38 +9,28 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 
 
 class PostgresHandlerNoSSLTest(unittest.TestCase):
-    # image_name = "mindsdb/mysql-handler-test"
-    image_name = "pg_test"
+    image_name = "mindsdb/postgres-handler-test"
     kwargs = {"connection_data": {
                         "host": "localhost",
                         "port": "5432",
                         "user": "postgres",
                         "password": "supersecret",
                         "database": "test",
-                        # "ssl": False
                  }
     }
-    certs_archive = "certs.tar"
-    certs_dir = "mysql"
     @classmethod
     def setUpClass(cls):
         cls.containers = list()
         cls.docker_client = docker.from_env()
         main_container = cls.docker_client.containers.run(
                     cls.image_name,
-                    # command="--secure-file-priv=/",
                     detach=True,
                     environment={"POSTGRES_PASSWORD":"supersecret"},
                     ports={"5432/tcp": 5432},
                 )
         cls.containers.append(main_container)
         cls.waitReadiness(main_container)
-        cls.get_certificates()
         cls.handler = PostgresHandler('test_postgres_handler', **cls.kwargs)
-
-    @classmethod
-    def get_certificates(cls):
-        pass
 
     @classmethod
     def waitReadiness(cls, container, timeout=30):
@@ -61,12 +51,6 @@ class PostgresHandlerNoSSLTest(unittest.TestCase):
         for c in cls.containers:
             c.kill()
         cls.docker_client.close()
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        try:
-            os.remove(os.path.join(cur_dir, cls.certs_archive))
-            shutil.rmtree(os.path.join(cur_dir, cls.certs_dir))
-        except Exception as e:
-            print(f"unable to delete .tar/files of certificates: {e}")
 
     def test_00_connect(self):
         self.handler.connect()
@@ -134,6 +118,25 @@ class PostgresHandlerNoSSLTest(unittest.TestCase):
         assert tables is not None, "expected to have some tables in the db, but got None"
         assert 'table_name' in tables, f"expected to get 'table_name' column in the response:\n{tables}"
         return list(tables['table_name'])
+
+
+class PostgresHandlerSSLTest(PostgresHandlerNoSSLTest):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.containers = list()
+        cls.docker_client = docker.from_env()
+        main_container = cls.docker_client.containers.run(
+                    cls.image_name,
+                    command="-c ssl=on -c ssl_cert_file=/var/lib/.postgresql/server.crt -c ssl_key_file=/var/lib/.postgresql/server.key",
+                    detach=True,
+                    environment={"POSTGRES_PASSWORD":"supersecret"},
+                    ports={"5432/tcp": 5432},
+                )
+        cls.containers.append(main_container)
+        cls.waitReadiness(main_container)
+        cls.handler = PostgresHandler('test_postgres_handler', **cls.kwargs)
+
 
 if __name__ == "__main__":
     unittest.main(failfast=True, verbosity=2)

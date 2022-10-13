@@ -60,9 +60,10 @@ class PostgresHandler(DatabaseHandler):
         return self.connection
 
     def disconnect(self):
-        if self.connection is not None:
-            self.connection.close()
-            self.connection = None
+        if self.is_connected is False:
+            return
+        self.connection.close()
+        self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
         """

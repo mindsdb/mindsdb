@@ -1,5 +1,7 @@
 # Community Tutorials
+
 * [Predict Water Quality using MindsDB](https://dev.to/rutamhere/predict-water-quality-using-mindsdb-4hm4) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
+* [Predicting Life Expectancy using MindsDB Cloud](https://dev.to/armanchand/predicting-life-expectancy-using-mindsdb-cloud-3643) by [Arman Chand](https://dev.to/armanchand)
 * [Predict Purchasing Power per Country using MindsDB](https://dev.to/rutamhere/predict-purchasing-power-per-country-using-mindsdb-1oh7) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting the Genre of Books with MindsDB](https://dev.to/f2010126/mindsdb-tutorial-predicting-the-genre-of-books-2ifh) by [Dipti Sengupta](https://www.linkedin.com/in/dipti-s-894831b2/)
 * [Predicting Data Science Job Salaries using MindsDB Cloud](https://community.ops.io/rutamhere/predicting-data-science-job-salaries-using-mindsdb-cloud-1lgn) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)

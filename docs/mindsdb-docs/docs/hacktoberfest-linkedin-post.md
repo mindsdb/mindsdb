@@ -11,3 +11,5 @@
 - A LinkedIn post by [Hell Fire](https://www.linkedin.com/posts/hell-fire-7a8544253_machinelearning-activity-6985893709196185600-dp3U?utm_source=share&utm_medium=member_desktop)
 
 - A LinkedIn post by [Shrey Parekh](https://www.linkedin.com/posts/shrey-parekh-a16644200_quickstart-activity-6985973943211814912-Mulk?utm_source=share&utm_medium=member_desktop)
+
+- A LinkedIn post by [Emmanuel Aiyenigba](https://www.linkedin.com/posts/emmanuel-aiyenigba-46b9331a3_i-recently-discovered-mindsdb-an-open-source-activity-6986369927674761216-bToN?utm_source=share&utm_medium=member_desktop)

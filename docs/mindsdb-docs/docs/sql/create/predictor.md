@@ -9,10 +9,10 @@ The `CREATE PREDICTOR` statement creates and trains a new ML model.
 Here is the syntax:
 
 ```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
-FROM [integration_name]
-    (SELECT [column_name, ...] FROM [table_name])
-PREDICT [target_column]
+CREATE PREDICTOR _mindsdb.[predictor_name]_
+FROM _[integration_name]_
+    (SELECT _[column_name, ...] FROM [table_name]_)
+PREDICT [_target_column_]
 [USING [parameter_key]=['parameter_value']];
 ```
 
@@ -36,8 +36,8 @@ Where:
 
     ```sql
     SELECT *
-    FROM mindsdb.predictors
-    WHERE name='[predictor_name]';
+    FROM _mindsdb.predictors_
+    WHERE _name='[predictor_name]'_;
     ```
 
     On execution, we get:
@@ -55,10 +55,10 @@ Where:
 This example shows how to create and train a machine learning model called `home_rentals_model` and predict the rental prices for real estate properties inside the dataset.
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
-FROM db_integration 
-    (SELECT * FROM house_rentals_data)
-PREDICT rental_price;
+CREATE PREDICTOR _mindsdb.home_rentals_model_
+FROM _db_integration_ 
+    (SELECT * FROM _house_rentals_data_) AS _rentals_
+PREDICT _rental_price_;
 ```
 
 On execution, we get:
@@ -71,8 +71,8 @@ To check the predictor status, query the [`#!sql mindsdb.predictors`](/sql/table
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
-WHERE name='home_rentals_model';
+FROM _mindsdb.predictors_
+WHERE _name='home_rentals_model'_;
 ```
 
 On execution, we get:
@@ -98,11 +98,11 @@ In the upcoming version of MindsDB, it will be possible to choose another ML fra
 Here is the syntax:
 
 ```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
-FROM [integration_name]
-    (SELECT [column_name, ...] FROM [table_name])
-PREDICT [target_column]
-USING [parameter_key] = ['parameter_value'];
+CREATE PREDICTOR _mindsdb.[predictor_name]_
+FROM _[integration_name]_
+    (SELECT _[column_name, ...]_ FROM _[table_name]_)
+PREDICT _[target_column]_
+USING _[parameter_key] = ['parameter_value']_;
 ```
 
 On execution, we get:
@@ -156,10 +156,10 @@ The most common use cases of configuring predictors use `#!sql encoders` and `#!
 Here we use the `home_rentals` dataset and specify particular `#!sql encoders` for some columns and a LightGBM `#!sql model`.
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
-FROM db_integration
-    (SELECT * FROM home_rentals)
-PREDICT rental_price
+CREATE PREDICTOR _mindsdb.home_rentals_model_
+FROM _db_integration_
+    (SELECT * FROM _home_rentals_)
+PREDICT _rental_price_
 USING
     encoders.location.module='CategoricalAutoEncoder',
     encoders.rental_price.module = 'NumericEncoder',
@@ -193,10 +193,10 @@ This statement is used to create and train a model from a file or a database tab
 Here is the syntax:
 
 ```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
-FROM files
-    (SELECT * FROM [file_name])
-PREDICT target_column;
+CREATE PREDICTOR _mindsdb.[predictor_name]_
+FROM _files_
+    (SELECT * FROM _[file_name]_)
+PREDICT _target_column_;
 ```
 
 On execution, we get:
@@ -219,10 +219,10 @@ Where:
 Here we uploaded the `home_rentals` dataset as a file.
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
-FROM files
-    (SELECT * from home_rentals)
-PREDICT rental_price;
+CREATE PREDICTOR _mindsdb.home_rentals_model_
+FROM _files_
+    (SELECT * from _home_rentals_)
+PREDICT _rental_price_;
 ```
 
 On execution, we get:
@@ -242,14 +242,14 @@ To train a time series model, MindsDB provides additional statements.
 Here is the syntax:
 
 ```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
-FROM [integration_name]
-    (SELECT [sequential_column], [partition_column], [other_column], [target_column]
-     FROM [table_name])
-PREDICT [target_column]
+CREATE PREDICTOR _mindsdb.[predictor_name]_
+FROM _[integration_name]_
+    (SELECT _[sequential_column], [partition_column], [other_column], [target_column]_
+     FROM _[table_name]_)
+PREDICT _[target_column]_
 
-ORDER BY [sequential_column]
-GROUP BY [partition_column]
+ORDER BY _[sequential_column]_
+GROUP BY _[partition_column]_
 
 WINDOW [int]
 HORIZON [int];
@@ -278,12 +278,12 @@ Where:
 Here is an example:
 
 ```sql
-CREATE PREDICTOR mindsdb.inventory_model
-FROM db_integration
-    (SELECT * FROM inventory)
-PREDICT units_in_inventory
-ORDER BY date
-GROUP BY product_id
+CREATE PREDICTOR _mindsdb.inventory_model_
+FROM _db_integration_
+    (SELECT * FROM _inventory_)
+PREDICT _units_in_inventory_
+ORDER BY _date_
+GROUP BY _product_id_
 WINDOW 20
 HORIZON 7;
 ```

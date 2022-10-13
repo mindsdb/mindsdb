@@ -17,3 +17,5 @@
 - A Twitter Thread by [Craig Gehrig](https://twitter.com/CraigGehrig/status/1579322580347109376)
 
 - A Twitter Thread by [@talkshrey](https://twitter.com/talkshrey/status/1580204446578941952)
+
+- A Twitter Thread by [@alissatroiano](https://twitter.com/alissamtroiano/status/1580675689724145665?s=20&t=rGANm3YrKzbBKYb-Vh2Z9Q)

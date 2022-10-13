@@ -53,7 +53,7 @@ class SheetsHandler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        url = url = f"https://docs.google.com/spreadsheets/d/{self.connection_data['spreadsheet_id']}/gviz/tq?tqx=out:csv&sheet={self.connection_data['sheet_name']}"
+        url = f"https://docs.google.com/spreadsheets/d/{self.connection_data['spreadsheet_id']}/gviz/tq?tqx=out:csv&sheet={self.connection_data['sheet_name']}"
         globals()[self.connection_data['sheet_name']] = pd.read_csv(url)
 
         self.connection = duckdb.connect()

@@ -59,6 +59,12 @@ class PostgresHandler(DatabaseHandler):
         self.connection = connection
         return self.connection
 
+    def disconnect(self):
+        if self.is_connected is False:
+            return
+        self.connection.close()
+        self.is_connected = False
+
     def check_connection(self) -> StatusResponse:
         """
         Check the connection of the PostgreSQL database

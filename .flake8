@@ -1,6 +1,75 @@
 [flake8]
 max-line-length = 88
 select = C,E,F,W,B,B9
-ignore = E203, E501, W503
-exclude = __init__.py
+ignore = E203, E402, E501, E713, W503, C901, F401, F403, F405, F541, F821,
+exclude =
+  __init__.py,
+  # TODO: clean up this code
+
+  mindsdb/api/mongo/*
+  mindsdb/api/mysql/mysql_proxy/*
+  mindsdb/api/mysql/mysql_proxy/external_libs/mysql_scramble.py
+  mindsdb/integrations/handlers/access_handler/access_handler.py
+  mindsdb/integrations/handlers/airtable_handler/airtable_handler.py
+  mindsdb/integrations/handlers/bigquery_handler/tests/test_bigquery_handler.py
+  mindsdb/integrations/handlers/couchbase_handler/couchbase_handler.py
+  mindsdb/integrations/handlers/couchbase_handler/tests/test_couchbase_handler.py
+  mindsdb/integrations/handlers/crate_handler/crate_handler.py
+  mindsdb/integrations/handlers/crate_handler/tests/test_crate_handler.py
+  mindsdb/integrations/handlers/d0lt_handler/tests/test_d0lt_handler.py
+  mindsdb/integrations/handlers/databricks_handler/databricks_handler.py
+  mindsdb/integrations/handlers/datastax_handler/datastax_handler.py
+  mindsdb/integrations/handlers/db2_handler/*
+  mindsdb/integrations/handlers/druid_handler/druid_handler.py
+  mindsdb/integrations/handlers/dynamodb_handler/dynamodb_handler.py
+  mindsdb/integrations/handlers/elasticsearch_handler/elasticsearch_handler.py
+  mindsdb/integrations/handlers/firebird_handler
+  mindsdb/integrations/handlers/firebird_handler/firebird_handler.py
+  mindsdb/integrations/handlers/hive_handler/tests/test_hive_handler.py
+  mindsdb/integrations/handlers/informix_handler/informix_handler.py
+  mindsdb/integrations/handlers/informix_handler/tests/test_informix_handler.py
+  mindsdb/integrations/handlers/lightwood_handler/*
+  mindsdb/integrations/handlers/ludwig_handler/test_ludwig.py
+  mindsdb/integrations/handlers/mariadb_handler/tests/test_mariadb_handler.py
+  mindsdb/integrations/handlers/matrixone_handler/*
+  mindsdb/integrations/handlers/mlflow_handler/*
+  mindsdb/integrations/handlers/monetdb_handler/*
+  mindsdb/integrations/handlers/mongodb_handler/*
+  mindsdb/integrations/handlers/mssql_handler/*
+  mindsdb/integrations/handlers/mysql_handler/tests/test_mysql_handler.py
+  mindsdb/integrations/handlers/oracle_handler/oracle_handler.py
+  mindsdb/integrations/handlers/pinot_handler/pinot_handler.py
+  mindsdb/integrations/handlers/postgres_handler/tests/test_postgres_handler.py
+  mindsdb/integrations/handlers/questdb_handler/*
+  mindsdb/integrations/handlers/redshift_handler/*
+  mindsdb/integrations/handlers/s3_handler/s3_handler.py
+  mindsdb/integrations/handlers/singlestore_handler/*
+  mindsdb/integrations/handlers/snowflake_handler/snowflake_handler.py
+  mindsdb/integrations/handlers/sqlite_handler/sqlite_handler.py
+  mindsdb/integrations/handlers/supabase_handler/tests/test_supabase_handler.py
+  mindsdb/integrations/handlers/tidb_handler/*
+  mindsdb/integrations/handlers/timescaledb_handler/*
+  mindsdb/integrations/handlers/trino_handler/trino_handler.py
+  mindsdb/integrations/handlers/vertica_handler/*
+  mindsdb/integrations/handlers/view_handler/view_handler.py
+  mindsdb/integrations/handlers/yugabyte_handler/*
+  mindsdb/integrations/libs/response.py
+  mindsdb/integrations/utilities/utils.py
+  mindsdb/interfaces/model/model_controller.py
+  mindsdb/migrations/env.py
+  mindsdb/migrations/versions/2021-11-30_17c3d2384711_init.py
+  mindsdb/migrations/versions/2022-01-26_47f97b83cee4_views.py
+  mindsdb/migrations/versions/2022-08-25_6a54ba55872e_view_integration.py
+  mindsdb/utilities/cache.py
+  mindsdb/utilities/log.py
+  mindsdb/utilities/loop.py
+  tests/handler_tests/test_storage_handler.py
+  tests/integration_tests/flows/test_mysql_bin_api.py
+  tests/prediction_latency_test/*
+  tests/unit/executor_test_base.py
+  tests/unit/test_cache.py
+  tests/unit/test_executor.py
+  tests/unit/test_mongodb_handler.py
+  tests/unit/test_mongodb_server.py
+
 max-complexity = 18

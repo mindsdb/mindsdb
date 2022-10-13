@@ -2,9 +2,7 @@ from typing import Optional
 from collections import OrderedDict
 
 import pandas as pd
-import requests
-import urllib
-import json
+import duckdb
 
 from mindsdb_sql import parse_sql
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
@@ -55,17 +53,23 @@ class SheetsHandler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        self.connection = f"https://docs.google.com/spreadsheets/d/{self.connection_data['spreadsheet_id']}/gviz/tq?sheet={self.connection_data['sheet_name']}"
+        url = url = f"https://docs.google.com/spreadsheets/d/{self.connection_data['spreadsheet_id']}/gviz/tq?tqx=out:csv&sheet={self.connection_data['sheet_name']}"
+        globals()[self.connection_data['sheet_name']] = pd.read_csv(url)
+
+        self.connection = duckdb.connect()
+        self.is_connected = True
+
         return self.connection
 
     def disconnect(self):
-        """ Close any existing connections
-        Should switch self.is_connected.
         """
+        Close any existing connections.
+        """
+
         if self.is_connected is False:
             return
 
-        self.connection = None
+        self.connection.close()
         self.is_connected = False
         return self.is_connected
 
@@ -81,7 +85,6 @@ class SheetsHandler(DatabaseHandler):
 
         try:
             self.connect()
-            self.native_query("SELECT 1")
             response.success = True
         except Exception as e:
             log.error(f'Error connecting to the Google Sheet with ID {self.connection_data["spreadsheet_id"]}, {e}!')
@@ -106,22 +109,22 @@ class SheetsHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         connection = self.connect()
+        cursor = connection.cursor()
         try:
-            connection += f"&tq={urllib.parse.quote(query)}"
-            result = requests.get(self.connection)
+            cursor.execute(query)
+            result = cursor.fetchall()
             if result:
-                columns, data = self.parse_response(result)
-
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.DataFrame(
-                        data,
-                        columns=columns
+                        result,
+                        columns=[x[0] for x in cursor.description]
                     )
                 )
 
             else:
                 response = Response(RESPONSE_TYPE.OK)
+                connection.commit()
         except Exception as e:
             log.error(f'Error running query: {query} on the Google Sheet with ID {self.connection_data["spreadsheet_id"]}!')
             response = Response(
@@ -133,23 +136,6 @@ class SheetsHandler(DatabaseHandler):
             self.disconnect()
 
         return response
-
-    def parse_response(self, response):
-        records = json.loads(response.text.split('(', maxsplit=1)[1].rsplit(')', maxsplit=1)[0])
-
-        columns = [col['label'] for col in records['table']['cols'] if col['label']]
-
-        data = []
-        for record in records['table']['rows']:
-            row = []
-            for item in record['c']:
-                if item is not None:
-                    row.append(item['v'])
-
-            data.append(row)
-
-        return columns, data
-
 
     def query(self, query: ASTNode) -> StatusResponse:
         """
@@ -189,19 +175,18 @@ class SheetsHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        df = self.native_query("SELECT *").data_frame
-
         response = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 {
-                    'column_name': list(df.columns),
-                    'data_type': df.dtypes
+                    'column_name': list(globals()[{self.connection_data['sheet_name']}].columns),
+                    'data_type': globals()[{self.connection_data['sheet_name']}].dtypes
                 }
             )
         )
 
         return response
+
 
 connection_args = OrderedDict(
     spreadsheet_id={

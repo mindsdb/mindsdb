@@ -8,7 +8,7 @@ class SheetsHandlerTest(unittest.TestCase):
     def setUpClass(cls):
         cls.kwargs = {
             "spreadsheet_id": "12wgS-1KJ9ymUM-6VYzQ0nJYGitONxay7cMKLnEE2_d0",
-            "sheet_name": "iris_original"
+            "sheet_name": "iris"
         }
         cls.handler = SheetsHandler('test_sheets_handler', cls.kwargs)
 
@@ -16,7 +16,7 @@ class SheetsHandlerTest(unittest.TestCase):
         assert self.handler.check_connection()
 
     def test_1_native_query_select(self):
-        query = "SELECT *"
+        query = "SELECT * FROM iris"
         result = self.handler.native_query(query)
         assert result.type is RESPONSE_TYPE.TABLE
 

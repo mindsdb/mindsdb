@@ -6,7 +6,7 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities.log import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -58,6 +58,12 @@ class PostgresHandler(DatabaseHandler):
         self.is_connected = True
         self.connection = connection
         return self.connection
+
+    def disconnect(self):
+        if self.is_connected is False:
+            return
+        self.connection.close()
+        self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
         """

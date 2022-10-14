@@ -18,6 +18,33 @@ PARAMETERS={
 
 ![CREATE_DATABASE](https://github.com/saldanhad/mindsdb/blob/tests/databrickstestimages/createdb.jpg)
 
+**2. Testing CREATE PREDICTOR**
+
+```
+CREATE PREDICTOR 
+  mindsdb.banknotes_model
+FROM databricks_datasource
+  (SELECT * FROM default.data_banknotes)
+PREDICT class;
+```
+
+![CREATE_PREDICTOR](https://github.com/saldanhad/mindsdb/blob/tests/databrickstestimages/createpred.jpg)
+
+**3. Testing SELECT FROM PREDICTOR**
+
+```
+
+SELECT class, 
+       class_explain 
+FROM mindsdb.banknotes_model
+WHERE variance = 3.6216
+AND skewness=8.661
+AND curtosis=-2.8073
+AND entropy=-0.44699;
+
+```
+
+![SELECT_FROM](https://github.com/saldanhad/mindsdb/blob/tests/databrickstestimages/selectfrom.jpg)
 
 ### Results
 

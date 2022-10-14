@@ -2,31 +2,41 @@
 
 > **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
 
-## Testing Clickhouse Handler with [Dataset Name](URL to the Dataset)
+## Testing Clickhouse Handler with [House Rent Prediction Dataset](https://www.kaggle.com/datasets/iamsouravbanerjee/house-rent-prediction-dataset)
 
 **1. Testing CREATE DATABASE**
 
 ```
-COMMAND THAT YOU RAN TO CREATE DATABASE.
+CREATE DATABASE local_clickhouse
+WITH ENGINE='clickhouse',
+PARAMETERS={
+  "host": "10.32.36.188",
+  "port": 9001,
+  "database": "default",
+  "user": "default",
+  "password": ""
+};
 ```
+<img width="1164" alt="image" src="https://user-images.githubusercontent.com/8719716/195746882-054d63df-849d-4875-b711-c8fc01f66b7d.png">
 
-![CREATE_DATABASE](Image URL of the screenshot)
+
 
 **2. Testing CREATE PREDICTOR**
 
 ```
-COMMAND THAT YOU RAN TO CREATE PREDICTOR.
+CREATE PREDICTOR mindsdb.home_rental_model FROM  local_clickhouse    (SELECT * FROM House_Rent_Dataset) PREDICT rent;
 ```
 
-![CREATE_PREDICTOR](Image URL of the screenshot)
+<img width="1149" alt="image" src="https://user-images.githubusercontent.com/8719716/195746592-daa11cf6-878b-49dd-a4f7-b14e2267abaf.png">
 
 **3. Testing SELECT FROM PREDICTOR**
 
 ```
-COMMAND THAT YOU RAN TO DO A SELECT FROM.
+SELECT rent,rent_explain FROM mindsdb.home_rental_model
+WHERE posted_on = '2022-10-10' and  bhk=2 and size1=400  and floor='Ground out of 2' and area_type='Carpet Area' and area_locality='chatana' and city='Kolkata' and furnishing_status='Unfurnished' and tenant_preferred='Bachelors/Family' and  bathroom=1 and  point_of_contact='Contact Owner';
 ```
 
-![SELECT_FROM](Image URL of the screenshot)
+<img width="1295" alt="image" src="https://user-images.githubusercontent.com/8719716/195746705-5537b2aa-37dc-41e3-bc81-fff6191ca31d.png">
 
 ### Results
 

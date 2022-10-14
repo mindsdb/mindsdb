@@ -26,7 +26,7 @@ import numpy as np
 from mindsdb.integrations.libs.base import PredictiveHandler
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
 from mindsdb.integrations.utilities.processes import HandlerProcess
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 import mindsdb.interfaces.storage.db as db
@@ -101,7 +101,7 @@ class LightwoodHandler(PredictiveHandler):
             assert int(year) > 22 or (int(year) == 22 and int(major) >= 4)
             result.success = True
         except AssertionError as e:
-            log.error(f"Cannot import lightwood, {e}")
+            log.logger.error(f"Cannot import lightwood, {e}")
             result.error_message = str(e)
         return result
 
@@ -184,6 +184,8 @@ class LightwoodHandler(PredictiveHandler):
             raise Exception(f"Query type {type(statement)} not supported")
 
     def analyze_dataset(self, data_frame: pd.DataFrame) -> dict:
+        if data_frame.empty:
+            return {}
         analysis = lightwood.analyze_dataset(data_frame)
         return analysis.to_dict()
 

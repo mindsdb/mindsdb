@@ -1,1 +1,1 @@
-from .log import log    # noqa
+from .log import logger    # noqa

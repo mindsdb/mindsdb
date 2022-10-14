@@ -2,7 +2,7 @@ import copy
 import tempfile
 import os
 from unittest import mock
-
+import json
 import datetime as dt
 
 import pandas as pd
@@ -31,13 +31,27 @@ class BaseUnitTest:
         # remove imports of mindsdb in previous tests
         unload_module('mindsdb')
 
-        # create tmp db file
+        # database temp file
         cls.db_file = tempfile.mkstemp(prefix='mindsdb_db_')[1]
 
-        # save to environ before import db module
-        os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + cls.db_file
+        # config
+        config = {
+            'storage_db': 'sqlite:///' + cls.db_file
+        }
+        # config temp file
+        fdi, cfg_file = tempfile.mkstemp(prefix='mindsdb_conf_')
+
+        with os.fdopen(fdi, 'w') as fd:
+            json.dump(config, fd)
+
+        os.environ['MINDSDB_CONFIG_PATH'] = cfg_file
+
+        # initialize config
+        from mindsdb.utilities.config import Config
+        Config()
 
         from mindsdb.interfaces.storage import db
+        db.init()
         cls.db = db
 
     @staticmethod

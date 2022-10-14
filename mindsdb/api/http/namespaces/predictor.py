@@ -7,7 +7,6 @@ from flask_restx import Resource, abort
 from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 from mindsdb_sql.parser.ast import Identifier
 
-from mindsdb.utilities.log import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.predictors import ns_conf
 from mindsdb.api.http.namespaces.entitites.predictor_metadata import (

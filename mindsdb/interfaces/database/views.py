@@ -3,7 +3,7 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.planner.utils import query_traversal
 
-from mindsdb.interfaces.storage.db import session, Integration, View
+from mindsdb.interfaces.storage import db
 
 
 class ViewController:
@@ -15,12 +15,12 @@ class ViewController:
             raise Exception(f'Name should be without dots: {name}')
 
         # name exists?
-        rec = session.query(View.id).filter(View.name == name,
-                                            View.company_id == company_id).first()
+        rec = db.session.query(db.View.id).filter(db.View.name == name,
+                                            db.View.company_id == company_id).first()
         if rec is not None:
             raise Exception(f'View already exists: {name}')
 
-        integration_records = session.query(Integration).filter_by(company_id=company_id).all()
+        integration_records = db.session.query(db.Integration).filter_by(company_id=company_id).all()
 
         if integration_name is not None:
             integration_id = None
@@ -44,17 +44,17 @@ class ViewController:
             render = SqlalchemyRender('mysql')
             query = render.get_string(query_ast, with_failback=False)
 
-        view_record = View(name=name, company_id=company_id, query=query)
-        session.add(view_record)
-        session.commit()
+        view_record = db.View(name=name, company_id=company_id, query=query)
+        db.session.add(view_record)
+        db.session.commit()
 
     def delete(self, name, company_id=None):
 
-        rec = session.query(View).filter(View.name == name, View.company_id == company_id).first()
+        rec = db.session.query(db.View).filter(db.View.name == name, db.View.company_id == company_id).first()
         if rec is None:
-            raise Exception(f'View not found: {name}')
-        session.delete(rec)
-        session.commit()
+            raise Exception(f'db.View not found: {name}')
+        db.session.delete(rec)
+        db.session.commit()
 
     def _get_view_record_data(self, record):
 
@@ -65,9 +65,9 @@ class ViewController:
 
     def get(self, id=None, name=None, company_id=None):
         if id is not None:
-            records = session.query(View).filter_by(id=id, company_id=company_id).all()
+            records = db.session.query(db.View).filter_by(id=id, company_id=company_id).all()
         elif name is not None:
-            records = session.query(View).filter_by(name=name, company_id=company_id).all()
+            records = db.session.query(db.View).filter_by(name=name, company_id=company_id).all()
         if len(records) == 0:
             raise Exception(f"Can't find view with name/id: {name}/{id}")
         elif len(records) > 1:
@@ -76,7 +76,7 @@ class ViewController:
         return self._get_view_record_data(record)
 
     def get_all(self, company_id=None):
-        view_records = session.query(View).filter_by(company_id=company_id).all()
+        view_records = db.session.query(db.View).filter_by(company_id=company_id).all()
         views_dict = {}
         for record in view_records:
             views_dict[record.name] = self._get_view_record_data(record)

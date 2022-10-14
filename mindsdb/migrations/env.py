@@ -23,9 +23,11 @@ import os
 
 
 # init database
-from mindsdb import __init__
-from mindsdb.interfaces.storage.db import Base
-target_metadata = Base.metadata
+
+from mindsdb.interfaces.storage import db
+db.init()
+
+target_metadata = db.Base.metadata
 
 config.set_main_option('sqlalchemy.url', os.environ['MINDSDB_DB_CON'])
 

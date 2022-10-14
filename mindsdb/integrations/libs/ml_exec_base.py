@@ -60,7 +60,7 @@ from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.functions import mark_process
 from mindsdb.integrations.utilities.utils import format_exception_error
 
-from mindsdb.interfaces.storage.fs import ModelStorage, HandlerStorage
+from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 
 import torch.multiprocessing as mp
 ctx = mp.get_context('spawn')

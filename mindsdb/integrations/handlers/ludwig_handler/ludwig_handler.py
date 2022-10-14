@@ -16,7 +16,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropPredictor,
 )
 
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
@@ -84,7 +84,7 @@ class LudwigHandler(PredictiveHandler):
             result.success = True
             self.is_connected = True
         except ImportError as e:
-            log.error(f'Error importing Ludwig, {e}!')
+            log.logger.error(f'Error importing Ludwig, {e}!')
             result.error_message = str(e)
         return result
 
@@ -117,7 +117,7 @@ class LudwigHandler(PredictiveHandler):
                 )
             r = HandlerResponse(RESPONSE_TYPE.TABLE, df)
         except Exception as e:
-            log.error(f"Could not get columns for model {table_name}, error: {e}")
+            log.logger.error(f"Could not get columns for model {table_name}, error: {e}")
             r = HandlerResponse(RESPONSE_TYPE.ERROR)
         return r
 

@@ -8,7 +8,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.handler_helpers import define_handler
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 
 class BaseDBWrapper:
     def __init__(self, **kwargs):
@@ -21,7 +21,7 @@ class BaseDBWrapper:
         # self.index becomes a flask API endpoint
         default_router = self.app.route("/")
         self.index = default_router(self.index)
-        log.info("%s: base params and route have been initialized", self.__class__.__name__)
+        log.logger.info("%s: base params and route have been initialized", self.__class__.__name__)
 
     def index(self):
         return "A DB Service Wrapper", 200
@@ -52,7 +52,7 @@ class DBHandlerWrapper(BaseDBWrapper):
 
         query_route = self.app.route("/query", methods = ["GET", ])
         self.query = query_route(self.query)
-        log.info("%s: additional params and routes have been initialized", self.__class__.__name__)
+        log.logger.info("%s: additional params and routes have been initialized", self.__class__.__name__)
 
     def connect(self):
         try:
@@ -60,31 +60,31 @@ class DBHandlerWrapper(BaseDBWrapper):
             return {"status": "OK"}, 200
         except Exception as e:
             msg = traceback.format_exc()
-            log.error(msg)
+            log.logger.error(msg)
             return {"status": "FAIL" ,"error": msg}, 500
 
     def check_connection(self):
-        log.info("%s: calling 'check_connection'", self.__class__.__name__)
+        log.logger.info("%s: calling 'check_connection'", self.__class__.__name__)
         try:
             result =  self.handler.check_connection()
             return result.to_json(), 200
             # return {"success": result.success}
         except Exception as e:
             msg = traceback.format_exc()
-            log.error(msg)
+            log.logger.error(msg)
             result = StatusResponse(success=False,
                                     error_message=msg)
             return result.to_json(), 500
 
     def native_query(self):
         query = request.json.get("query")
-        log.info("%s: calling 'native_query' with query - %s", self.__class__.__name__, query)
+        log.logger.info("%s: calling 'native_query' with query - %s", self.__class__.__name__, query)
         try:
             result = self.handler.native_query(query)
             return result.to_json(), 200
         except Exception as e:
             msg = traceback.format_exc()
-            log.error(msg)
+            log.logger.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)
@@ -94,26 +94,26 @@ class DBHandlerWrapper(BaseDBWrapper):
         # s_query = request.data("query")
         s_query = request.get_data()
         query = pickle.loads(s_query)
-        log.info("%s: calling 'query' with query - %s", self.__class__.__name__, query)
+        log.logger.info("%s: calling 'query' with query - %s", self.__class__.__name__, query)
         try:
             result = self.handler.query(query)
             return result.to_json(), 200
         except Exception as e:
             msg = traceback.format_exc()
-            log.error(msg)
+            log.logger.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)
             return result.to_json(), 500
 
     def get_tables(self):
-        log.info("%s: calling 'get_tables'", self.__class__.__name__)
+        log.logger.info("%s: calling 'get_tables'", self.__class__.__name__)
         try:
             result = self.handler.get_tables()
             return result.to_json(), 200
         except Exception as e:
             msg = traceback.format_exc()
-            log.error(msg)
+            log.logger.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)
@@ -122,16 +122,16 @@ class DBHandlerWrapper(BaseDBWrapper):
     def get_columns(self):
         table = request.json.get("table")
         try:
-            log.debug("get_columns: table - %s", table)
-            log.info("%s: calling 'get_columns' for table - %s", self.__class__.__name__, table)
+            log.logger.debug("get_columns: table - %s", table)
+            log.logger.info("%s: calling 'get_columns' for table - %s", self.__class__.__name__, table)
             result = self.handler.get_columns(table)
             return result.to_json(), 200
-            # log.debug("get_columns: result - %s", result.data_frame)
+            # log.logger.debug("get_columns: result - %s", result.data_frame)
             # return {"query": result.query, "data": result.data_frame.to_json(orient="split")}, 200
         except Exception as e:
             # return {"status": "FAIL" ,"error": str(e)}, 500
             msg = traceback.format_exc()
-            log.error(msg)
+            log.logger.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)

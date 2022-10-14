@@ -1,0 +1,71 @@
+version: "3.2"
+
+services:
+
+  migrations:
+    command: bash -c "cd /mindsdb && python ./mindsdb/migrations/migrate.py"
+
+    <<: &globalSettings
+      build:
+        context: ../
+        dockerfile: ./docker/mindsdb.Dockerfile
+      volumes:
+        - type: bind
+          source: ../
+          target: /mindsdb
+      environment:
+        MINDSDB_STORAGE_DIR: "/mindsdb/var"
+
+  mindsdb:
+    # Copy global settings from migration above
+    <<: *globalSettings
+    restart: always
+    ports:
+      - '47334:47334'
+      - '47335:47335'
+    command: bash -c "cd /mindsdb && python -m mindsdb"
+    environment:
+      MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      FLASK_DEBUG: "1"
+      FLASK_ENV: "development"
+      FLASK_APP: "/mindsdb/mindsdb/__main__.py"
+      SEPARATE_MIGRATIONS: "1"
+    healthcheck:
+      test:  ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
+      interval: 30s
+      timeout: 4s
+      retries: 100
+
+  mysql_db:
+    image: "mindsdb/mysql-handler-test"
+    ports:
+      - 3307:3306
+    command: --secure-file-priv=/
+    environment:
+      MYSQL_ROOT_PASSWORD: "supersecret"
+      MYSQL_DATABASE: "test"
+    healthcheck:
+      test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD' ]
+      interval: 20s
+      timeout: 4s
+      retries: 100
+
+
+  mysql_db_handler:
+    # image: "db_handler"
+    build:
+      context: ../
+      dockerfile: ./docker/db_handler.Dockerfile
+    environment:
+      - 'PARAMS={"connection_data": {"host": "mysql_db", "port": "3306", "user": "root", "password": "supersecret", "database": "test", "ssl": false}, "name": "foo", "type": "mysql"}'
+    ports:
+      - 5000:5000
+    depends_on:
+      - mindsdb
+      - mysql_db
+
+    healthcheck:
+      test:  ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 4s
+      retries: 100

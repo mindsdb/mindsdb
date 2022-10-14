@@ -57,8 +57,15 @@ if __name__ == '__main__':
     config = Config()
 
     is_cloud = config.get('cloud', False)
+    # need configure migration behavior by env_variables
+    # leave 'is_cloud' for now, but needs to be removed further
+    run_migration_separately = os.environ.get("SEPARATE_MIGRATIONS", False)
+    if run_migration_separately in (False, "false","False", 0, "0", ""):
+        run_migration_separately = False
+    else:
+        run_migration_separately = True
 
-    if not is_cloud:
+    if not is_cloud and not run_migration_separately:
         print('Applying database migrations:')
         try:
             from mindsdb.migrations import migrate
@@ -104,17 +111,18 @@ if __name__ == '__main__':
 
     if not is_cloud:
         # region creating permanent integrations
-        for integration_name in ['files', 'views', 'lightwood']:
-            integration_meta = integration_controller.get(name=integration_name)
-            if integration_meta is None:
-                integration_record = db.Integration(
-                    name=integration_name,
-                    data={},
-                    engine=integration_name,
-                    company_id=None
-                )
-                db.session.add(integration_record)
-                db.session.commit()
+        for integration_name, handler in integration_controller.get_handlers_import_status().items():
+            if handler.get('permanent'):
+                integration_meta = integration_controller.get(name=integration_name)
+                if integration_meta is None:
+                    integration_record = db.Integration(
+                        name=integration_name,
+                        data={},
+                        engine=integration_name,
+                        company_id=None
+                    )
+                    db.session.add(integration_record)
+                    db.session.commit()
         # endregion
 
         # region Mark old predictors as outdated

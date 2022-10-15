@@ -1,5 +1,4 @@
 # Community Tutorials
-* [How to create an account on MindsDB cloud](https://youtu.be/qFQ95MoSE94) by [HellFire](https://github.com/Artemis6969)
 * [Predict Purchasing Power per Country using MindsDB](https://dev.to/rutamhere/predict-purchasing-power-per-country-using-mindsdb-1oh7) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting the Genre of Books with MindsDB](https://dev.to/f2010126/mindsdb-tutorial-predicting-the-genre-of-books-2ifh) by [Dipti Sengupta](https://www.linkedin.com/in/dipti-s-894831b2/)
 * [Predicting Data Science Job Salaries using MindsDB Cloud](https://community.ops.io/rutamhere/predicting-data-science-job-salaries-using-mindsdb-cloud-1lgn) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)

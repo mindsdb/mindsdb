@@ -1,5 +1,6 @@
 # Community Tutorials
 
+* [How to create a free account on MindsDB Cloud](https://youtu.be/ciBtpqrlbhI) by [Anamika](https://github.com/noviicee)
 * [Deploying MindsDB on Oracle Cloud](https://community.ops.io/rutamhere/deploying-mindsdb-on-oracle-cloud-164d) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predict Water Quality using MindsDB](https://dev.to/rutamhere/predict-water-quality-using-mindsdb-4hm4) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Life Expectancy using MindsDB Cloud](https://dev.to/armanchand/predicting-life-expectancy-using-mindsdb-cloud-3643) by [Arman Chand](https://dev.to/armanchand)

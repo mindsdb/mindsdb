@@ -16,7 +16,7 @@ PARAMETERS={
 };
 ```
 
-![CREATE_DATABASE](https://github.com/saldanhad/mindsdb/blob/data/mindsdb/databricks/createdb.jpg)
+![CREATE_DATABASE](https://github.com/saldanhad/mindsdb/blob/data/mindsdb/integrations/handlers/databricks_handler/databricks/createdb.jpg)
 
 **2. Testing CREATE PREDICTOR**
 
@@ -28,7 +28,7 @@ FROM databricks_datasource
 PREDICT class;
 ```
 
-![CREATE_PREDICTOR](https://github.com/saldanhad/mindsdb/blob/data/mindsdb/databricks/createpred.jpg)
+![CREATE_PREDICTOR](https://github.com/saldanhad/mindsdb/blob/data/mindsdb/integrations/handlers/databricks_handler/databricks/createpred.jpg)
 
 **3. Testing SELECT FROM PREDICTOR**
 
@@ -42,7 +42,7 @@ AND curtosis=-2.8073
 AND entropy=-0.44699;
 ```
 
-![SELECT_FROM](https://github.com/saldanhad/mindsdb/blob/data/mindsdb/databricks/selectfrom.jpg)
+![SELECT_FROM](https://github.com/saldanhad/mindsdb/blob/data/mindsdb/integrations/handlers/databricks_handler/databricks/selectfrom.jpg)
 
 ### Results
 

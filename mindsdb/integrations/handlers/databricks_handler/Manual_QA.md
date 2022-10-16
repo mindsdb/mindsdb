@@ -7,10 +7,16 @@
 **1. Testing CREATE DATABASE**
 
 ```
-COMMAND THAT YOU RAN TO CREATE DATABASE.
+CREATE DATABASE databricks_datasource
+WITH ENGINE='databricks',
+PARAMETERS={
+  "server_hostname": "adb-2739211854327427.7.azuredatabricks.net",
+  "http_path": "sql/protocolv1/o/2739211854327427/1008-130317-9mq6rcp6",
+  "access_token": "dapib9c127dc406d9ddb9d42a4f170f398df-3"
+};
 ```
 
-![CREATE_DATABASE](Image URL of the screenshot)
+![CREATE_DATABASE]()
 
 **2. Testing CREATE PREDICTOR**
 

@@ -16,28 +16,37 @@ PARAMETERS={
 };
 ```
 
-![CREATE_DATABASE]()
+![CREATE_DATABASE](https://github.com/saldanhad/mindsdb/blob/data/mindsdb/databricks/createdb.jpg)
 
 **2. Testing CREATE PREDICTOR**
 
 ```
-COMMAND THAT YOU RAN TO CREATE PREDICTOR.
+CREATE PREDICTOR 
+  mindsdb.banknotes_model
+FROM databricks_datasource
+  (SELECT * FROM default.data_banknotes)
+PREDICT class;
 ```
 
-![CREATE_PREDICTOR](Image URL of the screenshot)
+![CREATE_PREDICTOR](https://github.com/saldanhad/mindsdb/blob/data/mindsdb/databricks/createpred.jpg)
 
 **3. Testing SELECT FROM PREDICTOR**
 
 ```
-COMMAND THAT YOU RAN TO DO A SELECT FROM.
+SELECT class, 
+       class_explain 
+FROM mindsdb.banknotes_model
+WHERE variance = 3.6216
+AND skewness=8.661
+AND curtosis=-2.8073
+AND entropy=-0.44699;
 ```
 
-![SELECT_FROM](Image URL of the screenshot)
+![SELECT_FROM](https://github.com/saldanhad/mindsdb/blob/data/mindsdb/databricks/selectfrom.jpg)
 
 ### Results
 
 Drop a remark based on your observation.
-- [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+- [x] There's a Bug 🪲 [[Bug]:Databricks](https://github.com/mindsdb/mindsdb/issues/3387)
 
 ---

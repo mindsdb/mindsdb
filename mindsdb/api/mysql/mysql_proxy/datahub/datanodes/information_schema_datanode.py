@@ -36,6 +36,8 @@ class InformationSchemaDataNode(DataNode):
         self.session = session
         self.integration_controller = session.integration_controller
         self.view_interface = session.view_interface
+        self.project_controller = session.project_controller
+
         self.persis_datanodes = {
             'mindsdb': MindsDBDataNode(
                 session.model_controller,
@@ -217,7 +219,12 @@ class InformationSchemaDataNode(DataNode):
         ]
 
         # permanent databases
-        data.append(['def', 'mindsdb', 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
+        # data.append(['def', 'mindsdb', 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
+
+        # projects
+        projects = self.project_controller.get_list()
+        for project in projects:
+            data.append(['def', project.name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
 
         integration_names = self.integration_controller.get_all().keys()
         for database_name in integration_names:

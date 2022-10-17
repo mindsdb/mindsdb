@@ -100,12 +100,7 @@ class ExecuteCommands:
             sql_lower = self.executor.sql_lower
 
         if type(statement) == CreateDatasource:
-            struct = {
-                'datasource_name': statement.name,
-                'database_type': statement.engine.lower(),
-                'connection_args': statement.parameters
-            }
-            return self.answer_create_datasource(struct)
+            return self.answer_create_database(statement)
         if type(statement) == DropPredictor:
             ml_integration_name = self.session.database
             if len(statement.name.parts) > 1:
@@ -123,7 +118,7 @@ class ExecuteCommands:
             return self.answer_drop_tables(statement)
         elif type(statement) == DropDatasource or type(statement) == DropDatabase:
             ds_name = statement.name.parts[-1]
-            return self.answer_drop_datasource(ds_name)
+            return self.answer_drop_database(ds_name)
         elif type(statement) == Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
             predictor_attrs = ("model", "features", "ensemble")
@@ -667,15 +662,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_create_datasource(self, struct: dict):
-        ''' create new handler (datasource/integration in old terms)
-            Args:
-                struct: data for creating integration
-        '''
-        datasource_name = struct['datasource_name']
-        engine = struct['database_type']
-        connection_args = struct['connection_args']
-
+    def _create_integration(self, name: str, engine: str, connection_args: dict):
         # we have connection checkers not for any db. So do nothing if fail
         # TODO return rich error message
 
@@ -725,14 +712,33 @@ class ExecuteCommands:
         if status.success is False:
             raise SqlApiException(f"Can't connect to db: {status.error_message}")
 
-        integration = self.session.integration_controller.get(datasource_name)
+        integration = self.session.integration_controller.get(name)
         if integration is not None:
-            raise SqlApiException(f"Database '{datasource_name}' already exists.")
+            raise SqlApiException(f"Database '{name}' already exists.")
 
-        self.session.integration_controller.add(datasource_name, engine, connection_args)
+        self.session.integration_controller.add(name, engine, connection_args)
+
+    def answer_create_database(self, statement: ASTNode):
+        ''' create new handler (datasource/integration in old terms)
+            Args:
+                statement (ASTNode): data for creating database/project
+        '''
+
+        database_name = statement.name
+        engine = statement.engine
+        if engine is None:
+            engine = 'mindsdb'
+        engine = engine.lower()
+        connection_args = statement.parameters
+
+        if engine == 'mindsdb':
+            self.session.project_controller.add(database_name)
+        else:
+            self._create_integration(database_name, engine, connection_args)
+
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_drop_datasource(self, ds_name):
+    def answer_drop_database(self, ds_name):
         integration = self.session.integration_controller.get(ds_name)
         if integration is None:
             raise SqlApiException(f"Database '{ds_name}' does not exists.")

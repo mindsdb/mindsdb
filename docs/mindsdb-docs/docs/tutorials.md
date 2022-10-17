@@ -1,5 +1,6 @@
 # Community Tutorials
 
+* [Predicting Employee Attrition & Performance using MindsDB Cloud](https://dev.to/armanchand/predicting-employee-attrition-performance-using-mindsdb-cloud-3cm6) by [Arman Chand](https://dev.to/armanchand)
 * [Deploying MindsDB on Oracle Cloud](https://community.ops.io/rutamhere/deploying-mindsdb-on-oracle-cloud-164d) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predict Water Quality using MindsDB](https://dev.to/rutamhere/predict-water-quality-using-mindsdb-4hm4) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Life Expectancy using MindsDB Cloud](https://dev.to/armanchand/predicting-life-expectancy-using-mindsdb-cloud-3643) by [Arman Chand](https://dev.to/armanchand)
@@ -49,3 +50,5 @@
 # Community Video Guides
 
 * [What is MindsDB?](https://www.youtube.com/watch?v=i2tMs4MX_yw) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
+* [Tutorial: Create a Free MindsDB Cloud Account](https://youtu.be/yfM91zgGr3Q) by [Alissa Troiano](https://github.com/alissatroiano)
+

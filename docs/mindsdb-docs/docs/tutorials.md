@@ -1,5 +1,6 @@
 # Community Tutorials
 
+* [Predict Wine Quality using MindsDB](https://dev.to/rutamhere/predict-wine-quality-using-mindsdb-1521) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Employee Attrition & Performance using MindsDB Cloud](https://dev.to/armanchand/predicting-employee-attrition-performance-using-mindsdb-cloud-3cm6) by [Arman Chand](https://dev.to/armanchand)
 * [Deploying MindsDB on Oracle Cloud](https://community.ops.io/rutamhere/deploying-mindsdb-on-oracle-cloud-164d) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predict Water Quality using MindsDB](https://dev.to/rutamhere/predict-water-quality-using-mindsdb-4hm4) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)

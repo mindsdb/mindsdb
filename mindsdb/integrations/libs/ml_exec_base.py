@@ -274,6 +274,12 @@ class BaseMLEngineExec:
 
         problem_definition['target'] = target
 
+        if statement.horizon is not None:
+            problem_definition['horizon'] = int(statement.horizon)
+
+        if statement.window is not None:
+            problem_definition['window'] = int(statement.window)
+
         predictor_record = db.Predictor(
             company_id=self.company_id,
             name=model_name,

@@ -88,6 +88,31 @@ class MindsDBDataNode(DataNode):
 
         return columns
 
+    def get_base_ml_engine_table_column_dict(self, table_name, ml_handler_name):
+        from mindsdb.integrations.libs.base import BaseMLEngine
+        from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
+        rt = {}
+        try:
+            predictor_name = table_name[1]
+            handler = self.integration_controller.get_handler(ml_handler_name)
+            if not isinstance(handler, BaseMLEngineExec):
+                print(f"{table_name} is not the instance of {BaseMLEngineExec.__class__.__name__}")
+            else:
+                ml_engine_exec: BaseMLEngineExec = handler
+                ml_engine_cls: BaseMLEngine = ml_engine_exec.handler_class
+                try:
+                    column_dict = ml_engine_cls.get_custom_column_appendix_dict()
+                    if column_dict is not None and len(column_dict) > 0:
+                        model = self.model_controller.get_model_data(name=predictor_name, ml_handler_name=ml_handler_name)
+                        for column, column_type in column_dict.items():
+                            rt[str(model["predict"]) + column] = column_type
+                except Exception as e:
+                    print(repr(e))
+                    print(f"failed to get_custom_columns from handler of {ml_handler_name}. ")
+        except Exception as e:
+            print(f"handler not found {ml_handler_name}")
+        return rt
+
     def _select_predictors(self, ml_handler_name='lightwood'):
         models = self.model_controller.get_models(ml_handler_name=ml_handler_name)
         columns = ['name', 'status', 'accuracy', 'predict', 'update_status',

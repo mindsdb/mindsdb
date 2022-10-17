@@ -1161,6 +1161,16 @@ class SQLQuery():
                 table_name = get_preditor_alias(step, self.database)
                 columns_collection = ColumnsCollection()
                 dn = self.datahub.get(self.mindsdb_database_name)
+                base_ml_engine_type_dict = {}
+                if ml_handler_name not in ("mindsdb", "lightwood"):
+                    base_ml_engine_type_dict = dn.get_base_ml_engine_table_column_dict(table_name=table_name,
+                                                                   ml_handler_name=ml_handler_name)
+                    if base_ml_engine_type_dict is not None:
+                        for col, col_type in base_ml_engine_type_dict.items():
+                            columns_collection.add(table_name, (col, col))
+                    else:
+                        base_ml_engine_type_dict = {}
+
                 if len(where_data) == 0:
                     cols = dn.get_table_columns(predictor_name) + ['__mindsdb_row_id']
                     for col in cols:
@@ -1193,11 +1203,15 @@ class SQLQuery():
 
                     values = [{table_name: x} for x in data]
 
+                merged_model_types = base_ml_engine_type_dict
+                if self.model_types is not None:
+                    merged_model_types.update(self.model_types)
+
                 data = {
                     'values': values,
                     'columns': columns_collection,
                     'tables': [table_name],
-                    'types': {table_name: self.model_types},
+                    'types': {table_name: merged_model_types},
                     'is_prediction': True  # for join step
                 }
             except Exception as e:

@@ -191,9 +191,19 @@ class FileStorage:
     def push(self):
         self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
 
+    def push_path(self, path):
+        self.fs_store.put(os.path.join(self.folder_name, path), str(self.resource_group_path))
+
     def pull(self):
         try:
             self.fs_store.get(str(self.folder_name), str(self.resource_group_path))
+        except Exception:
+            pass
+
+    def pull_path(self, path):
+        try:
+            # TODO not sync if not changed?
+            self.fs_store.get(os.path.join(self.folder_name, path), str(self.resource_group_path))
         except Exception:
             pass
 

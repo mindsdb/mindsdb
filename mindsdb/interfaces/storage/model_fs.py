@@ -97,7 +97,7 @@ class HandlerStorage:
         storageFactory = FileStorageFactory(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             company_id=company_id,
-            sync=True
+            sync=False
         )
         self.fileStorage = storageFactory(integration_id)
 
@@ -111,10 +111,12 @@ class HandlerStorage:
     # files
 
     def file_get(self, name):
+        self.fileStorage.pull_path(name)
         return self.fileStorage.file_get(name)
 
     def file_set(self, name, content):
         self.fileStorage.file_set(name, content)
+        self.fileStorage.push_path(name)
 
     def file_list(self):
         ...
@@ -129,11 +131,15 @@ class HandlerStorage:
         name = name.lower().replace(' ', '_')
         name = re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
 
+        self.fileStorage.pull_path(name)
         return str(self.fileStorage.get_path(name))
 
     def folder_sync(self, name):
         # sync abs path
-        self.fileStorage.push()
+        name = name.lower().replace(' ', '_')
+        name = re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
+
+        self.fileStorage.push_path(name)
 
     # jsons
 

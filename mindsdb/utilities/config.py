@@ -29,13 +29,13 @@ class Config():
     def __init__(self):
         # initialize once
         global config
+        self.config_path = os.environ['MINDSDB_CONFIG_PATH']
         if config is None:
             config = self.init_config()
         self._config = config
 
     def init_config(self):
 
-        self.config_path = os.environ['MINDSDB_CONFIG_PATH']
         if self.config_path == 'absent':
             self._override_config = {}
         else:

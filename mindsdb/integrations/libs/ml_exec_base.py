@@ -15,16 +15,11 @@ In particular, three big components are included:
     - `predict_process` method: handles async dispatch of the `predict` method in an engine.
 
 """
-
-from collections import OrderedDict
-
 import datetime as dt
 from dateutil.parser import parse as parse_datetime
-import json
 import traceback
 import importlib
 
-import numpy as np
 import pandas as pd
 
 from mindsdb_sql import parse_sql
@@ -62,12 +57,15 @@ from mindsdb.integrations.utilities.utils import format_exception_error
 
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 
+from .ml_handler_proc import MLHandlerWraper
+
 import torch.multiprocessing as mp
 ctx = mp.get_context('spawn')
 
 
 @mark_process(name='learn')
 def learn_process(class_path, company_id, integration_id, predictor_id, training_data_df, target, problem_definition):
+    db.init()
 
     predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
 
@@ -101,34 +99,29 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
     db.session.commit()
 
 
-@mark_process(name='predict')
-def predict_process(class_path, company_id, integration_id, predictor_id, df, res_queue=None):
+def get_ml_handler(class_path, company_id, integration_id, predictor_id):
+    # returns instance or wrapper over in
 
-    module_name, class_name = class_path
-    module = importlib.import_module(module_name)
-    klass = getattr(module, class_name)
+    wrapper_type = 'subprocess'
+    if wrapper_type == 'none':
+        module_name, class_name = class_path
+        module = importlib.import_module(module_name)
+        klass = getattr(module, class_name)
 
-    handlerStorage = HandlerStorage(company_id, integration_id)
-    modelStorage = ModelStorage(company_id, predictor_id)
+        handlerStorage = HandlerStorage(company_id, integration_id)
+        modelStorage = ModelStorage(company_id, predictor_id)
 
-    ml_handler = klass(
-        engine_storage=handlerStorage,
-        model_storage=modelStorage,
-    )
+        ml_handler = klass(
+            engine_storage=handlerStorage,
+            model_storage=modelStorage,
+        )
+        return ml_handler
 
-    predictions = ml_handler.predict(df)
+    elif wrapper_type == 'subprocess':
+        return MLHandlerWraper(class_path, company_id, integration_id, predictor_id)
 
-    # mdb indexes
-    if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
-        predictions['__mindsdb_row_id'] = df['__mindsdb_row_id']
-
-    predictions = predictions.to_dict(orient='records')
-
-    if res_queue is not None:
-        # subprocess mode
-        res_queue.put(predictions)
-    else:
-        return predictions
+    elif wrapper_type == 'remote':
+        raise NotImplementedError()
 
 
 class BaseMLEngineExec:
@@ -313,6 +306,7 @@ class BaseMLEngineExec:
         # TODO: mark current predictor as inactive, create new predictor and run learn
         raise NotImplementedError()
 
+    @mark_process(name='predict')
     def predict(self, model_name: str, data: list, pred_format: str = 'dict'):
         """ Generates predictions with some model and input data. """
         if isinstance(data, dict):
@@ -327,31 +321,17 @@ class BaseMLEngineExec:
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
-        is_subprocess = False
-        if is_subprocess:
+        ml_handler = get_ml_handler(class_path, self.company_id, self.integration_id, predictor_record.id)
 
-            res_queue = ctx.SimpleQueue()
-            p = HandlerProcess(
-                predict_process,
-                class_path,
-                self.company_id,
-                self.integration_id,
-                predictor_record.id,
-                df,
-                res_queue,
-            )
-            p.start()
-            p.join()
-            predictions = res_queue.get()
+        predictions = ml_handler.predict(df)
 
-        else:
-            predictions = predict_process(
-                class_path,
-                self.company_id,
-                self.integration_id,
-                predictor_record.id,
-                df
-            )
+        ml_handler.close()
+
+        # mdb indexes
+        if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
+            predictions['__mindsdb_row_id'] = df['__mindsdb_row_id']
+
+        predictions = predictions.to_dict(orient='records')
 
         after_predict_hook(
             company_id=self.company_id,

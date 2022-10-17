@@ -130,6 +130,7 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
 @mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
               json_ai_override: dict = None, company_id: int = None) -> None:
+    db.init()
     if json_ai_override is None:
         json_ai_override = {}
 

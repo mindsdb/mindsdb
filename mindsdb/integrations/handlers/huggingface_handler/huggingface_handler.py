@@ -113,7 +113,7 @@ class HuggingFaceHandler(BaseMLEngine):
 
         task = args['task']
         if task == 'text-classification':
-            output_list_messy = pipeline(input_list_str, truncation=True, num_workers=1, max_length=args['max_length'])
+            output_list_messy = pipeline(input_list_str, truncation=True, max_length=args['max_length'])
             output_list_tidy = [tidy_output_classification(args, x) for x in output_list_messy]
 
         elif task == 'zero-shot-classification':

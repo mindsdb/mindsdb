@@ -52,7 +52,6 @@ services:
 
 
   mysql_db_handler:
-    # image: "db_handler"
     build:
       context: ../
       dockerfile: ./docker/db_handler.Dockerfile

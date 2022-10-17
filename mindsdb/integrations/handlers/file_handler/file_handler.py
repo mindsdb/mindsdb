@@ -16,7 +16,7 @@ from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import DropTables, Select
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -41,7 +41,7 @@ class FileHandler(DatabaseHandler):
     """
     name = 'files'
 
-    def __init__(self, name=None, file_storage=None, connection_data={}, file_controller=None):
+    def __init__(self, name=None, file_storage=None, connection_data={}, file_controller=None, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
         self.fs_store = file_storage
@@ -103,6 +103,11 @@ class FileHandler(DatabaseHandler):
         if custom_parser:
             header, file_data = custom_parser(data, fmt)
 
+        elif fmt == 'parquet':
+            df = pd.read_parquet(data)
+            header = df.columns.values.tolist()
+            file_data = df.values.tolist()
+
         elif fmt == 'csv':
             csv_reader = list(csv.reader(data, dialect))
             header = csv_reader[0]
@@ -162,6 +167,19 @@ class FileHandler(DatabaseHandler):
         ############
         # check for file type
         ############
+
+        # Check first and last 4 bytes equal to PAR1.
+        # Refer: https://parquet.apache.org/docs/file-format/
+        parquet_sig = b'PAR1'
+        data.seek(0, 0)
+        start_meta = data.read(4)
+        data.seek(-4, 2)
+        end_meta = data.read()
+        data.seek(0)
+        if start_meta == parquet_sig and end_meta == parquet_sig:
+            return data, 'parquet', None
+        else:
+            print("It's not parquet file. Checking for other formats")
 
         # try to guess if its an excel file
         xlsx_sig = b'\x50\x4B\x05\06'

@@ -26,4 +26,4 @@
 
 - A Twitter Thread by [@EmmanuelCoder](https://twitter.com/EmmanuelCoder/status/1580609518362558466)
 
-
+- A Twitter Thread by [Atharva Shirdhankar](https://twitter.com/_Atharva_08/status/1581620848351268866?s=20&t=cbPkcHUXrsOQAcTCi_PFXQ)

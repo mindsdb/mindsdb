@@ -1,5 +1,8 @@
 # Community Tutorials
 
+* [How to create a free account on MindsDB Cloud](https://youtu.be/ciBtpqrlbhI) by [Anamika](https://github.com/noviicee)
+* [Predict Wine Quality using MindsDB](https://dev.to/rutamhere/predict-wine-quality-using-mindsdb-1521) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
+* [Predicting Employee Attrition & Performance using MindsDB Cloud](https://dev.to/armanchand/predicting-employee-attrition-performance-using-mindsdb-cloud-3cm6) by [Arman Chand](https://dev.to/armanchand)
 * [Deploying MindsDB on Oracle Cloud](https://community.ops.io/rutamhere/deploying-mindsdb-on-oracle-cloud-164d) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predict Water Quality using MindsDB](https://dev.to/rutamhere/predict-water-quality-using-mindsdb-4hm4) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Life Expectancy using MindsDB Cloud](https://dev.to/armanchand/predicting-life-expectancy-using-mindsdb-cloud-3643) by [Arman Chand](https://dev.to/armanchand)
@@ -45,3 +48,11 @@
 * [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI) by [Posterizedsoul](https://github.com/Posterizedsoul)
 * [Predicting Store Sales Data using MindsDB](https://dev.to/kevinheng/predict-store-sales-data-with-mindsdb-using-machine-learning-and-sql-2af8) by [Kevin Heng](https://github.com/HengKevin)
 * [Using MindsDB to Predict Future Retail Sales](https://medium.com/@alissatroianonyc/using-mindsdb-to-predict-future-retail-sales-a300f63a086b) by [Alissa Troiano](https://github.com/alissatroiano)
+* [Predicting the Rating of Cars using Mindsdb](https://atharva08.hashnode.dev/predicting-the-rating-of-cars-using-mindsdb) by [Atharva Shirdhankar](https://github.com/StarTrooper08)
+* [Predicting & Visualizing Hourly Electricity Demand in the US with MindsDB and Tableau](https://teslimodus.medium.com/predicting-visualizing-hourly-electricity-demand-in-the-us-with-mindsdb-and-tableau-126d1c74d860) by [Teslim Odumuyiwa](https://teslimodus.medium.com/)
+
+# Community Video Guides
+
+* [What is MindsDB?](https://www.youtube.com/watch?v=i2tMs4MX_yw) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
+* [Tutorial: Create a Free MindsDB Cloud Account](https://youtu.be/yfM91zgGr3Q) by [Alissa Troiano](https://github.com/alissatroiano)
+* [How to create an account on MindsDB cloud](https://youtu.be/qFQ95MoSE94) by [HellFire](https://github.com/Artemis6969)

@@ -1,5 +1,7 @@
 # Show your 💚 for MindsDB on Twitter
 
+- A Twitter Thread by [@akhilcoder](https://twitter.com/akhilcoder/status/1581641683300937731)
+
 - A Twitter Thread by [Arman Chand](https://twitter.com/arman74895017/status/1580463741581524992?s=20&t=gv9DHRwSpBHUbobDv8zZLw)
 
 - A Twitter Thread by [@TheBilalAamer](https://twitter.com/TheBilalAamer/status/1577646790869852161)

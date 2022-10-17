@@ -1,4 +1,3 @@
-import os
 import copy
 import base64
 import shutil
@@ -47,7 +46,7 @@ class IntegrationController:
             return
 
         log.debug("%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
-                 self.__class__.__name__, name, engine, connection_args, company_id)
+                  self.__class__.__name__, name, engine, connection_args, company_id)
         handlers_meta = self.get_handlers_import_status()
         handler_meta = handlers_meta[engine]
         accept_connection_args = handler_meta.get('connection_args')

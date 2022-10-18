@@ -11,12 +11,24 @@ The MindsDB SQL API supports creating connections to integrations by passing the
 Let's review the syntax for the `#!sql CREATE DATABASE` command.
 
 ```sql
-CREATE DATABASE [datasource_name]
-WITH ENGINE=[engine_string],
-PARAMETERS={
-  "key":"value",
-  ...
+CREATE DATABASE [name]
+WITH ENGINE = [engine_name],
+PARAMETERS = {
+    json parametrs
+    ...
 };
+```
+
+`WITH` become to be optional.  
+`ENGINE` by default is 'mindsdb'. To create a 'project' engine should be = 'mindsdb'.  
+Therefore, to create project, all these requests are the same:
+
+```sql
+CREATE DATABASE db;
+CREATE DATABASE db ENGINE 'mindsdb';
+CREATE DATABASE db ENGINE = 'mindsdb';
+CREATE DATABASE db WITH ENGINE 'mindsdb';
+CREATE DATABASE db WITH ENGINE = 'mindsdb';
 ```
 
 On execution, we get:
@@ -36,6 +48,7 @@ Where:
 ## Example
 
 ### Connecting a Data Source
+
 Here is an example of how to connect to a MySQL database.
 
 ```sql
@@ -141,7 +154,7 @@ PARAMETERS={
   "user":"postgres",
   "port": 15093,
   "password": "password",
-  "host": "4.tcp.ngrok.io", 
+  "host": "4.tcp.ngrok.io",
   "database": "postgres"
 };
 ```
@@ -157,7 +170,7 @@ DROP DATABASE psql_datasource;
 After dropping the data source and reconnecting your local database, you can use the predictors that you trained using the previously connected data source. However, if you have to `RETRAIN` your predictors, please ensure the database connection has the same name you used when creating the predictor to avoid failing to retrain.
 
 !!! info "Work in progress"
-    Please note that this feature is a beta version. If you have questions about the supported data sources or experience some issues, [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or open a [GitHub issue](https://github.com/mindsdb/mindsdb/issues).
+Please note that this feature is a beta version. If you have questions about the supported data sources or experience some issues, [reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or open a [GitHub issue](https://github.com/mindsdb/mindsdb/issues).
 
 ## Supported Integrations
 
@@ -1390,7 +1403,7 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
     };
     ```
 
-(*): this parameter is experimental and might be changed or removed in future release
+(\*): this parameter is experimental and might be changed or removed in future release
 
 === "Example"
 
@@ -1406,6 +1419,7 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
       "schema": "test"
     };
     ```
+
 or
 
     ```sql
@@ -1460,34 +1474,34 @@ or
 
 === "Template"
 
-  ```sql
-    CREATE DATABASE sap_hana_trial --- display name for the database
-    WITH ENGINE = 'hana',   --- name of the MindsDB handler
-    PARAMETERS = {
-      "user": "",   --- user name
-      "password": "", --- password
-      "host": "",  --- host name or IP address
-      "port": "", --- port used to make TCP/IP connection
-      "schema": "", --- name of database schema
-      "encrypt":   -- set to true or false
-  };
-  ```
+```sql
+  CREATE DATABASE sap_hana_trial --- display name for the database
+  WITH ENGINE = 'hana',   --- name of the MindsDB handler
+  PARAMETERS = {
+    "user": "",   --- user name
+    "password": "", --- password
+    "host": "",  --- host name or IP address
+    "port": "", --- port used to make TCP/IP connection
+    "schema": "", --- name of database schema
+    "encrypt":   -- set to true or false
+};
+```
 
 === "Example"
 
-  ```sql
-    CREATE DATABASE sap_hana_trial
-    WITH ENGINE = 'hana',
-    PARAMETERS = {
-      "user": "DBADMIN",
-      "password": "password",
-      "host": "<uuid>.hana.trial-us10.hanacloud.ondemand.com",
-      "port": "443", 
-      "schema": "MINDSDB",
-      "encrypt": true
-  };
-  ```
-    
+```sql
+  CREATE DATABASE sap_hana_trial
+  WITH ENGINE = 'hana',
+  PARAMETERS = {
+    "user": "DBADMIN",
+    "password": "password",
+    "host": "<uuid>.hana.trial-us10.hanacloud.ondemand.com",
+    "port": "443",
+    "schema": "MINDSDB",
+    "encrypt": true
+};
+```
+
 ## Connecting Through Ngrok
 
 When connecting your local database to MindsDB Cloud, you need to expose the local database server to be publicly accessible using [Ngrok Tunnel](https://ngrok.com). The free tier offers all you need to get started.
@@ -1509,6 +1523,7 @@ ngrok tcp 5431  # assuming you are running a db on the port 5432, for example, p
 ```
 
 At this point you will see a line saying something like this:
+
 ```bash
 Session Status                online
 Account                       myaccount (Plan: Free)
@@ -1531,7 +1546,7 @@ PARAMETERS={
   "user":"postgres",
   "port": 15093,
   "password": "Mimzo3i-mxt@9CpThpBj",
-  "host": "4.tcp.ngrok.io", 
+  "host": "4.tcp.ngrok.io",
   "database": "postgres"
 };
 ```

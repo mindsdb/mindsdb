@@ -1,7 +1,3 @@
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast import Identifier
-from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.interfaces.storage.db import session, Integration, View
 
@@ -30,19 +26,6 @@ class ViewController:
                     break
             if integration_id is None:
                 raise Exception(f"Can't find integration with name: {integration_name}")
-
-            # inject integration into sql
-            query_ast = parse_sql(query, dialect='mindsdb')
-
-            def inject_integration(node, is_table, **kwargs):
-                if is_table and isinstance(node, Identifier):
-                    if not node.parts[0] == integration_name:
-                        node.parts.insert(0, integration_name)
-
-            query_traversal(query_ast, inject_integration)
-
-            render = SqlalchemyRender('mysql')
-            query = render.get_string(query_ast, with_failback=False)
 
         view_record = View(name=name, company_id=company_id, query=query)
         session.add(view_record)

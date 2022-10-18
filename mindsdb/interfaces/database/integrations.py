@@ -21,6 +21,7 @@ from mindsdb.utilities.log import log
 from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
+
 class IntegrationController:
     @staticmethod
     def _is_not_empty_str(s):
@@ -97,9 +98,8 @@ class IntegrationController:
         if name in self.handler_modules:
             handler = self.handler_modules[name]
 
-            if getattr(handler, 'permanent', False) == True:
+            if getattr(handler, 'permanent', False) is True:
                 raise Exception('Unable to drop: is permanent integration')
-
 
         integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
 

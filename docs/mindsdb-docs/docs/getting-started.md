@@ -12,11 +12,11 @@ To try out MindsDB right away without bringing in your own data or models, follo
 
     === "Docker"
 
-        To get started with a Docker installation, follow the MindsDB installation instructions using [Docker](/deployment/docker).
+        To get started with a Docker installation, follow the MindsDB installation instructions using [Docker](/setup/self-hosted/docker).
 
     === "pip"
 
-        You can also install MindsDB from source using [pip](setup/self-hosted/pip/source/).
+        You can also install MindsDB from source using [pip](/setup/self-hosted/pip/source/).
 
 1. Open your SQL client and connect to MindsDB.
 

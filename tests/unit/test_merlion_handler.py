@@ -14,16 +14,34 @@ from mindsdb.integrations.handlers.merlion_handler.adapters import DefaultForeca
 # from mindsdb.integrations.handlers.merlion_handler.adapters import DefaultDetectorAdapter
 from .executor_test_base import BaseExecutorTest
 
+import pandas as pd
+from pathlib import Path
+import requests
+
 
 class TestMerlion(BaseExecutorTest):
-    def get_m4_abs_path(self):
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        return os.path.join(dir_path, "m4_test_merlion.csv")
+    def get_m4_df(self) -> pd.DataFrame:
+        train_csv = "https://raw.githubusercontent.com/Mcompetitions/M4-methods/master/Dataset/Train/Hourly-train.csv"
+        test_csv = "https://raw.githubusercontent.com/Mcompetitions/M4-methods/master/Dataset/Test/Hourly-test.csv"
+        train_set = pd.read_csv(train_csv).set_index("V1")
+        test_set = pd.read_csv(test_csv).set_index("V1")
+        ntrain = train_set.iloc[0, :].dropna().shape[0]
+        sequence = pd.concat((train_set.iloc[0, :].dropna(), test_set.iloc[0, :].dropna()))
+        # raw data do not follow consistent timestamp format
+        sequence.index = pd.date_range(start=0, periods=sequence.shape[0], freq="H")
+        sequence = sequence.to_frame()
+        metadata = pd.DataFrame({"trainval": sequence.index < sequence.index[ntrain]}, index=sequence.index)
+        train = sequence[metadata.trainval]
+        test = sequence[~metadata.trainval]
+        train["train"] = 1
+        test["train"] = 0
+        df = pd.concat([train, test], axis=0)
+        return df
 
-    def get_nba_abs_path(self):
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        return os.path.join(dir_path, "nba_test_merlion.csv")
-
+    def get_nab_df(self) -> pd.DataFrame:
+        df = pd.read_csv("https://raw.githubusercontent.com/numenta/NAB/master/data/realKnownCause/nyc_taxi.csv")
+        df.rename(columns={"timestamp": "t", "value": "val"}, inplace=True)
+        return df
 
     def run_mindsdb_sql(self, sql):
         return self.command_executor.execute_command(
@@ -31,7 +49,7 @@ class TestMerlion(BaseExecutorTest):
         )
 
     def test_merlion_forecaster(self):
-        df = pd.read_csv(self.get_m4_abs_path())
+        df = self.get_m4_df()
         df.index = pd.to_datetime(df["t"])
         df.drop(columns=["t"], inplace=True)
         df_train = df[df["train"] == 1][["H1"]]
@@ -68,7 +86,7 @@ class TestMerlion(BaseExecutorTest):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_merlion_forecaster_sql(self, mock_handler):
         # prepare data
-        df = pd.read_csv(self.get_m4_abs_path())
+        df = self.get_m4_df()
         df["t"] = pd.to_datetime(df["t"])
         self.set_handler(mock_handler, name='pg', tables={'m4': df})
         # test default
@@ -104,7 +122,7 @@ class TestMerlion(BaseExecutorTest):
         assert ret.error_code is None, "forecast failed: " + model_name
 
     def test_merlion_detector(self):
-        df = pd.read_csv(self.get_nba_abs_path())
+        df = self.get_nab_df()
         df.index = pd.to_datetime(df["t"])
         df.drop(columns=["t"], inplace=True)
         df_train = df[df["train"] == 1][["val"]]
@@ -141,7 +159,7 @@ class TestMerlion(BaseExecutorTest):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_merlion_detector_sql(self, mock_handler):
         # prepare data
-        df = pd.read_csv(self.get_nba_abs_path())
+        df = self.get_nab_df()
         df["t"] = pd.to_datetime(df["t"])
         self.set_handler(mock_handler, name='pg', tables={'nba': df})
 

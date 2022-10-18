@@ -3,16 +3,12 @@ from merlion.models.anomaly.isolation_forest import IsolationForestConfig, Isola
 from merlion.models.anomaly.windstats import WindStatsConfig, WindStats
 from merlion.models.automl.autoprophet import AutoProphetConfig, AutoProphet
 from merlion.models.automl.autosarima import AutoSarimaConfig, AutoSarima
-from merlion.models.forecast.arima import ArimaConfig, Arima
-from merlion.models.forecast.prophet import ProphetConfig, Prophet
 from merlion.models.forecast.smoother import MSESConfig, MSES
 from merlion.post_process.threshold import AggregateAlarms
-from merlion.transform.base import Identity
 from merlion.transform.moving_average import DifferenceTransform
 from scipy.stats import norm
 
 from merlion.models.defaults import DefaultDetectorConfig, DefaultDetector, DefaultForecaster, DefaultForecasterConfig
-from merlion.models.factory import ModelFactory
 from merlion.utils import TimeSeries
 
 from enum import Enum
@@ -86,6 +82,9 @@ class BaseMerlionForecastAdapter:
 
 
 class DefaultForecasterAdapter(BaseMerlionForecastAdapter):
+    # DefaultForecaster
+    # reference: https://opensource.salesforce.com/Merlion/latest/merlion.models.html#
+    #               merlion.models.defaults.DefaultForecaster
     def __init__(self, **kwargs):
         super(DefaultForecasterAdapter, self).__init__(**kwargs)
         self.model = DefaultForecaster(DefaultForecasterConfig(max_forecast_steps=self.max_forecast_steps,
@@ -93,6 +92,9 @@ class DefaultForecasterAdapter(BaseMerlionForecastAdapter):
 
 
 class SarimaForecasterAdapter(BaseMerlionForecastAdapter):
+    # AutoSarima
+    # reference: https://opensource.salesforce.com/Merlion/latest/merlion.models.automl.html#
+    #               module-merlion.models.automl.autosarima
     def __init__(self, **kwargs):
         super(SarimaForecasterAdapter, self).__init__(**kwargs)
         config = AutoSarimaConfig(auto_pqPQ=True, auto_d=True, auto_D=True, auto_seasonality=True,
@@ -101,12 +103,18 @@ class SarimaForecasterAdapter(BaseMerlionForecastAdapter):
 
 
 class ProphetForecasterAdapter(BaseMerlionForecastAdapter):
+    # AutoProphet
+    # reference: https://opensource.salesforce.com/Merlion/latest/merlion.models.automl.html#
+    #               module-merlion.models.automl.autoprophet
     def __init__(self, **kwargs):
         super(ProphetForecasterAdapter, self).__init__(**kwargs)
         self.model = AutoProphet(AutoProphetConfig(max_forecast_steps=self.max_forecast_steps))
 
 
 class MSESForecasterAdapter(BaseMerlionForecastAdapter):
+    # MSES
+    # reference: https://opensource.salesforce.com/Merlion/latest/merlion.models.forecast.html#
+    #               merlion.models.forecast.smoother.MSES
     def __init__(self, **kwargs):
         super(MSESForecasterAdapter, self).__init__(**kwargs)
         self.model = MSES(MSESConfig(max_forecast_steps=self.max_forecast_steps,
@@ -137,18 +145,27 @@ class BaseMerlineDetectorAdapter(BaseMerlionForecastAdapter):
 
 
 class DefaultDetectorAdapter(BaseMerlineDetectorAdapter):
+    # DefaultDetector
+    # reference: https://opensource.salesforce.com/Merlion/latest/merlion.models.html#
+    #               merlion.models.defaults.DefaultDetector
     def __init__(self, **kwargs):
         super(DefaultDetectorAdapter, self).__init__(**kwargs)
         self.model = DefaultDetector(DefaultDetectorConfig())
 
 
 class IsolationForestDetectorAdapter(BaseMerlineDetectorAdapter):
+    # IsolationForest
+    # reference: https://opensource.salesforce.com/Merlion/latest/merlion.models.anomaly.html#
+    #               merlion.models.anomaly.isolation_forest.IsolationForest
     def __init__(self, **kwargs):
         super(IsolationForestDetectorAdapter, self).__init__(**kwargs)
         self.model = IsolationForest(IsolationForestConfig())
 
 
 class WindStatsDetectorAdapter(BaseMerlineDetectorAdapter):
+    # WindStats
+    # reference: https://opensource.salesforce.com/Merlion/latest/merlion.models.anomaly.html#
+    #               merlion.models.anomaly.windstats.WindStats
     def __init__(self, **kwargs):
         super(WindStatsDetectorAdapter, self).__init__(**kwargs)
         config = WindStatsConfig(wind_sz=self.wind_sz, threshold=AggregateAlarms(alm_threshold=self.alm_threshold))
@@ -156,6 +173,9 @@ class WindStatsDetectorAdapter(BaseMerlineDetectorAdapter):
 
 
 class ProphetDetectorAdapter(BaseMerlineDetectorAdapter):
+    # ProphetDetector
+    # reference: https://opensource.salesforce.com/Merlion/latest/merlion.models.anomaly.forecast_based.html#
+    #               merlion.models.anomaly.forecast_based.prophet.ProphetDetector
     def __init__(self, **kwargs):
         super(ProphetDetectorAdapter, self).__init__(**kwargs)
         config = ProphetDetectorConfig(transform=DifferenceTransform())

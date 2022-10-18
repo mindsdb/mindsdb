@@ -55,6 +55,11 @@ class SessionController():
             company_id=company_id
         )
 
+        self.database_controller = WithKWArgsWrapper(
+            server.original_database_controller,
+            company_id=company_id
+        )
+
         self.datahub = init_datahub(self)
 
         self.prepared_stmts = {}

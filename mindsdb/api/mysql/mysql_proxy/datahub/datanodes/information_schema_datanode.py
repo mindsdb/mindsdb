@@ -214,21 +214,12 @@ class InformationSchemaDataNode(DataNode):
 
     def _get_schemata(self, query: ASTNode = None):
         columns = self.information_schema['SCHEMATA']
+
+        databases_meta = self.session.database_controller.get_list()
         data = [
-            ['def', 'information_schema', 'utf8', 'utf8_general_ci', None]
+            ['def', x['name'], 'utf8mb4', 'utf8mb4_0900_ai_ci', None]
+            for x in databases_meta
         ]
-
-        # permanent databases
-        # data.append(['def', 'mindsdb', 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
-
-        # projects
-        projects = self.project_controller.get_list()
-        for project in projects:
-            data.append(['def', project.name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
-
-        integration_names = self.integration_controller.get_all().keys()
-        for database_name in integration_names:
-            data.append(['def', database_name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
 
         df = pd.DataFrame(data, columns=columns)
         return df

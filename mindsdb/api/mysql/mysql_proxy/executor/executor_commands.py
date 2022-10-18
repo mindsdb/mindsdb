@@ -832,13 +832,16 @@ class ExecuteCommands:
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     def answer_create_predictor(self, statement):
-        ml_integration_name = self.session.database
+        integration_name = self.session.database
         if len(statement.name.parts) == 2:
-            ml_integration_name = statement.name.parts[0]
+            integration_name = statement.name.parts[0]
             statement.name.parts = [statement.name.parts[-1]]
-        ml_integration_name = ml_integration_name.lower()
-        if ml_integration_name == 'mindsdb':
-            ml_integration_name = 'lightwood'
+        integration_name = integration_name.lower()
+
+        ml_integration_name = 'lightwood'
+        if statement.using is not None and statement.using.get('engine') is not None:
+            using = {k.lower(): v for k, v in statement.using.items()}
+            ml_integration_name = using.get('engine', ml_integration_name)
 
         ml_handler = self.session.integration_controller.get_handler(ml_integration_name)
 

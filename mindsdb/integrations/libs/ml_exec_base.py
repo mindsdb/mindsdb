@@ -204,7 +204,7 @@ class BaseMLEngineExec:
 
         if type(statement) == Show:
             if statement.category.lower() == 'tables':
-               return self.get_tables()
+                return self.get_tables()
             else:
                 response = Response(
                     RESPONSE_TYPE.ERROR,

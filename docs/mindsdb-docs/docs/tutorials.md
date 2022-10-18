@@ -1,5 +1,6 @@
 # Community Tutorials
 
+* [Predicting Logistics Quality using MindsDB](https://dev.to/armanchand/predicting-logistics-quality-using-mindsdb-2n9d) by [Arman Chand](https://dev.to/armanchand)
 * [How to create a free account on MindsDB Cloud](https://youtu.be/ciBtpqrlbhI) by [Anamika](https://github.com/noviicee)
 * [How to create a free account on MindsDB Cloud](https://youtu.be/3bGJP6-s8p4) by [MichaelLantz](https://github.com/MichaelLantz)
 * [Predict Wine Quality using MindsDB](https://dev.to/rutamhere/predict-wine-quality-using-mindsdb-1521) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)

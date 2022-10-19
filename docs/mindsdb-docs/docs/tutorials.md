@@ -20,6 +20,7 @@
 * [How To Visualize MindsDB Predictions with Tableau](https://dev.to/ephraimx/how-to-visualize-mindsdb-predictions-with-tableau-2bpd) by [Ephraimx](https://dev.to/ephraimx)
 * [Predicting Supermarket Future Sales Using Machine Learning with MindsDB](https://dev.to/ephraimx/predicting-future-sales-using-machine-learning-with-mindsdb-3p70) by [Ephraimx](https://dev.to/ephraimx)
 * [Predicting Home Rental Prices with MindsDB in Python](https://curiousprogrammer.hashnode.dev/predicting-home-rental-prices-with-mindsdb-in-python) by [Temidayo](https://hashnode.com/@Temicoder)
+* [MindsDB: In-Database Machine Learning](https://morioh.com/p/d37812f13228) by [Katrine Gorczany](https://morioh.com/p/d37812f13228)
 * [Easy machine learning with MindsDB](https://medium.com/codesight/easy-machine-learning-with-mindsdb-664e27c974f9) by [Liron Navon](https://codesight.medium.com/)
 * [MindsDB: Your Introduction to Creating Machine Learning Predictive Models](https://dev.to/chandrevdw31/mindsdb-your-introduction-to-creating-machine-learning-predictive-models-12d3) by [Chandre Van Der Westhuizen](https://github.com/chandrevdw31)
 * [Self-Service Machine Learning with Intelligent Databases](https://medium.com/mindsdb/self-service-machine-learning-with-intelligent-databases-ea628aa85f1e) by [MindsDB Team](https://medium.com/@mindsdbteam)

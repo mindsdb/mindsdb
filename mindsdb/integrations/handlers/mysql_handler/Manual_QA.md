@@ -7,26 +7,40 @@
 **1. Testing CREATE DATABASE**
 
 ```
-COMMAND THAT YOU RAN TO CREATE DATABASE.
+CREATE DATABASE example_db
+WITH ENGINE = "mysql",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+    };
 ```
 
-![CREATE_DATABASE](Image URL of the screenshot)
+![CREATE_DATABASE](https://ibb.co/pb5CQvG)
 
 **2. Testing CREATE PREDICTOR**
 
 ```
-COMMAND THAT YOU RAN TO CREATE PREDICTOR.
+CREATE PREDICTOR 
+  mindsdb.home_rentals_model
+FROM example_db
+  (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price;
 ```
 
-![CREATE_PREDICTOR](Image URL of the screenshot)
+![CREATE_PREDICTOR](https://ibb.co/p30m97k)
 
 **3. Testing SELECT FROM PREDICTOR**
 
 ```
-COMMAND THAT YOU RAN TO DO A SELECT FROM.
+SELECT *
+FROM mindsdb.predictors
+WHERE name='home_rentals_model';
 ```
 
-![SELECT_FROM](Image URL of the screenshot)
+![SELECT_FROM](https://ibb.co/qx5mRHJ)
 
 ### Results
 

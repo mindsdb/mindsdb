@@ -7,26 +7,36 @@
 **1. Testing CREATE DATABASE**
 
 ```
-COMMAND THAT YOU RAN TO CREATE DATABASE.
+CREATE DATABASE access_datasource       --- display name for the database
+WITH ENGINE = 'access',                 --- name of the MindsDB handler
+PARAMETERS = {
+  "db_file": "teste.accdb"                        --- path to the database file to be used
+};
 ```
 
-![CREATE_DATABASE](Image URL of the screenshot)
+![CREATE_DATABASE](https://ibb.co/09MGyXQ)
 
 **2. Testing CREATE PREDICTOR**
 
 ```
-COMMAND THAT YOU RAN TO CREATE PREDICTOR.
+CREATE PREDICTOR 
+  mindsdb.home_rentals_model_access
+FROM access_datasource
+  (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price;
 ```
 
-![CREATE_PREDICTOR](Image URL of the screenshot)
+![CREATE_PREDICTOR](https://ibb.co/ZL72Tvh)
 
 **3. Testing SELECT FROM PREDICTOR**
 
 ```
-COMMAND THAT YOU RAN TO DO A SELECT FROM.
+SELECT *
+FROM mindsdb.predictors
+WHERE name='home_rentals_model_access';
 ```
 
-![SELECT_FROM](Image URL of the screenshot)
+![SELECT_FROM](https://ibb.co/94zf2qm)
 
 ### Results
 

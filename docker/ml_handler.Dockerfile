@@ -7,9 +7,10 @@ RUN pip3 install --upgrade pip
 WORKDIR /
 
 # Install our reqs
-COPY mindsdb/integrations/handlers_wrapper/requirements.txt /mindsdb/
-# RUN pip3 install -r /mindsdb/handlers_requirements.txt
-RUN pip3 install -r /mindsdb/requirements.txt
+COPY mindsdb/integrations/handlers_wrapper/common_requirements.txt /mindsdb/
+COPY mindsdb/integrations/handlers_wrapper/huggingface_requirements.txt /mindsdb/
+RUN pip3 install -r /mindsdb/common_requirements.txt
+RUN pip3 install -r /mindsdb/huggingface_requirements.txt
 # Install our app
 COPY ./mindsdb /mindsdb/mindsdb
 

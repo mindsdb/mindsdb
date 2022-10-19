@@ -11,12 +11,12 @@ The MindsDB SQL API supports creating connections to integrations by passing the
 Let's review the syntax for the `#!sql CREATE DATABASE` command.
 
 ```sql
-CREATE DATABASE [datasource_name]
-WITH ENGINE=[engine_string],
-PARAMETERS={
+CREATE DATABASE datasource_name
+[WITH] [ENGINE [=] engine_name] [,
+PARAMETERS [=] {
   "key":"value",
   ...
-};
+}];
 ```
 
 On execution, we get:
@@ -32,6 +32,17 @@ Where:
 | `[datasource_name]` | Identifier for the data source to be created.                                            |
 | `[engine_string]`   | Engine to be selected depending on the database connection.                              |
 | `PARAMETERS`        | `#!json {"key":"value"}` object with the connection parameters specific for each engine. |
+
+!!! note "SQL Commands Resulting in the Same Output"
+    Please note that the keywords/statements enclosed within square brackets are optional. Also, by default, the engine is `mindsdb` if not provided otherwise. That yields the following SQL commands to result in the same output.
+
+    ```sql
+    CREATE DATABASE db;
+    CREATE DATABASE db ENGINE 'mindsdb';
+    CREATE DATABASE db ENGINE = 'mindsdb';
+    CREATE DATABASE db WITH ENGINE 'mindsdb';
+    CREATE DATABASE db WITH ENGINE = 'mindsdb';
+    ```
 
 ## Example
 

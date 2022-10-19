@@ -52,11 +52,12 @@
 * [Using MindsDB to Predict Future Retail Sales](https://medium.com/@alissatroianonyc/using-mindsdb-to-predict-future-retail-sales-a300f63a086b) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Predicting the Rating of Cars using Mindsdb](https://atharva08.hashnode.dev/predicting-the-rating-of-cars-using-mindsdb) by [Atharva Shirdhankar](https://github.com/StarTrooper08)
 * [Predicting & Visualizing Hourly Electricity Demand in the US with MindsDB and Tableau](https://teslimodus.medium.com/predicting-visualizing-hourly-electricity-demand-in-the-us-with-mindsdb-and-tableau-126d1c74d860) by [Teslim Odumuyiwa](https://teslimodus.medium.com/)
-* [What is MindsDB and How to Get Started](https://youtu.be/zHReFuFUI34) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
-
+* [Bank Customer Churn Prediction using MindsDB](https://medium.com/@ayushsharmaa101/thanks-for-reading-dfec90467ddb) by [Ayush Sharma](https://github.com/ayushthe1)
 
 # Community Video Guides
 
+* [What is MindsDB and How to Get Started](https://youtu.be/zHReFuFUI34) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
+* [Setup MindsDB Free Cloud Account in 2 minutes](https://youtu.be/YuwRKZP51xg) by [@akhilcoder](https://www.youtube.com/@akhilcoder)
 * [What is MindsDB?](https://www.youtube.com/watch?v=i2tMs4MX_yw) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Tutorial: Create a Free MindsDB Cloud Account](https://youtu.be/yfM91zgGr3Q) by [Alissa Troiano](https://github.com/alissatroiano)
 * [How to create an account on MindsDB cloud](https://youtu.be/qFQ95MoSE94) by [HellFire](https://github.com/Artemis6969)

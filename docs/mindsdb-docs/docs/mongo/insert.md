@@ -17,13 +17,7 @@ db.predictors.insert({
      name: "predictor_name",
      predict: "target_column",
      connection: "integration_name",
-     select_data_query: {
-        "collection": "collection_name",
-        "call": [
-            "method": "find",
-            "args": []
-        ]
-     }
+     select_data_query: "db.collection_name.find({})"
 });
 ```
 
@@ -62,13 +56,7 @@ db.predictors.insert({
      name: "home_rentals_model",
      predict: "rental_price",
      connection: "mongo_integration",
-     select_data_query: {
-        "collection": "home_rentals",
-        "call": [{
-            "method": "find",
-            "args": []
-        }]
-     }
+     select_data_query: "db.home_rentals.find({})"
 });
 ```
 
@@ -98,6 +86,11 @@ On execution, we get:
     "predict" : "rental_price", 
     "update_status" : "up_to_date", 
     "mindsdb_version" : "22.8.3.1", 
+    "error" : null,
+    "select_data_query" : "", 
+    "training_options" : ""
+}
+```
     "error" : null,
     "select_data_query" : "", 
     "training_options" : ""

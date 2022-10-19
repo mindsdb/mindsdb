@@ -43,6 +43,10 @@ from mindsdb_sql.parser.ast import (
     DropView,
     Union,
 )
+from mindsdb_sql import parse_sql
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql.parser.ast import Identifier
+from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities import log
@@ -690,6 +694,8 @@ class ExecuteCommands:
             accept_connection_args = handler_meta.get('connection_args')
             if accept_connection_args is not None:
                 for arg_name, arg_value in connection_args.items():
+                    if arg_name == 'as_service':
+                        continue
                     if arg_name not in accept_connection_args:
                         raise SqlApiException(f"Unknown connection argument: {arg_name}")
                     arg_meta = accept_connection_args[arg_name]
@@ -775,12 +781,39 @@ class ExecuteCommands:
 
     def answer_create_view(self, statement):
         name = statement.name
-        query = str(statement.query_str)
-        datasource_name = None
-        if statement.from_table is not None:
-            datasource_name = statement.from_table.parts[-1]
 
-        self.session.view_interface.add(name, query, datasource_name)
+        query_str = statement.query_str
+        query = parse_sql(query_str, dialect='mindsdb')
+
+        integration_name = None
+        if statement.from_table is not None:
+            integration_name = statement.from_table.parts[-1]
+
+        if integration_name is not None:
+
+            # inject integration into sql
+            query = parse_sql(query_str, dialect='mindsdb')
+
+            def inject_integration(node, is_table, **kwargs):
+                if is_table and isinstance(node, Identifier):
+                    if not node.parts[0] == integration_name:
+                        node.parts.insert(0, integration_name)
+
+            query_traversal(query, inject_integration)
+
+            render = SqlalchemyRender('mysql')
+            query_str = render.get_string(query, with_failback=False)
+
+        if isinstance(query, Select):
+            # check create view sql
+            query.limit = Constant(1)
+
+            # exception should appear from SQLQuery
+            sqlquery = SQLQuery(query, session=self.session)
+            if sqlquery.fetch()['success'] != True:
+                raise SqlApiException('Wrong view query')
+
+        self.session.view_interface.add(name, query_str, integration_name)
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     def answer_drop_view(self, statement):

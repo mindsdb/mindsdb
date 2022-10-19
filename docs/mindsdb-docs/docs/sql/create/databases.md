@@ -11,12 +11,12 @@ The MindsDB SQL API supports creating connections to integrations by passing the
 Let's review the syntax for the `#!sql CREATE DATABASE` command.
 
 ```sql
-CREATE DATABASE [datasource_name]
-WITH ENGINE=[engine_string],
-PARAMETERS={
+CREATE DATABASE datasource_name
+[WITH] [ENGINE [=] engine_name] [,
+PARAMETERS [=] {
   "key":"value",
   ...
-};
+}];
 ```
 
 On execution, we get:
@@ -32,6 +32,17 @@ Where:
 | `[datasource_name]` | Identifier for the data source to be created.                                            |
 | `[engine_string]`   | Engine to be selected depending on the database connection.                              |
 | `PARAMETERS`        | `#!json {"key":"value"}` object with the connection parameters specific for each engine. |
+
+!!! note "SQL Commands Resulting in the Same Output"
+    Please note that the keywords/statements enclosed within square brackets are optional. Also, by default, the engine is `mindsdb` if not provided otherwise. That yields the following SQL commands to result in the same output.
+
+    ```sql
+    CREATE DATABASE db;
+    CREATE DATABASE db ENGINE 'mindsdb';
+    CREATE DATABASE db ENGINE = 'mindsdb';
+    CREATE DATABASE db WITH ENGINE 'mindsdb';
+    CREATE DATABASE db WITH ENGINE = 'mindsdb';
+    ```
 
 ## Example
 
@@ -1140,6 +1151,38 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
     };
     ```
 
+### SAP HANA
+
+=== "Template"
+
+    ```sql
+    CREATE DATABASE sap_hana_datasource           --- display name for the database
+    WITH ENGINE='hana',                           --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                                --- host name or IP address
+      "port": ,                                   --- port used to make TCP/IP connection
+      "user": " ",                                --- user
+      "password": " ",                            --- password
+      "schema": " ",                              --- database schema name (defaults to the current schema if left blank)
+      "encrypt":                                  --- whether connection is encrypted (required for cloud usage)
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE sap_hana_datasource
+    WITH ENGINE='hana',
+    PARAMETERS={
+      "host": "<uuid>.hana.trial-us10.hanacloud.ondemand.com",
+      "port": "443",
+      "user": "DBADMIN",
+      "password": "password",
+      "schema": "MINDSDB",
+      "encrypt": true
+    };
+    ```
+
 ### Scylla
 
 === "Template"
@@ -1424,6 +1467,38 @@ or
     };
     ```
 
+### SAP Hana Handler
+
+=== "Template"
+
+  ```sql
+    CREATE DATABASE sap_hana_trial --- display name for the database
+    WITH ENGINE = 'hana',   --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": "",   --- user name
+      "password": "", --- password
+      "host": "",  --- host name or IP address
+      "port": "", --- port used to make TCP/IP connection
+      "schema": "", --- name of database schema
+      "encrypt":   -- set to true or false
+  };
+  ```
+
+=== "Example"
+
+  ```sql
+    CREATE DATABASE sap_hana_trial
+    WITH ENGINE = 'hana',
+    PARAMETERS = {
+      "user": "DBADMIN",
+      "password": "password",
+      "host": "<uuid>.hana.trial-us10.hanacloud.ondemand.com",
+      "port": "443", 
+      "schema": "MINDSDB",
+      "encrypt": true
+  };
+  ```
+    
 ## Connecting Through Ngrok
 
 When connecting your local database to MindsDB Cloud, you need to expose the local database server to be publicly accessible using [Ngrok Tunnel](https://ngrok.com). The free tier offers all you need to get started.

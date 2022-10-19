@@ -56,6 +56,7 @@
 
 # Community Video Guides
 
+* [How to Create an Account on MindsDB under 2 minutes 👾](https://youtu.be/7T2aTzmSPBg) by [Chirag8023](https://twitter.com/Chirag8023)
 * [What is MindsDB and How to Get Started](https://youtu.be/zHReFuFUI34) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
 * [Setup MindsDB Free Cloud Account in 2 minutes](https://youtu.be/YuwRKZP51xg) by [@akhilcoder](https://www.youtube.com/@akhilcoder)
 * [What is MindsDB?](https://www.youtube.com/watch?v=i2tMs4MX_yw) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)

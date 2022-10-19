@@ -9,30 +9,31 @@
 ```
 --- After you fill all the mandatory fields run the query with the top button or shift + enter. 
     
-CREATE DATABASE postgres_test  --- display name for database. 
-WITH ENGINE = 'postgres',     --- name of the mindsdb handler 
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
 PARAMETERS = {
-    "user": "postgres",              --- Your database user.
-    "password": "changeme",          --- Your password.
-    "host": "192.168.1.163",              --- host, it can be an ip or an url. 
-    "port": "5432",           --- common port is 5432.
-    "database": "DIABETES_DATA"           --- The name of your database *optional.
-};
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+    };
 ```
 
-![CREATE_DATABASE](https://user-images.githubusercontent.com/241893/195336804-c14d06dd-ef40-4e2b-875b-2deb35fa64bb.png)
+![CREATE_DATABASE](https://ibb.co/wN5ZbDB)
 )
 
 **2. Testing CREATE PREDICTOR**
 
 ```
-CREATE PREDICTOR mindsdb.diabetes_predictor
-FROM postgres_test (
-    SELECT * FROM diabetes
-) PREDICT class;
+CREATE PREDICTOR 
+  mindsdb.home_rentals_model
+FROM example_db
+  (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price;
 ```
 
-![CREATE_PREDICTOR](https://user-images.githubusercontent.com/241893/195336892-0e60ed8a-c339-4b93-8bca-12c135609f06.png)
+![CREATE_PREDICTOR](https://ibb.co/tpp2pG3)
 )
 
 **3. Testing SELECT FROM PREDICTOR**
@@ -40,10 +41,10 @@ FROM postgres_test (
 ```
 SELECT *
 FROM mindsdb.predictors
-WHERE name='diabetes_predictor';
+WHERE name='home_rentals_model';
 ```
 
-![SELECT_FROM](https://user-images.githubusercontent.com/241893/195337026-7d80d631-bb8a-445b-bc68-5ee7788de2d9.png)
+![SELECT_FROM](https://ibb.co/TbZxb5w)
 )
 
 ### Results

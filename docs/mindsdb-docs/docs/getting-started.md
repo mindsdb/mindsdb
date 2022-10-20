@@ -12,16 +12,16 @@ To try out MindsDB right away without bringing in your own data or models, follo
 
     === "Docker"
 
-        To get started with a Docker installation, follow the MindsDB installation instructions using [Docker](/deployment/docker).
+        To get started with a Docker installation, follow the MindsDB installation instructions using [Docker](/setup/self-hosted/docker).
 
     === "pip"
 
-        You can also install MindsDB from source using [pip](setup/self-hosted/pip/source/).
+        You can also install MindsDB using pip on [Windows](setup/self-hosted/pip/source/windows/),[Linux](setup/self-hosted/pip/source/linux/),[MacOS](setup/self-hosted/pip/source/macos/)OR via a [Source code](setup/self-hosted/pip/source/source/).
 
 1. Open your SQL client and connect to MindsDB.
 
     !!! Tip ""
-        If you do not have a preferred SQL client yet, we recommend using the [MindsDB SQL Editor](https://cloud.mindsdb.com/editor) or [DBeaver Community Edition](https://dbeaver.io/download/). Follow [this guide](setup/cloud/) to set up your MindsDB SQL Editor. And [here](connect/dbeaver/), you'll find how to connect to MindsDB from DBeaver.
+        If you do not have a preferred SQL client yet, we recommend using the [MindsDB SQL Editor](https://cloud.mindsdb.com/editor) or [DBeaver Community Edition](https://dbeaver.io/download/). Follow [this guide](/setup/cloud/) to set up your MindsDB SQL Editor. And [here](/connect/dbeaver/), you'll find how to connect to MindsDB from DBeaver.
 
     === "MindsDB Cloud"
 

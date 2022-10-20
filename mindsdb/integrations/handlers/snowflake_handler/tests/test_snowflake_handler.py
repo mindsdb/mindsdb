@@ -28,7 +28,7 @@ class SnowflakeHandlerTest(unittest.TestCase):
         assert tbls.type is not RESPONSE_TYPE.ERROR
 
     def test_2_get_columns(self):
-        tbls = self.handler.get_tables()
+        tbls = self.handler.get_columns('home_rentals')
         assert tbls.type is not RESPONSE_TYPE.ERROR
 
     def test_3_select_native(self):

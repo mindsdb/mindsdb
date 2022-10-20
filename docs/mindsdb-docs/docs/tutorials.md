@@ -1,8 +1,7 @@
 # Community Tutorials
 
+* [Creating Views with MindsDB](https://dev.to/rutamhere/creating-views-with-mindsdb-1mnf) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Logistics Quality using MindsDB](https://dev.to/armanchand/predicting-logistics-quality-using-mindsdb-2n9d) by [Arman Chand](https://dev.to/armanchand)
-* [How to create a free account on MindsDB Cloud](https://youtu.be/ciBtpqrlbhI) by [Anamika](https://github.com/noviicee)
-* [How to create a free account on MindsDB Cloud](https://youtu.be/3bGJP6-s8p4) by [MichaelLantz](https://github.com/MichaelLantz)
 * [Predict Wine Quality using MindsDB](https://dev.to/rutamhere/predict-wine-quality-using-mindsdb-1521) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Employee Attrition & Performance using MindsDB Cloud](https://dev.to/armanchand/predicting-employee-attrition-performance-using-mindsdb-cloud-3cm6) by [Arman Chand](https://dev.to/armanchand)
 * [Deploying MindsDB on Oracle Cloud](https://community.ops.io/rutamhere/deploying-mindsdb-on-oracle-cloud-164d) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
@@ -38,7 +37,6 @@
 * [Forecast bitcoin price using MindsDB](https://medium.com/@kinkusuma/forecast-bitcoin-price-using-mindsdb-75f9f0500e86) by [Kinie K Kusuma](https://medium.com/@kinkusuma)
 * [Predicting car prices using MindsDB](https://medium.com/@pipboyguy/predicting-car-prices-using-mindsdb-c7dd51919b83) by [Marcel Coetzee](https://medium.com/@pipboyguy)
 * [Predict Gold Prices Using MindsDB](https://medium.com/@alissatroianonyc/predict-gold-prices-using-mindsdb-9da57d24ddab) by [Alissa Troiano](https://github.com/alissatroiano)
-* [Machine Learning in ClickHouse](https://youtu.be/lTswa9Vf8ig) by [Jorges Torres](https://medium.com/@torrmal)
 * [Predicting Type of Glass using MindsDB](https://medium.com/@ketansingh918/predicting-the-type-of-glass-using-mindsdb-9bbab203a214) by [Ketan Singh](https://medium.com/@ketansingh918)
 * [MindsDB: Predicting Supply Chain Demand with Machine Learning using SQL](https://www.devforce.one/18303637/mindsdb-predicting-supply-chain-demand-with-machine-learning-using-sql#/) by [Chandre Van Der Westhuizen](https://github.com/chandrevdw31)
 * [Predicting Poker Hand Strength with MindsDB](https://teslimodus.medium.com/predicting-poker-hand-strength-with-mindsdb-d541c73009a2) by [Teslim Odumuyiwa](https://medium.com/@teslimodus)
@@ -48,7 +46,6 @@
 * [Predicting Mobile Phone Price using MindsDB Cloud](https://dev.to/armanchand/predicting-mobile-phone-price-using-mindsdb-cloud-23d5) by [Arman Chand](https://dev.to/armanchand)
 * [Predicting Machine Failure Rates using MindsDB](https://community.ops.io/rutamhere/predicting-machine-failure-rates-using-mindsdb-4dkn) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Turbine Yield Energy using MindsDB](https://medium.com/@dhaneshvijay10/want-to-do-ml-without-knowing-ml-5f4934942019) by [DhaneshRagu](https://medium.com/@dhaneshvijay10)
-* [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI) by [Posterizedsoul](https://github.com/Posterizedsoul)
 * [Predicting Store Sales Data using MindsDB](https://dev.to/kevinheng/predict-store-sales-data-with-mindsdb-using-machine-learning-and-sql-2af8) by [Kevin Heng](https://github.com/HengKevin)
 * [Using MindsDB to Predict Future Retail Sales](https://medium.com/@alissatroianonyc/using-mindsdb-to-predict-future-retail-sales-a300f63a086b) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Predicting the Rating of Cars using Mindsdb](https://atharva08.hashnode.dev/predicting-the-rating-of-cars-using-mindsdb) by [Atharva Shirdhankar](https://github.com/StarTrooper08)
@@ -56,6 +53,7 @@
 * [Bank Customer Churn Prediction using MindsDB](https://medium.com/@ayushsharmaa101/thanks-for-reading-dfec90467ddb) by [Ayush Sharma](https://github.com/ayushthe1)
 
 # Community Video Guides
+
 
 * [How to deploy MindsDB on your local machine (Docker, PIP)](https://youtu.be/dIbs27Jg1FY) by [Munyoudoum Pav](https://github.com/munyoudoum)
 * [What are AI Tables and How to use MindsDB ?](https://youtu.be/Wqy_OcKdg-Y) by [@akhilcoder](https://twitter.com/akhilcoder)
@@ -65,4 +63,7 @@
 * [What is MindsDB?](https://www.youtube.com/watch?v=i2tMs4MX_yw) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Tutorial: Create a Free MindsDB Cloud Account](https://youtu.be/yfM91zgGr3Q) by [Alissa Troiano](https://github.com/alissatroiano)
 * [How to create an account on MindsDB cloud](https://youtu.be/qFQ95MoSE94) by [HellFire](https://github.com/Artemis6969)
+* [How to create a free account on MindsDB Cloud](https://youtu.be/ciBtpqrlbhI) by [Anamika](https://github.com/noviicee)
+* [How to create a free account on MindsDB Cloud](https://youtu.be/3bGJP6-s8p4) by [MichaelLantz](https://github.com/MichaelLantz)
+* [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI) by [Posterizedsoul](https://github.com/Posterizedsoul)
 

@@ -134,7 +134,7 @@ class ExecuteCommands:
             return self.answer_retrain_predictor(statement)
         elif type(statement) == Show:
             sql_category = statement.category.lower()
-            if sql_category == 'predictors':
+            if sql_category in ('predictors', 'models'):
                 where = statement.where
                 if statement.like is not None:
                     like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])

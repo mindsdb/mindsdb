@@ -10,6 +10,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.mindsdb_datanode import MindsDBDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import IntegrationDataNode
+from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.project_datanode import ProjectDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 
@@ -37,6 +38,7 @@ class InformationSchemaDataNode(DataNode):
         self.integration_controller = session.integration_controller
         self.view_interface = session.view_interface
         self.project_controller = session.project_controller
+        self.database_controller = session.database_controller
 
         self.persis_datanodes = {
             'mindsdb': MindsDBDataNode(
@@ -79,6 +81,31 @@ class InformationSchemaDataNode(DataNode):
         if name_lower in self.persis_datanodes:
             return self.persis_datanodes[name_lower]
 
+        existing_databases_meta = self.database_controller.get_dict()  # filter_type='project'
+        database_name = None
+        for key in existing_databases_meta:
+            if key.lower() == name_lower:
+                database_name = key
+                break
+
+        if database_name is None:
+            return None
+
+        database_meta = existing_databases_meta[database_name]
+        if database_meta['type'] == 'integration':
+            integration = self.integration_controller.get(name=database_name)
+            return IntegrationDataNode(
+                database_name,
+                ds_type=integration['engine'],
+                integration_controller=self.session.integration_controller
+            )
+        if database_meta['type'] == 'project':
+            project = self.database_controller.get_project(name=database_name)
+            return ProjectDataNode(
+
+            )
+        # ProjectDataNode()
+
         integration_names = self.integration_controller.get_all().keys()
         for integration_name in integration_names:
             if integration_name.lower() == name_lower:
@@ -111,6 +138,10 @@ class InformationSchemaDataNode(DataNode):
             for x in integration_names
             if x not in ('files', 'views')
         ]
+
+    def get_projects_names(self):
+        projects = self.database_controller.get_dict(filter_type='project')
+        return [x.lower() for x in projects]
 
     def _get_tables(self, query: ASTNode = None):
         columns = self.information_schema['TABLES']
@@ -159,6 +190,15 @@ class InformationSchemaDataNode(DataNode):
                     data.append(row.to_list())
             except Exception:
                 print(f"Can't get tables from '{ds_name}'")
+
+        for project_name in self.get_projects_names():
+            if target_table is not None and target_table != project_name:
+                continue
+            project_dn = self.get(project_name)
+            project_tables = project_dn.get_tables()
+            for row in project_tables:
+                row.TABLE_SCHEMA = project_name
+                data.append(row.to_list())
 
         df = pd.DataFrame(data, columns=columns)
         return df

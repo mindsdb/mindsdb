@@ -68,3 +68,26 @@ services:
       interval: 30s
       timeout: 4s
       retries: 100
+
+
+  hugginggace_ml_handler:
+    build:
+      context: ../
+      dockerfile: ./docker/ml_handler.Dockerfile
+    ports:
+      - 5001:5000
+    depends_on:
+      - mindsdb
+      - mysql_db
+
+    # temporary volume for debugging
+    volumes:
+      - type: bind
+        source: ../
+        target: /mindsdb
+
+    healthcheck:
+      test:  ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 4s
+      retries: 100

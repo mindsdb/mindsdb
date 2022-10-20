@@ -63,10 +63,13 @@ class MLHandlerWrapper(BaseMLWrapper):
 
     def _get_handler_class(self):
         common_data = self._get_handler_general_data()
+        log.info("%s: got common handler args from request - %s", self.__class__.__name__, common_data)
         handler_class = define_ml_handler(common_data["type"])
+        log.info("%s: handler class for '%s' type has defined - %s", self.__class__.__name__, common_data["type"], handler_class)
         return handler_class
 
     def _get_create_data(self) -> dict:
+        log.info("%s: getting training data from request", self.__class__.__name__)
         data = {"target": request.json.get("target"),
                 "args": request.json.get("args", None)}
         df = None
@@ -81,6 +84,7 @@ class MLHandlerWrapper(BaseMLWrapper):
         return data
 
     def _get_predict_data(self):
+        log.info("%s: getting predict data from request", self.__class__.__name__)
         df = None
         try:
             df = request.get_data()
@@ -129,9 +133,9 @@ class MLHandlerWrapper(BaseMLWrapper):
             predict_kwargs = self._get_predict_data()
             predictions = handler.predict(**predict_kwargs)
             result = Response(resp_type=RESPONSE_TYPE.OK,
-                              data_frame=predictions
-                              error_code=1,
-                              error_message=msg)
+                              data_frame=predictions,
+                              error_code=0,
+                              error_message=None)
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()

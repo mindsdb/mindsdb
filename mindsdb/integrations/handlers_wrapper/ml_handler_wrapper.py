@@ -87,9 +87,9 @@ class MLHandlerWrapper(BaseMLWrapper):
         log.info("%s: getting predict data from request", self.__class__.__name__)
         df = None
         try:
-            df = request.get_data()
-            df = json.loads(df)
-            df = read_json(df, orient="split")
+            df = request.json.get("df", None)
+            if df is not None:
+                df = read_json(df, orient="split")
         except Exception:
             log.error("%s: error getting predict dataframe from request", self.__class__.__name__)
         return {"df": df}

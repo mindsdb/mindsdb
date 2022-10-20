@@ -12,5 +12,5 @@ if __name__ == "__main__":
     app = MLHandlerWrapper(**kwargs)
     port = int(os.environ.get('PORT', 5001))
     host = os.environ.get('HOST', '0.0.0.0')
-    log.info("Running dbservice: host=%s, port=%s", host, port)
+    log.info("Running ML service: host=%s, port=%s", host, port)
     app.run(debug=True, host=host, port=port)

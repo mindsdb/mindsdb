@@ -51,23 +51,23 @@ services:
       retries: 100
 
 
-  mysql_db_handler:
-    build:
-      context: ../
-      dockerfile: ./docker/db_handler.Dockerfile
-    environment:
-      - 'PARAMS={"connection_data": {"host": "mysql_db", "port": "3306", "user": "root", "password": "supersecret", "database": "test", "ssl": false}, "name": "foo", "type": "mysql"}'
-    ports:
-      - 5000:5000
-    depends_on:
-      - mindsdb
-      - mysql_db
+   mysql_db_handler:
+     build:
+       context: ../
+       dockerfile: ./docker/db_handler.Dockerfile
+     environment:
+       - 'PARAMS={"connection_data": {"host": "mysql_db", "port": "3306", "user": "root", "password": "supersecret", "database": "test", "ssl": false}, "name": "foo", "type": "mysql"}'
+     ports:
+       - 5000:5000
+     depends_on:
+       - mindsdb
+       - mysql_db
 
-    healthcheck:
-      test:  ["CMD", "curl", "-f", "http://localhost:5000"]
-      interval: 30s
-      timeout: 4s
-      retries: 100
+     healthcheck:
+       test:  ["CMD", "curl", "-f", "http://localhost:5000"]
+       interval: 120s
+       timeout: 4s
+       retries: 100
 
 
   hugginggace_ml_handler:
@@ -78,14 +78,14 @@ services:
       - 5001:5000
     depends_on:
       - mindsdb
-      - mysql_db
-
-    # temporary volume for debugging
+        # - mysql_db
+    environment:
+      # have to share mindsdb database, because it doens't work without it
+      MINDSDB_STORAGE_DIR: "/mindsdb/var"
     volumes:
       - type: bind
         source: ../
         target: /mindsdb
-
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:5000"]
       interval: 30s

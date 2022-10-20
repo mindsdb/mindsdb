@@ -30,6 +30,9 @@ class MLClient(BaseClient):
         self.base_url = f"http://{host}:{port}"
         if not self.as_service:
             self.handler = handler_class(**kwargs)
+        self.model_info = {"company_id": kwargs.get("company_id", None),
+                           "predictor_id": kwargs.get("predictor_id", 0),
+                           "type": "huggingface"}
 
     def check_connection(self) -> StatusResponse:
         """
@@ -54,13 +57,14 @@ class MLClient(BaseClient):
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         if df is not None:
-            df = df.to_json(orient="split")
-        log.info("%s calling 'create': df(size) - %s, target - %s, args - %s",
+            df = df.to_json(orient="split", index=False)
+        log.info("%s calling 'create': df - %s, target - %s, args - %s",
                     self.__class__.__name__,
-                    df.size if df is not None else None,
+                    df,
                     target,
                     args)
         params = {"target": target, "args": args, "df": df}
+        params.update(self.model_info)
         r = self._do("/create", _type="post", json=params)
         r = self._convert_response(r.json())
         err = r.get("error_message", None)
@@ -77,21 +81,19 @@ class MLClient(BaseClient):
         Returns:
             DataFrame of prediction results
         """
+        log.info("PREDICT with dataframe - %s", df)
         if df is not None:
-            df = df.to_json(orient="split")
+            df = df.to_json(orient="split", index=False)
         params = {"df": df, "args": args}
-        log.info("%s: calling 'predict':\n df(size) - %s\nargs - %s\n",
+        params.update(self.model_info)
+        log.info("%s: calling 'predict':\n df - %s\nargs - %s\n",
                  self.__class__.__name__,
-                 df.size if df is not None else None,
+                 df,
+                 # df.size if df is not None else None,
                  args)
         r = self._do("/predict", json=params)
         r = self._convert_response(r.json())
-        # response = Response(data_frame=r.get("data_frame", None),
-        #                     resp_type=r.get("resp_type"),
-        #                     error_code=r.get("error_code", 0),
-        #                     error_message=r.get("error_message", None),
-        #                     query=r.get("query"))
-        log.info("%s: db service has replied. error_code - %s, err_msg",
+        log.info("%s: db service has replied. error_code - %s, err_msg - %s",
                     self.__class__.__name__,
                     r.get("error_code", 0),
                     r.get("error_message", None))

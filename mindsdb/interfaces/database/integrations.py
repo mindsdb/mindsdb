@@ -353,21 +353,20 @@ class IntegrationController:
         from mindsdb.integrations.libs.base import BaseMLEngine
         from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
-        klass = self.handler_modules[integration_engine].Handler
+        HandlerClass = self.handler_modules[integration_engine].Handler
 
-        if isinstance(klass, type) and issubclass(klass, BaseMLEngine):
-            # need to wrapp it
-            handler_ars['handler_class'] = klass
-            inst = BaseMLEngineExec(**handler_ars)
+        if isinstance(HandlerClass, type) and issubclass(HandlerClass, BaseMLEngine):
+            handler_ars['handler_class'] = HandlerClass
+            handler = BaseMLEngineExec(**handler_ars)
 
         else:
-            inst = klass(**handler_ars)
+            handler = HandlerClass(**handler_ars)
 
         if as_service:
             log.debug("%s get_handler: create a client to db service of %s type", self.__class__.__name__, handler_type)
             return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
 
-        return inst
+        return handler
 
     def reload_handler_module(self, handler_name):
         importlib.reload(self.handler_modules[handler_name])

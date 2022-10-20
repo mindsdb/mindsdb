@@ -833,9 +833,10 @@ class ExecuteCommands:
 
     def answer_create_predictor(self, statement):
         integration_name = self.session.database
-        if len(statement.name.parts) == 2:
+        if len(statement.name.parts) > 1:
             integration_name = statement.name.parts[0]
-            statement.name.parts = [statement.name.parts[-1]]
+        else:
+            statement.name.parts = [integration_name, statement.name.parts[-1]]
         integration_name = integration_name.lower()
 
         ml_integration_name = 'lightwood'

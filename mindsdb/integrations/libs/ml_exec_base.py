@@ -59,7 +59,7 @@ from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.functions import mark_process
 from mindsdb.integrations.utilities.utils import format_exception_error
-
+from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.storage.fs import ModelStorage, HandlerStorage
 
 import torch.multiprocessing as mp
@@ -77,12 +77,12 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
     try:
         module_name, class_name = class_path
         module = importlib.import_module(module_name)
-        klass = getattr(module, class_name)
+        HandlerClass = getattr(module, class_name)
 
         handlerStorage = HandlerStorage(company_id, integration_id)
         modelStorage = ModelStorage(company_id, predictor_id)
 
-        ml_handler = klass(
+        ml_handler = HandlerClass(
             engine_storage=handlerStorage,
             model_storage=modelStorage,
         )
@@ -102,21 +102,29 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
 
 
 @mark_process(name='predict')
-def predict_process(class_path, company_id, integration_id, predictor_id, df, res_queue=None):
+def predict_process(class_path, company_id, integration_id, predictor_id, df, res_queue=None, args: dict = {}):
 
     module_name, class_name = class_path
     module = importlib.import_module(module_name)
-    klass = getattr(module, class_name)
+    HandlerClass = getattr(module, class_name)
 
     handlerStorage = HandlerStorage(company_id, integration_id)
     modelStorage = ModelStorage(company_id, predictor_id)
 
-    ml_handler = klass(
+    ml_handler = HandlerClass(
         engine_storage=handlerStorage,
         model_storage=modelStorage,
     )
 
-    predictions = ml_handler.predict(df)
+    # FIXME
+    if class_name == 'LightwoodHandler':
+        predictor_record = db.Predictor.query.get(predictor_id)
+        args['code'] = predictor_record.code
+        args['target'] = predictor_record.to_predict[0]
+        args['dtype_dict'] = predictor_record.dtype_dict
+        args['learn_args'] = predictor_record.learn_args
+
+    predictions = ml_handler.predict(df, args)
 
     # mdb indexes
     if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
@@ -132,7 +140,6 @@ def predict_process(class_path, company_id, integration_id, predictor_id, df, re
 
 
 class BaseMLEngineExec:
-
     def __init__(self, name, **kwargs):
         """
         ML handler interface converter
@@ -148,6 +155,11 @@ class BaseMLEngineExec:
 
         self.model_controller = WithKWArgsWrapper(
             ModelController(),
+            company_id=self.company_id
+        )
+
+        self.database_controller = WithKWArgsWrapper(
+            DatabaseController(),
             company_id=self.company_id
         )
 
@@ -230,16 +242,30 @@ class BaseMLEngineExec:
 
     def learn(self, statement):
         """ Trains a model given some data-gathering SQL statement. """
-        model_name = statement.name.parts[-1]
+        project_name = statement.name.parts[0]
+        model_name = statement.name.parts[1]
 
-        data = self.get_tables().data_frame.to_dict(orient='records')
-        tables_names = [x['table_name'] for x in data]
+        existing_projects_meta = self.database_controller.get_dict(filter_type='project')
+        if project_name not in existing_projects_meta:
+            raise Exception(f"Project '{project_name}' does not exist.")
 
-        if model_name in tables_names:
+        project = self.database_controller.get_project(name=project_name)
+        project_tables = project.get_tables()
+        if model_name in project_tables:
             return Response(
                 RESPONSE_TYPE.ERROR,
-                error_message="Error: this model already exists!"
+                error_message=f"Error: model '{model_name}' already exists in project {project_name}!"
             )
+
+        # TODO
+        # data = self.get_tables().data_frame.to_dict(orient='records')
+        # tables_names = [x['table_name'] for x in data]
+
+        # if model_name in tables_names:
+        #     return Response(
+        #         RESPONSE_TYPE.ERROR,
+        #         error_message="Error: this model already exists!"
+        #     )
 
         target = statement.targets[0].parts[-1]
         training_data_df = pd.DataFrame()
@@ -284,6 +310,7 @@ class BaseMLEngineExec:
             to_predict=target,
             learn_args=problem_definition,
             data={'name': model_name},
+            project_id=project.id,
             training_data_columns_count=len(training_data_df.columns),
             training_data_rows_count=len(training_data_df),
             training_start_at=dt.datetime.now(),
@@ -327,9 +354,12 @@ class BaseMLEngineExec:
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
+        args = {
+            'pred_format': pred_format
+        }
+
         is_subprocess = False
         if is_subprocess:
-
             res_queue = ctx.SimpleQueue()
             p = HandlerProcess(
                 predict_process,
@@ -339,6 +369,7 @@ class BaseMLEngineExec:
                 predictor_record.id,
                 df,
                 res_queue,
+                args
             )
             p.start()
             p.join()
@@ -350,7 +381,9 @@ class BaseMLEngineExec:
                 self.company_id,
                 self.integration_id,
                 predictor_record.id,
-                df
+                df,
+                None,
+                args
             )
 
         after_predict_hook(

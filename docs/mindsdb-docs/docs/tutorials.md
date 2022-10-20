@@ -54,6 +54,8 @@
 
 # Community Video Guides
 
+
+* [How to deploy MindsDB on your local machine (Docker, PIP)](https://youtu.be/dIbs27Jg1FY) by [Munyoudoum Pav](https://github.com/munyoudoum)
 * [What are AI Tables and How to use MindsDB ?](https://youtu.be/Wqy_OcKdg-Y) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [How to Create an Account on MindsDB under 2 minutes 👾](https://youtu.be/7T2aTzmSPBg) by [Chirag8023](https://twitter.com/Chirag8023)
 * [What is MindsDB and How to Get Started](https://youtu.be/zHReFuFUI34) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
@@ -64,3 +66,4 @@
 * [How to create a free account on MindsDB Cloud](https://youtu.be/ciBtpqrlbhI) by [Anamika](https://github.com/noviicee)
 * [How to create a free account on MindsDB Cloud](https://youtu.be/3bGJP6-s8p4) by [MichaelLantz](https://github.com/MichaelLantz)
 * [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI) by [Posterizedsoul](https://github.com/Posterizedsoul)
+

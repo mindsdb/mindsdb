@@ -7,12 +7,14 @@ class VerticaHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host":'127.0.0.1',
-            "port":5433,
-            "user":'dbadmin',
-            "password":'',
-            "database":'VMart',
-            "schema_name":'public'
+            "connection_data": {
+                "host":'127.0.0.1',
+                "port":5433,
+                "user":'dbadmin',
+                "password":'',
+                "database":'VMart',
+                "schema_name":'public'
+            }
     
         }
         cls.handler = VerticaHandler('test_vertica_handler', cls.kwargs)

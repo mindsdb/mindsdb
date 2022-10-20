@@ -9,14 +9,16 @@ class TrinoHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": "qa.analytics.quantum.site.gs.com",
-            "port": "8090",
-            "user": "dqsvcuat",
-            "password": "",
-            "catalog": "gsam_dev2imddata_elastic",
-            "schema": "default",
-            "service_name": "HTTP/qa.analytics.quantum.site.gs.com",
-            "config_file_name": "test_trino_config.ini"
+            "connection_data": {
+                "host": "qa.analytics.quantum.site.gs.com",
+                "port": "8090",
+                "user": "dqsvcuat",
+                "password": "",
+                "catalog": "gsam_dev2imddata_elastic",
+                "schema": "default",
+                "service_name": "HTTP/qa.analytics.quantum.site.gs.com",
+                "config_file_name": "test_trino_config.ini"
+            }
         }
         cls.handler = TrinoHandler('test_trino_handler', **cls.kwargs)
 

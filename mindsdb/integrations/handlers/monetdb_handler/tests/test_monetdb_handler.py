@@ -7,11 +7,13 @@ class MonetDBHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": "127.0.0.1",
-            "port": 50000,
-            "user": "monetdb",
-            "password": "monetdb",
-            "database": "demo",
+            "connection_data": {
+                "host": "127.0.0.1",
+                "port": 50000,
+                "user": "monetdb",
+                "password": "monetdb",
+                "database": "demo",
+            }
             
         }
         cls.handler = MonetDBHandler('test_monet_handler', cls.kwargs)

@@ -7,11 +7,13 @@ class CockroachHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": "localhost",
-            "port": "5432",
-            "user": "mindsdb",
-            "password": "mindsdb",
-            "database": "postgres"
+            "connection_data": {
+                "host": "localhost",
+                "port": "5432",
+                "user": "mindsdb",
+                "password": "mindsdb",
+                "database": "postgres"
+            }
         }
         cls.handler = CockroachHandler('test_cockroach_handler', **cls.kwargs)
 

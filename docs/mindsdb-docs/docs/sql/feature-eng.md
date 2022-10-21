@@ -44,7 +44,11 @@ Once that's done, you can run the following commands with us.
 
 ### Let's Run the Codes
 
-Here, we go through the codes for the base table and enhanced base tables simulataneously.
+Here, we go through the codes for the base table and enhanced base tables simultaneously.
+
+#### Data Setup
+
+Let's prepare and verify the data. Here, we create the views and query them to ensure the input for the predictors is in order.
 
 === "Using the Base Table"
 
@@ -176,6 +180,11 @@ Here, we go through the codes for the base table and enhanced base tables simula
     +-----+----+-----+------------+-------+--------+---+----+----------+----+---------+-------------+-------------+
     ```
 
+!!! note "Dropping a View"
+    If you want to drop a view, run the command `DROP VIEW view_name;`.
+
+#### Creating Predictors
+
 Now, we create predictors based on the `example_db.demo_data.used_car_price` table and its extensions.
 
 === "Using the Base Table"
@@ -222,6 +231,11 @@ Now, we create predictors based on the `example_db.demo_data.used_car_price` tab
     ```sql
     Query OK, 0 rows affected (x.xxx sec)
     ```
+
+!!! note "Dropping a Predictor"
+    If you want to drop a predictor, run the command `DROP PREDICTOR predictor_name;`.
+
+#### Predictor Status and Accuracy
 
 Finally, let's check the predictor status whose value is `generating` at first, then `training`, and at last, `complete`.
 
@@ -279,11 +293,13 @@ Finally, let's check the predictor status whose value is `generating` at first, 
     +--------------------------------------+--------+--------+---------+-------------+---------------+------+---------------------------------------------------+----------------+
     ```
 
+### Accuracy Values Comparison
+
 Once the training process of all three predictors completes, we see the accuracy values.
 
 * For the base table, we get an accuracy value of `0.963`.
-* For the base table with two more data columns, we get an accuracy value of `0.965`. The value is increased, as expected.
-* For the base table with four more data columns, we get an accuracy value of `0.982`. The value is increased again, as expected.
+* For the base table with two more data columns, we get an accuracy value of `0.965`. The accuracy value increased, as expected.
+* For the base table with four more data columns, we get an accuracy value of `0.982`. The accuracy value increased again, as expected.
 
 ## Example: Joining Data Tables
 

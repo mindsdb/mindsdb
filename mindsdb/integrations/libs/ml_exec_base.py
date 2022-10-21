@@ -85,6 +85,7 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
             model_storage=modelStorage,
         )
         ml_handler.create(target, df=training_data_df, args=problem_definition)
+        predictor_record.status = PREDICTOR_STATUS.COMPLETE
 
     except Exception as e:
         print(traceback.format_exc())
@@ -95,7 +96,6 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
         db.session.commit()
 
     predictor_record.training_stop_at = dt.datetime.now()
-    predictor_record.status = PREDICTOR_STATUS.COMPLETE
     db.session.commit()
 
 

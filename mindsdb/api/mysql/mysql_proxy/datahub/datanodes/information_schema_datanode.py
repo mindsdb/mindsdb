@@ -31,6 +31,8 @@ class InformationSchemaDataNode(DataNode):
         'STATISTICS': ['TABLE_CATALOG', 'TABLE_SCHEMA', 'TABLE_NAME', 'NON_UNIQUE', 'INDEX_SCHEMA', 'INDEX_NAME', 'SEQ_IN_INDEX', 'COLUMN_NAME', 'COLLATION', 'CARDINALITY', 'SUB_PART', 'PACKED', 'NULLABLE', 'INDEX_TYPE', 'COMMENT', 'INDEX_COMMENT', 'IS_VISIBLE', 'EXPRESSION'],
         'CHARACTER_SETS': ['CHARACTER_SET_NAME', 'DEFAULT_COLLATE_NAME', 'DESCRIPTION', 'MAXLEN'],
         'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
+        # MindsDB specific:
+        'MODELS': ['NAME', 'PROJECT', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS']
     }
 
     def __init__(self, session):
@@ -64,6 +66,7 @@ class InformationSchemaDataNode(DataNode):
             'ENGINES': self._get_engines,
             'CHARACTER_SETS': self._get_charsets,
             'COLLATIONS': self._get_collations,
+            'MODELS': self._get_models
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -199,6 +202,27 @@ class InformationSchemaDataNode(DataNode):
             for row in project_tables:
                 row.TABLE_SCHEMA = project_name
                 data.append(row.to_list())
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_models(self, query: ASTNode = None):
+        columns = self.information_schema['MODELS']
+        data = []
+        for project_name in self.get_projects_names():
+            project = self.database_controller.get_project(name=project_name)
+            project_tables = project.get_tables()
+            for table_name, table_meta in project_tables.items():
+                if table_meta['type'] != 'model':
+                    continue
+                data.append([
+                    table_name, project_name, table_meta['status'], table_meta['accuracy'], table_meta['predict'],
+                    table_meta['update_status'], table_meta['mindsdb_version'], table_meta['error'],
+                    table_meta['select_data_query'], table_meta['training_options']
+                ])
+            # TODO optimise here
+            # if target_table is not None and target_table != project_name:
+            #     continue
 
         df = pd.DataFrame(data, columns=columns)
         return df

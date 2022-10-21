@@ -135,16 +135,24 @@ class ExecuteCommands:
         elif type(statement) == Show:
             sql_category = statement.category.lower()
             if sql_category in ('predictors', 'models'):
-                where = statement.where
+                where = BinaryOperation('=', args=[Constant(1), Constant(1)])
+                if statement.from_table is not None:
+                    where = BinaryOperation('and', args=[
+                        where,
+                        BinaryOperation('=', args=[
+                            Identifier('project'),
+                            Constant(statement.from_table)
+                        ])
+                    ])
                 if statement.like is not None:
                     like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
+                    where = BinaryOperation('and', args=[where, like])
+                if statement.where is not None:
+                    where = BinaryOperation('and', args=[statement.where, where])
+
                 new_statement = Select(
                     targets=[Star()],
-                    from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors']),
+                    from_table=Identifier(parts=['information_schema', 'models']),
                     where=where
                 )
                 query = SQLQuery(

@@ -5,7 +5,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 
 
 class DatabaseController:
-    def __init__(self, integration_controller=None, project_controller=None):
+    def __init__(self):
         self.integration_controller = IntegrationController()
         self.project_controller = ProjectController()
 

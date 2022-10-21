@@ -9,14 +9,16 @@ class TrinoHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": "qa.analytics.quantum.site.gs.com",
-            "port": "8090",
-            "user": "dqsvcuat",
-            "password": "",
-            "catalog": "gsam_dev2imddata_elastic",
-            "schema": "default",
-            "service_name": "HTTP/qa.analytics.quantum.site.gs.com",
-            "config_file_name": "test_trino_config.ini"
+            "connection_data": {
+                "host": "qa.analytics.quantum.site.gs.com",
+                "port": "8090",
+                "user": "dqsvcuat",
+                "password": "",
+                "catalog": "gsam_dev2imddata_elastic",
+                "schema": "default",
+                "service_name": "HTTP/qa.analytics.quantum.site.gs.com",
+                "config_file_name": "test_trino_config.ini"
+            }
         }
         cls.handler = TrinoHandler('test_trino_handler', **cls.kwargs)
 
@@ -35,14 +37,10 @@ class TrinoHandlerTest(unittest.TestCase):
         assert tables
 
     def test_3_describe_table(self):
-        described = self.handler.describe_table("axioma_att_2021-12")
+        described = self.handler.get_columns("axioma_att_2021-12")
         assert described['type'] is not RESPONSE_TYPE.ERROR
 
     # TODO: complete tests implementation
-    # def test_3_get_views(self):
-    #     views = self.handler.get_views()
-    #     assert views['type'] is not RESPONSE_TYPE.ERROR
-    #
     # def test_4_select_query(self):
     #     query = "SELECT * FROM data.test_mdb WHERE 'id'='1'"
     #     result = self.handler.query(query)

@@ -38,6 +38,8 @@ Select secure storage for the `aws_skysql_chain.pem` file that allows a working 
 
 To print the query template, select Add Data in either the top or side navigation and choose MariaDB SkySQL from the list. Fill in the values and run query to complete the setup.
 
+![type:video](https://youtube.com/embed/yG4qZBDu918)
+
 === "Template"
 
     ```sql

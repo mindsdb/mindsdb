@@ -38,6 +38,14 @@ def get_predictor_integration(record: db.Predictor) -> db.Integration:
     return integration_record
 
 
+def get_predictor_project(record: db.Predictor) -> db.Project:
+    project_record = (
+        db.session.query(db.Project)
+        .filter_by(id=record.project_id).first()
+    )
+    return project_record
+
+
 def get_model_records(company_id: int, integration_id=None, active: bool = True, deleted_at=null(),
                       ml_handler_name: str = None, **kwargs):
     if company_id is None:

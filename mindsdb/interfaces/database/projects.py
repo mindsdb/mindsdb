@@ -48,16 +48,37 @@ class Project:
         db.session.commit()
 
     def get_tables(self):
-        predictors_records = db.Predictor.query.filter_by(
+        records = db.session.query(db.Predictor, db.Integration).filter_by(
             project_id=self.id,
             deleted_at=sa.null(),
+            company_id=self.company_id,
             active=True
-        ).all()
+        ).join(db.Integration, db.Integration.id == db.Predictor.integration_id).all()
 
         return OrderedDict(
-            (x.name, {'type': 'model'})
-            for x in predictors_records
+            (
+                predictor_record.name,
+                {
+                    'type': 'model',
+                    'engine': integraion_record.engine,
+                    'engine_name': integraion_record.name
+                }
+            )
+            for predictor_record, integraion_record in records
         )
+
+    def get_columns(self, table_name: str):
+        # at the moment it works only for models
+        predictor_record = db.Predictor.query.filter_by(
+            company_id=self.company_id,
+            project_id=self.id,
+            name=table_name
+        ).first()
+        columns = []
+        if predictor_record is not None and isinstance(predictor_record.dtype_dict, dict):
+            columns = list(predictor_record.dtype_dict.keys())
+
+        return columns
 
 
 class ProjectController:

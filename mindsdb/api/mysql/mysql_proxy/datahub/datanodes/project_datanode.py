@@ -13,12 +13,9 @@ from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, 
 class ProjectDataNode(DataNode):
     type = 'project'
 
-    def __init__(self, project):
+    def __init__(self, project, integration_controller):
         self.project = project
-
-        # self.integration_name = integration_name
-        # self.integration_controller = integration_controller
-        # self.integration_handler = self.integration_controller.get_handler(self.integration_name)
+        self.integration_controller = integration_controller
 
     def get_type(self):
         return self.type
@@ -33,93 +30,18 @@ class ProjectDataNode(DataNode):
         tables = self.project.get_tables()
         return table_name in tables
 
-    def get_table_columns(self, tableName):
-        return []
+    def get_table_columns(self, table_name):
+        return self.project.get_columns(table_name)
 
-    # def create_table(self, table_name_parts, columns, data, is_replace=False, is_create=False):
-    #     # is_create - create table
-    #     # is_replace - drop table if exists
-    #     # is_create==False and is_replace==False: just insert
-
-    #     table_columns_meta = []
-    #     table_columns = []
-    #     for table in columns.tables():
-    #         for column in columns.table_columns(table):
-    #             column_type = None
-    #             for row in data:
-    #                 column_value = row[table][column]
-    #                 if isinstance(column_value, int):
-    #                     column_type = Integer
-    #                 elif isinstance(column_value, float):
-    #                     column_type = Float
-    #                 elif isinstance(column_value, str):
-    #                     column_type = Text
-    #             column_type = column_type or Text
-    #             table_columns.append(
-    #                 TableColumn(
-    #                     name=column[-1],
-    #                     type=column_type
-    #                 )
-    #             )
-    #             table_columns_meta.append({
-    #                 'table': table,
-    #                 'name': column,
-    #                 'type': column_type
-    #             })
-
-    #     if is_replace:
-    #         # drop
-    #         drop_ast = DropTables(
-    #             tables=[Identifier(parts=table_name_parts)],
-    #             if_exists=True
-    #         )
-    #         result = self.integration_handler.query(drop_ast)
-    #         if result.type == RESPONSE_TYPE.ERROR:
-    #             raise Exception(result.error_message)
-    #         is_create = True
-
-    #     if is_create:
-    #         create_table_ast = CreateTable(
-    #             name=Identifier(parts=table_name_parts),
-    #             columns=table_columns,
-    #             is_replace=True
-    #         )
-
-    #         result = self.integration_handler.query(create_table_ast)
-    #         if result.type == RESPONSE_TYPE.ERROR:
-    #             raise Exception(result.error_message)
-
-    #     insert_columns = [Identifier(parts=[x['name'][-1]]) for x in table_columns_meta]
-    #     formatted_data = []
-    #     for row in data:
-    #         new_row = []
-    #         for column_meta in table_columns_meta:
-    #             value = row[column_meta['table']][column_meta['name']]
-    #             python_type = str
-    #             if column_meta['type'] == Integer:
-    #                 python_type = int
-    #             elif column_meta['type'] == Float:
-    #                 python_type = float
-
-    #             try:
-    #                 value = python_type(value) if value is not None else value
-    #             except Exception:
-    #                 pass
-    #             new_row.append(value)
-    #         formatted_data.append(new_row)
-
-    #     insert_ast = Insert(
-    #         table=Identifier(parts=table_name_parts),
-    #         columns=insert_columns,
-    #         values=formatted_data
-    #     )
-
-    #     result = self.integration_handler.query(insert_ast)
-    #     if result.type == RESPONSE_TYPE.ERROR:
-    #         raise Exception(result.error_message)
+    def predict(self, model_name: str, data) -> list:
+        project_tables = self.project.get_tables()
+        predictor_table_meta = project_tables[model_name]
+        handler = self.integration_controller.get_handler(predictor_table_meta['engine_name'])
+        predictions = handler.predict(model_name, data)
+        return predictions
 
     def query(self, query=None, native_query=None):
-
+        # TODO
         if query is not None:
             result = self.integration_handler.query(query)
         else:

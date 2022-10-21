@@ -25,114 +25,98 @@ class ProjectDataNode(DataNode):
 
     def get_tables(self):
         tables = self.project.get_tables()
+        tables = [{'TABLE_NAME': x} for x in tables.keys()]
+        result = [TablesRow.from_dict(row) for row in tables]
+        return result
 
-        # KEEP HERE
-
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame.from_records(
-                result,
-                columns=[x[0] for x in cursor.description]
-            )
-        )
-
-        response = self.integration_handler.get_tables()
-        if response.type is RESPONSE_TYPE.TABLE:
-            result_dict = response.data_frame.to_dict(orient='records')
-            result = []
-            for row in result_dict:
-                result.append(TablesRow.from_dict(row))
-            return result
-        else:
-            raise Exception(f"Can't get tables: {response.error_message}")
-
-    def has_table(self, tableName):
-        return True
+    def has_table(self, table_name):
+        tables = self.project.get_tables()
+        return table_name in tables
 
     def get_table_columns(self, tableName):
         return []
 
-    def create_table(self, table_name_parts, columns, data, is_replace=False, is_create=False):
-        # is_create - create table
-        # is_replace - drop table if exists
-        # is_create==False and is_replace==False: just insert
+    # def create_table(self, table_name_parts, columns, data, is_replace=False, is_create=False):
+    #     # is_create - create table
+    #     # is_replace - drop table if exists
+    #     # is_create==False and is_replace==False: just insert
 
-        table_columns_meta = []
-        table_columns = []
-        for table in columns.tables():
-            for column in columns.table_columns(table):
-                column_type = None
-                for row in data:
-                    column_value = row[table][column]
-                    if isinstance(column_value, int):
-                        column_type = Integer
-                    elif isinstance(column_value, float):
-                        column_type = Float
-                    elif isinstance(column_value, str):
-                        column_type = Text
-                column_type = column_type or Text
-                table_columns.append(
-                    TableColumn(
-                        name=column[-1],
-                        type=column_type
-                    )
-                )
-                table_columns_meta.append({
-                    'table': table,
-                    'name': column,
-                    'type': column_type
-                })
+    #     table_columns_meta = []
+    #     table_columns = []
+    #     for table in columns.tables():
+    #         for column in columns.table_columns(table):
+    #             column_type = None
+    #             for row in data:
+    #                 column_value = row[table][column]
+    #                 if isinstance(column_value, int):
+    #                     column_type = Integer
+    #                 elif isinstance(column_value, float):
+    #                     column_type = Float
+    #                 elif isinstance(column_value, str):
+    #                     column_type = Text
+    #             column_type = column_type or Text
+    #             table_columns.append(
+    #                 TableColumn(
+    #                     name=column[-1],
+    #                     type=column_type
+    #                 )
+    #             )
+    #             table_columns_meta.append({
+    #                 'table': table,
+    #                 'name': column,
+    #                 'type': column_type
+    #             })
 
-        if is_replace:
-            # drop
-            drop_ast = DropTables(
-                tables=[Identifier(parts=table_name_parts)],
-                if_exists=True
-            )
-            result = self.integration_handler.query(drop_ast)
-            if result.type == RESPONSE_TYPE.ERROR:
-                raise Exception(result.error_message)
-            is_create = True
+    #     if is_replace:
+    #         # drop
+    #         drop_ast = DropTables(
+    #             tables=[Identifier(parts=table_name_parts)],
+    #             if_exists=True
+    #         )
+    #         result = self.integration_handler.query(drop_ast)
+    #         if result.type == RESPONSE_TYPE.ERROR:
+    #             raise Exception(result.error_message)
+    #         is_create = True
 
-        if is_create:
-            create_table_ast = CreateTable(
-                name=Identifier(parts=table_name_parts),
-                columns=table_columns,
-                is_replace=True
-            )
+    #     if is_create:
+    #         create_table_ast = CreateTable(
+    #             name=Identifier(parts=table_name_parts),
+    #             columns=table_columns,
+    #             is_replace=True
+    #         )
 
-            result = self.integration_handler.query(create_table_ast)
-            if result.type == RESPONSE_TYPE.ERROR:
-                raise Exception(result.error_message)
+    #         result = self.integration_handler.query(create_table_ast)
+    #         if result.type == RESPONSE_TYPE.ERROR:
+    #             raise Exception(result.error_message)
 
-        insert_columns = [Identifier(parts=[x['name'][-1]]) for x in table_columns_meta]
-        formatted_data = []
-        for row in data:
-            new_row = []
-            for column_meta in table_columns_meta:
-                value = row[column_meta['table']][column_meta['name']]
-                python_type = str
-                if column_meta['type'] == Integer:
-                    python_type = int
-                elif column_meta['type'] == Float:
-                    python_type = float
+    #     insert_columns = [Identifier(parts=[x['name'][-1]]) for x in table_columns_meta]
+    #     formatted_data = []
+    #     for row in data:
+    #         new_row = []
+    #         for column_meta in table_columns_meta:
+    #             value = row[column_meta['table']][column_meta['name']]
+    #             python_type = str
+    #             if column_meta['type'] == Integer:
+    #                 python_type = int
+    #             elif column_meta['type'] == Float:
+    #                 python_type = float
 
-                try:
-                    value = python_type(value) if value is not None else value
-                except Exception:
-                    pass
-                new_row.append(value)
-            formatted_data.append(new_row)
+    #             try:
+    #                 value = python_type(value) if value is not None else value
+    #             except Exception:
+    #                 pass
+    #             new_row.append(value)
+    #         formatted_data.append(new_row)
 
-        insert_ast = Insert(
-            table=Identifier(parts=table_name_parts),
-            columns=insert_columns,
-            values=formatted_data
-        )
+    #     insert_ast = Insert(
+    #         table=Identifier(parts=table_name_parts),
+    #         columns=insert_columns,
+    #         values=formatted_data
+    #     )
 
-        result = self.integration_handler.query(insert_ast)
-        if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
+    #     result = self.integration_handler.query(insert_ast)
+    #     if result.type == RESPONSE_TYPE.ERROR:
+    #         raise Exception(result.error_message)
 
     def query(self, query=None, native_query=None):
 

@@ -102,9 +102,8 @@ class InformationSchemaDataNode(DataNode):
         if database_meta['type'] == 'project':
             project = self.database_controller.get_project(name=database_name)
             return ProjectDataNode(
-
+                project=project
             )
-        # ProjectDataNode()
 
         integration_names = self.integration_controller.get_all().keys()
         for integration_name in integration_names:

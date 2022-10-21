@@ -49,6 +49,49 @@ class Project:
         self.record.deleted_at = time.time()
         db.session.commit()
 
+    def get_models(self):
+        records = (
+            db.session.query(db.Predictor, db.Integration).filter_by(
+                project_id=self.id,
+                deleted_at=sa.null(),
+                company_id=self.company_id
+            )
+            .join(db.Integration, db.Integration.id == db.Predictor.integration_id)
+            .order_by(db.Predictor.name, db.Predictor.id)
+            .all()
+        )
+
+        data = []
+        i = 0
+        for predictor_record, integraion_record in records:
+            predictor_data = deepcopy(predictor_record.data) or {}
+            if len(data) == 0 or data[-1]['name'] != predictor_record.name:
+                i = 1
+            else:
+                i += 1
+            predictor_meta = {
+                'type': 'model',
+                'id': predictor_record.id,
+                'engine': integraion_record.engine,
+                'engine_name': integraion_record.name,
+                'active': predictor_record.active,
+                'version': i,
+                'status': predictor_record.status,
+                'accuracy': None,
+                'predict': predictor_record.to_predict[0],
+                'update_status': predictor_record.update_status,
+                'mindsdb_version': predictor_record.mindsdb_version,
+                'error': predictor_data.get('error'),
+                'select_data_query': predictor_record.fetch_data_query,
+                'training_options': predictor_record.learn_args
+            }
+            if predictor_data is not None and predictor_data.get('accuracies', None) is not None:
+                if len(predictor_data['accuracies']) > 0:
+                    predictor_meta['accuracy'] = float(np.mean(list(predictor_data['accuracies'].values())))
+            data.append({'name': predictor_record.name, 'metadata': predictor_meta})
+
+        return data
+
     def get_tables(self):
         records = db.session.query(db.Predictor, db.Integration).filter_by(
             project_id=self.id,

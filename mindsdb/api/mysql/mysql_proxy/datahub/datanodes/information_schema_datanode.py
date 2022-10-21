@@ -32,7 +32,8 @@ class InformationSchemaDataNode(DataNode):
         'CHARACTER_SETS': ['CHARACTER_SET_NAME', 'DEFAULT_COLLATE_NAME', 'DESCRIPTION', 'MAXLEN'],
         'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
         # MindsDB specific:
-        'MODELS': ['NAME', 'PROJECT', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS']
+        'MODELS': ['NAME', 'PROJECT', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
+        'MODELS_VERSIONS': ['NAME', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
     }
 
     def __init__(self, session):
@@ -66,7 +67,8 @@ class InformationSchemaDataNode(DataNode):
             'ENGINES': self._get_engines,
             'CHARACTER_SETS': self._get_charsets,
             'COLLATIONS': self._get_collations,
-            'MODELS': self._get_models
+            'MODELS': self._get_models,
+            'MODELS_VERSIONS': self._get_models_versions
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -223,6 +225,25 @@ class InformationSchemaDataNode(DataNode):
             # TODO optimise here
             # if target_table is not None and target_table != project_name:
             #     continue
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_models_versions(self, query: ASTNode = None):
+        columns = self.information_schema['MODELS_VERSIONS']
+        data = []
+        for project_name in self.get_projects_names():
+            project = self.database_controller.get_project(name=project_name)
+            project_models = project.get_models()
+            for row in project_models:
+                table_name = row['name']
+                table_meta = row['metadata']
+                data.append([
+                    table_name, project_name, table_meta['active'], table_meta['version'], table_meta['status'],
+                    table_meta['accuracy'], table_meta['predict'], table_meta['update_status'],
+                    table_meta['mindsdb_version'], table_meta['error'], table_meta['select_data_query'],
+                    table_meta['training_options']
+                ])
 
         df = pd.DataFrame(data, columns=columns)
         return df

@@ -87,6 +87,10 @@ class ModelStorage:
     def json_del(self, name):
         ...
 
+    def delete(self):
+        self.fileStorage.delete()
+        # TODO delete json
+
 
 class HandlerStorage:
     """

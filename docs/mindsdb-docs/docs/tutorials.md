@@ -55,8 +55,8 @@
 
 # Community Video Guides
 
+* [Singing Up with MindsDB Cloud](https://youtu.be/Y5hZ9GwjsQs) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [How to connect to MindsDB with SQL Alchemy(Python)](https://www.youtube.com/watch?v=pYR83QTyOQA) by [Nishant Sapkota](https://github.com/thenishantsapkota)
-
 * [What is MindsDB | How to Get Started | A Cloud/AI Enabled Database](https://www.youtube.com/watch?v=XWDVxYVGH9M) by [Arman Chand](https://github.com/ArmanChand)
 * [How to deploy MindsDB on your local machine (Docker, PIP)](https://youtu.be/dIbs27Jg1FY) by [Munyoudoum Pav](https://github.com/munyoudoum)
 * [What are AI Tables and How to use MindsDB ?](https://youtu.be/Wqy_OcKdg-Y) by [@akhilcoder](https://twitter.com/akhilcoder)

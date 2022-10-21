@@ -1,9 +1,15 @@
+from copy import deepcopy
+
 import numpy as np
 
 from sqlalchemy.types import (
     Integer, Float, Text
 )
-from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn, DropTables
+from mindsdb_sql.parser.ast import (
+    BinaryOperation,
+    Identifier,
+    Constant
+)
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
@@ -13,9 +19,10 @@ from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, 
 class ProjectDataNode(DataNode):
     type = 'project'
 
-    def __init__(self, project, integration_controller):
+    def __init__(self, project, integration_controller, information_schema):
         self.project = project
         self.integration_controller = integration_controller
+        self.information_schema = information_schema
 
     def get_type(self):
         return self.type
@@ -41,28 +48,24 @@ class ProjectDataNode(DataNode):
         return predictions
 
     def query(self, query=None, native_query=None):
-        # TODO
-        if query is not None:
-            result = self.integration_handler.query(query)
-        else:
-            # try to fetch native query
-            result = self.integration_handler.native_query(native_query)
+        # is it query to 'models' or 'models_versions'?
+        query_table = query.from_table.parts[0]
+        if query_table in ('models', 'models_versions'):
+            new_query = deepcopy(query)
+            project_filter = BinaryOperation('=', args=[
+                Identifier('project'),
+                Constant(self.project.name)
+            ])
+            if new_query.where is None:
+                new_query.where = project_filter
+            else:
+                new_query.where = BinaryOperation('and', args=[
+                    new_query.where,
+                    project_filter
+                ])
+            data, columns_info = self.information_schema.query(new_query)
+            return data, columns_info
 
-        if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
-        if result.type == RESPONSE_TYPE.QUERY:
-            return result.query, None
-        if result.type == RESPONSE_TYPE.OK:
-            return
+        # TODO views
 
-        df = result.data_frame
-        df = df.replace({np.nan: None})
-        columns_info = [
-            {
-                'name': k,
-                'type': v
-            }
-            for k, v in df.dtypes.items()
-        ]
-        data = df.to_dict(orient='records')
-        return data, columns_info
+        raise Exception(f"Unknown table '{query_table}'")

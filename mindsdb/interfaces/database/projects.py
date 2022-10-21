@@ -93,35 +93,14 @@ class Project:
         return data
 
     def get_tables(self):
-        records = db.session.query(db.Predictor, db.Integration).filter_by(
-            project_id=self.id,
-            deleted_at=sa.null(),
-            company_id=self.company_id,
-            active=True
-        ).join(db.Integration, db.Integration.id == db.Predictor.integration_id).all()
-
         data = OrderedDict()
-        for predictor_record, integraion_record in records:
-            predictor_data = deepcopy(predictor_record.data) or {}
-            predictor_meta = {
-                'type': 'model',
-                'id': predictor_record.id,
-                'engine': integraion_record.engine,
-                'engine_name': integraion_record.name,
-                'status': predictor_record.status,
-                'accuracy': '',
-                'predict': predictor_record.to_predict[0],
-                'update_status': predictor_record.update_status,
-                'mindsdb_version': predictor_record.mindsdb_version,
-                'error': predictor_data.get('error'),
-                'select_data_query': predictor_record.fetch_data_query,
-                'training_options': predictor_record.learn_args
-            }
-            if predictor_data is not None and predictor_data.get('accuracies', None) is not None:
-                if len(predictor_data['accuracies']) > 0:
-                    predictor_meta['accuracy'] = float(np.mean(list(predictor_data['accuracies'].values())))
-            data[predictor_record.name] = predictor_meta
+        data['models'] = {'type': 'table'}
+        data['models_versions'] = {'type': 'table'}
 
+        models = self.get_models()
+        for model in models:
+            if model['metadata']['active'] is True:
+                data[model['name']] = model['metadata']
         return data
 
     def get_columns(self, table_name: str):

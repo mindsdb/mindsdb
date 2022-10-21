@@ -309,7 +309,7 @@ class FileStorage:
 
         path = (self.folder_path / relative_path).resolve()
 
-        if path == self.folder_path:
+        if path == self.folder_path.resolve():
             return self.complete_removal()
 
         if self.sync is True:

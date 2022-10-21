@@ -44,7 +44,7 @@ Once that's done, you can run the following commands with us.
 
 ### Let's Run the Codes
 
-Here, we go through the codes for the base table and enhanced base table simulataneously.
+Here, we go through the codes for the base table and enhanced base tables simulataneously.
 
 === "Using the Base Table"
 
@@ -279,7 +279,7 @@ Finally, let's check the predictor status whose value is `generating` at first, 
     +--------------------------------------+--------+--------+---------+-------------+---------------+------+---------------------------------------------------+----------------+
     ```
 
-Once all the training process of all three predictors completes, we see the accuracy values.
+Once the training process of all three predictors completes, we see the accuracy values.
 
 * For the base table, we get an accuracy value of `0.963`.
 * For the base table with two more data columns, we get an accuracy value of `0.965`. The value is increased, as expected.

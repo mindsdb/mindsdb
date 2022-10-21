@@ -1,5 +1,6 @@
 # Community Tutorials
 
+* [Deploying MindsDB on Scaleway Cloud](https://dev.to/rutamhere/deploying-mindsdb-on-scaleway-cloud-4kc6) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Creating Views with MindsDB](https://dev.to/rutamhere/creating-views-with-mindsdb-1mnf) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Logistics Quality using MindsDB](https://dev.to/armanchand/predicting-logistics-quality-using-mindsdb-2n9d) by [Arman Chand](https://dev.to/armanchand)
 * [Predict Wine Quality using MindsDB](https://dev.to/rutamhere/predict-wine-quality-using-mindsdb-1521) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)

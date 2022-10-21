@@ -8,10 +8,9 @@ including calling params and returning types.
     Typical usage example:
     client = DBServiceClient("mysql",
                              as_service=True,
-                             {"connection_data":
-                                {"host": "SERVICE(OR_CONTAINER)HOST",
-                                 "port": "SERVICE_PORTS"}
-                             })
+                             connection_data={"host": "SERVICE(OR_CONTAINER)HOST",
+                                              "port": "SERVICE_PORTS"}
+                             )
     status_response = client.check_connection()
     print(status_response.status, status_response.error_message)
 

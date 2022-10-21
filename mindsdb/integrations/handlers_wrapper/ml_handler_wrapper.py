@@ -1,3 +1,13 @@
+"""Implementation of REST API wrapper for any supported MLHandler.
+The module provide an opportunity to convert a MLHandler into REST API service
+Basic usage:
+    app = MLHandlerWrapper("foo handler")
+    port = int(os.environ.get('PORT', 5001))
+    host = os.environ.get('HOST', '0.0.0.0')
+    log.info("Running dbservice: host=%s, port=%s", host, port)
+    app.run(debug=True, host=host, port=port)
+
+"""
 import traceback
 import pickle
 import json
@@ -18,6 +28,7 @@ from mindsdb.integrations.libs.handler_helpers import define_ml_handler
 from mindsdb.utilities.log import log
 
 class BaseMLWrapper:
+    """Base abstract class contains some general methods."""
     def __init__(self, name):
         self.app = Flask(name)
         self.__mdb_config = Config()
@@ -36,14 +47,20 @@ class BaseMLWrapper:
         return {"hash": hash(ctx_str), "context": context}
 
     def index(self):
+        """ Default GET endpoint - '/'."""
         return "A ML Service Wrapper", 200
 
     def run(self, **kwargs):
+        """ Launch internal Flask application."""
         return self.app.run(**kwargs)
 
 
 class MLHandlerWrapper(BaseMLWrapper):
     def __init__(self,  name):
+        """ Wrapper Init.
+        Args:
+            name: name of the service
+        """
         super().__init__(name)
 
         # CONVERT METHODS TO FLASK API ENDPOINTS
@@ -57,11 +74,15 @@ class MLHandlerWrapper(BaseMLWrapper):
         self.create = query_create(self.create)
 
     def _get_handler_general_data(self) -> dict:
+        """ Get common data for creating MLHandler instance from the request. """
         return {"company_id": request.json.get("company_id", None),
                 "predictor_id": request.json.get("predictor_id", None),
                 "type": request.json.get("type")}
 
     def _get_handler_class(self):
+        """ Specify handler class base on common handler data.
+        The method gets the data from the request json.
+        """
         common_data = self._get_handler_general_data()
         log.info("%s: got common handler args from request - %s", self.__class__.__name__, common_data)
         handler_class = define_ml_handler(common_data["type"])
@@ -69,6 +90,7 @@ class MLHandlerWrapper(BaseMLWrapper):
         return handler_class
 
     def _get_create_data(self) -> dict:
+        """ Get 'create' model params from json in the request."""
         log.info("%s: getting training data from request", self.__class__.__name__)
         data = {"target": request.json.get("target"),
                 "args": request.json.get("args", None)}
@@ -84,6 +106,7 @@ class MLHandlerWrapper(BaseMLWrapper):
         return data
 
     def _get_predict_data(self):
+        """Get model 'predict' params from json in the request."""
         log.info("%s: getting predict data from request", self.__class__.__name__)
         df = None
         try:
@@ -95,6 +118,7 @@ class MLHandlerWrapper(BaseMLWrapper):
         return {"df": df}
 
     def _get_handler(self):
+        """Create handler instance."""
         # seems that integration_id is senseless for models
         integration_id = 0
         handler_class = self._get_handler_class()
@@ -115,6 +139,7 @@ class MLHandlerWrapper(BaseMLWrapper):
 
 
     def create(self):
+        """See 'create' method in MLHandler"""
         try:
             handler = self._get_handler()
             create_kwargs = self._get_create_data()
@@ -128,6 +153,7 @@ class MLHandlerWrapper(BaseMLWrapper):
             return status.to_json(), 500
 
     def predict(self):
+        """See 'predict' method in MLHandler"""
         try:
             handler = self._get_handler()
             predict_kwargs = self._get_predict_data()

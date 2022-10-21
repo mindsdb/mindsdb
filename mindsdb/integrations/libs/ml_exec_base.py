@@ -16,20 +16,16 @@ In particular, three big components are included:
 
 """
 
-from collections import OrderedDict
-
 import datetime as dt
 from dateutil.parser import parse as parse_datetime
-import json
 import traceback
 import importlib
 
-import numpy as np
 import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant, Select, Show, Star, NativeQuery
+from mindsdb_sql.parser.ast import Identifier, Select, Show, Star, NativeQuery
 from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
     CreatePredictor,

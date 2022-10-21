@@ -8,12 +8,14 @@ class MatrixOneHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": "localhost",
-            "port": 6001,
-            "user": "dump",
-            "password": "111",
-            "database": "mo_catalog",
-            "ssl": False
+            "connection_data": {
+                "host": "localhost",
+                "port": 6001,
+                "user": "dump",
+                "password": "111",
+                "database": "mo_catalog",
+                "ssl": False
+            }
         }
         cls.handler = MatrixOneHandler('test_mysql_handler', cls.kwargs)
 

@@ -6,12 +6,14 @@ class SupabaseHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": "localhost",
-            "port": "3306",
-            "user": "root",
-            "password": "root",
-            "database": "test",
-            "ssl": False
+            "connection_data": {
+                "host": "localhost",
+                "port": "3306",
+                "user": "root",
+                "password": "root",
+                "database": "test",
+                "ssl": False
+            }
         }
         cls.handler = SupabaseHandler('test_supabase_handler', **cls.kwargs)
 

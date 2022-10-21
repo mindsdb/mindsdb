@@ -7,14 +7,16 @@ class InformixHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "server": "server",
-            "host": "127.0.0.1",
-            "port": 9093,
-            "user": "informix",
-            "password": "in4mix",
-            "database": "demo",
-            "schema_name": "love",
-            "loging_enabled": False
+            "connection_data": {
+                "server": "server",
+                "host": "127.0.0.1",
+                "port": 9093,
+                "user": "informix",
+                "password": "in4mix",
+                "database": "demo",
+                "schema_name": "love",
+                "loging_enabled": False
+            }
         }
         cls.handler = InformixHandler('test_informix_handler', cls.kwargs)
 

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any
 import copy
 from dateutil.parser import parse as parse_datetime
-
+from collections import OrderedDict
 import psutil
 import pandas as pd
 import lightwood
@@ -63,6 +63,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
     x = np.float32(5)
     json.dumps(x, cls=NumpyJSONEncoder)
     """
+
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
@@ -286,12 +287,17 @@ class LightwoodHandler(PredictiveHandler):
 
         lightwood_integration_meta = self.handler_controller.get(name='lightwood')
 
+        if isinstance(statement.query_str, (OrderedDict, dict,)):
+            query_str = str(dict(statement.query_str))
+        else:
+            query_str = statement.query_str
+
         predictor_record = db.Predictor(
             company_id=self.company_id,
             name=model_name,
             integration_id=lightwood_integration_meta['id'],
             data_integration_id=integration_meta['id'],
-            fetch_data_query=statement.query_str,
+            fetch_data_query=query_str,
             mindsdb_version=mindsdb_version,
             lightwood_version=lightwood_version,
             to_predict=problem_definition.target,
@@ -556,7 +562,11 @@ class LightwoodHandler(PredictiveHandler):
         timeseries_settings = predictor_record.learn_args['timeseries_settings']
 
         if timeseries_settings['is_timeseries'] is True:
-            __no_forecast_offset = set([row.get('__mdb_forecast_offset', None) for row in pred_dicts]) == {None}
+            # offset forecast if have __mdb_forecast_offset > 0
+            forecast_offset = any([
+                row.get('__mdb_forecast_offset') is not None and row['__mdb_forecast_offset'] > 0
+                for row in pred_dicts
+            ])
 
             predict = predictor_record.to_predict[0]
             group_by = timeseries_settings['group_by'] or []
@@ -621,7 +631,7 @@ class LightwoodHandler(PredictiveHandler):
                         new_row[predict] = new_row[predict][i]
                         if isinstance(new_row[order_by_column], list):
                             new_row[order_by_column] = new_row[order_by_column][i]
-                    if '__mindsdb_row_id' in new_row and (i > 0 or __no_forecast_offset):
+                    if '__mindsdb_row_id' in new_row and (i > 0 or forecast_offset):
                         new_row['__mindsdb_row_id'] = None
                     rows.append(new_row)
 

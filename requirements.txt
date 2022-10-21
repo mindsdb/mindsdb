@@ -29,3 +29,4 @@ charset-normalizer
 dill >= 0.3.4
 pyOpenSSL >= 22.0.0
 pydateinfer==0.3.0
+pyarrow >= 9.0.0, < 10.0.0

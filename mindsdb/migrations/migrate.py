@@ -36,3 +36,7 @@ def migrate_to_head():
             return
 
     upgrade(config=config, revision='head')
+
+
+if __name__ == "__main__":
+    migrate_to_head()

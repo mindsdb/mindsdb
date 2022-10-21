@@ -7,11 +7,13 @@ class YugabyteHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": "localhost",
-            "port": 5433,
-            "user": "admin",
-            "password": "",
-            "database": "yugabyte"
+            "connection_data": {
+                "host": "localhost",
+                "port": 5433,
+                "user": "admin",
+                "password": "",
+                "database": "yugabyte"
+            }
         }
         cls.handler = YugabyteHandler('test_yugabyte_handler', cls.kwargs)
 

@@ -20,7 +20,7 @@ from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers_client.db_client import DBServiceClient
-
+from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
 class IntegrationController:
     @staticmethod
@@ -90,18 +90,42 @@ class IntegrationController:
         db.session.commit()
 
     def delete(self, name, company_id=None):
+
         if name in ('files', 'views', 'lightwood'):
             raise Exception('Unable to drop: is system database')
+
+        # check permanent integration
+        if name in self.handler_modules:
+            handler = self.handler_modules[name]
+
+            if getattr(handler, 'permanent', False) == True:
+                raise Exception('Unable to drop: is permanent integration')
 
         integration_record = db.session.query(db.Integration).filter_by(company_id=company_id, name=name).first()
 
         # check linked predictors
-        predictor = db.session.query(db.Predictor.name).filter(or_(
-            db.Predictor.integration_id == integration_record.id,
-            db.Predictor.data_integration_id == integration_record.id
-        )).first()
+        predictor = db.session.query(db.Predictor.name).filter(
+            db.Predictor.status != PREDICTOR_STATUS.DELETED,
+            or_(
+                db.Predictor.integration_id == integration_record.id,
+                db.Predictor.data_integration_id == integration_record.id,
+            )
+        ).first()
         if predictor is not None:
             raise Exception(f'Unable to drop: is linked to predictor {predictor.name}')
+
+        # unlink integration from deleted predictors
+        for predictor in db.session.query(db.Predictor).filter(
+            db.Predictor.status == PREDICTOR_STATUS.DELETED,
+            db.Predictor.integration_id == integration_record.id
+        ):
+            predictor.integration_id = None
+
+        for predictor in db.session.query(db.Predictor).filter(
+            db.Predictor.status == PREDICTOR_STATUS.DELETED,
+            db.Predictor.data_integration_id == integration_record.id
+        ):
+            predictor.data_integration_id = None
 
         # integrations_dir = Config()['paths']['integrations']
         # folder_name = f'integration_files_{company_id}_{integration_record.id}'

@@ -26,7 +26,7 @@ class PostgresHandler(DatabaseHandler):
         self.parser = parse_sql
         self.connection_args = kwargs.get('connection_data')
         self.dialect = 'postgresql'
-        self.database = self.connection_args.get('database')
+        self.database = self.connection_args.get['database']
         if 'database' in self.connection_args:
             self.connection_args['database']
         self.renderer = SqlalchemyRender('postgres')
@@ -58,6 +58,12 @@ class PostgresHandler(DatabaseHandler):
         self.is_connected = True
         self.connection = connection
         return self.connection
+
+    def disconnect(self):
+        if self.is_connected is False:
+            return
+        self.connection.close()
+        self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
         """

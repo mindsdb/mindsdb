@@ -7,11 +7,13 @@ class SqlServerHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": "localhost",
-            "port": "1433",
-            "user": "sa",
-            "password": "",
-            "database": "master"
+           "connection_data": {
+                "host": "localhost",
+                "port": "1433",
+                "user": "sa",
+                "password": "",
+                "database": "master"
+           }
         }
         cls.handler = SqlServerHandler('test_sqlserver_handler', **cls.kwargs)
 

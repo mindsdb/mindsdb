@@ -1,0 +1,6 @@
+black==22.3.0
+flake8==5.0.4
+invoke>=1.7.1
+isort==5.10.1
+mypy>=0.971
+pre-commit>=2.16.0

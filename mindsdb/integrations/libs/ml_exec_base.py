@@ -57,7 +57,7 @@ from mindsdb.integrations.utilities.utils import format_exception_error
 
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 
-from .ml_handler_proc import MLHandlerWraper
+from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
 import torch.multiprocessing as mp
 ctx = mp.get_context('spawn')
@@ -102,7 +102,7 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
 def get_ml_handler(class_path, company_id, integration_id, predictor_id):
     # returns instance or wrapper over in
 
-    wrapper_type = 'subprocess'
+    wrapper_type = 'subprocess_keep'
     if wrapper_type == 'none':
         module_name, class_name = class_path
         module = importlib.import_module(module_name)
@@ -118,7 +118,17 @@ def get_ml_handler(class_path, company_id, integration_id, predictor_id):
         return ml_handler
 
     elif wrapper_type == 'subprocess':
-        return MLHandlerWraper(class_path, company_id, integration_id, predictor_id)
+        handler = MLHandlerWrapper()
+
+        handler.init_handler(class_path, company_id, integration_id, predictor_id)
+        return handler
+
+    elif wrapper_type == 'subprocess_keep':
+        handler = MLHandlerPersistWrapper()
+
+        handler.init_handler(class_path, company_id, integration_id, predictor_id)
+        return handler
+
 
     elif wrapper_type == 'remote':
         raise NotImplementedError()

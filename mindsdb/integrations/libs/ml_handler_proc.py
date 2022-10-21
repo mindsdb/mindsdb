@@ -17,14 +17,17 @@ if 'error' in response dict, parent process trows exception
 
 """
 
-
 import pickle
 import subprocess
 import sys
 import struct
 import traceback
 import importlib
+import threading
+import queue
 
+
+# =================  child process ====================
 
 class MLHandlerProcess:
 
@@ -81,7 +84,7 @@ class MLHandlerProcess:
 
         return obj
 
-    def init(self, class_path, company_id, integration_id, predictor_id):
+    def init_handler(self, class_path, company_id, integration_id, predictor_id):
         # mdb initialization
         import mindsdb.interfaces.storage.db as db
         db.init()
@@ -105,9 +108,10 @@ class MLHandlerProcess:
         sys.exit(0)
 
 
-class MLHandlerWraper:
-    def __init__(self, class_path, company_id, integration_id, predictor_id):
+# =================  parent wrapper ====================
 
+class MLHandlerWrapper:
+    def __init__(self):
         # TODO change to virtualenv from config
         python_path = sys.executable
         wrapper_path = __file__
@@ -118,14 +122,6 @@ class MLHandlerWraper:
             stderr=subprocess.PIPE,
         )
         self.proc = p
-
-        self.exec_command(
-            'init',
-             class_path=class_path,
-             company_id=company_id,
-             integration_id=integration_id,
-             predictor_id=predictor_id
-       )
 
     def __del__(self):
         if self.proc is not None:
@@ -174,5 +170,51 @@ class MLHandlerWraper:
         return ret
 
 
+# ================= thread to keep wrapper opened ====================
+
+process_thread = None
+queue_in = queue.Queue()
+queue_out = queue.Queue()
+
+
+def process_keeper():
+    wrapper = MLHandlerWrapper()
+
+    while True:
+        method_name, args, kwargs = queue_in.get()
+        method = wrapper.__getattr__(method_name)
+        ret = method(*args, **kwargs)
+        queue_in.task_done()
+        queue_out.put(ret)
+
+
+class MLHandlerPersistWrapper:
+    '''
+        keeps child process opened
+    '''
+
+    def __init__(self):
+        global process_thread
+        if process_thread is None:
+            process_thread = threading.Thread(target=process_keeper, daemon=True)
+            process_thread.start()
+
+    def __getattr__(self, method_name):
+        global queue_in, queue_out
+
+        # is call of the method
+
+        def call(*args, **kwargs):
+            queue_in.put([method_name, args, kwargs])
+            return queue_out.get()
+
+        return call
+
+    def close(self):
+        # not close child pricess
+        pass
+
+
+# run child process
 if __name__ == '__main__':
     MLHandlerProcess().mainloop()

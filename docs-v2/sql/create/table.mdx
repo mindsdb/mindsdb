@@ -1,0 +1,82 @@
+---
+title: CREATE TABLE Statement
+sidebarTitle: TABLE
+---
+
+## Description
+
+The `CREATE TABLE` is used to create a table and fill it with the result of a
+subselect, usually used to materialize predictions into tables.
+
+## Syntax
+
+You can use the usual `CREATE TABLE` statement:
+
+```sql
+CREATE TABLE [integration_name].[table_name]
+    (SELECT ...);
+```
+
+Or the `CREATE OR REPLACE TABLE` statement:
+
+```sql
+CREATE OR REPLACE TABLE [integration_name].[table_name]
+    (SELECT ...);
+```
+
+It performs a subselect `[SELECT ...]` and gets data from it, thereafter it
+creates a table `[table_name]` in `[integration_name]`. lastly it performs an
+`INSERT INTO [integration_name].[table_name]` with the contents of the
+`[SELECT ...]`.
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+<Warning>
+  "`REPLACE`" If `REPLACE` is indicated then `#!sql
+  [integration_name].[table_name]` will be **Dropped**{" "}
+</Warning>
+
+## Example
+
+In this example we want to persist the predictions into a table `int1.tbl1`.
+Given the following schema:
+
+```bash
+int1
+└── tbl1
+mindsdb
+└── predictor_name
+int2
+└── tbl2
+```
+
+Where:
+
+|                  | Description                                           |
+| ---------------- | ----------------------------------------------------- |
+| `int1`           | Integration for the table to be created in            |
+| `tbl1`           | Table to be created                                   |
+| `predictor_name` | Name of the model to be used                          |
+| `int2`           | Database to be used as a source in the inner `SELECT` |
+| `tbl2`           | Table to be used as a source.                         |
+
+In order to achieve the desired result we could execute the following query:
+
+```sql
+CREATE TABLE int1.tbl1 (
+    SELECT *
+    FROM int2.tbl2 AS ta
+    JOIN mindsdb.predictor_name AS tb
+    WHERE ta.date > '2015-12-31'
+);
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```

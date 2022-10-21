@@ -1,0 +1,75 @@
+---
+title: MindsDB and Tableau
+sidebarTitle: Tableau
+---
+
+Tableau lets you visualize your data easily and intuitively. Now that MindsDB
+supports the MySQL binary protocol, you can connect it to Tableau and see the
+forecasts.
+
+## How to Connect
+
+Follow the steps below to connect your MindsDB to Tableau.
+
+First, create a new workbook in Tableau and open the _Connectors_ tab in the
+_Connect to Data_ window.
+
+![](/assets/connect_tableau.png)
+
+Next, choose _MySQL_ and provide the details of your MindsDB connection, such as
+the IP, port, and database name. Optionally, you can provide a username and
+password. Then, click _Sign In_.
+
+![](/assets/connect_tableau_2.png)
+
+Now you're connected!
+
+## Overview of MindsDB in Tableau
+
+The content of your MindsDB is visible in the right-side pane.
+
+![](/assets/connect_tableau_3.png)
+
+All the predictors are listed under the _Table_ section. You can also switch
+between the integrations, such as _mindsdb_ or _files_, in the _Database_
+section using the drop-down.
+
+![](/assets/connect_tableau_4.png)
+
+Now, let's run some examples!
+
+## Examples
+
+### Example 1
+
+Previewing one of the tables from the _mysql_ integration:
+
+![](/assets/connect_tableau_5.png)
+
+### Example 2
+
+There is one technical limitation. Namely, we cannot join tables from different
+databases/integrations in Tableau. To overcome this challenge, you can use
+either views or custom SQL queries.
+
+- Previewing a view that joins a data table with a predictor table:
+
+![](/assets/connect_tableau_6.png)
+
+- Using a custom SQL query by clicking the _New Custom SQL_ button in the
+  right-side pane:
+
+![](/assets/connect_tableau_7.png)
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and
+**Community Tutorials** sections, where you'll find various examples of
+regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on
+[MindsDB database structure](/sql/table-structure/). Also, don't miss out on the
+remaining pages from the **SQL API** section, as they explain a common SQL
+syntax with examples.
+
+Have fun!

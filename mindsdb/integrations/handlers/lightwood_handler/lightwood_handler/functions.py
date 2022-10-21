@@ -141,6 +141,8 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
     try:
         run_generate(df, problem_definition, predictor_id, json_ai_override)
         run_fit(predictor_id, df, company_id)
+
+        predictor_record.status = PREDICTOR_STATUS.COMPLETE
     except Exception as e:
         predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
         print(traceback.format_exc())
@@ -152,7 +154,6 @@ def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id
         db.session.commit()
 
     predictor_record.training_stop_at = datetime.now()
-    predictor_record.status = PREDICTOR_STATUS.COMPLETE
     db.session.commit()
 
 

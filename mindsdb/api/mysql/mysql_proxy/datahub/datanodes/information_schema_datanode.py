@@ -8,7 +8,6 @@ from mindsdb_sql.parser.ast import BinaryOperation, Select, Identifier, Constant
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.mindsdb_datanode import MindsDBDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import IntegrationDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.project_datanode import ProjectDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
@@ -34,6 +33,7 @@ class InformationSchemaDataNode(DataNode):
         # MindsDB specific:
         'MODELS': ['NAME', 'PROJECT', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
         'MODELS_VERSIONS': ['NAME', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
+        'DATABASES': ['NAME', 'TYPE', 'ENGINE']
     }
 
     def __init__(self, session):
@@ -44,10 +44,6 @@ class InformationSchemaDataNode(DataNode):
         self.database_controller = session.database_controller
 
         self.persis_datanodes = {
-            'mindsdb': MindsDBDataNode(
-                session.model_controller,
-                session.integration_controller
-            ),
             'files': IntegrationDataNode(
                 'files',
                 ds_type='file',
@@ -68,7 +64,8 @@ class InformationSchemaDataNode(DataNode):
             'CHARACTER_SETS': self._get_charsets,
             'COLLATIONS': self._get_collations,
             'MODELS': self._get_models,
-            'MODELS_VERSIONS': self._get_models_versions
+            'MODELS_VERSIONS': self._get_models_versions,
+            'DATABASES': self._get_databases
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -108,7 +105,8 @@ class InformationSchemaDataNode(DataNode):
             project = self.database_controller.get_project(name=database_name)
             return ProjectDataNode(
                 project=project,
-                integration_controller=self.session.integration_controller
+                integration_controller=self.session.integration_controller,
+                information_schema=self
             )
 
         integration_names = self.integration_controller.get_all().keys()
@@ -225,6 +223,18 @@ class InformationSchemaDataNode(DataNode):
             # TODO optimise here
             # if target_table is not None and target_table != project_name:
             #     continue
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_databases(self, query: ASTNode = None):
+        columns = self.information_schema['DATABASES']
+
+        project = self.database_controller.get_list()
+        data = [
+            [x['name'], x['type'], x['engine']]
+            for x in project
+        ]
 
         df = pd.DataFrame(data, columns=columns)
         return df

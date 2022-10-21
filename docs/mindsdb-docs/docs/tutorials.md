@@ -55,8 +55,8 @@
 
 # Community Video Guides
 
+* [Exploring Learning Hub on MindsDB by predicting house rental prices and forecasting house sales](https://youtu.be/Qmk_v0iginw) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [How to connect to MindsDB with SQL Alchemy(Python)](https://www.youtube.com/watch?v=pYR83QTyOQA) by [Nishant Sapkota](https://github.com/thenishantsapkota)
-
 * [What is MindsDB | How to Get Started | A Cloud/AI Enabled Database](https://www.youtube.com/watch?v=XWDVxYVGH9M) by [Arman Chand](https://github.com/ArmanChand)
 * [How to deploy MindsDB on your local machine (Docker, PIP)](https://youtu.be/dIbs27Jg1FY) by [Munyoudoum Pav](https://github.com/munyoudoum)
 * [What are AI Tables and How to use MindsDB ?](https://youtu.be/Wqy_OcKdg-Y) by [@akhilcoder](https://twitter.com/akhilcoder)

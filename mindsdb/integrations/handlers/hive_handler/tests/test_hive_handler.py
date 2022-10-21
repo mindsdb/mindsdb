@@ -28,10 +28,6 @@ class HiveHandlerTest(unittest.TestCase):
         tbls = self.handler.get_tables()
         assert tbls['type'] is not RESPONSE_TYPE.ERROR
 
-    def test_3_get_views(self):
-        views = self.handler.get_views()
-        assert views['type'] is not RESPONSE_TYPE.ERROR
-
     def test_5_drop_table(self):
         res = self.handler.native_query("DROP TABLE IF EXISTS test_hdb")
         assert res['type'] is not RESPONSE_TYPE.ERROR
@@ -48,6 +44,7 @@ class HiveHandlerTest(unittest.TestCase):
         query = "SELECT * FROM test_mdb WHERE foo=238"
         result = self.handler.query(query)
         assert result['type'] is RESPONSE_TYPE.TABLE
+
 
 if __name__ == '__main__':
     unittest.main()

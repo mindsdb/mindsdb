@@ -182,7 +182,11 @@ class LightwoodHandler(BaseMLEngine):
         timeseries_settings = learn_args.get('timeseries_settings', {'is_timeseries': False})
 
         if timeseries_settings['is_timeseries'] is True:
-            __no_forecast_offset = set([row.get('__mdb_forecast_offset', None) for row in pred_dicts]) == {None}
+            # offset forecast if have __mdb_forecast_offset > 0
+            forecast_offset = any([
+                row.get('__mdb_forecast_offset') is not None and row['__mdb_forecast_offset'] > 0
+                for row in pred_dicts
+            ])
 
             group_by = timeseries_settings['group_by'] or []
             order_by_column = timeseries_settings['order_by']
@@ -246,7 +250,7 @@ class LightwoodHandler(BaseMLEngine):
                         new_row[target] = new_row[target][i]
                         if isinstance(new_row[order_by_column], list):
                             new_row[order_by_column] = new_row[order_by_column][i]
-                    if '__mindsdb_row_id' in new_row and (i > 0 or __no_forecast_offset):
+                    if '__mindsdb_row_id' in new_row and (i > 0 or forecast_offset):
                         new_row['__mindsdb_row_id'] = None
                     rows.append(new_row)
 

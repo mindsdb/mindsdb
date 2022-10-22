@@ -31,3 +31,6 @@
 - A Twitter Thread by [Atharva Shirdhankar](https://twitter.com/_Atharva_08/status/1581620848351268866?s=20&t=cbPkcHUXrsOQAcTCi_PFXQ)
 
 - A Twitter Thread by [@UnrevealRich](https://twitter.com/UnrevealRich/status/1583537036119937024)
+
+- A Twitter Thread by [@FionaMurugi1](https://twitter.com/FionaMurugi1/status/1583922222699229185)
+

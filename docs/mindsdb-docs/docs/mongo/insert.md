@@ -91,8 +91,3 @@ On execution, we get:
     "training_options" : ""
 }
 ```
-    "error" : null,
-    "select_data_query" : "", 
-    "training_options" : ""
-}
-```

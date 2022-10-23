@@ -1,5 +1,7 @@
 # Setup for Linux via pip
 
+![type:video](https://www.youtube.com/embed/TVgp5xtfFmk)
+
 ## Before You Start
 
 There are some points that you should consider before jumping into the installation. Please have a look at them below.

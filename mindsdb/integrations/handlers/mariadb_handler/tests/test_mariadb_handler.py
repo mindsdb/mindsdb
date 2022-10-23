@@ -30,10 +30,6 @@ class MariaDBHandlerTest(unittest.TestCase):
         tbls = self.handler.get_tables()
         assert isinstance(tbls, list)
 
-    def test_4_get_views(self):
-        views = self.handler.get_views()
-        assert isinstance(views, list)
-
     def test_5_create_table(self):
         try:
             self.handler.native_query("CREATE TABLE test_mdb (test_col INT)")

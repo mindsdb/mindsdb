@@ -51,10 +51,13 @@
 * [Predicting the Rating of Cars using Mindsdb](https://atharva08.hashnode.dev/predicting-the-rating-of-cars-using-mindsdb) by [Atharva Shirdhankar](https://github.com/StarTrooper08)
 * [Predicting & Visualizing Hourly Electricity Demand in the US with MindsDB and Tableau](https://teslimodus.medium.com/predicting-visualizing-hourly-electricity-demand-in-the-us-with-mindsdb-and-tableau-126d1c74d860) by [Teslim Odumuyiwa](https://teslimodus.medium.com/)
 * [Bank Customer Churn Prediction using MindsDB](https://medium.com/@ayushsharmaa101/thanks-for-reading-dfec90467ddb) by [Ayush Sharma](https://github.com/ayushthe1)
+* [Let's connect Mindsdb with Mariadb shell Locally and Predict the Mobile Price](https://atharva08.hashnode.dev/lets-connect-mindsdb-with-mariadb-shell-locally-and-predict-the-mobile-price-range) by [Atharva Shirdhankar](https://github.com/StarTrooper08)
 
 # Community Video Guides
 
+* [How to connect to MindsDB with SQL Alchemy(Python)](https://www.youtube.com/watch?v=pYR83QTyOQA) by [Nishant Sapkota](https://github.com/thenishantsapkota)
 
+* [What is MindsDB | How to Get Started | A Cloud/AI Enabled Database](https://www.youtube.com/watch?v=XWDVxYVGH9M) by [Arman Chand](https://github.com/ArmanChand)
 * [How to deploy MindsDB on your local machine (Docker, PIP)](https://youtu.be/dIbs27Jg1FY) by [Munyoudoum Pav](https://github.com/munyoudoum)
 * [What are AI Tables and How to use MindsDB ?](https://youtu.be/Wqy_OcKdg-Y) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [How to Create an Account on MindsDB under 2 minutes 👾](https://youtu.be/7T2aTzmSPBg) by [Chirag8023](https://twitter.com/Chirag8023)
@@ -63,7 +66,7 @@
 * [What is MindsDB?](https://www.youtube.com/watch?v=i2tMs4MX_yw) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Tutorial: Create a Free MindsDB Cloud Account](https://youtu.be/yfM91zgGr3Q) by [Alissa Troiano](https://github.com/alissatroiano)
 * [How to create an account on MindsDB cloud](https://youtu.be/qFQ95MoSE94) by [HellFire](https://github.com/Artemis6969)
+* [Setting Up Docker for MindsDB](https://www.youtube.com/watch?v=dadY-cUpUm0&feature=youtu.be) by [Alissa Troiano](https://github.com/alissatroiano)
 * [How to create a free account on MindsDB Cloud](https://youtu.be/ciBtpqrlbhI) by [Anamika](https://github.com/noviicee)
 * [How to create a free account on MindsDB Cloud](https://youtu.be/3bGJP6-s8p4) by [MichaelLantz](https://github.com/MichaelLantz)
 * [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI) by [Posterizedsoul](https://github.com/Posterizedsoul)
-

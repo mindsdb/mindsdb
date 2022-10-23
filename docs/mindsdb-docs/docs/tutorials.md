@@ -1,6 +1,7 @@
 # Community Tutorials
 
 * [Deploying MindsDB on Scaleway Cloud](https://dev.to/rutamhere/deploying-mindsdb-on-scaleway-cloud-4kc6) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
+* [Predict Tesla Stock Prices using MindsDB](https://dev.to/rutamhere/predict-tesla-stock-prices-using-mindsdb-40k5) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Creating Views with MindsDB](https://dev.to/rutamhere/creating-views-with-mindsdb-1mnf) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predicting Logistics Quality using MindsDB](https://dev.to/armanchand/predicting-logistics-quality-using-mindsdb-2n9d) by [Arman Chand](https://dev.to/armanchand)
 * [Predict Wine Quality using MindsDB](https://dev.to/rutamhere/predict-wine-quality-using-mindsdb-1521) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
@@ -53,6 +54,7 @@
 * [Predicting & Visualizing Hourly Electricity Demand in the US with MindsDB and Tableau](https://teslimodus.medium.com/predicting-visualizing-hourly-electricity-demand-in-the-us-with-mindsdb-and-tableau-126d1c74d860) by [Teslim Odumuyiwa](https://teslimodus.medium.com/)
 * [Bank Customer Churn Prediction using MindsDB](https://medium.com/@ayushsharmaa101/thanks-for-reading-dfec90467ddb) by [Ayush Sharma](https://github.com/ayushthe1)
 * [Let's connect Mindsdb with Mariadb shell Locally and Predict the Mobile Price](https://atharva08.hashnode.dev/lets-connect-mindsdb-with-mariadb-shell-locally-and-predict-the-mobile-price-range) by [Atharva Shirdhankar](https://github.com/StarTrooper08)
+* [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/RPisvY54Tg4) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
 
 # Community Video Guides
 
@@ -71,3 +73,4 @@
 * [How to create a free account on MindsDB Cloud](https://youtu.be/ciBtpqrlbhI) by [Anamika](https://github.com/noviicee)
 * [How to create a free account on MindsDB Cloud](https://youtu.be/3bGJP6-s8p4) by [MichaelLantz](https://github.com/MichaelLantz)
 * [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI) by [Posterizedsoul](https://github.com/Posterizedsoul)
+* [MindsDB Data Insights](https://youtu.be/4oGgocNLi1c) by [@akhilcoder](https://www.youtube.com/@akhilcoder)

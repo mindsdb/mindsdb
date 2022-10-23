@@ -82,6 +82,9 @@ jobs:
           echo -e "\n===============PostgreSQL Handler===============\n"
           pytest -svx tests/handler_tests/test_postgres_handler.py
 
+          echo -e "\n===============MariaDB Handler===============\n"
+          pytest -svx tests/handler_tests/test_mariadb_handler.py
+
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
           sudo chmod 600 ~/.ssh/db_machine

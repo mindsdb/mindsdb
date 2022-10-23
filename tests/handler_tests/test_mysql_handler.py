@@ -45,18 +45,15 @@ def get_certificates(container):
 
 
 def waitReadiness(container, timeout=30):
-    logs_inter = container.logs(stream=True)
     threshold = time.time() + timeout
-    ready_event_num = 0
+    ready_msg = "/usr/sbin/mysqld: ready for connections. Version: '8.0.27'"
     while True:
-        line = logs_inter.next().decode()
-        if "/usr/sbin/mysqld: ready for connections. Version: '8.0.27'" in line:
-            ready_event_num += 1
+        lines = container.logs().decode()
             # container fully ready
             # because it reloads the db server during initialization
             # need to check that the 'ready for connections' has found second time
-            if ready_event_num > 1:
-                break
+        if lines.count(ready_msg) >= 2:
+            break
         if time.time() > threshold:
             raise Exception("timeout exceeded, container is still not ready")
 
@@ -65,14 +62,21 @@ def handler(request):
     image_name = "mindsdb/mysql-handler-test"
     docker_client = docker.from_env()
     with_ssl = request.param["ssl"]
-    container = docker_client.containers.run(
-                image_name,
-                command="--secure-file-priv=/",
-                detach=True,
-                environment={"MYSQL_ROOT_PASSWORD":"supersecret"},
-                ports={"3306/tcp": 3307},
-            )
-    waitReadiness(container)
+    container = None
+    try:
+        container = docker_client.containers.run(
+                    image_name,
+                    command="--secure-file-priv=/",
+                    detach=True,
+                    environment={"MYSQL_ROOT_PASSWORD":"supersecret"},
+                    ports={"3306/tcp": 3307},
+                )
+        waitReadiness(container)
+    except Exception as e:
+        if container is not None:
+            container.kill()
+        raise e
+
     if with_ssl:
         get_certificates(container)
     handler = MySQLHandler('test_mysql_handler', **HANDLER_KWARGS)

@@ -59,8 +59,7 @@ def waitReadiness(container, timeout=30):
 
 @pytest.fixture(scope="module", params=[{"ssl": False}, {"ssl": True}], ids=["NoSSL", "SSL"])
 def handler(request):
-    # image_name = "mindsdb/mysql-handler-test"
-    image_name = "mariadb-test"
+    image_name = "mindsdb/mariadb-handler-test"
     docker_client = docker.from_env()
     with_ssl = request.param["ssl"]
     container = None

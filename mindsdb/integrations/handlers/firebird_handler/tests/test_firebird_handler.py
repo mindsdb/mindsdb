@@ -7,10 +7,12 @@ class FirebirdHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": "localhost",
-            "database": r"C:\Users\minura\Documents\mindsdb\test.fdb",
-            "user": "sysdba",
-            "password": "password"
+            "connection_data": {
+                "host": "localhost",
+                "database": r"C:\Users\minura\Documents\mindsdb\test.fdb",
+                "user": "sysdba",
+                "password": "password"
+            }
         }
         cls.handler = FirebirdHandler('test_firebird_handler', cls.kwargs)
 

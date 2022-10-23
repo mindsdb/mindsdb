@@ -74,6 +74,14 @@ jobs:
                 
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
 
+          echo -e "\n===============\nDB HANDLERS\n===============\n"
+
+          echo -e "\n===============MySQL Handler===============\n"
+          python mindsdb/integrations/handlers/mysql_handler/tests/test_mysql_handler.py
+
+          echo -e "\n===============PostgreSQL Handler===============\n"
+          python mindsdb/integrations/handlers/postgres_handler/tests/test_postgres_handler.py
+
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
           sudo chmod 600 ~/.ssh/db_machine
@@ -83,13 +91,6 @@ jobs:
           sudo chmod 644 ~/.mindsdb_credentials.json
 
           export USE_EXTERNAL_DB_SERVER="1"
-          echo -e "\n===============\nDB HANDLERS\n===============\n"
-
-          echo -e "\n===============MySQL Handler===============\n"
-          python mindsdb/integrations/handlers/mysql_handler/tests/test_mysql_handler.py
-
-          echo -e "\n===============PostgreSQL Handler===============\n"
-          python mindsdb/integrations/handlers/postgres_handler/tests/test_postgres_handler.py
 
           # MySQL API
           echo -e "\n===============\ntest MySQL API\n===============\n"

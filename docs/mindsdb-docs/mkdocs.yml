@@ -5,7 +5,7 @@ repo_url: 'https://github.com/mindsdb/mindsdb'
 theme:
   name: 'material'
   custom_dir: overrides
-  logo: assets/mdb_logo_w2.svg
+  logo: assets/mdb_logo_w.svg
   favicon: assets/mdb_logo.png
   font:
       text: Inter

@@ -55,6 +55,7 @@
 * [Bank Customer Churn Prediction using MindsDB](https://medium.com/@ayushsharmaa101/thanks-for-reading-dfec90467ddb) by [Ayush Sharma](https://github.com/ayushthe1)
 * [Let's connect Mindsdb with Mariadb shell Locally and Predict the Mobile Price](https://atharva08.hashnode.dev/lets-connect-mindsdb-with-mariadb-shell-locally-and-predict-the-mobile-price-range) by [Atharva Shirdhankar](https://github.com/StarTrooper08)
 * [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/RPisvY54Tg4) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
+* [Gold price prediction using MindsDB](https://dev.to/purgecodee/predicting-gold-price-with-mindsdb-205n) by [Pritish Sinha](https://github.com/Pritish-Sinha) 
 
 # Community Video Guides
 

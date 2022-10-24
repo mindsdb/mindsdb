@@ -106,14 +106,13 @@ class ExecuteCommands:
         if type(statement) == CreateDatasource:
             return self.answer_create_database(statement)
         if type(statement) == DropPredictor:
-            ml_integration_name = self.session.database
+            database_name = self.session.database
             if len(statement.name.parts) > 1:
-                ml_integration_name = statement.name.parts[0].lower()
-            predictor_name = statement.name.parts[-1]
-            ml_integration_name = ml_integration_name.lower()
+                database_name = statement.name.parts[0].lower()
+            model_name = statement.name.parts[-1]
+
             try:
-                self.session.datahub['mindsdb']\
-                    .delete_predictor(predictor_name, integration_name=ml_integration_name)
+                self.session.model_controller.delete_model(model_name, project_name=database_name)
             except Exception as e:
                 if not statement.if_exists:
                     raise e

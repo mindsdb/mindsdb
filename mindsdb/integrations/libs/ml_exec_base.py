@@ -393,12 +393,18 @@ class BaseMLEngineExec:
 
     def drop(self, statement):
         """ Deletes a model from the MindsDB registry. """
-        model_name = statement.name.parts[-1]
+        if len(statement.name.parts) != 2:
+            raise Exception("Command should contain project name and model name: 'DROP project_name.model_name'")
+        project_name = statement.name.parts[0]
+        model_name = statement.name.parts[1]
+
+        project = self.database_controller.get_project(project_name)
 
         predictors_records = get_model_records(
             company_id=self.company_id,
             name=model_name,
-            ml_handler_name=self.name
+            ml_handler_name=self.name,
+            project_id=project.id
         )
         if len(predictors_records) == 0:
             return Response(
@@ -423,6 +429,7 @@ class BaseMLEngineExec:
                 predictor_record.deleted_at = dt.datetime.now()
             else:
                 db.session.delete(predictor_record)
-            self.fs_store.delete(f'predictor_{self.company_id}_{predictor_record.id}')
+            fs_storage = self.storage_factory(predictor_record.id)
+            fs_storage.complete_removal()
         db.session.commit()
         return Response(RESPONSE_TYPE.OK)

@@ -328,11 +328,6 @@ class LightwoodHandler(BaseMLEngine):
 
         return pd.DataFrame(data)
 
-    # TODO !
-    def analyze_dataset(self, data_frame: pd.DataFrame) -> dict:
-        analysis = lightwood.analyze_dataset(data_frame)
-        return analysis.to_dict()
-
     def edit_json_ai(self, name: str, json_ai: dict):
         predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
         assert predictor_record is not None

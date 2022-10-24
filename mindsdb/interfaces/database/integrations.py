@@ -358,7 +358,6 @@ class IntegrationController:
         if isinstance(HandlerClass, type) and issubclass(HandlerClass, BaseMLEngine):
             handler_ars['handler_class'] = HandlerClass
             handler = BaseMLEngineExec(**handler_ars)
-
         else:
             handler = HandlerClass(**handler_ars)
 

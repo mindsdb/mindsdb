@@ -25,6 +25,7 @@ import traceback
 import importlib
 import threading
 import queue
+from threading import Lock
 
 
 # =================  child process ====================
@@ -175,7 +176,7 @@ class MLHandlerWrapper:
 process_thread = None
 queue_in = queue.Queue()
 queue_out = queue.Queue()
-
+queue_lock = Lock()
 
 def process_keeper():
     wrapper = MLHandlerWrapper()
@@ -200,13 +201,19 @@ class MLHandlerPersistWrapper:
             process_thread.start()
 
     def __getattr__(self, method_name):
-        global queue_in, queue_out
+        global queue_in, queue_out, queue_lock
 
         # is call of the method
 
         def call(*args, **kwargs):
+            # send one task at the time
+            queue_lock.acquire()
+
             queue_in.put([method_name, args, kwargs])
-            return queue_out.get()
+            result = queue_out.get()
+
+            queue_lock.release()
+            return result
 
         return call
 

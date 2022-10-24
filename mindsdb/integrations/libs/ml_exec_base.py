@@ -96,6 +96,27 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
     predictor_record.status = PREDICTOR_STATUS.COMPLETE
     db.session.commit()
 
+    # region If the process is 'retrain', then need to mark last trained predictor as 'active'
+    predictors_records = (
+        db.Predictor.query.filter_by(
+            name=predictor_record.name,
+            project_id=predictor_record.project_id
+        )
+        .order_by(db.Predictor.created_at)
+        .with_for_update()
+        .populate_existing()
+        .all()
+    )
+    for predictor_record in predictors_records:
+        predictor_record.active = False
+    predictor_record = next((x for x in reversed(predictors_records) if x.status == PREDICTOR_STATUS.COMPLETE), None)
+    if predictor_record is not None:
+        predictor_record.active = True
+    else:
+        predictors_records[-1].active = True
+    db.session.commit()
+    # endregion
+
 
 @mark_process(name='predict')
 def predict_process(class_path, company_id, integration_id, predictor_id, df, res_queue=None, args: dict = {}):
@@ -333,8 +354,67 @@ class BaseMLEngineExec:
         return Response(RESPONSE_TYPE.OK)
 
     def retrain(self, statement):
-        # TODO: mark current predictor as inactive, create new predictor and run learn
-        raise NotImplementedError()
+        if len(statement.name.parts) != 2:
+            raise Exception("Retrain command should contain name of database and name of model")
+        database_name, model_name = statement.name.parts
+
+        base_predictor_record = get_model_record(
+            name=model_name,
+            project_name=database_name,
+            company_id=self.company_id,
+            active=True
+        )
+
+        if base_predictor_record is None:
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=f"Error: model '{model_name}' does not exists"
+            )
+
+        new_predictor_record = db.Predictor(
+            company_id=self.company_id,
+            name=base_predictor_record.name,
+            integration_id=base_predictor_record.integration_id,
+            data_integration_id=base_predictor_record.data_integration_id,
+            fetch_data_query=base_predictor_record.fetch_data_query,
+            mindsdb_version=mindsdb_version,
+            to_predict=base_predictor_record.to_predict,
+            learn_args=base_predictor_record.learn_args,
+            data={'name': base_predictor_record.name},
+            active=False,
+            status=PREDICTOR_STATUS.GENERATING,
+            project_id=base_predictor_record.project_id
+        )
+        db.session.add(new_predictor_record)
+        db.session.commit()
+
+        data_handler_meta = self.handler_controller.get_by_id(base_predictor_record.data_integration_id)
+        data_handler = self.handler_controller.get_handler(data_handler_meta['name'])
+        ast = self.parser(base_predictor_record.fetch_data_query, dialect=self.dialect)
+        response = data_handler.query(ast)
+        if response.type == RESPONSE_TYPE.ERROR:
+            return response
+        training_data_df = response.data_frame
+
+        new_predictor_record.training_data_columns_count = len(training_data_df.columns)
+        new_predictor_record.training_data_rows_count = len(training_data_df)
+        db.session.commit()
+
+        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+
+        p = HandlerProcess(
+            learn_process,
+            class_path,
+            self.company_id,
+            self.integration_id,
+            new_predictor_record.id,
+            training_data_df,
+            new_predictor_record.to_predict,
+            new_predictor_record.learn_args
+        )
+        p.start()
+
+        return Response(RESPONSE_TYPE.OK)
 
     def predict(self, model_name: str, data: list, pred_format: str = 'dict', project_name: str = None):
         """ Generates predictions with some model and input data. """

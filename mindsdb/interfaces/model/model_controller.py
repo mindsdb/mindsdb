@@ -6,7 +6,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_datetime
 
-from sqlalchemy import func
+from sqlalchemy import func, null
 import numpy as np
 
 import mindsdb.interfaces.storage.db as db
@@ -122,6 +122,7 @@ class ModelController():
         project_record = db.Project.query.filter(
             (func.lower(db.Project.name) == func.lower(project_name))
             & (db.Project.company_id == company_id)
+            & (db.Project.deleted_at == null())
         ).first()
         if project_record is None:
             raise Exception(f"Project '{project_name}' does not exists")

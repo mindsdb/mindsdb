@@ -1,3 +1,4 @@
+from typing import Optional
 from collections import OrderedDict
 
 from mindsdb.interfaces.database.integrations import IntegrationController
@@ -10,9 +11,22 @@ class DatabaseController:
         self.project_controller = ProjectController()
 
     # def create(self): ...
-    # def delete(self): ...
+    def delete(self, name: str, company_id: Optional[int]):
+        databases = self.get_dict(company_id=company_id)
+        if name not in databases:
+            raise Exception(f"Database '{name}' does not exists")
+        db_type = databases[name]['type']
+        if db_type == 'project':
+            project = self.get_project(name, company_id=company_id)
+            project.delete()
+            return
+        elif db_type == 'data':
+            self.integration_controller.delete(name, company_id=company_id)
+            return
+        else:
+            raise Exception(f"Database with type '{db_type}' cannot be deleted")
 
-    def get_list(self, company_id: int, filter_type: str = None):
+    def get_list(self, company_id: Optional[int], filter_type: Optional[str] = None):
         projects = self.project_controller.get_list(company_id=company_id)
         integrations = self.integration_controller.get_all(company_id=company_id)
         result = [{
@@ -41,14 +55,14 @@ class DatabaseController:
 
         return result
 
-    def get_dict(self, company_id: int, filter_type: str = None):
+    def get_dict(self, company_id: Optional[int], filter_type: Optional[str] = None):
         return OrderedDict(
             (x['name'], {'type': x['type']})
             for x in self.get_list(company_id=company_id, filter_type=filter_type)
         )
 
-    def get_project(self, name):
-        return self.project_controller.get(name=name)
+    def get_project(self, name: str, company_id: Optional[int]):
+        return self.project_controller.get(name=name, company_id=company_id)
 
     # def get_tables(self, db): ...
     # def get_column(self, db, table): ...

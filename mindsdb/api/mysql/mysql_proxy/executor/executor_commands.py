@@ -121,8 +121,7 @@ class ExecuteCommands:
         elif type(statement) == DropTables:
             return self.answer_drop_tables(statement)
         elif type(statement) == DropDatasource or type(statement) == DropDatabase:
-            ds_name = statement.name.parts[-1]
-            return self.answer_drop_database(ds_name)
+            return self.answer_drop_database(statement)
         elif type(statement) == Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
             predictor_attrs = ("model", "features", "ensemble")
@@ -739,11 +738,11 @@ class ExecuteCommands:
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_drop_database(self, ds_name):
-        integration = self.session.integration_controller.get(ds_name)
-        if integration is None:
-            raise SqlApiException(f"Database '{ds_name}' does not exists.")
-        self.session.integration_controller.delete(integration['name'])
+    def answer_drop_database(self, statement):
+        if len(statement.name.parts) != 1:
+            raise Exception('Database name should contain only 1 part.')
+        db_name = statement.name.parts[0]
+        self.session.database_controller.delete(db_name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):

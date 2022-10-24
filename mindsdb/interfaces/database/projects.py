@@ -1,7 +1,7 @@
-import time
+import datetime
 from typing import List
-from collections import OrderedDict
 from copy import deepcopy
+from collections import OrderedDict
 
 import sqlalchemy as sa
 import numpy as np
@@ -46,7 +46,11 @@ class Project:
         db.session.commit()
 
     def delete(self):
-        self.record.deleted_at = time.time()
+        tables = self.get_tables()
+        tables = [key for key, val in tables.items() if val['type'] != 'table']
+        if len(tables) > 0:
+            raise Exception(f"Project '{self.name}' can not be deleted, because it contains tables: {', '.join(tables)}")
+        self.record.deleted_at = datetime.datetime.now()
         db.session.commit()
 
     def get_models(self):

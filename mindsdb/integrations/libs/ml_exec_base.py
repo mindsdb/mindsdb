@@ -336,12 +336,15 @@ class BaseMLEngineExec:
         # TODO: mark current predictor as inactive, create new predictor and run learn
         raise NotImplementedError()
 
-    def predict(self, model_name: str, data: list, pred_format: str = 'dict'):
+    def predict(self, model_name: str, data: list, pred_format: str = 'dict', project_name: str = None):
         """ Generates predictions with some model and input data. """
         if isinstance(data, dict):
             data = [data]
         df = pd.DataFrame(data)
-        predictor_record = get_model_record(company_id=self.company_id, name=model_name, ml_handler_name=self.name)
+        predictor_record = get_model_record(
+            company_id=self.company_id, name=model_name,
+            ml_handler_name=self.name, project_name=project_name
+        )
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,

@@ -44,7 +44,7 @@ class ProjectDataNode(DataNode):
         project_tables = self.project.get_tables()
         predictor_table_meta = project_tables[model_name]
         handler = self.integration_controller.get_handler(predictor_table_meta['engine_name'])
-        predictions = handler.predict(model_name, data)
+        predictions = handler.predict(model_name, data, project_name=self.project.name)
         return predictions
 
     def query(self, query=None, native_query=None):

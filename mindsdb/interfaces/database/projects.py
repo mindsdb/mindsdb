@@ -7,6 +7,7 @@ import sqlalchemy as sa
 import numpy as np
 
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities.config import Config
 
 
 class Project:
@@ -50,7 +51,16 @@ class Project:
         tables = [key for key, val in tables.items() if val['type'] != 'table']
         if len(tables) > 0:
             raise Exception(f"Project '{self.name}' can not be deleted, because it contains tables: {', '.join(tables)}")
-        self.record.deleted_at = datetime.datetime.now()
+
+        is_cloud = Config().get('cloud', False)
+        if is_cloud is True:
+            self.record.deleted_at = datetime.datetime.now()
+        else:
+            db.session.delete(self.record)
+            self.record = None
+            self.name = None
+            self.company_id = None
+            self.id = None
         db.session.commit()
 
     def get_models(self):
@@ -147,9 +157,9 @@ class ProjectController:
             )
 
         if deleted is True:
-            q.filter((db.Project.deleted_at != sa.null()))
+            q = q.filter((db.Project.deleted_at != sa.null()))
         else:
-            q.filter_by(deleted_at=sa.null())
+            q = q.filter_by(deleted_at=sa.null())
 
         record = q.one()
 

@@ -275,6 +275,11 @@ class BaseMLEngineExec:
         if problem_definition is None:
             problem_definition = {}
 
+        # checks
+        if target not in training_data_df.columns:
+            raise Exception(
+                f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
+
         problem_definition['target'] = target
 
         predictor_record = db.Predictor(

@@ -487,7 +487,8 @@ class BaseMLEngineExec:
             company_id=self.company_id,
             name=model_name,
             ml_handler_name=self.name,
-            project_id=project.id
+            project_id=project.id,
+            active=None
         )
         if len(predictors_records) == 0:
             return Response(

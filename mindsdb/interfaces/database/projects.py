@@ -97,7 +97,8 @@ class Project:
                 'mindsdb_version': predictor_record.mindsdb_version,
                 'error': predictor_data.get('error'),
                 'select_data_query': predictor_record.fetch_data_query,
-                'training_options': predictor_record.learn_args
+                'training_options': predictor_record.learn_args,
+                'deletable': True
             }
             if predictor_data is not None and predictor_data.get('accuracies', None) is not None:
                 if len(predictor_data['accuracies']) > 0:
@@ -108,8 +109,8 @@ class Project:
 
     def get_tables(self):
         data = OrderedDict()
-        data['models'] = {'type': 'table'}
-        data['models_versions'] = {'type': 'table'}
+        data['models'] = {'type': 'table', 'deletable': False}
+        data['models_versions'] = {'type': 'table', 'deletable': False}
 
         models = self.get_models()
         for model in models:

@@ -144,7 +144,7 @@ class ExecuteCommands:
                         where,
                         BinaryOperation('=', args=[
                             Identifier('project'),
-                            Constant(statement.from_table)
+                            Constant(statement.from_table.parts[-1])
                         ])
                     ])
                 if statement.like is not None:

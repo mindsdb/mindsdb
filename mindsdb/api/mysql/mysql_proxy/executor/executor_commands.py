@@ -216,24 +216,6 @@ class ExecuteCommands:
                     session=self.session
                 )
                 return self.answer_select(query)
-            elif sql_category == 'datasources':
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-                new_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(parts=['mindsdb', 'datasources']),
-                    where=where
-                )
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
             elif sql_category in ('tables', 'full tables'):
                 schema = self.session.database or 'mindsdb'
                 if statement.from_table is not None:

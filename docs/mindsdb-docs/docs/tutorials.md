@@ -77,3 +77,4 @@
 * [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI) by [Posterizedsoul](https://github.com/Posterizedsoul)
 * [Visualizing prediction result in Tableau](https://youtu.be/4aio-8kNbOo) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [MindsDB Data Insights](https://youtu.be/4oGgocNLi1c) by [@akhilcoder](https://www.youtube.com/@akhilcoder)
+* [Easily connect to Mindsdb Cloud from MongoShell](https://youtu.be/ysPRXSgdOVk) by [@akhilcoder](https://www.youtube.com/@akhilcoder)

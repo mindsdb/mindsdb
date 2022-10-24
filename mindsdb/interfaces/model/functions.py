@@ -38,6 +38,7 @@ def get_project_record(company_id: int, name: str) -> db.Project:
         .filter(
             (func.lower(db.Project.name) == name)
             & (db.Project.company_id == company_id)
+            & (db.Project.deleted_at == null())
         ).first()
     )
     return project_record

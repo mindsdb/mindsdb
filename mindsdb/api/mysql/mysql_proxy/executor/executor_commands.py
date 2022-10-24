@@ -79,7 +79,8 @@ from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE
 from mindsdb.interfaces.model.functions import (
     get_model_record,
-    get_model_records
+    get_model_records,
+    get_predictor_integration
 )
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
@@ -616,30 +617,32 @@ class ExecuteCommands:
         )
 
     def answer_retrain_predictor(self, statement):
-        handler_name = self.session.database
-        if len(statement.name.parts) > 1:
-            handler_name = statement.name.parts[0]
-            statement.name.parts = statement.name.parts[1:]
-        if handler_name.lower() == 'mindsdb':
-            handler_name = 'lightwood'
-        ml_handler = self.session.integration_controller.get_handler(handler_name)
-        model_name = statement.name.parts[0]
+        if len(statement.name.parts) == 1:
+            statement.name.parts = [
+                self.session.database,
+                statement.name.parts[0]
+            ]
+        database_name, model_name = statement.name.parts
 
-        models = get_model_records(
-            ml_handler_name=handler_name,
+        model_record = get_model_record(
             company_id=self.session.company_id,
-            active=None,
-            name=model_name
+            name=model_name,
+            project_name=database_name,
+            except_absent=True
         )
+        integration_record = get_predictor_integration(model_record)
+        if integration_record is None:
+            raise Exception(f"Model '{model_name}' does not have linked integration")
 
-        if len(models) == 0:
-            raise SqlApiException(
-                f'There is no predictor {handler_name}.{model_name}'
-            )
+        ml_handler = self.session.integration_controller.get_handler(integration_record.name)
 
         # region check if there is already predictor retraing
         is_cloud = self.session.config.get('cloud', False)
         if is_cloud and self.session.user_class == 0:
+            models = get_model_records(
+                company_id=self.session.company_id,
+                active=None
+            )
             longest_training = None
             for p in models:
                 if (

@@ -134,6 +134,10 @@ class ExecuteCommands:
             return self.answer_retrain_predictor(statement)
         elif type(statement) == Show:
             sql_category = statement.category.lower()
+            if hasattr(statement, 'modes'):
+                if isinstance(statement.modes, list) is False:
+                    statement.modes = []
+                statement.modes = [x.upper() for x in statement.modes]
             if sql_category in ('predictors', 'models'):
                 where = BinaryOperation('=', args=[Constant(1), Constant(1)])
                 if statement.from_table is not None:
@@ -204,12 +208,18 @@ class ExecuteCommands:
                         where = like
 
                 new_statement = Select(
-                    targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
-                    from_table=Identifier(parts=['information_schema', 'SCHEMATA']),
+                    targets=[Identifier(parts=["NAME"], alias=Identifier('Database'))],
+                    from_table=Identifier(parts=['information_schema', 'DATABASES']),
                     where=where
                 )
                 if statement.where is not None:
                     new_statement.where = statement.where
+
+                if 'FULL' in statement.modes:
+                    new_statement.targets.extend([
+                        Identifier(parts=['TYPE'], alias=Identifier('TYPE')),
+                        Identifier(parts=['ENGINE'], alias=Identifier('ENGINE'))
+                    ])
 
                 query = SQLQuery(
                     new_statement,
@@ -245,13 +255,10 @@ class ExecuteCommands:
                     where=where
                 )
 
-                if statement.modes is not None:
-                    modes = [m.upper() for m in statement.modes]
-                    # show full tables. show always 'BASE TABLE'
-                    if 'FULL' in modes:
-                        new_statement.targets.append(
-                            Constant(value='BASE TABLE', alias=Identifier('Table_type'))
-                        )
+                if 'FULL' in statement.modes:
+                    new_statement.targets.append(
+                        Constant(value='BASE TABLE', alias=Identifier('Table_type'))
+                    )
 
                 query = SQLQuery(
                     new_statement,

@@ -287,9 +287,6 @@ class BaseMLEngineExec:
         target = statement.targets[0].parts[-1]
         training_data_df = pd.DataFrame()
 
-        if target not in training_data_df.columns:
-            raise Exception(f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
-
         fetch_data_query = None
         data_integration_id = None
         # get data for learn
@@ -313,7 +310,16 @@ class BaseMLEngineExec:
 
             training_data_df = result['result']
 
-            data_integration_id = self.handler_controller.get(name=integration_name)['id']
+            databases_meta = self.database_controller.get_dict()
+            data_integration_meta = databases_meta[integration_name]
+            # TODO improve here. Suppose that it is view
+            if data_integration_meta['type'] == 'project':
+                data_integration_id = self.handler_controller.get(name='views')['id']
+            else:
+                data_integration_id = data_integration_meta['id']
+
+        if target not in training_data_df.columns:
+            raise Exception(f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
         problem_definition = statement.using
         if problem_definition is None:

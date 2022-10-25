@@ -5,6 +5,7 @@ import numpy as np
 from sqlalchemy.types import (
     Integer, Float, Text
 )
+from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
@@ -51,6 +52,9 @@ class ProjectDataNode(DataNode):
         return predictions
 
     def query(self, query=None, native_query=None, session=None):
+        if query is None and native_query is not None:
+            query = parse_sql(native_query, dialect='mindsdb')
+
         # region is it query to 'models' or 'models_versions'?
         query_table = query.from_table.parts[0]
         if query_table in ('models', 'models_versions'):

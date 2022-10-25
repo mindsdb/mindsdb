@@ -33,7 +33,6 @@ class ViewController:
         session.commit()
 
     def delete(self, name, company_id=None):
-
         rec = session.query(View).filter(View.name == name, View.company_id == company_id).first()
         if rec is None:
             raise Exception(f'View not found: {name}')
@@ -41,7 +40,6 @@ class ViewController:
         session.commit()
 
     def _get_view_record_data(self, record):
-
         return {
             'name': record.name,
             'query': record.query

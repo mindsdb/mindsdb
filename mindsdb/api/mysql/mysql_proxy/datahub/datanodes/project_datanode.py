@@ -5,6 +5,7 @@ import numpy as np
 from sqlalchemy.types import (
     Integer, Float, Text
 )
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     Identifier,
@@ -14,6 +15,8 @@ from mindsdb_sql.parser.ast import (
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
+from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
 
 class ProjectDataNode(DataNode):
@@ -47,8 +50,8 @@ class ProjectDataNode(DataNode):
         predictions = handler.predict(model_name, data, project_name=self.project.name)
         return predictions
 
-    def query(self, query=None, native_query=None):
-        # is it query to 'models' or 'models_versions'?
+    def query(self, query=None, native_query=None, session=None):
+        # region is it query to 'models' or 'models_versions'?
         query_table = query.from_table.parts[0]
         if query_table in ('models', 'models_versions'):
             new_query = deepcopy(query)
@@ -65,7 +68,37 @@ class ProjectDataNode(DataNode):
                 ])
             data, columns_info = self.information_schema.query(new_query)
             return data, columns_info
+        # endregion
 
-        # TODO views
+        # region query to views
+        views_handler = self.integration_controller.get_handler('views')
+        response = views_handler.query(query)
 
-        raise Exception(f"Unknown table '{query_table}'")
+        if response.resp_type != 'query':
+            raise Exception(f'Cant execute view query: {response.error_message}')
+
+        renderer = SqlalchemyRender('mysql')
+        query_str = renderer.get_string(response.query, with_failback=True)
+
+        sqlquery = SQLQuery(
+            query_str,
+            session=session
+        )
+
+        result = sqlquery.fetch(view='dataframe')
+        if result['success'] is False:
+            raise Exception(f'Cant execute view query: {query_str}')
+        df = result['result']
+
+        df = query_df(df, query)
+
+        columns_info = [
+            {
+                'name': k,
+                'type': v
+            }
+            for k, v in df.dtypes.items()
+        ]
+
+        return df.to_dict(orient='records'), columns_info
+        # endregion

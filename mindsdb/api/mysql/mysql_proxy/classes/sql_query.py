@@ -536,15 +536,16 @@ class SQLQuery():
 
             # fetch raw_query
             data, columns_info = dn.query(
-                native_query=step.raw_query
+                native_query=step.raw_query,
+                session=self.session
             )
         else:
-
             table_alias = get_table_alias(step.query.from_table, self.database)
             # TODO for information_schema we have 'database' = 'mindsdb'
 
             data, columns_info = dn.query(
-                query=query
+                query=query,
+                session=self.session
             )
 
         # if this is query: execute it
@@ -773,7 +774,7 @@ class SQLQuery():
             dn = self.datahub.get(step.namespace)
             ds_query = Select(from_table=Identifier(table), targets=[Star()])
 
-            data, columns_info = dn.query(ds_query)
+            data, columns_info = dn.query(ds_query, session=self.session)
 
             table_alias = (self.database, table, table)
 
@@ -1551,8 +1552,7 @@ class SQLQuery():
                 for param_name, param in params_map_index:
                     param.value = row[param_name]
 
-                # execute
-                dn.query(query=update_query)
+                dn.query(query=update_query, session=self.session)
 
             data = None
         else:

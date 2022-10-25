@@ -354,7 +354,7 @@ class InformationSchemaDataNode(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def query(self, query: ASTNode):
+    def query(self, query: ASTNode, session=None):
         query_tables = get_all_tables(query)
 
         if len(query_tables) != 1:

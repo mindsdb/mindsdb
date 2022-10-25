@@ -809,7 +809,7 @@ class ExecuteCommands:
                     query=statement.query_str
                 )
             )
-            renderer = SqlalchemyRender('mindsdb')
+            renderer = SqlalchemyRender('mysql')
             query_str = renderer.get_string(query, with_failback=True)
 
         if isinstance(query, Select):

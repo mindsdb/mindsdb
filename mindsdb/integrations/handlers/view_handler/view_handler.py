@@ -39,7 +39,6 @@ class ViewHandler(DatabaseHandler):
         return self.query(ast)
 
     def query(self, query: ASTNode) -> Response:
-
         view_name = query.from_table.parts[-1]
         if query.from_table.alias is not None:
             view_alias = query.from_table.alias.parts[-1]
@@ -48,22 +47,11 @@ class ViewHandler(DatabaseHandler):
         view_meta = self.view_controller.get(name=view_name)
 
         subquery_ast = parse_sql(view_meta['query'], dialect='mindsdb')
-        if query.from_table.parts[-1] != view_name:
-            return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=f"Query does not contain view name '{view_name}': {query}"
-            )
-
-        # set alias
-        query = copy.deepcopy(query)
-        subquery_ast.alias = Identifier(view_alias)
-        query.from_table = subquery_ast
 
         return Response(
             RESPONSE_TYPE.QUERY,
-            query=query
+            query=subquery_ast
         )
-
 
     def get_tables(self) -> Response:
         """

@@ -1294,35 +1294,6 @@ class ExecuteCommands:
             else:
                 raise ErBadDbError(f"Database {db_name} does not exists")
 
-    def _check_predict_columns(self, predict_column_names, ds_column_names):
-        ''' validate 'predict' column names
-
-            predict_column_names: list of 'predict' columns
-            ds_column_names: list of all datasource columns
-        '''
-        cleaned_predict_column_names = []
-        for predict_column_name in predict_column_names:
-            candidate = None
-            for column_name in ds_column_names:
-                if column_name == predict_column_name:
-                    if candidate is not None:
-                        raise ErKeyColumnDoesNotExist("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
-                    candidate = column_name
-            if candidate is None:
-                for column_name in ds_column_names:
-                    if column_name.lower() == predict_column_name.lower():
-                        if candidate is not None:
-                            raise ErKeyColumnDoesNotExist("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
-                        candidate = column_name
-            if candidate is None:
-                raise ErKeyColumnDoesNotExist(f"Datasource has not column with name '{predict_column_name}'")
-            cleaned_predict_column_names.append(candidate)
-
-        if len(cleaned_predict_column_names) != len(set(cleaned_predict_column_names)):
-            raise ErDubFieldName("'predict' column name is duplicated")
-
-        return cleaned_predict_column_names
-
     def _get_features_info(self, data):
         ai_info = data.get('json_ai', {})
         if ai_info == {}:

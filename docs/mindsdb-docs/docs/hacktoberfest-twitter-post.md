@@ -31,3 +31,8 @@
 - A Twitter Thread by [Atharva Shirdhankar](https://twitter.com/_Atharva_08/status/1581620848351268866?s=20&t=cbPkcHUXrsOQAcTCi_PFXQ)
 
 - A Twitter Thread by [@UnrevealRich](https://twitter.com/UnrevealRich/status/1583537036119937024)
+
+- A Twitter Thread by [Syed Zubeen](https://twitter.com/ZubeenSyed/status/1584655063687270400?s=20&t=XsoG4J4YUqK1tUG9ZYx3qQ)
+
+- A Twitter Thread by [Syed Zubeen](https://twitter.com/ZubeenSyed/status/1584329407610511360?s=20&t=VNpMJOS8MHsiQ07ACvTtGA)
+

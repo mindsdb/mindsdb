@@ -1270,26 +1270,11 @@ class ExecuteCommands:
             data=data['result'],
         )
 
-    def is_db_exists(self, db_name):
-        sql_statement = Select(
-            targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
-            from_table=Identifier(parts=['information_schema', 'SCHEMATA']),
-            where=BinaryOperation('=', args=[Identifier('schema_name'), Constant(db_name)])
-        )
-        query = SQLQuery(
-            sql_statement,
-            session=self.session
-        )
-        result = query.fetch()
-        if result.get('success') is True and len(result.get('result')) > 0:
-            return True
-        return False
-
     def change_default_db(self, db_name):
         # That fix for bug in mssql: it keeps connection for a long time, but after some time mssql can
         # send packet with COM_INIT_DB=null. In this case keep old database name as default.
         if db_name != 'null':
-            if self.is_db_exists(db_name):
+            if self.session.database_controller.exists(db_name):
                 self.session.database = db_name
             else:
                 raise ErBadDbError(f"Database {db_name} does not exists")

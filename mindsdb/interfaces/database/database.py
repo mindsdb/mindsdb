@@ -10,7 +10,6 @@ class DatabaseController:
         self.integration_controller = IntegrationController()
         self.project_controller = ProjectController()
 
-    # def create(self): ...
     def delete(self, name: str, company_id: Optional[int]):
         databases = self.get_dict(company_id=company_id)
         if name not in databases:
@@ -61,8 +60,8 @@ class DatabaseController:
             for x in self.get_list(company_id=company_id, filter_type=filter_type)
         )
 
+    def exists(self, db_name: str, company_id: Optional[int]) -> bool:
+        return db_name in self.get_dict(company_id=company_id)
+
     def get_project(self, name: str, company_id: Optional[int]):
         return self.project_controller.get(name=name, company_id=company_id)
-
-    # def get_tables(self, db): ...
-    # def get_column(self, db, table): ...

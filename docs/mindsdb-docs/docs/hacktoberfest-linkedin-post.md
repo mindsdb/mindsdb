@@ -23,3 +23,5 @@
 - A LinkedIn post by [Munyoudoum Pav](https://www.linkedin.com/posts/munyoudoum_how-to-deploy-mindsdb-on-your-local-machine-activity-6988933107886276608-Ps1r?utm_source=share&utm_medium=member_desktop)
 
 - A LinkedIn post by [Angelo Ganaden Jr](https://www.linkedin.com/posts/angelo-ganaden-2245b6120_had-fun-integrating-ai-in-my-database-using-activity-6989554095598518272-wa4y/?utm_source=share&utm_medium=member_desktop)
+
+- A LinkedIn Post by [Syed Zubeen](https://www.linkedin.com/posts/syedzubeen_introduce-ai-to-your-database-activity-6990496536421904384-yLwm?utm_source=share&utm_medium=member_desktop)

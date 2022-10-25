@@ -327,9 +327,9 @@ Let's get started.
 
 ### Let's Run the Codes
 
-Here, we go through the codes for the partial table and the full table after joining the data.
+Here, we go through the codes using partial tables and the full table after joining the data.
 
-You can download the files to follow the steps with us: [usedcarprice_part1](/assets/sql/usedcarprice_part1.csv), [usedcarprice_part2](/assets/sql/usedcarprice_part2.csv), and [usedcarprice_joined](/assets/sql/usedcarprice_joined.csv).
+Download the following files: [usedcarprice_part1](/assets/sql/usedcarprice_part1.csv), [usedcarprice_part2](/assets/sql/usedcarprice_part2.csv), and [usedcarprice_joined](/assets/sql/usedcarprice_joined.csv), and check out [how to upload a file to MindsDB](/sql/create/file/) to follow the steps with us.
 
 #### Data Setup
 
@@ -355,7 +355,8 @@ On execution, we get:
 +---+-----+----+------------+-------+--------+-----+---+
 ```
 
-Please note that we added the `id` column to be able to join the two partial tables ([usedcarprice_part1](/assets/sql/usedcarprice_part1.csv) and [usedcarprice_part2](/assets/sql/usedcarprice_part2.csv)) on the `id` column that uniquely identifies each data row.
+!!! note "Added a Column"
+    Please note that we added the `id` column to be able to join the two partial tables ([usedcarprice_part1](/assets/sql/usedcarprice_part1.csv) and [usedcarprice_part2](/assets/sql/usedcarprice_part2.csv)) on the `id` column that uniquely identifies each data row.
 
 And here is the remaining data (the `mpg` and `enginesize` columns):
 
@@ -378,8 +379,6 @@ On execution, we get:
 |5  | A3  |2019|Manual      |1998   |Petrol  |49.6 |1         |
 +---+-----+----+------------+-------+--------+-----+----------+
 ```
-
-Please note that we added the `id` column to be able to join the two partial tables on the `id` column that uniquely identifies each data row.
 
 The two tables above will be joined on the `id` column.
 
@@ -407,7 +406,7 @@ On execution, we get:
 
 #### Creating Predictors
 
-Let's create a predictor for the first partial table.
+Let's create a predictor for the partial table.
 
 ```sql
 CREATE PREDICTOR mindsdb.price_predictor_partial_table1
@@ -422,7 +421,7 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-Now, let's create a predictor for the table that is a `JOIN` between the two partial tables: the [usedcarprice_part1](/assets/sql/usedcarprice_part1.csv) and [usedcarprice_part2](/assets/sql/usedcarprice_part2.csv) tables.
+Now, let's create a predictor for the table that is a `JOIN` between the two partial tables.
 
 ```sql
 CREATE PREDICTOR mindsdb.price_predictor_joined
@@ -441,7 +440,7 @@ Query OK, 0 rows affected (x.xxx sec)
 
 Next, we check the status of both predictors.
 
-We start with the predictor based on the first partial table.
+We start with the predictor based on the partial table.
 
 ```sql
 SELECT *
@@ -500,4 +499,4 @@ Let's compare how close the predicted price values are to the true price.
 +---+-----+----+------------+-------+--------+----------+------------+------------+
 ```
 
-The prices predicted by the second predictor, based on the full joined table, are on average the closest to the true price.
+The prices predicted by the second predictor (based on the full joined table) are, on average, the closest to the true price.

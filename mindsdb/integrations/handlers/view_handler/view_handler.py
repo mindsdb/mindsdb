@@ -41,6 +41,10 @@ class ViewHandler(DatabaseHandler):
     def query(self, query: ASTNode) -> Response:
 
         view_name = query.from_table.parts[-1]
+        if query.from_table.alias is not None:
+            view_alias = query.from_table.alias.parts[-1]
+        else:
+            view_alias = view_name
         view_meta = self.view_controller.get(name=view_name)
 
         subquery_ast = parse_sql(view_meta['query'], dialect='mindsdb')
@@ -52,7 +56,7 @@ class ViewHandler(DatabaseHandler):
 
         # set alias
         query = copy.deepcopy(query)
-        subquery_ast.alias = Identifier(view_name)
+        subquery_ast.alias = Identifier(view_alias)
         query.from_table = subquery_ast
 
         return Response(

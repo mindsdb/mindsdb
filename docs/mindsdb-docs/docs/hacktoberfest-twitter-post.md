@@ -16,6 +16,8 @@
 
 - A Twitter Thread by [Aditya Das](https://twitter.com/ADITYA90546170/status/1578227619396726784?t=vMgXWKje0d7czZDe8d3qJQ&s=03)
 
+- A Twitter Thread by [Haseeb Siddiqui](https://twitter.com/hasebsiddiqui/status/1583608352671555584)
+
 - A Twitter Thread by [@DevHellFire](https://twitter.com/DevHellfire/status/1580132923025788929)
 
 - A Twitter Thread by [Craig Gehrig](https://twitter.com/CraigGehrig/status/1579322580347109376)
@@ -27,3 +29,5 @@
 - A Twitter Thread by [@EmmanuelCoder](https://twitter.com/EmmanuelCoder/status/1580609518362558466)
 
 - A Twitter Thread by [Atharva Shirdhankar](https://twitter.com/_Atharva_08/status/1581620848351268866?s=20&t=cbPkcHUXrsOQAcTCi_PFXQ)
+
+- A Twitter Thread by [@UnrevealRich](https://twitter.com/UnrevealRich/status/1583537036119937024)

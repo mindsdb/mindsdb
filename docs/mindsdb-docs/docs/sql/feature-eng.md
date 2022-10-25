@@ -329,7 +329,7 @@ Let's get started.
 
 Here, we go through the codes for the partial table and the full table after joining the data.
 
-You can download the files to follow the steps with us: [usedcarprice_part1](/mindsdb/docs/mindsdb-docs/docs/sql/usedcarprice_part1.csv), [usedcarprice_part2](/mindsdb/docs/mindsdb-docs/docs/sql/usedcarprice_part2.csv), and [usedcarprice_joined](/mindsdb/docs/mindsdb-docs/docs/sql/usedcarprice_joined.csv).
+You can download the files to follow the steps with us: [usedcarprice_part1](/assets/sql/usedcarprice_part1.csv), [usedcarprice_part2](/assets/sql/usedcarprice_part2.csv), and [usedcarprice_joined](/assets/sql/usedcarprice_joined.csv).
 
 #### Data Setup
 
@@ -355,7 +355,7 @@ On execution, we get:
 +---+-----+----+------------+-------+--------+-----+---+
 ```
 
-Please note that we added the `id` column to be able to join the two partial tables ([usedcarprice_part1](/mindsdb/docs/mindsdb-docs/docs/sql/usedcarprice_part1.csv) and [usedcarprice_part2](/mindsdb/docs/mindsdb-docs/docs/sql/usedcarprice_part2.csv)) on the `id` column that uniquely identifies each data row.
+Please note that we added the `id` column to be able to join the two partial tables ([usedcarprice_part1](/assets/sql/usedcarprice_part1.csv) and [usedcarprice_part2](/assets/sql/usedcarprice_part2.csv)) on the `id` column that uniquely identifies each data row.
 
 And here is the remaining data (the `mpg` and `enginesize` columns):
 
@@ -422,7 +422,7 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-Now, let's create a predictor for the table that is a `JOIN` between the two partial tables: the [usedcarprice_part1](usedcarprice_part1) and [usedcarprice_part2](usedcarprice_part2) tables.
+Now, let's create a predictor for the table that is a `JOIN` between the two partial tables: the [usedcarprice_part1](/assets/sql/usedcarprice_part1.csv) and [usedcarprice_part2](/assets/sql/usedcarprice_part2.csv) tables.
 
 ```sql
 CREATE PREDICTOR mindsdb.price_predictor_joined

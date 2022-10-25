@@ -42,12 +42,14 @@ class DatabaseController:
                 'engine': None
             })
         for key, value in integrations.items():
-            result.append({
-                'name': key,
-                'type': 'data',
-                'id': value.get('id'),
-                'engine': value.get('engine')
-            })
+            db_type = value.get('type', 'data')
+            if db_type != 'ml':
+                result.append({
+                    'name': key,
+                    'type': value.get('type', 'data'),
+                    'id': value.get('id'),
+                    'engine': value.get('engine')
+                })
 
         if filter_type is not None:
             result = [x for x in result if x['type'] == filter_type]

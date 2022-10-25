@@ -178,9 +178,15 @@ class IntegrationController:
             ):
                 data['connection'] = None
 
+        integration_type = None
+        integration_module = self.handler_modules.get(integration_record.engine)
+        if hasattr(integration_module, 'type'):
+            integration_type = integration_module.type
+
         return {
             'id': integration_record.id,
             'name': integration_record.name,
+            'type': integration_type,
             'engine': integration_record.engine,
             'date_last_update': deepcopy(integration_record.updated_at),
             'connection_data': data

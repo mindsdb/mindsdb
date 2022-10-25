@@ -2,7 +2,7 @@
 
 > **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
 
-## Testing MySQL Handler with [Car Prices Dataset](https://www.kaggle.com/code/dronax/car-prices-dataset/data)
+## Testing PlanetScale Handler with [Car Prices Dataset](https://www.kaggle.com/code/dronax/car-prices-dataset/data)
 
 **1. Testing CREATE DATABASE**
 

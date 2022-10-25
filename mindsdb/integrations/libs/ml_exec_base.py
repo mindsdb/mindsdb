@@ -286,6 +286,10 @@ class BaseMLEngineExec:
 
         target = statement.targets[0].parts[-1]
         training_data_df = pd.DataFrame()
+
+        if target not in training_data_df.columns:
+            raise Exception(f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
+
         fetch_data_query = None
         data_integration_id = None
         # get data for learn

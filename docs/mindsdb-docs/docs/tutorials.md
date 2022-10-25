@@ -54,7 +54,9 @@
 * [Predicting & Visualizing Hourly Electricity Demand in the US with MindsDB and Tableau](https://teslimodus.medium.com/predicting-visualizing-hourly-electricity-demand-in-the-us-with-mindsdb-and-tableau-126d1c74d860) by [Teslim Odumuyiwa](https://teslimodus.medium.com/)
 * [Bank Customer Churn Prediction using MindsDB](https://medium.com/@ayushsharmaa101/thanks-for-reading-dfec90467ddb) by [Ayush Sharma](https://github.com/ayushthe1)
 * [Let's connect Mindsdb with Mariadb shell Locally and Predict the Mobile Price](https://atharva08.hashnode.dev/lets-connect-mindsdb-with-mariadb-shell-locally-and-predict-the-mobile-price-range) by [Atharva Shirdhankar](https://github.com/StarTrooper08)
+* [What is MindsDB?](https://medium.com/@okekeebubechukwu08/what-is-mindsdb-b6862af21492) by [Gloria Okeke E.J](https://medium.com/@okekeebubechukwu08)
 * [Forecasting Honey Production with MindsDB](https://dev.to/narayanadithya/using-mindsdb-for-time-series-forecasting-honey-production-in-the-usa-4p05) by [Adithya Narayan](https://github.com/NarayanAdithya)
+
 
 # Community Video Guides
 

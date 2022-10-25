@@ -865,8 +865,7 @@ class ExecuteCommands:
         query2 = Select(targets=[Identifier('name')],
                         from_table=query.table,
                         where=query.where)
-        # fake_sql = sql.strip(' ')
-        # fake_sql = 'select name ' + fake_sql[len('delete '):]
+
         sqlquery = SQLQuery(
             query2.to_string(),
             session=self.session
@@ -883,22 +882,6 @@ class ExecuteCommands:
 
         for predictor_name in predictors_names:
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
-
-    def handle_custom_command(self, command):
-        command = command.strip(' ;').split()
-
-        if command[0].lower() == 'delete' and command[1].lower() == 'predictor':
-            if len(command) != 3:
-                raise ErSqlSyntaxError("wrong syntax of 'DELETE PREDICTOR {NAME}' command")
-
-            predictor_name = command[2]
-            self.delete_predictor_query(parse_sql(
-                f"delete from mindsdb.predictors where name = '{predictor_name}'",
-                'mindsdb'
-            ))
-            return ExecuteAnswer(ANSWER_TYPE.OK)
-
-        raise ErSqlSyntaxError("at this moment only 'delete predictor' command supported")
 
     def process_insert(self, statement):
         db_name = self.session.database
@@ -925,9 +908,7 @@ class ExecuteCommands:
             for value in row:
                 values.append(value.value)
             insert_dict = dict(zip(column_names, values))
-        if table_name == 'commands':
-            return self.handle_custom_command(insert_dict['command'])
-        elif table_name == 'predictors':
+        if table_name == 'predictors':
             return self.insert_predictor_answer(insert_dict)
 
     def answer_show_columns(self, target: Identifier, where: Optional[Operation] = None,

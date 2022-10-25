@@ -19,3 +19,11 @@
 - A LinkedIn post by [Emmanuel Aiyenigba](https://www.linkedin.com/posts/emmanuel-aiyenigba-46b9331a3_i-recently-discovered-mindsdb-an-open-source-activity-6986369927674761216-bToN?utm_source=share&utm_medium=member_desktop)
 
 - A LinkedIn post by [Jeremy Zabala](https://www.linkedin.com/posts/zavbala_hacktoberfest2022-activity-6986871570870779904-Epsn?utm_source=share&utm_medium=member_desktop)
+
+- A LinkedIn post by [Munyoudoum Pav](https://www.linkedin.com/posts/munyoudoum_how-to-deploy-mindsdb-on-your-local-machine-activity-6988933107886276608-Ps1r?utm_source=share&utm_medium=member_desktop)
+
+- A LinkedIn post by [Angelo Ganaden Jr](https://www.linkedin.com/posts/angelo-ganaden-2245b6120_had-fun-integrating-ai-in-my-database-using-activity-6989554095598518272-wa4y/?utm_source=share&utm_medium=member_desktop)
+
+- A LinkedIn post by [Fiona Murugi] (https://www.linkedin.com/posts/fiona-murugi-594012174_introduce-ai-to-your-database-activity-6989693493744963584-oGSO?utm_source=share&utm_medium=member_desktop)
+
+- A LinkedIn Post by [Syed Zubeen](https://www.linkedin.com/posts/syedzubeen_introduce-ai-to-your-database-activity-6990496536421904384-yLwm?utm_source=share&utm_medium=member_desktop)

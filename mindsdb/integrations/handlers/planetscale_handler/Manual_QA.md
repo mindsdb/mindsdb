@@ -3,7 +3,7 @@
 > **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
 
 ## Testing PlanetScale Handler with [Car Prices Dataset](https://www.kaggle.com/code/dronax/car-prices-dataset/data)
-
+### Results
 **1. Testing CREATE DATABASE**
 
 ```
@@ -48,7 +48,7 @@ SELECT * FROM predictors;
 
 ![PREDICTOR_STATUS](https://i.imgur.com/D2RiAye.png)
 
-**3. Testing SELECT FROM PREDICTOR**
+**5. Testing SELECT FROM PREDICTOR**
 
 ```
 SELECT * FROM cars_predict WHERE carlength=190 AND carwidth=60;
@@ -56,7 +56,6 @@ SELECT * FROM cars_predict WHERE carlength=190 AND carwidth=60;
 
 ![SELECT_FROM](https://i.imgur.com/2fTDI7l.png)
 
-### Results
 
 Drop a remark based on your observation.
 - [x] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)

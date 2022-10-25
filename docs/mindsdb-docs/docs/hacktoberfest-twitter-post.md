@@ -32,6 +32,8 @@
 
 - A Twitter Thread by [@UnrevealRich](https://twitter.com/UnrevealRich/status/1583537036119937024)
 
+- A Twitter Thread by [@FionaMurugi1](https://twitter.com/FionaMurugi1/status/1583922222699229185)
+
 - A Twitter Thread by [@zavbala](https://twitter.com/zavbala/status/1584241613915967489)
 
 - A Twitter Thread by [Syed Zubeen](https://twitter.com/ZubeenSyed/status/1584655063687270400?s=20&t=XsoG4J4YUqK1tUG9ZYx3qQ)

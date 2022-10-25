@@ -698,10 +698,10 @@ class TestWithNativeQuery(BaseExecutorTestMockModel):
         }
         self.set_predictor(predictor)
         ret = self.command_executor.execute_command(parse_sql(f'''
-           select task_model.p 
-           from views.{view_name}
-           join mindsdb.task_model
-           where {view_name}.a = 2
+           select m.p, v.a  
+           from views.{view_name} v
+           join mindsdb.task_model m
+           where v.a = 2
         ''', dialect='mindsdb'))
         assert ret.error_code is None
 

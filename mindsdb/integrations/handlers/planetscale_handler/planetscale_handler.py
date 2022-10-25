@@ -3,6 +3,6 @@ from ..mysql_handler import Handler as MySQLHandler, connection_args, connection
 
 class PlanetScaleHandler(MySQLHandler):
     """
-    This handler handles connection and execution of queries against PlanetSQL.
+    This handler handles connection and execution of queries against PlanetScale.
     """
     name = 'planet_scale'

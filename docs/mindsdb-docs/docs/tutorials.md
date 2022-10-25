@@ -78,3 +78,4 @@
 * [Visualizing prediction result in Tableau](https://youtu.be/4aio-8kNbOo) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [MindsDB Data Insights](https://youtu.be/4oGgocNLi1c) by [@akhilcoder](https://www.youtube.com/@akhilcoder)
 * [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/RPisvY54Tg4) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
+* [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/WCBLotgskZg) by [Adithya Narayan](https://github.com/NarayanAdithya)

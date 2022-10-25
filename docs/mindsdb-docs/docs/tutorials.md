@@ -55,9 +55,17 @@
 * [Bank Customer Churn Prediction using MindsDB](https://medium.com/@ayushsharmaa101/thanks-for-reading-dfec90467ddb) by [Ayush Sharma](https://github.com/ayushthe1)
 * [Let's connect Mindsdb with Mariadb shell Locally and Predict the Mobile Price](https://atharva08.hashnode.dev/lets-connect-mindsdb-with-mariadb-shell-locally-and-predict-the-mobile-price-range) by [Atharva Shirdhankar](https://github.com/StarTrooper08)
 * [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/RPisvY54Tg4) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
+* [Gold price prediction using MindsDB](https://dev.to/purgecodee/predicting-gold-price-with-mindsdb-205n) by [Pritish Sinha](https://github.com/Pritish-Sinha) 
+* [What is MindsDB?](https://medium.com/@okekeebubechukwu08/what-is-mindsdb-b6862af21492) by [Gloria Okeke E.J](https://medium.com/@okekeebubechukwu08)
+* [Forecasting Honey Production with MindsDB](https://dev.to/narayanadithya/using-mindsdb-for-time-series-forecasting-honey-production-in-the-usa-4p05) by [Adithya Narayan](https://github.com/NarayanAdithya)
+
+
 
 # Community Video Guides
 
+* [Video: What is MindsDB?](https://www.youtube.com/watch?v=SrDPYqQrzaw) by [Alissa Troiano](https://github.com/alissatroiano)
+* [Connect Postgres Database to MindsDB](https://youtu.be/jbH5fsviAgE) by [@akhilcoder](https://twitter.com/akhilcoder)
+* [Exploring Learning Hub on MindsDB by predicting house rental prices and forecasting house sales](https://youtu.be/Qmk_v0iginw) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Easily connect to MindsDB Cloud from MongoShell](https://youtube.com/video/ysPRXSgdOVk) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Singing Up with MindsDB Cloud](https://youtu.be/Y5hZ9GwjsQs) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [How to connect to MindsDB with SQL Alchemy(Python)](https://www.youtube.com/watch?v=pYR83QTyOQA) by [Nishant Sapkota](https://github.com/thenishantsapkota)
@@ -75,5 +83,11 @@
 * [How to create a free account on MindsDB Cloud](https://youtu.be/ciBtpqrlbhI) by [Anamika](https://github.com/noviicee)
 * [How to create a free account on MindsDB Cloud](https://youtu.be/3bGJP6-s8p4) by [MichaelLantz](https://github.com/MichaelLantz)
 * [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI) by [Posterizedsoul](https://github.com/Posterizedsoul)
+* [MindsDB - Predict data with machine learning](https://youtu.be/y2DNgJOplxM) by [HellFire](https://github.com/Artemis6969)
 * [Visualizing prediction result in Tableau](https://youtu.be/4aio-8kNbOo) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [MindsDB Data Insights](https://youtu.be/4oGgocNLi1c) by [@akhilcoder](https://www.youtube.com/@akhilcoder)
+* [Honey Production Prediction Time Series](https://youtu.be/WCBLotgskZg) by [Adithya Narayan](https://github.com/NarayanAdithya)
+* [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/RPisvY54Tg4) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
+* [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/WCBLotgskZg) by [Adithya Narayan](https://github.com/NarayanAdithya)
+* [How to access MindsDB](https://www.youtube.com/watch?v=8F5p_Rwmvgk) by [Syed Zubeen](https://github.com/syedzubeen)
+

@@ -280,6 +280,10 @@ class LightwoodHandler(PredictiveHandler):
 
         training_data_df = result['result']
 
+        # checks
+        if target not in training_data_df.columns:
+            raise Exception(f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
+
         integration_meta = self.handler_controller.get(name=integration_name)
         problem_definition = ProblemDefinition.from_dict(problem_definition_dict)
 

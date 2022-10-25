@@ -1,0 +1,51 @@
+# Welcome to the MindsDB Manual QA Testing for Salesforce Handler
+
+> **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
+
+## Testing Salesforce Handler with [Dataset Name](URL to the Dataset)
+
+**1. Testing CREATE DATABASE**
+
+```
+--- After you fill all the mandatory fields run the query with the top button or shift + enter. 
+    
+CREATE DATABASE salesforce_test  --- display name for database. 
+WITH ENGINE = 'salesforce',     --- name of the mindsdb handler 
+PARAMETERS = {
+    "user": "salesforce",              --- Your database user.
+    "password": "changeme",          --- Your password.
+    "host": "192.168.1.163",              --- host, it can be an ip or an url. 
+    "port": "5432",           --- common port is 5432.
+    "database": "DIABETES_DATA"           --- The name of your database *optional.
+};
+```
+
+**2. Testing CREATE PREDICTOR**
+
+```
+CREATE PREDICTOR mindsdb.diabetes_predictor
+FROM salesforce_test (
+    SELECT * FROM diabetes
+) PREDICT class;
+```
+
+**3. Testing SELECT FROM PREDICTOR**
+
+```
+SELECT *
+FROM mindsdb.predictors
+WHERE name='diabetes_predictor';
+```
+
+![SELECT_FROM](https://user-images.githubusercontent.com/241893/195337026-7d80d631-bb8a-445b-bc68-5ee7788de2d9.png)
+)
+
+### Results
+
+Drop a remark based on your observation.
+- [X] Works Great 💚 (This means that all the steps were executed successfully and the expected outputs were returned.)
+- [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+
+Looking forward to further testing / development.
+
+---

@@ -80,9 +80,11 @@
 * [How to create a free account on MindsDB Cloud](https://youtu.be/ciBtpqrlbhI) by [Anamika](https://github.com/noviicee)
 * [How to create a free account on MindsDB Cloud](https://youtu.be/3bGJP6-s8p4) by [MichaelLantz](https://github.com/MichaelLantz)
 * [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI) by [Posterizedsoul](https://github.com/Posterizedsoul)
+* [MindsDB - Predict data with machine learning](https://youtu.be/y2DNgJOplxM) by [HellFire](https://github.com/Artemis6969)
 * [Visualizing prediction result in Tableau](https://youtu.be/4aio-8kNbOo) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [MindsDB Data Insights](https://youtu.be/4oGgocNLi1c) by [@akhilcoder](https://www.youtube.com/@akhilcoder)
 * [Honey Production Prediction Time Series](https://youtu.be/WCBLotgskZg) by [Adithya Narayan](https://github.com/NarayanAdithya)
 * [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/RPisvY54Tg4) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
 * [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/WCBLotgskZg) by [Adithya Narayan](https://github.com/NarayanAdithya)
 * [How to access MindsDB](https://www.youtube.com/watch?v=8F5p_Rwmvgk) by [Syed Zubeen](https://github.com/syedzubeen)
+

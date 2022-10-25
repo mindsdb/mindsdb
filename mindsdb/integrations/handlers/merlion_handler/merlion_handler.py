@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.utilities.log import log
 from .adapters import BaseMerlionForecastAdapter, DefaultForecasterAdapter, MerlionArguments, DefaultDetectorAdapter, \
     SarimaForecasterAdapter, ProphetForecasterAdapter, MSESForecasterAdapter, IsolationForestDetectorAdapter, \
     WindStatsDetectorAdapter, ProphetDetectorAdapter
@@ -138,15 +139,15 @@ class MerlionHandler(BaseMLEngine):
         if task_enum == TaskType.forecast:
             model_args[MerlionArguments.max_forecast_steps.value] = horizon
         adapter: BaseMerlionForecastAdapter = adapter_class(**model_args)
-        print("Training model, args: " + json.dumps(args))
+        log.info("Training model, args: " + json.dumps(args))
         adapter.train(df=df, target=target)
-        print("Training model completed.")
+        log.info("Training model completed.")
 
         # persist save model
         model_bytes = adapter.to_bytes()
         self.model_storage.file_set(self.PERSISIT_MODEL_FILE_NAME, model_bytes)
         self.model_storage.json_set(self.PERSISIT_ARGS_KEY_IN_JSON_STORAGE, args)
-        print("Model and args saved.")
+        log.info("Model and args saved.")
 
         # back mapping column name
         df.rename(columns=column_name_back_mapping, inplace=True)

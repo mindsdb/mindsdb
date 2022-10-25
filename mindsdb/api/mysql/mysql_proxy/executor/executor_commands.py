@@ -481,9 +481,8 @@ class ExecuteCommands:
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Insert:
             if statement.from_select is None:
-                return self.process_insert(statement)
+                raise ErNotSupportedYet("At this moment only 'insert from select' is supported.")
             else:
-                # run with planner
                 SQLQuery(
                     statement,
                     session=self.session,
@@ -494,7 +493,6 @@ class ExecuteCommands:
             if statement.from_select is None:
                 raise ErNotSupportedYet('Update is not implemented')
             else:
-                # run with planner
                 SQLQuery(
                     statement,
                     session=self.session,
@@ -882,34 +880,6 @@ class ExecuteCommands:
 
         for predictor_name in predictors_names:
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
-
-    def process_insert(self, statement):
-        db_name = self.session.database
-        if len(statement.table.parts) == 2:
-            db_name = statement.table.parts[0].lower()
-        table_name = statement.table.parts[-1].lower()
-        if db_name != 'mindsdb' or table_name != 'predictors':
-            raise ErNonInsertableTable("At this moment only insert to 'mindsdb.predictors' is possible")
-        column_names = []
-        for column_identifier in statement.columns:
-            if isinstance(column_identifier, Identifier):
-                if len(column_identifier.parts) != 1:
-                    raise ErKeyColumnDoesNotExist(f'Incorrect column name: {column_identifier}')
-                column_name = column_identifier.parts[0].lower()
-                column_names.append(column_name)
-            elif isinstance(column_identifier, TableColumn):
-                column_names.append(column_identifier.name)
-            else:
-                raise ErKeyColumnDoesNotExist(f'Incorrect column name: {column_identifier}')
-        if len(statement.values) > 1:
-            raise SqlApiException('At this moment only 1 row can be inserted.')
-        for row in statement.values:
-            values = []
-            for value in row:
-                values.append(value.value)
-            insert_dict = dict(zip(column_names, values))
-        if table_name == 'predictors':
-            return self.insert_predictor_answer(insert_dict)
 
     def answer_show_columns(self, target: Identifier, where: Optional[Operation] = None,
                             like: Optional[str] = None, is_full=False):
@@ -1323,17 +1293,6 @@ class ExecuteCommands:
                 self.session.database = db_name
             else:
                 raise ErBadDbError(f"Database {db_name} does not exists")
-
-    def insert_predictor_answer(self, insert):
-        ''' Start learn new predictor.
-            Parameters:
-             - insert - dict with keys as columns of mindsb.predictors table.
-        '''
-        return ExecuteAnswer(
-            ANSWER_TYPE.ERROR,
-            error_code=0,
-            error_message='At the moment insert into predictors table is not supported'
-        )
 
     def _check_predict_columns(self, predict_column_names, ds_column_names):
         ''' validate 'predict' column names

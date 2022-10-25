@@ -107,6 +107,26 @@ class Project:
 
         return data
 
+    def get_views(self):
+        records = (
+            db.session.query(db.View).filter_by(
+                project_id=self.id,
+                company_id=self.company_id
+            )
+            .order_by(db.View.name, db.View.id)
+            .all()
+        )
+        data = [{
+            'name': view_record.name,
+            'metadata': {
+                'type': 'view',
+                'id': view_record.id,
+                'deletable': True
+            }}
+            for view_record in records
+        ]
+        return data
+
     def get_tables(self):
         data = OrderedDict()
         data['models'] = {'type': 'table', 'deletable': False}
@@ -116,6 +136,11 @@ class Project:
         for model in models:
             if model['metadata']['active'] is True:
                 data[model['name']] = model['metadata']
+
+        views = self.get_views()
+        for view in views:
+            data[view['name']] = view['metadata']
+
         return data
 
     def get_columns(self, table_name: str):

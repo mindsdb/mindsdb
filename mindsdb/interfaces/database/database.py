@@ -58,7 +58,14 @@ class DatabaseController:
 
     def get_dict(self, company_id: Optional[int], filter_type: Optional[str] = None):
         return OrderedDict(
-            (x['name'], {'type': x['type']})
+            (
+                x['name'],
+                {
+                    'type': x['type'],
+                    'engine': x['engine'],
+                    'id': x['id']
+                }
+            )
             for x in self.get_list(company_id=company_id, filter_type=filter_type)
         )
 

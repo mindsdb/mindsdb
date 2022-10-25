@@ -1,33 +1,34 @@
-
-from mindsdb.interfaces.storage.db import session, Integration, View
+from mindsdb.interfaces.storage.db import session, View
 
 
 class ViewController:
-    def add(self, name, query, integration_name, company_id=None):
+    def add(self, name, query, project_name, company_id=None):
+        from mindsdb.interfaces.database.database import DatabaseController
 
-        # check is name without paths
-        # TODO or allow ?
-        if len(name.split('.')) > 1:
-            raise Exception(f'Name should be without dots: {name}')
+        database_controller = DatabaseController()
+        project_databases_dict = database_controller.get_dict(company_id=company_id, filter_type='project')
 
-        # name exists?
-        rec = session.query(View.id).filter(View.name == name,
-                                            View.company_id == company_id).first()
-        if rec is not None:
+        if project_name not in project_databases_dict:
+            raise Exception(f"Can not find project: '{project_name}'")
+
+        project_id = project_databases_dict[project_name]['id']
+        view_record = (
+            session.query(View.id)
+            .filter_by(
+                name=name,
+                company_id=company_id,
+                project_id=project_id
+            ).first()
+        )
+        if view_record is not None:
             raise Exception(f'View already exists: {name}')
 
-        integration_records = session.query(Integration).filter_by(company_id=company_id).all()
-
-        if integration_name is not None:
-            integration_id = None
-            for record in integration_records:
-                if record.name.lower() == integration_name.lower():
-                    integration_id = record.id
-                    break
-            if integration_id is None:
-                raise Exception(f"Can't find integration with name: {integration_name}")
-
-        view_record = View(name=name, company_id=company_id, query=query)
+        view_record = View(
+            name=name,
+            company_id=company_id,
+            query=query,
+            project_id=project_id
+        )
         session.add(view_record)
         session.commit()
 

@@ -21,6 +21,7 @@ from mindsdb_sql.parser.ast import (
     BinaryOperation,
     DropDatabase,
     NullConstant,
+    NativeQuery,
     Describe,
     Constant,
     Function,
@@ -792,40 +793,38 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_view(self, statement):
-        name = statement.name
+        project_name = self.session.database
+        view_name = statement.name.parts[-1]
+        if len(statement.name.parts) == 2:
+            project_name = statement.name.parts[0]
 
         query_str = statement.query_str
         query = parse_sql(query_str, dialect='mindsdb')
 
-        integration_name = None
         if statement.from_table is not None:
-            integration_name = statement.from_table.parts[-1]
-
-        if integration_name is not None:
-
-            # inject integration into sql
-            query = parse_sql(query_str, dialect='mindsdb')
-
-            def inject_integration(node, is_table, **kwargs):
-                if is_table and isinstance(node, Identifier):
-                    if not node.parts[0] == integration_name:
-                        node.parts.insert(0, integration_name)
-
-            query_traversal(query, inject_integration)
-
-            render = SqlalchemyRender('mysql')
-            query_str = render.get_string(query, with_failback=False)
+            query = Select(
+                targets=[Star()],
+                from_table=NativeQuery(
+                    integration=Identifier(statement.from_table),
+                    query=statement.query_str
+                )
+            )
+            renderer = SqlalchemyRender('mindsdb')
+            query_str = renderer.get_string(query, with_failback=True)
 
         if isinstance(query, Select):
             # check create view sql
             query.limit = Constant(1)
 
-            # exception should appear from SQLQuery
             sqlquery = SQLQuery(query, session=self.session)
             if sqlquery.fetch()['success'] != True:
                 raise SqlApiException('Wrong view query')
 
-        self.session.view_interface.add(name, query_str, integration_name)
+        self.session.view_interface.add(
+            view_name,
+            query=query_str,
+            project_name=project_name
+        )
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     def answer_drop_view(self, statement):

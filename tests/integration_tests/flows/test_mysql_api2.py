@@ -169,8 +169,14 @@ class TestMySqlApi(BaseStuff):
     def test_create_postgres_datasources(self, postgres_db):
         self.create_datasource(postgres_db)
         self.validate_datasource_creation(postgres_db)
-        # self.validate_datasource_creation(postgres_db)
 
+    def test_create_mysql_datasources(self, mysql_db):
+        self.create_datasource(mysql_db)
+        self.validate_datasource_creation(mysql_db)
+
+    def test_create_mariadb_datasources(self, maria_db):
+        self.create_datasource(maria_db)
+        self.validate_datasource_creation(maria_db)
     # @pytest.mark.parametrize("db_type", ["postgres", "mysql", "mariad"])
     # def test_1_create_datasources(self, db_type):
     #     self.validate_datasource_creation(db_type)

@@ -60,10 +60,10 @@
 * [Forecasting Honey Production with MindsDB](https://dev.to/narayanadithya/using-mindsdb-for-time-series-forecasting-honey-production-in-the-usa-4p05) by [Adithya Narayan](https://github.com/NarayanAdithya)
 
 
-
 # Community Video Guides
 
 * [Video: What is MindsDB?](https://www.youtube.com/watch?v=SrDPYqQrzaw) by [Alissa Troiano](https://github.com/alissatroiano)
+* [Connecting MindsDB to Tableau](https://www.youtube.com/watch?v=eUiBVrm85v4) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Connect Postgres Database to MindsDB](https://youtu.be/jbH5fsviAgE) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Exploring Learning Hub on MindsDB by predicting house rental prices and forecasting house sales](https://youtu.be/Qmk_v0iginw) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Easily connect to MindsDB Cloud from MongoShell](https://youtube.com/video/ysPRXSgdOVk) by [@akhilcoder](https://twitter.com/akhilcoder)
@@ -91,5 +91,7 @@
 * [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/RPisvY54Tg4) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
 * [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/WCBLotgskZg) by [Adithya Narayan](https://github.com/NarayanAdithya)
 * [How to access MindsDB](https://www.youtube.com/watch?v=8F5p_Rwmvgk) by [Syed Zubeen](https://github.com/syedzubeen)
+* [Deploying an instance of mindsDB on Google Cloud Platform](https://www.youtube.com/watch?v=OrW-8ciNGng) by [Syed Zubeen](https://github.com/syedzubeen)
 * [Connecting MindsDB to Tableau](https://www.youtube.com/watch?v=eUiBVrm85v4) by [Alissa Troiano](https://github.com/alissatroiano)
+
 

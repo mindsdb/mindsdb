@@ -86,7 +86,7 @@ def mindsdb_app(request, config):
     app = subprocess.Popen(
         ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={config_path}', '--verbose'],
         close_fds=True,
-        stdout=None,
+        stdout=sys.stdout,
         stderr=sys.stderr,
         shell=False
     )

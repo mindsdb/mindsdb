@@ -93,9 +93,9 @@ class HTTPTest(unittest.TestCase):
     def await_predictor(self, predictor_name, timeout=60):
         start = time.time()
         while (time.time() - start) < timeout:
-            resp = self.sql_via_http('show predictors', RESPONSE_TYPE.TABLE)
-            name_index = resp['column_names'].index('name')
-            status_index = resp['column_names'].index('status')
+            resp = self.sql_via_http('show models', RESPONSE_TYPE.TABLE)
+            name_index = [x.lower() for x in resp['column_names']].index('name')
+            status_index = [x.lower() for x in resp['column_names']].index('status')
             status = None
             for row in resp['data']:
                 if row[name_index] == predictor_name:
@@ -304,7 +304,8 @@ class HTTPTest(unittest.TestCase):
         resp_1 = self.sql_via_http('show tables', RESPONSE_TYPE.TABLE)
         table_names = [x[0] for x in resp_1['data']]
         self.assertTrue('test_file' not in table_names)
-        self.assertTrue('predictors' in table_names)
+        self.assertTrue('models' in table_names)
+        self.assertTrue('models_versions' in table_names)
 
         resp = self.sql_via_http('use files', RESPONSE_TYPE.OK)
         self.assertTrue(resp['context']['db'] == 'files')
@@ -312,7 +313,8 @@ class HTTPTest(unittest.TestCase):
         resp_4 = self.sql_via_http('show tables', RESPONSE_TYPE.TABLE)
         table_names = [x[0] for x in resp_4['data']]
         self.assertTrue('test_file' in table_names)
-        self.assertTrue('predictors' not in table_names)
+        self.assertTrue('models' not in table_names)
+        self.assertTrue('models_versions' not in table_names)
 
     def test_04_special_queries(self):
         # "show databases;",
@@ -327,7 +329,7 @@ class HTTPTest(unittest.TestCase):
         # "show warnings;",
         # "show charset;",
         # "show collation;",
-        # "show predictors;",       # !!!
+        # "show models;",
         # "show function status where db = 'mindsdb';",
         # "show procedure status where db = 'mindsdb';",
         empty_table = [
@@ -445,7 +447,7 @@ class HTTPTest(unittest.TestCase):
         self.assertTrue(resp['data'][0][0] == resp['data'][0][1] and resp['data'][0][0] == resp['data'][0][2])
 
     def test_08_sql_create_predictor(self):
-        resp = self.sql_via_http('show predictors', RESPONSE_TYPE.TABLE)
+        resp = self.sql_via_http('show models', RESPONSE_TYPE.TABLE)
         self.assertTrue(len(resp['data']) == 0)
 
         self.sql_via_http('''

@@ -327,7 +327,6 @@ class HTTPTest(unittest.TestCase):
         # "show warnings;",
         # "show charset;",
         # "show collation;",
-        # "show datasources;",      # !!!
         # "show predictors;",       # !!!
         # "show function status where db = 'mindsdb';",
         # "show procedure status where db = 'mindsdb';",
@@ -393,8 +392,6 @@ class HTTPTest(unittest.TestCase):
 
     def test_06_sql_create_database(self):
         ''' sql-via-http:
-            'create datasource' for each db (obsolete?)
-            'drop datasource' for each db (obsolete?)
             'create database' for each db
             'drop database' for each db
             'create database' for each db
@@ -406,9 +403,6 @@ class HTTPTest(unittest.TestCase):
                 continue
             queries = [
                 {
-                    'create': 'CREATE DATASOURCE',
-                    'drop': 'DROP DATASOURCE'
-                }, {
                     'create': 'CREATE DATABASE',
                     'drop': 'DROP DATABASE'
                 }, {
@@ -434,11 +428,10 @@ class HTTPTest(unittest.TestCase):
                         self.sql_via_http(f'{drop_query} {db_name}', RESPONSE_TYPE.OK)
                         self.assertTrue(db_name.upper() not in self.show_databases())
 
-        for query in ['show databases', 'show datasources']:
-            resp = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
-            db_names = [x[0] for x in resp['data']]
-            for name in created_db_names:
-                self.assertTrue(name in db_names)
+        resp = self.sql_via_http('show databases', RESPONSE_TYPE.TABLE)
+        db_names = [x[0] for x in resp['data']]
+        for name in created_db_names:
+            self.assertTrue(name in db_names)
 
     def test_07_sql_select_from_file(self):
         self.sql_via_http('use mindsdb', RESPONSE_TYPE.OK)

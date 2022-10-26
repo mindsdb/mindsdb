@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Dict, Optional
 
 import pandas as pd
-import mlflow
 from mlflow.tracking import MlflowClient
 
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -16,21 +15,19 @@ class MLflowHandler(BaseMLEngine):
         - An MLflow server should be running, to access its model registry
 
     Example:
-        1. Run `mlflow server -p 5001 --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./artifacts --host 0.0.0.0`
+        1. Run `mlflow server -p 5001 --backend-store-uri sqlite:////path/to/mlflow.db --default-artifact-root ./artifacts --host 0.0.0.0`
         2. Run `mlflow models serve --model-uri ./model_path`
-        3. Use the engine through MindsDB
+        3. Run MindsDB
     
+    Note: above, `artifacts` is a folder to store artifacts for new experiments that do not specify an artifact store.
     """  # noqa
 
     name = 'mlflow'
 
-    # TODO: Instance this integration and call the `connect method` passing the relevant urls to mlflow and to the DB
-    # TODO: Note: above, `artifacts` is a folder to store artifacts for new experiments that do not specify an artifact store.
-
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         connection = MlflowClient(args['mlflow_server_url'], args['mlflow_server_path'])
         model_name = args['model_name']
-        mlflow_models = [model.name for model in connection.list_registered_models()]
+        mlflow_models = [model.name for model in connection.search_registered_models()]
 
         if model_name not in mlflow_models:
             raise Exception(f"Error: model '{model_name}' not found in mlflow. Check serving and try again.")
@@ -42,12 +39,12 @@ class MLflowHandler(BaseMLEngine):
     def predict(self, df, args=None):
         args = self.model_storage.json_get('args')  # override any incoming args for now
         self._check_model_url(args['predict_url'])
-        resp = requests.post(args['mlflow_server_url'],
+        resp = requests.post(args['predict_url'],  # args['mlflow_server_url'],
                              data=df.to_json(orient='records'),
                              headers={'content-type': 'application/json; format=pandas-records'})
         answer = resp.json()
-        predictions = pd.DataFrame({'prediction': answer})
-        return df.join(predictions)
+        predictions = pd.DataFrame({args['target']: answer})
+        return predictions
 
     def describe(self, key: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')

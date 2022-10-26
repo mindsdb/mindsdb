@@ -45,20 +45,6 @@ class TestScenario:
     predictor_name = 'home_rentals'
     file_datasource_name = "from_files"
 
-    def create_datasource(self, db_type):
-        _query = "CREATE DATASOURCE %s WITH ENGINE = '%s', PARAMETERS = %s;" % (
-            db_type.upper(),
-            db_type,
-            json.dumps(self.db_creds[db_type]))
-
-        self.query(_query)
-        # and try to drop one of the datasources
-        if db_type == 'mysql':
-
-            self.query(f'drop datasource {db_type};')
-            # and create again
-            self.query(_query)
-
     @staticmethod
     def upload_ds(df, name):
         """Upload pandas df as csv file."""
@@ -101,20 +87,33 @@ class TestScenario:
         self.assertTrue('status' in res and res.get_record('status', 'complete'),
                         f"predictor {predictor_name} is not complete after {timeout} seconds")
 
-    def validate_datasource_creation(self, ds_type):
-        self.create_datasource(ds_type.lower())
-        res = self.query("SELECT * FROM mindsdb.datasources WHERE name='{}';".format(ds_type.upper()))
-        self.assertTrue("name" in res and res.get_record("name", ds_type.upper()),
-                        f"Expected datasource is not found after creation - {ds_type.upper()}: {res}")
+    def create_database(self, db_type):
+        _query = "CREATE DATABASE %s WITH ENGINE = '%s', PARAMETERS = %s;" % (
+            db_type.upper(),
+            db_type,
+            json.dumps(self.db_creds[db_type]))
 
-    def test_1_create_datasources(self):
+        self.query(_query)
+        # and try to drop one of the databases
+        if db_type == 'mysql':
+            self.query(f'DROP DATABASE {db_type.upper()};')
+            # and create again
+            self.query(_query)
+
+    def validate_database_creation(self, ds_type):
+        self.create_database(ds_type.lower())
+        res = self.query(f"SELECT * FROM information_schema.databases WHERE name='{ds_type.upper()}';")
+        self.assertTrue('NAME' in res and res.get_record("NAME", ds_type.upper()),
+                        f"Expected database is not found after creation - {ds_type.upper()}: {res}")
+
+    def test_1_create_databasess(self):
         for ds_type in ['postgres', 'mysql', 'mariadb']:
             with self.subTest(msg=ds_type):
                 print(f"\nExecuting {self._testMethodName} ({__name__}.{self.__class__.__name__}) [{ds_type}]")
-                self.validate_datasource_creation(ds_type)
+                self.validate_database_creation(ds_type)
 
     def test_2_create_predictor(self):
-        _query = f"CREATE PREDICTOR {self.predictor_name} from MYSQL (select * from test_data.home_rentals) as hr_ds predict rental_price;"
+        _query = f"CREATE PREDICTOR {self.predictor_name} from MYSQL (select * from test_data.home_rentals) predict rental_price;"
         self.query(_query)
         self.check_predictor_readiness(self.predictor_name)
 
@@ -149,8 +148,7 @@ class TestScenario:
             "show warnings;",
             "show charset;",
             "show collation;",
-            "show datasources;",
-            "show predictors;",
+            "show models;",
             "show function status where db = 'mindsdb';",
             "show procedure status where db = 'mindsdb';",
             # "show table status like commands;",

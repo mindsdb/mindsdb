@@ -2,9 +2,9 @@ import unittest
 import pandas as pd
 
 from mindsdb.utilities.config import Config
-from mindsdb.integrations.mlflow_handler.mlflow_handler.mlflow_handler import MLflowHandler
-from mindsdb.integrations.mysql_handler.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.interfaces.storage.fs import ModelStorage, HandlerStorage
+from mindsdb.integrations.handlers.mlflow_handler.mlflow_handler.mlflow_handler import MLflowHandler
+from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 
 
 class MLflowHandlerTest(unittest.TestCase):

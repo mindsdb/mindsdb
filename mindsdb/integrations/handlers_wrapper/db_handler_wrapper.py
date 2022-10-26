@@ -1,4 +1,23 @@
-import json
+"""Implementation of REST API wrapper for any supported DBHandler.
+The module provide an opportunity to convert a DBHandler into REST API service
+Basic usage:
+    app = DBHandlerWrapper(
+            connection_data={
+                    "host": "mysql_db",
+                    "port": "3306",
+                    "user": "root",
+                    "password": "supersecret",
+                    "database": "test",
+                    "ssl": false}
+            name="foo"
+            type="mysql"}
+    )
+    port = int(os.environ.get('PORT', 5001))
+    host = os.environ.get('HOST', '0.0.0.0')
+    log.info("Running dbservice: host=%s, port=%s", host, port)
+    app.run(debug=True, host=host, port=port)
+
+"""
 import pickle
 import traceback
 from flask import Flask, request
@@ -11,6 +30,8 @@ from mindsdb.integrations.libs.handler_helpers import define_handler
 from mindsdb.utilities.log import log
 
 class BaseDBWrapper:
+    """Base abstract class contains some general methods."""
+
     def __init__(self, **kwargs):
         name = kwargs.get("name")
         _type = kwargs.get("type")
@@ -24,14 +45,26 @@ class BaseDBWrapper:
         log.info("%s: base params and route have been initialized", self.__class__.__name__)
 
     def index(self):
+        """ Default GET endpoint - '/'."""
         return "A DB Service Wrapper", 200
 
     def run(self, **kwargs):
+        """ Launch internal Flask application."""
         self.app.run(**kwargs)
 
 
 class DBHandlerWrapper(BaseDBWrapper):
+    """ A REST API wrapper for DBHandler.
+    General meaning: DBHandlerWrapper(DBHandler) = DBHandler + REST API
+    DBHandler which capable communicate with the caller via REST
+    """
     def __init__(self,  **kwargs):
+        """ Wrapper Init.
+        Args:
+            connection_data: dict contains all required connection info to a specific database
+            name: DBHandler instance name
+            type: type of the Handler (mysql, postgres, etc)
+        """
         super().__init__(**kwargs)
 
         # CONVERT METHODS TO FLASK API ENDPOINTS
@@ -64,11 +97,11 @@ class DBHandlerWrapper(BaseDBWrapper):
             return {"status": "FAIL" ,"error": msg}, 500
 
     def check_connection(self):
+        """Check connection to the database server."""
         log.info("%s: calling 'check_connection'", self.__class__.__name__)
         try:
             result =  self.handler.check_connection()
             return result.to_json(), 200
-            # return {"success": result.success}
         except Exception as e:
             msg = traceback.format_exc()
             log.error(msg)
@@ -77,6 +110,7 @@ class DBHandlerWrapper(BaseDBWrapper):
             return result.to_json(), 500
 
     def native_query(self):
+        """Execute received string query."""
         query = request.json.get("query")
         log.info("%s: calling 'native_query' with query - %s", self.__class__.__name__, query)
         try:
@@ -91,7 +125,7 @@ class DBHandlerWrapper(BaseDBWrapper):
             return result.to_json(), 500
 
     def query(self):
-        # s_query = request.data("query")
+        """Execute received query object"""
         s_query = request.get_data()
         query = pickle.loads(s_query)
         log.info("%s: calling 'query' with query - %s", self.__class__.__name__, query)
@@ -122,14 +156,10 @@ class DBHandlerWrapper(BaseDBWrapper):
     def get_columns(self):
         table = request.json.get("table")
         try:
-            log.debug("get_columns: table - %s", table)
             log.info("%s: calling 'get_columns' for table - %s", self.__class__.__name__, table)
             result = self.handler.get_columns(table)
             return result.to_json(), 200
-            # log.debug("get_columns: result - %s", result.data_frame)
-            # return {"query": result.query, "data": result.data_frame.to_json(orient="split")}, 200
         except Exception as e:
-            # return {"status": "FAIL" ,"error": str(e)}, 500
             msg = traceback.format_exc()
             log.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,

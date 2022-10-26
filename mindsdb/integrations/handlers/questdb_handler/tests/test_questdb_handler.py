@@ -7,11 +7,13 @@ class QuestDBHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": "127.0.0.1",
-            "port": "8812",
-            "user": "admin",
-            "password": "quest",
-            "database": "questdb"
+            "connection_data": {
+                "host": "127.0.0.1",
+                "port": "8812",
+                "user": "admin",
+                "password": "quest",
+                "database": "questdb"
+            }
         }
         cls.handler = QuestDBHandler('test_questdb_handler', **cls.kwargs)
 

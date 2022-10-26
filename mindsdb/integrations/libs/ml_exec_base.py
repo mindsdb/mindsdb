@@ -245,7 +245,7 @@ class BaseMLEngineExec:
             )
 
         target = statement.targets[0].parts[-1]
-        training_data_df = pd.DataFrame()
+        training_data_df = None
         fetch_data_query = None
         data_integration_id = None
         # get data for learn
@@ -275,10 +275,15 @@ class BaseMLEngineExec:
         if problem_definition is None:
             problem_definition = {}
 
-        # checks
-        if target not in training_data_df.columns:
-            raise Exception(
-                f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
+        training_data_columns_count, training_data_rows_count = 0, 0
+        if training_data_df is not None:
+            training_data_columns_count = len(training_data_df.columns)
+            training_data_rows_count = len(training_data_df)
+
+            # checks
+            if target not in training_data_df.columns:
+                raise Exception(
+                    f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
         problem_definition['target'] = target
 
@@ -292,8 +297,8 @@ class BaseMLEngineExec:
             to_predict=target,
             learn_args=problem_definition,
             data={'name': model_name},
-            training_data_columns_count=len(training_data_df.columns),
-            training_data_rows_count=len(training_data_df),
+            training_data_columns_count=training_data_columns_count,
+            training_data_rows_count=training_data_rows_count,
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING
         )

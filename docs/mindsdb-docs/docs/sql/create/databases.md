@@ -680,29 +680,19 @@ Let's look at sample codes showing how to connect to each of the supported integ
     };
     ```
 
-=== "Example for Self-Hosted MindsDB"
+=== "Example"
 
     ```sql
     CREATE DATABASE bigquery_datasource
     WITH ENGINE='bigquery',
     PARAMETERS={
-      "project_id": "badger-345908",
-      "service_account_keys": {
-        "path": "/home/Downloads/badger-345908.json"
-      }
-    };
-    ```
-
-=== "Example for MindsDB Cloud"
-
-    ```sql
-    CREATE DATABASE bigquery_datasource
-    WITH ENGINE='bigquery',
-    PARAMETERS={
-      "project_id": "badger-345908",
-      "service_account_keys": {
-        "url": "https://url/badger-345908.json"
-      }
+        "host": "127.0.0.1",
+        "port": 7077,
+        "user": "datastax",
+        "password": "password",
+        "secure_connection_bundle": {
+            "path": "/home/Downloads/file.zip"
+        }
     };
     ```
 

@@ -8,6 +8,8 @@ import requests
 import docker
 import pytest
 import netifaces
+from mindsdb.utilities.ps import get_child_pids
+
 
 USE_PERSISTENT_STORAGE = bool(int(os.getenv('USE_PERSISTENT_STORAGE') or "0"))
 TEST_CONFIG = os.path.dirname(os.path.realpath(__file__)) + '/config/config.json'
@@ -16,25 +18,31 @@ TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../').joinpath(
 ).resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
-from mindsdb.utilities.ps import get_child_pids
-
-
 
 def docker_inet_ip():
+    """Get ip of docker0 interface."""
     if "docker0" not in netifaces.interfaces():
         raise Exception("Unable to find 'docker' interface. Please install docker first.")
     return netifaces.ifaddresses('docker0')[netifaces.AF_INET][0]['addr']
 
 @pytest.fixture(scope="session")
 def temp_dir():
+    """Create temp directory to store mindsdb data inside it.
+    The directory is created once for the whole test session.
+    See 'scope' fixture parameter
+    """
     temp_dir = Path(__file__).parent.absolute().joinpath('../../').joinpath(
         f'temp/test_storage_{int(time.time()*1000)}/' if not USE_PERSISTENT_STORAGE else 'temp/test_storage/'
     ).resolve()
     temp_dir.mkdir(parents=True, exist_ok=True)
     return temp_dir
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def config(temp_dir):
+    """Create config used by mindsdb app in tests.
+    The config is created once for the whole test module.
+    See 'scope' fixture parameter.
+    """
     with open(TEST_CONFIG, 'rt') as f:
         config_json = json.loads(f.read())
         config_json['storage_dir'] = f'{TEMP_DIR}'
@@ -44,6 +52,7 @@ def config(temp_dir):
     return config_json
 
 def override_recursive(a, b):
+    """Overrides some elements in json 'a' by elements in json 'b'"""
     for key in b:
         if isinstance(b[key], dict) is False:
             a[key] = b[key]
@@ -57,6 +66,9 @@ def override_recursive(a, b):
 
 @pytest.fixture(scope="module")
 def mindsdb_app(request, config):
+    """Start mindsdb app before tests and stop it after ones.
+    Takes 'OVERRIDE_CONFIG' and 'API_LIST' from test module (file)
+    """
     apis = getattr(request.module, "API_LIST", [])
     if not apis:
         api_str = "http,mysql"
@@ -106,6 +118,14 @@ def mindsdb_app(request, config):
     return
 
 def waitReadiness(container, match_msg, match_number=2, timeout=30):
+    """Wait the container readiness.
+    Args:
+        match_msg: str - substring in log indicates container readiness
+        match_number: int - how many times 'match_msg' needs to be found in container logs
+        timeout: - timeout
+    Raises:
+        timeout exceeded error if the container wasn't ready in timeout.
+    """
     threshold = time.time() + timeout
     ready_msg = match_msg
     while True:

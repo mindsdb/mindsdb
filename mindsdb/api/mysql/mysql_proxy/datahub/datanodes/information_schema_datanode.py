@@ -35,7 +35,7 @@ class InformationSchemaDataNode(DataNode):
         'MODELS_VERSIONS': ['NAME', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
         'DATABASES': ['NAME', 'TYPE', 'ENGINE'],
         'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
-        'HANDLERS': ['NAME']
+        'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS']
     }
 
     def __init__(self, session):
@@ -160,8 +160,11 @@ class InformationSchemaDataNode(DataNode):
 
         data = []
         for _key, val in ml_handlers.items():
+            connection_args = val.get('connection_args')
+            if connection_args is not None:
+                connection_args = str(dict(connection_args))
             data.append([
-                val['name'], val.get('title'), val.get('description')
+                val['name'], val.get('title'), val.get('description'), val.get('version'), connection_args
             ])
 
         df = pd.DataFrame(data, columns=columns)

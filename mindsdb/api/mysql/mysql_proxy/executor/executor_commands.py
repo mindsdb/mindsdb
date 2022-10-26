@@ -9,6 +9,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatasource,
     RetrainPredictor,
     CreatePredictor,
+    CreateMLEngine,
     DropDatasource,
     DropPredictor,
     CreateView
@@ -151,7 +152,9 @@ class ExecuteCommands:
 
         if type(statement) == CreateDatasource:
             return self.answer_create_database(statement)
-        if type(statement) == DropPredictor:
+        elif type(statement) == CreateMLEngine:
+            return self.answer_create_ml_engine(statement)
+        elif type(statement) == DropPredictor:
             database_name = self.session.database
             if len(statement.name.parts) > 1:
                 database_name = statement.name.parts[0].lower()
@@ -203,6 +206,21 @@ class ExecuteCommands:
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=['information_schema', 'ml_engines']),
+                    where=_get_show_where(
+                        statement,
+                        like_name='name'
+                    )
+                )
+
+                query = SQLQuery(
+                    new_statement,
+                    session=self.session
+                )
+                return self.answer_select(query)
+            elif sql_category == 'handlers':
+                new_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(parts=['information_schema', 'handlers']),
                     where=_get_show_where(
                         statement,
                         like_name='name'
@@ -744,6 +762,20 @@ class ExecuteCommands:
             raise SqlApiException(f"Database '{name}' already exists.")
 
         self.session.integration_controller.add(name, engine, connection_args)
+
+    def answer_create_ml_engine(self, statement: ASTNode):
+        name = statement.name.parts[-1]
+        integrations = self.session.integration_controller.get_all()
+        if name in integrations:
+            raise SqlApiException(f"Integration '{name}' already exists")
+
+        self.session.integration_controller._add_integration_record(
+            name=name,
+            engine=statement.handler,
+            connection_args=statement.params
+        )
+
+        return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_database(self, statement: ASTNode):
         ''' create new handler (datasource/integration in old terms)

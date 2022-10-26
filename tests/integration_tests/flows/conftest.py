@@ -90,22 +90,22 @@ def mindsdb_app(request, config):
         stderr=sys.stderr,
         shell=False
     )
-    threshold = time.time() + 30
+    threshold = time.time() + 60
 
+    print("starting mindsdb app...")
     while True:
         try:
-            print("checking mindsdb app readiness.")
             host = config["api"]["http"]["host"]
             port = config["api"]["http"]["port"]
             r = requests.get(f"http://{host}:{port}/api/util/ping")
             r.raise_for_status()
-            print("application is ready.")
-            time.sleep(1)
             break
         except Exception:
             time.sleep(1)
             if time.time() > threshold:
-                raise Exception("unable to launch mindsdb app in 30 seconds")
+                raise Exception("unable to launch mindsdb app in 60 seconds")
+    print("mindsdb app has started.")
+
     def cleanup():
         print(f"STOPPING APPLICATION")
         for ch in get_child_pids(app.pid):

@@ -33,7 +33,9 @@ class InformationSchemaDataNode(DataNode):
         # MindsDB specific:
         'MODELS': ['NAME', 'PROJECT', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
         'MODELS_VERSIONS': ['NAME', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
-        'DATABASES': ['NAME', 'TYPE', 'ENGINE']
+        'DATABASES': ['NAME', 'TYPE', 'ENGINE'],
+        'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
+        'HANDLERS': ['NAME']
     }
 
     def __init__(self, session):
@@ -65,7 +67,9 @@ class InformationSchemaDataNode(DataNode):
             'COLLATIONS': self._get_collations,
             'MODELS': self._get_models,
             'MODELS_VERSIONS': self._get_models_versions,
-            'DATABASES': self._get_databases
+            'DATABASES': self._get_databases,
+            'ML_ENGINES': self._get_ml_engines,
+            'HANDLERS': self._get_handlers
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -145,6 +149,41 @@ class InformationSchemaDataNode(DataNode):
     def get_projects_names(self):
         projects = self.database_controller.get_dict(filter_type='project')
         return [x.lower() for x in projects]
+
+    def _get_handlers(self, query: ASTNode = None):
+        columns = self.information_schema['HANDLERS']
+
+        handlers = self.integration_controller.get_handlers_import_status()
+        ml_handlers = {
+            key: val for key, val in handlers.items()
+            if val['import']['success'] is True and val['type'] == 'ml'}
+
+        data = []
+        for _key, val in ml_handlers.items():
+            data.append([
+                val['name'], val.get('title'), val.get('description')
+            ])
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_ml_engines(self, query: ASTNode = None):
+        columns = self.information_schema['ML_ENGINES']
+
+        integrations = self.integration_controller.get_all()
+        ml_integrations = {
+            key: val for key, val in integrations.items()
+            if val['type'] == 'ml'
+        }
+
+        data = []
+        for _key, val in ml_integrations.items():
+            data.append([
+                val['name'], val.get('engine'), val.get('connection_data')
+            ])
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
 
     def _get_tables(self, query: ASTNode = None):
         columns = self.information_schema['TABLES']

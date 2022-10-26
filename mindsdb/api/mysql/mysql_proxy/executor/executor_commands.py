@@ -2,6 +2,7 @@ import json
 import datetime
 from typing import Optional
 from pathlib import Path
+from functools import reduce
 
 import pandas as pd
 from mindsdb_sql.parser.dialects.mindsdb import (
@@ -86,8 +87,51 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
 
-class ExecuteCommands:
+def _get_show_where(statement: ASTNode, from_name: Optional[str] = None,
+                    like_name: Optional[str] = None, initial: Optional[ASTNode] = None) -> ASTNode:
+    ''' combine all possible show filters to single 'where' condition
+        SHOW category [FROM name] [LIKE filter] [WHERE filter]
 
+        Args:
+            statement (ASTNode): 'show' query statement
+            from_name (str): name of column for 'from' filter
+            like_name (str): name of column for 'like' filter,
+            initial (ASTNode): initial 'where' filter
+        Returns:
+            ASTNode: 'where' statemnt
+    '''
+    where = []
+    if initial is not None:
+        where.append(initial)
+    if statement.from_table is not None and from_name is not None:
+        where.append(
+            BinaryOperation('=', args=[
+                Identifier(from_name),
+                Constant(statement.from_table.parts[-1])
+            ])
+        )
+    if statement.like is not None and like_name is not None:
+        where.append(
+            BinaryOperation(
+                'like',
+                args=[
+                    Identifier(like_name),
+                    Constant(statement.like)
+                ]
+            )
+        )
+    if statement.where is not None:
+        where.append(statement.where)
+
+    if len(where) > 0:
+        return reduce(
+            lambda prev, next: BinaryOperation('and', args=[prev, next]),
+            where
+        )
+    return None
+
+
+class ExecuteCommands:
     def __init__(self, session, executor):
         self.session = session
         self.executor = executor
@@ -140,25 +184,31 @@ class ExecuteCommands:
                 statement.modes = [x.upper() for x in statement.modes]
             if sql_category in ('predictors', 'models'):
                 where = BinaryOperation('=', args=[Constant(1), Constant(1)])
-                if statement.from_table is not None:
-                    where = BinaryOperation('and', args=[
-                        where,
-                        BinaryOperation('=', args=[
-                            Identifier('project'),
-                            Constant(statement.from_table.parts[-1])
-                        ])
-                    ])
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
-                    where = BinaryOperation('and', args=[where, like])
-                if statement.where is not None:
-                    where = BinaryOperation('and', args=[statement.where, where])
 
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=['information_schema', 'models']),
-                    where=where
+                    where=_get_show_where(
+                        statement,
+                        from_name='project',
+                        like_name='name'
+                    )
                 )
+                query = SQLQuery(
+                    new_statement,
+                    session=self.session
+                )
+                return self.answer_select(query)
+            elif sql_category == 'ml_engines':
+                new_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(parts=['information_schema', 'ml_engines']),
+                    where=_get_show_where(
+                        statement,
+                        like_name='name'
+                    )
+                )
+
                 query = SQLQuery(
                     new_statement,
                     session=self.session
@@ -169,16 +219,15 @@ class ExecuteCommands:
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant('views')]),
                     BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
                 ])
-                if statement.where is not None:
-                    where = BinaryOperation('and', args=[where, statement.where])
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('View'), Constant(statement.like)])
-                    where = BinaryOperation('and', args=[where, like])
 
                 new_statement = Select(
                     targets=[Identifier(parts=['table_name'], alias=Identifier('View'))],
                     from_table=Identifier(parts=['information_schema', 'TABLES']),
-                    where=where
+                    where=_get_show_where(
+                        statement,
+                        like_name='View',
+                        initial=where
+                    )
                 )
 
                 query = SQLQuery(
@@ -199,21 +248,14 @@ class ExecuteCommands:
                 )
                 return self.answer_select(query)
             elif sql_category in ('databases', 'schemas'):
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('Database'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-
                 new_statement = Select(
                     targets=[Identifier(parts=["NAME"], alias=Identifier('Database'))],
                     from_table=Identifier(parts=['information_schema', 'DATABASES']),
-                    where=where
+                    where=_get_show_where(
+                        statement,
+                        like_name='Database'
+                    )
                 )
-                if statement.where is not None:
-                    new_statement.where = statement.where
 
                 if 'FULL' in statement.modes:
                     new_statement.targets.extend([
@@ -230,6 +272,7 @@ class ExecuteCommands:
                 schema = self.session.database or 'mindsdb'
                 if statement.from_table is not None:
                     schema = statement.from_table.parts[-1]
+                    statement.from_table = None
                 where = BinaryOperation('and', args=[
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
                     BinaryOperation('or', args=[
@@ -240,19 +283,15 @@ class ExecuteCommands:
                         ])
                     ])
                 ])
-                if statement.where is not None:
-                    where = BinaryOperation('and', args=[statement.where, where])
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier(f'Tables_in_{schema}'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
 
                 new_statement = Select(
                     targets=[Identifier(parts=['table_name'], alias=Identifier(f'Tables_in_{schema}'))],
                     from_table=Identifier(parts=['information_schema', 'TABLES']),
-                    where=where
+                    where=_get_show_where(
+                        statement,
+                        like_name=f'Tables_in_{schema}',
+                        initial=where
+                    )
                 )
 
                 if 'FULL' in statement.modes:
@@ -266,18 +305,13 @@ class ExecuteCommands:
                 )
                 return self.answer_select(query)
             elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('Variable_name'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-
                 new_statement = Select(
                     targets=[Identifier(parts=['Variable_name']), Identifier(parts=['Value'])],
                     from_table=Identifier(parts=['dataframe']),
-                    where=where
+                    where=_get_show_where(
+                        statement,
+                        like_name='Variable_name'
+                    )
                 )
 
                 data = {}
@@ -355,13 +389,6 @@ class ExecuteCommands:
                 table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
                 return self.answer_show_create_table(table)
             elif sql_category in ('character set', 'charset'):
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('CHARACTER_SET_NAME'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
                 new_statement = Select(
                     targets=[
                         Identifier('CHARACTER_SET_NAME', alias=Identifier('Charset')),
@@ -370,7 +397,10 @@ class ExecuteCommands:
                         Identifier('MAXLEN', alias=Identifier('Maxlen'))
                     ],
                     from_table=Identifier(parts=['INFORMATION_SCHEMA', 'CHARACTER_SETS']),
-                    where=where
+                    where=_get_show_where(
+                        statement,
+                        like_name='CHARACTER_SET_NAME'
+                    )
                 )
                 query = SQLQuery(
                     new_statement,
@@ -390,13 +420,6 @@ class ExecuteCommands:
                 )
                 return self.answer_select(query)
             elif sql_category == 'collation':
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('Collation'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
                 new_statement = Select(
                     targets=[
                         Identifier('COLLATION_NAME', alias=Identifier('Collation')),
@@ -408,7 +431,10 @@ class ExecuteCommands:
                         Identifier('PAD_ATTRIBUTE', alias=Identifier('Pad_attribute'))
                     ],
                     from_table=Identifier(parts=['INFORMATION_SCHEMA', 'COLLATIONS']),
-                    where=where
+                    where=_get_show_where(
+                        statement,
+                        like_name='Collation'
+                    )
                 )
                 query = SQLQuery(
                     new_statement,

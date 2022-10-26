@@ -76,7 +76,7 @@ class TestScenario:
         threshold = time.time() + timeout
         res = ''
         while time.time() < threshold:
-            _query = "SELECT status, error FROM predictors WHERE name='{}';".format(predictor_name)
+            _query = "SELECT status, error FROM mindsdb.models WHERE name='{}';".format(predictor_name)
             res = self.query(_query)
             if 'status' in res:
                 if res.get_record('status', 'complete'):

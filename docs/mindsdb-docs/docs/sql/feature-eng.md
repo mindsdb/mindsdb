@@ -319,9 +319,7 @@ The prices predicted by the third predictor, having the highest accuracy value, 
 
 ### Introduction
 
-First, we'll use a table that contains a subset of columns from the `example_db.demo_data.used_car_price` table. Namely, it contains the `model`, `year`, `transmission`, `mileage`, `fueltype`, `price`, and `tax` columns. And we'll create a predictor based on this table.
-
-Next, we'll join the remaining data from the `example_db.demo_data.used_car_price` table and create a predictor to see the impact on its strength.
+We start by creating a predictor from the `car_sales` table. Then, we add more data by joining the `car_sales` and `car_info` tables. We create a predictor based on the `car_sales_info` view.
 
 Let's get started.
 
@@ -329,89 +327,139 @@ Let's get started.
 
 Here, we go through the codes using partial tables and the full table after joining the data.
 
-Download the following files: [usedcarprice_part1](/assets/sql/usedcarprice_part1.csv), [usedcarprice_part2](/assets/sql/usedcarprice_part2.csv), and [usedcarprice_joined](/assets/sql/usedcarprice_joined.csv), and check out [how to upload a file to MindsDB](/sql/create/file/) to follow the steps with us.
-
 #### Data Setup
 
-Here is the partial table:
+Here is the `car_sales` table:
 
 ```sql
 SELECT *
-FROM files.usedcarprice1
+FROM example_db.demo_data.car_sales
 LIMIT 5;
 ```
 
 On execution, we get:
 
 ```sql
-+---+-----+----+------------+-------+--------+-----+---+
-|id |model|year|transmission|mileage|fueltype|price|tax|
-+---+-----+----+------------+-------+--------+-----+---+
-|1  | A1  |2017|Manual      |15735  |Petrol  |12500|150|
-|2  | A6  |2016|Automatic   |36203  |Diesel  |16500|20 |
-|3  | A1  |2016|Manual      |29946  |Petrol  |11000|30 |
-|4  | A4  |2017|Automatic   |25952  |Diesel  |16800|145|
-|5  | A3  |2019|Manual      |1998   |Petrol  |17300|145|
-+---+-----+----+------------+-------+--------+-----+---+
++-----+----+-----+------------+-------+--------+---+
+|model|year|price|transmission|mileage|fueltype|tax|
++-----+----+-----+------------+-------+--------+---+
+| A1  |2017|12500|Manual      |15735  |Petrol  |150|
+| A6  |2016|16500|Automatic   |36203  |Diesel  |20 |
+| A1  |2016|11000|Manual      |29946  |Petrol  |30 |
+| A4  |2017|16800|Automatic   |25952  |Diesel  |145|
+| A3  |2019|17300|Manual      |1998   |Petrol  |145|
++-----+----+-----+------------+-------+--------+---+
 ```
 
-!!! note "Added a Column"
-    Please note that we added the `id` column to be able to join the two partial tables ([usedcarprice_part1](/assets/sql/usedcarprice_part1.csv) and [usedcarprice_part2](/assets/sql/usedcarprice_part2.csv)) on the `id` column that uniquely identifies each data row.
-
-And here is the remaining data (the `mpg` and `enginesize` columns):
+And here is the `car_info` table:
 
 ```sql
 SELECT *
-FROM files.usedcarprice2
+FROM example_db.demo_data.car_info
 LIMIT 5;
 ```
 
 On execution, we get:
 
 ```sql
-+---+-----+----+------------+-------+--------+-----+----------+
-|id |model|year|transmission|mileage|fueltype|mpg  |enginesize|
-+---+-----+----+------------+-------+--------+-----+----------+
-|1  | A1  |2017|Manual      |15735  |Petrol  |55.4 |1.4       |
-|2  | A6  |2016|Automatic   |36203  |Diesel  |64.2 |2         |
-|3  | A1  |2016|Manual      |29946  |Petrol  |55.4 |1.4       |
-|4  | A4  |2017|Automatic   |25952  |Diesel  |67.3 |2         |
-|5  | A3  |2019|Manual      |1998   |Petrol  |49.6 |1         |
-+---+-----+----+------------+-------+--------+-----+----------+
++-----+----+------------+---------+-----+----------+
+|model|year|transmission|fueltype |mpg  |enginesize|
++-----+----+------------+---------+-----+----------+
+| A1  |2010|Automatic   |Petrol   |53.3 |1.4       |
+| A1  |2011|Manual      |Diesel   |70.6 |1.6       |
+| A1  |2011|Manual      |Petrol   |53.3 |1.4       |
+| A1  |2012|Automatic   |Petrol   |50.6 |1.4       |
+| A1  |2012|Manual      |Diesel   |72.95|1.7       |
++-----+----+------------+---------+-----+----------+
 ```
 
-The two tables above will be joined on the `id` column.
+Let's join the `car_sales` and `car_info` tables on the `model`, `year`, `transmission`, and `fueltype` columns.
 
-After the `JOIN` operation, we get the original `example_db.demo_data.used_car_price` table:
+```sql
+SELECT * FROM example_db
+(
+  SELECT s.*, i.mpg, i.enginesize
+  FROM demo_data.car_sales s
+  JOIN demo_data.car_info i
+  ON s.model=i.model
+  AND s.year=i.year
+  AND s.transmission=i.transmission
+  AND s.fueltype=i.fueltype
+)
+LIMIT 5;
+```
+
+!!! note "Nested `SELECT` Statements"
+    Please note that we use the nested `SELECT` statement in order to trigger native query at the MindsDB Cloud Editor. Here, the `example_db` database is a PostgreSQL database, so we trigger PostgreSQL-native syntax.
+
+On execution, we get:
+
+```sql
++-----+----+-----+------------+-------+--------+---+----+----------+
+|model|year|price|transmission|mileage|fueltype|tax|mpg |enginesize|
++-----+----+-----+------------+-------+--------+---+----+----------+
+| A1  |2010|9990 |Automatic   |38000  |Petrol  |125|53.3|1.4       |
+| A1  |2011|4250 |Manual      |116000 |Diesel  |20 |70.6|1.6       |
+| A1  |2011|6475 |Manual      |45000  |Diesel  |0  |70.6|1.6       |
+| A1  |2011|6295 |Manual      |107000 |Petrol  |125|53.3|1.4       |
+| A1  |2011|7495 |Manual      |60700  |Petrol  |125|53.3|1.4       |
++-----+----+-----+------------+-------+--------+---+----+----------+
+```
+
+Now, we create a view based on the `JOIN` query:
+
+```sql
+CREATE VIEW car_sales_info 
+(
+    SELECT * FROM example_db
+    (
+    SELECT s.*, i.mpg, i.enginesize
+    FROM demo_data.car_sales s
+    JOIN demo_data.car_info i
+    ON s.model=i.model
+    AND s.year=i.year
+    AND s.transmission=i.transmission
+    AND s.fueltype=i.fueltype
+    )
+);
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+Let's verify the view by selecting from it.
 
 ```sql
 SELECT *
-FROM files.usedcarprice_joined
+FROM views.car_sales_info
 LIMIT 5;
 ```
 
 On execution, we get:
 
 ```sql
-+---+-----+----+------------+-------+--------+-----+-----+----+----------+
-|id |model|year|transmission|mileage|fueltype|price|tax  |mpg |enginesize|
-+---+-----+----+------------+-------+--------+-----+-----+----+----------+
-|1  | A1  |2017|Manual      |15735  |Petrol  |12500|150.0|55.4|1.4       |
-|2  | A6  |2016|Automatic   |36203  |Diesel  |16500|20.0 |64.2|2.0       |
-|3  | A1  |2016|Manual      |29946  |Petrol  |11000|30.0 |55.4|1.4       |
-|4  | A4  |2017|Automatic   |25952  |Diesel  |16800|145.0|67.3|2.0       |
-|5  | A3  |2019|Manual      |1998   |Petrol  |17300|145.0|49.6|1.0       |
-+---+-----+----+------------+-------+--------+-----+-----+----+----------+
++-----+----+-----+------------+-------+--------+---+----+----------+
+|model|year|price|transmission|mileage|fueltype|tax|mpg |enginesize|
++-----+----+-----+------------+-------+--------+---+----+----------+
+| A1  |2010|9990 |Automatic   |38000  |Petrol  |125|53.3|1.4       |
+| A1  |2011|4250 |Manual      |116000 |Diesel  |20 |70.6|1.6       |
+| A1  |2011|6475 |Manual      |45000  |Diesel  |0  |70.6|1.6       |
+| A1  |2011|6295 |Manual      |107000 |Petrol  |125|53.3|1.4       |
+| A1  |2011|7495 |Manual      |60700  |Petrol  |125|53.3|1.4       |
++-----+----+-----+------------+-------+--------+---+----+----------+
 ```
 
 #### Creating Predictors
 
-Let's create a predictor for the partial table.
+Let's create a predictor with the `car_sales` table as input data.
 
 ```sql
-CREATE PREDICTOR mindsdb.price_predictor_partial_table1
-FROM files
-  (SELECT * FROM usedcarprice1)
+CREATE PREDICTOR mindsdb.price_predictor_car_sales
+FROM example_db
+  (SELECT * FROM demo_data.car_sales)
 PREDICT price;
 ```
 
@@ -421,12 +469,12 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-Now, let's create a predictor for the table that is a `JOIN` between the two partial tables.
+Now, let's create a predictor for the table that is a `JOIN` between the `car_sales` and `car_info` tables.
 
 ```sql
-CREATE PREDICTOR mindsdb.price_predictor_joined
-FROM files
-  (SELECT * FROM usedcarprice_joined)
+CREATE PREDICTOR mindsdb.price_predictor_car_sales_info
+FROM views
+  (SELECT * FROM car_sales_info)
 PREDICT price;
 ```
 
@@ -445,17 +493,17 @@ We start with the predictor based on the partial table.
 ```sql
 SELECT *
 FROM mindsdb.predictors
-WHERE name='price_predictor_partial_table1';
+WHERE name='price_predictor_car_sales';
 ```
 
 On execution, we get:
 
 ```sql
-+------------------------------+--------+--------+---------+-------------+---------------+------+---------------------------+----------------+
-|name                          |status  |accuracy|predict  |update_status|mindsdb_version|error|select_data_query           |training_options|
-+------------------------------+--------+--------+---------+-------------+---------------+------+---------------------------+----------------+
-|price_predictor_partial_table1|complete|0.908   |price    |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM usedcarprice1|                |
-+------------------------------+--------+--------+---------+-------------+---------------+------+---------------------------+----------------+
++-------------------------+--------+--------+---------+-------------+---------------+------+---------------------------------+----------------+
+|name                     |status  |accuracy|predict  |update_status|mindsdb_version|error |select_data_query                |training_options|
++-------------------------+--------+--------+---------+-------------+---------------+------+---------------------------------+----------------+
+|price_predictor_car_sales|complete|0.912   |price    |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM demo_data.car_sales|                |
++-------------------------+--------+--------+---------+-------------+---------------+------+---------------------------------+----------------+
 ```
 
 And now, for the predictor based on the full table.
@@ -463,40 +511,19 @@ And now, for the predictor based on the full table.
 ```sql
 SELECT *
 FROM mindsdb.predictors
-WHERE name='price_predictor_joined';
+WHERE name='price_predictor_car_sales_info';
 ```
 
 On execution, we get:
 
 ```sql
-+----------------------+--------+--------+---------+-------------+---------------+------+---------------------------------+----------------+
-|name                  |status  |accuracy|predict  |update_status|mindsdb_version|error |select_data_query                |training_options|
-+----------------------+--------+--------+---------+-------------+---------------+------+---------------------------------+----------------+
-|price_predictor_joined|complete|0.966   |price    |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM usedcarprice_joined|                |
-+----------------------+--------+--------+---------+-------------+---------------+------+---------------------------------+----------------+
++------------------------------+--------+--------+---------+-------------+---------------+------+----------------------------+----------------+
+|name                          |status  |accuracy|predict  |update_status|mindsdb_version|error |select_data_query           |training_options|
++------------------------------+--------+--------+---------+-------------+---------------+------+----------------------------+----------------+
+|price_predictor_car_sales_info|complete|0.912   |price    |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM car_sales_info|                |
++------------------------------+--------+--------+---------+-------------+---------------+------+----------------------------+----------------+
 ```
 
 ### Accuracy Comparison
 
-Once the training process of both predictors completes, we see the accuracy values.
-
-* For the first partial table, we get an accuracy value of `0.908`.
-* For the full table after joining the two partial tables, we get an accuracy value of `0.966`. The accuracy value increased, as expected.
-
-### True vs Predicted Price Comparison
-
-Let's compare how close the predicted price values are to the true price.
-
-```sql
-+---+-----+----+------------+-------+--------+----------+------------+------------+
-|id |model|year|transmission|mileage|fueltype|true_price|pred_price_1|pred_price_2|
-+---+-----+----+------------+-------+--------+----------+------------+------------+
-|1  | A1  |2017|Manual      |15735  |Petrol  |12500     |16542       |15839       |
-|2  | A6  |2016|Automatic   |36203  |Diesel  |16500     |15508       |15872       |
-|3  | A1  |2016|Manual      |29946  |Petrol  |11000     |14814       |14963       |
-|4  | A4  |2017|Automatic   |25952  |Diesel  |16800     |17897       |16098       |
-|5  | A3  |2019|Manual      |1998   |Petrol  |17300     |23400       |18820       |
-+---+-----+----+------------+-------+--------+----------+------------+------------+
-```
-
-The prices predicted by the second predictor (based on the full joined table) are, on average, the closest to the true price.
+The accuracy values are 0.912 for both the predictors.

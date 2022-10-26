@@ -187,7 +187,7 @@ Here is what you can do:
 
 - [X] Are you familiar with Python? You can then help us out in resolving open issues. At first, have a look at [issues labeled with the `good first issue` tag](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22), as these should be easy to start.
 
-- [X] You can also help us with documentation and tutorials. Here is how you can contribute by writing [documentation](contribute/docs/) and [tutorials](contribute/tutorials/). Don't forget to follow the [style guide](docs-rules/).
+- [X] You can also help us with documentation and tutorials. Here is how you can contribute by writing [documentation](https://docs.mindsdb.com/contribute/docs/) and [tutorials](https://docs.mindsdb.com/sql/tutorials/home-rentals/). Don't forget to follow the [style guide](https://docs.mindsdb.com/docs-rules/).
 
 - [X] Share with your friends and spread the word about MindsDB.
 

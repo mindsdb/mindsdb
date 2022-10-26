@@ -6,6 +6,8 @@ import requests
 
 from pymongo import MongoClient
 
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+
 from common import (
     CONFIG_PATH,
     HTTP_API_ROOT,
@@ -42,6 +44,37 @@ class CompanyIndependentTest(unittest.TestCase):
             )
         )
 
+    def sql_via_http(self, request: str, expected_resp_type: str = None, context: dict = None, headers: dict = None) -> dict:
+        if context is None:
+            context = {}
+
+        root = 'http://127.0.0.1:47334/api'
+        response = requests.post(
+            f'{root}/sql/query',
+            json={
+                'query': request,
+                'context': context
+            },
+            headers=headers
+        )
+        self.assertTrue(response.status_code == 200)
+        response = response.json()
+        if expected_resp_type is not None:
+            self.assertTrue(response.get('type') == expected_resp_type)
+        else:
+            self.assertTrue(
+                response.get('type') in [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR]
+            )
+        self.assertIsInstance(response.get('context'), dict)
+        if response['type'] == 'table':
+            self.assertIsInstance(response.get('data'), list)
+            self.assertIsInstance(response.get('column_names'), list)
+        elif response['type'] == 'error':
+            self.assertIsInstance(response.get('error_code'), int)
+            self.assertIsInstance(response.get('error_message'), str)
+        self._sql_via_http_context = response['context']
+        return response
+
     def test_1_initial_state_http(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
@@ -62,7 +95,36 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assertTrue(len(integrations_a) == 3)
         self.assertTrue(len(integrations_b) == 3)
 
-    def test_2_add_integration_http(self):
+        response = self.sql_via_http('show databases', headers={'company-id': f'{CID_A}'})
+        databases_names = [x[0] for x in response['data']]
+        self.assertTrue(len(databases_names) == 3)
+        self.assertTrue('mindsdb' not in databases_names)
+
+        response = self.sql_via_http('show databases', headers={'company-id': f'{CID_B}'})
+        databases_names = [x[0] for x in response['data']]
+        self.assertTrue(len(databases_names) == 3)
+        self.assertTrue('mindsdb' not in databases_names)
+
+        self.sql_via_http('create database mindsdb', headers={'company-id': f'{CID_A}'})
+
+        response = self.sql_via_http('show databases', headers={'company-id': f'{CID_A}'})
+        databases_names = [x[0] for x in response['data']]
+        self.assertTrue(len(databases_names) == 4)
+        self.assertTrue('mindsdb' in databases_names)
+
+        response = self.sql_via_http('show databases', headers={'company-id': f'{CID_B}'})
+        databases_names = [x[0] for x in response['data']]
+        self.assertTrue(len(databases_names) == 3)
+        self.assertTrue('mindsdb' not in databases_names)
+
+        self.sql_via_http('create database mindsdb', headers={'company-id': f'{CID_B}'})
+
+        response = self.sql_via_http('show databases', headers={'company-id': f'{CID_B}'})
+        databases_names = [x[0] for x in response['data']]
+        self.assertTrue(len(databases_names) == 4)
+        self.assertTrue('mindsdb' not in databases_names)
+
+    def test_3_add_integration_http(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         test_integration_data = {}

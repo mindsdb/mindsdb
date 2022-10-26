@@ -16,6 +16,8 @@ from mindsdb.api.http.namespaces.entitites.predictor_metadata import (
     put_predictor_metadata
 )
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
+from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
 
 
 @ns_conf.route('/')
@@ -51,8 +53,6 @@ class Predictor(Resource):
     @ns_conf.expect(put_predictor_metadata)
     def put(self, name):
         '''Learning new predictor'''
-        lw_handler = request.integration_controller.get_handler('lightwood')
-
         data = request.json
 
         try:
@@ -68,15 +68,21 @@ class Predictor(Resource):
             to_predict = [to_predict]
 
         ast = CreatePredictor(
-            name=Identifier(name),
+            name=Identifier(f"mindsdb.{name}"),
             integration_name=Identifier(data.get('integration')),
             query_str=data.get('query'),
             targets=[Identifier(x) for x in to_predict],
             using=kwargs
         )
 
-        response = lw_handler.query(ast)
-        if response.type == RESPONSE_TYPE.ERROR:
+        proxy = FakeMysqlProxy(
+            company_id=request.company_id,
+            user_class=request.user_class
+        )
+        executor = ExecuteCommands(proxy.session, executor=None)
+        response = executor.answer_create_predictor(ast)
+
+        if response.error_code is not None:
             return http_error(400, detail=response.error_message)
         return '', 200
 

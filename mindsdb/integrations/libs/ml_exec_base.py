@@ -327,6 +327,11 @@ class BaseMLEngineExec:
 
         problem_definition['target'] = target
 
+        join_learn_process = False
+        if 'join_learn_process' in problem_definition:
+            join_learn_process = problem_definition['join_learn_process']
+            del problem_definition['join_learn_process']
+
         predictor_record = db.Predictor(
             company_id=self.company_id,
             name=model_name,
@@ -360,6 +365,8 @@ class BaseMLEngineExec:
             problem_definition,
         )
         p.start()
+        if join_learn_process is True:
+            p.join()
 
         return Response(RESPONSE_TYPE.OK)
 

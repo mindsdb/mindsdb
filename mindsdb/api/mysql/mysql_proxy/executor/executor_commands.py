@@ -10,6 +10,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
     CreatePredictor,
     CreateMLEngine,
+    DropMLEngine,
     DropDatasource,
     DropPredictor,
     CreateView
@@ -154,6 +155,8 @@ class ExecuteCommands:
             return self.answer_create_database(statement)
         elif type(statement) == CreateMLEngine:
             return self.answer_create_ml_engine(statement)
+        elif type(statement) == DropMLEngine:
+            return self.answer_drop_ml_engine(statement)
         elif type(statement) == DropPredictor:
             database_name = self.session.database
             if len(statement.name.parts) > 1:
@@ -775,6 +778,14 @@ class ExecuteCommands:
             connection_args=statement.params
         )
 
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_drop_ml_engine(self, statement: ASTNode):
+        name = statement.name.parts[-1]
+        integrations = self.session.integration_controller.get_all()
+        if name not in integrations:
+            raise SqlApiException(f"Integration '{name}' does not exists")
+        self.session.integration_controller.delete(name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_database(self, statement: ASTNode):

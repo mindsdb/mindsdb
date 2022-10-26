@@ -863,9 +863,15 @@ class ExecuteCommands:
 
     def answer_create_view(self, statement):
         project_name = self.session.database
-        view_name = statement.name.parts[-1]
-        if len(statement.name.parts) == 2:
-            project_name = statement.name.parts[0]
+        # TEMP
+        if isinstance(statement.name, Identifier):
+            parts = statement.name.parts
+        else:
+            parts = statement.name.split('.')
+
+        view_name = parts[-1]
+        if len(parts) == 2:
+            project_name = parts[0]
 
         query_str = statement.query_str
         query = parse_sql(query_str, dialect='mindsdb')

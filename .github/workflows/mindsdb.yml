@@ -74,8 +74,6 @@ jobs:
                 
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
 
-          echo -e "\n===============\nDB HANDLERS\n===============\n"
-
           echo -e "\n===============MySQL Handler===============\n"
           pytest -svx tests/handler_tests/test_mysql_handler.py
 
@@ -84,6 +82,10 @@ jobs:
 
           echo -e "\n===============MariaDB Handler===============\n"
           pytest -svx tests/handler_tests/test_mariadb_handler.py
+
+          # MySQL API
+          echo -e "\n===============test MySQL API===============\n"
+          pytest -vx tests/integration_tests/flows/test_mysql_api_pytest_based.py
 
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
@@ -95,10 +97,6 @@ jobs:
 
           export USE_EXTERNAL_DB_SERVER="1"
 
-          # MySQL API
-          echo -e "\n===============\ntest MySQL API\n===============\n"
-          python tests/integration_tests/flows/test_mysql_api.py
-        
           # MySQL binary API
           echo -e "\n===============\ntest MySQL binary API\n===============\n"
           python tests/integration_tests/flows/test_mysql_bin_api.py

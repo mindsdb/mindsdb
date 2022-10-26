@@ -74,9 +74,27 @@ Let's prepare and verify the data. Here, we create the views and query them to e
     +-----+----+-----+------------+-------+--------+---+----+----------+
     ```
 
+    Where:
+
+    | Name           | Description                                                 |
+    |----------------|-------------------------------------------------------------|
+    | `model`        | Model of the car.                                           |
+    | `year`         | Year of production.                                         |
+    | `price`        | Price of the car.                                           |
+    | `transmission` | Transmission (`Manual`, or `Automatic`, or `Semi-Auto`).    |
+    | `mileage`      | Mileage of the car.                                         |
+    | `fueltype`     | Fuel type of the car.                                       |
+    | `tax`          | Tax.                                                        |
+    | `mpg`          | Miles per gallon.                                           |
+    | `enginesize`   | Engine size of the car.                                     |
+
 === "Using the Base Table + 2 More Columns"
 
     Let's create a view based on the `example_db.demo_data.used_car_price` table, and add two more columns. Please note that we replace the `mpg` column with the `kml` column.
+
+    The added columns are:</br>
+    - the `kml` column, calculated from the `mpg` column using the formula like in the query below, stands for `kilometers per liter`,</br>
+    - the `years_old` column, calculated by subtracting car's year from the current date, stands for car's age.</br>
 
     ```sql
     CREATE VIEW used_car_price_plus_2_columns (
@@ -128,6 +146,12 @@ Let's prepare and verify the data. Here, we create the views and query them to e
 === "Using the Base Table + 4 More Columns"
 
     Let's create a view based on the `example_db.demo_data.used_car_price` table, and add four more columns. Please note that we replace the `mpg` column with the `kml` column.
+
+    The added columns are:</br>
+    - the `kml` column, calculated from the `mpg` column using the formula like in the query below, stands for `kilometers per liter`,</br>
+    - the `years_old` column, calculated by subtracting car's year from the current date, stands for car's age,</br>
+    - the `units_to_sell` column, calculated using the `OVER` and `PARTITION BY` clauses, indicates how many units of a certain car model are sold in a year,</br>
+    - the `tax_div_price` column, calculated by dividing the `tax` column by the `price` column.</br>
 
     ```sql
     CREATE VIEW used_car_price_plus_another_2_columns (
@@ -351,6 +375,18 @@ On execution, we get:
 +-----+----+-----+------------+-------+--------+---+
 ```
 
+Where:
+
+| Name           | Description                                                 |
+|----------------|-------------------------------------------------------------|
+| `model`        | Model of the car.                                           |
+| `year`         | Year of production.                                         |
+| `price`        | Price of the car.                                           |
+| `transmission` | Transmission (`Manual`, or `Automatic`, or `Semi-Auto`).    |
+| `mileage`      | Mileage of the car.                                         |
+| `fueltype`     | Fuel type of the car.                                       |
+| `tax`          | Tax.                                                        |
+
 And here is the `car_info` table:
 
 ```sql
@@ -372,6 +408,17 @@ On execution, we get:
 | A1  |2012|Manual      |Diesel   |72.95|1.7       |
 +-----+----+------------+---------+-----+----------+
 ```
+
+Where:
+
+| Name           | Description                                                 |
+|----------------|-------------------------------------------------------------|
+| `model`        | Model of the car.                                           |
+| `year`         | Year of production.                                         |
+| `transmission` | Transmission (`Manual`, or `Automatic`, or `Semi-Auto`).    |
+| `fueltype`     | Fuel type of the car.                                       |
+| `mpg`          | Miles per gallon.                                           |
+| `enginesize`   | Engine size of the car.                                     |
 
 Let's join the `car_sales` and `car_info` tables on the `model`, `year`, `transmission`, and `fueltype` columns.
 
@@ -526,4 +573,4 @@ On execution, we get:
 
 ### Accuracy Comparison
 
-The accuracy values are 0.912 for both the predictors.
+The accuracy values are 0.912 for both the predictors. The predictor already learns how the combination of `model+year+transmission+fueltype` affects the price, so joining more data columns doesn't play a role in this particular example.

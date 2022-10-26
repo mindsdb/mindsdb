@@ -72,7 +72,6 @@ class BaseStuff:
                Save sql statement into temporary dir in .sql file
                Run docker container with volume points to this temp dir,
                Provide .sql file as input parameter for 'mysql' command"""
-        print("ATTEMPT TO EXECUTE A QUERY: %s" % _query)
         with tempfile.TemporaryDirectory() as tmpdirname:
             with open(f"{tmpdirname}/test.sql", 'w') as f:
                 f.write(_query)

@@ -86,7 +86,7 @@ def mindsdb_app(request, config):
     app = subprocess.Popen(
         ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={config_path}', '--verbose'],
         close_fds=True,
-        stdout=sys.stdout,
+        stdout=None,
         stderr=sys.stderr,
         shell=False
     )
@@ -109,11 +109,8 @@ def mindsdb_app(request, config):
     def cleanup():
         print(f"STOPPING APPLICATION")
         for ch in get_child_pids(app.pid):
-            print(f"STOPPING CHILDS")
             ch.kill()
-        print(f"STOPPING APPLICATION")
         app.kill()
-        # app.wait()
     request.addfinalizer(cleanup)
     return
 

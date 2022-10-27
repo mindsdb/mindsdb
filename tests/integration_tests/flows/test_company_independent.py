@@ -438,12 +438,14 @@ class CompanyIndependentTest(unittest.TestCase):
         self.assert_list(collections, {
             'models',
             'models_versions',
-            'test_mon_p_a'
+            'test_mon_p_a',
+            'model_a'
         })
         collections = client_b.mindsdb.collection_names()
         self.assert_list(collections, {
             'models',
-            'models_versions'
+            'models_versions',
+            'model_b'
         })
 
 

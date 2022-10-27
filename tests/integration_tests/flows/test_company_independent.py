@@ -122,7 +122,7 @@ class CompanyIndependentTest(unittest.TestCase):
         response = self.sql_via_http('show databases', headers={'company-id': f'{CID_B}'})
         databases_names = [x[0] for x in response['data']]
         self.assertTrue(len(databases_names) == 4)
-        self.assertTrue('mindsdb' not in databases_names)
+        self.assertTrue('mindsdb' in databases_names)
 
     def test_3_add_integration_http(self):
         print(f'\nExecuting {inspect.stack()[0].function}')

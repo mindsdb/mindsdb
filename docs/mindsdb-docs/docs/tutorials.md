@@ -76,3 +76,4 @@
 * [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI) by [Posterizedsoul](https://github.com/Posterizedsoul)
 * [Visualizing prediction result in Tableau](https://youtu.be/4aio-8kNbOo) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [MindsDB Data Insights](https://youtu.be/4oGgocNLi1c) by [@akhilcoder](https://www.youtube.com/@akhilcoder)
+* [CREATE Predictor with USING statement using Cement Manufacturing Dataset Civil Engineering](https://www.youtube.com/watch?v=aLP7KLolUSs&t=2s) by [Teslim Odumuyiwa](https://github.com/Tes-program)

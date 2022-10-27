@@ -53,7 +53,7 @@ Now, it's time to fill up the form.
     </p>
 
 !!! info "Remember"
-    All contributions to our repository should follow the [contributing guidelines](https://github.com/mindsdb/mindsdb/blob/0758ffe328ebc71467c745ee696071a8c6d7ccb8/CONTRIBUTING.md) and [code of conduct](https://github.com/mindsdb/mindsdb/blob/0758ffe328ebc71467c745ee696071a8c6d7ccb8/CODE_OF_CONDUCT.md).
+    All contributions to our repository should follow the [contributing guidelines](https://github.com/mindsdb/mindsdb/blob/staging/CONTRIBUTING.md) and [code of conduct](https://github.com/mindsdb/mindsdb/blob/staging/CODE_OF_CONDUCT.md).
 
 Thank you for reporting a bug! It helps us improve MindsDB for you and future users.
 
@@ -106,7 +106,7 @@ Now, it's time to fill up the form.
     </p>
 
 !!! info "Remember"
-    All contributions to our repository should follow the [contributing guidelines](https://github.com/mindsdb/mindsdb/blob/0758ffe328ebc71467c745ee696071a8c6d7ccb8/CONTRIBUTING.md) and [code of conduct](https://github.com/mindsdb/mindsdb/blob/0758ffe328ebc71467c745ee696071a8c6d7ccb8/CODE_OF_CONDUCT.md).
+    All contributions to our repository should follow the [contributing guidelines](https://github.com/mindsdb/mindsdb/blob/staging/CONTRIBUTING.md) and [code of conduct](https://github.com/mindsdb/mindsdb/blob/staging/CODE_OF_CONDUCT.md).
 
 Thank you for submitting a feature request! It helps us improve MindsDB for you and future users.
 

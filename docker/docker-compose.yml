@@ -46,13 +46,12 @@ services:
       MYSQL_DATABASE: "test"
     healthcheck:
       test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD' ]
-      interval: 20s
+      interval: 120s
       timeout: 4s
       retries: 100
 
 
   mysql_db_handler:
-    # image: "db_handler"
     build:
       context: ../
       dockerfile: ./docker/db_handler.Dockerfile
@@ -66,6 +65,28 @@ services:
 
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:5000"]
-      interval: 30s
+      interval: 120s
+      timeout: 4s
+      retries: 100
+
+
+  hugginggace_ml_handler:
+    build:
+      context: ../
+      dockerfile: ./docker/ml_handler.Dockerfile
+    ports:
+      - 5001:5000
+    depends_on:
+      - mindsdb
+    environment:
+      # have to share mindsdb database, because it doens't work without it
+      MINDSDB_STORAGE_DIR: "/mindsdb/var"
+    volumes:
+      - type: bind
+        source: ../
+        target: /mindsdb
+    healthcheck:
+      test:  ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 120s
       timeout: 4s
       retries: 100

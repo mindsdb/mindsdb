@@ -20,7 +20,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 &
         psycopg[binary]>=1.15.3 \
         pymongo certifi \
         snowflake-connector-python>=2.7.6 \
-        snowflake-sqlalchemy>=1.4.2 \
+        snowflake-sqlalchemy>=1.4.3 \
         clickhouse-driver \
         scylla-driver && \
     pip install --prefer-binary --no-cache-dir \

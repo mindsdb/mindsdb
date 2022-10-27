@@ -280,6 +280,10 @@ class LightwoodHandler(PredictiveHandler):
 
         training_data_df = result['result']
 
+        # checks
+        if target not in training_data_df.columns:
+            raise Exception(f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
+
         integration_meta = self.handler_controller.get(name=integration_name)
         problem_definition = ProblemDefinition.from_dict(problem_definition_dict)
 
@@ -560,7 +564,11 @@ class LightwoodHandler(PredictiveHandler):
         timeseries_settings = predictor_record.learn_args['timeseries_settings']
 
         if timeseries_settings['is_timeseries'] is True:
-            __no_forecast_offset = set([row.get('__mdb_forecast_offset', None) for row in pred_dicts]) == {None}
+            # offset forecast if have __mdb_forecast_offset > 0
+            forecast_offset = any([
+                row.get('__mdb_forecast_offset') is not None and row['__mdb_forecast_offset'] > 0
+                for row in pred_dicts
+            ])
 
             predict = predictor_record.to_predict[0]
             group_by = timeseries_settings['group_by'] or []
@@ -625,7 +633,7 @@ class LightwoodHandler(PredictiveHandler):
                         new_row[predict] = new_row[predict][i]
                         if isinstance(new_row[order_by_column], list):
                             new_row[order_by_column] = new_row[order_by_column][i]
-                    if '__mindsdb_row_id' in new_row and (i > 0 or __no_forecast_offset):
+                    if '__mindsdb_row_id' in new_row and (i > 0 or forecast_offset):
                         new_row['__mindsdb_row_id'] = None
                     rows.append(new_row)
 

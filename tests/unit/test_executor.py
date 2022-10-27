@@ -149,7 +149,7 @@ class Test(BaseExecutorTestMockModel):
 
         # > latest ______________________
         ret = self.command_executor.execute_command(parse_sql(f'''
-                select p.* from pg.tasks t
+                select t.t as t0, p.* from pg.tasks t
                 join mindsdb.task_model p
                 where t.t > latest
             ''', dialect='mindsdb'))
@@ -158,6 +158,8 @@ class Test(BaseExecutorTestMockModel):
         ret_df = self.ret_to_df(ret)
         assert ret_df.shape[0] == 3
         assert ret_df.t.min() == dt.datetime(2020, 1, 4)
+        # table shouldn't join
+        assert ret_df.t0[0] is None
 
         # > date ______________________
         ret = self.command_executor.execute_command(parse_sql(f'''
@@ -696,10 +698,10 @@ class TestWithNativeQuery(BaseExecutorTestMockModel):
         }
         self.set_predictor(predictor)
         ret = self.command_executor.execute_command(parse_sql(f'''
-           select task_model.p 
-           from views.{view_name}
-           join mindsdb.task_model
-           where {view_name}.a = 2
+           select m.p, v.a  
+           from views.{view_name} v
+           join mindsdb.task_model m
+           where v.a = 2
         ''', dialect='mindsdb'))
         assert ret.error_code is None
 

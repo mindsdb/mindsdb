@@ -406,9 +406,6 @@ class HTTPTest(unittest.TestCase):
                 continue
             queries = [
                 {
-                    'create': 'CREATE DATASOURCE',
-                    'drop': 'DROP DATASOURCE'
-                }, {
                     'create': 'CREATE DATABASE',
                     'drop': 'DROP DATABASE'
                 }, {
@@ -434,7 +431,7 @@ class HTTPTest(unittest.TestCase):
                         self.sql_via_http(f'{drop_query} {db_name}', RESPONSE_TYPE.OK)
                         self.assertTrue(db_name.upper() not in self.show_databases())
 
-        for query in ['show databases', 'show datasources']:
+        for query in ['show databases', ]:
             resp = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
             db_names = [x[0] for x in resp['data']]
             for name in created_db_names:

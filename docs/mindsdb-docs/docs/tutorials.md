@@ -58,6 +58,7 @@
 * [Gold price prediction using MindsDB](https://dev.to/purgecodee/predicting-gold-price-with-mindsdb-205n) by [Pritish Sinha](https://github.com/Pritish-Sinha) 
 * [What is MindsDB?](https://medium.com/@okekeebubechukwu08/what-is-mindsdb-b6862af21492) by [Gloria Okeke E.J](https://medium.com/@okekeebubechukwu08)
 * [Forecasting Honey Production with MindsDB](https://dev.to/narayanadithya/using-mindsdb-for-time-series-forecasting-honey-production-in-the-usa-4p05) by [Adithya Narayan](https://github.com/NarayanAdithya)
+* [Predicting gold prices with MindsDB and MongoDB](https://dev.to/yagueto/predicting-gold-prices-with-mindsdb-and-mongodb-4k22) by [yagueto](https://github.com/yagueto)
 * [Predicting the Genre of Books using MongoDB with MindsDB](https://dev.to/sarveshk76/tutorial-to-predict-the-genre-of-books-using-mongodb-2a1n) by [Sarvesh S. Kulkarni](https://github.com/Sarveshk76)
 
 

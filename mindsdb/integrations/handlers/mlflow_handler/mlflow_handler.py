@@ -39,7 +39,7 @@ class MLflowHandler(BaseMLEngine):
     def predict(self, df, args=None):
         args = self.model_storage.json_get('args')  # override any incoming args for now
         self._check_model_url(args['predict_url'])
-        resp = requests.post(args['predict_url'],  # args['mlflow_server_url'],
+        resp = requests.post(args['predict_url'],
                              data=df.to_json(orient='records'),
                              headers={'content-type': 'application/json; format=pandas-records'})
         answer = resp.json()
@@ -49,7 +49,7 @@ class MLflowHandler(BaseMLEngine):
     def describe(self, key: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')
         connection = MlflowClient(args['mlflow_server_url'], args['self.mlflow_server_path'])
-        models = {model.name: model for model in connection.list_registered_models()}
+        models = {model.name: model for model in connection.search_registered_models()}
         model = models[key]
         latest_version = model.latest_versions[-1]
         description = {

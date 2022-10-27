@@ -24,7 +24,7 @@ class MLflowHandlerTest(unittest.TestCase):
             "ssl": False
         }
         cls.sql_handler_name = 'test_handler'
-        cls.data_table_name = 'train_escaped_csv'  # 'tweet_sentiment_train'
+        cls.data_table_name = 'train_escaped_csv'
         cls.data_handler = MySQLHandler(cls.sql_handler_name, **kwargs)
 
     def test_1_create_predictor(self):

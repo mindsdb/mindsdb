@@ -95,8 +95,7 @@ class BaseStuff:
         self.query(_query)
         # and try to drop one of the datasources
         if db_type == 'mysql':
-
-            self.query(f'DROP DATABASE {db_type};')
+            self.query(f'DROP DATABASE {db_type.upper()};')
             # and create again
             self.query(_query)
 

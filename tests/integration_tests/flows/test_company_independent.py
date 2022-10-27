@@ -28,7 +28,7 @@ CID_B = 2
 def get_mongo_predictors(company_id):
     client = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
     client.admin.command({'company_id': company_id, 'need_response': 1})
-    return [x['name'] for x in client.mindsdb.predictors.find()]
+    return [x['NAME'] for x in client.mindsdb.predictors.find()]
 
 
 class CompanyIndependentTest(unittest.TestCase):
@@ -249,8 +249,8 @@ class CompanyIndependentTest(unittest.TestCase):
 
         mongo_predictors_a = get_mongo_predictors(company_id=CID_A)
         mongo_predictors_b = get_mongo_predictors(company_id=CID_B)
-        self.assertTrue(len(mongo_predictors_a) == 2 and mongo_predictors_a[1] == 'test_mon_p_a')
-        self.assertTrue(len(mongo_predictors_b) == 1 and mongo_predictors_b[0] == 'test_p_b')
+        self.assertTrue(len(mongo_predictors_a) == 2 and 'test_mon_p_a' in mongo_predictors_a)
+        self.assertTrue(len(mongo_predictors_b) == 1 and 'test_p_b' in mongo_predictors_b)
 
         client = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
         client.admin.command({'company_id': CID_A, 'need_response': 1})
@@ -258,13 +258,13 @@ class CompanyIndependentTest(unittest.TestCase):
 
         mongo_predictors_a = get_mongo_predictors(company_id=CID_A)
         mongo_predictors_b = get_mongo_predictors(company_id=CID_B)
-        self.assertTrue(len(mongo_predictors_a) == 1 and mongo_predictors_a[0] == 'test_mon_p_a')
-        self.assertTrue(len(mongo_predictors_b) == 1 and mongo_predictors_b[0] == 'test_p_b')
+        self.assertTrue(len(mongo_predictors_a) == 1 and 'test_mon_p_a' in mongo_predictors_a)
+        self.assertTrue(len(mongo_predictors_b) == 1 and 'test_p_b' in mongo_predictors_b)
 
         predictors_a = get_predictors_names_list(company_id=CID_A)
         predictors_b = get_predictors_names_list(company_id=CID_B)
-        self.assertTrue(len(predictors_a) == 1 and predictors_a[0] == 'test_mon_p_a')
-        self.assertTrue(len(predictors_b) == 1 and predictors_b[0] == 'test_p_b')
+        self.assertTrue(len(predictors_a) == 1 and 'test_mon_p_a' in predictors_a)
+        self.assertTrue(len(predictors_b) == 1 and 'test_p_b' in predictors_b)
 
 
 if __name__ == "__main__":

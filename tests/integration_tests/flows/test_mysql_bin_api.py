@@ -26,7 +26,6 @@ class TestMySqlBinApi(TestMySqlApi):
 
     def query(self, _query, encoding='utf-8'):
 
-        print("EXECUTING REDEFINED QUERY METHOD!!!!")
         cnx = mysql.connector.connect(
             host=self.config["api"]["mysql"]["host"],
             port=self.config["api"]["mysql"]["port"],

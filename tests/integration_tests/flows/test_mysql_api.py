@@ -62,7 +62,6 @@ class BaseStuff:
         return res
 
     def query(self, _query, encoding='utf-8'):
-        print("EXECUTING BASESTUFF QUERY METHOD!!!!")
         """Run mysql docker container
            Perform connection to mindsdb database
            Execute sql request

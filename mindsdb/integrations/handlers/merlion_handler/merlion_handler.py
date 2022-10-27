@@ -214,7 +214,3 @@ class MerlionHandler(BaseMLEngine):
             raise Exception("Wrong using.model_type: " + model_type + ", valid options: " +
                             enum_to_str(task_enum.value) + ", " + str(e))
         return adapter_class
-
-    @staticmethod
-    def get_custom_column_appendix_dict() -> dict:
-        return {"": "float", "__upper": "float", "__lower": "float", "__anomaly_score": "float"}

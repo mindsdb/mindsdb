@@ -434,14 +434,14 @@ class CompanyIndependentTest(unittest.TestCase):
         })
         self.assertEqual(len(list(response)), 1)
 
-        collections = client_a.mindsdb.collection_names()
+        collections = client_a.mindsdb.list_collection_names()
         self.assert_list(collections, {
             'models',
             'models_versions',
             'test_mon_p_a',
             'model_a'
         })
-        collections = client_b.mindsdb.collection_names()
+        collections = client_b.mindsdb.list_collection_names()
         self.assert_list(collections, {
             'models',
             'models_versions',

@@ -87,7 +87,7 @@ class BaseStuff:
 
     def create_datasource(self, db_data):
         db_type = db_data["type"]
-        _query = "CREATE DATASOURCE %s WITH ENGINE = '%s', PARAMETERS = %s;" % (
+        _query = "CREATE DATABASE %s WITH ENGINE = '%s', PARAMETERS = %s;" % (
             db_type.upper(),
             db_type,
             json.dumps(db_data["connection_data"]))
@@ -96,7 +96,7 @@ class BaseStuff:
         # and try to drop one of the datasources
         if db_type == 'mysql':
 
-            self.query(f'drop datasource {db_type};')
+            self.query(f'DROP DATABASE {db_type};')
             # and create again
             self.query(_query)
 

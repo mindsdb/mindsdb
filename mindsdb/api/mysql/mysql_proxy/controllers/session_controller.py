@@ -45,7 +45,7 @@ class SessionController():
             company_id=company_id
         )
 
-        self.view_interface = WithKWArgsWrapper(
+        self.view_controller = WithKWArgsWrapper(
             server.original_view_controller,
             company_id=company_id
         )

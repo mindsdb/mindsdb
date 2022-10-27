@@ -895,7 +895,7 @@ class ExecuteCommands:
             if sqlquery.fetch()['success'] != True:
                 raise SqlApiException('Wrong view query')
 
-        self.session.view_interface.add(
+        self.session.view_controller.add(
             view_name,
             query=query_str,
             project_name=project_name
@@ -907,7 +907,11 @@ class ExecuteCommands:
 
         for name in names:
             view_name = name.parts[-1]
-            self.session.view_interface.delete(view_name)
+            if len(name.parts) > 1:
+                db_name = name.parts[0]
+            else:
+                db_name = self.session.database
+            self.session.view_controller.delete(view_name, project_name=db_name)
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 

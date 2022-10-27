@@ -1,4 +1,4 @@
-from mindsdb.interfaces.storage.db import session, View
+from mindsdb.interfaces.storage.db import session, View, Project
 
 
 class ViewController:
@@ -32,8 +32,13 @@ class ViewController:
         session.add(view_record)
         session.commit()
 
-    def delete(self, name, company_id=None):
-        rec = session.query(View).filter(View.name == name, View.company_id == company_id).first()
+    def delete(self, name, project_name, company_id=None):
+        project_record = session.query(Project).filter_by(name=project_name, deleted_at=None).first()
+        rec = session.query(View).filter(
+            View.name == name,
+            View.company_id == company_id,
+            View.project_id == project_record.id
+        ).first()
         if rec is None:
             raise Exception(f'View not found: {name}')
         session.delete(rec)

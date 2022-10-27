@@ -313,8 +313,8 @@ class CompanyIndependentTest(unittest.TestCase):
 
         query = """
             CREATE VIEW mindsdb.{}
-            FROM mindsdb (
-                select * from test_integration_{}.test_data.home_rentals limit 50
+            FROM test_integration_{} (
+                select * from test_data.home_rentals limit 50
             )
         """
 
@@ -411,12 +411,12 @@ class CompanyIndependentTest(unittest.TestCase):
         databases = client_a.list_databases()
         self.assert_list([x['name'] for x in databases], {
             'admin', 'information_schema', 'mindsdb',
-            'files', 'test_integration_a'
+            'files', 'test_integration_a', 'views'
         })
         databases = client_b.list_databases()
         self.assert_list([x['name'] for x in databases], {
             'admin', 'information_schema', 'mindsdb',
-            'files', 'test_integration_b'
+            'files', 'test_integration_b', 'views'
         })
 
         client_a.mindsdb.models.insert_one({

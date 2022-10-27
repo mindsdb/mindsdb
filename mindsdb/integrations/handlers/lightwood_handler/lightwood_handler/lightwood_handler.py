@@ -185,8 +185,11 @@ class LightwoodHandler(PredictiveHandler):
             raise Exception(f"Query type {type(statement)} not supported")
 
     def analyze_dataset(self, data_frame: pd.DataFrame) -> dict:
-        analysis = lightwood.analyze_dataset(data_frame)
-        return analysis.to_dict()
+        if len(data_frame) > 0:
+            analysis = lightwood.analyze_dataset(data_frame)
+            return analysis.to_dict()
+        else:
+            return {}
 
     def edit_json_ai(self, name: str, json_ai: dict):
         predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')

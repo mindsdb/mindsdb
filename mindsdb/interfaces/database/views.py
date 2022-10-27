@@ -33,7 +33,11 @@ class ViewController:
         session.commit()
 
     def delete(self, name, project_name, company_id=None):
-        project_record = session.query(Project).filter_by(name=project_name, deleted_at=None).first()
+        project_record = session.query(Project).filter_by(
+            name=project_name,
+            company_id=company_id,
+            deleted_at=None
+        ).first()
         rec = session.query(View).filter(
             View.name == name,
             View.company_id == company_id,
@@ -50,11 +54,16 @@ class ViewController:
             'query': record.query
         }
 
-    def get(self, id=None, name=None, company_id=None):
+    def get(self, id=None, name=None, project_name=None, company_id=None):
+        project_record = session.query(Project).filter_by(
+            name=project_name,
+            company_id=company_id,
+            deleted_at=None
+        ).first()
         if id is not None:
-            records = session.query(View).filter_by(id=id, company_id=company_id).all()
+            records = session.query(View).filter_by(id=id, project_id=project_record.id, company_id=company_id).all()
         elif name is not None:
-            records = session.query(View).filter_by(name=name, company_id=company_id).all()
+            records = session.query(View).filter_by(name=name, project_id=project_record.id, company_id=company_id).all()
         if len(records) == 0:
             raise Exception(f"Can't find view with name/id: {name}/{id}")
         elif len(records) > 1:

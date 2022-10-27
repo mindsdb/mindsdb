@@ -81,7 +81,7 @@ class ProjectDataNode(DataNode):
 
         # region query to views
         views_handler = self.integration_controller.get_handler('views')
-        response = views_handler.query(query)
+        response = views_handler.query(query, db_name=self.project.name)
 
         if response.resp_type != 'query':
             raise Exception(f'Cant execute view query: {response.error_message}')

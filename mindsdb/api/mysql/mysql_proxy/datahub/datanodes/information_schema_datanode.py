@@ -45,18 +45,15 @@ class InformationSchemaDataNode(DataNode):
         self.project_controller = session.project_controller
         self.database_controller = session.database_controller
 
-        self.persis_datanodes = {
-            'files': IntegrationDataNode(
+        self.persis_datanodes = {}
+
+        databases = self.database_controller.get_list()
+        if 'files' in databases:
+            self.persis_datanodes['files'] = IntegrationDataNode(
                 'files',
                 ds_type='file',
                 integration_controller=self.session.integration_controller
-            ),
-            'views': IntegrationDataNode(
-                'views',
-                ds_type='view',
-                integration_controller=self.session.integration_controller
             )
-        }
 
         self.get_dataframe_funcs = {
             'TABLES': self._get_tables,

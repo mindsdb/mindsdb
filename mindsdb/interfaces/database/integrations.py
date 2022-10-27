@@ -283,6 +283,12 @@ class IntegrationController:
             connection_data=connection_data
         )
 
+        if handler_type == 'views':
+            handler_ars['view_controller'] = WithKWArgsWrapper(
+                ViewController(),
+                company_id=company_id
+            )
+
         if as_service:
             log.debug("%s create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
             return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
@@ -296,19 +302,6 @@ class IntegrationController:
                 (Integration.company_id == company_id)
                 & (func.lower(Integration.name) == func.lower(name))
             ).first()
-
-        # # TODO del in future
-        # if integration_record is None:
-        #     if name == 'lightwood':
-        #         handler = self.create_handler(
-        #             name=name,
-        #             handler_type='lightwood',
-        #             connection_data=None,
-        #             company_id=company_id
-        #         )
-        #         return handler
-        #     else:
-        #         raise Exception(f'Unknown integration: {name}')
 
         integration_data = self._get_integration_record_data(integration_record, True)
         connection_data = integration_data.get('connection_data', {})

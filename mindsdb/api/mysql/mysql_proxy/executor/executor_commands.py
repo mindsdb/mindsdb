@@ -714,6 +714,8 @@ class ExecuteCommands:
         # we have connection checkers not for any db. So do nothing if fail
         # TODO return rich error message
 
+        if connection_args is None:
+            connection_args = {}
         status = HandlerStatusResponse(success=False)
 
         try:
@@ -876,11 +878,11 @@ class ExecuteCommands:
         query_str = statement.query_str
         query = parse_sql(query_str, dialect='mindsdb')
 
-        if statement.from_table is not None:
+        if isinstance(statement.from_table, Identifier):
             query = Select(
                 targets=[Star()],
                 from_table=NativeQuery(
-                    integration=Identifier(statement.from_table),
+                    integration=statement.from_table,
                     query=statement.query_str
                 )
             )

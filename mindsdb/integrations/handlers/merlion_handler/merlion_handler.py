@@ -63,22 +63,6 @@ def to_ts_dataframe(df: pd.DataFrame, time_col=None) -> str:
     return time_col
 
 
-# remove ` from column, the result is (mapping, back_mapping)
-# this function is a little strange, but I think it's important to keep
-# the raw column names, maybe ` is a trick while parsing sql? maybe ...
-def get_column_name_format_mapping(df: pd.DataFrame) -> (dict, dict):
-    column_names = list(df.columns.values)
-    mapping = {}
-    back_mapping = {}
-    for column_name in column_names:
-        if column_name.find("`") == -1:
-            continue
-        formatted_name = column_name.replace("`", "")
-        mapping[column_name] = formatted_name
-        back_mapping[formatted_name] = column_name
-    return mapping, back_mapping
-
-
 class MerlionHandler(BaseMLEngine):
     name = 'merlion'
 
@@ -100,9 +84,6 @@ class MerlionHandler(BaseMLEngine):
 
     def create(self, target, args=None, **kwargs):
         df: pd.DataFrame = kwargs.get(self.KWARGS_DF, None)
-        column_name_mapping, column_name_back_mapping = get_column_name_format_mapping(df)
-        df.rename(columns=column_name_mapping, inplace=True)
-
         # prepare arguments
         task = args.get(self.ARG_USING_TASK, TaskType.forecast.name)
         model_type = args.get(self.ARG_USING_MODEL_TYPE, self.DEFAULT_MODEL_TYPE)
@@ -150,8 +131,6 @@ class MerlionHandler(BaseMLEngine):
 
     def predict(self, df):
         rt_df = df.copy(deep=True)
-        column_name_mapping, column_name_back_mapping = get_column_name_format_mapping(rt_df)
-        rt_df.rename(columns=column_name_mapping, inplace=True)
         # read model and args from storage
         model_bytes = self.model_storage.file_get(self.PERSISIT_MODEL_FILE_NAME)
         args = self.model_storage.json_get(self.PERSISIT_ARGS_KEY_IN_JSON_STORAGE)
@@ -197,8 +176,6 @@ class MerlionHandler(BaseMLEngine):
         elif task_enum == TaskType.detector:
             pred_df[f"{target}__anomaly_score"].fillna(0, inplace=True)
         rt_df = rt_df.join(pred_df, how="right")
-        # back mapping column name
-        rt_df.rename(columns=column_name_back_mapping, inplace=True)
         return rt_df
 
     def __args_to_adapter_class(self, task: str, model_type: str):

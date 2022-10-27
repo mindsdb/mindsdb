@@ -47,7 +47,7 @@ class InformationSchemaDataNode(DataNode):
 
         self.persis_datanodes = {}
 
-        databases = self.database_controller.get_list()
+        databases = self.database_controller.get_dict()
         if 'files' in databases:
             self.persis_datanodes['files'] = IntegrationDataNode(
                 'files',

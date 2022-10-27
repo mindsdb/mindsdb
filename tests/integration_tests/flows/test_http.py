@@ -491,22 +491,6 @@ class HTTPTest(unittest.TestCase):
         response = requests.get(f'{root}/config/vars')
         assert response.status_code == 200
 
-    def test_10_predictors(self):
-        """
-        Call list predictors endpoint
-        THEN check the response is success
-        """
-        response = requests.get(f'{root}/predictors/')
-        assert response.status_code == 200
-
-    def test_11_predictor_not_found(self):
-        """
-        Call unexisting predictor
-        then check the response is NOT FOUND
-        """
-        response = requests.get(f'{root}/predictors/dummy_predictor')
-        assert response.status_code != 200
-
     def test_12_gui_is_served(self):
         """
         GUI downloaded and available
@@ -514,115 +498,6 @@ class HTTPTest(unittest.TestCase):
         response = requests.get('http://localhost:47334/')
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0
-
-    # def test_13_generate_predictor(self):
-    #     r = requests.put(
-    #         f'{root}/predictors/generate/lwr_{pred_name}',
-    #         json={
-    #             'problem_definition': {'target': 'rental_price'},
-    #             'data_source_name': ds_name,
-    #             'join_learn_process': True
-    #         }
-    #     )
-    #     r.raise_for_status()
-
-    # def test_14_edit_json_ai(self):
-    #     # Get the json ai
-    #     resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
-    #     predictor_data = resp.json()
-
-    #     # Edit it
-    #     json_ai = predictor_data['json_ai']
-    #     json_ai['problem_definition']
-    #     mixers = json_ai['model']['args']['submodels']
-    #     keep_only = [x for x in mixers if x['module'] != 'Regression']
-    #     json_ai['model']['args']['submodels'] = keep_only
-
-    #     # Upload it
-    #     r = requests.put(
-    #         f'{root}/predictors/lwr_{pred_name}/edit/json_ai',
-    #         json={'json_ai': json_ai}
-    #     )
-    #     r.raise_for_status()
-
-    # def test_15_validate_json_ai(self):
-    #     # Get the json ai
-    #     resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
-    #     predictor_data = resp.json()
-
-    #     # Check it
-    #     r = requests.post(
-    #         f'{root}/util/validate_json_ai',
-    #         json={'json_ai': predictor_data['json_ai']}
-    #     )
-    #     r.raise_for_status()
-
-    # def test_16_edit_code(self):
-    #     # Make sure json ai edits went through
-    #     resp = requests.get(f'{root}/predictors/lwr_{pred_name}')
-    #     predictor_data = resp.json()
-    #     assert 'Regression(' not in predictor_data['code']
-
-    #     # Change the code
-    #     new_code = predictor_data['code']
-    #     new_code = new_code.split('''self.mode = "predict"''')[0]
-    #     new_code += """\n        return pd.DataFrame({'prediction': [int(5555555)]}).astype(int)"""
-
-    #     r = requests.put(
-    #         f'{root}/predictors/lwr_{pred_name}/edit/code',
-    #         json={'code': new_code}
-    #     )
-    #     r.raise_for_status()
-
-    # def test_17_train_predictor(self):
-    #     r = requests.put(
-    #         f'{root}/predictors/lwr_{pred_name}/train',
-    #         json={'data_source_name': ds_name, 'join_learn_process': True}
-    #     )
-    #     r.raise_for_status()
-
-    # def test_18_predict_modified_predictor(self):
-    #     params = {
-    #         'when': {'sqft': 500}
-    #     }
-    #     url = f'{root}/predictors/lwr_{pred_name}/predict'
-    #     res = requests.post(url, json=params)
-    #     assert res.status_code == 200
-    #     pvs = res.json()
-    #     assert pvs[0]['rental_price']['predicted_value'] == 5555555
-
-    # def test_19_export_and_import_predictor(self):
-    #     # Create and train a new predictor
-    #     params = {
-    #         'data_source_name': ds_name,
-    #         'to_predict': 'rental_price',
-    #         'kwargs': {
-    #             'stop_training_in_x_seconds': 20,
-    #             'join_learn_process': True
-    #         }
-    #     }
-    #     url = f'{root}/predictors/test_99_{pred_name}'
-    #     res = requests.put(url, json=params)
-    #     assert res.status_code == 200
-    #
-    #     # Export the predictor as a binary
-    #     res = requests.get(f'{root}/predictors/test_99_{pred_name}/export')
-    #     assert res.status_code == 200
-    #     exported_predictor = json.loads(res.text)  # undo the extra wrapping done by requests
-    #
-    #     # Delete the predictor
-    #     res = requests.delete(f'{root}/predictors/test_99_{pred_name}')
-    #     assert res.status_code == 200
-    #
-    #     # Import the predictor from the previous export
-    #     res = requests.put(f'{root}/predictors/test_99_{pred_name}/import', json=exported_predictor)
-    #     assert res.status_code == 200
-    #
-    #     # Test that it still exists and that it can make predictions
-    #     url = f'{root}/predictors/test_99_{pred_name}/predict'
-    #     res = requests.post(url, json={'when': {'sqft': 500}})
-    #     assert res.status_code == 200
-    #     assert isinstance(res.json()[0]['rental_price']['predicted_value'], float)
 
 
 if __name__ == '__main__':

@@ -187,7 +187,7 @@ class TestMySqlApi(BaseStuff):
         self.validate_datasource_creation(mysql_db)
 
     def test_create_predictor(self, mysql_db):
-        _query = f"CREATE PREDICTOR {self.predictor_name} from MYSQL (select * from test.rentals) as hr_ds predict rental_price;"
+        _query = f"CREATE PREDICTOR {self.predictor_name} from MYSQL (select * from test.rentals) PREDICT rental_price;"
         self.query(_query)
         self.check_predictor_readiness(self.predictor_name)
 

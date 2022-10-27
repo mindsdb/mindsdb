@@ -41,6 +41,12 @@ class TestMerlion(BaseExecutorTest):
     def get_nab_df(self) -> pd.DataFrame:
         df = pd.read_csv("https://raw.githubusercontent.com/numenta/NAB/master/data/realKnownCause/nyc_taxi.csv")
         df.rename(columns={"timestamp": "t", "value": "val"}, inplace=True)
+        train_len = int(len(df) * 0.5)
+        df_train = df.iloc[: train_len]
+        df_test = df.iloc[train_len: ]
+        df_train["train"] = 1
+        df_test["train"] = 0
+        df = pd.concat([df_train, df_test], axis=0)
         return df
 
     def run_mindsdb_sql(self, sql):
@@ -50,8 +56,6 @@ class TestMerlion(BaseExecutorTest):
 
     def test_merlion_forecaster(self):
         df = self.get_m4_df()
-        df.index = pd.to_datetime(df["t"])
-        df.drop(columns=["t"], inplace=True)
         df_train = df[df["train"] == 1][["H1"]]
         df_test = df[df["train"] == 0][["H1"]]
         # default adapter
@@ -87,7 +91,7 @@ class TestMerlion(BaseExecutorTest):
     def test_merlion_forecaster_sql(self, mock_handler):
         # prepare data
         df = self.get_m4_df()
-        df["t"] = pd.to_datetime(df["t"])
+        df["t"] = df.index
         self.set_handler(mock_handler, name='pg', tables={'m4': df})
         # test default
         self.exec_train_and_forecast(mock_handler=mock_handler, model_name="default", using="")

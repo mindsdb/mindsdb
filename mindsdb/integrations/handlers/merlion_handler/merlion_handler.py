@@ -85,7 +85,6 @@ class MerlionHandler(BaseMLEngine):
     ARG_USING_TASK = "task"
     ARG_USING_MODEL_TYPE = "model_type"
     ARG_USING_TIME_COLUMN = "time_column"
-    ARG_HORIZON = "horizon"
     ARG_WINDOW = "window"
     ARG_TARGET = "target" # only be used to persist args to args.json
     ARG_COLUMN_SEQUENCE = "column_sequence"  # only be used to persist args to args.json
@@ -108,13 +107,13 @@ class MerlionHandler(BaseMLEngine):
         task = args.get(self.ARG_USING_TASK, TaskType.forecast.name)
         model_type = args.get(self.ARG_USING_MODEL_TYPE, self.DEFAULT_MODEL_TYPE)
         time_column = args.get(self.ARG_USING_TIME_COLUMN, None)
-        horizon = args.get(self.ARG_HORIZON, self.DEFAULT_MAX_PREDICT_STEP)
+        horizon = args.get("horizon", self.DEFAULT_MAX_PREDICT_STEP)
         window = args.get(self.ARG_WINDOW, self.DEFAULT_PREDICT_BASE_WINDOW)
         # update args for default value maybe has been used, only time column will be set afterwards
         args[self.ARG_TARGET] = target
         args[self.ARG_USING_TASK] = task
         args[self.ARG_USING_MODEL_TYPE] = model_type
-        args[self.ARG_HORIZON] = horizon
+        args["horizon"] = horizon
         args[self.ARG_WINDOW] = window
 
         # check df
@@ -149,9 +148,6 @@ class MerlionHandler(BaseMLEngine):
         self.model_storage.json_set(self.PERSISIT_ARGS_KEY_IN_JSON_STORAGE, args)
         log.info("Model and args saved.")
 
-        # back mapping column name
-        df.rename(columns=column_name_back_mapping, inplace=True)
-
     def predict(self, df):
         rt_df = df.copy(deep=True)
         column_name_mapping, column_name_back_mapping = get_column_name_format_mapping(rt_df)
@@ -165,7 +161,7 @@ class MerlionHandler(BaseMLEngine):
         model_type = args[self.ARG_USING_MODEL_TYPE]
         time_column = args[self.ARG_USING_TIME_COLUMN]
         target = args[self.ARG_TARGET]
-        horizon = args[self.ARG_HORIZON]
+        horizon = args["horizon"]
         # window = args[self.ARG_WINDOW]
         feature_column_sequence = list(args[self.ARG_COLUMN_SEQUENCE])
         task_enum = TaskType[task]

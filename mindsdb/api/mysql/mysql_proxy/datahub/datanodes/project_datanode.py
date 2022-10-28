@@ -91,7 +91,10 @@ class ProjectDataNode(DataNode):
         # endregion
 
         # region query to views
-        views_handler = self.integration_controller.get_handler('views')
+        views_handler = self.integration_controller.create_tmp_handler(
+            handler_type='views',
+            connection_data={}
+        )
         response = views_handler.query(query, db_name=self.project.name)
 
         if response.resp_type != 'query':

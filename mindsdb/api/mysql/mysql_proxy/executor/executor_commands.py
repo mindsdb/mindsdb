@@ -235,27 +235,6 @@ class ExecuteCommands:
                     session=self.session
                 )
                 return self.answer_select(query)
-            elif sql_category == 'views':
-                where = BinaryOperation('and', args=[
-                    BinaryOperation('=', args=[Identifier('table_schema'), Constant('views')]),
-                    BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
-                ])
-
-                new_statement = Select(
-                    targets=[Identifier(parts=['table_name'], alias=Identifier('View'))],
-                    from_table=Identifier(parts=['information_schema', 'TABLES']),
-                    where=_get_show_where(
-                        statement,
-                        like_name='View',
-                        initial=where
-                    )
-                )
-
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
             elif sql_category == 'plugins':
                 if statement.where is not None or statement.like:
                     raise SqlApiException("'SHOW PLUGINS' query should be used without filters")

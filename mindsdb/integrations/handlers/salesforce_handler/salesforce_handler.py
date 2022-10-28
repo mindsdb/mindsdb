@@ -1,5 +1,5 @@
 # Set up Python package and API access
-from simple_salesforce import Salesforce
+from simple_salesforce import Salesforce # The Salesforce function allows you to connect to the API (you will need API access and your Salesforce credentials)
 import requests
 import pandas as pd
 from io import StringIO
@@ -19,6 +19,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 class salesforce_handler(DatabaseHandler):
@@ -45,9 +46,9 @@ class salesforce_handler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
 
-         def __del__(self):
-        if self.is_connected is True:
-            self.disconnect()
+        def __del__(self):
+            if self.is_connected is True:
+                self.disconnect()
 
     def connect(self) -> StatusResponse:
         """
@@ -59,21 +60,12 @@ class salesforce_handler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        if self.connection_args.get('dbname') is None:
-            self.connection_args['dbname'] = self.database
-        args = self.connection_args.copy()
-
-        for key in ['type', 'publish', 'test', 'date_last_update', 'integrations_name', 'database_name', 'id', 'database']:
-            if key in args:
-                del args[key]
-        connection = simple_salesforce.connect(**args, connect_timeout=10)
-
-        self.is_connected = True
         self.connection = simple_salesforce.client(
-            'salesforce',
-            sf_username = self.connection_data['sf_username'],
-            sf_password = self.connection_data['sf_password'],
-            sf_security_token= self.connection_data['sf_security_token']
+            'salesforce', 
+            sf_username = Salesforce(username='SALESFORCE_API_USER', 
+            sf_password = 'SALESFORCE_API_PASSWORD',
+            sf_security_token='SALESFORCE_API_TOKEN',
+            )
         )
         self.is_connected = True
 
@@ -116,43 +108,70 @@ class salesforce_handler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         connection = self.connect()
+
         with connection.cursor() as cur:
             try:
                 result = connection.select_object_content(
-                    sf_credentials=self.connection_data['sf_credentials']
-                cur.execute(query)
-                if ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
-                    response = Response(RESPONSE_TYPE.OK)
-                else:
-                    result = cur.fetchall()
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        DataFrame(
-                            result,
-                            columns=[x.name for x in cur.description]
-                        )
-                    )
-                connection.commit()
+                    sf_instance = ['https://oneappexchange.lightning.force.com/'],# Salesforce Instance URL
+                    reportId = ['12345'], # add report id
+                    export = ['?isdtp=p1&export=1&enc=UTF-8&xf=csv'],
+                    response = requests.get(sfUrl, headers=sf.headers, cookies={'sid': sf.session_id})
+                    download_report = response.content.decode('utf-8')
+                    InputSerialization=ast.literal_eval(self.connection_data['input_serialization']),
+                )
+
+                '''
+                Check all field names of the object
+                '''
+                descri=sf.UserInstall__c.describe()
+                [field['name'] for field in descri['fields']]
+                
+                # writing SOQL query 
+                results=sf.query_all("""
+                    Select 
+                    CreatedDate,
+                    Listing__r.RecordTypeSnapshot__c,
+                    Name,
+                    Listing__r.ProviderName__c
+                    from UserInstall__c
+                    where CreatedDate=LAST_N_DAYS:7 
+                    """)
+
+            records = [dict(CreatedDate=rec['CreatedDate'], 
+                Record_Type=rec['Listing__r']['RecordTypeSnapshot__c'],
+                ProviderName=rec['Listing__r']['ProviderName__c'], 
+                Name=rec['Name'] ) for rec in results['records']]
+            df=pd.DataFrame(records)
+
+            # perform calculations and aggregate dataset
+            df['CreatedDate']=pd.to_datetime(df['CreatedDate']).dt.to_period('M')
+            df['bucket']=df['ProviderName'].apply(lambda x: 'Labs' if x in ('Salesforce','Salesforce Labs') else 'Other')
+            df=df.groupby(by=['CreatedDate','bucket'])['Name'].count().reset_index()
+
+            df = pd.read_csv(io.StringIO(file_str))
+
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=df
+            )
+
             except Exception as e:
-                log.error(f'Error running query: {query} on {self.database}!')
+                log.error(f'Error running query: {query} on {self.connection_data["key"]} in {self.connection_data["bucket"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
-                    error_code=0,
                     error_message=str(e)
                 )
-                connection.rollback()
+            
+            if need_to_close is True:
+                self.disconnect()
 
-        if need_to_close is True:
-            self.disconnect()
-
-        return response
+            return response
 
     def query(self, query: ASTNode) -> Response:
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
-        query_str = self.renderer.get_string(query, with_failback=True)
-        return self.native_query(query_str)
+        return self.native_query(query.to_string())
 
     def get_tables(self) -> Response:
         """
@@ -172,13 +191,52 @@ class salesforce_handler(DatabaseHandler):
         return self.native_query(query)
 
     def get_columns(self, table_name):
-        query = f"""
-            SELECT
-                column_name as "Field",
-                data_type as "Type"
-            FROM
-                information_schema.columns
-            WHERE
-                table_name = '{table_name}'
-        """
-        return self.native_query(query)
+
+        query = "SELECT * FROM S3Object LIMIT 5"
+        result = self.native_query(query)
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                {
+                    'column_name': result.data_frame.columns,
+                    'data_type': result.data_frame.dtypes
+                }
+            )
+        )
+
+        return response
+
+        connection_args = OrderedDict(
+            sf_instance ={
+                'type': ARG_TYPE.STR,
+                'description': 'The Salesforce instance URL.'
+            },
+            reportId={
+                'type': ARG_TYPE.STR,
+                'description': 'The Salesforce report ID x'
+            },
+            sf_instance={
+                'type': ARG_TYPE.STR,
+                'descriptipn': 'The Salesforce instance'
+            },
+            sf_username={
+                'type': ARG_TYPE.STR,
+                'description': 'The Salesforce username credentials' 
+            },
+            sf_password={
+                'type': ARG_TYPE.STR,
+                'description': 'The Salesforce user password credentials' 
+            },
+            sf_security_token={
+                'type': ARG_TYPE.STR,
+                'description': 'The Salesforce user security token'
+            }
+    
+            connection_args_example = OrderedDict(
+                sf_instance = 'https://oneappexchange.lightning.force.com/'# Salesforce Instance URL
+                reportId = '12345' # add report id
+                sf_username = Salesforce(username='SALESFORCE_API_USER', 
+                sf_password = 'SALESFORCE_API_PASSWORD',
+                sf_security_token='SALESFORCE_API_TOKEN',
+            )

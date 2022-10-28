@@ -85,7 +85,7 @@ class BaseStuff:
                 environment={"MYSQL_PWD": self.config["api"]["mysql"]["password"]})
         return self.to_dicts(res.decode(encoding))
 
-    def create_datasource(self, db_data):
+    def create_database(self, db_data):
         db_type = db_data["type"]
         _query = "CREATE DATABASE %s WITH ENGINE = '%s', PARAMETERS = %s;" % (
             db_type.upper(),
@@ -95,8 +95,7 @@ class BaseStuff:
         self.query(_query)
         # and try to drop one of the datasources
         if db_type == 'mysql':
-
-            self.query(f'DROP DATABASE {db_type};')
+            self.query(f'DROP DATABASE {db_type.upper()};')
             # and create again
             self.query(_query)
 
@@ -130,7 +129,7 @@ class BaseStuff:
         threshold = time.time() + timeout
         res = ''
         while time.time() < threshold:
-            _query = "SELECT status, error FROM predictors WHERE name='{}';".format(predictor_name)
+            _query = "SELECT status, error FROM mindsdb.models WHERE name='{}';".format(predictor_name)
             res = self.query(_query)
             if 'status' in res:
                 if res.get_record('status', 'complete'):
@@ -140,9 +139,9 @@ class BaseStuff:
             time.sleep(2)
         assert 'status' in res and res.get_record('status', 'complete'), f"predictor {predictor_name} is not complete after {timeout} seconds"
 
-    def validate_datasource_creation(self, db_data):
+    def validate_database_creation(self, db_data):
         ds_type = db_data["type"]
-        res = self.query("SELECT * FROM mindsdb.datasources WHERE name='{}';".format(ds_type.upper()))
+        res = self.query("SELECT name FROM information_schema.databases WHERE name='{}';".format(ds_type.upper()))
         assert "name" in res and res.get_record("name", ds_type.upper()), f"Expected datasource is not found after creation - {ds_type.upper()}: {res}"
 
 
@@ -175,19 +174,19 @@ class TestMySqlApi(BaseStuff):
         cls.docker_client.close()
 
     def test_create_postgres_datasources(self, postgres_db):
-        self.create_datasource(postgres_db)
-        self.validate_datasource_creation(postgres_db)
+        self.create_database(postgres_db)
+        self.validate_database_creation(postgres_db)
 
     def test_create_mariadb_datasources(self, maria_db):
-        self.create_datasource(maria_db)
-        self.validate_datasource_creation(maria_db)
+        self.create_database(maria_db)
+        self.validate_database_creation(maria_db)
 
     def test_create_mysql_datasources(self, mysql_db):
-        self.create_datasource(mysql_db)
-        self.validate_datasource_creation(mysql_db)
+        self.create_database(mysql_db)
+        self.validate_database_creation(mysql_db)
 
     def test_create_predictor(self, mysql_db):
-        _query = f"CREATE PREDICTOR {self.predictor_name} from MYSQL (select * from test.rentals) PREDICT rental_price;"
+        _query = f"CREATE MODEL {self.predictor_name} from MYSQL (select * from test.rentals) PREDICT rental_price;"
         self.query(_query)
         self.check_predictor_readiness(self.predictor_name)
 
@@ -200,31 +199,31 @@ class TestMySqlApi(BaseStuff):
         res = self.query(_query)
         assert 'rental_price' in res and 'rental_price_explain' in res, f"error getting prediction from {self.predictor_name} - {res}"
 
-    @pytest.mark.parametrize("describe_attr",["model", "features", "ensemble"])
+    @pytest.mark.parametrize("describe_attr", ["model", "features", "ensemble"])
     def test_describe_predictor_attrs(self, describe_attr):
         self.query(f"describe mindsdb.{self.predictor_name}.{describe_attr};")
 
-    @pytest.mark.parametrize("service_req",["show databases;",
-                                        "show schemas;",
-                                        "show tables;",
-                                        "show tables from mindsdb;",
-                                        "show full tables from mindsdb;",
-                                        "show variables;",
-                                        "show session status;",
-                                        "show global variables;",
-                                        "show engines;",
-                                        "show warnings;",
-                                        "show charset;",
-                                        "show collation;",
-                                        "show datasources;",
-                                        "show predictors;",
-                                        "show function status where db = 'mindsdb';",
-                                        "show procedure status where db = 'mindsdb';"]
-                            )
+    @pytest.mark.parametrize("service_req", [
+        "show databases;",
+        "show schemas;",
+        "show tables;",
+        "show tables from mindsdb;",
+        "show full tables from mindsdb;",
+        "show variables;",
+        "show session status;",
+        "show global variables;",
+        "show engines;",
+        "show warnings;",
+        "show charset;",
+        "show collation;",
+        "show models;",
+        "show function status where db = 'mindsdb';",
+        "show procedure status where db = 'mindsdb';"
+    ])
     def test_service_requests(self, service_req):
         self.query(service_req)
 
-    def test_train_predictor_from_files(self):
+    def test_train_model_from_files(self):
         df = pd.DataFrame({
             'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],
             'x2': [x * 2 for x in range(100, 210)] + [x * 3 for x in range(100, 210)],
@@ -235,7 +234,7 @@ class TestMySqlApi(BaseStuff):
         self.verify_file_ds(self.file_datasource_name)
 
         _query = f"""
-            CREATE PREDICTOR {file_predictor_name}
+            CREATE MODEL {file_predictor_name}
             from files (select * from {self.file_datasource_name})
             predict y;
         """
@@ -271,19 +270,19 @@ class TestMySqlApi(BaseStuff):
 
         params = [
             ("with_group_by_hor1",
-                f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order GROUP BY group WINDOW 10 HORIZON 1;",
+                f"CREATE MODEL %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order GROUP BY group WINDOW 10 HORIZON 1;",
                 f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.group= 'A' LIMIT 1;",
                 1),
             ("no_group_by_hor1",
-                f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order WINDOW 10 HORIZON 1;",
+                f"CREATE MODEL %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order WINDOW 10 HORIZON 1;",
                 f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 1;",
                 1),
             ("with_group_by_hor2",
-                f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order GROUP BY group WINDOW 10 HORIZON 2;",
+                f"CREATE MODEL %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order GROUP BY group WINDOW 10 HORIZON 2;",
                 f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.group= 'A' LIMIT 2;",
                 2),
             ("no_group_by_hor2",
-                f"CREATE PREDICTOR %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order WINDOW 10 HORIZON 2;",
+                f"CREATE MODEL %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order WINDOW 10 HORIZON 2;",
                 f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 2;",
                 2),
         ]

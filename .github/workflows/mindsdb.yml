@@ -65,13 +65,13 @@ jobs:
           # Unit tests
           # echo -e "\n===============\nUnit tests\n===============\n"
           cat mindsdb/interfaces/storage/db.py | grep integration
-          
+
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
-        
+
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
-                
+
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
 
           echo -e "\n===============MySQL Handler===============\n"
@@ -109,17 +109,13 @@ jobs:
           echo -e "\n===============\ntest HTTP\n===============\n"
           python tests/integration_tests/flows/test_http.py
 
-          # user flow 1
-          echo -e "\n===============\ntest user flow 1\n===============\n"
-          python tests/integration_tests/flows/test_user_flow_1.py
-
           # # Kafka Stream
           # echo -e "\n===============\ntest Kafka Stream\n===============\n"
           # python tests/integration_tests/flows/test_kafka.py
 
-          # Redis Stream
-          echo -e "\n===============\ntest Redis Stream\n===============\n"
-          python tests/integration_tests/flows/test_redis.py
+          # # Redis Stream
+          # echo -e "\n===============\ntest Redis Stream\n===============\n"
+          # python tests/integration_tests/flows/test_redis.py
         
         fi
       shell: bash

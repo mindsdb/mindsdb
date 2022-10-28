@@ -1,4 +1,3 @@
-import os
 import copy
 import base64
 import shutil
@@ -21,6 +20,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from mindsdb.utilities.log import log
 from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
+
 
 class IntegrationController:
     @staticmethod
@@ -47,7 +47,7 @@ class IntegrationController:
             return
 
         log.debug("%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
-                 self.__class__.__name__, name, engine, connection_args, company_id)
+                  self.__class__.__name__, name, engine, connection_args, company_id)
         handlers_meta = self.get_handlers_import_status()
         handler_meta = handlers_meta[engine]
         accept_connection_args = handler_meta.get('connection_args')
@@ -91,16 +91,15 @@ class IntegrationController:
 
     def delete(self, name, company_id=None):
 
-        if name in ('files', 'views', 'lightwood'):
+        if name in ('files', 'lightwood'):
             raise Exception('Unable to drop: is system database')
 
         # check permanent integration
         if name in self.handler_modules:
             handler = self.handler_modules[name]
 
-            if getattr(handler, 'permanent', False) == True:
+            if getattr(handler, 'permanent', False) is True:
                 raise Exception('Unable to drop: is permanent integration')
-
 
         integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
 
@@ -179,9 +178,15 @@ class IntegrationController:
             ):
                 data['connection'] = None
 
+        integration_type = None
+        integration_module = self.handler_modules.get(integration_record.engine)
+        if hasattr(integration_module, 'type'):
+            integration_type = integration_module.type
+
         return {
             'id': integration_record.id,
             'name': integration_record.name,
+            'type': integration_type,
             'engine': integration_record.engine,
             'date_last_update': deepcopy(integration_record.updated_at),
             'connection_data': data
@@ -278,6 +283,12 @@ class IntegrationController:
             connection_data=connection_data
         )
 
+        if handler_type == 'views':
+            handler_ars['view_controller'] = WithKWArgsWrapper(
+                ViewController(),
+                company_id=company_id
+            )
+
         if as_service:
             log.debug("%s create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
             return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
@@ -291,19 +302,6 @@ class IntegrationController:
                 (Integration.company_id == company_id)
                 & (func.lower(Integration.name) == func.lower(name))
             ).first()
-
-        # # TODO del in future
-        # if integration_record is None:
-        #     if name == 'lightwood':
-        #         handler = self.create_handler(
-        #             name=name,
-        #             handler_type='lightwood',
-        #             connection_data=None,
-        #             company_id=company_id
-        #         )
-        #         return handler
-        #     else:
-        #         raise Exception(f'Unknown integration: {name}')
 
         integration_data = self._get_integration_record_data(integration_record, True)
         connection_data = integration_data.get('connection_data', {})
@@ -354,21 +352,19 @@ class IntegrationController:
         from mindsdb.integrations.libs.base import BaseMLEngine
         from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
-        klass = self.handler_modules[integration_engine].Handler
+        HandlerClass = self.handler_modules[integration_engine].Handler
 
-        if isinstance(klass, type) and issubclass(klass, BaseMLEngine):
-            # need to wrapp it
-            handler_ars['handler_class'] = klass
-            inst = BaseMLEngineExec(**handler_ars)
-
+        if isinstance(HandlerClass, type) and issubclass(HandlerClass, BaseMLEngine):
+            handler_ars['handler_class'] = HandlerClass
+            handler = BaseMLEngineExec(**handler_ars)
         else:
-            inst = klass(**handler_ars)
+            handler = HandlerClass(**handler_ars)
 
         if as_service:
             log.debug("%s get_handler: create a client to db service of %s type", self.__class__.__name__, handler_type)
             return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
 
-        return inst
+        return handler
 
     def reload_handler_module(self, handler_name):
         importlib.reload(self.handler_modules[handler_name])
@@ -443,7 +439,7 @@ class IntegrationController:
         if hasattr(module, 'permanent'):
             handler_meta['permanent'] = module.permanent
         else:
-            if handler_meta.get('name') in ('files', 'views', 'lightwood'):
+            if handler_meta.get('name') in ('files', 'lightwood'):
                 handler_meta['permanent'] = True
             else:
                 handler_meta['permanent'] = False

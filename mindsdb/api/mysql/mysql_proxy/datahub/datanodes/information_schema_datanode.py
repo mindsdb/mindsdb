@@ -8,8 +8,8 @@ from mindsdb_sql.parser.ast import BinaryOperation, Select, Identifier, Constant
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.mindsdb_datanode import MindsDBDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import IntegrationDataNode
+from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.project_datanode import ProjectDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 
@@ -30,28 +30,30 @@ class InformationSchemaDataNode(DataNode):
         'STATISTICS': ['TABLE_CATALOG', 'TABLE_SCHEMA', 'TABLE_NAME', 'NON_UNIQUE', 'INDEX_SCHEMA', 'INDEX_NAME', 'SEQ_IN_INDEX', 'COLUMN_NAME', 'COLLATION', 'CARDINALITY', 'SUB_PART', 'PACKED', 'NULLABLE', 'INDEX_TYPE', 'COMMENT', 'INDEX_COMMENT', 'IS_VISIBLE', 'EXPRESSION'],
         'CHARACTER_SETS': ['CHARACTER_SET_NAME', 'DEFAULT_COLLATE_NAME', 'DESCRIPTION', 'MAXLEN'],
         'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
+        # MindsDB specific:
+        'MODELS': ['NAME', 'PROJECT', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
+        'MODELS_VERSIONS': ['NAME', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
+        'DATABASES': ['NAME', 'TYPE', 'ENGINE'],
+        'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
+        'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS']
     }
 
     def __init__(self, session):
         self.session = session
         self.integration_controller = session.integration_controller
-        self.view_interface = session.view_interface
-        self.persis_datanodes = {
-            'mindsdb': MindsDBDataNode(
-                session.model_controller,
-                session.integration_controller
-            ),
-            'files': IntegrationDataNode(
+        self.view_controller = session.view_controller
+        self.project_controller = session.project_controller
+        self.database_controller = session.database_controller
+
+        self.persis_datanodes = {}
+
+        databases = self.database_controller.get_dict()
+        if 'files' in databases:
+            self.persis_datanodes['files'] = IntegrationDataNode(
                 'files',
                 ds_type='file',
                 integration_controller=self.session.integration_controller
-            ),
-            'views': IntegrationDataNode(
-                'views',
-                ds_type='view',
-                integration_controller=self.session.integration_controller
             )
-        }
 
         self.get_dataframe_funcs = {
             'TABLES': self._get_tables,
@@ -60,6 +62,11 @@ class InformationSchemaDataNode(DataNode):
             'ENGINES': self._get_engines,
             'CHARACTER_SETS': self._get_charsets,
             'COLLATIONS': self._get_collations,
+            'MODELS': self._get_models,
+            'MODELS_VERSIONS': self._get_models_versions,
+            'DATABASES': self._get_databases,
+            'ML_ENGINES': self._get_ml_engines,
+            'HANDLERS': self._get_handlers
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -76,6 +83,32 @@ class InformationSchemaDataNode(DataNode):
 
         if name_lower in self.persis_datanodes:
             return self.persis_datanodes[name_lower]
+
+        existing_databases_meta = self.database_controller.get_dict()  # filter_type='project'
+        database_name = None
+        for key in existing_databases_meta:
+            if key.lower() == name_lower:
+                database_name = key
+                break
+
+        if database_name is None:
+            return None
+
+        database_meta = existing_databases_meta[database_name]
+        if database_meta['type'] == 'integration':
+            integration = self.integration_controller.get(name=database_name)
+            return IntegrationDataNode(
+                database_name,
+                ds_type=integration['engine'],
+                integration_controller=self.session.integration_controller
+            )
+        if database_meta['type'] == 'project':
+            project = self.database_controller.get_project(name=database_name)
+            return ProjectDataNode(
+                project=project,
+                integration_controller=self.session.integration_controller,
+                information_schema=self
+            )
 
         integration_names = self.integration_controller.get_all().keys()
         for integration_name in integration_names:
@@ -109,6 +142,48 @@ class InformationSchemaDataNode(DataNode):
             for x in integration_names
             if x not in ('files', 'views')
         ]
+
+    def get_projects_names(self):
+        projects = self.database_controller.get_dict(filter_type='project')
+        return [x.lower() for x in projects]
+
+    def _get_handlers(self, query: ASTNode = None):
+        columns = self.information_schema['HANDLERS']
+
+        handlers = self.integration_controller.get_handlers_import_status()
+        ml_handlers = {
+            key: val for key, val in handlers.items()
+            if val['import']['success'] is True and val['type'] == 'ml'}
+
+        data = []
+        for _key, val in ml_handlers.items():
+            connection_args = val.get('connection_args')
+            if connection_args is not None:
+                connection_args = str(dict(connection_args))
+            data.append([
+                val['name'], val.get('title'), val.get('description'), val.get('version'), connection_args
+            ])
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_ml_engines(self, query: ASTNode = None):
+        columns = self.information_schema['ML_ENGINES']
+
+        integrations = self.integration_controller.get_all()
+        ml_integrations = {
+            key: val for key, val in integrations.items()
+            if val['type'] == 'ml'
+        }
+
+        data = []
+        for _key, val in ml_integrations.items():
+            data.append([
+                val['name'], val.get('engine'), val.get('connection_data')
+            ])
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
 
     def _get_tables(self, query: ASTNode = None):
         columns = self.information_schema['TABLES']
@@ -157,6 +232,67 @@ class InformationSchemaDataNode(DataNode):
                     data.append(row.to_list())
             except Exception:
                 print(f"Can't get tables from '{ds_name}'")
+
+        for project_name in self.get_projects_names():
+            if target_table is not None and target_table != project_name:
+                continue
+            project_dn = self.get(project_name)
+            project_tables = project_dn.get_tables()
+            for row in project_tables:
+                row.TABLE_SCHEMA = project_name
+                data.append(row.to_list())
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_models(self, query: ASTNode = None):
+        columns = self.information_schema['MODELS']
+        data = []
+        for project_name in self.get_projects_names():
+            project = self.database_controller.get_project(name=project_name)
+            project_tables = project.get_tables()
+            for table_name, table_meta in project_tables.items():
+                if table_meta['type'] != 'model':
+                    continue
+                data.append([
+                    table_name, project_name, table_meta['status'], table_meta['accuracy'], table_meta['predict'],
+                    table_meta['update_status'], table_meta['mindsdb_version'], table_meta['error'],
+                    table_meta['select_data_query'], table_meta['training_options']
+                ])
+            # TODO optimise here
+            # if target_table is not None and target_table != project_name:
+            #     continue
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_databases(self, query: ASTNode = None):
+        columns = self.information_schema['DATABASES']
+
+        project = self.database_controller.get_list()
+        data = [
+            [x['name'], x['type'], x['engine']]
+            for x in project
+        ]
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_models_versions(self, query: ASTNode = None):
+        columns = self.information_schema['MODELS_VERSIONS']
+        data = []
+        for project_name in self.get_projects_names():
+            project = self.database_controller.get_project(name=project_name)
+            project_models = project.get_models()
+            for row in project_models:
+                table_name = row['name']
+                table_meta = row['metadata']
+                data.append([
+                    table_name, project_name, table_meta['active'], table_meta['version'], table_meta['status'],
+                    table_meta['accuracy'], table_meta['predict'], table_meta['update_status'],
+                    table_meta['mindsdb_version'], table_meta['error'], table_meta['select_data_query'],
+                    table_meta['training_options']
+                ])
 
         df = pd.DataFrame(data, columns=columns)
         return df
@@ -212,16 +348,12 @@ class InformationSchemaDataNode(DataNode):
 
     def _get_schemata(self, query: ASTNode = None):
         columns = self.information_schema['SCHEMATA']
+
+        databases_meta = self.session.database_controller.get_list()
         data = [
-            ['def', 'information_schema', 'utf8', 'utf8_general_ci', None]
+            ['def', x['name'], 'utf8mb4', 'utf8mb4_0900_ai_ci', None]
+            for x in databases_meta
         ]
-
-        # permanent databases
-        data.append(['def', 'mindsdb', 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
-
-        integration_names = self.integration_controller.get_all().keys()
-        for database_name in integration_names:
-            data.append(['def', database_name, 'utf8mb4', 'utf8mb4_0900_ai_ci', None])
 
         df = pd.DataFrame(data, columns=columns)
         return df
@@ -261,7 +393,7 @@ class InformationSchemaDataNode(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def query(self, query: ASTNode):
+    def query(self, query: ASTNode, session=None):
         query_tables = get_all_tables(query)
 
         if len(query_tables) != 1:

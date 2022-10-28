@@ -96,5 +96,4 @@
 * [How to access MindsDB](https://www.youtube.com/watch?v=8F5p_Rwmvgk) by [Syed Zubeen](https://github.com/syedzubeen)
 * [Deploying an instance of mindsDB on Google Cloud Platform](https://www.youtube.com/watch?v=OrW-8ciNGng) by [Syed Zubeen](https://github.com/syedzubeen)
 * [Connecting MindsDB to Tableau](https://www.youtube.com/watch?v=eUiBVrm85v4) by [Alissa Troiano](https://github.com/alissatroiano)
-
-
+* [Deploy MindsDB on the Google Cloud Platform](https://www.youtube.com/watch?v=WLdb7UNi4bk) by [Alissa Troiano](https://github.com/alissatroiano)

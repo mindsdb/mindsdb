@@ -80,7 +80,7 @@ class LightwoodHandler(BaseMLEngine):
     def create(self, target, df, args):
         run_learn(
             df,
-            args,   # problem_definition
+            args,   # Problem definition and JsonAI override
             self.model_storage
         )
 

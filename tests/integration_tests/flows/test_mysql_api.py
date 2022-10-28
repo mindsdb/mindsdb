@@ -217,7 +217,6 @@ class TestMySqlApi(BaseStuff):
         "show charset;",
         "show collation;",
         "show models;",
-        "show models_versions;",
         "show function status where db = 'mindsdb';",
         "show procedure status where db = 'mindsdb';"
     ])

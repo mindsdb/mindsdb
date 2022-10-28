@@ -7,6 +7,8 @@ Create Date: 2022-10-14 09:59:44.589745
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.sql import text
+
 import mindsdb.interfaces.storage.db as db
 
 
@@ -67,8 +69,44 @@ def upgrade():
             nullable=False
         )
 
+    views = conn.execute('''
+        select id, name from view
+        where exists (select 1 from predictor where view.name = predictor.name)
+    ''').fetchall()
+
+    for row in views:
+        conn.execute(
+            text("""
+                update view
+                set name = :name
+                where id = :view_id
+            """), {
+                'name': f"{row['name']}_view",
+                'view_id': row['id']
+            }
+        )
+
+    view_integration = db.Integration.query.filter_by(name='views').first()
+    if view_integration is not None:
+        session.delete(view_integration)
+        session.commit()
+
 
 def downgrade():
+    conn = op.get_bind()
+    session = sa.orm.Session(bind=conn)
+
+    view_integration = db.Integration.query.filter_by(name='views').first()
+    if view_integration is None:
+        views_integration = db.Integration(
+            name='views',
+            data={},
+            engine='views',
+            company_id=None
+        )
+        session.add(views_integration)
+    session.commit()
+
     with op.batch_alter_table('view', schema=None) as batch_op:
         batch_op.drop_constraint('fk_project_id', type_='foreignkey')
         batch_op.drop_column('project_id')

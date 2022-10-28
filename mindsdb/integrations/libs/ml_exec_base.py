@@ -274,16 +274,6 @@ class BaseMLEngineExec:
                 error_message=f"Error: model '{model_name}' already exists in project {project_name}!"
             )
 
-        # TODO
-        # data = self.get_tables().data_frame.to_dict(orient='records')
-        # tables_names = [x['table_name'] for x in data]
-
-        # if model_name in tables_names:
-        #     return Response(
-        #         RESPONSE_TYPE.ERROR,
-        #         error_message="Error: this model already exists!"
-        #     )
-
         target = statement.targets[0].parts[-1]
         training_data_df = pd.DataFrame()
 

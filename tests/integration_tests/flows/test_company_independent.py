@@ -6,15 +6,12 @@ import requests
 
 from pymongo import MongoClient
 
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+
 from common import (
     CONFIG_PATH,
     HTTP_API_ROOT,
     run_environment
-)
-
-from http_test_helpers import (
-    get_predictors_names_list,
-    get_integrations_names
 )
 
 config = {}
@@ -23,10 +20,8 @@ CID_A = 1
 CID_B = 2
 
 
-def get_mongo_predictors(company_id):
-    client = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
-    client.admin.command({'company_id': company_id, 'need_response': 1})
-    return [x['name'] for x in client.mindsdb.predictors.find()]
+def get_string_params(parameters):
+    return ', '.join([f'{key} = {json.dumps(val)}' for key, val in parameters.items()])
 
 
 class CompanyIndependentTest(unittest.TestCase):
@@ -42,139 +37,389 @@ class CompanyIndependentTest(unittest.TestCase):
             )
         )
 
+    def get_db_names(self, company_id: int = None):
+        response = self.sql_via_http(
+            'show databases',
+            company_id=company_id,
+            expected_resp_type=RESPONSE_TYPE.TABLE
+        )
+        return [x[0].lower() for x in response['data']]
+
+    def get_tables_in(self, table, company_id):
+        response = self.sql_via_http(
+            f"SHOW TABLES FROM {table}",
+            company_id=company_id,
+            expected_resp_type=RESPONSE_TYPE.TABLE
+        )
+        return [x[0].lower() for x in response['data']]
+
+    def get_ml_engines(self, company_id: int = None):
+        response = self.sql_via_http(
+            "SHOW ML_ENGINES",
+            company_id=company_id,
+            expected_resp_type=RESPONSE_TYPE.TABLE
+        )
+        return [x[0].lower() for x in response['data']]
+
+    def assert_list(self, a, b):
+        self.assertEqual(len(a), len(b))
+        self.assertSetEqual(set(a), set(b))
+
+    def sql_via_http(self, request: str, expected_resp_type: str = None, context: dict = None,
+                     headers: dict = None, company_id: int = None) -> dict:
+        if context is None:
+            context = {}
+
+        if headers is None:
+            headers = {}
+        if company_id is not None:
+            headers['company-id'] = str(company_id)
+
+        root = 'http://127.0.0.1:47334/api'
+        response = requests.post(
+            f'{root}/sql/query',
+            json={
+                'query': request,
+                'context': context
+            },
+            headers=headers
+        )
+        self.assertTrue(response.status_code == 200)
+        response = response.json()
+        if expected_resp_type is not None:
+            self.assertEqual(response.get('type'), expected_resp_type)
+        else:
+            self.assertTrue(
+                response.get('type') in [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR]
+            )
+        self.assertIsInstance(response.get('context'), dict)
+        if response['type'] == 'table':
+            self.assertIsInstance(response.get('data'), list)
+            self.assertIsInstance(response.get('column_names'), list)
+        elif response['type'] == 'error':
+            self.assertIsInstance(response.get('error_code'), int)
+            self.assertIsInstance(response.get('error_message'), str)
+        self._sql_via_http_context = response['context']
+        return response
+
     def test_1_initial_state_http(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
         # add permanent integrations
         for cid in [CID_A, CID_B]:
-            for inegration_name in ['files', 'views', 'lightwood']:
-                res = requests.put(
-                    f'{HTTP_API_ROOT}/config/integrations/{inegration_name}',
-                    json={'params': {'type': inegration_name}},
-                    headers={'company-id': f'{cid}'}
-                )
-                self.assertTrue(res.status_code == 200)
-                print(f"created integration '{inegration_name}' for company '{cid}'")
+            databases_names = self.get_db_names(cid)
+            self.assertTrue(
+                len(databases_names) == 1
+                and databases_names[0] == 'information_schema'
+            )
+            self.sql_via_http(
+                "CREATE DATABASE files ENGINE='files'",
+                company_id=cid,
+                expected_resp_type=RESPONSE_TYPE.OK
+            )
+            databases_names = self.get_db_names(cid)
+            self.assert_list(
+                databases_names, {
+                    'information_schema',
+                    'files'
+                }
+            )
+            self.sql_via_http(
+                'CREATE DATABASE mindsdb',
+                company_id=cid,
+                expected_resp_type=RESPONSE_TYPE.OK
+            )
+            databases_names = self.get_db_names(cid)
+            self.assert_list(
+                databases_names, {
+                    'information_schema',
+                    'mindsdb',
+                    'files'
+                }
+            )
 
-        # is no integrations
-        integrations_a = get_integrations_names(company_id=CID_A)
-        integrations_b = get_integrations_names(company_id=CID_B)
-        self.assertTrue(len(integrations_a) == 3)
-        self.assertTrue(len(integrations_b) == 3)
-
-    def test_2_add_integration_http(self):
+    def test_2_add_data_db_http(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
 
+        # region create data db
         test_integration_data = {}
         test_integration_data.update(config['integrations']['default_postgres'])
 
-        res = requests.put(
-            f'{HTTP_API_ROOT}/config/integrations/test_integration_a',
-            json={'params': test_integration_data},
-            headers={'company-id': f'{CID_A}'}
+        self.sql_via_http(
+            f"""
+                CREATE DATABASE test_integration_a
+                ENGINE 'postgres'
+                PARAMETERS {json.dumps(test_integration_data)}
+            """,
+            company_id=CID_A,
+            expected_resp_type=RESPONSE_TYPE.OK
         )
-        self.assertTrue(res.status_code == 200)
 
-        integrations_a = get_integrations_names(company_id=CID_A)
-        integrations_a = [x for x in integrations_a if x not in ('files', 'views', 'lightwood')]
-        self.assertTrue(len(integrations_a) == 1 and integrations_a[0] == 'test_integration_a')
-
-        integrations_b = get_integrations_names(company_id=CID_B)
-        integrations_b = [x for x in integrations_b if x not in ('files', 'views', 'lightwood')]
-        self.assertTrue(len(integrations_b) == 0)
-
-        res = requests.put(
-            f'{HTTP_API_ROOT}/config/integrations/test_integration_b',
-            json={'params': test_integration_data},
-            headers={'company-id': f'{CID_B}'}
+        databases_names_a = self.get_db_names(CID_A)
+        self.assert_list(
+            databases_names_a, {
+                'information_schema',
+                'mindsdb',
+                'files',
+                'test_integration_a'
+            }
         )
-        self.assertTrue(res.status_code == 200)
 
-        integrations_a = get_integrations_names(company_id=CID_A)
-        integrations_a = [x for x in integrations_a if x not in ('files', 'views', 'lightwood')]
-        self.assertTrue(len(integrations_a) == 1 and integrations_a[0] == 'test_integration_a')
+        databases_names_b = self.get_db_names(CID_B)
+        self.assert_list(
+            databases_names_b, {
+                'information_schema',
+                'mindsdb',
+                'files'
+            }
+        )
 
-        integrations_b = get_integrations_names(company_id=CID_B)
-        integrations_b = [x for x in integrations_b if x not in ('files', 'views', 'lightwood')]
-        self.assertTrue(len(integrations_b) == 1 and integrations_b[0] == 'test_integration_b')
+        self.sql_via_http(
+            f"""
+                CREATE DATABASE test_integration_b
+                ENGINE 'postgres'
+                PARAMETERS {json.dumps(test_integration_data)}
+            """,
+            company_id=CID_B,
+            expected_resp_type=RESPONSE_TYPE.OK
+        )
 
-    def test_4_add_predictors_http(self):
+        databases_names_a = self.get_db_names(CID_A)
+        self.assert_list(
+            databases_names_a, {
+                'information_schema',
+                'mindsdb',
+                'files',
+                'test_integration_a'
+            }
+        )
+
+        databases_names_b = self.get_db_names(CID_B)
+        self.assert_list(
+            databases_names_b, {
+                'information_schema',
+                'mindsdb',
+                'files',
+                'test_integration_b'
+            }
+        )
+        # endregion
+
+        # region del data bd and create again
+        self.sql_via_http(
+            "DROP DATABASE test_integration_a",
+            company_id=CID_A,
+            expected_resp_type=RESPONSE_TYPE.OK
+        )
+
+        databases_names_a = self.get_db_names(CID_A)
+        self.assert_list(
+            databases_names_a, {
+                'information_schema',
+                'mindsdb',
+                'files'
+            }
+        )
+
+        databases_names_b = self.get_db_names(CID_B)
+        self.assert_list(
+            databases_names_b, {
+                'information_schema',
+                'mindsdb',
+                'files',
+                'test_integration_b'
+            }
+        )
+
+        self.sql_via_http(
+            f"""
+                CREATE DATABASE test_integration_a
+                ENGINE 'postgres'
+                PARAMETERS {json.dumps(test_integration_data)}
+            """,
+            company_id=CID_A,
+            expected_resp_type=RESPONSE_TYPE.OK
+        )
+
+        databases_names_a = self.get_db_names(CID_A)
+        self.assert_list(
+            databases_names_a, {
+                'information_schema',
+                'mindsdb',
+                'files',
+                'test_integration_a'
+            }
+        )
+
+        databases_names_b = self.get_db_names(CID_B)
+        self.assert_list(
+            databases_names_b, {
+                'information_schema',
+                'mindsdb',
+                'files',
+                'test_integration_b'
+            }
+        )
+        # endregion
+
+        # region check tables
+        for cid in [CID_A, CID_B]:
+            tables = self.get_tables_in('mindsdb', cid)
+            self.assert_list(
+                tables, {
+                    'models',
+                    'models_versions'
+                }
+            )
+        # endregion
+
+        # region cehck select from data db
+        response = self.sql_via_http(
+            "select * from test_integration_a.test_data.home_rentals limit 10",
+            company_id=CID_A,
+            expected_resp_type=RESPONSE_TYPE.TABLE
+        )
+        self.assertEqual(len(response['data']), 10)
+
+        response = self.sql_via_http(
+            "select * from test_integration_a.test_data.home_rentals limit 10",
+            company_id=CID_B,
+            expected_resp_type=RESPONSE_TYPE.ERROR
+        )
+        # endregion
+
+    def test_3_add_ml_engine(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
-        params = {
-            'integration': 'test_integration_a',
-            'query': 'select * from test_data.home_rentals limit 50',
-            'to_predict': 'rental_price',
-            'kwargs': {
-                'time_aim': 5,
-                'join_learn_process': True
-            }
-        }
-        url = f'{HTTP_API_ROOT}/predictors/test_p_a'
-        res = requests.put(url, json=params, headers={'company-id': f'{CID_A}'})
-        self.assertTrue(res.status_code == 200)
 
-        predictors_a = get_predictors_names_list(company_id=CID_A)
-        predictors_b = get_predictors_names_list(company_id=CID_B)
-        self.assertTrue(len(predictors_a) == 1 and predictors_a[0] == 'test_p_a')
-        self.assertTrue(len(predictors_b) == 0)
+        for cid in [CID_A, CID_B]:
+            engines = self.get_ml_engines(cid)
+            self.assertTrue(len(engines) == 0)
 
-        mongo_predictors_a = get_mongo_predictors(company_id=CID_A)
-        mongo_predictors_b = get_mongo_predictors(company_id=CID_B)
-        self.assertTrue(len(mongo_predictors_a) == 1 and mongo_predictors_a[0] == 'test_p_a')
-        self.assertTrue(len(mongo_predictors_b) == 0)
+            self.sql_via_http(
+                "CREATE ML_ENGINE lightwood FROM lightwood USING password=''",
+                company_id=cid,
+                expected_resp_type=RESPONSE_TYPE.OK
+            )
 
-        params = {
-            'integration': 'test_integration_a',
-            'query': 'select * from test_data.home_rentals limit 50',
-            'to_predict': 'rental_price',
-            'kwargs': {
-                'time_aim': 5,
-                'join_learn_process': True
-            }
-        }
-        url = f'{HTTP_API_ROOT}/predictors/test_p_b'
-        res = requests.put(url, json=params, headers={'company-id': f'{CID_B}'})
-        # shold not be able to create predictor from foreign ds
-        self.assertTrue(res.status_code != 200)
+            engines = self.get_ml_engines(cid)
+            self.assert_list(
+                engines, {
+                    'lightwood'
+                }
+            )
 
-        predictors_a = get_predictors_names_list(company_id=CID_A)
-        predictors_b = get_predictors_names_list(company_id=CID_B)
-        self.assertTrue(len(predictors_a) == 1 and predictors_a[0] == 'test_p_a')
-        self.assertTrue(len(predictors_b) == 0)
-
-        mongo_predictors_a = get_mongo_predictors(company_id=CID_A)
-        mongo_predictors_b = get_mongo_predictors(company_id=CID_B)
-        self.assertTrue(len(mongo_predictors_a) == 1 and mongo_predictors_a[0] == 'test_p_a')
-        self.assertTrue(len(mongo_predictors_b) == 0)
-
-        params = {
-            'integration': 'test_integration_b',
-            'query': 'select * from test_data.home_rentals limit 50',
-            'to_predict': 'rental_price',
-            'kwargs': {
-                'time_aim': 5,
-                'join_learn_process': True
-            }
-        }
-        url = f'{HTTP_API_ROOT}/predictors/test_p_b'
-        res = requests.put(url, json=params, headers={'company-id': f'{CID_B}'})
-        self.assertTrue(res.status_code == 200)
-
-        predictors_a = get_predictors_names_list(company_id=CID_A)
-        predictors_b = get_predictors_names_list(company_id=CID_B)
-        self.assertTrue(len(predictors_a) == 1 and predictors_a[0] == 'test_p_a')
-        self.assertTrue(len(predictors_b) == 1 and predictors_b[0] == 'test_p_b')
-
-        mongo_predictors_a = get_mongo_predictors(company_id=CID_A)
-        mongo_predictors_b = get_mongo_predictors(company_id=CID_B)
-        self.assertTrue(len(mongo_predictors_a) == 1 and mongo_predictors_a[0] == 'test_p_a')
-        self.assertTrue(len(mongo_predictors_b) == 1 and mongo_predictors_b[0] == 'test_p_b')
-
-    def test_5_add_predictors_mongo(self):
+    def test_4_views(self):
         print(f'\nExecuting {inspect.stack()[0].function}')
-        client = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
-        client.admin.command({'company_id': CID_A, 'need_response': 1})
-        client.mindsdb.predictors.insert_one({
+
+        query = """
+            CREATE VIEW mindsdb.{}
+            FROM test_integration_{} (
+                select * from test_data.home_rentals limit 50
+            )
+        """
+
+        for cid, char in [(CID_A, 'a'), (CID_B, 'b')]:
+            self.sql_via_http(
+                """
+                    CREATE DATABASE views
+                    ENGINE 'views'
+                    PARAMETERS {}
+                """,
+                company_id=cid,
+                expected_resp_type=RESPONSE_TYPE.OK
+            )
+
+            self.sql_via_http(
+                query.format(f'test_view_{char}', char),
+                company_id=cid,
+                expected_resp_type=RESPONSE_TYPE.OK
+            )
+
+            tables = self.get_tables_in('mindsdb', cid)
+            self.assert_list(
+                tables, {
+                    'models',
+                    'models_versions',
+                    f'test_view_{char}'
+                }
+            )
+
+        for cid, char in [(CID_A, 'a'), (CID_B, 'b')]:
+            response = self.sql_via_http(
+                f"select * from mindsdb.test_view_{char}",
+                company_id=cid,
+                expected_resp_type=RESPONSE_TYPE.TABLE
+            )
+            self.assertEqual(len(response['data']), 50)
+
+            response = self.sql_via_http(
+                f"DROP VIEW mindsdb.test_view_{char}",
+                company_id=cid,
+                expected_resp_type=RESPONSE_TYPE.OK
+            )
+
+            tables = self.get_tables_in('mindsdb', cid)
+            self.assert_list(
+                tables, {
+                    'models',
+                    'models_versions'
+                }
+            )
+
+            self.sql_via_http(
+                f"select * from mindsdb.test_view_{char}",
+                company_id=cid,
+                expected_resp_type=RESPONSE_TYPE.ERROR
+            )
+
+    def test_5_model(self):
+        query = """
+            CREATE MODEL mindsdb.model_{}
+            FROM test_integration_{} (
+                select * from test_data.home_rentals limit 50
+            ) PREDICT rental_price
+            USING join_learn_process=true, time_aim=5
+        """
+
+        predict_query = """
+            select * from mindsdb.model_{} where sqft = 100
+        """
+
+        for cid, char in [(CID_A, 'a'), (CID_B, 'b')]:
+            self.sql_via_http(
+                query.format(char, char),
+                company_id=cid,
+                expected_resp_type=RESPONSE_TYPE.OK
+            )
+
+            response = self.sql_via_http(
+                predict_query.format(char),
+                company_id=cid,
+                expected_resp_type=RESPONSE_TYPE.TABLE
+            )
+            self.assertTrue(len(response['data']), 1)
+
+    def test_6_mongo(self):
+        print(f'\nExecuting {inspect.stack()[0].function}')
+
+        client_a = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
+        client_a.admin.command({'company_id': CID_A, 'need_response': 1})
+
+        client_b = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
+        client_b.admin.command({'company_id': CID_B, 'need_response': 1})
+
+        databases = client_a.list_databases()
+        self.assert_list([x['name'] for x in databases], {
+            'admin', 'information_schema', 'mindsdb',
+            'files', 'test_integration_a', 'views'
+        })
+        databases = client_b.list_databases()
+        self.assert_list([x['name'] for x in databases], {
+            'admin', 'information_schema', 'mindsdb',
+            'files', 'test_integration_b', 'views'
+        })
+
+        client_a.mindsdb.models.insert_one({
             'name': 'test_mon_p_a',
             'predict': 'rental_price',
             'connection': 'test_integration_a',
@@ -184,25 +429,24 @@ class CompanyIndependentTest(unittest.TestCase):
                 'time_aim': 3
             }
         })
+        response = client_a.mindsdb.test_mon_p_a.find({
+            'sqft': 100
+        })
+        self.assertEqual(len(list(response)), 1)
 
-        mongo_predictors_a = get_mongo_predictors(company_id=CID_A)
-        mongo_predictors_b = get_mongo_predictors(company_id=CID_B)
-        self.assertTrue(len(mongo_predictors_a) == 2 and mongo_predictors_a[1] == 'test_mon_p_a')
-        self.assertTrue(len(mongo_predictors_b) == 1 and mongo_predictors_b[0] == 'test_p_b')
-
-        client = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
-        client.admin.command({'company_id': CID_A, 'need_response': 1})
-        client.mindsdb.predictors.delete_one({'name': 'test_p_a'})
-
-        mongo_predictors_a = get_mongo_predictors(company_id=CID_A)
-        mongo_predictors_b = get_mongo_predictors(company_id=CID_B)
-        self.assertTrue(len(mongo_predictors_a) == 1 and mongo_predictors_a[0] == 'test_mon_p_a')
-        self.assertTrue(len(mongo_predictors_b) == 1 and mongo_predictors_b[0] == 'test_p_b')
-
-        predictors_a = get_predictors_names_list(company_id=CID_A)
-        predictors_b = get_predictors_names_list(company_id=CID_B)
-        self.assertTrue(len(predictors_a) == 1 and predictors_a[0] == 'test_mon_p_a')
-        self.assertTrue(len(predictors_b) == 1 and predictors_b[0] == 'test_p_b')
+        collections = client_a.mindsdb.list_collection_names()
+        self.assert_list(collections, {
+            'models',
+            'models_versions',
+            'test_mon_p_a',
+            'model_a'
+        })
+        collections = client_b.mindsdb.list_collection_names()
+        self.assert_list(collections, {
+            'models',
+            'models_versions',
+            'model_b'
+        })
 
 
 if __name__ == "__main__":

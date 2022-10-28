@@ -89,7 +89,7 @@ def upgrade():
     view_integration = db.Integration.query.filter_by(name='views').first()
     if view_integration is not None:
         session.delete(view_integration)
-        session.commit()
+    session.commit()
 
 
 def downgrade():

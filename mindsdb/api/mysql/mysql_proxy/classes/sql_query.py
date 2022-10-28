@@ -608,8 +608,6 @@ class SQLQuery():
         return data
 
     def prepare_query(self, prepare=True):
-        mindsdb_sql_struct = self.query
-
         if prepare:
             # it is prepared statement call
             steps_data = []

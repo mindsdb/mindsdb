@@ -224,6 +224,8 @@ class InformationSchemaDataNode(DataNode):
         for ds_name in self.get_integrations_names():
             if target_table is not None and target_table != ds_name:
                 continue
+            if ds_name == 'views':
+                continue
             try:
                 ds = self.get(ds_name)
                 ds_tables = ds.get_tables()
@@ -273,6 +275,7 @@ class InformationSchemaDataNode(DataNode):
         data = [
             [x['name'], x['type'], x['engine']]
             for x in project
+            if x['engine'] != 'views'
         ]
 
         df = pd.DataFrame(data, columns=columns)

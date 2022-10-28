@@ -401,7 +401,13 @@ class BaseMLEngineExec:
         response = data_handler.query(ast)
         if response.type == RESPONSE_TYPE.ERROR:
             return response
-        training_data_df = response.data_frame
+        if response.type == RESPONSE_TYPE.QUERY:
+            sql_session = make_sql_session(self.company_id)
+            sqlquery = SQLQuery(response.query.to_string(), session=sql_session)
+            result = sqlquery.fetch(view='dataframe')
+            training_data_df = result['result']
+        else:
+            training_data_df = response.data_frame
 
         new_predictor_record.training_data_columns_count = len(training_data_df.columns)
         new_predictor_record.training_data_rows_count = len(training_data_df)

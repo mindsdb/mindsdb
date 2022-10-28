@@ -86,10 +86,6 @@ def upgrade():
             }
         )
 
-    view_integration = session.query(db.Integration).filter_by(name='views').first()
-    if view_integration is not None:
-        session.delete(view_integration)
-
     session.commit()
 
 

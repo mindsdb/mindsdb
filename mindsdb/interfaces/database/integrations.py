@@ -439,7 +439,7 @@ class IntegrationController:
         if hasattr(module, 'permanent'):
             handler_meta['permanent'] = module.permanent
         else:
-            if handler_meta.get('name') in ('files', 'lightwood'):
+            if handler_meta.get('name') in ('files', 'views', 'lightwood'):
                 handler_meta['permanent'] = True
             else:
                 handler_meta['permanent'] = False

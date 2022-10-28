@@ -276,10 +276,13 @@ class ExecuteCommands:
                 where = BinaryOperation('and', args=[
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
                     BinaryOperation('or', args=[
-                        BinaryOperation('=', args=[Identifier('table_type'), Constant('BASE TABLE')]),
+                        BinaryOperation('=', args=[Identifier('table_type'), Constant('MODEL')]),
                         BinaryOperation('or', args=[
-                            BinaryOperation('=', args=[Identifier('table_type'), Constant('SYSTEM VIEW')]),
-                            BinaryOperation('=', args=[Identifier('table_type'), Constant('VIEW')])
+                            BinaryOperation('=', args=[Identifier('table_type'), Constant('BASE TABLE')]),
+                            BinaryOperation('or', args=[
+                                BinaryOperation('=', args=[Identifier('table_type'), Constant('SYSTEM VIEW')]),
+                                BinaryOperation('=', args=[Identifier('table_type'), Constant('VIEW')])
+                            ])
                         ])
                     ])
                 ])
@@ -296,7 +299,7 @@ class ExecuteCommands:
 
                 if 'FULL' in statement.modes:
                     new_statement.targets.append(
-                        Constant(value='BASE TABLE', alias=Identifier('Table_type'))
+                        Identifier(parts=['TABLE_TYPE'], alias=Identifier('Table_type'))
                     )
 
                 query = SQLQuery(

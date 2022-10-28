@@ -33,7 +33,18 @@ class ProjectDataNode(DataNode):
 
     def get_tables(self):
         tables = self.project.get_tables()
-        tables = [{'TABLE_NAME': x} for x in tables.keys()]
+        table_types = {
+            'table': 'BASE TABLE',
+            'model': 'MODEL',
+            'view': 'VIEW'
+        }
+        tables = [
+            {
+                'TABLE_NAME': key,
+                'TABLE_TYPE': table_types.get(val['type'])
+            }
+            for key, val in tables.items()
+        ]
         result = [TablesRow.from_dict(row) for row in tables]
         return result
 

@@ -314,12 +314,12 @@ class BaseMLEngineExec:
         problem_definition = {'target': target}
 
         for attr in ['using', 'horizon', 'window']:
-            if hasattr(statement, attr):
+            if hasattr(statement, attr) and getattr(statement, attr) is not None:
                 problem_definition[attr] = getattr(statement, attr)
 
-        if hasattr(statement, 'order_by'):
+        if hasattr(statement, 'order_by') and statement.order_by is not None:
             problem_definition['order_by'] = str(getattr(statement, 'order_by')[0])
-        if hasattr(statement, 'group_by'):
+        if hasattr(statement, 'group_by') and statement.group_by is not None:
             problem_definition['group_by'] = [str(col) for col in getattr(statement, 'group_by')]
 
         join_learn_process = False

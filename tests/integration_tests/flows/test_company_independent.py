@@ -411,12 +411,12 @@ class CompanyIndependentTest(unittest.TestCase):
         databases = client_a.list_databases()
         self.assert_list([x['name'] for x in databases], {
             'admin', 'information_schema', 'mindsdb',
-            'files', 'test_integration_a', 'views'
+            'files', 'test_integration_a'
         })
         databases = client_b.list_databases()
         self.assert_list([x['name'] for x in databases], {
             'admin', 'information_schema', 'mindsdb',
-            'files', 'test_integration_b', 'views'
+            'files', 'test_integration_b'
         })
 
         client_a.mindsdb.models.insert_one({

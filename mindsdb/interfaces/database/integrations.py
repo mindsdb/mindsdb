@@ -91,7 +91,7 @@ class IntegrationController:
 
     def delete(self, name, company_id=None):
 
-        if name in ('files', 'views', 'lightwood'):
+        if name in ('files', 'lightwood'):
             raise Exception('Unable to drop: is system database')
 
         # check permanent integration
@@ -439,7 +439,7 @@ class IntegrationController:
         if hasattr(module, 'permanent'):
             handler_meta['permanent'] = module.permanent
         else:
-            if handler_meta.get('name') in ('files', 'views', 'lightwood'):
+            if handler_meta.get('name') in ('files', 'lightwood'):
                 handler_meta['permanent'] = True
             else:
                 handler_meta['permanent'] = False

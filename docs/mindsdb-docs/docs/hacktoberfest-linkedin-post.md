@@ -27,3 +27,5 @@
 - A LinkedIn post by [Fiona Murugi] (https://www.linkedin.com/posts/fiona-murugi-594012174_introduce-ai-to-your-database-activity-6989693493744963584-oGSO?utm_source=share&utm_medium=member_desktop)
 
 - A LinkedIn Post by [Syed Zubeen](https://www.linkedin.com/posts/syedzubeen_introduce-ai-to-your-database-activity-6990496536421904384-yLwm?utm_source=share&utm_medium=member_desktop)
+
+- A LinkedIn Post by [Hritik Dangi](https://www.linkedin.com/posts/sparsh-singh3_modein-activity-6991446202139488256-F9iu?utm_source=share&utm_medium=member_desktop)

@@ -8,7 +8,7 @@ class OrioleDBHandlerTest(unittest.TestCase):
         cls.kwargs = {
             "connection_data": {
                 "host": "localhost",
-                "port": "5432",
+                "port": 5432,
                 "user": "postgres",
                 "password": "1234",
                 "database": "postgres",

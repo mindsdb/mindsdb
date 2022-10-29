@@ -30,7 +30,7 @@ PARAMETERS = {
   "password": "<p455W0rd>",
   "host": "localhost",
   "port": 9030,
-  "database": "database"
+  "database": "starrocks  "
 }
 ```
 

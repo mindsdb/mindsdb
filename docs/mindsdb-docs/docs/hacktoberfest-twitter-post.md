@@ -41,3 +41,5 @@
 - A Twitter Thread by [Syed Zubeen](https://twitter.com/ZubeenSyed/status/1584329407610511360?s=20&t=VNpMJOS8MHsiQ07ACvTtGA)
 
 - A Twitter Thread by [Anusha](https://twitter.com/piece_of_irony/status/1585842363125362690?s=20&t=wNrx3Q2gaFi6gl7VK2eTzw)
+
+- A Twitter Thread by [@Sohoxic](https://twitter.com/Sohoxic_/status/1586434104580395009)

@@ -104,6 +104,21 @@ class Predictor(Base):
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
     dtype_dict = Column(Json, nullable=True)
+    project_id = Column(Integer, ForeignKey('project.id', name='fk_project_id'), nullable=False)
+
+
+class Project(Base):
+    __tablename__ = 'project'
+
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    deleted_at = Column(DateTime)
+    name = Column(String, nullable=False)
+    company_id = Column(Integer)
+    __table_args__ = (
+        UniqueConstraint('name', 'company_id', name='unique_integration_name_company_id'),
+    )
 
 
 class Log(Base):
@@ -172,6 +187,7 @@ class View(Base):
     name = Column(String, nullable=False)
     company_id = Column(Integer)
     query = Column(String, nullable=False)
+    project_id = Column(Integer, ForeignKey('project.id', name='fk_project_id'), nullable=False)
     __table_args__ = (
         UniqueConstraint('name', 'company_id', name='unique_view_name_company_id'),
     )

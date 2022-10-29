@@ -13,14 +13,17 @@ class Responce(Responder):
 
         mindsdb_env['user_class'] = user_class
         mindsdb_env['company_id'] = company_id
-        mindsdb_env['model_controller'] = WithKWArgsWrapper(
-            mindsdb_env['origin_model_controller'],
-            company_id=company_id
-        )
-        mindsdb_env['integration_controller'] = WithKWArgsWrapper(
-            mindsdb_env['origin_integration_controller'],
-            company_id=company_id
-        )
+        for name in [
+            'model_controller',
+            'integration_controller',
+            'view_controller',
+            'project_controller',
+            'database_controller'
+        ]:
+            mindsdb_env[name] = WithKWArgsWrapper(
+                mindsdb_env[f'original_{name}'],
+                company_id=company_id
+            )
 
         if need_response:
             return {'ok': 1}

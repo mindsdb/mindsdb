@@ -103,6 +103,8 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.interfaces.database.views import ViewController
         from mindsdb.interfaces.file.file_controller import FileController
         from mindsdb.interfaces.model.model_controller import ModelController
+        from mindsdb.interfaces.database.projects import ProjectController
+        from mindsdb.interfaces.database.database import DatabaseController
 
         server_obj = type('', (), {})()
 
@@ -121,12 +123,14 @@ class BaseExecutorTest(BaseUnitTest):
         server_obj.original_integration_controller = integration_controller
         server_obj.original_model_controller = model_controller
         server_obj.original_view_controller = ViewController()
+        server_obj.original_project_controller = ProjectController()
+        server_obj.original_database_controller = DatabaseController()
 
         predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
         self.mock_predict = predict_patcher.__enter__()
 
-        learn_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler._learn')
-        self.mock_learn = learn_patcher.__enter__()
+        create_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.create')
+        self.mock_create = create_patcher.__enter__()
 
         sql_session = SessionController(
             server=server_obj,
@@ -223,13 +227,25 @@ class BaseExecutorTestMockModel(BaseExecutorTest):
         super().setup_method()
         self.set_executor(to_mock_model_controller=True)
 
+    def set_project(self, project):
+        r = self.db.Project.query.filter_by(name=project['name']).first()
+        if r is not None:
+            self.db.session.delete(r)
+
+        r = self.db.Project(
+            id=1,
+            name=project['name'],
+        )
+        self.db.session.add(r)
+        self.db.session.commit()
+
     def set_predictor(self, predictor):
         # fill model_interface mock with predictor data for test case
 
         # clear calls
         self.mock_model_controller.reset_mock()
         self.mock_predict.reset_mock()
-        self.mock_learn.reset_mock()
+        self.mock_create.reset_mock()
 
         # remove previous predictor record
         r = self.db.Predictor.query.filter_by(name=predictor['name']).first()
@@ -249,16 +265,16 @@ class BaseExecutorTestMockModel(BaseExecutorTest):
             },
             learn_args=predictor['problem_definition'],
             to_predict=predictor['predict'],
-            integration_id=self.lw_integration_id
+            integration_id=self.lw_integration_id,
+            project_id=1
         )
         self.db.session.add(r)
         self.db.session.commit()
 
-        def predict_f(model_name, data, pred_format='dict', *args, **kargs):
-            if model_name != predictor['name']:
-                raise Exception(f"Model does not exists: {model_name}")
+        def predict_f(data, pred_format='dict', *args, **kargs):
             dict_arr = []
             explain_arr = []
+            data = data.to_dict(orient='records')
 
             predicted_value = predictor['predicted_value']
             target = predictor['predict']
@@ -289,7 +305,7 @@ class BaseExecutorTestMockModel(BaseExecutorTest):
 
             if pred_format == 'explain':
                 return explain_arr
-            return data
+            return pd.DataFrame(data)
 
         predictor_record = {
             'version': None, 'is_active': None,

@@ -19,8 +19,6 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-
 
 class SalesforceHandler(DatabaseHandler):
     """
@@ -33,7 +31,6 @@ class SalesforceHandler(DatabaseHandler):
         super().__init__(name)
         self.parser = parse_sql
         self.dialect = 'salesforce'
-        self.renderer = SqlalchemyRender('salesforce')
         self.connection_data = connection_data
         self kwargs = kwargs
 
@@ -54,7 +51,7 @@ class SalesforceHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.connection = Salesforce.client(
+        self.connection = sf.client(
             'salesforce',
             sf_username=self.connection_data['user'],
             sf_password=self.connection_data['password'],

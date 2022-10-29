@@ -28,4 +28,6 @@
 
 - A LinkedIn Post by [Syed Zubeen](https://www.linkedin.com/posts/syedzubeen_introduce-ai-to-your-database-activity-6990496536421904384-yLwm?utm_source=share&utm_medium=member_desktop)
 
+- A LinkedIn post by [Gloria Okeke E.J](https://www.linkedin.com/posts/gloria-okeke-e-j_hacktoberfest2022-hacktoberfest-blockchain-activity-6991022112140374016-8FDJ?utm_source=share&utm_medium=member_android)
+
 - A LinkedIn Post by [Hritik Dangi](https://www.linkedin.com/posts/sparsh-singh3_modein-activity-6991446202139488256-F9iu?utm_source=share&utm_medium=member_desktop)

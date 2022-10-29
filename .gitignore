@@ -31,6 +31,8 @@ MindsDB.egg-info/*
 .history
 doc/lib/
 run.csh
+.DS_Store/
+DS_Store
 
 # Virtualenv
 bin
@@ -38,4 +40,5 @@ lib
 lib64
 pyvenv.cfg
 .python-version
-/mindsdb-venv/
+ .DS_Store
+ mindsdb-venv/

@@ -27,9 +27,9 @@ CREATE DATABASE starrocks_datasource
 WITH ENGINE = "starrocks",
 PARAMETERS = { 
   "user": "root",
-  "password": "root",
-  "host": "hostname",
-  "port": "5432",
+  "password": "<p455W0rd>",
+  "host": "localhost",
+  "port": 9030,
   "database": "database"
 }
 ```

@@ -972,9 +972,7 @@ class SQLQuery():
                 table_name = get_preditor_alias(step, self.database)
                 columns_collection = ColumnsCollection()
                 dn = self.datahub.get(self.mindsdb_database_name)
-
                 project_datanode = self.datahub.get(project_name)
-
                 if len(where_data) == 0:
                     cols = project_datanode.get_table_columns(predictor_name) + ['__mindsdb_row_id']
                     for col in cols:

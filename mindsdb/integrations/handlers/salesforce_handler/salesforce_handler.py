@@ -22,7 +22,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 
-class salesforce_handler(DatabaseHandler):
+class SalesforceHandler(DatabaseHandler):
     """
     This handler handles connection and execution of Salesforce statements.
     """
@@ -210,4 +210,3 @@ class salesforce_handler(DatabaseHandler):
             'description': 'The port to use for the connection'
         }
     )
-    

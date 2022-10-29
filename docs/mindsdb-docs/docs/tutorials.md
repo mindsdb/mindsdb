@@ -60,6 +60,7 @@
 * [Forecasting Honey Production with MindsDB](https://dev.to/narayanadithya/using-mindsdb-for-time-series-forecasting-honey-production-in-the-usa-4p05) by [Adithya Narayan](https://github.com/NarayanAdithya)
 * [Predicting gold prices with MindsDB and MongoDB](https://dev.to/yagueto/predicting-gold-prices-with-mindsdb-and-mongodb-4k22) by [yagueto](https://github.com/yagueto)
 * [Predicting the Genre of Books using MongoDB with MindsDB](https://dev.to/sarveshk76/tutorial-to-predict-the-genre-of-books-using-mongodb-2a1n) by [Sarvesh S. Kulkarni](https://github.com/Sarveshk76)
+* [Predict Diamond prices with SQL Alchemy](https://dev.to/tesprogram/predict-diamond-prices-with-sql-alchemy-and-mindsdb-b4e) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 
 
 # Community Video Guides

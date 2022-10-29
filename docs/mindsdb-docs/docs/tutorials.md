@@ -63,7 +63,7 @@
 
 
 # Community Video Guides
-
+* [Heart Disease Predictor using #MindsDB](https://youtu.be/vtVM6pL1ANo) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Video: What is MindsDB?](https://www.youtube.com/watch?v=SrDPYqQrzaw) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Connecting MindsDB to Tableau](https://www.youtube.com/watch?v=eUiBVrm85v4) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Connect Postgres Database to MindsDB](https://youtu.be/jbH5fsviAgE) by [@akhilcoder](https://twitter.com/akhilcoder)

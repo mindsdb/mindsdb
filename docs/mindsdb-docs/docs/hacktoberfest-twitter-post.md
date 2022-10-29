@@ -39,3 +39,5 @@
 - A Twitter Thread by [Syed Zubeen](https://twitter.com/ZubeenSyed/status/1584655063687270400?s=20&t=XsoG4J4YUqK1tUG9ZYx3qQ)
 
 - A Twitter Thread by [Syed Zubeen](https://twitter.com/ZubeenSyed/status/1584329407610511360?s=20&t=VNpMJOS8MHsiQ07ACvTtGA)
+
+- A Twitter Thread by [Anusha](https://twitter.com/piece_of_irony/status/1585842363125362690?s=20&t=wNrx3Q2gaFi6gl7VK2eTzw)

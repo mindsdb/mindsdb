@@ -31,6 +31,8 @@ MindsDB.egg-info/*
 .history
 doc/lib/
 run.csh
+/.DS_Store
+mindsdb/integrations/.DS_Store
 
 # Virtualenv
 bin

@@ -43,3 +43,5 @@
 - A Twitter Thread by [Syed Zubeen](https://twitter.com/ZubeenSyed/status/1584329407610511360?s=20&t=VNpMJOS8MHsiQ07ACvTtGA)
 
 - A Twitter Thread by [Anusha](https://twitter.com/piece_of_irony/status/1585842363125362690?s=20&t=wNrx3Q2gaFi6gl7VK2eTzw)
+
+- A Twitter Thread by [Prakash Gatiyala](https://twitter.com/PrakashGatiyal1/status/1586822595676352512?s=20&t=QQl8r6aXqLxyVExGbJe2eg)

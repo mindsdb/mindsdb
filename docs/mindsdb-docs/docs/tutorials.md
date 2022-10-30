@@ -59,10 +59,13 @@
 * [What is MindsDB?](https://medium.com/@okekeebubechukwu08/what-is-mindsdb-b6862af21492) by [Gloria Okeke E.J](https://medium.com/@okekeebubechukwu08)
 * [Forecasting Honey Production with MindsDB](https://dev.to/narayanadithya/using-mindsdb-for-time-series-forecasting-honey-production-in-the-usa-4p05) by [Adithya Narayan](https://github.com/NarayanAdithya)
 * [Predicting the Genre of Books using MongoDB with MindsDB](https://dev.to/sarveshk76/tutorial-to-predict-the-genre-of-books-using-mongodb-2a1n) by [Sarvesh S. Kulkarni](https://github.com/Sarveshk76)
+* [Predicting gold prices with MindsDB and MongoDB](https://dev.to/yagueto/predicting-gold-prices-with-mindsdb-and-mongodb-4k22) by [yagueto](https://github.com/yagueto)
+* [Predicting the Genre of Books using MongoDB with MindsDB](https://dev.to/sarveshk76/tutorial-to-predict-the-genre-of-books-using-mongodb-2a1n) by [Sarvesh S. Kulkarni](https://github.com/Sarveshk76)
+* [Predict Diamond prices with SQL Alchemy](https://dev.to/tesprogram/predict-diamond-prices-with-sql-alchemy-and-mindsdb-b4e) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 
 
 # Community Video Guides
-
+* [Heart Disease Predictor using #MindsDB](https://youtu.be/vtVM6pL1ANo) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Video: What is MindsDB?](https://www.youtube.com/watch?v=SrDPYqQrzaw) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Connecting MindsDB to Tableau](https://www.youtube.com/watch?v=eUiBVrm85v4) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Connect Postgres Database to MindsDB](https://youtu.be/jbH5fsviAgE) by [@akhilcoder](https://twitter.com/akhilcoder)
@@ -84,9 +87,11 @@
 * [How to create a free account on MindsDB Cloud](https://youtu.be/ciBtpqrlbhI) by [Anamika](https://github.com/noviicee)
 * [How to create a free account on MindsDB Cloud](https://youtu.be/3bGJP6-s8p4) by [MichaelLantz](https://github.com/MichaelLantz)
 * [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI) by [Posterizedsoul](https://github.com/Posterizedsoul)
+* [How to connect mongo compass to mindsdb](https://youtube.com/video/ziRxRHvuSJc) by [HellFire](https://github.com/Artemis6969)
 * [MindsDB - Predict data with machine learning](https://youtu.be/y2DNgJOplxM) by [HellFire](https://github.com/Artemis6969)
 * [Visualizing prediction result in Tableau](https://youtu.be/4aio-8kNbOo) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [MindsDB Data Insights](https://youtu.be/4oGgocNLi1c) by [@akhilcoder](https://www.youtube.com/@akhilcoder)
+* [CREATE Predictor with USING statement using Cement Manufacturing Dataset Civil Engineering](https://www.youtube.com/watch?v=aLP7KLolUSs&t=2s) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [What is MindsDB ?](https://www.youtube.com/watch?v=81Q2aQWuwDM) by [Syed Zubeen](https://github.com/syedzubeen)
 * [Honey Production Prediction Time Series](https://youtu.be/WCBLotgskZg) by [Adithya Narayan](https://github.com/NarayanAdithya)
 * [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/RPisvY54Tg4) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
@@ -94,5 +99,7 @@
 * [How to access MindsDB](https://www.youtube.com/watch?v=8F5p_Rwmvgk) by [Syed Zubeen](https://github.com/syedzubeen)
 * [Deploying an instance of mindsDB on Google Cloud Platform](https://www.youtube.com/watch?v=OrW-8ciNGng) by [Syed Zubeen](https://github.com/syedzubeen)
 * [Connecting MindsDB to Tableau](https://www.youtube.com/watch?v=eUiBVrm85v4) by [Alissa Troiano](https://github.com/alissatroiano)
-
+* [Deploy MindsDB on the Google Cloud Platform](https://www.youtube.com/watch?v=WLdb7UNi4bk) by [Alissa Troiano](https://github.com/alissatroiano)
+* [Regression Tutorial - Home Rentals](https://youtu.be/qf4HQ4EzaUU) by [Teslim Odumuyiwa](https://github.com/Tes-program)
+* [Setting up data sources with mindsDB](https://www.youtube.com/watch?v=kRrMjUVnib0) by [Syed Zubeen](https://github.com/syedzubeen)
 

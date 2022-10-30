@@ -27,3 +27,5 @@
 - A LinkedIn post by [Fiona Murugi] (https://www.linkedin.com/posts/fiona-murugi-594012174_introduce-ai-to-your-database-activity-6989693493744963584-oGSO?utm_source=share&utm_medium=member_desktop)
 
 - A LinkedIn Post by [Syed Zubeen](https://www.linkedin.com/posts/syedzubeen_introduce-ai-to-your-database-activity-6990496536421904384-yLwm?utm_source=share&utm_medium=member_desktop)
+
+- A LinkedIn Post by [Sarvesh S. Kulkarni](https://www.linkedin.com/posts/sarvesh-kulkarni-786ab8131_tutorial-to-predict-the-genre-of-books-using-activity-6991360686719197184-Dlxw?utm_source=share&utm_medium=member_desktop)

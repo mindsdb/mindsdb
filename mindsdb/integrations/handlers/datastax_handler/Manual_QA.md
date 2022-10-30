@@ -35,3 +35,14 @@ Drop a remark based on your observation.
 - [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
 
 ---
+
+## Testing Datastax Handler with [Car Price Prediction](https://www.kaggle.com/datasets/vijayaadithyanvg/car-price-predictionused-cars?resource=download)
+
+**1. Testing CREATE DATABASE**
+
+![datastax](https://user-images.githubusercontent.com/14253061/198587747-1552b988-4d61-482f-a4f5-efdf0c1b6074.PNG)
+
+There's a Bug with loading the bundle because of which connection could not be established. [[Manual QA] Test Datastax Handler Manually
+](https://github.com/mindsdb/mindsdb/issues/3632#)
+
+---

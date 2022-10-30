@@ -64,7 +64,7 @@
 
 
 # Community Video Guides
-
+* [Heart Disease Predictor using #MindsDB](https://youtu.be/vtVM6pL1ANo) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Video: What is MindsDB?](https://www.youtube.com/watch?v=SrDPYqQrzaw) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Connecting MindsDB to Tableau](https://www.youtube.com/watch?v=eUiBVrm85v4) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Connect Postgres Database to MindsDB](https://youtu.be/jbH5fsviAgE) by [@akhilcoder](https://twitter.com/akhilcoder)
@@ -100,4 +100,5 @@
 * [Connecting MindsDB to Tableau](https://www.youtube.com/watch?v=eUiBVrm85v4) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Deploy MindsDB on the Google Cloud Platform](https://www.youtube.com/watch?v=WLdb7UNi4bk) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Regression Tutorial - Home Rentals](https://youtu.be/qf4HQ4EzaUU) by [Teslim Odumuyiwa](https://github.com/Tes-program)
+* [Setting up data sources with mindsDB](https://www.youtube.com/watch?v=kRrMjUVnib0) by [Syed Zubeen](https://github.com/syedzubeen)
 

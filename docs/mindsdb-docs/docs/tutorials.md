@@ -1,5 +1,7 @@
 # Community Tutorials
 
+* [Quickstart to MindsDB](https://dev.to/learnearnfun/quickstart-to-mindsdb-1ifm) by [Learn Earn & Fun](https://dev.to/learnearnfun)
+* [Predicting Water Purity with MindsDB](https://dev.to/learnearnfun/predicting-water-purity-using-mindsdb-3iao) by [Learn Earn & Fun](https://dev.to/learnearnfun)
 * [Deploying MindsDB on Scaleway Cloud](https://dev.to/rutamhere/deploying-mindsdb-on-scaleway-cloud-4kc6) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Predict Tesla Stock Prices using MindsDB](https://dev.to/rutamhere/predict-tesla-stock-prices-using-mindsdb-40k5) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Creating Views with MindsDB](https://dev.to/rutamhere/creating-views-with-mindsdb-1mnf) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
@@ -64,6 +66,8 @@
 
 
 # Community Video Guides
+* [Introduction to MindsDB](https://youtu.be/sCUQ-yZkqUY) by [Learn Earn & Fun](https://www.youtube.com/channel/UCPK-CMPMf8juRuFyUVzwDsw)
+* [How to self-host MindsDB using Docker](https://youtu.be/d_fPbyC0lRE) by [Learn Earn & Fun](https://www.youtube.com/channel/UCPK-CMPMf8juRuFyUVzwDsw)
 * [Heart Disease Predictor using #MindsDB](https://youtu.be/vtVM6pL1ANo) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Video: What is MindsDB?](https://www.youtube.com/watch?v=SrDPYqQrzaw) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Connecting MindsDB to Tableau](https://www.youtube.com/watch?v=eUiBVrm85v4) by [Alissa Troiano](https://github.com/alissatroiano)

@@ -60,6 +60,7 @@
 * [Forecasting Honey Production with MindsDB](https://dev.to/narayanadithya/using-mindsdb-for-time-series-forecasting-honey-production-in-the-usa-4p05) by [Adithya Narayan](https://github.com/NarayanAdithya)
 * [Predicting gold prices with MindsDB and MongoDB](https://dev.to/yagueto/predicting-gold-prices-with-mindsdb-and-mongodb-4k22) by [yagueto](https://github.com/yagueto)
 * [Predicting the Genre of Books using MongoDB with MindsDB](https://dev.to/sarveshk76/tutorial-to-predict-the-genre-of-books-using-mongodb-2a1n) by [Sarvesh S. Kulkarni](https://github.com/Sarveshk76)
+* [Predict Diamond prices with SQL Alchemy](https://dev.to/tesprogram/predict-diamond-prices-with-sql-alchemy-and-mindsdb-b4e) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 
 
 # Community Video Guides
@@ -98,5 +99,6 @@
 * [Deploying an instance of mindsDB on Google Cloud Platform](https://www.youtube.com/watch?v=OrW-8ciNGng) by [Syed Zubeen](https://github.com/syedzubeen)
 * [Connecting MindsDB to Tableau](https://www.youtube.com/watch?v=eUiBVrm85v4) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Deploy MindsDB on the Google Cloud Platform](https://www.youtube.com/watch?v=WLdb7UNi4bk) by [Alissa Troiano](https://github.com/alissatroiano)
+* [Regression Tutorial - Home Rentals](https://youtu.be/qf4HQ4EzaUU) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [Setting up data sources with mindsDB](https://www.youtube.com/watch?v=kRrMjUVnib0) by [Syed Zubeen](https://github.com/syedzubeen)
 

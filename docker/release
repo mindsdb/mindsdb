@@ -21,7 +21,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 &
         pymongo certifi \
         snowflake-connector-python>=2.7.6 \
         snowflake-sqlalchemy>=1.4.3 \
-        clickhouse-driver \
+        clickhouse-driver clickhouse-sqlalchemy \
         scylla-driver && \
     pip install --prefer-binary --no-cache-dir \
         databricks-sql-connector sqlalchemy-databricks || true && \

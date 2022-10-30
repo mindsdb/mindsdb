@@ -176,7 +176,7 @@ class TestMongoDBServer(BaseUnitTest):
         ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
-           CREATE PREDICTOR house_sales_model5 
+           CREATE PREDICTOR mongo.house_sales_model5 
            FROM mongo (
                 db.house_sales.find({})
            ) 

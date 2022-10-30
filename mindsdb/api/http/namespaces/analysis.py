@@ -4,6 +4,7 @@ from flask import request
 from flask_restx import Resource
 from pandas.core.frame import DataFrame
 
+import lightwood
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Constant, Identifier
 from mindsdb_sql.planner.utils import query_traversal
@@ -12,6 +13,11 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.analysis import ns_conf
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
+
+
+def analyze_df(df: DataFrame) -> dict:
+    analysis = lightwood.analyze_dataset(df)
+    analysis = analysis.to_dict()
 
 
 @ns_conf.route('/query')
@@ -54,17 +60,7 @@ class QueryAnalysis(Resource):
 
         column_names = [x['name'] for x in result.columns]
         df = DataFrame(result.data, columns=column_names)
-
-        controller = request.integration_controller
-        lw_available = controller.original_instance.handlers_import_status['lightwood']['import']['success']
-        if lw_available and len(df) > 0:
-            lw_handler = controller.get_handler('lightwood')
-
-            analysis = lw_handler.analyze_dataset(
-                data_frame=df
-            )
-        else:
-            analysis = {}
+        analysis = analyze_df(df)
 
         query_tables = []
 
@@ -90,11 +86,7 @@ class DataAnalysis(Resource):
         column_names = payload.get('column_names')
         data = payload.get('data')
 
-        lw_handler = request.integration_controller.get_handler('lightwood')
-
-        analysis = lw_handler.analyze_dataset(
-            data_frame=DataFrame(data, columns=column_names)
-        )
+        analysis = analyze_df(DataFrame(data, columns=column_names))
 
         return {
             'analysis': analysis,

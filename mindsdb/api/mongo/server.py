@@ -20,6 +20,8 @@ from mindsdb.interfaces.storage.db import session as db_session
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
+from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.database.database import DatabaseController
 
 OP_REPLY = 1
 OP_UPDATE = 2001
@@ -336,18 +338,23 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         self.mindsdb_env = {
             'config': config,
-            'origin_model_controller': ModelController(),
-            'origin_integration_controller': IntegrationController(),
-            'origin_view_controller': ViewController()
+            'original_model_controller': ModelController(),
+            'original_integration_controller': IntegrationController(),
+            'original_view_controller': ViewController(),
+            'original_project_controller': ProjectController(),
+            'original_database_controller': DatabaseController()
         }
-        self.mindsdb_env['model_controller'] = WithKWArgsWrapper(
-            self.mindsdb_env['origin_model_controller'],
-            company_id=None
-        )
-        self.mindsdb_env['integration_controller'] = WithKWArgsWrapper(
-            self.mindsdb_env['origin_integration_controller'],
-            company_id=None
-        )
+        for name in [
+            'model_controller',
+            'integration_controller',
+            'view_controller',
+            'project_controller',
+            'database_controller'
+        ]:
+            self.mindsdb_env[name] = WithKWArgsWrapper(
+                self.mindsdb_env[f'original_{name}'],
+                company_id=None
+            )
 
         respondersCollection = RespondersCollection()
 

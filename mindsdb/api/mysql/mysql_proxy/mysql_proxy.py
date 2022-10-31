@@ -76,6 +76,8 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
+from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
 import mindsdb.utilities.hooks as hooks
 
@@ -831,6 +833,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.original_model_controller = ModelController()
         server.original_integration_controller = IntegrationController()
         server.original_view_controller = ViewController()
+        server.original_project_controller = ProjectController()
+        server.original_database_controller = DatabaseController()
 
         atexit.register(MysqlProxy.server_close, srv=server)
 

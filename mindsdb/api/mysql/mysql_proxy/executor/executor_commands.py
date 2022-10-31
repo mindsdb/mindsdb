@@ -2,12 +2,15 @@ import json
 import datetime
 from typing import Optional
 from pathlib import Path
+from functools import reduce
 
 import pandas as pd
 from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatasource,
     RetrainPredictor,
     CreatePredictor,
+    CreateMLEngine,
+    DropMLEngine,
     DropDatasource,
     DropPredictor,
     CreateView
@@ -21,6 +24,7 @@ from mindsdb_sql.parser.ast import (
     BinaryOperation,
     DropDatabase,
     NullConstant,
+    NativeQuery,
     Describe,
     Constant,
     Function,
@@ -79,13 +83,57 @@ from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE
 from mindsdb.interfaces.model.functions import (
     get_model_record,
-    get_model_records
+    get_model_records,
+    get_predictor_integration
 )
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
 
-class ExecuteCommands:
+def _get_show_where(statement: ASTNode, from_name: Optional[str] = None,
+                    like_name: Optional[str] = None, initial: Optional[ASTNode] = None) -> ASTNode:
+    ''' combine all possible show filters to single 'where' condition
+        SHOW category [FROM name] [LIKE filter] [WHERE filter]
 
+        Args:
+            statement (ASTNode): 'show' query statement
+            from_name (str): name of column for 'from' filter
+            like_name (str): name of column for 'like' filter,
+            initial (ASTNode): initial 'where' filter
+        Returns:
+            ASTNode: 'where' statemnt
+    '''
+    where = []
+    if initial is not None:
+        where.append(initial)
+    if statement.from_table is not None and from_name is not None:
+        where.append(
+            BinaryOperation('=', args=[
+                Identifier(from_name),
+                Constant(statement.from_table.parts[-1])
+            ])
+        )
+    if statement.like is not None and like_name is not None:
+        where.append(
+            BinaryOperation(
+                'like',
+                args=[
+                    Identifier(like_name),
+                    Constant(statement.like)
+                ]
+            )
+        )
+    if statement.where is not None:
+        where.append(statement.where)
+
+    if len(where) > 0:
+        return reduce(
+            lambda prev, next: BinaryOperation('and', args=[prev, next]),
+            where
+        )
+    return None
+
+
+class ExecuteCommands:
     def __init__(self, session, executor):
         self.session = session
         self.executor = executor
@@ -104,21 +152,19 @@ class ExecuteCommands:
             sql_lower = self.executor.sql_lower
 
         if type(statement) == CreateDatasource:
-            struct = {
-                'datasource_name': statement.name,
-                'database_type': statement.engine.lower(),
-                'connection_args': statement.parameters
-            }
-            return self.answer_create_datasource(struct)
-        if type(statement) == DropPredictor:
-            ml_integration_name = self.session.database
+            return self.answer_create_database(statement)
+        elif type(statement) == CreateMLEngine:
+            return self.answer_create_ml_engine(statement)
+        elif type(statement) == DropMLEngine:
+            return self.answer_drop_ml_engine(statement)
+        elif type(statement) == DropPredictor:
+            database_name = self.session.database
             if len(statement.name.parts) > 1:
-                ml_integration_name = statement.name.parts[0].lower()
-            predictor_name = statement.name.parts[-1]
-            ml_integration_name = ml_integration_name.lower()
+                database_name = statement.name.parts[0].lower()
+            model_name = statement.name.parts[-1]
+
             try:
-                self.session.datahub['mindsdb']\
-                    .delete_predictor(predictor_name, integration_name=ml_integration_name)
+                self.session.model_controller.delete_model(model_name, project_name=database_name)
             except Exception as e:
                 if not statement.if_exists:
                     raise e
@@ -126,8 +172,7 @@ class ExecuteCommands:
         elif type(statement) == DropTables:
             return self.answer_drop_tables(statement)
         elif type(statement) == DropDatasource or type(statement) == DropDatabase:
-            ds_name = statement.name.parts[-1]
-            return self.answer_drop_datasource(ds_name)
+            return self.answer_drop_database(statement)
         elif type(statement) == Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
             predictor_attrs = ("model", "features", "ensemble")
@@ -139,39 +184,50 @@ class ExecuteCommands:
             return self.answer_retrain_predictor(statement)
         elif type(statement) == Show:
             sql_category = statement.category.lower()
-            if sql_category == 'predictors':
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
+            if hasattr(statement, 'modes'):
+                if isinstance(statement.modes, list) is False:
+                    statement.modes = []
+                statement.modes = [x.upper() for x in statement.modes]
+            if sql_category in ('predictors', 'models'):
+                where = BinaryOperation('=', args=[Constant(1), Constant(1)])
+
                 new_statement = Select(
                     targets=[Star()],
-                    from_table=Identifier(parts=[self.session.database or 'mindsdb', 'predictors']),
-                    where=where
+                    from_table=Identifier(parts=['information_schema', 'models']),
+                    where=_get_show_where(
+                        statement,
+                        from_name='project',
+                        like_name='name'
+                    )
                 )
                 query = SQLQuery(
                     new_statement,
                     session=self.session
                 )
                 return self.answer_select(query)
-            elif sql_category == 'views':
-                where = BinaryOperation('and', args=[
-                    BinaryOperation('=', args=[Identifier('table_schema'), Constant('views')]),
-                    BinaryOperation('like', args=[Identifier('table_type'), Constant('BASE TABLE')])
-                ])
-                if statement.where is not None:
-                    where = BinaryOperation('and', args=[where, statement.where])
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('View'), Constant(statement.like)])
-                    where = BinaryOperation('and', args=[where, like])
-
+            elif sql_category == 'ml_engines':
                 new_statement = Select(
-                    targets=[Identifier(parts=['table_name'], alias=Identifier('View'))],
-                    from_table=Identifier(parts=['information_schema', 'TABLES']),
-                    where=where
+                    targets=[Star()],
+                    from_table=Identifier(parts=['information_schema', 'ml_engines']),
+                    where=_get_show_where(
+                        statement,
+                        like_name='name'
+                    )
+                )
+
+                query = SQLQuery(
+                    new_statement,
+                    session=self.session
+                )
+                return self.answer_select(query)
+            elif sql_category == 'handlers':
+                new_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(parts=['information_schema', 'handlers']),
+                    where=_get_show_where(
+                        statement,
+                        like_name='name'
+                    )
                 )
 
                 query = SQLQuery(
@@ -192,40 +248,21 @@ class ExecuteCommands:
                 )
                 return self.answer_select(query)
             elif sql_category in ('databases', 'schemas'):
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('Database'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-
                 new_statement = Select(
-                    targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
-                    from_table=Identifier(parts=['information_schema', 'SCHEMATA']),
-                    where=where
+                    targets=[Identifier(parts=["NAME"], alias=Identifier('Database'))],
+                    from_table=Identifier(parts=['information_schema', 'DATABASES']),
+                    where=_get_show_where(
+                        statement,
+                        like_name='Database'
+                    )
                 )
-                if statement.where is not None:
-                    new_statement.where = statement.where
 
-                query = SQLQuery(
-                    new_statement,
-                    session=self.session
-                )
-                return self.answer_select(query)
-            elif sql_category == 'datasources':
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('name'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-                new_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(parts=['mindsdb', 'datasources']),
-                    where=where
-                )
+                if 'FULL' in statement.modes:
+                    new_statement.targets.extend([
+                        Identifier(parts=['TYPE'], alias=Identifier('TYPE')),
+                        Identifier(parts=['ENGINE'], alias=Identifier('ENGINE'))
+                    ])
+
                 query = SQLQuery(
                     new_statement,
                     session=self.session
@@ -235,38 +272,35 @@ class ExecuteCommands:
                 schema = self.session.database or 'mindsdb'
                 if statement.from_table is not None:
                     schema = statement.from_table.parts[-1]
+                    statement.from_table = None
                 where = BinaryOperation('and', args=[
                     BinaryOperation('=', args=[Identifier('table_schema'), Constant(schema)]),
                     BinaryOperation('or', args=[
-                        BinaryOperation('=', args=[Identifier('table_type'), Constant('BASE TABLE')]),
+                        BinaryOperation('=', args=[Identifier('table_type'), Constant('MODEL')]),
                         BinaryOperation('or', args=[
-                            BinaryOperation('=', args=[Identifier('table_type'), Constant('SYSTEM VIEW')]),
-                            BinaryOperation('=', args=[Identifier('table_type'), Constant('VIEW')])
+                            BinaryOperation('=', args=[Identifier('table_type'), Constant('BASE TABLE')]),
+                            BinaryOperation('or', args=[
+                                BinaryOperation('=', args=[Identifier('table_type'), Constant('SYSTEM VIEW')]),
+                                BinaryOperation('=', args=[Identifier('table_type'), Constant('VIEW')])
+                            ])
                         ])
                     ])
                 ])
-                if statement.where is not None:
-                    where = BinaryOperation('and', args=[statement.where, where])
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier(f'Tables_in_{schema}'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
 
                 new_statement = Select(
                     targets=[Identifier(parts=['table_name'], alias=Identifier(f'Tables_in_{schema}'))],
                     from_table=Identifier(parts=['information_schema', 'TABLES']),
-                    where=where
+                    where=_get_show_where(
+                        statement,
+                        like_name=f'Tables_in_{schema}',
+                        initial=where
+                    )
                 )
 
-                if statement.modes is not None:
-                    modes = [m.upper() for m in statement.modes]
-                    # show full tables. show always 'BASE TABLE'
-                    if 'FULL' in modes:
-                        new_statement.targets.append(
-                            Constant(value='BASE TABLE', alias=Identifier('Table_type'))
-                        )
+                if 'FULL' in statement.modes:
+                    new_statement.targets.append(
+                        Identifier(parts=['TABLE_TYPE'], alias=Identifier('Table_type'))
+                    )
 
                 query = SQLQuery(
                     new_statement,
@@ -274,18 +308,13 @@ class ExecuteCommands:
                 )
                 return self.answer_select(query)
             elif sql_category in ('variables', 'session variables', 'session status', 'global variables'):
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('Variable_name'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
-
                 new_statement = Select(
                     targets=[Identifier(parts=['Variable_name']), Identifier(parts=['Value'])],
                     from_table=Identifier(parts=['dataframe']),
-                    where=where
+                    where=_get_show_where(
+                        statement,
+                        like_name='Variable_name'
+                    )
                 )
 
                 data = {}
@@ -363,13 +392,6 @@ class ExecuteCommands:
                 table = sql[sql.rfind('.') + 1:].strip(' .;\n\t').replace('`', '')
                 return self.answer_show_create_table(table)
             elif sql_category in ('character set', 'charset'):
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('CHARACTER_SET_NAME'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
                 new_statement = Select(
                     targets=[
                         Identifier('CHARACTER_SET_NAME', alias=Identifier('Charset')),
@@ -378,7 +400,10 @@ class ExecuteCommands:
                         Identifier('MAXLEN', alias=Identifier('Maxlen'))
                     ],
                     from_table=Identifier(parts=['INFORMATION_SCHEMA', 'CHARACTER_SETS']),
-                    where=where
+                    where=_get_show_where(
+                        statement,
+                        like_name='CHARACTER_SET_NAME'
+                    )
                 )
                 query = SQLQuery(
                     new_statement,
@@ -398,13 +423,6 @@ class ExecuteCommands:
                 )
                 return self.answer_select(query)
             elif sql_category == 'collation':
-                where = statement.where
-                if statement.like is not None:
-                    like = BinaryOperation('like', args=[Identifier('Collation'), Constant(statement.like)])
-                    if where is not None:
-                        where = BinaryOperation('and', args=[where, like])
-                    else:
-                        where = like
                 new_statement = Select(
                     targets=[
                         Identifier('COLLATION_NAME', alias=Identifier('Collation')),
@@ -416,7 +434,10 @@ class ExecuteCommands:
                         Identifier('PAD_ATTRIBUTE', alias=Identifier('Pad_attribute'))
                     ],
                     from_table=Identifier(parts=['INFORMATION_SCHEMA', 'COLLATIONS']),
-                    where=where
+                    where=_get_show_where(
+                        statement,
+                        like_name='Collation'
+                    )
                 )
                 query = SQLQuery(
                     new_statement,
@@ -490,9 +511,8 @@ class ExecuteCommands:
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Insert:
             if statement.from_select is None:
-                return self.process_insert(statement)
+                raise ErNotSupportedYet("At this moment only 'insert from select' is supported.")
             else:
-                # run with planner
                 SQLQuery(
                     statement,
                     session=self.session,
@@ -503,7 +523,6 @@ class ExecuteCommands:
             if statement.from_select is None:
                 raise ErNotSupportedYet('Update is not implemented')
             else:
-                # run with planner
                 SQLQuery(
                     statement,
                     session=self.session,
@@ -626,30 +645,32 @@ class ExecuteCommands:
         )
 
     def answer_retrain_predictor(self, statement):
-        handler_name = self.session.database
-        if len(statement.name.parts) > 1:
-            handler_name = statement.name.parts[0]
-            statement.name.parts = statement.name.parts[1:]
-        if handler_name.lower() == 'mindsdb':
-            handler_name = 'lightwood'
-        ml_handler = self.session.integration_controller.get_handler(handler_name)
-        model_name = statement.name.parts[0]
+        if len(statement.name.parts) == 1:
+            statement.name.parts = [
+                self.session.database,
+                statement.name.parts[0]
+            ]
+        database_name, model_name = statement.name.parts
 
-        models = get_model_records(
-            ml_handler_name=handler_name,
+        model_record = get_model_record(
             company_id=self.session.company_id,
-            active=None,
-            name=model_name
+            name=model_name,
+            project_name=database_name,
+            except_absent=True
         )
+        integration_record = get_predictor_integration(model_record)
+        if integration_record is None:
+            raise Exception(f"Model '{model_name}' does not have linked integration")
 
-        if len(models) == 0:
-            raise SqlApiException(
-                f'There is no predictor {handler_name}.{model_name}'
-            )
+        ml_handler = self.session.integration_controller.get_handler(integration_record.name)
 
         # region check if there is already predictor retraing
         is_cloud = self.session.config.get('cloud', False)
         if is_cloud and self.session.user_class == 0:
+            models = get_model_records(
+                company_id=self.session.company_id,
+                active=None
+            )
             longest_training = None
             for p in models:
                 if (
@@ -671,18 +692,12 @@ class ExecuteCommands:
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_create_datasource(self, struct: dict):
-        ''' create new handler (datasource/integration in old terms)
-            Args:
-                struct: data for creating integration
-        '''
-        datasource_name = struct['datasource_name']
-        engine = struct['database_type']
-        connection_args = struct['connection_args']
-
+    def _create_integration(self, name: str, engine: str, connection_args: dict):
         # we have connection checkers not for any db. So do nothing if fail
         # TODO return rich error message
 
+        if connection_args is None:
+            connection_args = {}
         status = HandlerStatusResponse(success=False)
 
         try:
@@ -729,18 +744,59 @@ class ExecuteCommands:
         if status.success is False:
             raise SqlApiException(f"Can't connect to db: {status.error_message}")
 
-        integration = self.session.integration_controller.get(datasource_name)
+        integration = self.session.integration_controller.get(name)
         if integration is not None:
-            raise SqlApiException(f"Database '{datasource_name}' already exists.")
+            raise SqlApiException(f"Database '{name}' already exists.")
 
-        self.session.integration_controller.add(datasource_name, engine, connection_args)
+        self.session.integration_controller.add(name, engine, connection_args)
+
+    def answer_create_ml_engine(self, statement: ASTNode):
+        name = statement.name.parts[-1]
+        integrations = self.session.integration_controller.get_all()
+        if name in integrations:
+            raise SqlApiException(f"Integration '{name}' already exists")
+
+        self.session.integration_controller._add_integration_record(
+            name=name,
+            engine=statement.handler,
+            connection_args=statement.params
+        )
+
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_drop_datasource(self, ds_name):
-        integration = self.session.integration_controller.get(ds_name)
-        if integration is None:
-            raise SqlApiException(f"Database '{ds_name}' does not exists.")
-        self.session.integration_controller.delete(integration['name'])
+    def answer_drop_ml_engine(self, statement: ASTNode):
+        name = statement.name.parts[-1]
+        integrations = self.session.integration_controller.get_all()
+        if name not in integrations:
+            raise SqlApiException(f"Integration '{name}' does not exists")
+        self.session.integration_controller.delete(name)
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_create_database(self, statement: ASTNode):
+        ''' create new handler (datasource/integration in old terms)
+            Args:
+                statement (ASTNode): data for creating database/project
+        '''
+
+        database_name = statement.name
+        engine = statement.engine
+        if engine is None:
+            engine = 'mindsdb'
+        engine = engine.lower()
+        connection_args = statement.parameters
+
+        if engine == 'mindsdb':
+            self.session.project_controller.add(database_name)
+        else:
+            self._create_integration(database_name, engine, connection_args)
+
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_drop_database(self, statement):
+        if len(statement.name.parts) != 1:
+            raise Exception('Database name should contain only 1 part.')
+        db_name = statement.name.parts[0]
+        self.session.database_controller.delete(db_name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):
@@ -754,66 +810,80 @@ class ExecuteCommands:
                     db_name = table.parts[0]
                 else:
                     db_name = self.session.database
-                if db_name not in ['files', 'mindsdb']:
-                    raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
                 table_name = table.parts[-1]
-                dn = self.session.datahub[db_name]
-                if dn.has_table(table_name) is False:
-                    raise SqlApiException(f"Cannot delete a table from database '{db_name}': table does not exists")
+
+                if db_name == 'files':
+                    dn = self.session.datahub[db_name]
+                    if dn.has_table(table_name) is False:
+                        raise SqlApiException(f"Cannot delete a table from database '{db_name}': table does not exists")
+                else:
+                    projects_dict = self.session.database_controller.get_dict(filter_type='project')
+                    if db_name not in projects_dict:
+                        raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
+                    project = self.session.database_controller.get_project(db_name)
+                    project_tables = {key: val for key, val in project.get_tables().items() if val.get('deletable') is True}
+                    if table_name not in project_tables:
+                        raise SqlApiException(f"Cannot delete a table from database '{db_name}': table does not exists")
 
         for table in statement.tables:
             if len(table.parts) > 1:
                 db_name = table.parts[0]
             else:
                 db_name = self.session.database
-            if db_name not in ['files', 'mindsdb']:
-                raise SqlApiException(f"Cannot delete a table from database '{db_name}'")
             table_name = table.parts[-1]
-            dn = self.session.datahub[db_name]
-            if dn.has_table(table_name):
-                if db_name == 'mindsdb':
-                    self.session.datahub['mindsdb'].delete_predictor(table_name)
-                elif db_name == 'files':
+
+            if db_name == 'files':
+                dn = self.session.datahub[db_name]
+                if dn.has_table(table_name):
                     self.session.datahub['files'].query(
                         DropTables(tables=[Identifier(table_name)])
                     )
+            else:
+                projects_dict = self.session.database_controller.get_dict(filter_type='project')
+                if db_name not in projects_dict:
+                    continue
+                self.session.model_controller.delete_model(table_name, project_name=db_name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_view(self, statement):
-        name = statement.name
+        project_name = self.session.database
+        # TEMP
+        if isinstance(statement.name, Identifier):
+            parts = statement.name.parts
+        else:
+            parts = statement.name.split('.')
+
+        view_name = parts[-1]
+        if len(parts) == 2:
+            project_name = parts[0]
 
         query_str = statement.query_str
         query = parse_sql(query_str, dialect='mindsdb')
 
-        integration_name = None
-        if statement.from_table is not None:
-            integration_name = statement.from_table.parts[-1]
-
-        if integration_name is not None:
-
-            # inject integration into sql
-            query = parse_sql(query_str, dialect='mindsdb')
-
-            def inject_integration(node, is_table, **kwargs):
-                if is_table and isinstance(node, Identifier):
-                    if not node.parts[0] == integration_name:
-                        node.parts.insert(0, integration_name)
-
-            query_traversal(query, inject_integration)
-
-            render = SqlalchemyRender('mysql')
-            query_str = render.get_string(query, with_failback=False)
+        if isinstance(statement.from_table, Identifier):
+            query = Select(
+                targets=[Star()],
+                from_table=NativeQuery(
+                    integration=statement.from_table,
+                    query=statement.query_str
+                )
+            )
+            renderer = SqlalchemyRender('mysql')
+            query_str = renderer.get_string(query, with_failback=True)
 
         if isinstance(query, Select):
             # check create view sql
             query.limit = Constant(1)
 
-            # exception should appear from SQLQuery
             sqlquery = SQLQuery(query, session=self.session)
             if sqlquery.fetch()['success'] != True:
                 raise SqlApiException('Wrong view query')
 
-        self.session.view_interface.add(name, query_str, integration_name)
+        self.session.view_controller.add(
+            view_name,
+            query=query_str,
+            project_name=project_name
+        )
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     def answer_drop_view(self, statement):
@@ -821,18 +891,26 @@ class ExecuteCommands:
 
         for name in names:
             view_name = name.parts[-1]
-            self.session.view_interface.delete(view_name)
+            if len(name.parts) > 1:
+                db_name = name.parts[0]
+            else:
+                db_name = self.session.database
+            self.session.view_controller.delete(view_name, project_name=db_name)
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     def answer_create_predictor(self, statement):
-        ml_integration_name = self.session.database
-        if len(statement.name.parts) == 2:
-            ml_integration_name = statement.name.parts[0]
-            statement.name.parts = [statement.name.parts[-1]]
-        ml_integration_name = ml_integration_name.lower()
-        if ml_integration_name == 'mindsdb':
-            ml_integration_name = 'lightwood'
+        integration_name = self.session.database
+        if len(statement.name.parts) > 1:
+            integration_name = statement.name.parts[0]
+        else:
+            statement.name.parts = [integration_name, statement.name.parts[-1]]
+        integration_name = integration_name.lower()
+
+        ml_integration_name = 'lightwood'
+        if statement.using is not None and statement.using.get('engine') is not None:
+            using = {k.lower(): v for k, v in statement.using.items()}
+            ml_integration_name = using.get('engine', ml_integration_name)
 
         ml_handler = self.session.integration_controller.get_handler(ml_integration_name)
 
@@ -847,8 +925,7 @@ class ExecuteCommands:
         query2 = Select(targets=[Identifier('name')],
                         from_table=query.table,
                         where=query.where)
-        # fake_sql = sql.strip(' ')
-        # fake_sql = 'select name ' + fake_sql[len('delete '):]
+
         sqlquery = SQLQuery(
             query2.to_string(),
             session=self.session
@@ -865,52 +942,6 @@ class ExecuteCommands:
 
         for predictor_name in predictors_names:
             self.session.datahub['mindsdb'].delete_predictor(predictor_name)
-
-    def handle_custom_command(self, command):
-        command = command.strip(' ;').split()
-
-        if command[0].lower() == 'delete' and command[1].lower() == 'predictor':
-            if len(command) != 3:
-                raise ErSqlSyntaxError("wrong syntax of 'DELETE PREDICTOR {NAME}' command")
-
-            predictor_name = command[2]
-            self.delete_predictor_query(parse_sql(
-                f"delete from mindsdb.predictors where name = '{predictor_name}'",
-                'mindsdb'
-            ))
-            return ExecuteAnswer(ANSWER_TYPE.OK)
-
-        raise ErSqlSyntaxError("at this moment only 'delete predictor' command supported")
-
-    def process_insert(self, statement):
-        db_name = self.session.database
-        if len(statement.table.parts) == 2:
-            db_name = statement.table.parts[0].lower()
-        table_name = statement.table.parts[-1].lower()
-        if db_name != 'mindsdb' or table_name != 'predictors':
-            raise ErNonInsertableTable("At this moment only insert to 'mindsdb.predictors' is possible")
-        column_names = []
-        for column_identifier in statement.columns:
-            if isinstance(column_identifier, Identifier):
-                if len(column_identifier.parts) != 1:
-                    raise ErKeyColumnDoesNotExist(f'Incorrect column name: {column_identifier}')
-                column_name = column_identifier.parts[0].lower()
-                column_names.append(column_name)
-            elif isinstance(column_identifier, TableColumn):
-                column_names.append(column_identifier.name)
-            else:
-                raise ErKeyColumnDoesNotExist(f'Incorrect column name: {column_identifier}')
-        if len(statement.values) > 1:
-            raise SqlApiException('At this moment only 1 row can be inserted.')
-        for row in statement.values:
-            values = []
-            for value in row:
-                values.append(value.value)
-            insert_dict = dict(zip(column_names, values))
-        if table_name == 'commands':
-            return self.handle_custom_command(insert_dict['command'])
-        elif table_name == 'predictors':
-            return self.insert_predictor_answer(insert_dict)
 
     def answer_show_columns(self, target: Identifier, where: Optional[Operation] = None,
                             like: Optional[str] = None, is_full=False):
@@ -1301,69 +1332,14 @@ class ExecuteCommands:
             data=data['result'],
         )
 
-    def is_db_exists(self, db_name):
-        sql_statement = Select(
-            targets=[Identifier(parts=["schema_name"], alias=Identifier('Database'))],
-            from_table=Identifier(parts=['information_schema', 'SCHEMATA']),
-            where=BinaryOperation('=', args=[Identifier('schema_name'), Constant(db_name)])
-        )
-        query = SQLQuery(
-            sql_statement,
-            session=self.session
-        )
-        result = query.fetch()
-        if result.get('success') is True and len(result.get('result')) > 0:
-            return True
-        return False
-
     def change_default_db(self, db_name):
         # That fix for bug in mssql: it keeps connection for a long time, but after some time mssql can
         # send packet with COM_INIT_DB=null. In this case keep old database name as default.
         if db_name != 'null':
-            if self.is_db_exists(db_name):
+            if self.session.database_controller.exists(db_name):
                 self.session.database = db_name
             else:
                 raise ErBadDbError(f"Database {db_name} does not exists")
-
-    def insert_predictor_answer(self, insert):
-        ''' Start learn new predictor.
-            Parameters:
-             - insert - dict with keys as columns of mindsb.predictors table.
-        '''
-        return ExecuteAnswer(
-            ANSWER_TYPE.ERROR,
-            error_code=0,
-            error_message='At the moment insert into predictors table is not supported'
-        )
-
-    def _check_predict_columns(self, predict_column_names, ds_column_names):
-        ''' validate 'predict' column names
-
-            predict_column_names: list of 'predict' columns
-            ds_column_names: list of all datasource columns
-        '''
-        cleaned_predict_column_names = []
-        for predict_column_name in predict_column_names:
-            candidate = None
-            for column_name in ds_column_names:
-                if column_name == predict_column_name:
-                    if candidate is not None:
-                        raise ErKeyColumnDoesNotExist("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
-                    candidate = column_name
-            if candidate is None:
-                for column_name in ds_column_names:
-                    if column_name.lower() == predict_column_name.lower():
-                        if candidate is not None:
-                            raise ErKeyColumnDoesNotExist("It is not possible to determine appropriate column name for 'predict' column: {predict_column_name}")
-                        candidate = column_name
-            if candidate is None:
-                raise ErKeyColumnDoesNotExist(f"Datasource has not column with name '{predict_column_name}'")
-            cleaned_predict_column_names.append(candidate)
-
-        if len(cleaned_predict_column_names) != len(set(cleaned_predict_column_names)):
-            raise ErDubFieldName("'predict' column name is duplicated")
-
-        return cleaned_predict_column_names
 
     def _get_features_info(self, data):
         ai_info = data.get('json_ai', {})

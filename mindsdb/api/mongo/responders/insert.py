@@ -64,7 +64,7 @@ class Responce(Responder):
                 "n": len(query['documents']),
                 "ok": 1
             }
-        elif table == 'predictors':
+        elif table in ['predictors', 'models']:
             predictors_columns = [
                 'name',
                 'status',
@@ -133,7 +133,7 @@ class Responce(Responder):
                 using = dict(kwargs)
 
                 create_predictor_ast = CreatePredictor(
-                    name=Identifier(doc['name']),
+                    name=Identifier(f"{request_env['database']}.{doc['name']}"),
                     integration_name=Identifier(doc['connection']),
                     query_str=select_data_query,
                     targets=[Identifier(x) for x in predict],

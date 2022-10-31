@@ -101,6 +101,7 @@ nav:
   - MindsDB Data Insights: sql/data-insights.md
   - Train a Predictor: sql/create/predictor.md
   - Get a Prediction: sql/api/select.md
+  - Feature Engineering in MindsDB: sql/feature-eng.md
   - SQL API:
     - MindsDB Tables Structure: sql/table-structure.md
     - CREATE:

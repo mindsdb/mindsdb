@@ -1,5 +1,7 @@
 # Setup for Docker
 
+![type:video](https://www.youtube.com/embed/Bmuavy0MelQ)
+
 ## Install Docker
 
 If you haven't done that already, install Docker on your machine following [the instructions](https://docs.docker.com/install). To make sure Docker is successfully installed on your machine, run a test container as follows:

@@ -1,4 +1,3 @@
-
 import time
 from unittest.mock import patch
 import pandas as pd
@@ -9,7 +8,7 @@ from mindsdb_sql import parse_sql
 #  env PYTHONPATH=./ pytest tests/unit/test_ml_handlers.py
 # Warning: a big huggingface models will be downloaded
 
-from .executor_test_base import BaseExecutorTest
+from tests.unit.executor_test_base import BaseExecutorTest
 
 
 class TestHuggingface(BaseExecutorTest):

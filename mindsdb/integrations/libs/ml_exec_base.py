@@ -322,6 +322,11 @@ class BaseMLEngineExec:
         if hasattr(statement, 'group_by') and statement.group_by is not None:
             problem_definition['group_by'] = [str(col) for col in getattr(statement, 'group_by')]
 
+        if problem_definition.get('order_by', False):
+            problem_definition['timeseries_settings'] = {'is_timeseries': True}
+            for attr in ['order_by', 'group_by', 'horizon', 'window']:
+                problem_definition['timeseries_settings'][attr] = problem_definition[attr]
+
         join_learn_process = False
         if 'join_learn_process' in problem_definition.get('using', {}):
             join_learn_process = problem_definition['using']['join_learn_process']

@@ -16,5 +16,5 @@ class DataNode:
     def get_table_columns(self, tableName):
         pass
 
-    def query(self, table=None, columns=None, where=None, where_data=None, order_by=None, group_by=None, came_from=None):
+    def query(self, query=None, native_query=None, session=None):
         return []

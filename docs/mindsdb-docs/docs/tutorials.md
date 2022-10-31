@@ -65,7 +65,7 @@
 * [Predict Diamond prices with SQL Alchemy](https://dev.to/tesprogram/predict-diamond-prices-with-sql-alchemy-and-mindsdb-b4e) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [Predict Municipal Debt Risk Analysis](https://teslimodus.medium.com/predict-municipal-debt-risk-analysis-5c5416502a29) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [What is MindsDB? How to get started with it ](https://medium.com/@hritikd3/what-is-mindsdb-how-to-get-started-2b3cf6d99707) by [Hritik Dangi](https://github.com/hritikd3)
-
+* [Using MindsDB to Predict Amazon Rainforest Degradation](https://medium.com/@alissatroianonyc/nusing-mindsdb-to-predict-amazon-rainforest-degradation-1ccb8e993e48) by [Alissa Troiano](https://github.com/alissatroiano)
 
 # Community Video Guides
 * [Heart Disease Predictor using #MindsDB](https://youtu.be/vtVM6pL1ANo) by [@akhilcoder](https://twitter.com/akhilcoder)

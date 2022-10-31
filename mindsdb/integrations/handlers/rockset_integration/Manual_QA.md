@@ -13,8 +13,8 @@ WITH ENGINE = "rockset",
 PARAMETERS = {
       "host":"https://api.use1a1.rockset.com",
       "port":"3306",
-      "user":"<user>",
-      "password":"<password>",
+      "user":"admin",
+      "password":"password",
       "database":"test"
     };
 ```

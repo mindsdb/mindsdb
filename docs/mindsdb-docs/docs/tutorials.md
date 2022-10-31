@@ -102,4 +102,5 @@
 * [Deploy MindsDB on the Google Cloud Platform](https://www.youtube.com/watch?v=WLdb7UNi4bk) by [Alissa Troiano](https://github.com/alissatroiano)
 * [Regression Tutorial - Home Rentals](https://youtu.be/qf4HQ4EzaUU) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [Setting up data sources with mindsDB](https://www.youtube.com/watch?v=kRrMjUVnib0) by [Syed Zubeen](https://github.com/syedzubeen)
-
+* [Integrating your mindsDB instance into MongoDB](https://www.youtube.com/watch?v=xwUGBbNkyks) by [Syed Zubeen](https://github.com/syedzubeen)
+* [Predicting car prices with mindsDB](https://www.youtube.com/watch?v=pYSlYBjukNA) by [Syed Zubeen](https://github.com/syedzubeen)

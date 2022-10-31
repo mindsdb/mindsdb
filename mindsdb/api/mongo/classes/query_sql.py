@@ -5,9 +5,11 @@ from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteComm
 def run_sql_command(mindsdb_env, ast_query):
     server_obj = type('', (), {})()
 
-    server_obj.original_integration_controller = mindsdb_env['origin_integration_controller']
-    server_obj.original_model_controller = mindsdb_env['origin_model_controller']
-    server_obj.original_view_controller = mindsdb_env['origin_view_controller']
+    server_obj.original_integration_controller = mindsdb_env['original_integration_controller']
+    server_obj.original_model_controller = mindsdb_env['original_model_controller']
+    server_obj.original_view_controller = mindsdb_env['original_view_controller']
+    server_obj.original_project_controller = mindsdb_env['original_project_controller']
+    server_obj.original_database_controller = mindsdb_env['original_database_controller']
 
     sql_session = SessionController(
         server=server_obj,

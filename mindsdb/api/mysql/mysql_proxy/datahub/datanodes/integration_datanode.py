@@ -121,7 +121,7 @@ class IntegrationDataNode(DataNode):
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 
-    def query(self, query=None, native_query=None):
+    def query(self, query=None, native_query=None, session=None):
 
         if query is not None:
             result = self.integration_handler.query(query)

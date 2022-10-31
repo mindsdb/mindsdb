@@ -65,6 +65,8 @@
 * [What is MindsDB? How to get started with it ](https://medium.com/@hritikd3/what-is-mindsdb-how-to-get-started-2b3cf6d99707) by [Hritik Dangi](https://github.com/hritikd3)
 * [How to Design a custom mixer model in Lightwood](https://medium.com/@teslimodus/introduction-e2f933c40f4c) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [Predicting & Visualizing Petroleum Production with MindsDB and Tableau](https://dev.to/tesprogram/predicting-visualizing-petroleum-production-with-mindsdb-and-tableau-373f) by [Teslim Odumuyiwa](https://github.com/Tes-program)
+* [Predicting & Visualizing Gas Prices with MindsDB and Tableau](https://dev.to/tesprogram/predicting-visualizing-gas-prices-with-mindsdb-and-tableau-d1p) by [Teslim Odumuyiwa](https://github.com/Tes-program)
+
 
 # Community Video Guides
 * [Heart Disease Predictor using #MindsDB](https://youtu.be/vtVM6pL1ANo) by [@akhilcoder](https://twitter.com/akhilcoder)

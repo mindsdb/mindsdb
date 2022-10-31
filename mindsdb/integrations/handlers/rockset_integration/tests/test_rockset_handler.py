@@ -11,7 +11,7 @@ class RocksetHandlerTest(unittest.TestCase):
     def setUpClass(cls):
         cls.kwargs = {
             "connection_data": {
-                "host": "127.0.0.1",
+                "host": "https://api.use1a1.rockset.com",
                 "port": 3306,
                 "user": "root",
                 "password": "password",
@@ -78,8 +78,8 @@ class RocksetHandlerTest(unittest.TestCase):
         assert table is RESPONSE_TYPE.TABLE
 
     def test_get_columns(self):
-        columns = self.handler.get_columns('_event_time')
-        query = "DROP Table IF EXISTS _event_time;"
+        columns = self.handler.get_columns('test_table')
+        query = "DROP Table IF EXISTS test_table;"
         result = self.handler.query(query)
         assert columns.type is not RESPONSE_TYPE.ERROR
 
@@ -88,3 +88,6 @@ class RocksetHandlerTest(unittest.TestCase):
         query = "DROP Table IF EXISTS _id"
         result = self.handler.query(query)
         assert result.type is not RESPONSE_TYPE.ERROR
+
+if __name__ == '__main__':
+    unittest.main()

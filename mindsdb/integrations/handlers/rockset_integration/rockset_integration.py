@@ -1,7 +1,6 @@
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from collections import OrderedDict
 
-
 from ..mysql_handler import Handler as MySQLHandler, connection_args, connection_args_example
 
 
@@ -13,6 +12,7 @@ class RocksetIntegration(MysqlHandler):
 
     def __init__(self, name, **kwargs):
         super().__init__(name, **kwargs)
+
 
 connection_args = OrderedDict(
     user={

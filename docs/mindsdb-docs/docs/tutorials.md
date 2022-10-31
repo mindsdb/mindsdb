@@ -110,4 +110,4 @@
 * [Setting up data sources with mindsDB](https://www.youtube.com/watch?v=kRrMjUVnib0) by [Syed Zubeen](https://github.com/syedzubeen)
 * [Integrating your MindsDB instance into MongoDB](https://www.youtube.com/watch?v=xwUGBbNkyks) by [Syed Zubeen](https://github.com/syedzubeen)
 * [Predicting car prices with MindsDB](https://www.youtube.com/watch?v=pYSlYBjukNA) by [Syed Zubeen](https://github.com/syedzubeen)
-
+* [How Mindsdb is impacting the world of Machine Learning](https://youtu.be/YngjfwJLplA) by [Prathik Shetty](https://github.com/prathikshetty2002)

@@ -36,10 +36,10 @@ class BaseMerlionForecastAdapter:
         self.maxiter = kwargs.get(MerlionArguments.maxiter.value, self.DEFAULT_MAXITER)
         self.model = None
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytes:
         return self.model.to_bytes()
 
-    def from_bytes(self, bytes):
+    def initialize_model(self, bytes):
         self.model = self.model.from_bytes(bytes)
 
     def to_train_dataframe(self, df: pd.DataFrame, target: str) -> pd.DataFrame:
@@ -67,7 +67,7 @@ class BaseMerlionForecastAdapter:
         if err_ts is None:
             err_df = None
         else:
-            err_df = pred_ts.to_pd()
+            err_df = err_ts.to_pd()
 
         if err_df is None or target in list(err_df.columns.values):  # error and predict sometimes are same
             std = pred_df[target].std()

@@ -160,7 +160,7 @@ class MerlionHandler(BaseMLEngine):
         if task_enum == TaskType.forecast:
             model_args[MerlionArguments.max_forecast_steps.value] = horizon
         adapter = adapter_class(**model_args)
-        adapter.from_bytes(bytes=model_bytes)
+        adapter.initialize_model(bytes=model_bytes)
 
         # predict
         pred_df = adapter.predict(df=feature_df, target=target)

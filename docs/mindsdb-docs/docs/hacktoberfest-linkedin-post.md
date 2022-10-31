@@ -34,3 +34,4 @@
 
 - A LinkedIn Post by [Hritik Dangi](https://www.linkedin.com/posts/sparsh-singh3_modein-activity-6991446202139488256-F9iu?utm_source=share&utm_medium=member_desktop)
 
+- A LinkedIn Post by [Ferdi Gueran](https://www.linkedin.com/posts/activity-6992821262322401280-7tSl)

@@ -128,10 +128,11 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
 
 
 @mark_process(name='learn')
-def run_learn(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int,
-              json_ai_override: dict = None, company_id: int = None) -> None:
-    if json_ai_override is None:
-        json_ai_override = {}
+def run_learn(df: DataFrame, problem_definition: ProblemDefinition, model_storage) -> None:
+    # FIXME
+    predictor_id = model_storage.predictor_id
+    company_id = model_storage.company_id
+    json_ai_override = {}
 
     predictor_record = Predictor.query.with_for_update().get(predictor_id)
     predictor_record.training_start_at = datetime.now()

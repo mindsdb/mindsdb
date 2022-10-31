@@ -115,7 +115,6 @@ class SalesforceHandler(DatabaseHandler):
             result = connection.select_object_content(
                 sf_instance=self.connection_data['sf_instance'],
                 reportId=self.connection_data['reportId'],
-                export='?isdtp=p1&export=1&enc=UTF-8&xf=csv',
                 sfUrl=sf_instance + reportId + export,
                 response=requests.get(sfUrl, headers=headers)
                 download=response.content.decode('utf-8'),
@@ -138,7 +137,7 @@ class SalesforceHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        renderer = SqlalchemyRender(Salesforce)
+        renderer = SqlalchemyRender('salesforce')
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 

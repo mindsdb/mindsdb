@@ -331,7 +331,7 @@ class BaseMLEngineExec:
         join_learn_process = False
         if 'join_learn_process' in problem_definition.get('using', {}):
             join_learn_process = problem_definition['using']['join_learn_process']
-            del problem_definition['join_learn_process']
+            del problem_definition['using']['join_learn_process']
 
         predictor_record = db.Predictor(
             company_id=self.company_id,

@@ -5,18 +5,28 @@
 **1. Testing CREATE DATABASE**
 
 ```
-CREATE DATABASE rockset_db;
-```
+CREATE DATABASE rockset_integration
 WITH ENGINE = "rockset",
-
-```
-PARAMETERS = {
+    ROCKSET_API_KEY = "YOUR_API_KEY",
+    ROCKSET_REGION = "YOUR_REGION"
+    PARAMETERS = {
       "host":"https://api.use1a1.rockset.com",
       "port":"3306",
       "user":"admin",
       "password":"password",
       "database":"test"
     };
+```
+
+
+**2. Testing CREATE TABLE**
+
+```
+CREATE TABLE rockset_integration.test_table (
+    id INT,
+    name VARCHAR(255),
+    PRIMARY KEY (id)
+)
 ```
 
 ```

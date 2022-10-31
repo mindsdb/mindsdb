@@ -151,7 +151,7 @@ You can find the complete documentation of MindsDB at [docs.mindsdb.com](https:/
 
 ## Support
 
-If you found a bug, please submit an [issue on Github](https://github.com/mindsdb/mindsdb/issues).
+If you found a bug, please submit an [issue on Github](https://github.com/mindsdb/mindsdb/issues/new/choose).
 
 To get community support, you can:
 * Post at MindsDB [Slack community](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).

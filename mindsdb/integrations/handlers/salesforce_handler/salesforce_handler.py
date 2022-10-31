@@ -170,29 +170,30 @@ class SalesforceHandler(DatabaseHandler):
         """
         return self.native_query(query)
 
-    connection_args = OrderedDict(
-        protocol={
-            'type': ARG_TYPE.STRING,
-            'description': 'The protocol to use for the connection'
-        },
-        user={
-            'type': ARG_TYPE.STRING,
-            'description': 'The username to use for the connection'
-        },
-        password={
-            'type': ARG_TYPE.STRING,
-            'description': 'The password to use for the connection'
-        },
-        security_token={
-            'type': ARG_TYPE.STRING,
-            'description': 'The security token to use for the connection'
-        }
-        host={
-            'type': ARG_TYPE.STRING,
-            'description': 'The host to use for the connection'
-        },
-        port={
-            'type': ARG_TYPE.STRING,
-            'description': 'The port to use for the connection'
-        }
-    )
+
+connection_args = OrderedDict(
+    protocol={
+        'type': ARG_TYPE.STRING,
+        'description': 'The protocol to use for the connection'
+    },
+    user={
+        'type': ARG_TYPE.STRING,
+        'description': 'The username to use for the connection'
+    },
+    password={
+        'type': ARG_TYPE.STRING,
+        'description': 'The password to use for the connection'
+    },
+    security_token={
+        'type': ARG_TYPE.STRING,
+        'description': 'The security token to use for the connection'
+    }
+    host={
+        'type': ARG_TYPE.STRING,
+        'description': 'The host to use for the connection'
+    },
+    port={
+        'type': ARG_TYPE.STRING,
+        'description': 'The port to use for the connection'
+    }
+)

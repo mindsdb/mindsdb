@@ -54,6 +54,7 @@
 * [Predicting & Visualizing Hourly Electricity Demand in the US with MindsDB and Tableau](https://teslimodus.medium.com/predicting-visualizing-hourly-electricity-demand-in-the-us-with-mindsdb-and-tableau-126d1c74d860) by [Teslim Odumuyiwa](https://teslimodus.medium.com/)
 * [Bank Customer Churn Prediction using MindsDB](https://medium.com/@ayushsharmaa101/thanks-for-reading-dfec90467ddb) by [Ayush Sharma](https://github.com/ayushthe1)
 * [Let's connect Mindsdb with Mariadb shell Locally and Predict the Mobile Price](https://atharva08.hashnode.dev/lets-connect-mindsdb-with-mariadb-shell-locally-and-predict-the-mobile-price-range) by [Atharva Shirdhankar](https://github.com/StarTrooper08)
+* [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/WCBLotgskZg) by [Adithya Narayan](https://github.com/NarayanAdithya)
 * [Forecasting Quarterly House Sales with MindsDB](https://youtu.be/RPisvY54Tg4) by [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
 * [Gold price prediction using MindsDB](https://dev.to/purgecodee/predicting-gold-price-with-mindsdb-205n) by [Pritish Sinha](https://github.com/Pritish-Sinha) 
 * [What is MindsDB?](https://medium.com/@okekeebubechukwu08/what-is-mindsdb-b6862af21492) by [Gloria Okeke E.J](https://medium.com/@okekeebubechukwu08)
@@ -64,7 +65,6 @@
 * [Predict Diamond prices with SQL Alchemy](https://dev.to/tesprogram/predict-diamond-prices-with-sql-alchemy-and-mindsdb-b4e) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [Predict Municipal Debt Risk Analysis](https://teslimodus.medium.com/predict-municipal-debt-risk-analysis-5c5416502a29) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [What is MindsDB? How to get started with it ](https://medium.com/@hritikd3/what-is-mindsdb-how-to-get-started-2b3cf6d99707) by [Hritik Dangi](https://github.com/hritikd3)
-
 
 
 # Community Video Guides

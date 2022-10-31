@@ -66,7 +66,7 @@
 * [How to Design a custom mixer model in Lightwood](https://medium.com/@teslimodus/introduction-e2f933c40f4c) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [Predicting & Visualizing Petroleum Production with MindsDB and Tableau](https://dev.to/tesprogram/predicting-visualizing-petroleum-production-with-mindsdb-and-tableau-373f) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [Predicting & Visualizing Gas Prices with MindsDB and Tableau](https://dev.to/tesprogram/predicting-visualizing-gas-prices-with-mindsdb-and-tableau-d1p) by [Teslim Odumuyiwa](https://github.com/Tes-program)
-
+* [Predicting Environment Impact of Food Production caused by C02 Emission](https://dev.to/tesprogram/predicting-environment-impact-of-food-production-caused-by-c02-emission-51e3) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 
 # Community Video Guides
 * [Heart Disease Predictor using #MindsDB](https://youtu.be/vtVM6pL1ANo) by [@akhilcoder](https://twitter.com/akhilcoder)

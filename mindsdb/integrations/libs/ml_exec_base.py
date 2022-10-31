@@ -325,7 +325,8 @@ class BaseMLEngineExec:
         if problem_definition.get('order_by', False):
             problem_definition['timeseries_settings'] = {'is_timeseries': True}
             for attr in ['order_by', 'group_by', 'horizon', 'window']:
-                problem_definition['timeseries_settings'][attr] = problem_definition[attr]
+                if attr in problem_definition:
+                    problem_definition['timeseries_settings'][attr] = problem_definition[attr]
 
         join_learn_process = False
         if 'join_learn_process' in problem_definition.get('using', {}):

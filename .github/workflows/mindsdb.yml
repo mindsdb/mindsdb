@@ -91,23 +91,24 @@ jobs:
           echo -e "\n===============test MySQL binary API===============\n"
           pytest -vx -k 'not TestMySqlApi' tests/integration_tests/flows/test_mysql_bin_api.py
 
-          mkdir -p ~/.ssh/
-          echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
-          sudo chmod 600 ~/.ssh/db_machine
-          echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
-          sudo chmod 600 ~/.ssh/db_machine_ms
-          echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
-          sudo chmod 644 ~/.mindsdb_credentials.json
-
-          export USE_EXTERNAL_DB_SERVER="1"
-
-          # Company independent
-          echo -e "\n===============\ntest company independent\n===============\n"
-          python tests/integration_tests/flows/test_company_independent.py
-
           # HTTP
-          echo -e "\n===============\ntest HTTP\n===============\n"
-          python tests/integration_tests/flows/test_http.py
+          echo -e "\n===============test HTTP===============\n"
+          pytest -vx tests/integration_tests/flows/test_http.py
+          #
+          # Company independent
+          echo -e "\n===============test company independent===============\n"
+          pytest -vx tests/integration_tests/flows/test_company_independent.py
+
+          # mkdir -p ~/.ssh/
+          # echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
+          # sudo chmod 600 ~/.ssh/db_machine
+          # echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
+          # sudo chmod 600 ~/.ssh/db_machine_ms
+          # echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
+          # sudo chmod 644 ~/.mindsdb_credentials.json
+
+          # export USE_EXTERNAL_DB_SERVER="1"
+
 
           # # Kafka Stream
           # echo -e "\n===============\ntest Kafka Stream\n===============\n"
@@ -121,9 +122,9 @@ jobs:
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-        DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
-        DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
-        DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
+          # DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
+          # DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
+          # DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
 

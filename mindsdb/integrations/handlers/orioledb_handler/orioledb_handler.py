@@ -7,7 +7,7 @@ from ..postgres_handler import Handler as PostgresHandler
 
 class OrioleDBHandler(PostgresHandler):
     """
-    This handler handles connection and execution of the Supabase statements.
+    This handler handles connection and execution of the OrioleDB statements.
     """
     name = 'orioledb'
 

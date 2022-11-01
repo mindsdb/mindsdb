@@ -130,7 +130,6 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
 @mark_process(name='learn')
 def run_learn(df: DataFrame, problem_definition: ProblemDefinition, model_storage) -> None:
     # FIXME
-    db.init()
     predictor_id = model_storage.predictor_id
     company_id = model_storage.company_id
     json_ai_override = {}

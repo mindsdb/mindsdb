@@ -25,6 +25,10 @@ def unload_module(path):
 
 
 class BaseUnitTest:
+    """
+        mindsdb instance with temporal database and config
+    """
+
     @staticmethod
     def setup_class(cls):
 
@@ -103,6 +107,9 @@ class BaseUnitTest:
 
 
 class BaseExecutorTest(BaseUnitTest):
+    """
+        Set up executor: mock data handler
+    """
 
     def setup_method(self):
         super().setup_method()
@@ -140,11 +147,12 @@ class BaseExecutorTest(BaseUnitTest):
         server_obj.original_project_controller = ProjectController()
         server_obj.original_database_controller = DatabaseController()
 
-        predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
-        self.mock_predict = predict_patcher.__enter__()
+        if to_mock_model_controller:
+            predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
+            self.mock_predict = predict_patcher.__enter__()
 
-        create_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.create')
-        self.mock_create = create_patcher.__enter__()
+            create_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.create')
+            self.mock_create = create_patcher.__enter__()
 
         sql_session = SessionController(
             server=server_obj,
@@ -236,6 +244,9 @@ class BaseExecutorTest(BaseUnitTest):
         mock_handler().query.side_effect = query_f
 
 class BaseExecutorTestMockModel(BaseExecutorTest):
+    """
+        Set up executor: mock data handler and LW handler
+    """
 
     def setup_method(self):
         super().setup_method()

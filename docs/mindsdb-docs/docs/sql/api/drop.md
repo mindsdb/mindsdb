@@ -1,15 +1,15 @@
-# `#!sql DROP PREDICTOR` Statement
+# `#!sql DROP MODEL` Statement
 
 ## Description
 
-The `#!sql DROP PREDICTOR` statement deletes the model table.
+The `#!sql DROP MODEL` statement deletes the model table.
 
 ## Syntax
 
 Here is the syntax:
 
 ```sql
-DROP PREDICTOR [predictor_name];
+DROP MODEL [predictor_name];
 ```
 
 On execution, we get:
@@ -47,7 +47,7 @@ On execution, we get:
 Now we delete the `home_rentals_model` table.
 
 ```sql
-DROP PREDICTOR home_rentals_model;
+DROP MODEL home_rentals_model;
 ```
 
 On execution, we get:

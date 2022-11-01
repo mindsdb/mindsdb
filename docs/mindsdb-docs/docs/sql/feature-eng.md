@@ -255,7 +255,7 @@ Now, we create predictors based on the `example_db.demo_data.used_car_price` tab
     ```
 
 !!! note "Dropping a Predictor"
-    If you want to drop a predictor, run the command `DROP PREDICTOR predictor_name;`.
+    If you want to drop a predictor, run the command `DROP MODEL predictor_name;`.
 
 #### Predictor Status
 

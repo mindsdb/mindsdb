@@ -37,6 +37,6 @@ N/A
 
 Drop a remark based on your observation.
 - [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [X] There's a Bug 🪲 [Issue Title]([URL To the Issue you created](https://github.com/mindsdb/mindsdb/issues/3947) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+- [X] There's a Bug 🪲 [Access Handler Not Behaving As Expected]((https://github.com/mindsdb/mindsdb/issues/3947) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
 
 ---

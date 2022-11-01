@@ -149,6 +149,18 @@ Or:
 +----------+
 ```
 
+Alternatively, you can use the `SHOW MODELS` command as below.
+
+```sql
+SHOW MODELS [FROM *database_project_name*] [LIKE *model_name*] [WHERE *filter*];
+```
+
+Here is an example:
+
+```sql
+SHOW MODELS FROM mindsdb LIKE 'home_rentals_predictor' WHERE status='complete';
+```
+
 !!! attention "The status of the predictor must be `complete` before you can start making predictions."
 
 ## 7. Making a Prediction Using [`#!sql SELECT`](/sql/api/select/)

@@ -149,7 +149,7 @@ def postgres_db():
     container = None
 
     connection_args = {
-                        "host": "172.17.0.1",
+                        "host": "localhost",
                         "port": "15432",
                         "user": "postgres",
                         "password": "supersecret",

@@ -94,20 +94,21 @@ jobs:
           # HTTP
           echo -e "\n===============test HTTP===============\n"
           pytest -vx tests/integration_tests/flows/test_http.py
-
-          mkdir -p ~/.ssh/
-          echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
-          sudo chmod 600 ~/.ssh/db_machine
-          echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
-          sudo chmod 600 ~/.ssh/db_machine_ms
-          echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
-          sudo chmod 644 ~/.mindsdb_credentials.json
-
-          export USE_EXTERNAL_DB_SERVER="1"
-
+          #
           # Company independent
-          echo -e "\n===============\ntest company independent\n===============\n"
-          python tests/integration_tests/flows/test_company_independent.py
+          echo -e "\n===============test company independent===============\n"
+          pytest -vx tests/integration_tests/flows/test_company_independent.py
+
+          # mkdir -p ~/.ssh/
+          # echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
+          # sudo chmod 600 ~/.ssh/db_machine
+          # echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
+          # sudo chmod 600 ~/.ssh/db_machine_ms
+          # echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
+          # sudo chmod 644 ~/.mindsdb_credentials.json
+
+          # export USE_EXTERNAL_DB_SERVER="1"
+
 
           # # Kafka Stream
           # echo -e "\n===============\ntest Kafka Stream\n===============\n"

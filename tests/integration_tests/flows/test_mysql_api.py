@@ -12,6 +12,7 @@ import pytest
 from .conftest import docker_inet_ip, TEMP_DIR
 
 
+# used by mindsdb_app fixture in conftest
 OVERRIDE_CONFIG = {
     'integrations': {},
     'api': {

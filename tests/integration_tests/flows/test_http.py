@@ -7,13 +7,16 @@ import pandas as pd
 import pytest
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from .conftest import make_test_csv, TEMP_DIR, CONFIG_PATH
+from .conftest import make_test_csv, CONFIG_PATH
 
 
+# used by mindsdb_app fixture in conftest
+OVERRIDE_CONFIG = {
+    'integrations': {},
+}
 # used by (required for) mindsdb_app fixture in conftest
 API_LIST = ["http",]
 
-# used by (required for) mindsdb_app fixture in conftest
 HTTP_API_ROOT = f'http://127.0.0.1:47334/api'
 
 

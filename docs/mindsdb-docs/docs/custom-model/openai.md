@@ -4,10 +4,10 @@ OpenAI facilitates building and deploying ML models.
 
 ## How to Bring the OpenAI Model to MindsDB
 
-To bring your OpenAI model to MindsDB, run the `#!sql CREATE PREDICTOR` statement as below.
+To bring your OpenAI model to MindsDB, run the `#!sql CREATE MODEL` statement as below.
 
 ```sql
-CREATE PREDICTOR mindsdb.openai_model
+CREATE MODEL mindsdb.openai_model
 PREDICT target_text_column
 USING 
     format='openai',

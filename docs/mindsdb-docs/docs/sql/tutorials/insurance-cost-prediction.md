@@ -92,10 +92,10 @@ Now, to create the model, let's move to the MindsDB database, and see what's ins
 ![Show mindsdb](/assets/sql/tutorials/insurance-cost/show-tables-sql-2.png)
 
 There are 2 tables, predictors, and commands. Predictors contain your predictors record, and commands contain your last commands used.  
-To train a new machine learning model we will need to CREATE PREDICTOR as a new record inside the predictors table, and using this command:
+To train a new machine learning model we will need to `CREATE MODEL` as a new record inside the predictors table, and using this command:
 
 ```sql
-CREATE PREDICTOR mindsdb.predictor_name
+CREATE MODEL mindsdb.predictor_name
 FROM integration_name
     (SELECT column_name, column_name2 FROM table_name)
 PREDICT column_name;
@@ -112,7 +112,7 @@ The values that we need to provide are:
 So, use this command to create the models:
 
 ```sql
-CREATE PREDICTOR insurance_cost_predictor
+CREATE MODEL insurance_cost_predictor
 FROM insurance_costs
     (SELECT * FROM insurance)
 PREDICT charges;

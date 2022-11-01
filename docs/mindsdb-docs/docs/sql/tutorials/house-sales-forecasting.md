@@ -90,10 +90,10 @@ Where:
 
 ## Training a Predictor
 
-Let's create and train the machine learning model. For that, we use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) statement and specify the input columns used to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
+Let's create and train the machine learning model. For that, we use the [`#!sql CREATE MODEL`](/sql/create/predictor) statement and specify the input columns used to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
 
 ```sql
-CREATE PREDICTOR mindsdb.house_sales_predictor
+CREATE MODEL mindsdb.house_sales_predictor
 FROM files
   (SELECT * FROM house_sales)
 PREDICT MA

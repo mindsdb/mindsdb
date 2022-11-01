@@ -100,7 +100,7 @@ Where:
 ### Example 2
 
     ```sql
-    CREATE PREDICTOR mindsdb.predictor_name
+    CREATE MODEL mindsdb.predictor_name
     FROM integration_name
         (SELECT column_name_1, column_name_2, target_column FROM table_name)
     PREDICT target_column;
@@ -115,7 +115,7 @@ Where:
 #### Output of Example 2
 
 ```sql
-CREATE PREDICTOR mindsdb.predictor_name
+CREATE MODEL mindsdb.predictor_name
 FROM integration_name
     (SELECT column_name_1, column_name_2, target_column FROM table_name)
 PREDICT target_column;

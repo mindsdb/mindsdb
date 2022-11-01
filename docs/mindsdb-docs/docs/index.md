@@ -102,12 +102,12 @@ On execution, we get:
 
 To learn more about MindsDB tables structure, check out [this guide](sql/table-structure/).
 
-## 5. Creating a Predictor Using [`#!sql CREATE PREDICTOR`](/sql/create/predictor/)
+## 5. Creating a Predictor Using [`#!sql CREATE MODEL`](/sql/create/predictor/)
 
-Now you are ready to create your first predictor. Use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor/) statement, as below.
+Now you are ready to create your first predictor. Use the [`#!sql CREATE MODEL`](/sql/create/predictor/) statement, as below.
 
 ```sql 
-CREATE PREDICTOR mindsdb.home_rentals_predictor
+CREATE MODEL mindsdb.home_rentals_predictor
 FROM example_data
   (SELECT * FROM demo_data.home_rentals)
 PREDICT rental_price;

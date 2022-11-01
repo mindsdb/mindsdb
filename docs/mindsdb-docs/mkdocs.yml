@@ -106,7 +106,7 @@ nav:
     - MindsDB Tables Structure: sql/table-structure.md
     - CREATE:
       - DATABASE: sql/create/databases.md
-      - PREDICTOR: sql/create/predictor.md
+      - MODEL: sql/create/predictor.md
       - TABLE: sql/create/table.md
       - VIEW: sql/create/view.md
     - UPDATE: sql/api/update.md

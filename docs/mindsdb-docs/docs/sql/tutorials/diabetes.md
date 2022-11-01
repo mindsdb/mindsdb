@@ -96,7 +96,7 @@ The predictor we will create will be trained to determine negative and positive 
 Use the following query to create a predictor that will predict the `Class` (*positive or negative*) for the specific field parameters.
 
 ```sql
-CREATE PREDICTOR diabetes_predictor
+CREATE MODEL diabetes_predictor
 FROM mindsdb_prediction
     (SELECT * FROM diabetes)
 PREDICT class;

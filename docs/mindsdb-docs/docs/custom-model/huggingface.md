@@ -4,10 +4,10 @@ HuggingFace facilitates building, training, and deploying ML models.
 
 ## How to Bring the HuggingFace Model to MindsDB
 
-To bring your HuggingFace model to MindsDB, run the `#!sql CREATE PREDICTOR` statement as below.
+To bring your HuggingFace model to MindsDB, run the `#!sql CREATE MODEL` statement as below.
 
 ```sql
-CREATE PREDICTOR mindsdb.huggingface_model
+CREATE MODEL mindsdb.huggingface_model
 PREDICT `1`  -- `1` is the target column name
 USING 
     format='huggingface',

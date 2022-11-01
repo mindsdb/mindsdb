@@ -65,7 +65,7 @@ To try out MindsDB right away without bringing in your own data or models, follo
 
     ![DBeaver Preview Data](/assets/dbeaver-preview-data.png)
 
-1. Now you are ready to create your model, using [`CREATE PREDICTOR`](https://docs.mindsdb.com/sql/create/predictor/). If you already have a model in MLFlow, you can connect to your model.
+1. Now you are ready to create your model, using [`CREATE MODEL`](https://docs.mindsdb.com/sql/create/predictor/). If you already have a model in MLFlow, you can connect to your model.
 
     === "MindsDB is creating my model"
 
@@ -79,7 +79,7 @@ To try out MindsDB right away without bringing in your own data or models, follo
             #create-predictor code { background-color: #353535; color: #f5f5f5 }
         </style>
         
-        mysql> CREATE PREDICTOR mindsdb.home_rentals_predictor
+        mysql> CREATE MODEL mindsdb.home_rentals_predictor
             -> FROM example_data (select * from demo_data.home_rentals)
             -> PREDICT rental_price
             -> USING url.predict='http://host.docker.internal:1234/invocations',

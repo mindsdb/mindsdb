@@ -309,9 +309,7 @@ class BaseMLEngineExec:
         if target not in training_data_df.columns:
             raise Exception(f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
-        problem_definition = statement.using
-        if problem_definition is None:
-            problem_definition = {}
+        problem_definition = {'target': target}
 
         training_data_columns_count, training_data_rows_count = 0, 0
         if training_data_df is not None:
@@ -323,12 +321,25 @@ class BaseMLEngineExec:
                 raise Exception(
                     f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
-        problem_definition['target'] = target
+        for attr in ['using', 'horizon', 'window']:
+            if hasattr(statement, attr) and getattr(statement, attr) is not None:
+                problem_definition[attr] = getattr(statement, attr)
+
+        if hasattr(statement, 'order_by') and statement.order_by is not None:
+            problem_definition['order_by'] = str(getattr(statement, 'order_by')[0])
+        if hasattr(statement, 'group_by') and statement.group_by is not None:
+            problem_definition['group_by'] = [str(col) for col in getattr(statement, 'group_by')]
+
+        if problem_definition.get('order_by', False):
+            problem_definition['timeseries_settings'] = {'is_timeseries': True}
+            for attr in ['order_by', 'group_by', 'horizon', 'window']:
+                if attr in problem_definition:
+                    problem_definition['timeseries_settings'][attr] = problem_definition[attr]
 
         join_learn_process = False
-        if 'join_learn_process' in problem_definition:
-            join_learn_process = problem_definition['join_learn_process']
-            del problem_definition['join_learn_process']
+        if 'join_learn_process' in problem_definition.get('using', {}):
+            join_learn_process = problem_definition['using']['join_learn_process']
+            del problem_definition['using']['join_learn_process']
 
         predictor_record = db.Predictor(
             company_id=self.company_id,

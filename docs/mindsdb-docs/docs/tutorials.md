@@ -66,6 +66,8 @@
 * [Predict Municipal Debt Risk Analysis](https://teslimodus.medium.com/predict-municipal-debt-risk-analysis-5c5416502a29) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [What is MindsDB? How to get started with it ](https://medium.com/@hritikd3/what-is-mindsdb-how-to-get-started-2b3cf6d99707) by [Hritik Dangi](https://github.com/hritikd3)
 * [Using MindsDB to Predict Amazon Rainforest Degradation](https://medium.com/@alissatroianonyc/nusing-mindsdb-to-predict-amazon-rainforest-degradation-1ccb8e993e48) by [Alissa Troiano](https://github.com/alissatroiano)
+* [How to Design a custom mixer model in Lightwood](https://medium.com/@teslimodus/introduction-e2f933c40f4c) by [Teslim Odumuyiwa](https://github.com/Tes-program)
+* [Predicting & Visualizing Petroleum Production with MindsDB and Tableau](https://dev.to/tesprogram/predicting-visualizing-petroleum-production-with-mindsdb-and-tableau-373f) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [Using MindsDB to Predict Microsoft Stock Prices  ](https://dev.to/viveknshah/using-mindsdb-to-predict-microsoft-stock-prices-3l79) by [Vivek Shah](https://github.com/viveknshah)
 
 # Community Video Guides
@@ -110,4 +112,5 @@
 * [Setting up data sources with mindsDB](https://www.youtube.com/watch?v=kRrMjUVnib0) by [Syed Zubeen](https://github.com/syedzubeen)
 * [Integrating your MindsDB instance into MongoDB](https://www.youtube.com/watch?v=xwUGBbNkyks) by [Syed Zubeen](https://github.com/syedzubeen)
 * [Predicting car prices with MindsDB](https://www.youtube.com/watch?v=pYSlYBjukNA) by [Syed Zubeen](https://github.com/syedzubeen)
+* [Forcasting quarterly house sales with MindsDB](https://www.youtube.com/watch?v=dNjN52xdgVU) by [HellFire](https://github.com/Artemis6969)
 * [How Mindsdb is impacting the world of Machine Learning](https://youtu.be/YngjfwJLplA) by [Prathik Shetty](https://github.com/prathikshetty2002)

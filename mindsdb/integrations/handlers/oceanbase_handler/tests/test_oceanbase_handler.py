@@ -1,20 +1,20 @@
 import unittest
-from mindsdb.integrations.handlers.orioledb_handler.orioledb_handler import OrioleDBHandler
+from mindsdb.integrations.handlers.oceanbase_handler.oceanbase_handler import OceanBaseHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
-class OrioleDBHandlerTest(unittest.TestCase):
+class OceanBaseHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
             "connection_data": {
                 "host": "localhost",
-                "port": 5432,
-                "user": "postgres",
-                "password": "1234",
-                "database": "postgres",
+                "port": 9030,
+                "user": "root",
+                "password": "",
+                "database": "test",
             }
         }
-        cls.handler = OrioleDBHandler('test_orioledb_handler', **cls.kwargs)
+        cls.handler = OceanBaseHandler('test_oceanbase_handler', **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()

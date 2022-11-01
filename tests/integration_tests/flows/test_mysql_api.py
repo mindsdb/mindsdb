@@ -248,16 +248,16 @@ class TestMySqlApi(BaseStuff):
 
     def test_ts_train_and_predict(self, subtests):
         train_df = pd.DataFrame({
-            'group': ["A" for _ in range(100, 210)] + ["B" for _ in range(100, 210)],
-            'order': [x for x in range(100, 210)] + [x for x in range(200, 310)],
+            'gby': ["A" for _ in range(100, 210)] + ["B" for _ in range(100, 210)],
+            'oby': [x for x in range(100, 210)] + [x for x in range(200, 310)],
             'x1': [x for x in range(100, 210)] + [x for x in range(100, 210)],
             'x2': [x * 2 for x in range(100, 210)] + [x * 3 for x in range(100, 210)],
             'y': [x * 3 for x in range(100, 210)] + [x * 2 for x in range(100, 210)]
         })
 
         test_df = pd.DataFrame({
-            'group': ["A" for _ in range(210, 220)] + ["B" for _ in range(210, 220)],
-            'order': [x for x in range(210, 220)] + [x for x in range(310, 320)],
+            'gby': ["A" for _ in range(210, 220)] + ["B" for _ in range(210, 220)],
+            'oby': [x for x in range(210, 220)] + [x for x in range(310, 320)],
             'x1': [x for x in range(210, 220)] + [x for x in range(210, 220)],
             'x2': [x * 2 for x in range(210, 220)] + [x * 3 for x in range(210, 220)],
             'y': [x * 3 for x in range(210, 220)] + [x * 2 for x in range(210, 220)]
@@ -271,20 +271,20 @@ class TestMySqlApi(BaseStuff):
 
         params = [
             ("with_group_by_hor1",
-                f"CREATE MODEL %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order GROUP BY group WINDOW 10 HORIZON 1;",
-                f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.group= 'A' LIMIT 1;",
+                f"CREATE MODEL %s from files (select * from {train_ds_name}) PREDICT y ORDER BY oby GROUP BY gby WINDOW 10 HORIZON 1;",
+                f"SELECT res.gby, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.gby= 'A' LIMIT 1;",
                 1),
             ("no_group_by_hor1",
-                f"CREATE MODEL %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order WINDOW 10 HORIZON 1;",
-                f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 1;",
+                f"CREATE MODEL %s from files (select * from {train_ds_name}) PREDICT y ORDER BY oby WINDOW 10 HORIZON 1;",
+                f"SELECT res.gby, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 1;",
                 1),
             ("with_group_by_hor2",
-                f"CREATE MODEL %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order GROUP BY group WINDOW 10 HORIZON 2;",
-                f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.group= 'A' LIMIT 2;",
+                f"CREATE MODEL %s from files (select * from {train_ds_name}) PREDICT y ORDER BY oby GROUP BY gby WINDOW 10 HORIZON 2;",
+                f"SELECT res.gby, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res WHERE source.gby= 'A' LIMIT 2;",
                 2),
             ("no_group_by_hor2",
-                f"CREATE MODEL %s from files (select * from {train_ds_name}) PREDICT y ORDER BY order WINDOW 10 HORIZON 2;",
-                f"SELECT res.group, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 2;",
+                f"CREATE MODEL %s from files (select * from {train_ds_name}) PREDICT y ORDER BY oby WINDOW 10 HORIZON 2;",
+                f"SELECT res.gby, res.y as PREDICTED_RESULT FROM files.{test_ds_name} as source JOIN mindsdb.%s as res LIMIT 2;",
                 2),
         ]
         for predictor_name, create_query, select_query, res_len in params:

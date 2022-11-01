@@ -335,7 +335,7 @@ You can check the model status using this query:
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='byom_ray_serve_nlp';
 ```
 

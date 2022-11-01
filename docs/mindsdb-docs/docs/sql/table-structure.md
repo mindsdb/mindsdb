@@ -27,7 +27,7 @@ At first, the `predictors` table is empty. But, as soon as you create your first
 
 ```sql
 SELECT *
-FROM mindsdb.predictors;
+FROM mindsdb.models;
 ```
 
 On execution, we get:
@@ -60,7 +60,7 @@ To create a predictor, follow [this guide](https://docs.mindsdb.com/sql/create/p
 
 ```sql
 SELECT *
-FROM mindsdb.predictors;
+FROM mindsdb.models;
 ```
 
 On execution, we get:

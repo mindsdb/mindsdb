@@ -53,7 +53,7 @@ We can check the status of the model by querying the name we used as the predict
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='spam_predictor';
 ```
 

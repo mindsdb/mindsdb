@@ -112,7 +112,7 @@ A predictor may take a couple of minutes for the training to complete. You can m
 
 ```sql
 SELECT status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='eeg_eye_forecast';
 ```
 

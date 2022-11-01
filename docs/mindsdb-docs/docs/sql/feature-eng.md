@@ -265,7 +265,7 @@ Finally, let's check the predictor status whose value is `generating` at first, 
 
     ```sql
     SELECT *
-    FROM mindsdb.predictors
+    FROM mindsdb.models
     WHERE name='price_predictor';
     ```
 
@@ -283,7 +283,7 @@ Finally, let's check the predictor status whose value is `generating` at first, 
 
     ```sql
     SELECT *
-    FROM mindsdb.predictors
+    FROM mindsdb.models
     WHERE name='price_predictor_plus_2_columns';
     ```
 
@@ -301,7 +301,7 @@ Finally, let's check the predictor status whose value is `generating` at first, 
 
     ```sql
     SELECT *
-    FROM mindsdb.predictors
+    FROM mindsdb.models
     WHERE name='price_predictor_plus_another_2_columns';
     ```
 
@@ -539,7 +539,7 @@ We start with the predictor based on the partial table.
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='price_predictor_car_sales';
 ```
 
@@ -557,7 +557,7 @@ And now, for the predictor based on the full table.
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='price_predictor_car_sales_info';
 ```
 

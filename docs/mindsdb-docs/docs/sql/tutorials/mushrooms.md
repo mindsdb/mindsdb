@@ -130,7 +130,7 @@ The predictor was created successfully and has started training. To check the st
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='mushroom_predictor';
 ```
 

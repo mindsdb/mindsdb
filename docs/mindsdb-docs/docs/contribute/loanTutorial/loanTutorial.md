@@ -79,7 +79,9 @@ If all is successfull, you should see this screen below:
 To confirm this and view details of your model like the accuracy, use the following code:
 
 ```
-SELECT * FROM mindsdb.predictors WHERE name='loanPredictor';
+SELECT * 
+FROM mindsdb.models 
+WHERE name='loanPredictor';
 ```
 
 and you can see details of your model...

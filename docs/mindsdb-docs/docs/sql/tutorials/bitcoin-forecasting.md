@@ -110,7 +110,9 @@ So, use this command to create the models:
 If there's no error, that means your model is created and training. To see if your model is finished, use this command:
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name = predictor_name;
+SELECT * 
+FROM mindsdb.models 
+WHERE name = predictor_name;
 ```
 
 And values that we need to provide are:

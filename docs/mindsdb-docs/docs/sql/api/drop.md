@@ -30,7 +30,7 @@ Let's list all the available predictor tables.
 
 ```sql
 SELECT name
-FROM mindsdb.predictors;
+FROM mindsdb.models;
 ```
 
 On execution, we get:
@@ -56,11 +56,11 @@ On execution, we get:
 Query OK, 0 rows affected (0.058 sec)
 ```
 
-We can check if the deletion was successful by querying the `mindsdb.predictors` table again.
+We can check if the deletion was successful by querying the `mindsdb.models` table again.
 
 ```sql
 SELECT name
-FROM mindsdb.predictors;
+FROM mindsdb.models;
 ```
 
 On execution, we get:

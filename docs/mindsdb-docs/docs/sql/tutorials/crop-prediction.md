@@ -71,7 +71,7 @@ Now the predictor will begin training. You can check the status of the predictor
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='crop_predictor';
 ```
 

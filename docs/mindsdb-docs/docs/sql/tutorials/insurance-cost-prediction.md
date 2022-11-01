@@ -124,7 +124,7 @@ If there's no error, that means your model is created and training has started. 
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name = predictor_name;
 ```
 
@@ -134,7 +134,7 @@ And values that we need to provide are:
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='insurance_cost_predictor';
 ```
 

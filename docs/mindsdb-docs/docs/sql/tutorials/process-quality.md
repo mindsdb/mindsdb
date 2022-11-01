@@ -85,7 +85,7 @@ Now the Predictor will begin training. You can check the status with the followi
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='process_quality_predictor';
 ```
 

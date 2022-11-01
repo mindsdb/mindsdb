@@ -15,11 +15,11 @@ USING
     data_dtype={"0": "integer", "1": "integer"};
 ```
 
-Now you can query the `mindsdb.predictors` table to see your model.
+Now you can query the `mindsdb.models` table to see your model.
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='openai_model';
 ```
 

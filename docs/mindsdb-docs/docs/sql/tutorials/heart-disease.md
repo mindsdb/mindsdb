@@ -106,7 +106,7 @@ What we did here was to create a predictor called `patients_target `to predict t
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='patients_target';
 ```
 

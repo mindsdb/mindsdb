@@ -327,7 +327,7 @@ dtype_dict={"text": "rich_text", "target": "integer"},
 format='ray_server';
 ```
 
-Training will take a while given that this model is a neural network rather than a simple logistic regression. You can check its status with the query `SELECT * FROM mindsdb.predictors WHERE name = 'byom_ray_serve_nlp';`, much like you'd do with a "normal" MindsDB predictor.
+Training will take a while given that this model is a neural network rather than a simple logistic regression. You can check its status with the query `SELECT * FROM mindsdb.models WHERE name = 'byom_ray_serve_nlp';`, much like you'd do with a "normal" MindsDB predictor.
 
 Once the predictor's status becomes `trained` we can query it for predictions as usual:
 

@@ -125,7 +125,7 @@ It may take a couple of minutes until the predictor is trained. You can monitor 
 
 ```sql
 SELECT status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='home_rentals_predictor';
 ```
 

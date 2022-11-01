@@ -100,7 +100,7 @@ At this point, the predictor will immediately begin training.  Check the status 
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='bodyfat_predictor';
 ```
 

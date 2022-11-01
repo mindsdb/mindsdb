@@ -32,11 +32,11 @@ Where:
 | `PREDICT [target_column]`                       | `target_column` is the column to be predicted.                                                                                                  |
 
 !!! TIP "Checking Model Status"
-    After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training process by querying the `#!sql mindsdb.predictors` table.
+    After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training process by querying the `#!sql mindsdb.models` table.
 
     ```sql
     SELECT *
-    FROM mindsdb.predictors
+    FROM mindsdb.models
     WHERE name='[predictor_name]';
     ```
 
@@ -67,11 +67,11 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-To check the predictor status, query the [`#!sql mindsdb.predictors`](/sql/table-structure/#the-predictors-table) table.
+To check the predictor status, query the [`#!sql mindsdb.models`](/sql/table-structure/#the-predictors-table) table.
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='home_rentals_model';
 ```
 

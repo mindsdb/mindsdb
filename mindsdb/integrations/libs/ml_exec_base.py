@@ -327,6 +327,8 @@ class BaseMLEngineExec:
 
             if statement.group_by is not None:
                 problem_definition['timeseries_settings']['group_by'] = [str(col) for col in getattr(statement, 'group_by')]
+        else:
+            problem_definition['timeseries_settings'] = {'is_timeseries': False}
 
         join_learn_process = False
         if 'join_learn_process' in problem_definition.get('using', {}):

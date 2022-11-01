@@ -72,6 +72,8 @@
 * [Using MindsDB to Predict Amazon Rainforest Degradation](https://medium.com/@alissatroianonyc/nusing-mindsdb-to-predict-amazon-rainforest-degradation-1ccb8e993e48) by [Alissa Troiano](https://github.com/alissatroiano)
 * [How to Design a custom mixer model in Lightwood](https://medium.com/@teslimodus/introduction-e2f933c40f4c) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [Using MindsDB to Predict Microsoft Stock Prices  ](https://dev.to/viveknshah/using-mindsdb-to-predict-microsoft-stock-prices-3l79) by [Vivek Shah](https://github.com/viveknshah)
+* [Tutorial to Predict the Weather Using MindsDB and MongoDB ] by [Nupoor Shetye](https://dev.to/nupoor10/tutorial-to-predict-the-weather-using-mindsdb-and-mongodb-3blm)
+* [Tutorial to Predict Amsterdam Housing Prices Using MindsDB and MongoDB ] by [Nupoor Shetye](https://dev.to/nupoor10/tutorial-to-predict-amsterdam-housing-prices-using-mindsdb-and-mongodb-nha)
 
 
 # Community Video Guides

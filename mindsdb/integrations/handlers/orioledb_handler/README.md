@@ -29,7 +29,7 @@ PARAMETERS = {
   "user": "root",
   "password": "root",
   "host": "hostname",
-  "port": "5432",
+  "port": 5432,
   "database": "postgres"
 }
 ```

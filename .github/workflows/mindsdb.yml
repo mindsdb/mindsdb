@@ -91,6 +91,10 @@ jobs:
           echo -e "\n===============test MySQL binary API===============\n"
           pytest -vx -k 'not TestMySqlApi' tests/integration_tests/flows/test_mysql_bin_api.py
 
+          # HTTP
+          echo -e "\n===============test HTTP===============\n"
+          pytest -vx tests/integration_tests/flows/test_http.py
+
           mkdir -p ~/.ssh/
           echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
           sudo chmod 600 ~/.ssh/db_machine
@@ -104,10 +108,6 @@ jobs:
           # Company independent
           echo -e "\n===============\ntest company independent\n===============\n"
           python tests/integration_tests/flows/test_company_independent.py
-
-          # HTTP
-          echo -e "\n===============\ntest HTTP\n===============\n"
-          python tests/integration_tests/flows/test_http.py
 
           # # Kafka Stream
           # echo -e "\n===============\ntest Kafka Stream\n===============\n"

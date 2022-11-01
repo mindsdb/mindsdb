@@ -6,20 +6,28 @@ import pandas as pd
 from mindsdb_sql import parse_sql
 
 # How to run:
-#  env PYTHONPATH=./ pytest tests/unit/test_merlion_handler.py
-# Warning: uncomment and run too many sql-testcase in detector and forecaster will cost a long time
+#   env PYTHONPATH=./ pytest tests/unit/test_merlion_handler.py
 from mindsdb.integrations.handlers.merlion_handler.adapters import DefaultForecasterAdapter, SarimaForecasterAdapter, \
     ProphetForecasterAdapter, MSESForecasterAdapter, IsolationForestDetectorAdapter, \
     WindStatsDetectorAdapter, ProphetDetectorAdapter
-# from mindsdb.integrations.handlers.merlion_handler.adapters import DefaultDetectorAdapter
 from .executor_test_base import BaseExecutorTest
 
 import pandas as pd
-from pathlib import Path
-import requests
 
 
 class TestMerlion(BaseExecutorTest):
+    def set_project(self):
+        r = self.db.Project.query.filter_by(name='mindsdb').first()
+        if r is not None:
+            self.db.session.delete(r)
+
+        r = self.db.Project(
+            id=1,
+            name='mindsdb',
+        )
+        self.db.session.add(r)
+        self.db.session.commit()
+
     def get_m4_df(self) -> pd.DataFrame:
         train_csv = "https://raw.githubusercontent.com/Mcompetitions/M4-methods/master/Dataset/Train/Hourly-train.csv"
         test_csv = "https://raw.githubusercontent.com/Mcompetitions/M4-methods/master/Dataset/Test/Hourly-test.csv"
@@ -89,27 +97,22 @@ class TestMerlion(BaseExecutorTest):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_merlion_forecaster_sql(self, mock_handler):
+        self.set_project()
         # prepare data
         df = self.get_m4_df()
         df["t"] = df.index
         self.set_handler(mock_handler, name='pg', tables={'m4': df})
         # test default
         self.exec_train_and_forecast(mock_handler=mock_handler, model_name="default", using="")
-        # # test arima
-        # self.exec_train_and_predict(mock_handler=mock_handler, model_name="arima", using=f"USING model_type='arima'")
-        # # test prophet
-        # self.exec_train_and_forecast(mock_handler=mock_handler, model_name="prophet", using=f"USING model_type='prophet'")
-        # # test mses
-        # self.exec_train_and_forecast(mock_handler=mock_handler, model_name="mses", using=f"USING model_type='mses'")
 
     def exec_train_and_forecast(self, mock_handler, model_name, using):
         # create predictor
         create_sql = f'''
-                    CREATE PREDICTOR merlion.{model_name}_forecaster
+                    CREATE PREDICTOR mindsdb.{model_name}_forecaster
                     FROM pg
                     (select t, H1 from m4 where train = 1) 
                     PREDICT H1
-                    {using}
+                    USING engine='merlion'{using}
                 '''
         ret = self.run_mindsdb_sql(sql=create_sql)
         assert ret.error_code is None, "train failed: " + model_name
@@ -118,7 +121,7 @@ class TestMerlion(BaseExecutorTest):
 
         predict_sql = f'''
                     select p.t, p.H1 real, t.H1, t.H1__upper, t.H1__lower
-                    from merlion.{model_name}_forecaster t
+                    from mindsdb.{model_name}_forecaster t
                     inner join pg.m4 p on t.t = p.t
                     where p.train = 0
                 '''
@@ -131,16 +134,6 @@ class TestMerlion(BaseExecutorTest):
         df.drop(columns=["t"], inplace=True)
         df_train = df[df["train"] == 1][["val"]]
         df_test = df[df["train"] == 0][["val"]]
-        # # test default, it can't passed the unit test because of a py4j problem,
-        # # (ValueError: invalid literal for int() with base 10: b'')
-        # # it should be caused by the incompatible between test env and py4j, but
-        # # the detector works successfully in deployed mode.
-        # adapter = DefaultDetectorAdapter()
-        # adapter.train(df_train.copy(deep=True), target="val")
-        # rt_df = adapter.predict(df_test.copy(deep=True), target="val")
-        # assert rt_df is not None
-        # assert len(rt_df) == len(df_test)
-        # assert len(rt_df[rt_df["val__anomaly_score"] > 0]) > 0
         # isolation
         adapter = IsolationForestDetectorAdapter()
         adapter.train(df_train.copy(deep=True), target="val")
@@ -162,6 +155,7 @@ class TestMerlion(BaseExecutorTest):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_merlion_detector_sql(self, mock_handler):
+        self.set_project()
         # prepare data
         df = self.get_nab_df()
         df["t"] = pd.to_datetime(df["t"])
@@ -170,27 +164,15 @@ class TestMerlion(BaseExecutorTest):
         # test isolation forest
         self.exec_train_and_detect(mock_handler=mock_handler, model_name="isolation",
                                      using_model=f", model_type='isolation'")
-        # # test default, it can't passed the unit test because of a py4j problem,
-        # # (ValueError: invalid literal for int() with base 10: b'')
-        # # it should be caused by the incompatible between test env and py4j, but
-        # # the detector works successfully in deployed mode.
-        # self.exec_train_and_detect(mock_handler=mock_handler, model_name="default",
-        #                              using_model=f", model_type='default'")
-        # # test windstats
-        # self.exec_train_and_detect(mock_handler=mock_handler, model_name="windstats",
-        #                              using_model=f", model_type='windstats'")
-        # # prophet
-        # self.exec_train_and_detect(mock_handler=mock_handler, model_name="prophet",
-        #                              using_model=f", model_type='prophet'")
 
     def exec_train_and_detect(self, mock_handler, model_name, using_model):
         # create predictor
         create_sql = f'''
-                    CREATE PREDICTOR merlion.{model_name}_detector
+                    CREATE PREDICTOR mindsdb.{model_name}_detector
                     FROM pg
                     (select t, val from nba where train = 1) 
                     PREDICT val
-                    USING task='detector'{using_model}
+                    USING engine='merlion', task='detector'{using_model}
                 '''
         ret = self.run_mindsdb_sql(sql=create_sql)
         assert ret.error_code is None, "train failed: " + model_name
@@ -199,7 +181,7 @@ class TestMerlion(BaseExecutorTest):
 
         predict_sql = f'''
                     select p.t, p.val real, d.val__anomaly_score
-                    from merlion.{model_name}_detector d
+                    from mindsdb.{model_name}_detector d
                     inner join pg.nba p on d.t = p.t and d.val = p.val
                     where p.train = 0
                     '''
@@ -211,7 +193,7 @@ class TestMerlion(BaseExecutorTest):
         done = False
         for attempt in range(900):
             ret = self.run_mindsdb_sql(
-                f"select status from merlion.predictors where name='{model_name}'"
+                f"select status from mindsdb.predictors where name='{model_name}'"
             )
             if len(ret.data) > 0:
                 if ret.data[0][0] == 'complete':

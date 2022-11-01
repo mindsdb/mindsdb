@@ -1,7 +1,10 @@
 from enum import Enum
 import json
+from typing import Optional, Dict
+
 import numpy as np
 import pandas as pd
+import copy
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities.log import log
@@ -42,25 +45,30 @@ def enum_to_str(type_class: Enum) -> str:
     return "|".join(all)
 
 
-def to_ts_dataframe(df: pd.DataFrame, time_col=None) -> str:
+def to_ts_dataframe(df: pd.DataFrame, time_col=None) -> (pd.DataFrame, str):
     columns = list(df.columns.values)
-    if time_col is not None :
+    # if time column has been specified, check the specified time column
+    if time_col is not None:
         if time_col not in columns:
             raise Exception("invalid column name: " + time_col)
         if df[time_col].dtype != np.datetime64:
             try:
-                df.index = pd.to_datetime(df[time_col])
+                idx = pd.to_datetime(df[time_col])
             except Exception as e:
                 raise Exception("can not convert column to datetime: " + time_col + " " + str(e))
+    # if time column has not been specified, try to find one
     else:
         datetime_cols = list(df.select_dtypes(include=["datetime"]).columns.values)
         if len(datetime_cols) > 0:
             time_col = datetime_cols[0]
-            df.index = pd.to_datetime(df[time_col])
-        if time_col is None:
+            idx = pd.to_datetime(df[time_col])
+        else:
             raise Exception("can not find datetime column for time series")
-    df.drop(columns=[time_col], inplace=True)
-    return time_col
+    # build return dataframe
+    rt_df = copy.deepcopy(df)
+    rt_df.drop(columns=[time_col], inplace=True)
+    rt_df.index = idx
+    return rt_df, time_col
 
 
 class MerlionHandler(BaseMLEngine):
@@ -79,8 +87,8 @@ class MerlionHandler(BaseMLEngine):
     DEFAULT_MAX_PREDICT_STEP = 100
     DEFAULT_PREDICT_BASE_WINDOW = 10
 
-    PERSISIT_MODEL_FILE_NAME = "merlion_model"
-    PERSISIT_ARGS_KEY_IN_JSON_STORAGE = "args"
+    PERSIST_MODEL_FILE_NAME = "merlion_model"
+    PERSIST_ARGS_KEY_IN_JSON_STORAGE = "args"
 
     def create(self, target, args=None, **kwargs):
         df: pd.DataFrame = kwargs.get(self.KWARGS_DF, None)
@@ -101,8 +109,7 @@ class MerlionHandler(BaseMLEngine):
         if df is None:
             raise Exception("missing required key in args: " + self.KWARGS_DF)
         else:
-            column_sequence = list(df.columns.values)
-            sorted(column_sequence)
+            column_sequence = sorted(list(df.columns.values))
             df = df[column_sequence]
             args[self.ARG_COLUMN_SEQUENCE] = column_sequence
 
@@ -111,7 +118,7 @@ class MerlionHandler(BaseMLEngine):
         task_enum = TaskType[task]
 
         # check and cast to ts dataframe
-        time_column = to_ts_dataframe(df=df, time_col=time_column)
+        ts_df, time_column = to_ts_dataframe(df=df, time_col=time_column)
         args[self.ARG_USING_TIME_COLUMN] = time_column
 
         # train model
@@ -120,20 +127,20 @@ class MerlionHandler(BaseMLEngine):
             model_args[MerlionArguments.max_forecast_steps.value] = horizon
         adapter: BaseMerlionForecastAdapter = adapter_class(**model_args)
         log.info("Training model, args: " + json.dumps(args))
-        adapter.train(df=df, target=target)
+        adapter.train(df=ts_df, target=target)
         log.info("Training model completed.")
 
         # persist save model
         model_bytes = adapter.to_bytes()
-        self.model_storage.file_set(self.PERSISIT_MODEL_FILE_NAME, model_bytes)
-        self.model_storage.json_set(self.PERSISIT_ARGS_KEY_IN_JSON_STORAGE, args)
+        self.model_storage.file_set(self.PERSIST_MODEL_FILE_NAME, model_bytes)
+        self.model_storage.json_set(self.PERSIST_ARGS_KEY_IN_JSON_STORAGE, args)
         log.info("Model and args saved.")
 
-    def predict(self, df):
+    def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         rt_df = df.copy(deep=True)
         # read model and args from storage
-        model_bytes = self.model_storage.file_get(self.PERSISIT_MODEL_FILE_NAME)
-        args = self.model_storage.json_get(self.PERSISIT_ARGS_KEY_IN_JSON_STORAGE)
+        model_bytes = self.model_storage.file_get(self.PERSIST_MODEL_FILE_NAME)
+        args = self.model_storage.json_get(self.PERSIST_ARGS_KEY_IN_JSON_STORAGE)
 
         # resolve args
         task = args[self.ARG_USING_TASK]
@@ -141,7 +148,6 @@ class MerlionHandler(BaseMLEngine):
         time_column = args[self.ARG_USING_TIME_COLUMN]
         target = args[self.ARG_TARGET]
         horizon = args["horizon"]
-        # window = args[self.ARG_WINDOW]
         feature_column_sequence = list(args[self.ARG_COLUMN_SEQUENCE])
         task_enum = TaskType[task]
 
@@ -152,7 +158,7 @@ class MerlionHandler(BaseMLEngine):
         if len(missing_required_columns) > 0:
             raise Exception("Missing required columns: " + ",".join(missing_required_columns))
         feature_df = rt_df[feature_column_sequence]
-        to_ts_dataframe(df=feature_df, time_col=time_column)
+        ts_feature_df, _ = to_ts_dataframe(df=feature_df, time_col=time_column)
 
         # init model adapter
         adapter_class: BaseMerlionForecastAdapter = self.__args_to_adapter_class(task=task, model_type=model_type)
@@ -163,10 +169,10 @@ class MerlionHandler(BaseMLEngine):
         adapter.initialize_model(bytes=model_bytes)
 
         # predict
-        pred_df = adapter.predict(df=feature_df, target=target)
+        pred_df = adapter.predict(df=ts_feature_df, target=target)
 
         # build result
-        pred_df = feature_df[[]].join(pred_df, how="left")
+        pred_df = ts_feature_df[[]].join(pred_df, how="left")
 
         # arrange data
         pred_df.index = rt_df.index

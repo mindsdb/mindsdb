@@ -66,6 +66,8 @@
 * [Predict Municipal Debt Risk Analysis](https://teslimodus.medium.com/predict-municipal-debt-risk-analysis-5c5416502a29) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [What is MindsDB? How to get started with it ](https://medium.com/@hritikd3/what-is-mindsdb-how-to-get-started-2b3cf6d99707) by [Hritik Dangi](https://github.com/hritikd3)
 * [Using MindsDB to Predict Microsoft Stock Prices  ](https://dev.to/viveknshah/using-mindsdb-to-predict-microsoft-stock-prices-3l79) by [Vivek Shah](https://github.com/viveknshah)
+* [Tutorial to Predict the Weather Using MindsDB and MongoDB ] by [Nupoor Shetye](https://dev.to/nupoor10/tutorial-to-predict-the-weather-using-mindsdb-and-mongodb-3blm)
+* [Tutorial to Predict Amsterdam Housing Prices Using MindsDB and MongoDB ] by [Nupoor Shetye](https://dev.to/nupoor10/tutorial-to-predict-amsterdam-housing-prices-using-mindsdb-and-mongodb-nha)
 
 
 # Community Video Guides

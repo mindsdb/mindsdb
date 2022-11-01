@@ -93,6 +93,11 @@ class BaseUnitTest:
         db.session.add(r)
         db.session.flush()
         self.lw_integration_id = r.id
+
+        # default project
+        r = db.Project(name='mindsdb')
+        db.session.add(r)
+
         db.session.commit()
         return db
 

@@ -71,7 +71,6 @@
 * [Predicting Environment Impact of Food Production caused by C02 Emission](https://dev.to/tesprogram/predicting-environment-impact-of-food-production-caused-by-c02-emission-51e3) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [Using MindsDB to Predict Amazon Rainforest Degradation](https://medium.com/@alissatroianonyc/nusing-mindsdb-to-predict-amazon-rainforest-degradation-1ccb8e993e48) by [Alissa Troiano](https://github.com/alissatroiano)
 * [How to Design a custom mixer model in Lightwood](https://medium.com/@teslimodus/introduction-e2f933c40f4c) by [Teslim Odumuyiwa](https://github.com/Tes-program)
-* [Predicting & Visualizing Petroleum Production with MindsDB and Tableau](https://dev.to/tesprogram/predicting-visualizing-petroleum-production-with-mindsdb-and-tableau-373f) by [Teslim Odumuyiwa](https://github.com/Tes-program)
 * [Using MindsDB to Predict Microsoft Stock Prices  ](https://dev.to/viveknshah/using-mindsdb-to-predict-microsoft-stock-prices-3l79) by [Vivek Shah](https://github.com/viveknshah)
 
 

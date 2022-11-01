@@ -816,3 +816,29 @@ class TestWithNativeQuery(BaseExecutorTestMockModel):
 
         # p is predicted value
         assert ret_df['p'][0] == predicted_value
+
+class TestProjectStructure(BaseExecutorTestMockModel):
+
+    def test_flow(self):
+        ...
+
+        # create folde
+
+        # create model
+
+        # use model
+
+        # retrain predictor
+
+        # list of versions
+
+        # run predict with old version
+
+        # switch version
+
+        # drop version
+
+        # drop predictor
+
+        # all the same with TS
+

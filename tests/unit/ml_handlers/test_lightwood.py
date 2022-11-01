@@ -41,7 +41,7 @@ class TestLW(BaseExecutorTest):
 
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def xtest_simple(self, mock_handler):
+    def test_simple(self, mock_handler):
 
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=['a'])
@@ -115,21 +115,5 @@ class TestLW(BaseExecutorTest):
            JOIN proj.modelx as p
            where t.a='b' and t.t > latest
         ''')
-        print(ret)
-
-        # retrain predictor
-
-        # list of versions
-
-        # run predict with old version
-
-        # switch version
-
-        # drop version
-
-        # drop predictor
-
-        # all the same with TS
-
-
-
+        # LW can predict
+        assert list(ret.x) == [42, 43, 44]

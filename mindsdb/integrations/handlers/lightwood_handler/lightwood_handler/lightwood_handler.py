@@ -78,9 +78,10 @@ class LightwoodHandler(BaseMLEngine):
     name = 'lightwood'
 
     def create(self, target, df, args):
+        args['target'] = target
         run_learn(
             df,
-            args,   # problem_definition
+            args,   # Problem definition and JsonAI override
             self.model_storage
         )
 
@@ -188,7 +189,7 @@ class LightwoodHandler(BaseMLEngine):
                 for row in pred_dicts
             ])
 
-            group_by = timeseries_settings['group_by'] or []
+            group_by = timeseries_settings.get('group_by', [])
             order_by_column = timeseries_settings['order_by']
             if isinstance(order_by_column, list):
                 order_by_column = order_by_column[0]

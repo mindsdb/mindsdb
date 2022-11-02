@@ -1,21 +1,23 @@
-import unittest
-import inspect
 from pathlib import Path
 import json
+
 import requests
+import pytest
 
 from pymongo import MongoClient
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from .conftest import CONFIG_PATH
 
-from common import (
-    CONFIG_PATH,
-    HTTP_API_ROOT,
-    run_environment
-)
+# used by mindsdb_app fixture in conftest
+OVERRIDE_CONFIG = {
+    'integrations': {},
+}
 
-config = {}
+# used by (required for) mindsdb_app fixture in conftest
+API_LIST = ["http", 'mongodb']
 
+CONFIG = {}
 CID_A = 1
 CID_B = 2
 
@@ -24,14 +26,11 @@ def get_string_params(parameters):
     return ', '.join([f'{key} = {json.dumps(val)}' for key, val in parameters.items()])
 
 
-class CompanyIndependentTest(unittest.TestCase):
+@pytest.mark.usefixtures("mindsdb_app")
+class TestCompanyIndependent:
     @classmethod
-    def setUpClass(cls):
-        run_environment(
-            apis=['http', 'mongodb']
-        )
-
-        config.update(
+    def setup_class(cls):
+        CONFIG.update(
             json.loads(
                 Path(CONFIG_PATH).read_text()
             )
@@ -62,8 +61,10 @@ class CompanyIndependentTest(unittest.TestCase):
         return [x[0].lower() for x in response['data']]
 
     def assert_list(self, a, b):
-        self.assertEqual(len(a), len(b))
-        self.assertSetEqual(set(a), set(b))
+        a = set(a)
+        b = set(b)
+        assert len(a) == len(b)
+        assert a == b 
 
     def sql_via_http(self, request: str, expected_resp_type: str = None, context: dict = None,
                      headers: dict = None, company_id: int = None) -> dict:
@@ -84,34 +85,28 @@ class CompanyIndependentTest(unittest.TestCase):
             },
             headers=headers
         )
-        self.assertTrue(response.status_code == 200)
+        assert response.status_code == 200
         response = response.json()
         if expected_resp_type is not None:
-            self.assertEqual(response.get('type'), expected_resp_type)
+            assert response.get('type') == expected_resp_type
         else:
-            self.assertTrue(
-                response.get('type') in [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR]
-            )
-        self.assertIsInstance(response.get('context'), dict)
+            assert response.get('type') in [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR]
+        assert isinstance(response.get('context'), dict)
         if response['type'] == 'table':
-            self.assertIsInstance(response.get('data'), list)
-            self.assertIsInstance(response.get('column_names'), list)
+            assert isinstance(response.get('data'), list)
+            assert isinstance(response.get('column_names'), list)
         elif response['type'] == 'error':
-            self.assertIsInstance(response.get('error_code'), int)
-            self.assertIsInstance(response.get('error_message'), str)
+            assert isinstance(response.get('error_code'), int)
+            assert isinstance(response.get('error_message'), str)
         self._sql_via_http_context = response['context']
         return response
 
-    def test_1_initial_state_http(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
+    def test_initial_state_http(self):
 
         # add permanent integrations
         for cid in [CID_A, CID_B]:
             databases_names = self.get_db_names(cid)
-            self.assertTrue(
-                len(databases_names) == 1
-                and databases_names[0] == 'information_schema'
-            )
+            assert len(databases_names) == 1 and databases_names[0] == 'information_schema'
             self.sql_via_http(
                 "CREATE DATABASE files ENGINE='files'",
                 company_id=cid,
@@ -138,17 +133,16 @@ class CompanyIndependentTest(unittest.TestCase):
                 }
             )
 
-    def test_2_add_data_db_http(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
+    def test_add_data_db_http(self, postgres_db):
 
         # region create data db
-        test_integration_data = {}
-        test_integration_data.update(config['integrations']['default_postgres'])
+        test_integration_data = postgres_db["connection_data"]
+        test_integration_engine = postgres_db['type']
 
         self.sql_via_http(
             f"""
                 CREATE DATABASE test_integration_a
-                ENGINE 'postgres'
+                ENGINE '{test_integration_engine}'
                 PARAMETERS {json.dumps(test_integration_data)}
             """,
             company_id=CID_A,
@@ -177,7 +171,7 @@ class CompanyIndependentTest(unittest.TestCase):
         self.sql_via_http(
             f"""
                 CREATE DATABASE test_integration_b
-                ENGINE 'postgres'
+                ENGINE '{test_integration_engine}'
                 PARAMETERS {json.dumps(test_integration_data)}
             """,
             company_id=CID_B,
@@ -234,7 +228,7 @@ class CompanyIndependentTest(unittest.TestCase):
         self.sql_via_http(
             f"""
                 CREATE DATABASE test_integration_a
-                ENGINE 'postgres'
+                ENGINE '{test_integration_engine}'
                 PARAMETERS {json.dumps(test_integration_data)}
             """,
             company_id=CID_A,
@@ -275,25 +269,24 @@ class CompanyIndependentTest(unittest.TestCase):
 
         # region cehck select from data db
         response = self.sql_via_http(
-            "select * from test_integration_a.test_data.home_rentals limit 10",
+            "select * from test_integration_a.rentals limit 10",
             company_id=CID_A,
             expected_resp_type=RESPONSE_TYPE.TABLE
         )
-        self.assertEqual(len(response['data']), 10)
+        assert len(response['data']) == 10
 
         response = self.sql_via_http(
-            "select * from test_integration_a.test_data.home_rentals limit 10",
+            "select * from test_integration_a.rentals limit 10",
             company_id=CID_B,
             expected_resp_type=RESPONSE_TYPE.ERROR
         )
         # endregion
 
-    def test_3_add_ml_engine(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
+    def test_add_ml_engine(self):
 
         for cid in [CID_A, CID_B]:
             engines = self.get_ml_engines(cid)
-            self.assertTrue(len(engines) == 0)
+            assert len(engines) == 0
 
             self.sql_via_http(
                 "CREATE ML_ENGINE lightwood FROM lightwood USING password=''",
@@ -308,13 +301,12 @@ class CompanyIndependentTest(unittest.TestCase):
                 }
             )
 
-    def test_4_views(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
+    def test_views(self, postgres_db):
 
         query = """
             CREATE VIEW mindsdb.{}
             FROM test_integration_{} (
-                select * from test_data.home_rentals limit 50
+                select * from rentals limit 50
             )
         """
 
@@ -350,7 +342,7 @@ class CompanyIndependentTest(unittest.TestCase):
                 company_id=cid,
                 expected_resp_type=RESPONSE_TYPE.TABLE
             )
-            self.assertEqual(len(response['data']), 50)
+            assert len(response['data']) == 50
 
             response = self.sql_via_http(
                 f"DROP VIEW mindsdb.test_view_{char}",
@@ -372,11 +364,11 @@ class CompanyIndependentTest(unittest.TestCase):
                 expected_resp_type=RESPONSE_TYPE.ERROR
             )
 
-    def test_5_model(self):
+    def test_model(self, postgres_db):
         query = """
             CREATE MODEL mindsdb.model_{}
             FROM test_integration_{} (
-                select * from test_data.home_rentals limit 50
+                select * from rentals limit 50
             ) PREDICT rental_price
             USING join_learn_process=true, time_aim=5
         """
@@ -397,15 +389,14 @@ class CompanyIndependentTest(unittest.TestCase):
                 company_id=cid,
                 expected_resp_type=RESPONSE_TYPE.TABLE
             )
-            self.assertTrue(len(response['data']), 1)
+            assert len(response['data']), 1
 
-    def test_6_mongo(self):
-        print(f'\nExecuting {inspect.stack()[0].function}')
+    def test_6_mongo(self, postgres_db):
 
-        client_a = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
+        client_a = MongoClient(host='127.0.0.1', port=int(CONFIG['api']['mongodb']['port']))
         client_a.admin.command({'company_id': CID_A, 'need_response': 1})
 
-        client_b = MongoClient(host='127.0.0.1', port=int(config['api']['mongodb']['port']))
+        client_b = MongoClient(host='127.0.0.1', port=int(CONFIG['api']['mongodb']['port']))
         client_b.admin.command({'company_id': CID_B, 'need_response': 1})
 
         databases = client_a.list_databases()
@@ -423,7 +414,7 @@ class CompanyIndependentTest(unittest.TestCase):
             'name': 'test_mon_p_a',
             'predict': 'rental_price',
             'connection': 'test_integration_a',
-            'select_data_query': 'select * from test_data.home_rentals limit 50',
+            'select_data_query': 'select * from rentals limit 50',
             'training_options': {
                 'join_learn_process': True,
                 'time_aim': 3
@@ -432,7 +423,7 @@ class CompanyIndependentTest(unittest.TestCase):
         response = client_a.mindsdb.test_mon_p_a.find({
             'sqft': 100
         })
-        self.assertEqual(len(list(response)), 1)
+        assert len(list(response)) == 1
 
         collections = client_a.mindsdb.list_collection_names()
         self.assert_list(collections, {
@@ -447,11 +438,3 @@ class CompanyIndependentTest(unittest.TestCase):
             'models_versions',
             'model_b'
         })
-
-
-if __name__ == "__main__":
-    try:
-        unittest.main(failfast=True)
-        print('Tests passed!')
-    except Exception as e:
-        print(f'Tests Failed!\n{e}')

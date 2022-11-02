@@ -8,6 +8,7 @@ import requests
 import docker
 import pytest
 import netifaces
+import pandas as pd
 from mindsdb.utilities.ps import get_child_pids
 
 
@@ -17,7 +18,13 @@ TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../').joinpath(
     f'temp/test_storage_{int(time.time()*1000)}/' if not USE_PERSISTENT_STORAGE else 'temp/test_storage/'
 ).resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
+CONFIG_PATH = TEMP_DIR.joinpath('config.json')
 
+def make_test_csv(name, data):
+    test_csv_path = TEMP_DIR.joinpath(f'{name}.csv').resolve()
+    df = pd.DataFrame(data)
+    df.to_csv(test_csv_path, index=False)
+    return str(test_csv_path)
 
 def docker_inet_ip():
     """Get ip of docker0 interface."""
@@ -142,7 +149,7 @@ def postgres_db():
     container = None
 
     connection_args = {
-                        "host": "172.17.0.1",
+                        "host": "localhost",
                         "port": "15432",
                         "user": "postgres",
                         "password": "supersecret",

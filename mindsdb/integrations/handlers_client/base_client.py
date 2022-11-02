@@ -2,7 +2,7 @@
 import requests
 from pandas import read_json
 from mindsdb.integrations.libs.net_helpers import sending_attempts
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 
 
 class BaseClient:
@@ -20,11 +20,11 @@ class BaseClient:
     # in case of local lightwood installation
     def __getattr__(self, attr):
         """Delegates all calls to a handler instance if self.as_service == False."""
-        log.info("calling '%s' as: ", attr)
+        log.logger.info("calling '%s' as: ", attr)
         if self.__dict__["as_service"]:
-            log.info("service")
+            log.logger.info("service")
             return getattr(self, attr)
-        log.info("handler")
+        log.logger.info("handler")
         handler = self.__dict__["handler"]
         return getattr(handler, attr)
 

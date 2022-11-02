@@ -1,3 +1,3 @@
 from mindsdb.utilities.log import get_log
 
-log = get_log('mysql')
+logger = get_log('mysql')

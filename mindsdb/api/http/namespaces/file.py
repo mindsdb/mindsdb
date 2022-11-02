@@ -8,7 +8,7 @@ import tempfile
 import multipart
 import requests
 
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.files import ns_conf
 from mindsdb.utilities.config import Config
@@ -149,7 +149,7 @@ class File(Resource):
         try:
             request.file_controller.delete_file(name)
         except Exception as e:
-            log.error(e)
+            log.logger.error(e)
             return http_error(
                 400,
                 "Error deleting file",

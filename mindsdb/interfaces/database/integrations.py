@@ -11,16 +11,17 @@ from collections import OrderedDict
 
 from sqlalchemy import func, or_
 
-from mindsdb.interfaces.storage.db import session, Integration, Predictor
+from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
+
 
 class IntegrationController:
     @staticmethod
@@ -31,14 +32,14 @@ class IntegrationController:
         self._load_handler_modules()
 
     def _add_integration_record(self, name, engine, connection_args, company_id=None):
-        integration_record = Integration(
+        integration_record = db.Integration(
             name=name,
             engine=engine,
             data=connection_args,
             company_id=company_id
         )
-        session.add(integration_record)
-        session.commit()
+        db.session.add(integration_record)
+        db.session.commit()
         return integration_record.id
 
     def add(self, name, engine, connection_args, company_id=None):
@@ -46,12 +47,12 @@ class IntegrationController:
             self._add_integration_record(name, engine, connection_args, company_id)
             return
 
-        log.debug("%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
-                 self.__class__.__name__, name, engine, connection_args, company_id)
+        log.logger.debug("%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
+                  self.__class__.__name__, name, engine, connection_args, company_id)
         handlers_meta = self.get_handlers_import_status()
         handler_meta = handlers_meta[engine]
         accept_connection_args = handler_meta.get('connection_args')
-        log.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
+        log.logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
 
         files_dir = None
         if accept_connection_args is not None:
@@ -80,51 +81,50 @@ class IntegrationController:
         return integration_id
 
     def modify(self, name, data, company_id):
-        integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+        integration_record = db.session.query(db.Integration).filter_by(company_id=company_id, name=name).first()
         old_data = deepcopy(integration_record.data)
         for k in old_data:
             if k not in data:
                 data[k] = old_data[k]
 
         integration_record.data = data
-        session.commit()
+        db.session.commit()
 
     def delete(self, name, company_id=None):
 
-        if name in ('files', 'views', 'lightwood'):
+        if name in ('files', 'lightwood'):
             raise Exception('Unable to drop: is system database')
 
         # check permanent integration
         if name in self.handler_modules:
             handler = self.handler_modules[name]
 
-            if getattr(handler, 'permanent', False) == True:
+            if getattr(handler, 'permanent', False) is True:
                 raise Exception('Unable to drop: is permanent integration')
 
-
-        integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+        integration_record = db.session.query(db.Integration).filter_by(company_id=company_id, name=name).first()
 
         # check linked predictors
-        predictor = session.query(Predictor.name).filter(
-            Predictor.status != PREDICTOR_STATUS.DELETED,
+        predictor = db.session.query(db.Predictor.name).filter(
+            db.Predictor.status != PREDICTOR_STATUS.DELETED,
             or_(
-                Predictor.integration_id == integration_record.id,
-                Predictor.data_integration_id == integration_record.id,
+                db.Predictor.integration_id == integration_record.id,
+                db.Predictor.data_integration_id == integration_record.id,
             )
         ).first()
         if predictor is not None:
             raise Exception(f'Unable to drop: is linked to predictor {predictor.name}')
 
         # unlink integration from deleted predictors
-        for predictor in session.query(Predictor).filter(
-            Predictor.status == PREDICTOR_STATUS.DELETED,
-            Predictor.integration_id == integration_record.id
+        for predictor in db.session.query(db.Predictor).filter(
+            db.Predictor.status == PREDICTOR_STATUS.DELETED,
+            db.Predictor.integration_id == integration_record.id
         ):
             predictor.integration_id = None
 
-        for predictor in session.query(Predictor).filter(
-            Predictor.status == PREDICTOR_STATUS.DELETED,
-            Predictor.data_integration_id == integration_record.id
+        for predictor in db.session.query(db.Predictor).filter(
+            db.Predictor.status == PREDICTOR_STATUS.DELETED,
+            db.Predictor.data_integration_id == integration_record.id
         ):
             predictor.data_integration_id = None
 
@@ -137,8 +137,8 @@ class IntegrationController:
         #     FsStore().delete(folder_name)
         # except Exception:
         #     pass
-        session.delete(integration_record)
-        session.commit()
+        db.session.delete(integration_record)
+        db.session.commit()
 
     def _get_integration_record_data(self, integration_record, sensitive_info=True):
         if integration_record is None or integration_record.data is None:
@@ -179,30 +179,36 @@ class IntegrationController:
             ):
                 data['connection'] = None
 
+        integration_type = None
+        integration_module = self.handler_modules.get(integration_record.engine)
+        if hasattr(integration_module, 'type'):
+            integration_type = integration_module.type
+
         return {
             'id': integration_record.id,
             'name': integration_record.name,
+            'type': integration_type,
             'engine': integration_record.engine,
             'date_last_update': deepcopy(integration_record.updated_at),
             'connection_data': data
         }
 
     def get_by_id(self, integration_id, company_id=None, sensitive_info=True):
-        integration_record = session.query(Integration).filter_by(company_id=company_id, id=integration_id).first()
+        integration_record = db.session.query(db.Integration).filter_by(company_id=company_id, id=integration_id).first()
         return self._get_integration_record_data(integration_record, sensitive_info)
 
     def get(self, name, company_id=None, sensitive_info=True, case_sensitive=False):
         if case_sensitive:
-            integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+            integration_record = db.session.query(db.Integration).filter_by(company_id=company_id, name=name).first()
         else:
-            integration_record = session.query(Integration).filter(
-                (Integration.company_id == company_id)
-                & (func.lower(Integration.name) == func.lower(name))
+            integration_record = db.session.query(db.Integration).filter(
+                (db.Integration.company_id == company_id)
+                & (func.lower(db.Integration.name) == func.lower(name))
             ).first()
         return self._get_integration_record_data(integration_record, sensitive_info)
 
     def get_all(self, company_id=None, sensitive_info=True):
-        integration_records = session.query(Integration).filter_by(company_id=company_id).all()
+        integration_records = db.session.query(db.Integration).filter_by(company_id=company_id).all()
         integration_dict = {}
         for record in integration_records:
             if record is None or record.data is None:
@@ -261,7 +267,7 @@ class IntegrationController:
             as_service = connection_data["as_service"]
             connection_data = copy.deepcopy(connection_data)
             del connection_data['as_service']
-            log.debug("%s create_tmp_handler: delete 'as_service' key from connection args - %s", self.__class__.__name__, connection_data)
+            log.logger.debug("%s create_tmp_handler: delete 'as_service' key from connection args - %s", self.__class__.__name__, connection_data)
         resource_id = int(time() * 10000)
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
@@ -278,38 +284,31 @@ class IntegrationController:
             connection_data=connection_data
         )
 
+        if handler_type == 'views':
+            handler_ars['view_controller'] = WithKWArgsWrapper(
+                ViewController(),
+                company_id=company_id
+            )
+
         if as_service:
-            log.debug("%s create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
+            log.logger.debug("%s create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
             return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
         return self.handler_modules[handler_type].Handler(**handler_ars)
 
     def get_handler(self, name, company_id=None, case_sensitive=False):
         if case_sensitive:
-            integration_record = session.query(Integration).filter_by(company_id=company_id, name=name).first()
+            integration_record = db.session.query(db.Integration).filter_by(company_id=company_id, name=name).first()
         else:
-            integration_record = session.query(Integration).filter(
-                (Integration.company_id == company_id)
-                & (func.lower(Integration.name) == func.lower(name))
+            integration_record = db.session.query(db.Integration).filter(
+                (db.Integration.company_id == company_id)
+                & (func.lower(db.Integration.name) == func.lower(name))
             ).first()
-
-        # # TODO del in future
-        # if integration_record is None:
-        #     if name == 'lightwood':
-        #         handler = self.create_handler(
-        #             name=name,
-        #             handler_type='lightwood',
-        #             connection_data=None,
-        #             company_id=company_id
-        #         )
-        #         return handler
-        #     else:
-        #         raise Exception(f'Unknown integration: {name}')
 
         integration_data = self._get_integration_record_data(integration_record, True)
         connection_data = integration_data.get('connection_data', {})
         integration_engine = integration_data['engine']
         integration_name = integration_data['name']
-        log.debug("%s get_handler: connection_data=%s, engine=%s", self.__class__.__name__, connection_data, integration_engine)
+        log.logger.debug("%s get_handler: connection_data=%s, engine=%s", self.__class__.__name__, connection_data, integration_engine)
 
         if integration_engine not in self.handler_modules:
             raise Exception(f"Cant find handler for '{integration_name}' ({integration_engine})")
@@ -320,7 +319,7 @@ class IntegrationController:
         if 'as_service' in connection_data:
             as_service = connection_data['as_service']
             del connection_data['as_service']
-        log.debug("%s get_handler: connection args - %s", self.__class__.__name__, connection_args)
+        log.logger.debug("%s get_handler: connection args - %s", self.__class__.__name__, connection_args)
 
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
@@ -354,21 +353,20 @@ class IntegrationController:
         from mindsdb.integrations.libs.base import BaseMLEngine
         from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
-        klass = self.handler_modules[integration_engine].Handler
+        HandlerClass = self.handler_modules[integration_engine].Handler
 
-        if isinstance(klass, type) and issubclass(klass, BaseMLEngine):
-            # need to wrapp it
-            handler_ars['handler_class'] = klass
-            inst = BaseMLEngineExec(**handler_ars)
-
+        if isinstance(HandlerClass, type) and issubclass(HandlerClass, BaseMLEngine):
+            handler_ars['handler_class'] = HandlerClass
+            handler_ars['execution_method'] = getattr(self.handler_modules[integration_engine], 'execution_method', None)
+            handler = BaseMLEngineExec(**handler_ars)
         else:
-            inst = klass(**handler_ars)
+            handler = HandlerClass(**handler_ars)
 
         if as_service:
-            log.debug("%s get_handler: create a client to db service of %s type", self.__class__.__name__, handler_type)
+            log.logger.debug("%s get_handler: create a client to db service of %s type", self.__class__.__name__, handler_type)
             return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
 
-        return inst
+        return handler
 
     def reload_handler_module(self, handler_name):
         importlib.reload(self.handler_modules[handler_name])

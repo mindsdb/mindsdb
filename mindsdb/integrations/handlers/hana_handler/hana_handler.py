@@ -10,7 +10,7 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 
 from mindsdb.integrations.libs.base_handler import DatabaseHandler
 from mindsdb.integrations.libs.response import (
@@ -125,7 +125,7 @@ class HanaHandler(DatabaseHandler):
                 cur.execute('SELECT 1 FROM SYS.DUMMY')
             response.success = True
         except dbapi.Error as e:
-            log.error(f'Error connecting to SAP HANA {self.address}, {e}!')
+            log.logger.error(f'Error connecting to SAP HANA {self.address}, {e}!')
             response.error_message = e
 
         if response.success is True and need_to_close:
@@ -161,7 +161,7 @@ class HanaHandler(DatabaseHandler):
                     )
                 connection.commit()
             except Exception as e:
-                log.error(f'Error running query: {query} on {self.address}!')
+                log.logger.error(f'Error running query: {query} on {self.address}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_code=0,

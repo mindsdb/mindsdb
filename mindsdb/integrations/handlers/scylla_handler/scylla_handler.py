@@ -18,7 +18,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 
 
 class ScyllaHandler(DatabaseHandler):
@@ -81,7 +81,7 @@ class ScyllaHandler(DatabaseHandler):
             session.execute('SELECT release_version FROM system.local').one()
             response.success = True
         except Exception as e:
-            log.error(f'Error connecting to Scylla {self.connection_args["keyspace"]}, {e}!')
+            log.logger.error(f'Error connecting to Scylla {self.connection_args["keyspace"]}, {e}!')
             response.error_message = e
 
         if response.success is False and self.is_connected is True:
@@ -121,7 +121,7 @@ class ScyllaHandler(DatabaseHandler):
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            log.error(f'Error running query: {query} on {self.connection_args["keyspace"]}!')
+            log.logger.error(f'Error running query: {query} on {self.connection_args["keyspace"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

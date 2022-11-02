@@ -454,7 +454,7 @@ class ExecuteCommands:
                 #     table_name = expression.parts[-1]
                 if table_name is None:
                     err_str = f"Can't determine table name in query: {sql}"
-                    log.warning(err_str)
+                    log.logger.warning(err_str)
                     raise ErTableExistError(err_str)
                 return self.answer_show_table_status(table_name)
             elif sql_category == 'columns':
@@ -479,7 +479,7 @@ class ExecuteCommands:
                 self.charset = statement.arg.parts[0]
                 self.charset_text_type = charsets.get(self.charset)
                 if self.charset_text_type is None:
-                    log.warning(f"Unknown charset: {self.charset}. Setting up 'utf8_general_ci' as charset text type.")
+                    log.logger.warning(f"Unknown charset: {self.charset}. Setting up 'utf8_general_ci' as charset text type.")
                     self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
                 return ExecuteAnswer(
                     ANSWER_TYPE.OK,
@@ -490,7 +490,7 @@ class ExecuteCommands:
                     ]
                 )
             else:
-                log.warning(f'SQL statement is not processable, return OK package: {sql}')
+                log.logger.warning(f'SQL statement is not processable, return OK package: {sql}')
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Use:
             db_name = statement.value.parts[-1]
@@ -552,7 +552,7 @@ class ExecuteCommands:
             # TODO
             return self.answer_apply_predictor(statement)
         else:
-            log.warning(f'Unknown SQL statement: {sql}')
+            log.logger.warning(f'Unknown SQL statement: {sql}')
             raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
 
     def answer_describe_predictor(self, predictor_value):
@@ -1000,7 +1000,7 @@ class ExecuteCommands:
                 column_alias = target.alias or column_name
                 result = SERVER_VARIABLES.get(column_name)
                 if result is None:
-                    log.error(f'Unknown variable: {column_name}')
+                    log.logger.error(f'Unknown variable: {column_name}')
                     raise Exception(f"Unknown variable '{var_name}'")
                 else:
                     result = result[0]

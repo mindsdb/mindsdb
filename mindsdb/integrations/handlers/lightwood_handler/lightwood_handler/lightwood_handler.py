@@ -26,7 +26,7 @@ import numpy as np
 from mindsdb.integrations.libs.base import PredictiveHandler
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
 from mindsdb.integrations.utilities.processes import HandlerProcess
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 import mindsdb.interfaces.storage.db as db

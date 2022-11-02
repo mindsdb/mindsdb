@@ -1,4 +1,4 @@
-from mindsdb.interfaces.storage.db import session, View, Project
+from mindsdb.interfaces.storage import db
 
 
 class ViewController:
@@ -13,7 +13,7 @@ class ViewController:
 
         project_id = project_databases_dict[project_name]['id']
         view_record = (
-            session.query(View.id)
+            db.session.query(db.View.id)
             .filter_by(
                 name=name,
                 company_id=company_id,
@@ -23,30 +23,30 @@ class ViewController:
         if view_record is not None:
             raise Exception(f'View already exists: {name}')
 
-        view_record = View(
+        view_record = db.View(
             name=name,
             company_id=company_id,
             query=query,
             project_id=project_id
         )
-        session.add(view_record)
-        session.commit()
+        db.session.add(view_record)
+        db.session.commit()
 
     def delete(self, name, project_name, company_id=None):
-        project_record = session.query(Project).filter_by(
+        project_record = db.session.query(db.Project).filter_by(
             name=project_name,
             company_id=company_id,
             deleted_at=None
         ).first()
-        rec = session.query(View).filter(
-            View.name == name,
-            View.company_id == company_id,
-            View.project_id == project_record.id
+        rec = db.session.query(db.View).filter(
+            db.View.name == name,
+            db.View.company_id == company_id,
+            db.View.project_id == project_record.id
         ).first()
         if rec is None:
             raise Exception(f'View not found: {name}')
-        session.delete(rec)
-        session.commit()
+        db.session.delete(rec)
+        db.session.commit()
 
     def _get_view_record_data(self, record):
         return {
@@ -55,15 +55,15 @@ class ViewController:
         }
 
     def get(self, id=None, name=None, project_name=None, company_id=None):
-        project_record = session.query(Project).filter_by(
+        project_record = db.session.query(db.Project).filter_by(
             name=project_name,
             company_id=company_id,
             deleted_at=None
         ).first()
         if id is not None:
-            records = session.query(View).filter_by(id=id, project_id=project_record.id, company_id=company_id).all()
+            records = db.session.query(db.View).filter_by(id=id, project_id=project_record.id, company_id=company_id).all()
         elif name is not None:
-            records = session.query(View).filter_by(name=name, project_id=project_record.id, company_id=company_id).all()
+            records = db.session.query(db.View).filter_by(name=name, project_id=project_record.id, company_id=company_id).all()
         if len(records) == 0:
             raise Exception(f"Can't find view with name/id: {name}/{id}")
         elif len(records) > 1:
@@ -72,7 +72,7 @@ class ViewController:
         return self._get_view_record_data(record)
 
     def get_all(self, company_id=None):
-        view_records = session.query(View).filter_by(company_id=company_id).all()
+        view_records = db.session.query(db.View).filter_by(company_id=company_id).all()
         views_dict = {}
         for record in view_records:
             views_dict[record.name] = self._get_view_record_data(record)

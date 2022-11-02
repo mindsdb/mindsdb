@@ -13,9 +13,9 @@ import lightwood
 from lightwood.api.types import ProblemDefinition, JsonAI
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.interfaces.storage.db import session, Predictor
+from mindsdb.interfaces.storage import db
 from mindsdb.utilities.functions import mark_process
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.interfaces.model.functions import (
@@ -62,7 +62,7 @@ def run_generate(df: DataFrame, predictor_id: int, args: dict = None):
 
     code = lightwood.code_from_json_ai(json_ai)
 
-    predictor_record = Predictor.query.with_for_update().get(predictor_id)
+    predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
     predictor_record.code = code
     db.session.commit()
 
@@ -76,7 +76,7 @@ def run_generate(df: DataFrame, predictor_id: int, args: dict = None):
 @mark_process(name='learn')
 def run_fit(predictor_id: int, df: pd.DataFrame, company_id: int) -> None:
     try:
-        predictor_record = Predictor.query.with_for_update().get(predictor_id)
+        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
         assert predictor_record is not None
 
         predictor_record.data = {'training_log': 'training'}
@@ -122,7 +122,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame, company_id: int) -> None:
 def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
     try:
         serialized_df = json.dumps(df.to_dict())
-        predictor_record = Predictor.query.with_for_update().get(predictor_id)
+        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
         resp = requests.post(predictor_record.data['train_url'],
                              json={'df': serialized_df, 'target': predictor_record.to_predict[0]})
 
@@ -132,7 +132,7 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
         predictor_record.data['status'] = 'error'
         predictor_record.data['error'] = str(resp.text)
 
-    session.commit()
+    db.session.commit()
 
 
 @mark_process(name='learn')
@@ -141,15 +141,17 @@ def run_learn(df: DataFrame, args: dict, model_storage) -> None:
     predictor_id = model_storage.predictor_id
     company_id = model_storage.company_id
 
-    predictor_record = Predictor.query.with_for_update().get(predictor_id)
+    predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
     predictor_record.training_start_at = datetime.now()
     db.session.commit()
 
     try:
         run_generate(df, predictor_id, args)
         run_fit(predictor_id, df, company_id)
+
+        predictor_record.status = PREDICTOR_STATUS.COMPLETE
     except Exception as e:
-        predictor_record = Predictor.query.with_for_update().get(predictor_id)
+        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
         print(traceback.format_exc())
 
         error_message = format_exception_error(e)
@@ -159,7 +161,6 @@ def run_learn(df: DataFrame, args: dict, model_storage) -> None:
         db.session.commit()
 
     predictor_record.training_stop_at = datetime.now()
-    predictor_record.status = PREDICTOR_STATUS.COMPLETE
     db.session.commit()
 
 
@@ -171,7 +172,7 @@ def run_adjust(name, db_name, from_data, datasource_id, company_id):
 @mark_process(name='learn')
 def run_update(predictor_id: int, df: DataFrame, company_id: int):
     try:
-        predictor_record = Predictor.query.filter_by(id=predictor_id).first()
+        predictor_record = db.Predictor.query.filter_by(id=predictor_id).first()
 
         problem_definition = predictor_record.learn_args
         problem_definition['target'] = predictor_record.to_predict[0]
@@ -183,11 +184,13 @@ def run_update(predictor_id: int, df: DataFrame, company_id: int):
             problem_definition['time_aim'] = problem_definition['stop_training_in_x_seconds']
 
         json_ai = lightwood.json_ai_from_problem(df, problem_definition)
+
+        # TODO move it to ModelStorage (don't work with database directly)
         predictor_record.code = lightwood.code_from_json_ai(json_ai)
         predictor_record.data = {'training_log': 'training'}
         predictor_record.training_start_at = datetime.now()
         predictor_record.status = PREDICTOR_STATUS.TRAINING
-        session.commit()
+        db.session.commit()
 
         json_storage = get_json_storage(
             resource_id=predictor_id,
@@ -213,7 +216,7 @@ def run_update(predictor_id: int, df: DataFrame, company_id: int):
 
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
         predictor_record.training_stop_at = datetime.now()
-        session.commit()
+        db.session.commit()
 
         predictor_records = get_model_records(
             active=None,
@@ -228,10 +231,10 @@ def run_update(predictor_id: int, df: DataFrame, company_id: int):
         for record in predictor_records:
             record.active = False
         predictor_records[-1].active = True
-        session.commit()
+        db.session.commit()
     except Exception as e:
-        log.error(e)
-        predictor_record = Predictor.query.with_for_update().get(predictor_id)
+        log.logger.error(e)
+        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
         print(traceback.format_exc())
 
         error_message = format_exception_error(e)

@@ -10,14 +10,18 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy import JSON
 
-
-if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
-    engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
-else:
-    engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
 Base = declarative_base()
-session = scoped_session(sessionmaker(bind=engine, autoflush=True))
-Base.query = session.query_property()
+session, engine = None, None
+
+
+def init():
+    global Base, session, engine
+    if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
+        engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
+    else:
+        engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
+    session = scoped_session(sessionmaker(bind=engine, autoflush=True))
+    Base.query = session.query_property()
 
 
 # Source: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
@@ -74,6 +78,17 @@ class Semaphor(Base):
         UniqueConstraint('entity_type', 'entity_id', name='uniq_const'),
     )
 
+class PREDICTOR_STATUS:
+    __slots__ = ()
+    COMPLETE = 'complete'
+    TRAINING = 'training'
+    GENERATING = 'generating'
+    ERROR = 'error'
+    VALIDATION = 'validation'
+    DELETED = 'deleted'
+
+
+PREDICTOR_STATUS = PREDICTOR_STATUS()
 
 class Predictor(Base):
     __tablename__ = 'predictor'

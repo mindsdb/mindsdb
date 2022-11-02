@@ -56,7 +56,8 @@ from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.functions import mark_process
 from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.interfaces.database.database import DatabaseController
-from mindsdb.interfaces.storage.fs import ModelStorage, HandlerStorage
+from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
+from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
 import torch.multiprocessing as mp
 ctx = mp.get_context('spawn')
@@ -64,6 +65,7 @@ ctx = mp.get_context('spawn')
 
 @mark_process(name='learn')
 def learn_process(class_path, company_id, integration_id, predictor_id, training_data_df, target, problem_definition):
+    db.init()
 
     predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
 
@@ -83,6 +85,7 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
             model_storage=modelStorage,
         )
         ml_handler.create(target, df=training_data_df, args=problem_definition)
+        predictor_record.status = PREDICTOR_STATUS.COMPLETE
 
     except Exception as e:
         print(traceback.format_exc())
@@ -93,7 +96,6 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
         db.session.commit()
 
     predictor_record.training_stop_at = dt.datetime.now()
-    predictor_record.status = PREDICTOR_STATUS.COMPLETE
     db.session.commit()
 
     # region If the process is 'retrain', then need to mark last trained predictor as 'active'
@@ -118,45 +120,8 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
     # endregion
 
 
-@mark_process(name='predict')
-def predict_process(class_path, company_id, integration_id, predictor_id, df, res_queue=None, args: dict = {}):
-
-    module_name, class_name = class_path
-    module = importlib.import_module(module_name)
-    HandlerClass = getattr(module, class_name)
-
-    handlerStorage = HandlerStorage(company_id, integration_id)
-    modelStorage = ModelStorage(company_id, predictor_id)
-
-    ml_handler = HandlerClass(
-        engine_storage=handlerStorage,
-        model_storage=modelStorage,
-    )
-
-    # FIXME
-    if class_name == 'LightwoodHandler':
-        predictor_record = db.Predictor.query.get(predictor_id)
-        args['code'] = predictor_record.code
-        args['target'] = predictor_record.to_predict[0]
-        args['dtype_dict'] = predictor_record.dtype_dict
-        args['learn_args'] = predictor_record.learn_args
-
-    predictions = ml_handler.predict(df, args)
-
-    # mdb indexes
-    if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
-        predictions['__mindsdb_row_id'] = df['__mindsdb_row_id']
-
-    predictions = predictions.to_dict(orient='records')
-
-    if res_queue is not None:
-        # subprocess mode
-        res_queue.put(predictions)
-    else:
-        return predictions
-
-
 class BaseMLEngineExec:
+
     def __init__(self, name, **kwargs):
         """
         ML handler interface converter
@@ -169,6 +134,7 @@ class BaseMLEngineExec:
         self.fs_store = kwargs.get('file_storage')
         self.storage_factory = kwargs.get('storage_factory')
         self.integration_id = kwargs.get('integration_id')
+        self.execution_method = kwargs.get('execution_method')
 
         self.model_controller = WithKWArgsWrapper(
             ModelController(),
@@ -186,6 +152,38 @@ class BaseMLEngineExec:
         self.is_connected = True
 
         self.handler_class = kwargs['handler_class']
+
+    def get_ml_handler(self, predictor_id=None):
+        # returns instance or wrapper over it
+
+        company_id, integration_id = self.company_id, self.integration_id
+
+        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+
+        if self.execution_method == 'subprocess':
+            handler = MLHandlerWrapper()
+
+            handler.init_handler(class_path, company_id, integration_id, predictor_id)
+            return handler
+
+        elif self.execution_method == 'subprocess_keep':
+            handler = MLHandlerPersistWrapper()
+
+            handler.init_handler(class_path, company_id, integration_id, predictor_id)
+            return handler
+
+        elif self.execution_method == 'remote':
+            raise NotImplementedError()
+
+        else:
+            handlerStorage = HandlerStorage(company_id, integration_id)
+            modelStorage = ModelStorage(company_id, predictor_id)
+
+            ml_handler = self.handler_class(
+                engine_storage=handlerStorage,
+                model_storage=modelStorage,
+            )
+            return ml_handler
 
     def get_tables(self) -> Response:
         """ Returns all models currently registered that belong to the ML engine."""
@@ -275,7 +273,7 @@ class BaseMLEngineExec:
             )
 
         target = statement.targets[0].parts[-1]
-        training_data_df = pd.DataFrame()
+        training_data_df = None
 
         fetch_data_query = None
         data_integration_id = None
@@ -308,10 +306,17 @@ class BaseMLEngineExec:
             else:
                 data_integration_id = data_integration_meta['id']
 
-        if target not in training_data_df.columns:
-            raise Exception(f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
+        problem_definition = {'target': target}
 
-        problem_definition = {}
+        training_data_columns_count, training_data_rows_count = 0, 0
+        if training_data_df is not None:
+            training_data_columns_count = len(training_data_df.columns)
+            training_data_rows_count = len(training_data_df)
+
+            # checks
+            if target not in training_data_df.columns:
+                raise Exception(
+                    f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
         if statement.using is not None:
             problem_definition['using'] = statement.using
@@ -326,12 +331,16 @@ class BaseMLEngineExec:
                     problem_definition['timeseries_settings'][attr] = getattr(statement, attr)
 
             if statement.group_by is not None:
-                problem_definition['timeseries_settings']['group_by'] = [str(col) for col in getattr(statement, 'group_by')]
+                problem_definition['timeseries_settings']['group_by'] = [str(col) for col in statement.group_by]
 
         join_learn_process = False
         if 'join_learn_process' in problem_definition.get('using', {}):
             join_learn_process = problem_definition['using']['join_learn_process']
             del problem_definition['using']['join_learn_process']
+
+        # handler-side validation
+        if hasattr(self.handler_class, 'create_validation'):
+            self.handler_class.create_validation(target, df=training_data_df, args=problem_definition)
 
         predictor_record = db.Predictor(
             company_id=self.company_id,
@@ -344,8 +353,8 @@ class BaseMLEngineExec:
             learn_args=problem_definition,
             data={'name': model_name},
             project_id=project.id,
-            training_data_columns_count=len(training_data_df.columns),
-            training_data_rows_count=len(training_data_df),
+            training_data_columns_count=training_data_columns_count,
+            training_data_rows_count=training_data_rows_count,
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING
         )
@@ -455,39 +464,27 @@ class BaseMLEngineExec:
                 error_message=f"Error: model '{model_name}' does not exists!"
             )
 
-        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+        ml_handler = self.get_ml_handler(predictor_record.id)
 
         args = {
             'pred_format': pred_format
         }
+        # FIXME
+        if self.handler_class.__name__ == 'LightwoodHandler':
+            args['code'] = predictor_record.code
+            args['target'] = predictor_record.to_predict[0]
+            args['dtype_dict'] = predictor_record.dtype_dict
+            args['learn_args'] = predictor_record.learn_args
 
-        is_subprocess = False
-        if is_subprocess:
-            res_queue = ctx.SimpleQueue()
-            p = HandlerProcess(
-                predict_process,
-                class_path,
-                self.company_id,
-                self.integration_id,
-                predictor_record.id,
-                df,
-                res_queue,
-                args
-            )
-            p.start()
-            p.join()
-            predictions = res_queue.get()
+        predictions = ml_handler.predict(df, args)
 
-        else:
-            predictions = predict_process(
-                class_path,
-                self.company_id,
-                self.integration_id,
-                predictor_record.id,
-                df,
-                None,
-                args
-            )
+        ml_handler.close()
+
+        # mdb indexes
+        if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
+            predictions['__mindsdb_row_id'] = df['__mindsdb_row_id']
+
+        predictions = predictions.to_dict(orient='records')
 
         after_predict_hook(
             company_id=self.company_id,
@@ -512,7 +509,7 @@ class BaseMLEngineExec:
             name=model_name,
             ml_handler_name=self.name,
             project_id=project.id,
-            active=None
+            active=None,
         )
         if len(predictors_records) == 0:
             return Response(
@@ -537,7 +534,7 @@ class BaseMLEngineExec:
                 predictor_record.deleted_at = dt.datetime.now()
             else:
                 db.session.delete(predictor_record)
-            fs_storage = self.storage_factory(predictor_record.id)
-            fs_storage.complete_removal()
+            modelStorage = ModelStorage(self.company_id, predictor_record.id)
+            modelStorage.delete()
         db.session.commit()
         return Response(RESPONSE_TYPE.OK)

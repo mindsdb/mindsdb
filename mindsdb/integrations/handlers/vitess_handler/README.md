@@ -27,18 +27,18 @@ In order to make use of this handler and connect to a Vitess server in MindsDB, 
 
 ```sql
 CREATE DATABASE vitess_datasource
-WITH ENGINE = "Vitess",
+WITH ENGINE = "vitess",
 PARAMETERS = { 
   "user": "root",
   "password": "",
-  "host": "hostname",
+  "host": "localhost",
   "port": 33577,
-  "database": "vitess"
+  "database": "commerce"
 }
 ```
 
 Now, you can use this established connection to query your database as follows:
 
 ```sql
-SELECT * FROM vitess_datasource.loveU LIMIT 10;
+SELECT * FROM vitess_datasource.product LIMIT 10;
 ```

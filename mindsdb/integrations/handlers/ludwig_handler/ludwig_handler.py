@@ -17,11 +17,13 @@ class LudwigHandler(BaseMLEngine):
     name = 'ludwig'
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
-        # TODO: how to filter out incompatible use cases? (e.g. time series won't work currently)
+        args = args['using']  # ignore the rest of the problem definition
+
+        # TODO: filter out incompatible use cases (e.g. time series won't work currently)
+        # TODO: enable custom values via `args` (mindful of local vs cloud)
         user_config = {'hyperopt': {'executor': {'gpu_resources_per_trial': 0, 'num_samples': 3}}}  # no GPU for now
 
         with RayConnection():
-            # TODO: enable custom values via `args` (mindful of local vs cloud)
             results = auto_train(
                 dataset=df,
                 target=target,

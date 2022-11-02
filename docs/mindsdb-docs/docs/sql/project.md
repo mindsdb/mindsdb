@@ -10,9 +10,13 @@ You can create projects to store your models, making the structure like:
 
 ```
 project_alpha
+├─ models
+├─ models_versions
 ├─ model_a
 ├─ model_b
 project_beta
+├─ models
+├─ models_versions
 ├─ model_c
 ```
 

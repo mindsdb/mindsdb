@@ -338,6 +338,10 @@ class BaseMLEngineExec:
             join_learn_process = problem_definition['using']['join_learn_process']
             del problem_definition['using']['join_learn_process']
 
+        # handler-side validation
+        if hasattr(self.handler_class, 'create_validation'):
+            self.handler_class.create_validation(target, df=training_data_df, args=problem_definition)
+
         predictor_record = db.Predictor(
             company_id=self.company_id,
             name=model_name,

@@ -58,9 +58,9 @@ class MLHandlerProcess:
 
             except SystemExit:
                 raise
-            except:
+            except Exception as e:
                 error = traceback.format_exc()
-                self.send_output({'error': error})
+                self.send_output({'error': str(e), 'trace': error})
                 continue
 
             self.send_output(ret)
@@ -167,7 +167,7 @@ class MLHandlerWrapper:
         ret = pickle.loads(ret_enc)
 
         if ret is not None and 'error' in ret:
-            raise RuntimeError(ret['error'])
+            raise RuntimeError(ret)
         return ret
 
 
@@ -184,7 +184,14 @@ def process_keeper():
     while True:
         method_name, args, kwargs = queue_in.get()
         method = wrapper.__getattr__(method_name)
-        ret = method(*args, **kwargs)
+        try:
+            ret = method(*args, **kwargs)
+
+        except RuntimeError as e:
+            ret = e
+        except Exception as e:
+            # TODO to something else?
+            ret = e
         queue_in.task_done()
         queue_out.put(ret)
 
@@ -213,6 +220,10 @@ class MLHandlerPersistWrapper:
             result = queue_out.get()
 
             queue_lock.release()
+
+            if isinstance(result, Exception):
+                raise result
+
             return result
 
         return call

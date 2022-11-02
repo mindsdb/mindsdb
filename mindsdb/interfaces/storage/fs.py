@@ -7,17 +7,20 @@ from abc import ABC, abstractmethod
 from typing import Union, Optional
 from dataclasses import dataclass
 
-import mindsdb.interfaces.storage.db as db
-
-from mindsdb.integrations.libs.const import PREDICTOR_STATUS
-
-
 from checksumdir import dirhash
 try:
     import boto3
 except Exception:
     # Only required for remote storage on s3
     pass
+
+@dataclass(frozen=True)
+class RESOURCE_GROUP:
+    PREDICTOR = 'predictor'
+    INTEGRATION = 'integration'
+
+RESOURCE_GROUP = RESOURCE_GROUP()
+
 
 from mindsdb.utilities.config import Config
 
@@ -147,22 +150,14 @@ class S3FSStore(BaseFSStore):
         self.s3.delete_object(Bucket=self.bucket, Key=remote_name)
 
 
-storage_location = Config()['permanent_storage']['location']
-if storage_location == 'local':
-    FsStore = LocalFSStore
-elif storage_location == 's3':
-    FsStore = S3FSStore
-else:
-    raise Exception(f"Location: '{storage_location}' not supported")
-
-
-@dataclass(frozen=True)
-class RESOURCE_GROUP:
-    PREDICTOR = 'predictor'
-    INTEGRATION = 'integration'
-
-
-RESOURCE_GROUP = RESOURCE_GROUP()
+def FsStore():
+    storage_location = Config()['permanent_storage']['location']
+    if storage_location == 'local':
+        return LocalFSStore()
+    elif storage_location == 's3':
+        return S3FSStore()
+    else:
+        raise Exception(f"Location: '{storage_location}' not supported")
 
 
 class FileStorage:
@@ -196,9 +191,19 @@ class FileStorage:
     def push(self):
         self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
 
+    def push_path(self, path):
+        self.fs_store.put(os.path.join(self.folder_name, path), str(self.resource_group_path))
+
     def pull(self):
         try:
             self.fs_store.get(str(self.folder_name), str(self.resource_group_path))
+        except Exception:
+            pass
+
+    def pull_path(self, path):
+        try:
+            # TODO not sync if not changed?
+            self.fs_store.get(os.path.join(self.folder_name, path), str(self.resource_group_path))
         except Exception:
             pass
 
@@ -304,7 +309,7 @@ class FileStorage:
 
         path = (self.folder_path / relative_path).resolve()
 
-        if path == self.folder_path:
+        if path == self.folder_path.resolve():
             return self.complete_removal()
 
         if self.sync is True:
@@ -343,147 +348,3 @@ class FileStorageFactory:
             resource_id=resource_id
         )
 
-
-from .json import get_json_storage
-
-
-class ModelStorage:
-    """
-    This class deals with all model-related storage requirements, from setting status to storing artifacts.
-    """
-    def __init__(self, company_id, predictor_id):
-
-        storageFactory = FileStorageFactory(
-            resource_group=RESOURCE_GROUP.PREDICTOR,
-            company_id=company_id,
-            sync=True
-        )
-
-        self.fileStorage = storageFactory(predictor_id)
-
-        self.company_id = company_id
-        self.predictor_id = predictor_id
-
-    # -- fields --
-
-    def get_info(self):
-        rec = db.Predictor.query.get(self.predictor_id)
-        return dict(status=rec.status, to_predict=rec.to_predict)
-
-    def status_set(self, status, status_info=None):
-        rec = db.Predictor.query.get(self.predictor_id)
-        rec.status = status
-        if status == PREDICTOR_STATUS.ERROR and status_info is not None:
-            rec.data = status_info
-        db.session.commit()
-
-    def columns_get(self):
-        rec = db.Predictor.query.get(self.predictor_id)
-        return rec.dtype_dict
-
-    def columns_set(self, columns):
-        # columns: {name: dtype}
-
-        rec = db.Predictor.query.get(self.predictor_id)
-        rec.dtype_dict = columns
-        db.session.commit()
-
-    # files
-
-    def file_get(self, name):
-        return self.fileStorage.file_get(name)
-
-    def file_set(self, name, content):
-        self.fileStorage.file_set(name, content)
-
-    def file_list(self):
-        ...
-
-    def file_del(self, name):
-        ...
-
-    # jsons
-
-    def json_set(self, name, data):
-        json_storage = get_json_storage(
-            resource_id=self.predictor_id,
-            resource_group=RESOURCE_GROUP.PREDICTOR,
-            company_id=self.company_id
-        )
-        return json_storage.set(name, data)
-
-    def json_get(self, name):
-        json_storage = get_json_storage(
-            resource_id=self.predictor_id,
-            resource_group=RESOURCE_GROUP.PREDICTOR,
-            company_id=self.company_id
-        )
-        return json_storage.get(name)
-
-    def json_list(self):
-        ...
-
-    def json_del(self, name):
-        ...
-
-
-class HandlerStorage:
-    """
-    This class deals with all handler-related storage requirements, from storing metadata to synchronizing folders
-    across instances.
-    """
-    def __init__(self, company_id, integration_id):
-        storageFactory = FileStorageFactory(
-            resource_group=RESOURCE_GROUP.INTEGRATION,
-            company_id=company_id,
-            sync=True
-        )
-        self.fileStorage = storageFactory(integration_id)
-
-        self.company_id = company_id
-        self.integration_id = integration_id
-
-    def get_connection_args(self):
-        rec = db.Integration.query.get(self.integration_id)
-        return rec.data
-
-    # files
-
-    def file_get(self, name):
-        return self.fileStorage.file_get(name)
-
-    def file_set(self, name, content):
-        self.fileStorage.file_set(name, content)
-
-    def file_list(self):
-        ...
-
-    def file_del(self, name):
-        ...
-
-    # folder
-
-    def folder_get(self, name):
-        # pull folder and return path
-        name = name.lower().replace(' ', '_')
-        name = re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
-
-        return str(self.fileStorage.get_path(name))
-
-    def folder_sync(self, name):
-        # sync abs path
-        self.fileStorage.push()
-
-    # jsons
-
-    def json_set(self, name, content):
-        ...
-
-    def json_get(self, name):
-        ...
-
-    def json_list(self):
-        ...
-
-    def json_del(self, name):
-        ...

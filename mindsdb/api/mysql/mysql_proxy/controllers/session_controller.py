@@ -10,7 +10,7 @@
 """
 
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
-from mindsdb.api.mysql.mysql_proxy.utilities import log
+from mindsdb.api.mysql.mysql_proxy.utilities import logger
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 
@@ -30,7 +30,7 @@ class SessionController():
         self.user_class = user_class
         self.auth = False
         self.company_id = company_id
-        self.logging = log
+        self.logging = logger
         self.database = None
 
         self.config = Config()
@@ -45,8 +45,18 @@ class SessionController():
             company_id=company_id
         )
 
-        self.view_interface = WithKWArgsWrapper(
+        self.view_controller = WithKWArgsWrapper(
             server.original_view_controller,
+            company_id=company_id
+        )
+
+        self.project_controller = WithKWArgsWrapper(
+            server.original_project_controller,
+            company_id=company_id
+        )
+
+        self.database_controller = WithKWArgsWrapper(
+            server.original_database_controller,
             company_id=company_id
         )
 

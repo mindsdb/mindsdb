@@ -1,6 +1,6 @@
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
-from mindsdb.api.mongo.utilities import log
+from mindsdb.api.mongo.utilities import logger
 
 class Responce(Responder):
     when = {'saslStart': helpers.is_true}
@@ -22,7 +22,7 @@ class Responce(Responder):
                 'ok': 1
             }
         except Exception as e:
-            log.warning(str(e))
+            logger.warning(str(e))
             res = {
                 'errmsg': str(e),
                 'ok': 0

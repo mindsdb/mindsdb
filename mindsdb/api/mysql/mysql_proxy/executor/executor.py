@@ -16,7 +16,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatem
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErBadDbError,
     SqlApiException,
-    log
+    logger
 )
 
 
@@ -175,7 +175,7 @@ class Executor:
                 self.query = parse_sql(sql, dialect='mysql')
         except Exception as e:
             # not all statements are parsed by parse_sql
-            log.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
+            logger.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
 
             sql_list = [x for x in self.sql_lower.replace('\t', ' ').replace('\n', ' ').split(' ') if x not in ('', ' ')]
             if len(sql_list) > 1 and sql_list[0] == "show":
@@ -208,7 +208,7 @@ class Executor:
                 raise SqlApiException(f'SQL statement cannot be parsed by mindsdb_sql - {sql}: {e}') from e
 
             # not all statements are parse by parse_sql
-            log.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
+            logger.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
 
             # == a place for workarounds ==
             # or run sql in integration without parsing

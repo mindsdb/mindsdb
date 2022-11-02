@@ -12,6 +12,8 @@ from .lightwood_handler.__about__ import __version__ as version
 title = 'Lightwood'
 name = 'lightwood'
 type = HANDLER_TYPE.ML
+permanent = True
+
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'import_error'

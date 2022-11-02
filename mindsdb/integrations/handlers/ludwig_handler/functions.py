@@ -6,7 +6,7 @@ from ludwig.automl import auto_train
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 import mindsdb.interfaces.storage.db as db
 
 from .utils import RayConnection
@@ -65,7 +65,7 @@ def learn_process(df, target, user_config, predictor_id, sql_stmt, storage_confi
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
         db.session.commit()
 
-        log.info(f'Ludwig model {model_name} has finished training.')
+        log.logger.info(f'Ludwig model {model_name} has finished training.')
 
     except Exception as e:
         predictor_record = db.Predictor.query.with_for_update().get(predictor_id)

@@ -34,4 +34,9 @@ on release.
 Run `docker-compose up` or `docker-compose up -d` (for `detach` mode) to launch mindsdb environment in docker compose
 
 
+## Running local docker compose environment (in old manner development)
 
+
+
+1. Change http api and/or mysql api hosts from '127.0.0.1' to '0.0.0.0' in [config json](../mindsdb/utilities/config.py), see `api` section in `self._default_config`
+Run `docker-compose -f docker-compose up` or `docker-compose -f docker-compose up -d` (for `detach` mode) to launch mindsdb environment in docker compose

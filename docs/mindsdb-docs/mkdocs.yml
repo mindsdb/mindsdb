@@ -105,6 +105,7 @@ nav:
   - SQL API:
     - MindsDB Tables Structure: sql/table-structure.md
     - Running Native Queries: sql/native-queries.md
+    - PROJECTS: sql/project.md
     - CREATE:
       - DATABASE: sql/create/databases.md
       - PREDICTOR: sql/create/predictor.md

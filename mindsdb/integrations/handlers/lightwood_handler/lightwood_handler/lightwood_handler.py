@@ -78,6 +78,7 @@ class LightwoodHandler(BaseMLEngine):
     name = 'lightwood'
 
     def create(self, target, df, args):
+        args['target'] = target
         run_learn(
             df,
             args,   # Problem definition and JsonAI override

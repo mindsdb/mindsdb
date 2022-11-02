@@ -273,7 +273,7 @@ class BaseMLEngineExec:
             )
 
         target = statement.targets[0].parts[-1]
-        training_data_df = pd.DataFrame()
+        training_data_df = None
 
         fetch_data_query = None
         data_integration_id = None
@@ -306,9 +306,6 @@ class BaseMLEngineExec:
             else:
                 data_integration_id = data_integration_meta['id']
 
-        if target not in training_data_df.columns:
-            raise Exception(f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
-
         problem_definition = {'target': target}
 
         training_data_columns_count, training_data_rows_count = 0, 0
@@ -321,20 +318,20 @@ class BaseMLEngineExec:
                 raise Exception(
                     f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
-        for attr in ['using', 'horizon', 'window']:
-            if hasattr(statement, attr) and getattr(statement, attr) is not None:
-                problem_definition[attr] = getattr(statement, attr)
+        if statement.using is not None:
+            problem_definition['using'] = statement.using
 
-        if hasattr(statement, 'order_by') and statement.order_by is not None:
-            problem_definition['order_by'] = str(getattr(statement, 'order_by')[0])
-        if hasattr(statement, 'group_by') and statement.group_by is not None:
-            problem_definition['group_by'] = [str(col) for col in getattr(statement, 'group_by')]
+        if statement.order_by is not None:
+            problem_definition['timeseries_settings'] = {
+                'is_timeseries': True,
+                'order_by': str(getattr(statement, 'order_by')[0])
+            }
+            for attr in ['horizon', 'window']:
+                if getattr(statement, attr) is not None:
+                    problem_definition['timeseries_settings'][attr] = getattr(statement, attr)
 
-        if problem_definition.get('order_by', False):
-            problem_definition['timeseries_settings'] = {'is_timeseries': True}
-            for attr in ['order_by', 'group_by', 'horizon', 'window']:
-                if attr in problem_definition:
-                    problem_definition['timeseries_settings'][attr] = problem_definition[attr]
+            if statement.group_by is not None:
+                problem_definition['timeseries_settings']['group_by'] = [str(col) for col in statement.group_by]
 
         join_learn_process = False
         if 'join_learn_process' in problem_definition.get('using', {}):

@@ -46,10 +46,11 @@ def delete_learn_mark():
 def run_generate(df: DataFrame, predictor_id: int, args: dict = None):
     json_ai_override = args.pop('using', {})
 
-    args['timeseries_settings'] = {}
-    for tss_key in [f.name for f in dataclasses.fields(lightwood.api.TimeseriesSettings)]:
-        if tss_key in args:
-            args['timeseries_settings'][tss_key] = args.pop(tss_key)
+    if 'timeseries_settings' in args:
+        for tss_key in [f.name for f in dataclasses.fields(lightwood.api.TimeseriesSettings)]:
+            k = f'timeseries_settings.{tss_key}'
+            if k in json_ai_override:
+                args['timeseries_settings'][tss_key] = json_ai_override.pop(k)
 
     problem_definition = lightwood.ProblemDefinition.from_dict(args)
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)

@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 import requests
 from datetime import datetime
+import dataclasses
 
 import pandas as pd
 from pandas.core.frame import DataFrame
@@ -24,7 +25,7 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.interfaces.storage.fs import FileStorage, RESOURCE_GROUP
 from mindsdb.interfaces.storage.json import get_json_storage
 
-from .utils import rep_recur, brack_to_mod
+from .utils import rep_recur, brack_to_mod, unpack_jsonai_old_args
 
 
 def create_learn_mark():
@@ -42,13 +43,20 @@ def delete_learn_mark():
 
 
 @mark_process(name='learn')
-def run_generate(df: DataFrame, problem_definition: ProblemDefinition, predictor_id: int, json_ai_override: dict = None):
-    json_ai = lightwood.json_ai_from_problem(df, problem_definition)
-    if json_ai_override is None:
-        json_ai_override = {}
+def run_generate(df: DataFrame, predictor_id: int, args: dict = None):
+    json_ai_override = args.pop('using', {})
 
-    json_ai_override = brack_to_mod(json_ai_override)
+    if 'timeseries_settings' in args:
+        for tss_key in [f.name for f in dataclasses.fields(lightwood.api.TimeseriesSettings)]:
+            k = f'timeseries_settings.{tss_key}'
+            if k in json_ai_override:
+                args['timeseries_settings'][tss_key] = json_ai_override.pop(k)
+
+    problem_definition = lightwood.ProblemDefinition.from_dict(args)
+    json_ai = lightwood.json_ai_from_problem(df, problem_definition)
     json_ai = json_ai.to_dict()
+    unpack_jsonai_old_args(json_ai_override)
+    json_ai_override = brack_to_mod(json_ai_override)
     rep_recur(json_ai, json_ai_override)
     json_ai = JsonAI.from_dict(json_ai)
 
@@ -128,18 +136,17 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
 
 
 @mark_process(name='learn')
-def run_learn(df: DataFrame, problem_definition: ProblemDefinition, model_storage) -> None:
+def run_learn(df: DataFrame, args: dict, model_storage) -> None:
     # FIXME
     predictor_id = model_storage.predictor_id
     company_id = model_storage.company_id
-    json_ai_override = {}
 
     predictor_record = Predictor.query.with_for_update().get(predictor_id)
     predictor_record.training_start_at = datetime.now()
     db.session.commit()
 
     try:
-        run_generate(df, problem_definition, predictor_id, json_ai_override)
+        run_generate(df, predictor_id, args)
         run_fit(predictor_id, df, company_id)
     except Exception as e:
         predictor_record = Predictor.query.with_for_update().get(predictor_id)

@@ -311,16 +311,27 @@ class BaseMLEngineExec:
         if target not in training_data_df.columns:
             raise Exception(f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
-        problem_definition = statement.using
-        if problem_definition is None:
-            problem_definition = {}
+        problem_definition = {}
 
-        problem_definition['target'] = target
+        if statement.using is not None:
+            problem_definition['using'] = statement.using
+
+        if statement.order_by is not None:
+            problem_definition['timeseries_settings'] = {
+                'is_timeseries': True,
+                'order_by': str(getattr(statement, 'order_by')[0])
+            }
+            for attr in ['horizon', 'window']:
+                if getattr(statement, attr) is not None:
+                    problem_definition['timeseries_settings'][attr] = getattr(statement, attr)
+
+            if statement.group_by is not None:
+                problem_definition['timeseries_settings']['group_by'] = [str(col) for col in getattr(statement, 'group_by')]
 
         join_learn_process = False
-        if 'join_learn_process' in problem_definition:
-            join_learn_process = problem_definition['join_learn_process']
-            del problem_definition['join_learn_process']
+        if 'join_learn_process' in problem_definition.get('using', {}):
+            join_learn_process = problem_definition['using']['join_learn_process']
+            del problem_definition['using']['join_learn_process']
 
         predictor_record = db.Predictor(
             company_id=self.company_id,

@@ -15,23 +15,32 @@ mlflow models serve --model-uri ./model_folder_name
 
 # MindsDB example commands
 
--- Create a predictor that registers an MLFlow served model as an AI Table
-CREATE PREDICTOR mlflow.test
-PREDICT target  -- has to match the name of the column the script returns
+-- Create a model that registers an MLFlow served model as an AI Table
+
+CREATE MODEL mindsdb.test
+PREDICT target
 USING
+engine='mlflow',  -- calls this handler
 model_name='model_folder_name',
 mlflow_server_url='http://0.0.0.0:5001/',  -- match port with mlflow server
 mlflow_server_path='sqlite:////path/to/mlflow.db',
 predict_url='http://localhost:5000/invocations';  -- match port with `mlflow serve`
 
-SELECT * FROM mlflow.predictors WHERE name='test';  -- will appear as `complete` if import process finished successfully
+
+-- Check model status
+
+SELECT * FROM mindsdb.models WHERE name='test';  -- will appear as `complete` if import process finished successfully
+
+
+-- Predict using synthetic data
 
 SELECT target
-FROM mlflow.test
+FROM mindsdb.test
 WHERE text='The tsunami is coming, seek high ground';  -- gets predictions for the input data
 
+
+-- Batch prediction joining with another table
+
 SELECT t.text, m.predict
-FROM mlflow.test4 as m
+FROM mindsdb.test as m
 JOIN files.some_text as t;
-
-

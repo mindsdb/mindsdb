@@ -25,6 +25,7 @@ class MLflowHandler(BaseMLEngine):
     name = 'mlflow'
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        args = args['using']  # ignore the rest of the problem definition
         connection = MlflowClient(args['mlflow_server_url'], args['mlflow_server_path'])
         model_name = args['model_name']
         mlflow_models = [model.name for model in connection.search_registered_models()]

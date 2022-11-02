@@ -83,7 +83,9 @@ class BaseStuff:
                 command=cmd,
                 remove=True,
                 volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
-                environment={"MYSQL_PWD": self.config["api"]["mysql"]["password"]})
+                environment={"MYSQL_PWD": self.config["api"]["mysql"]["password"]},
+                extra_hosts={"host.docker.internal": "host-gateway"})
+
         return self.to_dicts(res.decode(encoding))
 
     def create_database(self, db_data):
@@ -166,7 +168,8 @@ class TestMySqlApi(BaseStuff):
         cls.config = json.loads(Path(os.path.join(TEMP_DIR, "config.json")).read_text())
 
         cls.launch_query_tmpl = "mysql --host=%s --port=%s --user=%s --database=mindsdb" % (
-            cls.config["api"]["mysql"]["host"],
+            "host.docker.internal",
+                #cls.config["api"]["mysql"]["host"],
             cls.config["api"]["mysql"]["port"],
             cls.config["api"]["mysql"]["user"])
 

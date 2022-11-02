@@ -1,5 +1,6 @@
 import sys
 import os
+import platform
 import time
 import json
 import subprocess
@@ -28,6 +29,8 @@ def make_test_csv(name, data):
 
 def docker_inet_ip():
     """Get ip of docker0 interface."""
+    if platform.system().lower() == "darwin":
+        return "127.0.0.1"
     if "docker0" not in netifaces.interfaces():
         raise Exception("Unable to find 'docker' interface. Please install docker first.")
     return netifaces.ifaddresses('docker0')[netifaces.AF_INET][0]['addr']

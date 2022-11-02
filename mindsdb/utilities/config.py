@@ -25,6 +25,7 @@ def _merge_configs(original_config, override_config):
 
 config = None
 
+
 class Config():
     def __init__(self):
         # initialize once

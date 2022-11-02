@@ -184,6 +184,8 @@ def run_update(predictor_id: int, df: DataFrame, company_id: int):
             problem_definition['time_aim'] = problem_definition['stop_training_in_x_seconds']
 
         json_ai = lightwood.json_ai_from_problem(df, problem_definition)
+
+        # TODO move it to ModelStorage (don't work with database directly)
         predictor_record.code = lightwood.code_from_json_ai(json_ai)
         predictor_record.data = {'training_log': 'training'}
         predictor_record.training_start_at = datetime.now()

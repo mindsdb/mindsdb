@@ -94,12 +94,12 @@ class MLHandlerProcess:
 
         module_name, class_name = class_path
         module = importlib.import_module(module_name)
-        klass = getattr(module, class_name)
+        HandlerClass = getattr(module, class_name)
 
         handlerStorage = HandlerStorage(company_id, integration_id)
         modelStorage = ModelStorage(company_id, predictor_id)
 
-        ml_handler = klass(
+        ml_handler = HandlerClass(
             engine_storage=handlerStorage,
             model_storage=modelStorage,
         )

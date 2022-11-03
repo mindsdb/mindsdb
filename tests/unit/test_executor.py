@@ -46,8 +46,6 @@ class Test(BaseExecutorTestMockModel):
         }
         self.set_predictor(predictor)
 
-        self.set_project({'name': 'mindsdb'})
-
         ret = self.command_executor.execute_command(parse_sql(f'''
              select * from mindsdb.task_model where a = 2
            ''', dialect='mindsdb'))
@@ -75,8 +73,6 @@ class Test(BaseExecutorTestMockModel):
             'predicted_value': 3.14
         }
         self.set_predictor(predictor)
-
-        self.set_project({'name': 'mindsdb'})
 
         ret = self.command_executor.execute_command(parse_sql(f'''
             SELECT a, last(b)
@@ -127,8 +123,6 @@ class Test(BaseExecutorTestMockModel):
             'predicted_value': ''
         }
         self.set_predictor(predictor)
-
-        self.set_project({'name': 'mindsdb'})
 
         # set predictor output
         predict_result = [
@@ -248,8 +242,6 @@ class Test(BaseExecutorTestMockModel):
         }
         self.set_predictor(predictor)
 
-        self.set_project({'name': 'mindsdb'})
-
         # set predictor output
         predict_result = [
             # window
@@ -333,7 +325,6 @@ class TestComplexQueries(BaseExecutorTestMockModel):
 
         # --- use predictor ---
         self.set_predictor(self.task_predictor)
-        self.set_project({'name': 'mindsdb'})
         sql = '''
              SELECT a as a1, b as target
               FROM pg.tasks
@@ -367,7 +358,6 @@ class TestComplexQueries(BaseExecutorTestMockModel):
 
         # --- use predictor ---
         self.set_predictor(self.task_predictor)
-        self.set_project({'name': 'mindsdb'})
         sql = '''
             update 
                 pg.table2                   
@@ -402,7 +392,6 @@ class TestComplexQueries(BaseExecutorTestMockModel):
         self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
 
         self.set_predictor(self.task_predictor)
-        self.set_project({'name': 'mindsdb'})
         sql = '''
               create table pg.table1                          
               (
@@ -442,7 +431,6 @@ class TestComplexQueries(BaseExecutorTestMockModel):
         self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
 
         self.set_predictor(self.task_predictor)
-        self.set_project({'name': 'mindsdb'})
         sql = '''
                insert into pg.table1                          
                (
@@ -512,7 +500,6 @@ class TestTableau(BaseExecutorTestMockModel):
             'predicted_value': 3.14
         }
         self.set_predictor(predictor)
-        self.set_project({'name': 'mindsdb'})
         ret = self.command_executor.execute_command(parse_sql(f'''
               SELECT 
               `Custom SQL Query`.`a` AS `height`,
@@ -548,7 +535,6 @@ class TestTableau(BaseExecutorTestMockModel):
             'predicted_value': predicted_value
         }
         self.set_predictor(predictor)
-        self.set_project({'name': 'mindsdb'})
         ret = self.command_executor.execute_command(parse_sql(f'''
            SELECT 
               SUM(1) AS `cnt__0B4A4E8BD11C48FFB4730D4D2C32191A_ok`,
@@ -585,7 +571,6 @@ class TestTableau(BaseExecutorTestMockModel):
             'predicted_value': predicted_value
         }
         self.set_predictor(predictor)
-        self.set_project({'name': 'mindsdb'})
         ret = self.command_executor.execute_command(parse_sql(f'''
            SELECT              
               max(a1) AS a1,
@@ -638,7 +623,6 @@ class TestWithNativeQuery(BaseExecutorTestMockModel):
         data = [[3, 'y'], [1, 'y']]
         df = pd.DataFrame(data, columns=['a', 'b'])
         self.set_handler(mock_handler, name='pg', tables={'tasks': df})
-        self.set_project({'name': 'mindsdb'})
 
         # --- create view ---
         ret = self.command_executor.execute_command(parse_sql(
@@ -669,7 +653,8 @@ class TestWithNativeQuery(BaseExecutorTestMockModel):
             dialect='mindsdb'))
         assert ret.error_code is None
 
-        # learn was called
+        # learn was called.
+        # TODO check input to ML handler
         # assert self.mock_create.call_args[0][0].name.to_string() == 'task_model'  # it exec in separate process
         # integration was called
         # TODO: integration is not called during learn process because learn function is mocked
@@ -692,7 +677,6 @@ class TestWithNativeQuery(BaseExecutorTestMockModel):
             {'a': 1, 'b': 'three'},
         ])
         self.set_handler(mock_handler, name='pg', tables={'tasks': df})
-        self.set_project({'name': 'mindsdb'})
 
         view_name = 'vtasks'
         # --- create view ---
@@ -724,18 +708,13 @@ class TestWithNativeQuery(BaseExecutorTestMockModel):
         assert ret.error_code is None
 
         # native query was called
-        assert len(mock_handler().native_query.call_args[0]) == 1
+        assert mock_handler().native_query.call_args[0][0] == 'select * from tasks'
 
         # check predictor call
-
-        # prediction was called
-        assert isinstance(self.mock_predict.call_args[0][0], pd.DataFrame)
-
         # input = one row whit a==2
-        when_data = self.mock_predict.call_args[0][0]
-        when_data = when_data.to_dict(orient='records')
-        assert len(when_data) == 1
-        assert when_data[0]['a'] == 2
+        df_in = self.mock_predict.call_args[0][0]
+        assert df_in.shape[0] == 1
+        assert df_in.a[0] == 2
 
         # check prediction
         assert ret.data[0][0] == predicted_value
@@ -757,7 +736,6 @@ class TestWithNativeQuery(BaseExecutorTestMockModel):
             {'a': 9, 't': dt.datetime(2020, 1, 3), 'g': 'z'},
         ])
         self.set_handler(mock_handler, name='pg', tables={'tasks': df})
-        self.set_project({'name': 'mindsdb'})
         view_name = 'vtasks'
         # --- create view ---
         ret = self.command_executor.execute_command(parse_sql(
@@ -816,3 +794,85 @@ class TestWithNativeQuery(BaseExecutorTestMockModel):
 
         # p is predicted value
         assert ret_df['p'][0] == predicted_value
+
+
+class TestProjectStructure(BaseExecutorTestMockModel):
+
+    def run_sql(self, sql):
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb')
+        )
+        assert ret.error_code is None
+        if ret.data is not None:
+            columns = [
+                col.alias if col.alias is not None else col.name
+                for col in ret.columns
+            ]
+            return pd.DataFrame(ret.data, columns=columns)
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_flow(self, mock_handler):
+        # set up
+
+        df = pd.DataFrame([
+            {'a': 1, 'b': dt.datetime(2020, 1, 1)},
+            {'a': 2, 'b': dt.datetime(2020, 1, 2)},
+            {'a': 1, 'b': dt.datetime(2020, 1, 3)},
+        ])
+        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
+
+        predictor = {
+            'name': 'task_model',
+            'predict': 'p',
+            'dtypes': {
+                'p': dtype.float,
+                'a': dtype.integer,
+                'b': dtype.categorical
+            },
+            'predicted_value': 3.14
+        }
+        self.set_predictor(predictor)
+
+        # ----------------
+
+        # create folder
+        self.run_sql('create database proj')
+
+        # # create model
+        # self.run_sql(
+        #     '''
+        #         CREATE PREDICTOR proj.task_model
+        #         from pg (select * from tasks)
+        #         PREDICT a
+        #     '''
+        # )
+
+        # # use model
+        # ret = self.run_sql('''
+        #      SELECT m.p
+        #        FROM pg.tasks as t
+        #        JOIN proj.task_model as m
+        # ''')
+        # print(ret)
+
+        # # retrain predictor
+        # self.run_sql(
+        #     '''
+        #         Retrain proj.task_model
+        #         from pg (select * from tasks where a=2)
+        #         PREDICT a
+        #     '''
+        # )
+
+        # list of versions
+
+        # run predict with old version
+
+        # switch version
+
+        # drop version
+
+        # drop predictor
+
+        # all the same with TS
+

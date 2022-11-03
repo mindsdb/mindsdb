@@ -1,4 +1,4 @@
-from mindsdb.api.mongo.utilities import log
+from mindsdb.api.mongo.utilities import logger
 
 from .responder import Responder
 
@@ -24,7 +24,7 @@ class RespondersCollection():
                 "codeName": "CommandNotFound"
             }
 
-        log.error(msg)
+        logger.error(msg)
         return ErrorResponder()
 
     def add(self, when, result):

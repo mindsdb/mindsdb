@@ -4,6 +4,7 @@ from copy import deepcopy
 
 from mindsdb.utilities.fs import create_directory
 
+from mindsdb.utilities.fs import get_or_create_data_dir
 
 def _merge_key_recursive(target_dict, source_dict, key):
     if key not in target_dict:
@@ -22,14 +23,45 @@ def _merge_configs(original_config, override_config):
     return original_config
 
 
+config = None
+
+
 class Config():
     def __init__(self):
+        # initialize once
+        global config
         self.config_path = os.environ['MINDSDB_CONFIG_PATH']
+        if config is None:
+            config = self.init_config()
+        self._config = config
+
+    def init_config(self):
+
         if self.config_path == 'absent':
             self._override_config = {}
         else:
             with open(self.config_path, 'r') as fp:
                 self._override_config = json.load(fp)
+
+        # region define storage dir
+        if 'storage_dir' in self._override_config:
+            root_storage_dir = self._override_config['storage_dir']
+            os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
+        elif os.environ.get('MINDSDB_STORAGE_DIR') is not None:
+            root_storage_dir = os.environ['MINDSDB_STORAGE_DIR']
+        else:
+            root_storage_dir = get_or_create_data_dir()
+            os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
+        # regionend
+
+        if os.path.isdir(root_storage_dir) is False:
+            os.makedirs(root_storage_dir)
+
+        if 'storage_db' in self._override_config:
+            os.environ['MINDSDB_DB_CON'] = self._override_config['storage_db']
+        elif os.environ.get('MINDSDB_DB_CON', '') == '':
+            os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(root_storage_dir,
+                                                                       'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
 
         paths = {
             'root': os.environ['MINDSDB_STORAGE_DIR']
@@ -86,7 +118,7 @@ class Config():
             }
         }
 
-        self._config = _merge_configs(self._default_config, self._override_config)
+        return _merge_configs(self._default_config, self._override_config)
 
     def __getitem__(self, key):
         return self._config[key]

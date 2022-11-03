@@ -82,8 +82,6 @@ from mindsdb.utilities.cache import get_cache, json_checksum
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
 
-predictor_cache = get_cache('predict')
-
 
 class ColumnsCollection:
     def __init__(self):
@@ -981,6 +979,8 @@ class SQLQuery():
                 else:
                     predictor_id = predictor_metadata['id']
                     key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
+                    predictor_cache = get_cache('predict')
+
                     data = predictor_cache.get(key)
 
                     if data is None:

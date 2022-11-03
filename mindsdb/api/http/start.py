@@ -19,17 +19,17 @@ from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.utilities.log import initialize_log, get_log
+from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.db import session, engine as db_engine
+from mindsdb.interfaces.storage import db
 
 
 def start(verbose, no_studio, with_nlp):
     config = Config()
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
-
-    initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
+    db.init()
+    log.initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
 
     # start static initialization in a separate thread
     init_static_thread = None
@@ -68,7 +68,7 @@ def start(verbose, no_studio, with_nlp):
 
     @api.errorhandler(Exception)
     def handle_exception(e):
-        get_log('http').error(f'http exception: {e}')
+        log.get_log('http').error(f'http exception: {e}')
         # pass through HTTP errors
         if isinstance(e, HTTPException):
             return {'message': str(e)}, e.code, e.get_response().headers
@@ -77,7 +77,7 @@ def start(verbose, no_studio, with_nlp):
 
     @app.teardown_appcontext
     def remove_session(*args, **kwargs):
-        session.close()
+        db.session.close()
 
     @app.before_request
     def before_request():
@@ -88,14 +88,14 @@ def start(verbose, no_studio, with_nlp):
             try:
                 company_id = int(company_id)
             except Exception as e:
-                get_log('http').error(f'Cloud not parse company id: {company_id} | exception: {e}')
+                log.get_log('http').error(f'Cloud not parse company id: {company_id} | exception: {e}')
                 company_id = None
 
         if user_class is not None:
             try:
                 user_class = int(user_class)
             except Exception as e:
-                get_log('http').error(f'Cloud not parse user_class: {user_class} | exception: {e}')
+                log.get_log('http').error(f'Cloud not parse user_class: {user_class} | exception: {e}')
                 user_class = 0
         else:
             user_class = 0
@@ -131,8 +131,8 @@ def start(verbose, no_studio, with_nlp):
             serve(app, port=port, host=host, max_request_body_size=1073741824 * 10, inbuf_overflow=1073741824 * 10)
     elif server.lower() == 'flask':
         # that will 'disable access' log in console
-        log = logging.getLogger('werkzeug')
-        log.setLevel(logging.WARNING)
+        logger = logging.getLogger('werkzeug')
+        logger.setLevel(logging.WARNING)
 
         app.run(debug=False, port=port, host=host)
     elif server.lower() == 'gunicorn':
@@ -143,7 +143,7 @@ def start(verbose, no_studio, with_nlp):
             return
 
         def post_fork(arbiter, worker):
-            db_engine.dispose()
+            db.engine.dispose()
 
         options = {
             'bind': f'{host}:{port}',

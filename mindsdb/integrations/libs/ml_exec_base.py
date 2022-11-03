@@ -333,12 +333,6 @@ class BaseMLEngineExec:
             if statement.group_by is not None:
                 problem_definition['timeseries_settings']['group_by'] = [str(col) for col in statement.group_by]
 
-        if statement.horizon is not None:
-            problem_definition['horizon'] = int(statement.horizon)
-
-        if statement.window is not None:
-            problem_definition['window'] = int(statement.window)
-
         join_learn_process = False
         if 'join_learn_process' in problem_definition.get('using', {}):
             join_learn_process = problem_definition['using']['join_learn_process']

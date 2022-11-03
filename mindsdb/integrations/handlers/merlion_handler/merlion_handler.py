@@ -7,7 +7,7 @@ import pandas as pd
 import copy
 
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from .adapters import BaseMerlionForecastAdapter, DefaultForecasterAdapter, MerlionArguments, DefaultDetectorAdapter, \
     SarimaForecasterAdapter, ProphetForecasterAdapter, MSESForecasterAdapter, IsolationForestDetectorAdapter, \
     WindStatsDetectorAdapter, ProphetDetectorAdapter
@@ -76,10 +76,12 @@ class MerlionHandler(BaseMLEngine):
 
     ARG_USING_TASK = "task"
     ARG_USING_MODEL_TYPE = "model_type"
-    ARG_USING_TIME_COLUMN = "time_column"
-    ARG_WINDOW = "window"
-    ARG_TARGET = "target" # only be used to persist args to args.json
-    ARG_COLUMN_SEQUENCE = "column_sequence"  # only be used to persist args to args.json
+    # keys only be used to persist args to args.json
+    ARG_TIME_COLUMN = "time_column"
+    ARG_BASE_WINDOW = "base_window"
+    ARG_PREDICT_HORIZON = "predict_horizon"
+    ARG_TARGET = "target"
+    ARG_COLUMN_SEQUENCE = "column_sequence"
 
     KWARGS_DF = "df"
 
@@ -95,15 +97,16 @@ class MerlionHandler(BaseMLEngine):
         # prepare arguments
         task = args.get(self.ARG_USING_TASK, TaskType.forecast.name)
         model_type = args.get(self.ARG_USING_MODEL_TYPE, self.DEFAULT_MODEL_TYPE)
-        time_column = args.get(self.ARG_USING_TIME_COLUMN, None)
-        horizon = args.get("horizon", self.DEFAULT_MAX_PREDICT_STEP)
-        window = args.get(self.ARG_WINDOW, self.DEFAULT_PREDICT_BASE_WINDOW)
+        timeseries_settings = args.get("timeseries_settings", dict())
+        time_column = timeseries_settings.get("order_by", None)
+        horizon = timeseries_settings.get("horizon", self.DEFAULT_MAX_PREDICT_STEP)
+        window = timeseries_settings.get("window", self.DEFAULT_PREDICT_BASE_WINDOW)
         # update args for default value maybe has been used, only time column will be set afterwards
         args[self.ARG_TARGET] = target
         args[self.ARG_USING_TASK] = task
         args[self.ARG_USING_MODEL_TYPE] = model_type
-        args["horizon"] = horizon
-        args[self.ARG_WINDOW] = window
+        args[self.ARG_PREDICT_HORIZON] = horizon
+        args[self.ARG_BASE_WINDOW] = window
 
         # check df
         if df is None:
@@ -119,22 +122,22 @@ class MerlionHandler(BaseMLEngine):
 
         # check and cast to ts dataframe
         ts_df, time_column = to_ts_dataframe(df=df, time_col=time_column)
-        args[self.ARG_USING_TIME_COLUMN] = time_column
+        args[self.ARG_TIME_COLUMN] = time_column
 
         # train model
         model_args = {}
         if task_enum == TaskType.forecast:
             model_args[MerlionArguments.max_forecast_steps.value] = horizon
         adapter: BaseMerlionForecastAdapter = adapter_class(**model_args)
-        log.info("Training model, args: " + json.dumps(args))
+        log.logger.info("Training model, args: " + json.dumps(args))
         adapter.train(df=ts_df, target=target)
-        log.info("Training model completed.")
+        log.logger.info("Training model completed.")
 
         # persist save model
         model_bytes = adapter.to_bytes()
         self.model_storage.file_set(self.PERSIST_MODEL_FILE_NAME, model_bytes)
         self.model_storage.json_set(self.PERSIST_ARGS_KEY_IN_JSON_STORAGE, args)
-        log.info("Model and args saved.")
+        log.logger.info("Model and args saved.")
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         rt_df = df.copy(deep=True)
@@ -145,9 +148,9 @@ class MerlionHandler(BaseMLEngine):
         # resolve args
         task = args[self.ARG_USING_TASK]
         model_type = args[self.ARG_USING_MODEL_TYPE]
-        time_column = args[self.ARG_USING_TIME_COLUMN]
+        time_column = args[self.ARG_TIME_COLUMN]
         target = args[self.ARG_TARGET]
-        horizon = args["horizon"]
+        horizon = args[self.ARG_PREDICT_HORIZON]
         feature_column_sequence = list(args[self.ARG_COLUMN_SEQUENCE])
         task_enum = TaskType[task]
 

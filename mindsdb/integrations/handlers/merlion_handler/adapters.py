@@ -57,7 +57,7 @@ class BaseMerlionForecastAdapter:
         forecast_step = self.max_forecast_steps
         df = df[df.index <= self.model.last_train_time + self.model.timedelta * forecast_step]
         if len(list(df.columns.values)) == 0:
-            df[target] = 0
+            df.loc[:, target] = 0
         predict_data = TimeSeries.from_pd(df)
         predict_pred, predict_err = self.model.forecast(time_stamps=predict_data.time_stamps)
         return self.__prepare_forecast_return(target=target, pred_ts=predict_pred, err_ts=predict_err)

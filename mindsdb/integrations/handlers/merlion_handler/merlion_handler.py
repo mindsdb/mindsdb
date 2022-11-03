@@ -95,18 +95,20 @@ class MerlionHandler(BaseMLEngine):
     def create(self, target, args=None, **kwargs):
         df: pd.DataFrame = kwargs.get(self.KWARGS_DF, None)
         # prepare arguments
-        task = args.get(self.ARG_USING_TASK, TaskType.forecast.name)
-        model_type = args.get(self.ARG_USING_MODEL_TYPE, self.DEFAULT_MODEL_TYPE)
+        using_args = args.get("using", dict())
+        task = using_args.get(self.ARG_USING_TASK, TaskType.forecast.name)
+        model_type = using_args.get(self.ARG_USING_MODEL_TYPE, self.DEFAULT_MODEL_TYPE)
         timeseries_settings = args.get("timeseries_settings", dict())
         time_column = timeseries_settings.get("order_by", None)
         horizon = timeseries_settings.get("horizon", self.DEFAULT_MAX_PREDICT_STEP)
         window = timeseries_settings.get("window", self.DEFAULT_PREDICT_BASE_WINDOW)
         # update args for default value maybe has been used, only time column will be set afterwards
-        args[self.ARG_TARGET] = target
-        args[self.ARG_USING_TASK] = task
-        args[self.ARG_USING_MODEL_TYPE] = model_type
-        args[self.ARG_PREDICT_HORIZON] = horizon
-        args[self.ARG_BASE_WINDOW] = window
+        serialize_args = dict()
+        serialize_args[self.ARG_TARGET] = target
+        serialize_args[self.ARG_USING_TASK] = task
+        serialize_args[self.ARG_USING_MODEL_TYPE] = model_type
+        serialize_args[self.ARG_PREDICT_HORIZON] = horizon
+        serialize_args[self.ARG_BASE_WINDOW] = window
 
         # check df
         if df is None:
@@ -114,7 +116,7 @@ class MerlionHandler(BaseMLEngine):
         else:
             column_sequence = sorted(list(df.columns.values))
             df = df[column_sequence]
-            args[self.ARG_COLUMN_SEQUENCE] = column_sequence
+            serialize_args[self.ARG_COLUMN_SEQUENCE] = column_sequence
 
         # check task, model_type and get the adapter_class
         adapter_class = self.__args_to_adapter_class(task=task, model_type=model_type)
@@ -122,36 +124,36 @@ class MerlionHandler(BaseMLEngine):
 
         # check and cast to ts dataframe
         ts_df, time_column = to_ts_dataframe(df=df, time_col=time_column)
-        args[self.ARG_TIME_COLUMN] = time_column
+        serialize_args[self.ARG_TIME_COLUMN] = time_column
 
         # train model
         model_args = {}
         if task_enum == TaskType.forecast:
             model_args[MerlionArguments.max_forecast_steps.value] = horizon
         adapter: BaseMerlionForecastAdapter = adapter_class(**model_args)
-        log.logger.info("Training model, args: " + json.dumps(args))
+        log.logger.info("Training model, args: " + json.dumps(serialize_args))
         adapter.train(df=ts_df, target=target)
         log.logger.info("Training model completed.")
 
         # persist save model
         model_bytes = adapter.to_bytes()
         self.model_storage.file_set(self.PERSIST_MODEL_FILE_NAME, model_bytes)
-        self.model_storage.json_set(self.PERSIST_ARGS_KEY_IN_JSON_STORAGE, args)
+        self.model_storage.json_set(self.PERSIST_ARGS_KEY_IN_JSON_STORAGE, serialize_args)
         log.logger.info("Model and args saved.")
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         rt_df = df.copy(deep=True)
         # read model and args from storage
         model_bytes = self.model_storage.file_get(self.PERSIST_MODEL_FILE_NAME)
-        args = self.model_storage.json_get(self.PERSIST_ARGS_KEY_IN_JSON_STORAGE)
+        deserialize_args = self.model_storage.json_get(self.PERSIST_ARGS_KEY_IN_JSON_STORAGE)
 
         # resolve args
-        task = args[self.ARG_USING_TASK]
-        model_type = args[self.ARG_USING_MODEL_TYPE]
-        time_column = args[self.ARG_TIME_COLUMN]
-        target = args[self.ARG_TARGET]
-        horizon = args[self.ARG_PREDICT_HORIZON]
-        feature_column_sequence = list(args[self.ARG_COLUMN_SEQUENCE])
+        task = deserialize_args[self.ARG_USING_TASK]
+        model_type = deserialize_args[self.ARG_USING_MODEL_TYPE]
+        time_column = deserialize_args[self.ARG_TIME_COLUMN]
+        target = deserialize_args[self.ARG_TARGET]
+        horizon = deserialize_args[self.ARG_PREDICT_HORIZON]
+        feature_column_sequence = list(deserialize_args[self.ARG_COLUMN_SEQUENCE])
         task_enum = TaskType[task]
 
         # check df and prepare data

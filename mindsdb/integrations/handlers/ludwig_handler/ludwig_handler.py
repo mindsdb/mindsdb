@@ -58,7 +58,7 @@ class LudwigHandler(BaseMLEngine):
             predictions.columns = ['prediction']
 
         predictions[f'{target_name}_explain'] = None
-        joined = df.join(predictions)  # TODO: Should it still join? Or return just predicted target col?
+        joined = df.join(predictions)
 
         if 'prediction' in joined:
             joined = joined.rename({

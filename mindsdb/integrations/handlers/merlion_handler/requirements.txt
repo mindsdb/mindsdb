@@ -1,0 +1,5 @@
+mindsdb>=22.6.2.1
+mindsdb_sql >= 0.4.0
+pandas <=1.4.3
+
+salesforce-merlion>=1.2.0,<=1.3.1

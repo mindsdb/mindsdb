@@ -31,6 +31,8 @@ services:
       FLASK_ENV: "development"
       FLASK_APP: "/mindsdb/mindsdb/__main__.py"
       SEPARATE_MIGRATIONS: "1"
+    depends_on:
+      - migrations
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
       interval: 30s

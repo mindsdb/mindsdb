@@ -51,7 +51,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 &
 
 WORKDIR /
 COPY requirements.txt /
-RUN pip install -r /requirements.txt
+RUN pip install -r /requirements.txt --no-cache-dir
 
 ENV PYTHONPATH "/mindsdb"
 ENV FLASK_DEBUG "1"

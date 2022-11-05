@@ -30,7 +30,7 @@ class Config():
     def __init__(self):
         # initialize once
         global config
-        self.config_path = os.environ['MINDSDB_CONFIG_PATH']
+        self.config_path = os.environ.get('MINDSDB_CONFIG_PATH', 'absent')
         self.use_docker_env = os.environ.get('MINDSDB_DOCKER_ENV', False)
         if self.use_docker_env:
             self.use_docker_env = True

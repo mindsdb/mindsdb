@@ -40,13 +40,19 @@ Before anything, activate your virtual environment where your MindsDB is install
     source mindsdb/bin/activate
     ```
 
-2. Install MindsDB:
+2. Once inside the virtual environment, run the command below to mitigate the dependency issues:
+
+    ```console
+    pip install --upgrade pip setuptools wheel
+    ```
+
+3. Install MindsDB:
 
     ```bash
     pip install mindsdb
     ```
 
-3. Verify MindsDB installation:
+4. Verify MindsDB installation:
 
     ```bash
     pip freeze
@@ -85,13 +91,19 @@ installed on your machine.
     conda activate mindsdb
     ```
 
-2. Install MindsDB:
+2. Once inside the virtual environment, run the command below to mitigate the dependency issues:
+
+    ```console
+    pip install --upgrade pip setuptools wheel
+    ```
+
+3. Install MindsDB:
 
     ```bash
     pip install mindsdb
     ```
 
-3. Verify MindsDB installation:
+4. Verify MindsDB installation:
 
     ```bach 
     conda list

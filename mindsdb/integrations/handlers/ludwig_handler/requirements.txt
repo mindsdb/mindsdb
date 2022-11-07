@@ -1,7 +1,7 @@
 ludwig[distributed]>=0.5.2
 ray<=1.13.0
-mindsdb>=22.6.2.1
-mindsdb_sql >= 0.4.0
+mindsdb>=22.10.2.1
+mindsdb_sql >= 0.4.4,<0.5.0
 hyperopt
 dill
 dask

@@ -90,6 +90,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='huggingface', data={}, engine='huggingface')
         db.session.add(r)
+        r = db.Integration(name='merlion', data={}, engine='merlion')
+        db.session.add(r)
         r = db.Integration(name='lightwood', data={}, engine='lightwood')
         db.session.add(r)
         r = db.Integration(name='dummy_ml', data={}, engine='dummy_ml')

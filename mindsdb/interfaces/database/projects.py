@@ -98,7 +98,8 @@ class Project:
                 'error': predictor_data.get('error'),
                 'select_data_query': predictor_record.fetch_data_query,
                 'training_options': predictor_record.learn_args,
-                'deletable': True
+                'deletable': True,
+                'label': predictor_record.label,
             }
             if predictor_data is not None and predictor_data.get('accuracies', None) is not None:
                 if len(predictor_data['accuracies']) > 0:

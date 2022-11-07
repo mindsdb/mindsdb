@@ -1,4 +1,3 @@
-from pickle import FALSE
 from typing import Optional
 from collections import OrderedDict
 import pandas as pd
@@ -6,13 +5,11 @@ import pandas as pd
 from sqlalchemy import create_engine
 import sqlalchemy_solr
 
-
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,

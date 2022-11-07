@@ -12,7 +12,7 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.utilities import log
 
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,

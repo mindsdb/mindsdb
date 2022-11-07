@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import base64
+import datetime as dt
 from copy import deepcopy
 from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_datetime
@@ -21,6 +22,8 @@ from mindsdb.interfaces.model.functions import (
     get_model_records
 )
 from mindsdb.interfaces.storage.json import get_json_storage
+from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
+from mindsdb.interfaces.database.database import DatabaseController
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -245,3 +248,118 @@ class ModelController():
             fp.write(predictor_binary)
 
         self.fs_store.push()
+
+    def process_create_statement(self, statement, database_controller, handler_controller):
+        # TODO use database_controller handler_controller internally
+
+        project_name = statement.name.parts[0]
+        model_name = statement.name.parts[1]
+
+        target = statement.targets[0].parts[-1]
+
+        # get data for learn
+        data_integration_id = None
+        fetch_data_query = None
+        if statement.integration_name is not None:
+            fetch_data_query = statement.query_str
+            integration_name = statement.integration_name.parts[0]
+
+            databases_meta = database_controller.get_dict()
+            data_integration_meta = databases_meta[integration_name]
+            # TODO improve here. Suppose that it is view
+            if data_integration_meta['type'] == 'project':
+                data_integration_id = handler_controller.get(name='views')['id']
+            else:
+                data_integration_id = data_integration_meta['id']
+
+        problem_definition = {'target': target}
+
+        label = None
+        if statement.using is not None:
+            label = statement.using.pop('tag', None)
+
+            problem_definition['using'] = statement.using
+
+        if statement.order_by is not None:
+            problem_definition['timeseries_settings'] = {
+                'is_timeseries': True,
+                'order_by': str(getattr(statement, 'order_by')[0])
+            }
+            for attr in ['horizon', 'window']:
+                if getattr(statement, attr) is not None:
+                    problem_definition['timeseries_settings'][attr] = getattr(statement, attr)
+
+            if statement.group_by is not None:
+                problem_definition['timeseries_settings']['group_by'] = [str(col) for col in statement.group_by]
+
+        join_learn_process = False
+        if 'join_learn_process' in problem_definition.get('using', {}):
+            join_learn_process = problem_definition['using']['join_learn_process']
+            del problem_definition['using']['join_learn_process']
+
+        return dict(
+            model_name=model_name,
+            project_name=project_name,
+            data_integration_id=data_integration_id,
+            fetch_data_query=fetch_data_query,
+            problem_definition=problem_definition,
+            join_learn_process=join_learn_process,
+            label=label
+        )
+
+    def create_predictor(self, statement, ml_handler, company_id: int):
+        params = self.process_create_statement(statement,
+                                               ml_handler.database_controller,
+                                               ml_handler.handler_controller)
+
+        existing_projects_meta = ml_handler.database_controller.get_dict(filter_type='project')
+        if params['project_name'] not in existing_projects_meta:
+            raise Exception(f"Project '{params['project_name']}' does not exist.")
+
+        project = ml_handler.database_controller.get_project(name=params['project_name'])
+        project_tables = project.get_tables()
+        if params['model_name'] in project_tables:
+            raise Exception(f"Error: model '{params['model_name']}' already exists in project {params['project_name']}!")
+
+        ml_handler.learn(**params)
+
+    def retrain_predictor(self, statement, ml_handler, company_id: int):
+        # active setting
+        set_active = True
+        if statement.using is not None:
+            set_active = statement.using.pop('active', True)
+            if set_active in ('0', 0, None):
+                set_active = False
+
+        params = self.process_create_statement(statement,
+                                               ml_handler.database_controller,
+                                               ml_handler.handler_controller)
+
+        base_predictor_record = get_model_record(
+            name=params['model_name'],
+            project_name=params['project_name'],
+            company_id=ml_handler.company_id,
+            active=True
+        )
+
+        model_name = params['model_name']
+        if base_predictor_record is None:
+            raise Exception(f"Error: model '{model_name}' does not exists")
+
+        params['version'] = base_predictor_record.version or 1
+
+        # get params from predictor if not defined
+
+        if params['data_integration_id'] is None:
+            params['data_integration_id'] = base_predictor_record.data_integration_id
+        if params['fetch_data_query'] is None:
+            params['fetch_data_query'] = base_predictor_record.fetch_data_query
+
+        problem_definition = base_predictor_record.learn_args.copy()
+        problem_definition.update(params['problem_definition'])
+        params['problem_definition'] = problem_definition
+
+        params['is_retrain'] = True
+        params['set_active'] = set_active
+        ml_handler.learn(**params)
+

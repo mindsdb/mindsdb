@@ -662,7 +662,18 @@ class ExecuteCommands:
         if integration_record is None:
             raise Exception(f"Model '{model_name}' does not have linked integration")
 
-        ml_handler = self.session.integration_controller.get_handler(integration_record.name)
+        ml_handler = None
+        if statement.using is not None:
+            # repack using with lower names
+            statement.using = {k.lower(): v for k, v in statement.using.items()}
+
+            if 'engine' in statement.using:
+                ml_integration_name = statement.using.pop('engine')
+                ml_handler = self.session.integration_controller.get_handler(ml_integration_name)
+
+        # use current ml handler
+        if ml_handler is None:
+            ml_handler = self.session.integration_controller.get_handler(integration_record.name)
 
         # region check if there is already predictor retraing
         is_cloud = self.session.config.get('cloud', False)
@@ -685,10 +696,7 @@ class ExecuteCommands:
                     "Can't start retrain while exists predictor in status 'training' or 'generating'"
                 )
         # endregion
-
-        result = ml_handler.query(statement)
-        if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
+        self.session.model_controller.retrain_predictor(statement, ml_handler)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -908,15 +916,15 @@ class ExecuteCommands:
         integration_name = integration_name.lower()
 
         ml_integration_name = 'lightwood'
-        if statement.using is not None and statement.using.get('engine') is not None:
-            using = {k.lower(): v for k, v in statement.using.items()}
-            ml_integration_name = using.get('engine', ml_integration_name)
+        if statement.using is not None:
+            # repack using with lower names
+            statement.using = {k.lower(): v for k, v in statement.using.items()}
+
+            ml_integration_name = statement.using.pop('engine', ml_integration_name)
 
         ml_handler = self.session.integration_controller.get_handler(ml_integration_name)
 
-        result = ml_handler.query(statement)
-        if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
+        self.session.model_controller.create_predictor(statement, ml_handler)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 

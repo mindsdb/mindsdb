@@ -134,7 +134,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # list of versions
         ret = self.run_sql('select * from proj.models_versions')
         # we have all tags in versions
-        assert set(ret['tags']) == {None, 'new', 'new2'}
+        assert set(ret['TAG']) == {None, 'new', 'new2'}
 
         # TODO:
         # run predict with old version

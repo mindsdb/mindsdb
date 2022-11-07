@@ -67,6 +67,8 @@ jobs:
           cat mindsdb/interfaces/storage/db.py | grep integration
 
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
+        
+          env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
 
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
 

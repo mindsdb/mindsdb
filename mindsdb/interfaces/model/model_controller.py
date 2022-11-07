@@ -138,11 +138,43 @@ class ModelController():
         if integration_record is None:
             raise Exception(f"Can't determine integration of '{model_name}'")
 
-        ml_handler = integration_controller.get_handler(integration_record.name)
-        response = ml_handler.native_query(f'drop predictor {project_name}.{model_name}')
+        database_controller = WithKWArgsWrapper(
+            DatabaseController(),
+            company_id=company_id
+        )
 
-        if response.type == RESPONSE_TYPE.ERROR:
-            raise Exception(response.error_message)
+        project = database_controller.get_project(project_name)
+
+        predictors_records = get_model_records(
+            company_id=company_id,
+            name=model_name,
+            ml_handler_name=integration_record.name,
+            project_id=project.id,
+            active=None,
+        )
+        if len(predictors_records) == 0:
+            raise Exception(f"Model '{model_name}' does not exist")
+
+        is_cloud = self.config.get('cloud', False)
+        if is_cloud:
+            for predictor_record in predictors_records:
+                model_data = self.get_model_data(predictor_record=predictor_record, company_id=company_id)
+                if (
+                    is_cloud is True
+                    and model_data.get('status') in ['generating', 'training']
+                    and isinstance(model_data.get('created_at'), str) is True
+                    and (dt.datetime.now() - parse_datetime(model_data.get('created_at'))) < dt.timedelta(hours=1)
+                ):
+                    raise Exception('You are unable to delete models currently in progress, please wait before trying again')
+
+        for predictor_record in predictors_records:
+            if is_cloud:
+                predictor_record.deleted_at = dt.datetime.now()
+            else:
+                db.session.delete(predictor_record)
+            modelStorage = ModelStorage(company_id, predictor_record.id)
+            modelStorage.delete()
+        db.session.commit()
 
     def rename_model(self, old_name, new_name, company_id: int):
         model_record = get_model_record(company_id=company_id, name=new_name)

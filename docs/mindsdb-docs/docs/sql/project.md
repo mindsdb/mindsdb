@@ -1,6 +1,6 @@
 # The `PROJECT` Entity
 
-MindsDB introduces the `PROJECT` entity that lets you create projects to store your models.
+MindsDB introduces the `PROJECT` entity that lets you create projects to store your ML experiments.
 
 ## Working with `PROJECTS`
 
@@ -46,12 +46,8 @@ There are two ways you can list all your databases and projects:
     | mindsdb              |
     | project_alpha        |
     | project_beta         |
-    | example_db           |
     +----------------------+
     ```
-
-    !!! tip "Where is `example_db`?"
-        If you don't see the `example_db` database in your output, check out [our tutorials](https://docs.mindsdb.com/sql/tutorials/home-rentals/) and see how to create it.
 
 2. Use the `SHOW FULL DATABASES` command to get more details:
 
@@ -69,7 +65,6 @@ There are two ways you can list all your databases and projects:
     | mindsdb              | project  | [NULL]    |
     | project_alpha        | project  | [NULL]    |
     | project_beta         | project  | [NULL]    |
-    | example_db           | data     | postgres  |
     +----------------------+----------+-----------+
     ```
 
@@ -255,7 +250,7 @@ On execution, we get:
 
 ## Working with `TABLES`
 
-The models that you create with the `CREATE MODEL` command are simple tables within a database or a project. Therefore, you can use the `SHOW [FULL] TABLES` commands to query for them.
+The models that you create with the `CREATE MODEL` command are simple tables within a project. Therefore, you can use the `SHOW [FULL] TABLES` commands to query for them.
 
 Here is how to query for tables from all databases/projects/schemas:
 
@@ -271,14 +266,6 @@ On execution, we get:
 +--------------+----------------+------------+
 |table_schema  |table_name      |table_type
 +--------------+----------------+------------+
-|example_db    |sales_data      |BASE TABLE  |
-|example_db    |house_sales     |BASE TABLE  |
-|example_db    |eeg_eye         |BASE TABLE  |
-|example_db    |customer_churn  |BASE TABLE  |
-|example_db    |car_info        |BASE TABLE  |
-|example_db    |used_car_price  |BASE TABLE  |
-|example_db    |home_rentals    |BASE TABLE  |
-|example_db    |house_sales     |BASE TABLE  |
 |mindsdb       |models          |BASE TABLE  |
 |mindsdb       |models_versions |BASE TABLE  |
 |project_alpha |models          |BASE TABLE  |

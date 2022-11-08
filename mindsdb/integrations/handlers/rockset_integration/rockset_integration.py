@@ -16,6 +16,7 @@ class RocksetIntegration(MySQLHandler):
         super().__init__(name, **kwargs)
         self.host = self.connection_data['host']
 
+
 connection_args = OrderedDict(
     user={
         'type': ARG_TYPE.STR,

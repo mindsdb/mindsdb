@@ -1,6 +1,6 @@
 from mindsdb.interfaces.stream.redis.redisdb import Redis
 from mindsdb.interfaces.stream.kafka.kafkadb import Kafka
-from mindsdb.utilities.log import log as logger
+from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
@@ -28,4 +28,4 @@ class StreamController():
                 raise Exception(f'Unkonw database integration type for: {db_alias}')
             self.known_dbs[integration_meta['engine']](self.config, db_alias, integration_meta).setup()
         except Exception as e:
-            logger.warning('Failed to setup stream for ' + db_alias + f', error: {e}')
+            log.logger.warning('Failed to setup stream for ' + db_alias + f', error: {e}')

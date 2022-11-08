@@ -12,7 +12,7 @@ import math
 import struct
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ONE_BYTE_ENC, TWO_BYTE_ENC, THREE_BYTE_ENC, NULL_VALUE, DEFAULT_CAPABILITIES
-from mindsdb.api.mysql.mysql_proxy.utilities import log
+from mindsdb.api.mysql.mysql_proxy.utilities import logger
 
 
 class Datum():
@@ -47,7 +47,7 @@ class Datum():
 
             num_str = buff[start:end]
             if end > 9:
-                log.error('Cant decode integer greater than 8 bytes')
+                logger.error('Cant decode integer greater than 8 bytes')
                 return buff[end - 1:]
 
             for j in range(8 - (end - start)):
@@ -84,7 +84,7 @@ class Datum():
             end = length
             num_str = buff[:end]
             if end > 8:
-                log.error('cant decode integer greater than 8 bytes')
+                logger.error('cant decode integer greater than 8 bytes')
                 return buff[end:]
             for j in range(8 - end):
                 num_str += b'\0'

@@ -11,9 +11,9 @@ from flask_restx import Resource, abort
 from flask import current_app as ca
 from dateutil.tz import tzlocal
 
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.api.http.namespaces.configs.config import ns_conf
-from mindsdb.utilities.log import get_logs
+from mindsdb.utilities.log_controller import get_logs
 from mindsdb.interfaces.stream.stream import StreamController
 
 
@@ -112,7 +112,7 @@ class Integration(Resource):
                 if engine in stream_controller.known_dbs and params.get('publish', False) is True:
                     stream_controller.setup(name)
         except Exception as e:
-            log.error(str(e))
+            log.logger.error(str(e))
             if temp_dir is not None:
                 shutil.rmtree(temp_dir)
             abort(500, f'Error during config update: {str(e)}')
@@ -129,7 +129,7 @@ class Integration(Resource):
         try:
             request.integration_controller.delete(name)
         except Exception as e:
-            log.error(str(e))
+            log.logger.error(str(e))
             abort(500, f'Error during integration delete: {str(e)}')
         return '', 200
 
@@ -154,7 +154,7 @@ class Integration(Resource):
             if params.get('type') in stream_controller.known_dbs and params.get('publish', False) is True:
                 stream_controller.setup(name)
         except Exception as e:
-            log.error(str(e))
+            log.logger.error(str(e))
             abort(500, f'Error during integration modifycation: {str(e)}')
         return '', 200
 

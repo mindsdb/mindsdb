@@ -2,7 +2,7 @@ import copy
 import tempfile
 import os
 from unittest import mock
-
+import json
 import datetime as dt
 
 import pandas as pd
@@ -25,19 +25,37 @@ def unload_module(path):
 
 
 class BaseUnitTest:
+    """
+        mindsdb instance with temporal database and config
+    """
+
     @staticmethod
     def setup_class(cls):
 
         # remove imports of mindsdb in previous tests
         unload_module('mindsdb')
 
-        # create tmp db file
+        # database temp file
         cls.db_file = tempfile.mkstemp(prefix='mindsdb_db_')[1]
 
-        # save to environ before import db module
-        os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + cls.db_file
+        # config
+        config = {
+            'storage_db': 'sqlite:///' + cls.db_file
+        }
+        # config temp file
+        fdi, cfg_file = tempfile.mkstemp(prefix='mindsdb_conf_')
+
+        with os.fdopen(fdi, 'w') as fd:
+            json.dump(config, fd)
+
+        os.environ['MINDSDB_CONFIG_PATH'] = cfg_file
+
+        # initialize config
+        from mindsdb.utilities.config import Config
+        Config()
 
         from mindsdb.interfaces.storage import db
+        db.init()
         cls.db = db
 
     @staticmethod
@@ -71,10 +89,17 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='huggingface', data={}, engine='huggingface')
         db.session.add(r)
+        r = db.Integration(name='merlion', data={}, engine='merlion')
+        db.session.add(r)
         r = db.Integration(name='lightwood', data={}, engine='lightwood')
         db.session.add(r)
         db.session.flush()
         self.lw_integration_id = r.id
+
+        # default project
+        r = db.Project(name='mindsdb')
+        db.session.add(r)
+
         db.session.commit()
         return db
 
@@ -89,6 +114,9 @@ class BaseUnitTest:
 
 
 class BaseExecutorTest(BaseUnitTest):
+    """
+        Set up executor: mock data handler
+    """
 
     def setup_method(self):
         super().setup_method()
@@ -126,11 +154,12 @@ class BaseExecutorTest(BaseUnitTest):
         server_obj.original_project_controller = ProjectController()
         server_obj.original_database_controller = DatabaseController()
 
-        predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
-        self.mock_predict = predict_patcher.__enter__()
+        if to_mock_model_controller:
+            predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
+            self.mock_predict = predict_patcher.__enter__()
 
-        create_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.create')
-        self.mock_create = create_patcher.__enter__()
+            create_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.create')
+            self.mock_create = create_patcher.__enter__()
 
         sql_session = SessionController(
             server=server_obj,
@@ -222,6 +251,9 @@ class BaseExecutorTest(BaseUnitTest):
         mock_handler().query.side_effect = query_f
 
 class BaseExecutorTestMockModel(BaseExecutorTest):
+    """
+        Set up executor: mock data handler and LW handler
+    """
 
     def setup_method(self):
         super().setup_method()

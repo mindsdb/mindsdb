@@ -10,6 +10,7 @@ from copy import deepcopy
 from collections import OrderedDict
 
 from sqlalchemy import func, or_
+import sqlalchemy as sa
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
@@ -106,7 +107,7 @@ class IntegrationController:
 
         # check linked predictors
         predictor = db.session.query(db.Predictor.name).filter(
-            db.Predictor.status != PREDICTOR_STATUS.DELETED,
+            db.Predictor.deleted_at == sa.null(),
             or_(
                 db.Predictor.integration_id == integration_record.id,
                 db.Predictor.data_integration_id == integration_record.id,
@@ -117,13 +118,13 @@ class IntegrationController:
 
         # unlink integration from deleted predictors
         for predictor in db.session.query(db.Predictor).filter(
-            db.Predictor.status == PREDICTOR_STATUS.DELETED,
+            db.Predictor.deleted_at != sa.null(),
             db.Predictor.integration_id == integration_record.id
         ):
             predictor.integration_id = None
 
         for predictor in db.session.query(db.Predictor).filter(
-            db.Predictor.status == PREDICTOR_STATUS.DELETED,
+            db.Predictor.deleted_at != sa.null(),
             db.Predictor.data_integration_id == integration_record.id
         ):
             predictor.data_integration_id = None

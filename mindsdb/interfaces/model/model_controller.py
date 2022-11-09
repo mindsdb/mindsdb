@@ -346,7 +346,8 @@ class ModelController():
         if base_predictor_record is None:
             raise Exception(f"Error: model '{model_name}' does not exists")
 
-        params['version'] = base_predictor_record.version or 1
+        version0 = base_predictor_record.version or 1
+        params['version'] = version0 + 1
 
         # get params from predictor if not defined
 

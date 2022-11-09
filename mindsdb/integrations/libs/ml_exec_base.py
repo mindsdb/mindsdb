@@ -95,7 +95,8 @@ def learn_process(class_path, company_id, integration_id,
             predictors_records = db.Predictor.query.filter_by(
                 name=predictor_record.name,
                 project_id=predictor_record.project_id,
-                active=True
+                active=True,
+                company_id=company_id,
             )
             for p in predictors_records:
                 p.active = False

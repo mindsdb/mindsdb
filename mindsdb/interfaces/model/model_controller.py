@@ -130,8 +130,9 @@ class ModelController():
             raise Exception(f"Project '{project_name}' does not exists")
 
         model_record = db.Predictor.query.filter(
-            (func.lower(db.Predictor.name) == func.lower(model_name))
-            & (db.Predictor.project_id == project_record.id)
+            func.lower(db.Predictor.name) == func.lower(model_name),
+            db.Predictor.project_id == project_record.id,
+            db.Predictor.company_id == company_id
         ).first()
         if model_record is None:
             raise Exception(f"Model '{model_name}' does not exists")

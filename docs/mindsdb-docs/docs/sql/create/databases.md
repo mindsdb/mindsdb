@@ -84,7 +84,6 @@ On execution, we get:
 | information_schema |
 | mindsdb            |
 | files              |
-| views              |
 | mysql_datasource   |
 +--------------------+
 ```

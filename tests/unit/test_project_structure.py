@@ -1,6 +1,7 @@
 from unittest.mock import patch
 import datetime as dt
 import time
+import pytest
 
 import pandas as pd
 from lightwood.api import dtype
@@ -31,17 +32,24 @@ class TestProjectStructure(BaseExecutorDummyML):
         if not done:
             raise RuntimeError("predictor didn't created")
 
-    def run_sql(self, sql):
+    def run_sql(self, sql, throw_error=True):
         ret = self.command_executor.execute_command(
             parse_sql(sql, dialect='mindsdb')
         )
-        assert ret.error_code is None
+        if throw_error:
+            assert ret.error_code is None
         if ret.data is not None:
             columns = [
                 col.alias if col.alias is not None else col.name
                 for col in ret.columns
             ]
             return pd.DataFrame(ret.data, columns=columns)
+
+    def get_models(self):
+        models = {}
+        for p in self.db.Predictor.query.all():
+            models[p.id] = p
+        return models
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_flow(self, data_handler):
@@ -114,6 +122,11 @@ class TestProjectStructure(BaseExecutorDummyML):
         ''')
         assert ret.predicted[0] == 42
 
+        # used model has tag 'new'
+        models = self.get_models()
+        model_id = ret.predictor_id[0]
+        assert models[model_id].label == 'new'
+
         # -- retrain again with active=0 --
         data_handler.reset_mock()
         self.run_sql(
@@ -131,15 +144,53 @@ class TestProjectStructure(BaseExecutorDummyML):
         # check target is from previous retrain
         assert ret['PREDICT'][0] == 'b'
 
+        # use model
+        ret = self.run_sql('''
+             SELECT m.*
+               FROM pg.tasks as t
+               JOIN proj.task_model as m
+        ''')
+
+        # used model has tag 'new' (previous)
+        models = self.get_models()
+        model_id = ret.predictor_id[0]
+        assert models[model_id].label == 'new'
+
         # list of versions
         ret = self.run_sql('select * from proj.models_versions')
         # we have all tags in versions
         assert set(ret['TAG']) == {None, 'new', 'new2'}
 
-        # TODO:
-        # run predict with old version
+        # run 3st version model and check used model version
+        ret = self.run_sql('''
+             SELECT m.*
+               FROM pg.tasks as t
+               JOIN proj.task_model.3 as m
+        ''')
+
+        models = self.get_models()
+        model_id = ret.predictor_id[0]
+        assert models[model_id].label == 'new2'
+
+        # one-line query model by version
+        ret = self.run_sql('SELECT * from proj.task_model.3 where a=1 and b=2')
+        model_id = ret.predictor_id[0]
+        assert models[model_id].label == 'new2'
+
+        # not existing version
+        with pytest.raises(Exception) as exc_info:
+            ret = self.run_sql(
+                'SELECT * from proj.task_model.4 where a=1 and b=2',
+                throw_error=False,
+            )
+        assert 'does not exists' in str(exc_info.value)
+
+
         # switch version
+
         # drop version
+
+        # try to use dropped version
 
         # drop predictor and check model is deleted and no versions
         self.run_sql('drop predictor proj.task_model')

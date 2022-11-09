@@ -344,20 +344,21 @@ class BaseMLEngineExec:
         if join_learn_process is True:
             p.join()
 
-    def predict(self, model_name: str, data: list, pred_format: str = 'dict', project_name: str = None):
+    def predict(self, model_name: str, data: list, pred_format: str = 'dict',
+                project_name: str = None, version=None):
         """ Generates predictions with some model and input data. """
         if isinstance(data, dict):
             data = [data]
         df = pd.DataFrame(data)
         predictor_record = get_model_record(
             company_id=self.company_id, name=model_name,
-            ml_handler_name=self.name, project_name=project_name
+            ml_handler_name=self.name, project_name=project_name,
+            version=version
         )
         if predictor_record is None:
-            return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=f"Error: model '{model_name}' does not exists!"
-            )
+            if version is not None:
+                model_name = f'{model_name}.{version}'
+            raise Exception(f"Error: model '{model_name}' does not exists!")
 
         ml_handler = self.get_ml_handler(predictor_record.id)
 

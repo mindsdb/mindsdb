@@ -83,6 +83,7 @@
 * [Exploring Learning Hub on MindsDB by predicting house rental prices and forecasting house sales](https://youtu.be/Qmk_v0iginw) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Easily connect to MindsDB Cloud from MongoShell](https://youtube.com/video/ysPRXSgdOVk) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Singing Up with MindsDB Cloud](https://youtu.be/Y5hZ9GwjsQs) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
+* [Toyota Car Price Prediction using MindsDB](https://youtu.be/FW6Zx4UUpV8) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Exploring Data Insights in MindsDB](https://youtu.be/dy_jkuKWJ5E) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Creating a View in MindsDB](https://youtu.be/-hpygLatpKo) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Water Quality Prediction using MindsDB](https://youtu.be/D6mp9thWn2Y) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)

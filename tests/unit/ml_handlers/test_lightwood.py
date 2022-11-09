@@ -25,7 +25,7 @@ class TestLW(BaseExecutorTest):
                     break
             time.sleep(0.5)
         if not done:
-            raise RuntimeError("predictor didn't created")
+            raise RuntimeError("predictor wasn't created")
 
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(
@@ -38,7 +38,6 @@ class TestLW(BaseExecutorTest):
                 for col in ret.columns
             ]
             return pd.DataFrame(ret.data, columns=columns)
-
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_simple(self, mock_handler):

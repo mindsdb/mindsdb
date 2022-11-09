@@ -83,6 +83,7 @@
 * [Exploring Learning Hub on MindsDB by predicting house rental prices and forecasting house sales](https://youtu.be/Qmk_v0iginw) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Easily connect to MindsDB Cloud from MongoShell](https://youtube.com/video/ysPRXSgdOVk) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Singing Up with MindsDB Cloud](https://youtu.be/Y5hZ9GwjsQs) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
+* [Forecasting Microsoft Stock Prices using MindsDB](https://youtu.be/ddBcHnOdlGs) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Forecasting Tesla Stock Prices using MindsDB](https://youtu.be/MJdPRv57-34) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Wine Quality Prediction using MindsDB](https://youtu.be/vT20Wdd_uvE) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Deploying MindsDB on IBM Cloud](https://youtu.be/v6iBpfrd2hM) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)

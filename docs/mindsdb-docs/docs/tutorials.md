@@ -85,6 +85,7 @@
 * [Exploring Learning Hub on MindsDB by predicting house rental prices and forecasting house sales](https://youtu.be/Qmk_v0iginw) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Easily connect to MindsDB Cloud from MongoShell](https://youtube.com/video/ysPRXSgdOVk) by [@akhilcoder](https://twitter.com/akhilcoder)
 * [Singing Up with MindsDB Cloud](https://youtu.be/Y5hZ9GwjsQs) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
+* [Deploying MindsDB on Vultr Cloud](https://youtu.be/oHI2ywd5Zos) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Deploying MindsDB on Scaleway Cloud](https://youtu.be/YCz-wsKGsxw) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [Deploying MindsDB on a DigitalOcean Droplet](https://youtu.be/lV0tsyyg9-k) uploaded on [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
 * [How to connect to MindsDB with SQL Alchemy(Python)](https://www.youtube.com/watch?v=pYR83QTyOQA) by [Nishant Sapkota](https://github.com/thenishantsapkota)

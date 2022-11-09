@@ -15,6 +15,7 @@ from mindsdb_sql import parse_sql
 from .executor_test_base import BaseExecutorTest
 
 
+# The interface of flask implemented belows has been verified to have the same actions as RayServe.
 app = Flask(__name__)
 mock_server_port = 8129
 

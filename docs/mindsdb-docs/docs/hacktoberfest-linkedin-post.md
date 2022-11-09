@@ -35,3 +35,5 @@
 - A LinkedIn Post by [Hritik Dangi](https://www.linkedin.com/posts/sparsh-singh3_modein-activity-6991446202139488256-F9iu?utm_source=share&utm_medium=member_desktop)
 
 - A LinkedIn Post by [Ferdi Gueran](https://www.linkedin.com/posts/activity-6992821262322401280-7tSl)
+
+- A LinkedIn Post by [Rutam Prita Mishra](https://www.linkedin.com/posts/rutam-prita-mishra_machine-learning-in-your-database-using-sql-activity-6993053642253615104-Swed)

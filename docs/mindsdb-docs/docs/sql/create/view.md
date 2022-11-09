@@ -11,7 +11,7 @@ In MindsDB, the `#!sql CREATE VIEW` statement is commonly used to create **AI Ta
 Here is the syntax:
 
 ```sql
-CREATE VIEW mindsdb.[ai_table_name] AS (
+CREATE VIEW [project_name].[view_name] AS (
     SELECT
         a.[column_name1],
         a.[column_name2],
@@ -32,7 +32,8 @@ Where:
 
 | Name                                  | Description                                                                              |
 | ------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `[ai_table_name]`                     | Name of the view or the AI Table.                                                        |
+| `[project_name]`                      | Name of the project to store the view.                                                   |
+| `[view_name]`                         | Name of the view.                                                                        |
 | `[column_name1], [column_name2], ...` | Columns of the data source table that are the input for the model to make predictions.   |
 | `[model_column]`                      | Name of the target column to be predicted.                                               |
 | `[integration_name].[table_name]`     | Data source table name along with the integration where it resides.                      |
@@ -114,7 +115,7 @@ Examples to use view
 
 ```sql
 SELECT type, last(bedrooms) 
-FROM views.house_v
+FROM mindsdb.house_v
 GROUP BY 1
 ```
 
@@ -122,7 +123,7 @@ GROUP BY 1
 
 ```sql
 CREATE predictor house_sales_model
-FROM views (
+FROM mindsdb (
   SELECT * FROM house_v
 ) PREDICT ma
 ORDER BY saledate
@@ -133,7 +134,7 @@ WINDOW 1 HORIZON 4
 3. Using predictor with view
 
 ```sql
-SELECT * FROM views.house_v
+SELECT * FROM mindsdb.house_v
 JOIN mindsdb.house_sales_model
 WHERE house_v.saledate > latest 
 ```

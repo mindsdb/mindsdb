@@ -70,6 +70,7 @@ jobs:
         
           # need fix in LW. not working yet 
           # env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
+          # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_lightwood.py
 
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
 

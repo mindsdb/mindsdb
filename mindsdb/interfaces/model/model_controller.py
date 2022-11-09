@@ -4,7 +4,6 @@ import json
 import base64
 import datetime as dt
 from copy import deepcopy
-from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_datetime
 
 from sqlalchemy import func, null
@@ -107,13 +106,13 @@ class ModelController():
                     )
                 elif model_data.get('status') == 'training':
                     reduced_model_data['training_time'] = (
-                        datetime.now()
+                        dt.datetime.now()
                         - model_data.get('training_start_at')
                     )
                 if reduced_model_data['training_time'] is not None:
                     reduced_model_data['training_time'] = (
                         reduced_model_data['training_time']
-                        - timedelta(microseconds=reduced_model_data['training_time'].microseconds)
+                        - dt.timedelta(microseconds=reduced_model_data['training_time'].microseconds)
                     )
 
             models.append(reduced_model_data)

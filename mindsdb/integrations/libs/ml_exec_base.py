@@ -91,7 +91,7 @@ def learn_process(class_path, company_id, integration_id,
 
         # if retrain and set_active after success creation
         if set_active:
-            # set inactive to previous
+            # deactivate current active version
             predictors_records = db.Predictor.query.filter_by(
                 name=predictor_record.name,
                 project_id=predictor_record.project_id,

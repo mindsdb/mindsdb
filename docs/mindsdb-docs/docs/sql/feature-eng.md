@@ -125,7 +125,7 @@ Let's prepare and verify the data. Here, we create the views and query them to e
 
     ```sql
     SELECT *
-    FROM views.used_car_price_plus_2_columns
+    FROM mindsdb.used_car_price_plus_2_columns
     LIMIT 5;
     ```
 
@@ -184,7 +184,7 @@ Let's prepare and verify the data. Here, we create the views and query them to e
 
     ```sql
     SELECT *
-    FROM views.used_car_price_plus_another_2_columns
+    FROM mindsdb.used_car_price_plus_another_2_columns
     LIMIT 5;
     ```
 
@@ -228,8 +228,8 @@ Now, we create predictors based on the `example_db.demo_data.used_car_price` tab
 
     ```sql
     CREATE PREDICTOR mindsdb.price_predictor_plus_2_columns
-    FROM views
-    (SELECT * FROM used_car_price_plus_2_columns)
+    FROM mindsdb
+        (SELECT * FROM used_car_price_plus_2_columns)
     PREDICT price;
     ```
 
@@ -243,8 +243,8 @@ Now, we create predictors based on the `example_db.demo_data.used_car_price` tab
 
     ```sql
     CREATE PREDICTOR mindsdb.price_predictor_plus_another_2_columns
-    FROM views
-    (SELECT * FROM used_car_price_plus_another_2_columns)
+    FROM mindsdb
+        (SELECT * FROM used_car_price_plus_another_2_columns)
     PREDICT price;
     ```
 
@@ -265,7 +265,7 @@ Finally, let's check the predictor status whose value is `generating` at first, 
 
     ```sql
     SELECT *
-    FROM mindsdb.predictors
+    FROM mindsdb.models
     WHERE name='price_predictor';
     ```
 
@@ -283,7 +283,7 @@ Finally, let's check the predictor status whose value is `generating` at first, 
 
     ```sql
     SELECT *
-    FROM mindsdb.predictors
+    FROM mindsdb.models
     WHERE name='price_predictor_plus_2_columns';
     ```
 
@@ -301,7 +301,7 @@ Finally, let's check the predictor status whose value is `generating` at first, 
 
     ```sql
     SELECT *
-    FROM mindsdb.predictors
+    FROM mindsdb.models
     WHERE name='price_predictor_plus_another_2_columns';
     ```
 
@@ -481,7 +481,7 @@ Let's verify the view by selecting from it.
 
 ```sql
 SELECT *
-FROM views.car_sales_info
+FROM mindsdb.car_sales_info
 LIMIT 5;
 ```
 
@@ -520,7 +520,7 @@ Now, let's create a predictor for the table that is a `JOIN` between the `car_sa
 
 ```sql
 CREATE PREDICTOR mindsdb.price_predictor_car_sales_info
-FROM views
+FROM mindsdb
   (SELECT * FROM car_sales_info)
 PREDICT price;
 ```
@@ -539,7 +539,7 @@ We start with the predictor based on the partial table.
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='price_predictor_car_sales';
 ```
 
@@ -557,7 +557,7 @@ And now, for the predictor based on the full table.
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='price_predictor_car_sales_info';
 ```
 

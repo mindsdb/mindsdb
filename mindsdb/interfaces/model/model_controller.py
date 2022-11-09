@@ -119,7 +119,6 @@ class ModelController():
         return models
 
     def delete_model(self, model_name: str, company_id: int, project_name: str = 'mindsdb'):
-        integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
 
         project_record = db.Project.query.filter(
             (func.lower(db.Project.name) == func.lower(project_name))
@@ -307,7 +306,7 @@ class ModelController():
             label=label
         )
 
-    def create_predictor(self, statement, ml_handler, company_id: int):
+    def create_model(self, statement, ml_handler, company_id: int):
         params = self.process_create_statement(statement,
                                                ml_handler.database_controller,
                                                ml_handler.handler_controller)
@@ -323,7 +322,7 @@ class ModelController():
 
         ml_handler.learn(**params)
 
-    def retrain_predictor(self, statement, ml_handler, company_id: int):
+    def retrain_model(self, statement, ml_handler, company_id: int):
         # active setting
         set_active = True
         if statement.using is not None:
@@ -363,4 +362,68 @@ class ModelController():
         params['is_retrain'] = True
         params['set_active'] = set_active
         ml_handler.learn(**params)
+
+    def update_model_version(self, models, company_id: int, active=None):
+        if active is None:
+            raise NotImplementedError(f'Update is not supported')
+
+        if active in ('0', 0, False):
+            active = False
+        else:
+            active = True
+
+        if active is False:
+            raise NotImplementedError('Only setting active version is possible')
+
+        if len(models) != 1:
+            raise Exception('Only one version can be updated')
+
+        # update
+        model = models[0]
+
+        model_record = get_model_record(
+            company_id=company_id,
+            name=model['NAME'],
+            project_name=model['PROJECT'],
+            version=model['VERSION']
+        )
+
+        model_record.active = True
+
+        # deactivate current active version
+        model_records = db.Predictor.query.filter(
+            db.Predictor.name == model_record.name,
+            db.Predictor.project_id == model_record.project_id,
+            db.Predictor.active == True,
+            db.Predictor.company_id == company_id,
+            db.Predictor.id != model_record.id
+        )
+        for p in model_records:
+            p.active = False
+
+        db.session.commit()
+
+    def delete_model_version(self, models, company_id: int):
+        if len(models) == 0:
+            raise Exception(f"Version to delete is not found")
+
+        for model in models:
+            model_record = get_model_record(
+                company_id=company_id,
+                name=model['NAME'],
+                project_name=model['PROJECT'],
+                version=model['VERSION']
+            )
+            if model_record.active:
+                raise Exception(f"Can't remove active version: f{model['PROJECT']}.{model['NAME']}.{model['VERSION']}")
+
+            is_cloud = self.config.get('cloud', False)
+            if is_cloud:
+                model_record.deleted_at = dt.datetime.now()
+            else:
+                db.session.delete(model_record)
+            modelStorage = ModelStorage(company_id, model_record.id)
+            modelStorage.delete()
+
+        db.session.commit()
 

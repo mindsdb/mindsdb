@@ -52,7 +52,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         return models
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_flow(self, data_handler):
+    def test_version_managing(self, data_handler):
         # set up
 
         df = pd.DataFrame([
@@ -62,7 +62,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         ])
         self.set_handler(data_handler, name='pg', tables={'tasks': df})
 
-        # ----------------
+        # ================= retrain cycles =====================
 
         # create folder
         self.run_sql('create database proj')
@@ -73,12 +73,16 @@ class TestProjectStructure(BaseExecutorDummyML):
                 CREATE PREDICTOR proj.task_model
                 from pg (select * from tasks)
                 PREDICT a
-                using engine='dummy_ml'
+                using engine='dummy_ml',  tag = 'first'
             '''
         )
         self.wait_predictor('proj', 'task_model')
 
         assert data_handler().native_query.call_args[0][0] == 'select * from tasks'
+
+        # tag works in create model
+        ret = self.run_sql('select * from proj.models')
+        assert ret['TAG'][0] == 'first'
 
         # use model
         ret = self.run_sql('''
@@ -97,10 +101,10 @@ class TestProjectStructure(BaseExecutorDummyML):
                 retrain proj.task_model
                 from pg (select * from tasks where a=2)
                 PREDICT b
-                using tag = 'new'
+                using tag = 'second'
             '''
         )
-        self.wait_predictor('proj', 'task_model', {'tag': 'new'})
+        self.wait_predictor('proj', 'task_model', {'tag': 'second'})
 
         # get current model
         ret = self.run_sql('select * from proj.models')
@@ -109,7 +113,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert ret['PREDICT'][0] == 'b'
 
         # check label
-        assert ret['TAG'][0] == 'new'
+        assert ret['TAG'][0] == 'second'
 
         # check integration sql
         assert data_handler().native_query.call_args[0][0] == 'select * from tasks where a=2'
@@ -122,10 +126,10 @@ class TestProjectStructure(BaseExecutorDummyML):
         ''')
         assert ret.predicted[0] == 42
 
-        # used model has tag 'new'
+        # used model has tag 'second'
         models = self.get_models()
         model_id = ret.predictor_id[0]
-        assert models[model_id].label == 'new'
+        assert models[model_id].label == 'second'
 
         # -- retrain again with active=0 --
         data_handler.reset_mock()
@@ -134,10 +138,10 @@ class TestProjectStructure(BaseExecutorDummyML):
                 retrain proj.task_model
                 from pg (select * from tasks where a=2)
                 PREDICT a
-                using tag='new2', active=0
+                using tag='third', active=0
             '''
         )
-        self.wait_predictor('proj', 'task_model', {'tag': 'new2'})
+        self.wait_predictor('proj', 'task_model', {'tag': 'third'})
 
         ret = self.run_sql('select * from proj.models')
 
@@ -151,15 +155,12 @@ class TestProjectStructure(BaseExecutorDummyML):
                JOIN proj.task_model as m
         ''')
 
-        # used model has tag 'new' (previous)
+        # used model has tag 'second' (previous)
         models = self.get_models()
         model_id = ret.predictor_id[0]
-        assert models[model_id].label == 'new'
+        assert models[model_id].label == 'second'
 
-        # list of versions
-        ret = self.run_sql('select * from proj.models_versions')
-        # we have all tags in versions
-        assert set(ret['TAG']) == {None, 'new', 'new2'}
+        # ================ working with inactive versions =================
 
         # run 3st version model and check used model version
         ret = self.run_sql('''
@@ -170,27 +171,86 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         models = self.get_models()
         model_id = ret.predictor_id[0]
-        assert models[model_id].label == 'new2'
+        assert models[model_id].label == 'third'
 
         # one-line query model by version
         ret = self.run_sql('SELECT * from proj.task_model.3 where a=1 and b=2')
         model_id = ret.predictor_id[0]
-        assert models[model_id].label == 'new2'
+        assert models[model_id].label == 'third'
 
         # not existing version
         with pytest.raises(Exception) as exc_info:
-            ret = self.run_sql(
+            self.run_sql(
                 'SELECT * from proj.task_model.4 where a=1 and b=2',
-                throw_error=False,
             )
         assert 'does not exists' in str(exc_info.value)
 
+        # ================== managing versions =========================
 
-        # switch version
+        # show models command
+        # Show models <from | in> <project> where <expr>
+        ret = self.run_sql('Show models')
+        assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
 
-        # drop version
+        ret = self.run_sql('Show models from proj')
+        assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
 
-        # try to use dropped version
+        ret = self.run_sql('Show models in proj')
+        assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
+
+        ret = self.run_sql("Show models where name='task_model'")
+        assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
+
+        ret = self.run_sql("Show models from proj where name='xxx'")
+        assert len(ret) == 0
+
+        # ----------------
+
+        # See all versions
+        ret = self.run_sql('select * from proj.models_versions')
+        # we have all tags in versions
+        assert set(ret['TAG']) == {'first', 'second', 'third'}
+
+        # Set active selected version
+        self.run_sql('''
+           update proj.models_versions 
+           set active=1
+           where version=1 and name='task_model' 
+        ''')
+
+        # get active version
+        ret = self.run_sql('select * from proj.models_versions where active = 1')
+        assert ret['TAG'][0] == 'first'
+
+        # use active version ?
+
+        # Delete specific version
+        self.run_sql('''
+           delete from proj.models_versions 
+           where version=2 
+           and name='task_model'
+        ''')
+
+        # deleted version not in list
+        ret = self.run_sql('select * from proj.models_versions')
+        assert len(ret) == 2
+        assert 'second' not in ret['TAG']
+
+        # try to use deleted version
+        with pytest.raises(Exception) as exc_info:
+            self.run_sql(
+                'SELECT * from proj.task_model.2 where a=1',
+            )
+        assert 'does not exists' in str(exc_info.value)
+
+        # exception with deleting active version
+        with pytest.raises(Exception) as exc_info:
+            self.run_sql('''
+               delete from proj.models_versions 
+               where version=3 
+               and model='task_model'
+            ''')
+        assert 'is not found' in str(exc_info.value)
 
         # drop predictor and check model is deleted and no versions
         self.run_sql('drop predictor proj.task_model')
@@ -200,5 +260,4 @@ class TestProjectStructure(BaseExecutorDummyML):
         ret = self.run_sql('select * from proj.models_versions')
         assert len(ret) == 0
 
-        # TODO: all the same with TS
 

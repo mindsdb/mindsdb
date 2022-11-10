@@ -1,18 +1,10 @@
-import os.path
 from unittest.mock import patch
-import datetime as dt
-import pytest
-import tempfile
 
 import pandas as pd
-import numpy as np
 from lightwood.api import dtype
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
-# How to run:
-#  env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
 from .executor_test_base import BaseExecutorTestMockModel
 

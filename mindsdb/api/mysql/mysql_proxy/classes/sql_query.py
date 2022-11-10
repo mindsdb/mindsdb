@@ -880,7 +880,8 @@ class SQLQuery():
 
                 predictions = project_datanode.predict(
                     model_name=predictor_name,
-                    data=where_data
+                    data=where_data,
+                    params=step.params,
                 )
 
                 data = [{(key, key): value for key, value in row.items()} for row in predictions]
@@ -986,7 +987,8 @@ class SQLQuery():
                     if data is None:
                         data = project_datanode.predict(
                             model_name=predictor_name,
-                            data=where_data
+                            data=where_data,
+                            params=step.params,
                         )
                         if data is not None and isinstance(data, list):
                             predictor_cache.set(key, data)

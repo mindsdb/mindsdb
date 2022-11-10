@@ -756,6 +756,9 @@ class ExecuteCommands:
         if name in integrations:
             raise SqlApiException(f"Integration '{name}' already exists")
 
+        if statement.handler not in integrations:
+            raise SqlApiException(f"There is no engine '{statement.handler}'")
+
         self.session.integration_controller._add_integration_record(
             name=name,
             engine=statement.handler,

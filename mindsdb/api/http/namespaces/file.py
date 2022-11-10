@@ -78,7 +78,7 @@ class File(Resource):
         else:
             data = request.json
 
-        if data['name'] in existing_file_names:
+        if mindsdb_file_name in existing_file_names:
             return http_error(
                 400,
                 "File already exists",

@@ -4,7 +4,7 @@ from mindsdb_sql.parser.ast import Identifier, OrderBy
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb.api.mongo.utilities import log
+from mindsdb.api.mongo.utilities import logger
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 
 from mindsdb.api.mongo.classes.query_sql import run_sql_command
@@ -17,7 +17,7 @@ class Responce(Responder):
         try:
             res = self._result(query, request_env, mindsdb_env)
         except Exception as e:
-            log.error(e)
+            logger.error(e)
             res = {
                 'n': 0,
                 'writeErrors': [{

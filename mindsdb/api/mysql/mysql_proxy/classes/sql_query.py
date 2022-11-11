@@ -82,8 +82,6 @@ from mindsdb.utilities.cache import get_cache, json_checksum
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
 
-predictor_cache = get_cache('predict')
-
 
 class ColumnsCollection:
     def __init__(self):
@@ -882,7 +880,8 @@ class SQLQuery():
 
                 predictions = project_datanode.predict(
                     model_name=predictor_name,
-                    data=where_data
+                    data=where_data,
+                    params=step.params,
                 )
 
                 data = [{(key, key): value for key, value in row.items()} for row in predictions]
@@ -981,12 +980,15 @@ class SQLQuery():
                 else:
                     predictor_id = predictor_metadata['id']
                     key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
+                    predictor_cache = get_cache('predict')
+
                     data = predictor_cache.get(key)
 
                     if data is None:
                         data = project_datanode.predict(
                             model_name=predictor_name,
-                            data=where_data
+                            data=where_data,
+                            params=step.params,
                         )
                         if data is not None and isinstance(data, list):
                             predictor_cache.set(key, data)
@@ -1685,7 +1687,10 @@ class SQLQuery():
         if Latest() in filter_args:
 
             for row in table_data:
-                key = tuple([str(row[i]) for i in group_cols])
+                if group_cols is None:
+                    key = 0  # the same for any value
+                else:
+                    key = tuple([str(row[i]) for i in group_cols])
                 val = row[order_col]
                 if key not in latest_vals or latest_vals[key] < val:
                     latest_vals[key] = val
@@ -1708,7 +1713,10 @@ class SQLQuery():
                 }
                 arg = filter_args[1]
                 if isinstance(arg, Latest):
-                    key = tuple([str(row[i]) for i in group_cols])
+                    if group_cols is None:
+                        key = 0  # the same for any value
+                    else:
+                        key = tuple([str(row[i]) for i in group_cols])
                     if key not in latest_vals:
                         # pass this row
                         continue

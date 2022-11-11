@@ -8,7 +8,7 @@ import tempfile
 import multipart
 import requests
 
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.files import ns_conf
 from mindsdb.utilities.config import Config
@@ -35,6 +35,8 @@ class File(Resource):
 
         data = {}
         mindsdb_file_name = name
+
+        existing_file_names = request.file_controller.get_files_names()
 
         def on_field(field):
             name = field.field_name.decode()
@@ -75,6 +77,13 @@ class File(Resource):
                 file_object.close()
         else:
             data = request.json
+
+        if mindsdb_file_name in existing_file_names:
+            return http_error(
+                400,
+                "File already exists",
+                f"File with name '{data['file']}' already exists"
+            )
 
         if data.get('source_type') == 'url':
             url = data['source']
@@ -149,7 +158,7 @@ class File(Resource):
         try:
             request.file_controller.delete_file(name)
         except Exception as e:
-            log.error(e)
+            log.logger.error(e)
             return http_error(
                 400,
                 "Error deleting file",

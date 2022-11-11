@@ -16,14 +16,14 @@ from flask.json import dumps
 from flask_restx import Api
 
 from mindsdb.__about__ import __version__ as mindsdb_version
-from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import get_log
-from mindsdb.interfaces.storage.db import session
+from mindsdb.interfaces.storage import db
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 
@@ -44,7 +44,7 @@ def custom_output_json(data, code, headers=None):
 
 
 def get_last_compatible_gui_version() -> LooseVersion:
-    log = get_log('http')
+    logger = get_log('http')
 
     try:
         res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json', timeout=5)
@@ -99,7 +99,7 @@ def get_last_compatible_gui_version() -> LooseVersion:
                 all_lower_versions = [LooseVersion(x) for x in lower_versions.keys()]
                 gui_version_lv = gui_versions[all_lower_versions[-1].vstring]
     except Exception as e:
-        log.error(f'Error in compatible-config.json structure: {e}')
+        logger.error(f'Error in compatible-config.json structure: {e}')
         return False
     return gui_version_lv
 
@@ -122,7 +122,7 @@ def get_current_gui_version() -> LooseVersion:
 def download_gui(destignation, version):
     if isinstance(destignation, str):
         destignation = Path(destignation)
-    log = get_log('http')
+    logger = get_log('http')
     dist_zip_path = str(destignation.joinpath('dist.zip'))
     bucket = "https://mindsdb-web-builds.s3.amazonaws.com/"
 
@@ -140,7 +140,7 @@ def download_gui(destignation, version):
         for r in resources:
             get_resources(r)
     except Exception as e:
-        log.error(f'Error during downloading files from s3: {e}')
+        logger.error(f'Error during downloading files from s3: {e}')
         return False
 
     static_folder = destignation
@@ -173,7 +173,7 @@ def download_gui(destignation, version):
 
 def initialize_static():
     success = update_static()
-    session.close()
+    db.session.close()
     return success
 
 
@@ -183,7 +183,7 @@ def update_static():
         Current GUI version stored in static/version.txt.
     '''
     config = Config()
-    log = get_log('http')
+    logger = get_log('http')
     static_path = Path(config['paths']['static'])
 
     last_gui_version_lv = get_last_compatible_gui_version()
@@ -196,7 +196,7 @@ def update_static():
         if current_gui_version_lv >= last_gui_version_lv:
             return True
 
-    log.info(f'New version of GUI available ({last_gui_version_lv.vstring}). Downloading...')
+    logger.info(f'New version of GUI available ({last_gui_version_lv.vstring}). Downloading...')
 
     temp_dir = tempfile.mkdtemp(prefix='mindsdb_gui_files_')
     success = download_gui(temp_dir, last_gui_version_lv.vstring)
@@ -211,7 +211,7 @@ def update_static():
     shutil.copytree(temp_dir, str(static_path))
     shutil.rmtree(temp_dir_for_rm)
 
-    log.info(f'GUI version updated to {last_gui_version_lv.vstring}')
+    logger.info(f'GUI version updated to {last_gui_version_lv.vstring}')
     return True
 
 
@@ -262,12 +262,12 @@ def initialize_flask(config, init_static_thread, no_studio):
 
     # NOTE rewrite it, that hotfix to see GUI link
     if not no_studio:
-        log = get_log('http')
+        logger = get_log('http')
         if host in ('', '0.0.0.0'):
             url = f'http://127.0.0.1:{port}/'
         else:
             url = f'http://{host}:{port}/'
-        log.info(f' - GUI available at {url}')
+        logger.info(f' - GUI available at {url}')
 
         pid = os.getpid()
         x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config['paths']['static']), daemon=True)
@@ -277,9 +277,9 @@ def initialize_flask(config, init_static_thread, no_studio):
 
 
 def initialize_interfaces(app):
-    app.original_model_controller = ModelController()
     app.original_integration_controller = IntegrationController()
     app.original_file_controller = FileController()
+    app.original_database_controller = DatabaseController()
     config = Config()
     app.config_obj = config
 
@@ -300,4 +300,4 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
     except Exception as e:
         logger.error(f'Failed to open {url} in webbrowser with exception {e}')
         logger.error(traceback.format_exc())
-    session.close()
+    db.session.close()

@@ -1,7 +1,10 @@
 import os
 import json
-from mindsdb.utilities.log import log
+from mindsdb.utilities.log import get_log
 from mindsdb.integrations.handlers_wrapper.ml_handler_wrapper import MLHandlerWrapper
+
+
+log = get_log()
 
 
 if __name__ == "__main__":

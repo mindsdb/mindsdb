@@ -4,6 +4,9 @@ import unittest
 import traceback
 import redis
 import warnings
+import tempfile
+import json
+import os
 
 import pandas as pd
 
@@ -11,6 +14,18 @@ from mindsdb.utilities.cache import get_cache, RedisCache, FileCache, dataframe_
 
 
 class TestCashe(unittest.TestCase):
+
+    @classmethod
+    def setup_class(cls):
+        # config
+        config = {}
+        # TODO run on own database
+        fdi, cfg_file = tempfile.mkstemp(prefix='mindsdb_conf_')
+
+        with os.fdopen(fdi, 'w') as fd:
+            json.dump(config, fd)
+
+        os.environ['MINDSDB_CONFIG_PATH'] = cfg_file
 
     def test_redis(self):
         cache = RedisCache('predict', max_size=2)

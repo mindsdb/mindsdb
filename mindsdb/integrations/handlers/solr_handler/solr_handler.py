@@ -1,4 +1,3 @@
-from pickle import FALSE
 from typing import Optional
 from collections import OrderedDict
 import pandas as pd
@@ -6,13 +5,11 @@ import pandas as pd
 from sqlalchemy import create_engine
 import sqlalchemy_solr
 
-
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.utilities.log import log
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.utilities import log
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -104,7 +101,7 @@ class SolrHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.error(f'Error connecting to Solr {self.connection_data["host"]}, {e}!')
+            log.logger.error(f'Error connecting to Solr {self.connection_data["host"]}, {e}!')
             response.error_message = str(e)
 
         if response.success is True and need_to_close:
@@ -142,7 +139,7 @@ class SolrHandler(DatabaseHandler):
                 response = Response(RESPONSE_TYPE.OK)
 
         except Exception as e:
-            log.error(f'Error running query: {query} on {self.connection_data["host"]}!')
+            log.logger.error(f'Error running query: {query} on {self.connection_data["host"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

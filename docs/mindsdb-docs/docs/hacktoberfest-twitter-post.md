@@ -1,5 +1,7 @@
 # Show your 💚 for MindsDB on Twitter
 
+- A Twitter Thread by [Aditya](https://twitter.com/aaditya_reigns/status/1586354471109476353)
+
 - A Twitter Thread by [@akhilcoder](https://twitter.com/akhilcoder/status/1581641683300937731)
 
 - A Twitter Thread by [Arman Chand](https://twitter.com/arman74895017/status/1580463741581524992?s=20&t=gv9DHRwSpBHUbobDv8zZLw)
@@ -32,6 +34,8 @@
 
 - A Twitter Thread by [@UnrevealRich](https://twitter.com/UnrevealRich/status/1583537036119937024)
 
+- A Twitter Thread by [Tushar Sublaik](https://twitter.com/SublaikTushar/status/1583882357324779521?s=20&t=423shrpalBVrFYe-8mQEWA)
+
 - A Twitter Thread by [@FionaMurugi1](https://twitter.com/FionaMurugi1/status/1583922222699229185)
 
 - A Twitter Thread by [@zavbala](https://twitter.com/zavbala/status/1584241613915967489)
@@ -41,3 +45,9 @@
 - A Twitter Thread by [Syed Zubeen](https://twitter.com/ZubeenSyed/status/1584329407610511360?s=20&t=VNpMJOS8MHsiQ07ACvTtGA)
 
 - A Twitter Thread by [Anusha](https://twitter.com/piece_of_irony/status/1585842363125362690?s=20&t=wNrx3Q2gaFi6gl7VK2eTzw)
+
+- A Twitter Thread by [Prakash Gatiyala](https://twitter.com/PrakashGatiyal1/status/1586822595676352512?s=20&t=QQl8r6aXqLxyVExGbJe2eg)
+
+- A Twitter Thread by [Prathik Shetty](https://twitter.com/I_am_prathik/status/1587193982253400064?s=20&t=-mIBPrMUrngfh2mRp12AzA)
+
+- A Twitter Thread by [Rutam Prita Mishra](https://twitter.com/RutamHere/status/1587180480352616448)

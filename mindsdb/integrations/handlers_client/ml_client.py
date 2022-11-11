@@ -31,7 +31,10 @@ from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.handlers_client.base_client import BaseClient
 from mindsdb.integrations.libs.handler_helpers import define_ml_handler
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.utilities.log import log
+from mindsdb.utilities.log import get_log
+
+
+log = get_log()
 
 
 class MLClient(BaseClient):

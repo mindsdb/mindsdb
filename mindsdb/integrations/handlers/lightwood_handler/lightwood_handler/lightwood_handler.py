@@ -26,7 +26,7 @@ import numpy as np
 from mindsdb.integrations.libs.base import PredictiveHandler
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
 from mindsdb.integrations.utilities.processes import HandlerProcess
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import mark_process
 import mindsdb.interfaces.storage.db as db
@@ -78,25 +78,27 @@ class LightwoodHandler(BaseMLEngine):
     name = 'lightwood'
 
     def create(self, target, df, args):
+        args['target'] = target
         run_learn(
             df,
-            args,   # problem_definition
+            args,   # Problem definition and JsonAI override
             self.model_storage
         )
 
     def predict(self, df, args=None):
         pred_format = args['pred_format']
-        predictror_code = args['code']
+        predictor_code = args['code']
         dtype_dict = args['dtype_dict']
         learn_args = args['learn_args']
+        pred_args = args.get('predict_params', {})
         self.model_storage.fileStorage.pull()
 
         predictor = lightwood.predictor_from_state(
             self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name,
-            predictror_code
+            predictor_code
         )
 
-        predictions = predictor.predict(df)
+        predictions = predictor.predict(df, args=pred_args)
         predictions = predictions.to_dict(orient='records')
 
         # TODO!!!
@@ -188,7 +190,7 @@ class LightwoodHandler(BaseMLEngine):
                 for row in pred_dicts
             ])
 
-            group_by = timeseries_settings['group_by'] or []
+            group_by = timeseries_settings.get('group_by', [])
             order_by_column = timeseries_settings['order_by']
             if isinstance(order_by_column, list):
                 order_by_column = order_by_column[0]

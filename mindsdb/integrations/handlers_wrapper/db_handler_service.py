@@ -1,6 +1,6 @@
 import os
 import json
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.integrations.handlers_wrapper.db_handler_wrapper import DBHandlerWrapper
 
 
@@ -12,5 +12,5 @@ if __name__ == "__main__":
     app = DBHandlerWrapper(**kwargs)
     port = int(os.environ.get('PORT', 5001))
     host = os.environ.get('HOST', '0.0.0.0')
-    log.info("Running dbservice: host=%s, port=%s", host, port)
+    log.logger.info("Running dbservice: host=%s, port=%s", host, port)
     app.run(debug=True, host=host, port=port)

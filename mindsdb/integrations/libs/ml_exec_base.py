@@ -469,7 +469,7 @@ class BaseMLEngineExec:
 
         args = {
             'pred_format': pred_format,
-            'predict_params': params
+            'predict_params': {} if params is None else params
         }
         # FIXME
         if self.handler_class.__name__ == 'LightwoodHandler':

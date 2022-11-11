@@ -87,17 +87,18 @@ class LightwoodHandler(BaseMLEngine):
 
     def predict(self, df, args=None):
         pred_format = args['pred_format']
-        predictror_code = args['code']
+        predictor_code = args['code']
         dtype_dict = args['dtype_dict']
         learn_args = args['learn_args']
+        pred_args = args.get('predict_params', {})
         self.model_storage.fileStorage.pull()
 
         predictor = lightwood.predictor_from_state(
             self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name,
-            predictror_code
+            predictor_code
         )
 
-        predictions = predictor.predict(df)
+        predictions = predictor.predict(df, args=pred_args)
         predictions = predictions.to_dict(orient='records')
 
         # TODO!!!

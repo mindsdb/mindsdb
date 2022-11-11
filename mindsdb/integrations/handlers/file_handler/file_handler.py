@@ -274,7 +274,7 @@ class FileHandler(DatabaseHandler):
 
     @staticmethod
     def _get_csv_dialect(buffer) -> csv.Dialect:
-        sample = buffer.read(128 * 1024)
+        sample = buffer.read(256 * 1024)
         buffer.seek(0)
         try:
             accepted_csv_delimiters = [',', '\t', ';']

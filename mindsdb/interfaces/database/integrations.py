@@ -15,7 +15,6 @@ from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
-from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
 from mindsdb.utilities import log
@@ -239,11 +238,6 @@ class IntegrationController:
                 FileController(),
                 company_id=company_id
             )
-        elif handler_type == 'views':
-            handler_ars['view_controller'] = WithKWArgsWrapper(
-                ViewController(),
-                company_id=company_id
-            )
         elif self.handler_modules.get(handler_type, False).type == HANDLER_TYPE.ML:
             handler_ars['handler_controller'] = WithKWArgsWrapper(
                 IntegrationController(),
@@ -284,12 +278,6 @@ class IntegrationController:
             fs_store=fs_store,
             connection_data=connection_data
         )
-
-        if handler_type == 'views':
-            handler_ars['view_controller'] = WithKWArgsWrapper(
-                ViewController(),
-                company_id=company_id
-            )
 
         if as_service:
             log.logger.debug("%s create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)

@@ -6,6 +6,9 @@ from collections import OrderedDict
 import sqlalchemy as sa
 import numpy as np
 
+from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql import parse_sql
+
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.model.model_controller import ModelController
@@ -65,7 +68,7 @@ class Project:
             self.id = None
         db.session.commit()
 
-    def drop_table(self, table_name):
+    def drop_table(self, table_name: str):
         tables = self.get_tables()
         if table_name not in tables:
             raise Exception(f"Table '{table_name}' do not exists")
@@ -92,6 +95,16 @@ class Project:
             project_name=self.name,
             company_id=self.company_id
         )
+
+    def query_view(self, query: ASTNode) -> ASTNode:
+        view_name = query.from_table.parts[-1]
+        view_meta = ViewController().get(
+            name=view_name,
+            project_name=self.name,
+            company_id=self.company_id
+        )
+        subquery_ast = parse_sql(view_meta['query'], dialect='mindsdb')
+        return subquery_ast
 
     def get_models(self):
         records = (

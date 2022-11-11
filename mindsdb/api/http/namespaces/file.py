@@ -36,6 +36,8 @@ class File(Resource):
         data = {}
         mindsdb_file_name = name
 
+        existing_file_names = request.file_controller.get_files_names()
+
         def on_field(field):
             name = field.field_name.decode()
             value = field.value.decode()
@@ -75,6 +77,13 @@ class File(Resource):
                 file_object.close()
         else:
             data = request.json
+
+        if mindsdb_file_name in existing_file_names:
+            return http_error(
+                400,
+                "File already exists",
+                f"File with name '{data['file']}' already exists"
+            )
 
         if data.get('source_type') == 'url':
             url = data['source']

@@ -1,4 +1,3 @@
-import os
 import copy
 import base64
 import shutil
@@ -21,7 +20,6 @@ from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers_client.db_client import DBServiceClient
-from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
 
 class IntegrationController:
@@ -36,7 +34,7 @@ class IntegrationController:
         integration_record = db.Integration(
             name=name,
             engine=engine,
-            data=connection_args,
+            data=connection_args or {},
             company_id=company_id
         )
         db.session.add(integration_record)
@@ -48,8 +46,10 @@ class IntegrationController:
             self._add_integration_record(name, engine, connection_args, company_id)
             return
 
-        log.logger.debug("%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
-                  self.__class__.__name__, name, engine, connection_args, company_id)
+        log.logger.debug(
+            "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
+            self.__class__.__name__, name, engine, connection_args, company_id
+        )
         handlers_meta = self.get_handlers_import_status()
         handler_meta = handlers_meta[engine]
         accept_connection_args = handler_meta.get('connection_args')

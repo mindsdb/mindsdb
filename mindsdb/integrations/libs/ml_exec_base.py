@@ -302,6 +302,7 @@ class BaseMLEngineExec:
             data_integration_meta = databases_meta[integration_name]
             # TODO improve here. Suppose that it is view
             if data_integration_meta['type'] == 'project':
+                # KEEP HERE
                 data_integration_id = self.handler_controller.get(name='views')['id']
             else:
                 data_integration_id = data_integration_meta['id']

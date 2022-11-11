@@ -78,6 +78,7 @@ class Semaphor(Base):
         UniqueConstraint('entity_type', 'entity_id', name='uniq_const'),
     )
 
+
 class PREDICTOR_STATUS:
     __slots__ = ()
     COMPLETE = 'complete'
@@ -89,6 +90,7 @@ class PREDICTOR_STATUS:
 
 
 PREDICTOR_STATUS = PREDICTOR_STATUS()
+
 
 class Predictor(Base):
     __tablename__ = 'predictor'
@@ -104,7 +106,8 @@ class Predictor(Base):
     mindsdb_version = Column(String)
     native_version = Column(String)
     integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'), nullable=False)
-    data_integration_id = Column(ForeignKey('integration.id', name='fk_data_integration_id'), nullable=True)
+    # data_integration_id = Column(ForeignKey('integration.id', name='fk_data_integration_id'), nullable=True)
+    data_integration_id = Column(Json)
     fetch_data_query = Column(String)
     is_custom = Column(Boolean)
     learn_args = Column(Json)

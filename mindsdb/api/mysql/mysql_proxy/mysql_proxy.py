@@ -832,7 +832,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         server.original_model_controller = ModelController()
         server.original_integration_controller = IntegrationController()
-        server.original_view_controller = ViewController()
         server.original_project_controller = ProjectController()
         server.original_database_controller = DatabaseController()
 

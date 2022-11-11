@@ -150,7 +150,6 @@ class BaseExecutorTest(BaseUnitTest):
 
         server_obj.original_integration_controller = integration_controller
         server_obj.original_model_controller = model_controller
-        server_obj.original_view_controller = ViewController()
         server_obj.original_project_controller = ProjectController()
         server_obj.original_database_controller = DatabaseController()
 

@@ -102,7 +102,6 @@ class TestCompanyIndependent:
         return response
 
     def test_initial_state_http(self):
-
         # add permanent integrations
         for cid in [CID_A, CID_B]:
             databases_names = self.get_db_names(cid)

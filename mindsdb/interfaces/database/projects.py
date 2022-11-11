@@ -8,6 +8,8 @@ import numpy as np
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
+from mindsdb.interfaces.model.model_controller import ModelController
+from mindsdb.interfaces.database.views import ViewController
 
 
 class Project:
@@ -62,6 +64,34 @@ class Project:
             self.company_id = None
             self.id = None
         db.session.commit()
+
+    def drop_table(self, table_name):
+        tables = self.get_tables()
+        if table_name not in tables:
+            raise Exception(f"Table '{table_name}' do not exists")
+        table_meta = tables[table_name]
+        if table_meta['type'] == 'model':
+            ModelController().delete_model(
+                table_name,
+                project_name=self.name,
+                company_id=self.company_id
+            )
+        elif table_meta['type'] == 'view':
+            ViewController().delete(
+                table_name,
+                project_name=self.name,
+                company_id=self.company_id
+            )
+        else:
+            raise Exception(f"Can't delete table '{table_name}' because of it type: {table_meta['type']}")
+
+    def create_view(self, name: str, query: str):
+        ViewController().add(
+            name,
+            query=query,
+            project_name=self.name,
+            company_id=self.company_id
+        )
 
     def get_models(self):
         records = (

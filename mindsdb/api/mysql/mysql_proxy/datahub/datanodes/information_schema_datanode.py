@@ -41,7 +41,6 @@ class InformationSchemaDataNode(DataNode):
     def __init__(self, session):
         self.session = session
         self.integration_controller = session.integration_controller
-        self.view_controller = session.view_controller
         self.project_controller = session.project_controller
         self.database_controller = session.database_controller
 

@@ -340,14 +340,12 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             'config': config,
             'original_model_controller': ModelController(),
             'original_integration_controller': IntegrationController(),
-            'original_view_controller': ViewController(),
             'original_project_controller': ProjectController(),
             'original_database_controller': DatabaseController()
         }
         for name in [
             'model_controller',
             'integration_controller',
-            'view_controller',
             'project_controller',
             'database_controller'
         ]:

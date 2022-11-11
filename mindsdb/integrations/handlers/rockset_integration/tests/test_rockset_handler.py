@@ -1,48 +1,26 @@
-from msilib.schema import tables
 import unittest
 
-from matplotlib import table
-from sqlalchemy import column
 from mindsdb.integrations.handlers.rockset_integration.rockset_integration import RocksetIntegration
-from mindsdb.integrations.libs.response import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+
 
 class RocksetHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
             "connection_data": {
-                "host": "127.0.0.1",
-                "port": 3306,
-                "user": "root",
-                "password": "password",
-                "database": "database"
+                "host":'127.0.0.1',
+                "port": 8080,
+                "user": "",
+                "password": "",
+                "database": "database",
+                "schema": "PUBLIC",
+                "protocol": "https",
+                "api_key": "api_key",
+                "api_region": "https://api.use1a1.rockset.com"
             }
         }
-        cls.handler = RocksetIntegration('test_rockset_handler', **cls.kwargs)
-
-    def test_connection_args(self):
-        self.assertEqual(self.handler.connection_args, {
-            'user': {
-                'type': ARG_TYPE.STR,
-                'description': 'The user name used to authenticate with the OceanBase server.'
-            },
-            'password': {
-                'type': ARG_TYPE.STR,
-                'description': 'The password to authenticate the user with the OceanBase server.'
-            },
-            'database': {
-                'type': ARG_TYPE.STR,
-                'description': 'The database name to use when connecting with the OceanBase server.'
-            },
-            'host': {
-                'type': ARG_TYPE.STR,
-                'description': 'The host name or IP address of the OceanBase server. '
-            },
-            'port': {
-                'type': ARG_TYPE.INT,
-                'description': 'The TCP/IP port of the OceanBase server. Must be an integer.'
-            }
-        })
+        cls.handler = RocksetIntegration('test_rockset_handler', cls.kwargs)
 
     def test_check_connection(self):
         assert self.handler.check_connection()
@@ -70,16 +48,13 @@ class RocksetHandlerTest(unittest.TestCase):
         result = self.handler.query(query)
         assert result.type is not RESPONSE_TYPE.ERROR
 
-    def test_disconnect(self):
-        assert self.handler.disconnect()
-
     def test_get_tables(self):
         tables = self.handler.get_tables()
         assert table is RESPONSE_TYPE.TABLE
 
     def test_get_columns(self):
-        columns = self.handler.get_columns('_event_time')
-        query = "DROP Table IF EXISTS _event_time;"
+        columns = self.handler.get_columns('test_table')
+        query = "DROP Table IF EXISTS test_table;"
         result = self.handler.query(query)
         assert columns.type is not RESPONSE_TYPE.ERROR
 
@@ -88,3 +63,6 @@ class RocksetHandlerTest(unittest.TestCase):
         query = "DROP Table IF EXISTS _id"
         result = self.handler.query(query)
         assert result.type is not RESPONSE_TYPE.ERROR
+
+if __name__ == '__main__':
+    unittest.main()

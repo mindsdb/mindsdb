@@ -1,6 +1,7 @@
 
 import traceback
 import pickle
+from uuid import uuid4
 import requests
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     logger
@@ -9,6 +10,7 @@ from mindsdb.integrations.libs.net_helpers import sending_attempts
 
 class ExecutorClient:
     def __init__(self, session, sqlserver, service_url=None):
+        self.id = f"executor_{uuid4()}"
         self.headers = {"Content-Type": "application/json"}
         self.base_url = service_url or "http://localhost:5500"
         self.sqlserver = sqlserver
@@ -41,15 +43,8 @@ class ExecutorClient:
             Exception if all attempts were failed.
     
         """
-        call = None
         _type = _type.lower()
-        if _type == "get":
-            call = requests.get
-        elif _type == "post":
-            call = requests.post
-        elif _type == "put":
-            call = requests.put
-
+        call = getattr(requests, _type)
         url = f"{self.base_url}/{endpoint}"
 
         headers = params.get("headers", None)
@@ -62,10 +57,19 @@ class ExecutorClient:
         r = call(url, **params)
         return r
 
+    def __del__(self):
+        url = f"{self.base_url}/executor"
+        logger.debug("%s.%s: delete an appropriate executor instance on the serverside", self.__class__.__name__, self.id)
+        self._do(url, "delete", json={"id": self.id})
+
+
     def default_json(self):
         return {
-                "session_id": self.session.id,
-                "connection_id": self.sqlserver.connection_id,
+            "id": self.id,
+            "session_id": self.session.id,
+            "connection_id": self.sqlserver.connection_id,
+            "company_id": self.session.company_id,
+            "user_class": self.session.user_class,
                 }
 
     def _update_attrs(self, response_json: dict):
@@ -99,6 +103,31 @@ class ExecutorClient:
             logger.error("%s.stmt_prepare: error unpickle query object: %s", self.__class__.__name__, msg)
             raise e
 
+    def stmt_execute(self, param_values):
+        if self.is_executed:
+            return
+        logger.debug("%s.stmt_execute: json=%s", self.__class__.__name__, param_values)
+        response = None
+        try:
+            response = self._do("stmt_execute", _type="post", json=param_values)
+            logger.debug("%s.stmt_execute result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error("%s.stmt_execute: request has finished with error: %s", self.__class__.__name__, msg)
+        try:
+            self._update_attrs(response.json())
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error("%s.stmt_execute: error reading response json: %s", self.__class__.__name__, msg)
+        try:
+            query = pickle.loads(response.content)
+            logger.error("%s.stmt_execute: success unpickle query object", self.__class__.__name__)
+            self.query = query
+        except Exception as e:
+            msg = traceback.format_exc()
+            logger.error("%s.stmt_execute: error unpickle query object: %s", self.__class__.__name__, msg)
+            raise e
+
     def query_execute(self, sql):
         json_data = self.default_json()
         json_data["sql"] = sql
@@ -128,6 +157,7 @@ class ExecutorClient:
         json_data = self.default_json()
         json_data["sql"] = sql
         logger.debug("%s.execute_external: json=%s", self.__class__.__name__, json_data)
+        return
         response = None
         try:
             response = self._do("execute_external", _type="post", json=json_data)

@@ -9,10 +9,20 @@
  *******************************************************
 """
 
+from uuid import uuid4
+
+import requests
+
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.utilities import logger
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+
+from mindsdb.interfaces.model.model_controller import ModelController
+from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.views import ViewController
+from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.database.database import DatabaseController
 
 
 class SessionController():
@@ -84,3 +94,62 @@ class SessionController():
 
     def unregister_stmt(self, stmt_id):
         del self.prepared_stmts[stmt_id]
+
+
+class ServerSessionContorller(SessionController):
+    def __init__(self, server, company_id=None, user_class=None, executor_service_url=None):
+        super().__init__(server, company_id, user_class)
+        self.id = uuid4()
+        self.executor_url = executor_service_url or "http://localhost:5500"
+
+    def __del__(self):
+        url = self.executor_url + "/" + "session"
+        requests.delete(url, json={"id":self.id})
+
+
+class ServiceSessionController(SessionController):
+
+    def __init__(self, company_id=None, user_class=None):
+        """
+        Initialize the session
+        :param company_id:
+        """
+
+        self.username = None
+        self.user_class = user_class
+        self.auth = False
+        self.company_id = company_id
+        self.logging = logger
+        self.database = None
+
+        self.config = Config()
+
+        self.model_controller = WithKWArgsWrapper(
+            ModelController(),
+            company_id=company_id
+        )
+
+        self.integration_controller = WithKWArgsWrapper(
+            IntegrationController(),
+            company_id=company_id
+        )
+
+        self.view_controller = WithKWArgsWrapper(
+            ViewController(),
+            company_id=company_id
+        )
+
+        self.project_controller = WithKWArgsWrapper(
+            ProjectController(),
+            company_id=company_id
+        )
+
+        self.database_controller = WithKWArgsWrapper(
+            DatabaseController(),
+            company_id=company_id
+        )
+
+        self.datahub = init_datahub(self)
+
+        self.prepared_stmts = {}
+        self.packet_sequence_number = 0

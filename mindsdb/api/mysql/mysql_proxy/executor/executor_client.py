@@ -106,7 +106,10 @@ class ExecutorClient:
     def stmt_execute(self, param_values):
         if self.is_executed:
             return
+        logger.debug("%s.stmt_execute: param_values=%s(type=%s)", self.__class__.__name__, param_values, type(param_values))
         logger.debug("%s.stmt_execute: json=%s", self.__class__.__name__, param_values)
+        json_data = self.default_json()
+        json_data["param_values"] = param_values
         response = None
         try:
             response = self._do("stmt_execute", _type="post", json=param_values)
@@ -159,17 +162,17 @@ class ExecutorClient:
         logger.debug("%s.execute_external: json=%s", self.__class__.__name__, json_data)
         return
         response = None
-        try:
-            response = self._do("execute_external", _type="post", json=json_data)
-            logger.debug("%s.execute_external result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
-        except Exception:
-            msg = traceback.format_exc()
-            logger.error("%s.execute_external: request has finished with error: %s", self.__class__.__name__, msg)
-        try:
-            self._update_attrs(response.json())
-        except Exception:
-            msg = traceback.format_exc()
-            logger.error("%s.execute_external: error reading response json: %s", self.__class__.__name__, msg)
+        # try:
+        #     response = self._do("execute_external", _type="post", json=json_data)
+        #     logger.debug("%s.execute_external result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
+        # except Exception:
+        #     msg = traceback.format_exc()
+        #     logger.error("%s.execute_external: request has finished with error: %s", self.__class__.__name__, msg)
+        # try:
+        #     self._update_attrs(response.json())
+        # except Exception:
+        #     msg = traceback.format_exc()
+        #     logger.error("%s.execute_external: error reading response json: %s", self.__class__.__name__, msg)
 
     def parse(self, sql):
         self.sql = sql

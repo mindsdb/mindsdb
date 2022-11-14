@@ -99,7 +99,7 @@ class SessionController():
 class ServerSessionContorller(SessionController):
     def __init__(self, server, company_id=None, user_class=None, executor_service_url=None):
         super().__init__(server, company_id, user_class)
-        self.id = uuid4()
+        self.id = f"session_{uuid4()}"
         self.executor_url = executor_service_url or "http://localhost:5500"
 
     def __del__(self):

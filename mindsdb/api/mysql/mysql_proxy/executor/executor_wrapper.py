@@ -49,20 +49,34 @@ class ExecutorService:
         self.do_execute = do_execute_router(self.do_execute)
         logger.info("%s: base params and route have been initialized", self.__class__.__name__)
 
-    def get_executor(self, params):
+    def _get_executor(self, params):
         exec_id = params["id"]
         if exec_id in self.executors_cache:
+            logger.debug("%s: executor %s found in cache", self.__class__.__name__, exec_id)
             return self.executors_cache[exec_id]
         session_id = params["session_id"]
-        if session_id not in self.sessions_cache:
+        if session_id in self.sessions_cache:
+            logger.debug("%s: session %s found in cache", self.__class__.__name__, session_id)
+            session = self.sessions_cache[session_id]
+        else:
+            logger.debug("%s: creating new session. id - %s, company_id - %s, user_class - %s",
+                    self.__class__.__name__,
+                    session_id,
+                    params["company_id"],
+                    params["user_class"]
+                )
             session = ServiceSessionController(params["company_id"], params["user_class"])
             self.sessions_cache[session_id] = session
-        else:
-            session = self.sessions_cache[session_id]
         sqlserver = SqlServerStub(connection_id=params["connection_id"])
+        logger.debug("%s: creating new executor. id - %s, session_id - %s",
+                self.__class__.__name__,
+                exec_id,
+                session_id,
+            )
         executor = Executor(session, sqlserver)
         self.executors_cache[exec_id] = executor
         return executor
+
 
     def index(self):
         """ Default GET endpoint - '/'."""
@@ -82,20 +96,55 @@ class ExecutorService:
         if session_id is not None and session_id in self.sessions_cache:
             del self.sessions_cache[session_id]
 
-    # def stmt_prepare(self, sql):
     def stmt_prepare(self):
+        params = request.json
+        logger.debug("%s.stmt_prepare: json received - %s", self.__class__.__name__, params)
+        executor = self._get_executor(params)
+        sql = params.get("sql")
+        executor.stmt_prepare(sql)
+        resp = executor.to_json()
+        return resp, 200
 
-    # def stmt_execute(self, param_values):
     def stmt_execute(self):
+        params = request.json
+        logger.debug("%s.stmt_execute: json received - %s", self.__class__.__name__, params)
+        executor = self._get_executor(params)
+        param_values = params.get("param_values")
+        executor.stmt_execute(param_values)
+        resp = executor.to_json()
+        return resp, 200
 
-    # def query_execute(self, sql):
     def query_execute(self):
+        params = request.json
+        logger.debug("%s.query_execute: json received - %s", self.__class__.__name__, params)
+        executor = self._get_executor(params)
+        sql = params.get("sql")
+        executor.query_execute(sql)
+        resp = executor.to_json()
+        return resp, 200
 
-    # def execute_external(self, sql):
     def execute_external(self):
-        return None
+        params = request.json
+        logger.debug("%s.execute_external: json received - %s", self.__class__.__name__, params)
+        executor = self._get_executor(params)
+        sql = params.get("sql")
+        executor.execute_external(sql)
+        resp = executor.to_json()
+        return resp, 200
 
-    # def parse(self, sql):
     def parse(self):
+        params = request.json
+        logger.debug("%s.parse: json received - %s", self.__class__.__name__, params)
+        executor = self._get_executor(params)
+        sql = params.get("sql")
+        executor.parse(sql)
+        resp = executor.to_json()
+        return resp, 200
 
     def do_execute(self):
+        params = request.json
+        logger.debug("%s.do_execute: json received - %s", self.__class__.__name__, params)
+        executor = self._get_executor(params)
+        executor.do_execute()
+        resp = executor.to_json()
+        return resp, 200

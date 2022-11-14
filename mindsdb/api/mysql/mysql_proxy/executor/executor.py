@@ -228,3 +228,14 @@ class Executor:
             self.columns = ret.columns
 
         self.state_track = ret.state_track
+
+    def to_json(self):
+        params = {
+                "columns": self.columns,
+                "params": self.params,
+                "data": self.data,
+                "state_track": self.state_track,
+                "server_status": self.server_status,
+                "is_executed": self.is_executed,
+                }
+        return params

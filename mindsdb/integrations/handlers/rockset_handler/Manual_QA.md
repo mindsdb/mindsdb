@@ -47,6 +47,8 @@ Error: Can't connect to db: Handler 'rockset' can not be used
 
 **Notes** 
 
+***Access to Rockset's API is based on API keys, which are specific to each user and their workspace. api keys are created in the rockset console.***
+
 
 **2. Testing CREATE TABLE**
 

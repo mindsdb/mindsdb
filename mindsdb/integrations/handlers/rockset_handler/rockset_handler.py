@@ -2,8 +2,8 @@ from collections import OrderedDict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from ..mysql_handler import Handler as MySQLHandler
+import rockset
 from rockset import Client
-
 
 class RocksetHandler(MySQLHandler):
     """

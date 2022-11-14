@@ -1,6 +1,6 @@
 # `CREATE ML_ENGINE` Statement
 
-You can create ML engines based on the ML handlers available in MindsDB. And if you can't find the ML handler of your interest, you can always contribute by [building a new ML handler](/contribute/ml_handlers/).
+You can create machine learning (ML) engines based on the ML handlers available in MindsDB. And if you can't find the ML handler of your interest, you can always contribute by [building a new ML handler](/contribute/ml_handlers/).
 
 ## Description
 
@@ -28,9 +28,9 @@ FROM handler_name
 [USING argument_key = argument_value];
 ```
 
-Please replace the `ml_engine_name`, `handler_name`, and optionally, `argument_key` and `argument_value` with the real values.
+Please replace `ml_engine_name`, `handler_name`, and optionally, `argument_key` and `argument_value` with the real values.
 
-To verify that your ML engine exists, run the command below:
+To verify that your ML engine was successfully created, run the command below:
 
 ```sql
 SELECT *

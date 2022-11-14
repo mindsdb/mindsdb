@@ -8,7 +8,7 @@ You should have the latest staging version of the MindsDB repository installed l
 
 ## What are ML Handlers?
 
-ML handlers act as a bridge to any ML framework so you can create your models using different ML engines.
+ML handlers act as a bridge to any ML framework. You use ML handlers to create ML engines using the `CREATE ML_ENGINE` command. So you can create your models using different ML engines.
 
 ## ML Handlers in the MindsDB Repository
 

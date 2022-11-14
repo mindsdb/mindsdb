@@ -435,6 +435,10 @@ class BaseMLEngineExec:
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
+        target = new_predictor_record.to_predict
+        if isinstance(target, list):
+            target = target[0]
+
         p = HandlerProcess(
             learn_process,
             class_path,
@@ -442,7 +446,7 @@ class BaseMLEngineExec:
             self.integration_id,
             new_predictor_record.id,
             training_data_df,
-            new_predictor_record.to_predict,
+            target,
             new_predictor_record.learn_args
         )
         p.start()

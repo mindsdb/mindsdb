@@ -780,7 +780,7 @@ class SQLQuery():
 
             columns_collection = ColumnsCollection()
             for column in columns_info:
-                columns_collection.add(table_name, column)
+                columns_collection.add(table, column)
 
             data = {
                 'values': [],

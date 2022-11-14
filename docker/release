@@ -50,7 +50,31 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 &
     pip install --prefer-binary --no-cache-dir \
         crate[sqlalchemy] || true \
     pip install --prefer-binary --no-cache-dir \
-        pinotdb || true
+        pinotdb || true \
+    pip install --prefer-binary --no-cache-dir \
+        sqlalchemy-solr || true \
+    pip install --prefer-binary --no-cache-dir \
+        taospy || true \
+    pip install --prefer-binary --no-cache-dir \
+        impyla || true \
+    pip install --prefer-binary --no-cache-dir \
+        pymonetdb sqlalchemy-monetdb || true \
+    pip install --prefer-binary --no-cache-dir \
+        IfxPy sqlalchemy-informix || true \
+    pip install --prefer-binary --no-cache-dir \
+        salesforce-merlion || true \
+    pip install --prefer-binary --no-cache-dir \
+        pydruid || true \
+    pip install --prefer-binary --no-cache-dir \
+        sqlalchemy-hana hdbcli || true \
+    pip install --prefer-binary --no-cache-dir \
+        elasticsearch elasticsearch-dbapi || true \
+    pip install --prefer-binary --no-cache-dir \
+        pymysql || true \
+    pip install --prefer-binary --no-cache-dir \
+        teradatasql teradatasqlalchemy || true \
+    pip install --prefer-binary --no-cache-dir \
+        sqlalchemy-sqlany sqlanydb || true
 
 ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}

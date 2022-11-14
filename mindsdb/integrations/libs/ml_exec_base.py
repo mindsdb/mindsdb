@@ -449,7 +449,8 @@ class BaseMLEngineExec:
 
         return Response(RESPONSE_TYPE.OK)
 
-    def predict(self, model_name: str, data: list, pred_format: str = 'dict', project_name: str = None):
+    def predict(self, model_name: str, data: list, pred_format: str = 'dict',
+                project_name: str = None, params: dict = None):
         """ Generates predictions with some model and input data. """
         if isinstance(data, dict):
             data = [data]
@@ -467,7 +468,8 @@ class BaseMLEngineExec:
         ml_handler = self.get_ml_handler(predictor_record.id)
 
         args = {
-            'pred_format': pred_format
+            'pred_format': pred_format,
+            'predict_params': {} if params is None else params
         }
         # FIXME
         if self.handler_class.__name__ == 'LightwoodHandler':

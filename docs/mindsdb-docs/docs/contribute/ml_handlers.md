@@ -1,6 +1,6 @@
 # Building a Machine Learning Handler
 
-In this section, you'll find how to create new machine learning handlers within MindsDB.
+In this section, you'll find how to create new machine learning (ML) handlers within MindsDB.
 
 ## Prerequisite
 
@@ -8,11 +8,11 @@ You should have the latest staging version of the MindsDB repository installed l
 
 ## What are Machine Learning Handlers?
 
-ML handlers act as a bridge to any ML framework. You use ML handlers to create ML engines using [the `CREATE ML_ENGINE` command](/sql/create/ml_engine/). So you can create your models using different ML engines.
+ML handlers act as a bridge to any ML framework. You use ML handlers to create ML engines using [the `CREATE ML_ENGINE` command](/sql/create/ml_engine/). So you can expose ML models from any supported ML engine as an AI table.
 
 ## ML Handlers in the MindsDB Repository
 
-The codes for ML handlers are located in the main MindsDB repository under the [/integrations](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations) directory.
+The source code for ML handlers is located in the main MindsDB repository under the [/integrations](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations) directory.
 
 ```
 integrations                      # Contains ML handlers source codes
@@ -110,8 +110,8 @@ def create_engine(self, connection_args: dict):
 
 To see some ML handlers that are currently in use, we encourage you to check out the following ML handlers inside the MindsDB repository:
 
+* [Lightwood](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/lightwood_handler)
 * [HuggingFace](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/huggingface_handler)
 * [Ludwig](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/ludwig_handler)
-* [Lightwood](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/lightwood_handler)
 
 And here are [all the handlers available in the MindsDB repository](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).

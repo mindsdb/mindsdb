@@ -77,6 +77,9 @@ class ExecutorService:
         self.executors_cache[exec_id] = executor
         return executor
 
+    def run(self, **kwargs):
+        """ Launch internal Flask application."""
+        self.app.run(**kwargs)
 
     def index(self):
         """ Default GET endpoint - '/'."""

@@ -2,21 +2,28 @@
 
 > **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
 
-**1. Testing CREATE DATABASE**
+## Test 1.2
+```
+CREATE DATABASE rockset
+WITH ENGINE = 'rockset',     
+PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 47335,
+    "user": "mindsdb",
+    "database": "rockset"
+};
+```
+
+**Results**
 
 ```
-CREATE DATABASE rockset_integration
-WITH ENGINE = "rockset",
-    ROCKSET_API_KEY = "YOUR_API_KEY",
-    ROCKSET_REGION = "YOUR_REGION"
-    PARAMETERS = {
-      "host":"https://api.use1a1.rockset.com",
-      "port":"3306",
-      "user":"admin",
-      "password":"password",
-      "database":"test"
-    };
+Error
+Expected {"START" | "SET" | "USE" | "SHOW" | "DELETE" | "INSERT" | "UPDATE" | "ALTER" | "SELECT" | "ROLLBACK" | "COMMIT" | "EXPLAIN" | {"CREATE" "PREDICTOR"} | {"CREATE" "VIEW"} | "DROP" | "RETRAIN" | {"CREATE" "DATASOURCE"} | "DESCRIBE" | {"CREATE" "DATABASE"} | {"CREATE" "TABLE"} | "BEGIN"} (at char 0), (line:1, col:1)
 ```
+
+![error](tests/error-3.png)
+
+
 
 
 **2. Testing CREATE TABLE**

@@ -2,7 +2,7 @@ from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 from .__about__ import __version__ as version, __description__ as description
 try:
-    from .rockset_integration import (
+    from .rockset_handler import (
         RocksetIntegration as Handler,
         connection_args_example,
         connection_args

@@ -60,13 +60,14 @@ def get_predictor_project(record: db.Predictor) -> db.Project:
     return project_record
 
 
-def get_model_records(company_id: int, integration_id=None, active: bool = True, deleted_at=null(),
+def get_model_records(company_id: int, integration_id=None, active=True, deleted_at=null(),
                       project_name: Optional[str] = None, ml_handler_name: Optional[str] = None, **kwargs):
     if company_id is None:
         kwargs['company_id'] = null()
     else:
         kwargs['company_id'] = company_id
-    kwargs['deleted_at'] = deleted_at
+    if deleted_at is not None:
+        kwargs['deleted_at'] = deleted_at
     if active is not None:
         kwargs['active'] = active
 
@@ -98,7 +99,7 @@ def get_model_records(company_id: int, integration_id=None, active: bool = True,
 
 def get_model_record(company_id: int, except_absent=False, ml_handler_name: Optional[str] = None,
                      project_name: Optional[str] = None, active: bool = True,
-                     deleted_at=null(), version :Optional[int] = None, **kwargs):
+                     deleted_at=null(), version: Optional[int] = None, **kwargs):
     if company_id is None:
         kwargs['company_id'] = null()
     else:

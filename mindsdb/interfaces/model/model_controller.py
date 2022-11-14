@@ -251,10 +251,12 @@ class ModelController():
     def process_create_statement(self, statement, database_controller, handler_controller):
         # TODO use database_controller handler_controller internally
 
-        project_name = statement.name.parts[0]
-        model_name = statement.name.parts[1]
+        project_name = statement.name.parts[0].lower()
+        model_name = statement.name.parts[1].lower()
 
-        target = statement.targets[0].parts[-1]
+        problem_definition = {}
+        if statement.targets is not None:
+            problem_definition['target'] = statement.targets[0].parts[-1]
 
         # get data for learn
         data_integration_id = None
@@ -270,8 +272,6 @@ class ModelController():
                 data_integration_id = handler_controller.get(name='views')['id']
             else:
                 data_integration_id = data_integration_meta['id']
-
-        problem_definition = {'target': target}
 
         label = None
         if statement.using is not None:
@@ -345,7 +345,18 @@ class ModelController():
         if base_predictor_record is None:
             raise Exception(f"Error: model '{model_name}' does not exists")
 
-        version0 = base_predictor_record.version or 1
+        # get max current version
+        models = get_model_records(
+            name=params['model_name'],
+            project_name=params['project_name'],
+            company_id=ml_handler.company_id,
+            deleted_at=None,
+            active=None,
+        )
+        version0 = max([m.version for m in models])
+        if version0 is None:
+            version0 = 1
+
         params['version'] = version0 + 1
 
         # get params from predictor if not defined

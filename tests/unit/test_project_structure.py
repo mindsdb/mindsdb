@@ -252,6 +252,18 @@ class TestProjectStructure(BaseExecutorDummyML):
             ''')
         assert 'is not found' in str(exc_info.value)
 
+        # ----------------------------------------------------
+
+        # retrain without all params
+        self.run_sql(
+            '''
+                retrain proj.task_model
+            '''
+        )
+        self.wait_predictor('proj', 'task_model', {'version': '4'})
+
+        # ----------------------------------------------------
+
         # drop predictor and check model is deleted and no versions
         self.run_sql('drop predictor proj.task_model')
         ret = self.run_sql('select * from proj.models')

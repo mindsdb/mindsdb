@@ -1,14 +1,14 @@
-# Building an ML Engine
+# Building a Machine Learning Handler
 
-In this section, you'll find how to create new ML handlers/engines within MindsDB.
+In this section, you'll find how to create new machine learning handlers within MindsDB.
 
 ## Prerequisite
 
 You should have the latest staging version of the MindsDB repository installed locally. Follow [this guide](/contribute/install/) to learn how to install MindsDB for development.
 
-## What are ML Handlers?
+## What are Machine Learning Handlers?
 
-ML handlers act as a bridge to any ML framework. You use ML handlers to create ML engines using the `CREATE ML_ENGINE` command. So you can create your models using different ML engines.
+ML handlers act as a bridge to any ML framework. You use ML handlers to create ML engines using [the `CREATE ML_ENGINE` command](/sql/create/ml_engine/). So you can create your models using different ML engines.
 
 ## ML Handlers in the MindsDB Repository
 
@@ -26,9 +26,9 @@ integrations                      # Contains ML handlers source codes
 │  ├─ install.py                           # Script that installs all handler dependencies
 ```
 
-## Creating an ML Engine
+## Creating a Machine Learning Handler
 
-You can create your own ML engine within MindsDB by inheriting from [the `BaseMLEngine` class](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L123).
+You can create your own ML handler within MindsDB by inheriting from [the `BaseMLEngine` class](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L123).
 
 By providing implementation for some or all of the methods contained in the `BaseMLEngine` class, you can connect with the machine learning library or framework of your choice.
 
@@ -106,7 +106,7 @@ def create_engine(self, connection_args: dict):
         """
 ```
 
-## Check out our ML Handlers!
+## Check out our Machine Learning Handlers!
 
 To see some ML handlers that are currently in use, we encourage you to check out the following ML handlers inside the MindsDB repository:
 

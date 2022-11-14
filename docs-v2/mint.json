@@ -37,7 +37,49 @@
   "navigation": [
     {
       "group": "Guides",
-      "pages": ["quickstart", "what-is-mindsdb", "getting-started"]
+      "pages": [
+        "quickstart",
+        "what-is-mindsdb",
+        "getting-started",
+        {
+          "group": "Deployment",
+          "pages": [
+            "setup/self-hosted/docker",
+            {
+              "group": "Self Hosting",
+              "pages": [
+                "setup/self-hosted/pip/windows",
+                "setup/self-hosted/pip/linux",
+                "setup/self-hosted/pip/macos",
+                "setup/self-hosted/pip/source"
+              ]
+            },
+            "setup/custom-config",
+            "setup/cloud",
+            "setup/digital-ocean",
+            "setup/gcp",
+            "setup/vultr",
+            "setup/civo"
+          ]
+        },
+        {
+          "group": "Connect to MindsDB",
+          "pages": [
+            "connect/dbeaver",
+            "connect/dbt",
+            "connect/deepnote",
+            "connect/kafka",
+            "connect/connect-mariadb-skysql",
+            "connect/metabase",
+            "connect/mindsdb_editor",
+            "connect/mongo-compass",
+            "connect/mongo-shell",
+            "connect/mysql-client",
+            "connect/sql-alchemy",
+            "connect/tableau"
+          ]
+        }
+      ]
     }
   ],
   "footerSocials": {

@@ -1,4 +1,4 @@
-from ..mysql_handler import Handler as MySQLHandler, connection_args, connection_args_example
+from ..mysql_handler import Handler as MySQLHandler
 
 class RocksetIntegration(MySQLHandler):
     """

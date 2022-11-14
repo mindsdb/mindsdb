@@ -5,7 +5,7 @@ repo_url: 'https://github.com/mindsdb/mindsdb'
 theme:
   name: 'material'
   custom_dir: overrides
-  logo: assets/mdb_logo_w2.svg
+  logo: assets/mdb_logo_w.svg
   favicon: assets/mdb_logo.png
   font:
       text: Inter
@@ -101,8 +101,11 @@ nav:
   - MindsDB Data Insights: sql/data-insights.md
   - Train a Predictor: sql/create/predictor.md
   - Get a Prediction: sql/api/select.md
+  - Feature Engineering in MindsDB: sql/feature-eng.md
   - SQL API:
     - MindsDB Tables Structure: sql/table-structure.md
+    - Running Native Queries: sql/native-queries.md
+    - PROJECTS: sql/project.md
     - CREATE:
       - DATABASE: sql/create/databases.md
       - PREDICTOR: sql/create/predictor.md

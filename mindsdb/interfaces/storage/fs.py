@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import hashlib
 from pathlib import Path
@@ -6,13 +7,20 @@ from abc import ABC, abstractmethod
 from typing import Union, Optional
 from dataclasses import dataclass
 
-
 from checksumdir import dirhash
 try:
     import boto3
 except Exception:
     # Only required for remote storage on s3
     pass
+
+@dataclass(frozen=True)
+class RESOURCE_GROUP:
+    PREDICTOR = 'predictor'
+    INTEGRATION = 'integration'
+
+RESOURCE_GROUP = RESOURCE_GROUP()
+
 
 from mindsdb.utilities.config import Config
 
@@ -142,22 +150,14 @@ class S3FSStore(BaseFSStore):
         self.s3.delete_object(Bucket=self.bucket, Key=remote_name)
 
 
-storage_location = Config()['permanent_storage']['location']
-if storage_location == 'local':
-    FsStore = LocalFSStore
-elif storage_location == 's3':
-    FsStore = S3FSStore
-else:
-    raise Exception(f"Location: '{storage_location}' not supported")
-
-
-@dataclass(frozen=True)
-class RESOURCE_GROUP:
-    PREDICTOR = 'predictor'
-    INTEGRATION = 'integration'
-
-
-RESOURCE_GROUP = RESOURCE_GROUP()
+def FsStore():
+    storage_location = Config()['permanent_storage']['location']
+    if storage_location == 'local':
+        return LocalFSStore()
+    elif storage_location == 's3':
+        return S3FSStore()
+    else:
+        raise Exception(f"Location: '{storage_location}' not supported")
 
 
 class FileStorage:
@@ -191,11 +191,47 @@ class FileStorage:
     def push(self):
         self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
 
+    def push_path(self, path):
+        self.fs_store.put(os.path.join(self.folder_name, path), str(self.resource_group_path))
+
     def pull(self):
         try:
             self.fs_store.get(str(self.folder_name), str(self.resource_group_path))
         except Exception:
             pass
+
+    def pull_path(self, path, update=True):
+        if update is False:
+            # not pull from source if object is exists
+            if os.path.exists(self.resource_group_path / self.folder_name / path):
+                return
+        try:
+            # TODO not sync if not changed?
+            self.fs_store.get(os.path.join(self.folder_name, path), str(self.resource_group_path))
+        except Exception:
+            pass
+
+    def file_set(self, name, content):
+        if self.sync is True:
+            self.pull()
+
+        dest_abs_path = self.folder_path / name
+
+        with open(dest_abs_path, 'wb') as fd:
+            fd.write(content)
+
+        if self.sync is True:
+            self.push()
+
+    def file_get(self, name):
+
+        if self.sync is True:
+            self.pull()
+
+        dest_abs_path = self.folder_path / name
+
+        with open(dest_abs_path, 'rb') as fd:
+            return fd.read()
 
     def add(self, path: Union[str, Path], dest_rel_path: Optional[Union[str, Path]] = None):
         """Copy file/folder to persist storage
@@ -256,14 +292,15 @@ class FileStorage:
 
         if isinstance(relative_path, str):
             relative_path = Path(relative_path)
-        relative_path = relative_path.resolve()
+        # relative_path = relative_path.resolve()
 
         if relative_path.is_absolute():
             raise TypeError('FSStorage.get_path() got absolute path as argument')
 
         ret_path = self.folder_path / relative_path
-        if ret_path.exists():
-            raise Exception('Path does not exists')
+        if not ret_path.exists():
+            # raise Exception('Path does not exists')
+            os.makedirs(ret_path)
 
         return ret_path
 
@@ -276,7 +313,7 @@ class FileStorage:
 
         path = (self.folder_path / relative_path).resolve()
 
-        if path == self.folder_path:
+        if path == self.folder_path.resolve():
             return self.complete_removal()
 
         if self.sync is True:
@@ -314,3 +351,4 @@ class FileStorageFactory:
             sync=self.sync,
             resource_id=resource_id
         )
+

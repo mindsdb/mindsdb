@@ -2,7 +2,7 @@ import copy
 import tempfile
 import os
 from unittest import mock
-
+import json
 import datetime as dt
 
 import pandas as pd
@@ -25,19 +25,37 @@ def unload_module(path):
 
 
 class BaseUnitTest:
+    """
+        mindsdb instance with temporal database and config
+    """
+
     @staticmethod
     def setup_class(cls):
 
         # remove imports of mindsdb in previous tests
         unload_module('mindsdb')
 
-        # create tmp db file
+        # database temp file
         cls.db_file = tempfile.mkstemp(prefix='mindsdb_db_')[1]
 
-        # save to environ before import db module
-        os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + cls.db_file
+        # config
+        config = {
+            'storage_db': 'sqlite:///' + cls.db_file
+        }
+        # config temp file
+        fdi, cfg_file = tempfile.mkstemp(prefix='mindsdb_conf_')
+
+        with os.fdopen(fdi, 'w') as fd:
+            json.dump(config, fd)
+
+        os.environ['MINDSDB_CONFIG_PATH'] = cfg_file
+
+        # initialize config
+        from mindsdb.utilities.config import Config
+        Config()
 
         from mindsdb.interfaces.storage import db
+        db.init()
         cls.db = db
 
     @staticmethod
@@ -69,21 +87,42 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='views', data={}, engine='views')
         db.session.add(r)
+        r = db.Integration(name='huggingface', data={}, engine='huggingface')
+        db.session.add(r)
+        r = db.Integration(name='merlion', data={}, engine='merlion')
+        db.session.add(r)
         r = db.Integration(name='lightwood', data={}, engine='lightwood')
         db.session.add(r)
         db.session.flush()
         self.lw_integration_id = r.id
+
+        # default project
+        r = db.Project(name='mindsdb')
+        db.session.add(r)
+
         db.session.commit()
         return db
 
+    @staticmethod
+    def ret_to_df(ret):
+        # converts executor response to dataframe
+        columns = [
+            col.alias if col.alias is not None else col.name
+            for col in ret.columns
+        ]
+        return pd.DataFrame(ret.data, columns=columns)
+
 
 class BaseExecutorTest(BaseUnitTest):
+    """
+        Set up executor: mock data handler
+    """
 
     def setup_method(self):
         super().setup_method()
         self.set_executor()
 
-    def set_executor(self):
+    def set_executor(self, to_mock_model_controller=False):
         # creates executor instance with mocked model_interface
         from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 
@@ -91,26 +130,36 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.interfaces.database.integrations import IntegrationController
         from mindsdb.interfaces.database.views import ViewController
         from mindsdb.interfaces.file.file_controller import FileController
+        from mindsdb.interfaces.model.model_controller import ModelController
+        from mindsdb.interfaces.database.projects import ProjectController
+        from mindsdb.interfaces.database.database import DatabaseController
 
         server_obj = type('', (), {})()
 
         integration_controller = IntegrationController()
-        view_controller = ViewController()
         self.file_controller = FileController()
-        self.mock_model_controller = mock.Mock()
+
+        if to_mock_model_controller:
+            model_controller = mock.Mock()
+            self.mock_model_controller = model_controller
+        else:
+            model_controller = ModelController()
 
         # no predictors yet
-        self.mock_model_controller.get_models.side_effect = lambda: []
+        # self.mock_model_controller.get_models.side_effect = lambda: []
 
         server_obj.original_integration_controller = integration_controller
-        server_obj.original_model_controller = self.mock_model_controller
-        server_obj.original_view_controller = view_controller
+        server_obj.original_model_controller = model_controller
+        server_obj.original_view_controller = ViewController()
+        server_obj.original_project_controller = ProjectController()
+        server_obj.original_database_controller = DatabaseController()
 
-        predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
-        self.mock_predict = predict_patcher.__enter__()
+        if to_mock_model_controller:
+            predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
+            self.mock_predict = predict_patcher.__enter__()
 
-        learn_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler._learn')
-        self.mock_learn = learn_patcher.__enter__()
+            create_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.create')
+            self.mock_create = create_patcher.__enter__()
 
         sql_session = SessionController(
             server=server_obj,
@@ -124,98 +173,6 @@ class BaseExecutorTest(BaseUnitTest):
         config_patch = mock.patch('mindsdb.utilities.cache.FileCache.get')
         self.mock_config = config_patch.__enter__()
         self.mock_config.side_effect = lambda x: None
-
-    def set_predictor(self, predictor):
-        # fill model_interface mock with predictor data for test case
-
-        # clear calls
-        self.mock_model_controller.reset_mock()
-        self.mock_predict.reset_mock()
-        self.mock_learn.reset_mock()
-
-        # remove previous predictor record
-        r = self.db.Predictor.query.filter_by(name=predictor['name']).first()
-        if r is not None:
-            self.db.session.delete(r)
-
-        if 'problem_definition' not in predictor:
-            predictor['problem_definition'] = {
-                'timeseries_settings': {'is_timeseries': False}
-            }
-
-        # add predictor to table
-        r = self.db.Predictor(
-            name=predictor['name'],
-            data={
-                'dtypes': predictor['dtypes']
-            },
-            learn_args=predictor['problem_definition'],
-            to_predict=predictor['predict'],
-            integration_id=self.lw_integration_id
-        )
-        self.db.session.add(r)
-        self.db.session.commit()
-
-        def predict_f(model_name, data, pred_format='dict', *args, **kargs):
-            if model_name != predictor['name']:
-                raise Exception(f"Model does not exists: {model_name}")
-            dict_arr = []
-            explain_arr = []
-
-            predicted_value = predictor['predicted_value']
-            target = predictor['predict']
-
-            meta = {
-                # 'select_data_query': None, 'when_data': None,
-                'original': None,
-                'confidence': 0.8,
-                'anomaly': None
-            }
-
-            data = copy.deepcopy(data)
-            for row in data:
-                # row = row.copy()
-                exp_row = {'predicted_value': predictor['predicted_value'],
-                           'confidence': 0.9999,
-                           'anomaly': None,
-                           'truth': None}
-                explain_arr.append({predictor['predict']: exp_row})
-
-                row[target] = predicted_value
-                # dict_arr.append({predictor['predict']: row})
-
-                for k, v in meta.items():
-                    row[f'{target}_{k}'] = v
-                row[f'{target}_explain'] = str(exp_row)
-
-
-            if pred_format == 'explain':
-                return explain_arr
-            return data
-
-        predictor_record = {
-            'version': None, 'is_active': None,
-            'status': 'complete', 'current_phase': None, 'accuracy': 0.9992752583404642,
-            'data_source': None,
-            'update': 'available', 'data_source_name': None, 'mindsdb_version': '22.3.5.0',
-            'error': None,
-            'train_end_at': None, 'updated_at': dt.datetime(2022, 5, 12, 16, 40, 26),
-            'created_at': dt.datetime(2022, 4, 4, 14, 48, 39),
-        }
-        predictor['dtype_dict'] = predictor['dtypes']
-        predictor_record.update(predictor)
-
-        def get_model_data_f(name,  *args):
-            if name != predictor['name']:
-                raise Exception(f"Model does not exists: {name}")
-            return predictor_record
-
-
-        # inject predictor info to model interface
-        self.mock_predict.side_effect = predict_f
-        self.mock_model_controller.get_models.side_effect = lambda: [predictor_record]
-        self.mock_model_controller.get_model_data.side_effect = get_model_data_f
-        self.mock_model_controller.get_model_description.side_effect = get_model_data_f
 
     def set_handler(self, mock_handler, name, tables, engine='postgres'):
         # integration
@@ -293,12 +250,115 @@ class BaseExecutorTest(BaseUnitTest):
 
         mock_handler().query.side_effect = query_f
 
-    @staticmethod
-    def ret_to_df(ret):
-        # converts executor response to dataframe
-        columns = [
-            col.alias if col.alias is not None else col.name
-            for col in ret.columns
-        ]
-        return pd.DataFrame(ret.data, columns=columns)
+class BaseExecutorTestMockModel(BaseExecutorTest):
+    """
+        Set up executor: mock data handler and LW handler
+    """
 
+    def setup_method(self):
+        super().setup_method()
+        self.set_executor(to_mock_model_controller=True)
+
+    def set_project(self, project):
+        r = self.db.Project.query.filter_by(name=project['name']).first()
+        if r is not None:
+            self.db.session.delete(r)
+
+        r = self.db.Project(
+            id=1,
+            name=project['name'],
+        )
+        self.db.session.add(r)
+        self.db.session.commit()
+
+    def set_predictor(self, predictor):
+        # fill model_interface mock with predictor data for test case
+
+        # clear calls
+        self.mock_model_controller.reset_mock()
+        self.mock_predict.reset_mock()
+        self.mock_create.reset_mock()
+
+        # remove previous predictor record
+        r = self.db.Predictor.query.filter_by(name=predictor['name']).first()
+        if r is not None:
+            self.db.session.delete(r)
+
+        if 'problem_definition' not in predictor:
+            predictor['problem_definition'] = {
+                'timeseries_settings': {'is_timeseries': False}
+            }
+
+        # add predictor to table
+        r = self.db.Predictor(
+            name=predictor['name'],
+            data={
+                'dtypes': predictor['dtypes']
+            },
+            learn_args=predictor['problem_definition'],
+            to_predict=predictor['predict'],
+            integration_id=self.lw_integration_id,
+            project_id=1
+        )
+        self.db.session.add(r)
+        self.db.session.commit()
+
+        def predict_f(data, pred_format='dict', *args, **kargs):
+            dict_arr = []
+            explain_arr = []
+            data = data.to_dict(orient='records')
+
+            predicted_value = predictor['predicted_value']
+            target = predictor['predict']
+
+            meta = {
+                # 'select_data_query': None, 'when_data': None,
+                'original': None,
+                'confidence': 0.8,
+                'anomaly': None
+            }
+
+            data = copy.deepcopy(data)
+            for row in data:
+                # row = row.copy()
+                exp_row = {'predicted_value': predictor['predicted_value'],
+                           'confidence': 0.9999,
+                           'anomaly': None,
+                           'truth': None}
+                explain_arr.append({predictor['predict']: exp_row})
+
+                row[target] = predicted_value
+                # dict_arr.append({predictor['predict']: row})
+
+                for k, v in meta.items():
+                    row[f'{target}_{k}'] = v
+                row[f'{target}_explain'] = str(exp_row)
+
+
+            if pred_format == 'explain':
+                return explain_arr
+            return pd.DataFrame(data)
+
+        predictor_record = {
+            'version': None, 'is_active': None,
+            'status': 'complete', 'current_phase': None, 'accuracy': 0.9992752583404642,
+            'data_source': None,
+            'update': 'available', 'data_source_name': None, 'mindsdb_version': '22.3.5.0',
+            'error': None,
+            'train_end_at': None, 'updated_at': dt.datetime(2022, 5, 12, 16, 40, 26),
+            'created_at': dt.datetime(2022, 4, 4, 14, 48, 39),
+        }
+        predictor['dtype_dict'] = predictor['dtypes']
+        predictor_record.update(predictor)
+
+        def get_model_data_f(name,  *args):
+            if name != predictor['name']:
+                raise Exception(f"Model does not exists: {name}")
+            return predictor_record
+
+
+        # inject predictor info to model interface
+        self.mock_predict.side_effect = predict_f
+        self.mock_model_controller.get_models.side_effect = lambda: [predictor_record]
+        self.mock_model_controller.get_model_data.side_effect = get_model_data_f
+        self.mock_model_controller.get_model_description.side_effect = get_model_data_f

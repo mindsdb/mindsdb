@@ -7,8 +7,8 @@ from pymongo import MongoClient
 
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.utilities.log import log
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.utilities import log
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -92,7 +92,7 @@ class MongoDBHandler(DatabaseHandler):
             con.server_info()
             result.success = True
         except Exception as e:
-            log.error(f'Error connecting to MongoDB {self.database}, {e}!')
+            log.logger.error(f'Error connecting to MongoDB {self.database}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -154,7 +154,7 @@ class MongoDBHandler(DatabaseHandler):
             )
 
         except Exception as e:
-            log.error(f'Error running query: {query} on {self.database}.{collection}!')
+            log.logger.error(f'Error running query: {query} on {self.database}.{collection}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

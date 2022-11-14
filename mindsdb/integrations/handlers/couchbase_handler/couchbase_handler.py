@@ -1,7 +1,7 @@
 from collections import OrderedDict
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb_sql.parser.ast.base import ASTNode
 from couchbase.n1ql import N1QLQuery
 import pandas as pd
@@ -106,7 +106,7 @@ class CouchbaseHandler(DatabaseHandler):
             print(self.is_connected)
             result.success = cluster.connected
         except UnAmbiguousTimeoutException as e:
-            log.error(f'Error connecting to Couchbase {self.connection_data["bucket"]}, {e}!')
+            log.logger.error(f'Error connecting to Couchbase {self.connection_data["bucket"]}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:

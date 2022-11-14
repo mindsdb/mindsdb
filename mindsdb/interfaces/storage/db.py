@@ -10,14 +10,18 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy import JSON
 
-
-if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
-    engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
-else:
-    engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
 Base = declarative_base()
-session = scoped_session(sessionmaker(bind=engine, autoflush=True))
-Base.query = session.query_property()
+session, engine = None, None
+
+
+def init():
+    global Base, session, engine
+    if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
+        engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
+    else:
+        engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
+    session = scoped_session(sessionmaker(bind=engine, autoflush=True))
+    Base.query = session.query_property()
 
 
 # Source: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
@@ -74,6 +78,17 @@ class Semaphor(Base):
         UniqueConstraint('entity_type', 'entity_id', name='uniq_const'),
     )
 
+class PREDICTOR_STATUS:
+    __slots__ = ()
+    COMPLETE = 'complete'
+    TRAINING = 'training'
+    GENERATING = 'generating'
+    ERROR = 'error'
+    VALIDATION = 'validation'
+    DELETED = 'deleted'  # TODO remove it?
+
+
+PREDICTOR_STATUS = PREDICTOR_STATUS()
 
 class Predictor(Base):
     __tablename__ = 'predictor'
@@ -104,6 +119,21 @@ class Predictor(Base):
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
     dtype_dict = Column(Json, nullable=True)
+    project_id = Column(Integer, ForeignKey('project.id', name='fk_project_id'), nullable=False)
+
+
+class Project(Base):
+    __tablename__ = 'project'
+
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    deleted_at = Column(DateTime)
+    name = Column(String, nullable=False)
+    company_id = Column(Integer)
+    __table_args__ = (
+        UniqueConstraint('name', 'company_id', name='unique_integration_name_company_id'),
+    )
 
 
 class Log(Base):
@@ -172,6 +202,7 @@ class View(Base):
     name = Column(String, nullable=False)
     company_id = Column(Integer)
     query = Column(String, nullable=False)
+    project_id = Column(Integer, ForeignKey('project.id', name='fk_project_id'), nullable=False)
     __table_args__ = (
         UniqueConstraint('name', 'company_id', name='unique_view_name_company_id'),
     )

@@ -31,3 +31,10 @@ MindsDB.egg-info/*
 .history
 doc/lib/
 run.csh
+
+# Virtualenv
+bin
+lib
+lib64
+pyvenv.cfg
+.python-version

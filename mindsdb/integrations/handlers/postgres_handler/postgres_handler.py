@@ -6,8 +6,8 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
-from mindsdb.utilities.log import log
+from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -27,8 +27,6 @@ class PostgresHandler(DatabaseHandler):
         self.connection_args = kwargs.get('connection_data')
         self.dialect = 'postgresql'
         self.database = self.connection_args.get('database')
-        if 'database' in self.connection_args:
-            self.connection_args['database']
         self.renderer = SqlalchemyRender('postgres')
 
         self.connection = None
@@ -59,6 +57,12 @@ class PostgresHandler(DatabaseHandler):
         self.connection = connection
         return self.connection
 
+    def disconnect(self):
+        if self.is_connected is False:
+            return
+        self.connection.close()
+        self.is_connected = False
+
     def check_connection(self) -> StatusResponse:
         """
         Check the connection of the PostgreSQL database
@@ -73,7 +77,7 @@ class PostgresHandler(DatabaseHandler):
                 cur.execute('select 1;')
             response.success = True
         except psycopg.Error as e:
-            log.error(f'Error connecting to PostgreSQL {self.database}, {e}!')
+            log.logger.error(f'Error connecting to PostgreSQL {self.database}, {e}!')
             response.error_message = e
 
         if response.success is True and need_to_close:
@@ -108,7 +112,7 @@ class PostgresHandler(DatabaseHandler):
                     )
                 connection.commit()
             except Exception as e:
-                log.error(f'Error running query: {query} on {self.database}!')
+                log.logger.error(f'Error running query: {query} on {self.database}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_code=0,

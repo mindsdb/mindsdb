@@ -6,11 +6,11 @@ import sqlite3
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -88,7 +88,7 @@ class SQLiteHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.error(f'Error connecting to SQLite {self.connection_data["db_file"]}, {e}!')
+            log.logger.error(f'Error connecting to SQLite {self.connection_data["db_file"]}, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -127,7 +127,7 @@ class SQLiteHandler(DatabaseHandler):
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            log.error(f'Error running query: {query} on {self.connection_data["db_file"]}!')
+            log.logger.error(f'Error running query: {query} on {self.connection_data["db_file"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

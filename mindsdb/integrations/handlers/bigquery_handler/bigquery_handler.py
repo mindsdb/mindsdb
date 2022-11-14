@@ -8,14 +8,14 @@ from sqlalchemy_bigquery.base import BigQueryDialect
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 
 
 class BigQueryHandler(DatabaseHandler):
@@ -67,7 +67,7 @@ class BigQueryHandler(DatabaseHandler):
             client.query('SELECT 1;')
             response.success = True
         except Exception as e:
-            log.error(f'Error connecting to BigQuery {self.connection_data["project_id"]}, {e}!')
+            log.logger.error(f'Error connecting to BigQuery {self.connection_data["project_id"]}, {e}!')
             response.error_message = e
 
         if response.success is False and self.is_connected is True:
@@ -93,7 +93,7 @@ class BigQueryHandler(DatabaseHandler):
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            log.error(f'Error running query: {query} on {self.connection_data["project_id"]}!')
+            log.logger.error(f'Error running query: {query} on {self.connection_data["project_id"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

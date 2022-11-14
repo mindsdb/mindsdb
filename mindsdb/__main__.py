@@ -6,6 +6,7 @@ import time
 import asyncio
 import signal
 import psutil
+import json
 
 import torch.multiprocessing as mp
 mp.set_start_method('spawn')
@@ -19,7 +20,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
 from mindsdb.interfaces.model.model_controller import ModelController
@@ -27,6 +28,18 @@ from mindsdb.interfaces.database.integrations import IntegrationController
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
 
+from mindsdb.utilities.fs import create_dirs_recursive
+from mindsdb.utilities.functions import args_parse
+from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
+
+# is_ray_worker = False
+# if sys.argv[0].endswith('ray/workers/default_worker.py'):
+#     is_ray_worker = True
+#
+# is_alembic = os.path.basename(sys.argv[0]).split('.')[0] == 'alembic'
+# is_pytest = os.path.basename(sys.argv[0]).split('.')[0] == 'pytest'
+#
+# if not is_ray_worker:
 
 COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
 
@@ -52,13 +65,77 @@ def close_api_gracefully(apis):
 
 
 if __name__ == '__main__':
-    mp.freeze_support()
+    # ----------------  __init__.py section ------------------
+
     args = args_parse()
+
+    # ---- CHECK SYSTEM ----
+    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 6):
+        print("""
+     MindsDB server requires Python >= 3.7 to run
+
+     Once you have Python 3.7 installed you can tun mindsdb as follows:
+
+     1. create and activate venv:
+     python3.7 -m venv venv
+     source venv/bin/activate
+
+     2. install MindsDB:
+     pip3 install mindsdb
+
+     3. Run MindsDB
+     python3.7 -m mindsdb
+
+     More instructions in https://docs.mindsdb.com
+         """)
+        exit(1)
+
+    # --- VERSION MODE ----
+    if args is not None and args.version:
+        print(f'MindsDB {mindsdb_version}')
+        sys.exit(0)
+
+    # --- MODULE OR LIBRARY IMPORT MODE ----
+    if args is not None and args.config is not None:
+        config_path = args.config
+        with open(config_path, 'r') as fp:
+            user_config = json.load(fp)
+    else:
+        user_config = {}
+        config_path = 'absent'
+    os.environ['MINDSDB_CONFIG_PATH'] = config_path
+
+    mindsdb_config = Config()
+    create_dirs_recursive(mindsdb_config['paths'])
+
+    if telemetry_file_exists(mindsdb_config['storage_dir']):
+        os.environ['CHECK_FOR_UPDATES'] = '0'
+        print('\n x telemetry disabled! \n')
+    elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False'] or mindsdb_config.get('cloud', False):
+        disable_telemetry(mindsdb_config['storage_dir'])
+        print('\n x telemetry disabled \n')
+    else:
+        print('\n ✓ telemetry enabled \n')
+
+    # -------------------------------------------------------
+
+    # initialization
+    db.init()
+    log.initialize_log()
+
+    mp.freeze_support()
     config = Config()
 
     is_cloud = config.get('cloud', False)
+    # need configure migration behavior by env_variables
+    # leave 'is_cloud' for now, but needs to be removed further
+    run_migration_separately = os.environ.get("SEPARATE_MIGRATIONS", False)
+    if run_migration_separately in (False, "false","False", 0, "0", ""):
+        run_migration_separately = False
+    else:
+        run_migration_separately = True
 
-    if not is_cloud:
+    if not is_cloud and not run_migration_separately:
         print('Applying database migrations:')
         try:
             from mindsdb.migrations import migrate
@@ -104,17 +181,18 @@ if __name__ == '__main__':
 
     if not is_cloud:
         # region creating permanent integrations
-        for integration_name in ['files', 'views', 'lightwood']:
-            integration_meta = integration_controller.get(name=integration_name)
-            if integration_meta is None:
-                integration_record = db.Integration(
-                    name=integration_name,
-                    data={},
-                    engine=integration_name,
-                    company_id=None
-                )
-                db.session.add(integration_record)
-                db.session.commit()
+        for integration_name, handler in integration_controller.get_handlers_import_status().items():
+            if handler.get('permanent'):
+                integration_meta = integration_controller.get(name=integration_name)
+                if integration_meta is None:
+                    integration_record = db.Integration(
+                        name=integration_name,
+                        data={},
+                        engine=integration_name,
+                        company_id=None
+                    )
+                    db.session.add(integration_record)
+                    db.session.commit()
         # endregion
 
         # region Mark old predictors as outdated
@@ -151,7 +229,7 @@ if __name__ == '__main__':
                     del integration_data['type']
                 integration_controller.add(integration_name, engine, integration_data)
             except Exception as e:
-                log.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
+                log.logger.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 
         stream_controller = StreamController(COMPANY_ID)
         for integration_name, integration_meta in integration_controller.get_all(sensitive_info=True).items():
@@ -203,7 +281,7 @@ if __name__ == '__main__':
             p.start()
             api_data['process'] = p
         except Exception as e:
-            log.error(f'Failed to start {api_name} API with exception {e}\n{traceback.format_exc()}')
+            log.logger.error(f'Failed to start {api_name} API with exception {e}\n{traceback.format_exc()}')
             close_api_gracefully(apis)
             raise e
 
@@ -228,7 +306,7 @@ if __name__ == '__main__':
             if started:
                 print(f"{api_name} API: started on {port}")
             else:
-                log.error(f"ERROR: {api_name} API cant start on {port}")
+                log.logger.error(f"ERROR: {api_name} API cant start on {port}")
 
     ioloop = asyncio.get_event_loop()
     ioloop.run_until_complete(wait_apis_start())

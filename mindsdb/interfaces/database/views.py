@@ -1,73 +1,69 @@
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast import Identifier
-from mindsdb_sql.planner.utils import query_traversal
-
-from mindsdb.interfaces.storage.db import session, Integration, View
+from mindsdb.interfaces.storage import db
 
 
 class ViewController:
-    def add(self, name, query, integration_name, company_id=None):
+    def add(self, name, query, project_name, company_id=None):
+        from mindsdb.interfaces.database.database import DatabaseController
 
-        # check is name without paths
-        # TODO or allow ?
-        if len(name.split('.')) > 1:
-            raise Exception(f'Name should be without dots: {name}')
+        database_controller = DatabaseController()
+        project_databases_dict = database_controller.get_dict(company_id=company_id, filter_type='project')
 
-        # name exists?
-        rec = session.query(View.id).filter(View.name == name,
-                                            View.company_id == company_id).first()
-        if rec is not None:
+        if project_name not in project_databases_dict:
+            raise Exception(f"Can not find project: '{project_name}'")
+
+        project_id = project_databases_dict[project_name]['id']
+        view_record = (
+            db.session.query(db.View.id)
+            .filter_by(
+                name=name,
+                company_id=company_id,
+                project_id=project_id
+            ).first()
+        )
+        if view_record is not None:
             raise Exception(f'View already exists: {name}')
 
-        integration_records = session.query(Integration).filter_by(company_id=company_id).all()
+        view_record = db.View(
+            name=name,
+            company_id=company_id,
+            query=query,
+            project_id=project_id
+        )
+        db.session.add(view_record)
+        db.session.commit()
 
-        if integration_name is not None:
-            integration_id = None
-            for record in integration_records:
-                if record.name.lower() == integration_name.lower():
-                    integration_id = record.id
-                    break
-            if integration_id is None:
-                raise Exception(f"Can't find integration with name: {integration_name}")
-
-            # inject integration into sql
-            query_ast = parse_sql(query, dialect='mindsdb')
-
-            def inject_integration(node, is_table, **kwargs):
-                if is_table and isinstance(node, Identifier):
-                    if not node.parts[0] == integration_name:
-                        node.parts.insert(0, integration_name)
-
-            query_traversal(query_ast, inject_integration)
-
-            render = SqlalchemyRender('mysql')
-            query = render.get_string(query_ast, with_failback=False)
-
-        view_record = View(name=name, company_id=company_id, query=query)
-        session.add(view_record)
-        session.commit()
-
-    def delete(self, name, company_id=None):
-
-        rec = session.query(View).filter(View.name == name, View.company_id == company_id).first()
+    def delete(self, name, project_name, company_id=None):
+        project_record = db.session.query(db.Project).filter_by(
+            name=project_name,
+            company_id=company_id,
+            deleted_at=None
+        ).first()
+        rec = db.session.query(db.View).filter(
+            db.View.name == name,
+            db.View.company_id == company_id,
+            db.View.project_id == project_record.id
+        ).first()
         if rec is None:
             raise Exception(f'View not found: {name}')
-        session.delete(rec)
-        session.commit()
+        db.session.delete(rec)
+        db.session.commit()
 
     def _get_view_record_data(self, record):
-
         return {
             'name': record.name,
             'query': record.query
         }
 
-    def get(self, id=None, name=None, company_id=None):
+    def get(self, id=None, name=None, project_name=None, company_id=None):
+        project_record = db.session.query(db.Project).filter_by(
+            name=project_name,
+            company_id=company_id,
+            deleted_at=None
+        ).first()
         if id is not None:
-            records = session.query(View).filter_by(id=id, company_id=company_id).all()
+            records = db.session.query(db.View).filter_by(id=id, project_id=project_record.id, company_id=company_id).all()
         elif name is not None:
-            records = session.query(View).filter_by(name=name, company_id=company_id).all()
+            records = db.session.query(db.View).filter_by(name=name, project_id=project_record.id, company_id=company_id).all()
         if len(records) == 0:
             raise Exception(f"Can't find view with name/id: {name}/{id}")
         elif len(records) > 1:
@@ -76,7 +72,7 @@ class ViewController:
         return self._get_view_record_data(record)
 
     def get_all(self, company_id=None):
-        view_records = session.query(View).filter_by(company_id=company_id).all()
+        view_records = db.session.query(db.View).filter_by(company_id=company_id).all()
         views_dict = {}
         for record in view_records:
             views_dict[record.name] = self._get_view_record_data(record)

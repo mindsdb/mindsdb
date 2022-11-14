@@ -14,12 +14,14 @@ import datetime as dt
 
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import RespondersCollection, Session
-from mindsdb.api.mongo.utilities import log
+from mindsdb.api.mongo.utilities import logger
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.interfaces.storage.db import session as db_session
+from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
+from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.database.database import DatabaseController
 
 OP_REPLY = 1
 OP_UPDATE = 2001
@@ -156,7 +158,7 @@ class OpMsgResponder(OperationResponder):
         elif remaining != 0:
             raise Exception('is bytes left after msg parsing')
 
-        log.debug(f'GET OpMSG={query}')
+        logger.debug(f'GET OpMSG={query}')
 
         responder = self.responders.find_match(query)
         assert responder is not None, 'query cant be processed'
@@ -201,7 +203,7 @@ class OpQueryResponder(OperationResponder):
 
         query = docs[0]  # docs = [query, returnFieldsSelector]
 
-        log.debug(f'GET OpQuery={query}')
+        logger.debug(f'GET OpQuery={query}')
 
         responder = self.responders.find_match(query)
         assert responder is not None, 'query cant be processed'
@@ -225,7 +227,7 @@ class OpQueryResponder(OperationResponder):
         reply_id = 123  # TODO
         response_to = request_id
 
-        log.debug(f'RET docs={request}')
+        logger.debug(f'RET docs={request}')
 
         data = b''.join([flags, cursor_id, starting_from, number_returned])
         data += b''.join([bson.BSON.encode(doc) for doc in [request]])
@@ -263,8 +265,8 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         self.request = ssl_socket
 
     def handle(self):
-        log.debug('connect')
-        log.debug(str(self.server.socket))
+        logger.debug('connect')
+        logger.debug(str(self.server.socket))
 
         self.session = Session(self.server.mindsdb_env)
 
@@ -282,13 +284,13 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             request_id, pos = unpack(INT, header, pos)
             response_to, pos = unpack(INT, header, pos)
             opcode, pos = unpack(INT, header, pos)
-            log.debug(f'GET length={length} id={request_id} opcode={opcode}')
+            logger.debug(f'GET length={length} id={request_id} opcode={opcode}')
             msg_bytes = self._read_bytes(length - pos)
             answer = self.get_answer(request_id, opcode, msg_bytes)
             if answer is not None:
                 self.request.send(answer)
 
-            db_session.close()
+            db.session.close()
 
     def get_answer(self, request_id, opcode, msg_bytes):
         if opcode not in self.server.operationsHandlersMap:
@@ -300,7 +302,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
             if response is None:
                 return None
         except Exception as e:
-            log.error(e)
+            logger.error(e)
             response = {
                 "ok": 0,
                 "errmsg": f'{str(e)} : {traceback.format_exc()}',
@@ -316,7 +318,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         while length:
             chunk = self.request.recv(length)
             if chunk == b'':
-                log.debug('Connection closed')
+                logger.debug('Connection closed')
                 return False
 
             length -= len(chunk)
@@ -330,24 +332,29 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         assert mongodb_config is not None, 'is no mongodb config!'
         host = mongodb_config['host']
         port = mongodb_config['port']
-        log.debug(f'start mongo server on {host}:{port}')
+        logger.debug(f'start mongo server on {host}:{port}')
 
         super().__init__((host, int(port)), MongoRequestHandler)
 
         self.mindsdb_env = {
             'config': config,
-            'origin_model_controller': ModelController(),
-            'origin_integration_controller': IntegrationController(),
-            'origin_view_controller': ViewController()
+            'original_model_controller': ModelController(),
+            'original_integration_controller': IntegrationController(),
+            'original_view_controller': ViewController(),
+            'original_project_controller': ProjectController(),
+            'original_database_controller': DatabaseController()
         }
-        self.mindsdb_env['model_controller'] = WithKWArgsWrapper(
-            self.mindsdb_env['origin_model_controller'],
-            company_id=None
-        )
-        self.mindsdb_env['integration_controller'] = WithKWArgsWrapper(
-            self.mindsdb_env['origin_integration_controller'],
-            company_id=None
-        )
+        for name in [
+            'model_controller',
+            'integration_controller',
+            'view_controller',
+            'project_controller',
+            'database_controller'
+        ]:
+            self.mindsdb_env[name] = WithKWArgsWrapper(
+                self.mindsdb_env[f'original_{name}'],
+                company_id=None
+            )
 
         respondersCollection = RespondersCollection()
 

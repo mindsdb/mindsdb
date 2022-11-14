@@ -65,63 +65,68 @@ jobs:
           # Unit tests
           # echo -e "\n===============\nUnit tests\n===============\n"
           cat mindsdb/interfaces/storage/db.py | grep integration
-          
+
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
-          env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
+          env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
         
+          env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
+
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
-                
+
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
 
-          mkdir -p ~/.ssh/
-          echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
-          sudo chmod 600 ~/.ssh/db_machine
-          echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
-          sudo chmod 600 ~/.ssh/db_machine_ms
-          echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
-          sudo chmod 644 ~/.mindsdb_credentials.json
+          echo -e "\n===============MySQL Handler===============\n"
+          pytest -svx tests/handler_tests/test_mysql_handler.py
 
-          export USE_EXTERNAL_DB_SERVER="1"
-          echo -e "\n===============\nDB HANDLERS\n===============\n"
-          echo -e "\n===============\nMySQL Handler\n===============\n"
-          python mindsdb/integrations/handlers/mysql_handler/tests/test_mysql_handler.py
+          echo -e "\n===============PostgreSQL Handler===============\n"
+          pytest -svx tests/handler_tests/test_postgres_handler.py
+
+          echo -e "\n===============MariaDB Handler===============\n"
+          pytest -svx tests/handler_tests/test_mariadb_handler.py
 
           # MySQL API
-          echo -e "\n===============\ntest MySQL API\n===============\n"
-          python tests/integration_tests/flows/test_mysql_api.py
-        
+          echo -e "\n===============test MySQL API===============\n"
+          pytest -vx tests/integration_tests/flows/test_mysql_api.py
+          #
           # MySQL binary API
-          echo -e "\n===============\ntest MySQL binary API\n===============\n"
-          python tests/integration_tests/flows/test_mysql_bin_api.py
-
-          # Company independent
-          echo -e "\n===============\ntest company independent\n===============\n"
-          python tests/integration_tests/flows/test_company_independent.py
+          echo -e "\n===============test MySQL binary API===============\n"
+          pytest -vx -k 'not TestMySqlApi' tests/integration_tests/flows/test_mysql_bin_api.py
 
           # HTTP
-          echo -e "\n===============\ntest HTTP\n===============\n"
-          python tests/integration_tests/flows/test_http.py
+          echo -e "\n===============test HTTP===============\n"
+          pytest -vx tests/integration_tests/flows/test_http.py
+          #
+          # Company independent
+          echo -e "\n===============test company independent===============\n"
+          pytest -vx tests/integration_tests/flows/test_company_independent.py
 
-          # user flow 1
-          echo -e "\n===============\ntest user flow 1\n===============\n"
-          python tests/integration_tests/flows/test_user_flow_1.py
+          # mkdir -p ~/.ssh/
+          # echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
+          # sudo chmod 600 ~/.ssh/db_machine
+          # echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
+          # sudo chmod 600 ~/.ssh/db_machine_ms
+          # echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
+          # sudo chmod 644 ~/.mindsdb_credentials.json
+
+          # export USE_EXTERNAL_DB_SERVER="1"
+
 
           # # Kafka Stream
           # echo -e "\n===============\ntest Kafka Stream\n===============\n"
           # python tests/integration_tests/flows/test_kafka.py
 
-          # Redis Stream
-          echo -e "\n===============\ntest Redis Stream\n===============\n"
-          python tests/integration_tests/flows/test_redis.py
+          # # Redis Stream
+          # echo -e "\n===============\ntest Redis Stream\n===============\n"
+          # python tests/integration_tests/flows/test_redis.py
         
         fi
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-        DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
-        DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
-        DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
+          # DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
+          # DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
+          # DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
 

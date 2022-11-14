@@ -66,7 +66,8 @@ from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
     get_model_records,
-    get_predictor_integration
+    get_predictor_integration,
+    get_predictor_project
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
@@ -80,8 +81,6 @@ from mindsdb.utilities.cache import get_cache, json_checksum
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
-
-predictor_cache = get_cache('predict')
 
 
 class ColumnsCollection:
@@ -441,10 +440,9 @@ class SQLQuery():
             self.execute_query()
 
     def create_planner(self):
-        integrations_meta = self.session.integration_controller.get_all()
-        integrations_names = list(integrations_meta.keys())
-        integrations_names.append('information_schema')
-        integration_name = None
+        databases_names = self.session.database_controller.get_list()
+        databases_names = [x['name'] for x in databases_names]
+        databases_names.append('information_schema')   # TEMP
 
         predictor_metadata = []
         predictors_records = get_model_records(company_id=self.session.company_id)
@@ -457,24 +455,24 @@ class SQLQuery():
 
         query_traversal(self.query, get_all_query_tables)
 
-        for p in predictors_records:
-            model_name = p.name
+        for predictor_record in predictors_records:
+            model_name = predictor_record.name
 
             if model_name not in query_tables:
                 continue
 
-            integration_name = None
-            integration_record = get_predictor_integration(p)
-            if integration_record is not None:
-                integration_name = integration_record.name
+            project_record = get_predictor_project(predictor_record)
+            if project_record is None:
+                continue
+            project_name = project_record.name
 
-            if isinstance(p.data, dict) and 'error' not in p.data:
-                ts_settings = p.learn_args.get('timeseries_settings', {})
+            if isinstance(predictor_record.data, dict) and 'error' not in predictor_record.data:
+                ts_settings = predictor_record.learn_args.get('timeseries_settings', {})
                 predictor = {
                     'name': model_name,
-                    'integration_name': integration_name,
+                    'integration_name': project_name,   # integration_name,
                     'timeseries': False,
-                    'id': p.id
+                    'id': predictor_record.id
                 }
                 if ts_settings.get('is_timeseries') is True:
                     window = ts_settings.get('window')
@@ -492,20 +490,15 @@ class SQLQuery():
                         'group_by_columns': group_by
                     })
                 predictor_metadata.append(predictor)
-                if predictor['integration_name'] == 'lightwood':
-                    default_predictor = predictor.copy()
-                    default_predictor['integration_name'] = 'mindsdb'
-                    predictor_metadata.append(default_predictor)
 
-                self.model_types.update(p.data.get('dtypes', {}))
+                self.model_types.update(predictor_record.data.get('dtypes', {}))
 
         database = None if self.session.database == '' else self.session.database.lower()
 
         self.predictor_metadata = predictor_metadata
         self.planner = query_planner.QueryPlanner(
             self.query,
-            integrations=integrations_names,
-            predictor_namespace=integration_name,
+            integrations=databases_names,
             predictor_metadata=predictor_metadata,
             default_namespace=database
         )
@@ -541,15 +534,16 @@ class SQLQuery():
 
             # fetch raw_query
             data, columns_info = dn.query(
-                native_query=step.raw_query
+                native_query=step.raw_query,
+                session=self.session
             )
         else:
-
             table_alias = get_table_alias(step.query.from_table, self.database)
             # TODO for information_schema we have 'database' = 'mindsdb'
 
             data, columns_info = dn.query(
-                query=query
+                query=query,
+                session=self.session
             )
 
         # if this is query: execute it
@@ -612,191 +606,6 @@ class SQLQuery():
         return data
 
     def prepare_query(self, prepare=True):
-        mindsdb_sql_struct = self.query
-
-        if isinstance(mindsdb_sql_struct, Select):
-
-            if (
-                isinstance(mindsdb_sql_struct.from_table, Identifier)
-                and (
-                    self.database == 'mindsdb'
-                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-                )
-            ):
-                if mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors':
-                    dn = self.datahub.get(self.mindsdb_database_name)
-                    data, columns = dn.get_predictors(mindsdb_sql_struct)
-                    table_name = ('mindsdb', 'predictors', 'predictors')
-                    data = [
-                        {
-                            (key, key): value
-                            for key, value in row.items()
-                        }
-                        for row in data
-                    ]
-                    data = [{table_name: x} for x in data]
-                    self.columns_list = [
-                        Column(
-                            database='mindsdb',
-                            table_name='predictors',
-                            name=column_name
-                        )
-                        for column_name in columns
-                    ]
-
-                    columns_collection = ColumnsCollection()
-                    for column_name in columns:
-                        columns_collection.add(table_name, (column_name, column_name))
-
-                    self.fetched_data = {
-                        'values': data,
-                        'columns': columns_collection,
-                        'tables': [table_name]
-                    }
-                    return
-                elif mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors_versions':
-                    dn = self.datahub.get(self.mindsdb_database_name)
-                    data, columns = dn.get_predictors_versions(mindsdb_sql_struct)
-                    table_name = ('mindsdb', 'predictors_versions', 'predictors_versions')
-                    data = [
-                        {
-                            (key, key): value
-                            for key, value in row.items()
-                        }
-                        for row in data
-                    ]
-                    data = [{table_name: x} for x in data]
-                    self.columns_list = [
-                        Column(
-                            database='mindsdb',
-                            table_name='predictors_versions',
-                            name=column_name
-                        )
-                        for column_name in columns
-                    ]
-
-                    columns_collection = ColumnsCollection()
-                    for column_name in columns:
-                        columns_collection.add(table_name, (column_name, column_name))
-
-                    self.fetched_data = {
-                        'values': data,
-                        'columns': columns_collection,
-                        'tables': [table_name]
-                    }
-                    return
-                elif mindsdb_sql_struct.from_table.parts[-1].lower() in ('datasources', 'databases'):
-                    dn = self.datahub.get(self.mindsdb_database_name)
-                    data, columns = dn.get_integrations(mindsdb_sql_struct)
-                    table_name = ('mindsdb', 'datasources', 'datasources')
-                    data = [
-                        {
-                            (key, key): value
-                            for key, value in row.items()
-                        }
-                        for row in data
-                    ]
-
-                    data = [{table_name: x} for x in data]
-
-                    self.columns_list = [
-                        Column(
-                            database='mindsdb',
-                            table_name='datasources',
-                            name=column_name
-                        )
-                        for column_name in columns
-                    ]
-
-                    columns_collection = ColumnsCollection()
-                    for column_name in columns:
-                        columns_collection.add(table_name, (column_name, column_name))
-
-                    self.fetched_data = {
-                        'values': data,
-                        'columns': columns_collection,
-                        'tables': [table_name]
-                    }
-                    return
-
-            # is it query to 'predictors'?
-            if (
-                isinstance(mindsdb_sql_struct.from_table, Identifier)
-                and mindsdb_sql_struct.from_table.parts[-1].lower() == 'predictors'
-                and (
-                    self.database == 'mindsdb'
-                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-                )
-            ):
-                dn = self.datahub.get(self.mindsdb_database_name)
-                data, columns = dn.get_predictors(mindsdb_sql_struct)
-                table_name = ('mindsdb', 'predictors', 'predictors')
-                data = [
-                    {
-                        (key, key): value
-                        for key, value in row.items()
-                    }
-                    for row in data
-                ]
-                data = [{table_name: x} for x in data]
-                self.columns_list = [
-                    Column(database='mindsdb',
-                           table_name='predictors',
-                           name=column_name)
-                    for column_name in columns
-                ]
-
-                columns_collection = ColumnsCollection()
-                for column_name in columns:
-                    columns_collection.add(table_name, (column_name, column_name))
-
-                self.fetched_data = {
-                    'values': data,
-                    'columns': columns_collection,
-                    'tables': [table_name]
-                }
-                return
-
-            # is it query to 'datasources'?
-            if (
-                isinstance(mindsdb_sql_struct.from_table, Identifier)
-                and mindsdb_sql_struct.from_table.parts[-1].lower() in ('datasources', 'databases')
-                and (
-                    self.database == 'mindsdb'
-                    or mindsdb_sql_struct.from_table.parts[0].lower() == 'mindsdb'
-                )
-            ):
-                dn = self.datahub.get(self.mindsdb_database_name)
-                data, columns = dn.get_integrations(mindsdb_sql_struct)
-                table_name = ('mindsdb', 'datasources', 'datasources')
-                data = [
-                    {
-                        (key, key): value
-                        for key, value in row.items()
-                    }
-                    for row in data
-                ]
-
-                data = [{table_name: x} for x in data]
-
-                self.columns_list = [
-                    Column(database='mindsdb',
-                           table_name='datasources',
-                           name=column_name)
-                    for column_name in columns
-                ]
-
-                columns_collection = ColumnsCollection()
-                for column_name in columns:
-                    columns_collection.add(table_name, (column_name, column_name))
-
-                self.fetched_data = {
-                    'values': data,
-                    'columns': columns_collection,
-                    'tables': [table_name]
-                }
-                return
-
         if prepare:
             # it is prepared statement call
             steps_data = []
@@ -961,7 +770,7 @@ class SQLQuery():
             dn = self.datahub.get(step.namespace)
             ds_query = Select(from_table=Identifier(table), targets=[Star()])
 
-            data, columns_info = dn.query(ds_query)
+            data, columns_info = dn.query(ds_query, session=self.session)
 
             table_alias = (self.database, table, table)
 
@@ -1064,19 +873,18 @@ class SQLQuery():
                     data['values'].extend(subdata['values'])
         elif type(step) == ApplyPredictorRowStep:
             try:
-                ml_handler_name = step.namespace
+                project_name = step.namespace
                 predictor_name = step.predictor.parts[0]
-
-                dn = self.datahub.get(self.mindsdb_database_name)
                 where_data = step.row_dict
+                project_datanode = self.datahub.get(project_name)
 
-                data = dn.query(
-                    table=predictor_name,
-                    where_data=where_data,
-                    ml_handler_name=ml_handler_name
+                predictions = project_datanode.predict(
+                    model_name=predictor_name,
+                    data=where_data,
+                    params=step.params,
                 )
 
-                data = [{(key, key): value for key, value in row.items()} for row in data]
+                data = [{(key, key): value for key, value in row.items()} for row in predictions]
 
                 table_name = get_preditor_alias(step, self.database)
                 values = [{table_name: x} for x in data]
@@ -1086,7 +894,10 @@ class SQLQuery():
                     row = data[0]
                     for key in row.keys():
                         columns_collection.add(table_name, key)
-                # TODO else
+                else:
+                    cols = project_datanode.get_table_columns(predictor_name)
+                    for col in cols:
+                        columns_collection.add(table_name, (col, col))
 
                 data = {
                     'values': values,
@@ -1114,10 +925,9 @@ class SQLQuery():
                 # shift counter
                 self.row_id += self.row_id + row_count * len(data['tables'])
 
-                ml_handler_name = step.namespace
-                if ml_handler_name == 'mindsdb':
-                    ml_handler_name = 'lightwood'
+                project_name = step.namespace
                 predictor_name = step.predictor.parts[0]
+
                 where_data = []
                 for row in steps_data[step.dataframe.step_num]['values']:
                     new_row = {}
@@ -1134,7 +944,7 @@ class SQLQuery():
 
                 predictor_metadata = {}
                 for pm in self.predictor_metadata:
-                    if pm['name'] == predictor_name and pm['integration_name'].lower() == ml_handler_name:
+                    if pm['name'] == predictor_name and pm['integration_name'].lower() == project_name:
                         predictor_metadata = pm
                         break
                 is_timeseries = predictor_metadata['timeseries']
@@ -1161,21 +971,24 @@ class SQLQuery():
                 table_name = get_preditor_alias(step, self.database)
                 columns_collection = ColumnsCollection()
                 dn = self.datahub.get(self.mindsdb_database_name)
+                project_datanode = self.datahub.get(project_name)
                 if len(where_data) == 0:
-                    cols = dn.get_table_columns(predictor_name) + ['__mindsdb_row_id']
+                    cols = project_datanode.get_table_columns(predictor_name) + ['__mindsdb_row_id']
                     for col in cols:
                         columns_collection.add(table_name, (col, col))
                     values = []
                 else:
                     predictor_id = predictor_metadata['id']
                     key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
+                    predictor_cache = get_cache('predict')
+
                     data = predictor_cache.get(key)
 
                     if data is None:
-                        data = dn.query(
-                            table=predictor_name,
-                            where_data=where_data,
-                            ml_handler_name=ml_handler_name
+                        data = project_datanode.predict(
+                            model_name=predictor_name,
+                            data=where_data,
+                            params=step.params,
                         )
                         if data is not None and isinstance(data, list):
                             predictor_cache.set(key, data)
@@ -1739,8 +1552,7 @@ class SQLQuery():
                 for param_name, param in params_map_index:
                     param.value = row[param_name]
 
-                # execute
-                dn.query(query=update_query)
+                dn.query(query=update_query, session=self.session)
 
             data = None
         else:
@@ -1875,7 +1687,10 @@ class SQLQuery():
         if Latest() in filter_args:
 
             for row in table_data:
-                key = tuple([str(row[i]) for i in group_cols])
+                if group_cols is None:
+                    key = 0  # the same for any value
+                else:
+                    key = tuple([str(row[i]) for i in group_cols])
                 val = row[order_col]
                 if key not in latest_vals or latest_vals[key] < val:
                     latest_vals[key] = val
@@ -1898,7 +1713,10 @@ class SQLQuery():
                 }
                 arg = filter_args[1]
                 if isinstance(arg, Latest):
-                    key = tuple([str(row[i]) for i in group_cols])
+                    if group_cols is None:
+                        key = 0  # the same for any value
+                    else:
+                        key = tuple([str(row[i]) for i in group_cols])
                     if key not in latest_vals:
                         # pass this row
                         continue

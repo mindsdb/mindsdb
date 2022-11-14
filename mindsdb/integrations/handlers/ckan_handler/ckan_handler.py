@@ -1,11 +1,11 @@
 from ckanapi import RemoteCKAN as rc
 import pandas as pd
 
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse, HandlerResponse, RESPONSE_TYPE
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 
 
 class CkanHandler(DatabaseHandler):
@@ -58,7 +58,7 @@ class CkanHandler(DatabaseHandler):
                 return response
 
         except Exception as e:
-            log.error(f'Error connecting to CKAN: {e}!')
+            log.logger.error(f'Error connecting to CKAN: {e}!')
             self.is_connected = False
             response.error_message = e
 

@@ -3,7 +3,7 @@ import requests
 from typing import Dict, List, Optional
 from datetime import datetime
 
-from mindsdb.integrations.libs.base_handler import BaseHandler, PredictiveHandler
+from mindsdb.integrations.libs.base import BaseHandler, PredictiveHandler
 from mindsdb.integrations.libs.storage_handler import SqliteStorageHandler
 from mindsdb.utilities.config import Config
 from mindsdb_sql import parse_sql

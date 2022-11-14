@@ -8,8 +8,8 @@ from oracledb import connect, Connection, makedsn
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.utilities.log import log
-from mindsdb.integrations.libs.base_handler import DatabaseHandler
+from mindsdb.utilities import log
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -79,7 +79,7 @@ class OracleHandler(DatabaseHandler):
             con.ping()
             response.success = True
         except Exception as e:
-            log.error(f"Error connecting to Oracle DB {self.dsn}, {e}!")
+            log.logger.error(f"Error connecting to Oracle DB {self.dsn}, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -114,7 +114,7 @@ class OracleHandler(DatabaseHandler):
 
                 connection.commit()
             except Exception as e:
-                log.error(f"Error running query: {query} on {self.dsn}!")
+                log.logger.error(f"Error running query: {query} on {self.dsn}!")
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e),

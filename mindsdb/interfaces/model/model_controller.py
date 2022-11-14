@@ -6,6 +6,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_datetime
 
+from sqlalchemy import func, null
 import numpy as np
 
 import mindsdb.interfaces.storage.db as db
@@ -82,10 +83,10 @@ class ModelController():
 
         return model_description
 
-    def get_models(self, company_id: int, with_versions=False, ml_handler_name='lightwood'):
+    def get_models(self, company_id: int, with_versions=False, ml_handler_name='lightwood', integration_id=None):
         models = []
         show_active = True if with_versions is False else None
-        for predictor_record in get_model_records(company_id=company_id, active=show_active, ml_handler_name=ml_handler_name):
+        for predictor_record in get_model_records(company_id=company_id, active=show_active, ml_handler_name=ml_handler_name, integration_id=integration_id):
             model_data = self.get_model_data(predictor_record=predictor_record, company_id=company_id)
             reduced_model_data = {}
 
@@ -115,12 +116,31 @@ class ModelController():
             models.append(reduced_model_data)
         return models
 
-    def delete_model(self, model_name: str, company_id: int, integration_name: str = 'lightwood'):
-        if integration_name.lower() == 'mindsdb':
-            integration_name = 'lightwood'
+    def delete_model(self, model_name: str, company_id: int, project_name: str = 'mindsdb'):
         integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=company_id)
-        ml_handler = integration_controller.get_handler(integration_name)
-        response = ml_handler.native_query(f'drop predictor {model_name}')
+
+        project_record = db.Project.query.filter(
+            (func.lower(db.Project.name) == func.lower(project_name))
+            & (db.Project.company_id == company_id)
+            & (db.Project.deleted_at == null())
+        ).first()
+        if project_record is None:
+            raise Exception(f"Project '{project_name}' does not exists")
+
+        model_record = db.Predictor.query.filter(
+            (func.lower(db.Predictor.name) == func.lower(model_name))
+            & (db.Predictor.project_id == project_record.id)
+        ).first()
+        if model_record is None:
+            raise Exception(f"Model '{model_name}' does not exists")
+
+        integration_record = db.Integration.query.get(model_record.integration_id)
+        if integration_record is None:
+            raise Exception(f"Can't determine integration of '{model_name}'")
+
+        ml_handler = integration_controller.get_handler(integration_record.name)
+        response = ml_handler.native_query(f'drop predictor {project_name}.{model_name}')
+
         if response.type == RESPONSE_TYPE.ERROR:
             raise Exception(response.error_message)
 

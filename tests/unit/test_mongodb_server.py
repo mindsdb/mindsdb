@@ -1,8 +1,11 @@
 import datetime as dt
+import json
 import threading
 import unittest
 import inspect
 from unittest.mock import patch
+import tempfile
+import os
 
 from pymongo import MongoClient
 from mindsdb_sql import parse_sql
@@ -33,6 +36,12 @@ class TestMongoDBServer(BaseUnitTest):
                 },
             }
             # TODO run on own database
+            fdi, cfg_file = tempfile.mkstemp(prefix='mindsdb_conf_')
+
+            with os.fdopen(fdi, 'w') as fd:
+                json.dump(config, fd)
+
+            os.environ['MINDSDB_CONFIG_PATH'] = cfg_file
 
             from mindsdb.api.mongo.server import MongoServer
 
@@ -176,7 +185,7 @@ class TestMongoDBServer(BaseUnitTest):
         ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
-           CREATE PREDICTOR house_sales_model5 
+           CREATE PREDICTOR mongo.house_sales_model5 
            FROM mongo (
                 db.house_sales.find({})
            ) 

@@ -1,21 +1,18 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
-from .__about__ import __version__ as version, __description__ as description
 
 try:
-    from .rockset_integration import (
-        RocksetIntegration as Handler,
-        connection_args_example,
-        connection_args
-    )
+    from .rockset_handler import RocksetHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None
     import_error = e
+from .__about__ import __version__ as version, __description__ as description
 
 title = 'Rockset'
 name = 'rockset'
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.png'
+icon_path = 'icon.svg'
+
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',

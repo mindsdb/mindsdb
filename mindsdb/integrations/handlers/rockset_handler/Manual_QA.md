@@ -2,7 +2,7 @@
 
 > **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
 
-## Test 1.2
+## Test 1.0
 ```
 CREATE DATABASE rockset
 WITH ENGINE = 'rockset',     
@@ -21,9 +21,31 @@ Error
 Expected {"START" | "SET" | "USE" | "SHOW" | "DELETE" | "INSERT" | "UPDATE" | "ALTER" | "SELECT" | "ROLLBACK" | "COMMIT" | "EXPLAIN" | {"CREATE" "PREDICTOR"} | {"CREATE" "VIEW"} | "DROP" | "RETRAIN" | {"CREATE" "DATASOURCE"} | "DESCRIBE" | {"CREATE" "DATABASE"} | {"CREATE" "TABLE"} | "BEGIN"} (at char 0), (line:1, col:1)
 ```
 
-![error](tests/error-3.png)
+![error](tests/test.png)
 
 
+## Test 1.1
+```
+CREATE DATABASE mindsdb
+WITH ENGINE = 'rockset',
+PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 47335,
+    "user": "rockset",
+    "password": "password",
+    "database": "mindsdb"
+};
+```
+
+**Results**
+
+```
+Error: Can't connect to db: Handler 'rockset' can not be used
+```
+
+![error](tests/test2.png)
+
+**Notes** 
 
 
 **2. Testing CREATE TABLE**

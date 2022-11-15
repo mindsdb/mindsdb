@@ -111,6 +111,7 @@ nav:
       - PREDICTOR: sql/create/predictor.md
       - TABLE: sql/create/table.md
       - VIEW: sql/create/view.md
+      - ML_ENGINE: sql/create/ml_engine.md
     - UPDATE: sql/api/update.md
     - INSERT INTO: sql/api/insert.md
     - DESCRIBE PREDICTOR: sql/api/describe.md

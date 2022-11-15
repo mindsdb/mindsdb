@@ -29,7 +29,7 @@ from pandas.api import types as pd_types
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
@@ -78,7 +78,7 @@ from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.database.database import DatabaseController
-from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
+from mindsdb.api.mysql.mysql_proxy.executor import Executor
 import mindsdb.utilities.hooks as hooks
 
 

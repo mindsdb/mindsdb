@@ -9,6 +9,7 @@
  *******************************************************
 """
 
+import os
 from uuid import uuid4
 
 import requests
@@ -97,10 +98,17 @@ class SessionController():
 
 
 class ServerSessionContorller(SessionController):
-    def __init__(self, server, company_id=None, user_class=None, executor_service_url=None):
+    def __init__(self, server, company_id=None, user_class=None):
         super().__init__(server, company_id, user_class)
         self.id = f"session_{uuid4()}"
-        self.executor_url = executor_service_url or "http://localhost:5500"
+        executor_host = os.environ.get("MINDSDB_EXECUTOR_HOSTNAME")
+        executor_port = os.environ.get("MINDSDB_EXECUTOR_PORT")
+        if executor_host and executor_port:
+            self.executor_url = f"http://{executor_host}:{executor_port}"
+        else:
+            self.executor_url = "http://localhost:5500"
+
+        logger.debug("%s.__init__: executor url - %s", self.__class__.__name__, self.executor_url)
 
     def __del__(self):
         url = self.executor_url + "/" + "session"

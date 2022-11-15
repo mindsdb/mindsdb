@@ -1,18 +1,27 @@
-
+import os
 import traceback
 import pickle
 from uuid import uuid4
 import requests
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    logger
+from mindsdb.utilities.log import (
+    get_log
 )
 from mindsdb.integrations.libs.net_helpers import sending_attempts
+logger = get_log("main")
 
 class ExecutorClient:
-    def __init__(self, session, sqlserver, service_url=None):
+    def __init__(self, session, sqlserver):
         self.id = f"executor_{uuid4()}"
         self.headers = {"Content-Type": "application/json"}
-        self.base_url = service_url or "http://localhost:5500"
+        executor_host = os.environ.get("MINDSDB_EXECUTOR_HOSTNAME")
+        executor_port = os.environ.get("MINDSDB_EXECUTOR_PORT")
+        if executor_host and executor_port:
+            self.base_url = f"http://{executor_host}:{executor_port}"
+        else:
+            self.base_url = "http://localhost:5500"
+            logger.info("%s.__init__: %s", self.__class__.__name__, os.environ)
+
+        logger.info("%s.__init__: executor url - %s", self.__class__.__name__, self.base_url)
         self.sqlserver = sqlserver
         self.session = session
         self.query = None
@@ -59,15 +68,19 @@ class ExecutorClient:
 
     def __del__(self):
         url = f"{self.base_url}/executor"
-        logger.debug("%s.%s: delete an appropriate executor instance on the serverside", self.__class__.__name__, self.id)
+        logger.info("%s.%s: delete an appropriate executor instance on the serverside", self.__class__.__name__, self.id)
         self._do(url, "delete", json={"id": self.id})
 
 
     def default_json(self):
+        if hasattr(self.sqlserver, "connection_id"):
+            connection_id = self.sqlserver.connection_id
+        else:
+            connection_id = -1
         return {
             "id": self.id,
             "session_id": self.session.id,
-            "connection_id": self.sqlserver.connection_id,
+            "connection_id": connection_id,
             "company_id": self.session.company_id,
             "user_class": self.session.user_class,
                 }
@@ -75,104 +88,104 @@ class ExecutorClient:
     def _update_attrs(self, response_json: dict):
         for attr in response_json:
             if hasattr(self, attr):
-                logger.debug("%s: updating %s attribute, new value - %s", self.__class__.__name__, attr, response_json[attr])
+                logger.info("%s: updating %s attribute, new value - %s", self.__class__.__name__, attr, response_json[attr])
                 setattr(self, attr, response_json[attr])
 
     def stmt_prepare(self, sql):
         json_data = self.default_json()
         json_data["sql"] = sql
-        logger.debug("%s.stmt_prepare: json=%s", self.__class__.__name__, json_data)
+        logger.info("%s.stmt_prepare: json=%s", self.__class__.__name__, json_data)
         response = None
         try:
             response = self._do("stmt_prepare", _type="post", json=json_data)
-            logger.debug("%s.stmt_prepare result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
+            logger.info("%s.stmt_prepare result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
         except Exception:
             msg = traceback.format_exc()
-            logger.error("%s.stmt_prepare: request has finished with error: %s", self.__class__.__name__, msg)
+            logger.info("%s.stmt_prepare: request has finished with error: %s", self.__class__.__name__, msg)
         try:
             self._update_attrs(response.json())
         except Exception:
             msg = traceback.format_exc()
-            logger.error("%s.stmt_prepare: error reading response json: %s", self.__class__.__name__, msg)
+            logger.info("%s.stmt_prepare: error reading response json: %s", self.__class__.__name__, msg)
         try:
             query = pickle.loads(response.content)
-            logger.error("%s.stmt_prepare: success unpickle query object", self.__class__.__name__)
+            logger.info("%s.stmt_prepare: success unpickle query object", self.__class__.__name__)
             self.query = query
         except Exception as e:
             msg = traceback.format_exc()
-            logger.error("%s.stmt_prepare: error unpickle query object: %s", self.__class__.__name__, msg)
+            logger.info("%s.stmt_prepare: error unpickle query object: %s", self.__class__.__name__, msg)
             raise e
 
     def stmt_execute(self, param_values):
         if self.is_executed:
             return
-        logger.debug("%s.stmt_execute: param_values=%s(type=%s)", self.__class__.__name__, param_values, type(param_values))
-        logger.debug("%s.stmt_execute: json=%s", self.__class__.__name__, param_values)
+        logger.info("%s.stmt_execute: param_values=%s(type=%s)", self.__class__.__name__, param_values, type(param_values))
+        logger.info("%s.stmt_execute: json=%s", self.__class__.__name__, param_values)
         json_data = self.default_json()
         json_data["param_values"] = param_values
         response = None
         try:
             response = self._do("stmt_execute", _type="post", json=param_values)
-            logger.debug("%s.stmt_execute result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
+            logger.info("%s.stmt_execute result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
         except Exception:
             msg = traceback.format_exc()
-            logger.error("%s.stmt_execute: request has finished with error: %s", self.__class__.__name__, msg)
+            logger.info("%s.stmt_execute: request has finished with error: %s", self.__class__.__name__, msg)
         try:
             self._update_attrs(response.json())
         except Exception:
             msg = traceback.format_exc()
-            logger.error("%s.stmt_execute: error reading response json: %s", self.__class__.__name__, msg)
+            logger.info("%s.stmt_execute: error reading response json: %s", self.__class__.__name__, msg)
         try:
             query = pickle.loads(response.content)
-            logger.error("%s.stmt_execute: success unpickle query object", self.__class__.__name__)
+            logger.info("%s.stmt_execute: success unpickle query object", self.__class__.__name__)
             self.query = query
         except Exception as e:
             msg = traceback.format_exc()
-            logger.error("%s.stmt_execute: error unpickle query object: %s", self.__class__.__name__, msg)
+            logger.info("%s.stmt_execute: error unpickle query object: %s", self.__class__.__name__, msg)
             raise e
 
     def query_execute(self, sql):
         json_data = self.default_json()
         json_data["sql"] = sql
-        logger.debug("%s.query_execute: json=%s", self.__class__.__name__, json_data)
+        logger.info("%s.query_execute: json=%s", self.__class__.__name__, json_data)
         response = None
         try:
             response = self._do("query_execute", _type="post", json=json_data)
-            logger.debug("%s.query_execute result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
+            logger.info("%s.query_execute result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
         except Exception:
             msg = traceback.format_exc()
-            logger.error("%s.query_execute: request has finished with error: %s", self.__class__.__name__, msg)
+            logger.info("%s.query_execute: request has finished with error: %s", self.__class__.__name__, msg)
         try:
             self._update_attrs(response.json())
         except Exception:
             msg = traceback.format_exc()
-            logger.error("%s.query_execute: error reading response json: %s", self.__class__.__name__, msg)
+            logger.info("%s.query_execute: error reading response json: %s", self.__class__.__name__, msg)
         try:
             query = pickle.loads(response.content)
-            logger.error("%s.query_execute: success unpickle query object", self.__class__.__name__)
+            logger.info("%s.query_execute: success unpickle query object", self.__class__.__name__)
             self.query = query
         except Exception as e:
             msg = traceback.format_exc()
-            logger.error("%s.query_execute: error unpickle query object: %s", self.__class__.__name__, msg)
+            logger.info("%s.query_execute: error unpickle query object: %s", self.__class__.__name__, msg)
             raise e
 
     def execute_external(self, sql):
         json_data = self.default_json()
         json_data["sql"] = sql
-        logger.debug("%s.execute_external: json=%s", self.__class__.__name__, json_data)
+        logger.info("%s.execute_external: json=%s", self.__class__.__name__, json_data)
         return
         response = None
         # try:
         #     response = self._do("execute_external", _type="post", json=json_data)
-        #     logger.debug("%s.execute_external result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
+        #     logger.info("%s.execute_external result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
         # except Exception:
         #     msg = traceback.format_exc()
-        #     logger.error("%s.execute_external: request has finished with error: %s", self.__class__.__name__, msg)
+        #     logger.info("%s.execute_external: request has finished with error: %s", self.__class__.__name__, msg)
         # try:
         #     self._update_attrs(response.json())
         # except Exception:
         #     msg = traceback.format_exc()
-        #     logger.error("%s.execute_external: error reading response json: %s", self.__class__.__name__, msg)
+        #     logger.info("%s.execute_external: error reading response json: %s", self.__class__.__name__, msg)
 
     def parse(self, sql):
         self.sql = sql
@@ -181,47 +194,47 @@ class ExecutorClient:
 
         json_data = self.default_json()
         json_data["sql"] = sql
-        logger.debug("%s.parse: json=%s", self.__class__.__name__, json_data)
+        logger.info("%s.parse: json=%s", self.__class__.__name__, json_data)
         response = None
         try:
             response = self._do("parse", _type="post", json=json_data)
-            logger.debug("%s.parse result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
+            logger.info("%s.parse result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
         except Exception:
             msg = traceback.format_exc()
-            logger.error("%s.parse: request has finished with error: %s", self.__class__.__name__, msg)
+            logger.info("%s.parse: request has finished with error: %s", self.__class__.__name__, msg)
 
-        logger.debug("%s.parse: load query object from response.content", self.__class__.__name__)
+        logger.info("%s.parse: load query object from response.content", self.__class__.__name__)
         try:
             self._update_attrs(response.json())
         except Exception:
             msg = traceback.format_exc()
-            logger.error("%s.parse: error reading response json: %s", self.__class__.__name__, msg)
+            logger.info("%s.parse: error reading response json: %s", self.__class__.__name__, msg)
         try:
             query = pickle.loads(response.content)
-            logger.error("%s.parse: success unpickle query object", self.__class__.__name__)
+            logger.info("%s.parse: success unpickle query object", self.__class__.__name__)
             self.query = query
         except Exception as e:
             msg = traceback.format_exc()
-            logger.error("%s.parse: error unpickle query object: %s", self.__class__.__name__, msg)
+            logger.info("%s.parse: error unpickle query object: %s", self.__class__.__name__, msg)
             raise e
 
     def do_execute(self):
         if self.is_executed:
             return
         json_data = self.default_json()
-        logger.debug("%s.do_execute: json=%s", self.__class__.__name__, json_data)
+        logger.info("%s.do_execute: json=%s", self.__class__.__name__, json_data)
         try:
             response = self._do("do_execute", _type="post", json=json_data)
-            logger.debug("%s.do_execute result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
+            logger.info("%s.do_execute result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)
         except Exception as e:
             msg = traceback.format_exc()
-            logger.error("%s.do_execute: request has finished with error: %s", self.__class__.__name__, msg)
+            logger.info("%s.do_execute: request has finished with error: %s", self.__class__.__name__, msg)
             raise e
         try:
             self._update_attrs(response.json())
         except Exception:
             msg = traceback.format_exc()
-            logger.error("%s.do_execute: error reading response json: %s", self.__class__.__name__, msg)
+            logger.info("%s.do_execute: error reading response json: %s", self.__class__.__name__, msg)
 
         self.is_executed = True
         self.data = response.json()["data"]

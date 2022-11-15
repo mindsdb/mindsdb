@@ -12,7 +12,7 @@ RUN pip3 install -r requirements.txt
 # Install our app
 COPY ./mindsdb /mindsdb/mindsdb
 
-ENV PORT 5500
+ENV PORT 5000
 ENV HOST "0.0.0.0"
 ENV PYTHONPATH "/mindsdb"
 EXPOSE $PORT

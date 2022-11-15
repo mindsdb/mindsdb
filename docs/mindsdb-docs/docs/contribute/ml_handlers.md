@@ -2,15 +2,14 @@
 
 In this section, you'll find how to create new machine learning (ML) handlers within MindsDB.
 
-## Prerequisite
-
-You should have the latest staging version of the MindsDB repository installed locally. Follow [this guide](/contribute/install/) to learn how to install MindsDB for development.
+!!! note "Prerequisite"
+    You should have the latest staging version of the MindsDB repository installed locally. Follow [this guide](/contribute/install/) to learn how to install MindsDB for development.
 
 ## What are Machine Learning Handlers?
 
 ML handlers act as a bridge to any ML framework. You use ML handlers to create ML engines using [the `CREATE ML_ENGINE` command](/sql/create/ml_engine/). So you can expose ML models from any supported ML engine as an AI table.
 
-## ML Handlers in the MindsDB Repository
+### ML Handlers in the MindsDB Repository
 
 The source code for ML handlers is located in the main MindsDB repository under the [/integrations](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations) directory.
 
@@ -25,6 +24,9 @@ integrations                      # Contains ML handlers source codes
 └─ utilities                           # Handler utility directory
 │  ├─ install.py                           # Script that installs all handler dependencies
 ```
+
+!!! note "Database Handlers"
+    To learn more about handlers and how to implement a database handler, visit our [doc page here](/contribute/integrations/).
 
 ## Creating a Machine Learning Handler
 

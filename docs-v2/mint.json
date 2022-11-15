@@ -78,6 +78,45 @@
             "connect/sql-alchemy",
             "connect/tableau"
           ]
+        },
+        "sql/create/file",
+        "sql/data-insights",
+        "sql/feature-eng",
+        {
+          "group": "SQL API",
+          "pages": [
+            "sql/table-structure",
+            {
+              "group": "CREATE",
+              "pages": [
+                "sql/create/databases",
+                "sql/create/predictor",
+                "sql/create/table",
+                "sql/create/view"
+              ]
+            },
+            "sql/api/update",
+            "sql/api/insert",
+            "sql/api/describe",
+            "sql/api/retrain",
+            "sql/api/drop",
+            "sql/api/select",
+            "sql/api/select-files",
+            "sql/api/join"
+          ]
+        },
+        {
+          "group": "Mongo API",
+          "pages": [
+            "mongo/collection-structure",
+            {
+              "group": "Insert()",
+              "pages": ["mongo/database", "mongo/insert"]
+            },
+            "mongo/stats",
+            "mongo/find",
+            "mongo/delete"
+          ]
         }
       ]
     }

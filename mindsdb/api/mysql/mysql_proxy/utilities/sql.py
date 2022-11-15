@@ -11,7 +11,7 @@ from mindsdb_sql.parser.ast import (
     Function, Constant
 )
 
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 
 
 def query_df(df, query, session=None):
@@ -64,7 +64,7 @@ def query_df(df, query, session=None):
     try:
         query_str = render.get_string(query_ast, with_failback=False)
     except Exception as e:
-        log.error(
+        log.logger.error(
             f"Exception during query casting to 'postgres' dialect. Query: {str(query)}. Error: {e}"
         )
         query_str = render.get_string(query_ast, with_failback=True)

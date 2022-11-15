@@ -34,4 +34,8 @@ on release.
 Run `docker-compose up` or `docker-compose up -d` (for `detach` mode) to launch mindsdb environment in docker compose
 
 
+## Running local docker compose environment (in old manner development)
 
+
+
+1. Run `docker-compose -f docker-compose-old-manner up` or `docker-compose -f docker-compose-old-manner up -d` (for `detach` mode) to launch mindsdb in docker-compose in old school manner (monolithic on 100%)

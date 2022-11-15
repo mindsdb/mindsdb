@@ -1,6 +1,6 @@
 from typing import Optional
 
-from mindsdb.interfaces.storage.db import session, JsonStorage as JsonStorageTable
+from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.fs import RESOURCE_GROUP
 
 
@@ -15,17 +15,17 @@ class JsonStorage:
             raise TypeError(f"got {type(value)} instead of dict")
         existing_record = self.get_record(key)
         if existing_record is None:
-            record = JsonStorageTable(
+            record = db.JsonStorage(
                 name=key,
                 resource_group=self.resource_group,
                 resource_id=self.resource_id,
                 company_id=self.company_id,
                 content=value
             )
-            session.add(record)
+            db.session.add(record)
         else:
             existing_record.content = value
-        session.commit()
+        db.session.commit()
 
     def set(self, key, value):
         self[key] = value
@@ -40,7 +40,7 @@ class JsonStorage:
         return self[key]
 
     def get_record(self, key):
-        record = session.query(JsonStorageTable).filter_by(
+        record = db.session.query(db.JsonStorage).filter_by(
             name=key,
             resource_group=self.resource_group,
             resource_id=self.resource_id,
@@ -49,7 +49,7 @@ class JsonStorage:
         return record
 
     def get_all_records(self):
-        records = session.query(JsonStorageTable).filter_by(
+        records = db.session.query(db.JsonStorage).filter_by(
             resource_group=self.resource_group,
             resource_id=self.resource_id,
             company_id=self.company_id
@@ -68,7 +68,7 @@ class JsonStorage:
     def __delitem__(self, key):
         record = self.get_record(key)
         if record is not None:
-            session.delete(record)
+            db.session.delete(record)
 
     def delete(self, key):
         self.delete(key)

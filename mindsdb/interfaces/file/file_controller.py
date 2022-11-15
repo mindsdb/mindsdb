@@ -3,9 +3,9 @@ import json
 from pathlib import Path
 import shutil
 
-from mindsdb.interfaces.storage.db import session, File
+from mindsdb.interfaces.storage import db
 from mindsdb.integrations.handlers.file_handler import Handler as FileHandler
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 
@@ -19,10 +19,10 @@ class FileController():
     def get_files_names(self, company_id=None):
         """ return list of files names
         """
-        return [x[0] for x in session.query(File.name).filter_by(company_id=company_id)]
+        return [x[0] for x in db.session.query(db.File.name).filter_by(company_id=company_id)]
 
     def get_file_meta(self, name, company_id=None):
-        file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
+        file_record = db.session.query(db.File).filter_by(company_id=company_id, name=name).first()
         if file_record is None:
             return None
         columns = file_record.columns
@@ -40,7 +40,7 @@ class FileController():
             Returns:
                 list[dict]: files metadata
         """
-        file_records = session.query(File).filter_by(company_id=company_id).all()
+        file_records = db.session.query(db.File).filter_by(company_id=company_id).all()
         files_metadata = [{
             'name': record.name,
             'row_count': record.row_count,
@@ -76,7 +76,7 @@ class FileController():
                 'column_names': list(df.columns)
             }
 
-            file_record = File(
+            file_record = db.File(
                 name=name,
                 company_id=company_id,
                 source_file_path=file_name,
@@ -84,11 +84,11 @@ class FileController():
                 row_count=ds_meta['row_count'],
                 columns=ds_meta['column_names']
             )
-            session.add(file_record)
-            session.commit()
+            db.session.add(file_record)
+            db.session.commit()
             store_file_path = f'file_{company_id}_{file_record.id}'
             file_record.file_path = store_file_path
-            session.commit()
+            db.session.commit()
 
             file_dir = Path(self.dir).joinpath(store_file_path)
             file_dir.mkdir(parents=True, exist_ok=True)
@@ -98,7 +98,7 @@ class FileController():
 
             self.fs_store.put(store_file_path, base_dir=self.dir)
         except Exception as e:
-            log.error(e)
+            log.logger.error(e)
             raise
         finally:
             if file_dir is not None:
@@ -107,17 +107,17 @@ class FileController():
         return file_record.id
 
     def delete_file(self, name, company_id):
-        file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
+        file_record = db.session.query(db.File).filter_by(company_id=company_id, name=name).first()
         if file_record is None:
             return None
         file_id = file_record.id
-        session.delete(file_record)
-        session.commit()
+        db.session.delete(file_record)
+        db.session.commit()
         self.fs_store.delete(f'file_{company_id}_{file_id}')
         return True
 
     def get_file_path(self, name, company_id):
-        file_record = session.query(File).filter_by(company_id=company_id, name=name).first()
+        file_record = db.session.query(db.File).filter_by(company_id=company_id, name=name).first()
         if file_record is None:
             raise Exception(f"File '{name}' does not exists")
         file_dir = f'file_{company_id}_{file_record.id}'

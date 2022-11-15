@@ -2,7 +2,7 @@ from collections import OrderedDict
 from typing import Optional
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
@@ -72,7 +72,7 @@ class MonetDBHandler(DatabaseHandler):
   
             self.is_connected= True
         except Exception as e:
-            log.error(f"Error while connecting to {self.database}, {e}")
+            log.logger.error(f"Error while connecting to {self.database}, {e}")
 
 
         return self.connection
@@ -88,7 +88,7 @@ class MonetDBHandler(DatabaseHandler):
             self.connection.close()
             self.is_connected=False
         except Exception as e:
-            log.error(f"Error while disconnecting to {self.database}, {e}")
+            log.logger.error(f"Error while disconnecting to {self.database}, {e}")
 
         return 
 
@@ -105,7 +105,7 @@ class MonetDBHandler(DatabaseHandler):
             self.connect()
             responseCode.success = True
         except Exception as e:
-            log.error(f'Error connecting to database {self.database}, {e}!')
+            log.logger.error(f'Error connecting to database {self.database}, {e}!')
             responseCode.error_message = str(e)
         finally:
             if responseCode.success is True and need_to_close:
@@ -143,7 +143,7 @@ class MonetDBHandler(DatabaseHandler):
                 response = Response(RESPONSE_TYPE.OK)
             self.connection.commit()
         except Exception as e:
-            log.error(f'Error running query: {query} on {self.database}!')
+            log.logger.error(f'Error running query: {query} on {self.database}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

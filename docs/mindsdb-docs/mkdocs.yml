@@ -120,6 +120,8 @@ nav:
     - SELECT: sql/api/select.md
     - SELECT from files: sql/api/select_files.md
     - JOIN: sql/api/join.md
+  - REST API:
+    - SQL Queries: rest/sql.md
   - Mongo API:
     - Collection Structure: mongo/collection-structure.md
     - Insert():

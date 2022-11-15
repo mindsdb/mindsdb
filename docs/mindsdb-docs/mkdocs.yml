@@ -157,6 +157,7 @@ nav:
       - MindsDB Installation for Development: contribute/install.md
       - Bug Reports and Feature Requests: contribute/issues.md
       - Building a New Integration: contribute/integrations.md
+      - Building an ML Engine: contribute/ml_handlers.md
       - Writing Documentation: contribute/docs.md
       - Docs Style Guide: docs-rules.md
       - Testing and Improving Test Coverage: contribute/tests.md

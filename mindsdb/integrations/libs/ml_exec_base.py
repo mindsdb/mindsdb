@@ -32,9 +32,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropPredictor
 )
 
-
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
-
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.response import (
@@ -50,13 +48,13 @@ from mindsdb.interfaces.model.functions import (
     get_model_records
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
-
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.functions import mark_process
 from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
+
 from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
 import torch.multiprocessing as mp
@@ -529,7 +527,7 @@ class BaseMLEngineExec:
                 model_data = self.model_controller.get_model_data(predictor_record=predictor_record)
                 if (
                     is_cloud is True
-                    and model_data.get('status') in ['generating', 'training']
+                    and model_data.get('status') in [PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING]
                     and isinstance(model_data.get('created_at'), str) is True
                     and (dt.datetime.now() - parse_datetime(model_data.get('created_at'))) < dt.timedelta(hours=1)
                 ):

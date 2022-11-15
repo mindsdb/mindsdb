@@ -12,7 +12,6 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     Column,
     SQLQuery
 )
-from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErBadDbError,
     SqlApiException,
@@ -169,49 +168,18 @@ class Executor:
         self.sql_lower = sql_lower.replace('`', '')
 
         try:
+            self.query = parse_sql(sql, dialect='mindsdb')
+        except Exception as mdb_error:
             try:
-                self.query = parse_sql(sql, dialect='mindsdb')
-            except Exception:
                 self.query = parse_sql(sql, dialect='mysql')
-        except Exception as e:
-            # not all statements are parsed by parse_sql
-            logger.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
+            except Exception as e:
+                # not all statements are parsed by parse_sql
+                logger.warning(f'SQL statement is not parsed by mindsdb_sql: {sql}')
 
-            sql_list = [x for x in self.sql_lower.replace('\t', ' ').replace('\n', ' ').split(' ') if x not in ('', ' ')]
-            if len(sql_list) > 1 and sql_list[0] == "show":
-                raise SqlApiException(f"unknown command: {sql}")
-            if len(sql_list) > 2 and " ".join(sql_list[:2]) == "create predictor":
-                if 'predict' not in sql_list:
-                    raise SqlApiException(f"'predict' field is mandatory: {sql}")
-                # analyze predictor name
-                if not sql_list[2][0].isalpha():
-                    raise SqlApiException(f"predictor name must start from letter character: {sql}")
+                raise SqlApiException(f'SQL statement cannot be parsed by mindsdb_sql - {sql}: {mdb_error}') from mdb_error
 
-            # TODO
-            if sql_lower == "set names 'utf8mb4' collate 'utf8mb4_general_ci'":
-                self.query = Set()  # empty set command
-            if sql_lower.startswith('alter table') and (
-                    sql_lower.endswith('disable keys') or sql_lower.endswith('enable keys')):
-                self.query = Set()  # empty set command
-
-            st = SqlStatementParser(sql)
-            keyword = st.keyword
-            if keyword == 'set':
-                self.query = Set()
-            elif keyword == 'update':
-                self.query = Update()
-            elif keyword == 'insert':
-                self.query = Insert(table='')
-            elif keyword == 'alter':
-                self.query = Alter()
-            else:
-                raise SqlApiException(f'SQL statement cannot be parsed by mindsdb_sql - {sql}: {e}') from e
-
-            # not all statements are parse by parse_sql
-            logger.warning(f'SQL statement are not parsed by mindsdb_sql: {sql}')
-
-            # == a place for workarounds ==
-            # or run sql in integration without parsing
+                # == a place for workarounds ==
+                # or run sql in integration without parsing
 
     def do_execute(self):
         # it can be already run at prepare state

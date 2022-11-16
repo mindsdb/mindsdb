@@ -78,10 +78,10 @@ Now, to create the model let's move to MindsDB database. and let's see what's in
 ![](https://github.com/kinkusuma/mindsdb/blob/add-regression-tutorial-sql/docs/mindsdb-docs/docs/assets/sql/tutorials/insurance-cost-prediction/show-tables-sql-2.png)
 
 There are 2 tables, predictors, and commands. Predictors contain your predictors record, and commands contain your last commands used.  
-To train a new machine learning model we will need to CREATE PREDICTOR as a new record inside the predictors table, and using this command:
+To train a new machine learning model we will need to `CREATE MODEL` as a new record inside the predictors table, and using this command:
 
 ```sql
-CREATE PREDICTOR mindsdb.predictor_name
+CREATE MODEL mindsdb.predictor_name
 FROM integration_name
 (SELECT column_name, column_name2 FROM table_name) as ds_name
 PREDICT column_target as column_alias
@@ -110,7 +110,9 @@ So, use this command to create the models:
 If there's no error, that means your model is created and training. To see if your model is finished, use this command:
 
 ```sql
-SELECT * FROM mindsdb.predictors WHERE name = predictor_name;
+SELECT * 
+FROM mindsdb.models 
+WHERE name = predictor_name;
 ```
 
 And values that we need to provide are:

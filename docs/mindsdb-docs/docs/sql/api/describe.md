@@ -1,19 +1,19 @@
-# `#!sql DESCRIBE PREDICTOR` Statement
+# `#!sql DESCRIBE MODEL` Statement
 
-The `#!sql DESCRIBE PREDICTOR` statement is used to display the attributes of an existing model.
+The `#!sql DESCRIBE MODEL` statement is used to display the attributes of an existing model.
 
-## `#!sql DESCRIBE PREDICTOR ... FEATURES` Statement
+## `#!sql DESCRIBE MODEL ... FEATURES` Statement
 
 ### Description
 
-The `DESCRIBE PREDICTOR mindsdb.[predictor_name].features` statement displays how the model encoded the data before the training process.
+The `DESCRIBE MODEL mindsdb.[predictor_name].features` statement displays how the model encoded the data before the training process.
 
 ### Syntax
 
 Here is the syntax:
 
 ```sql
-DESCRIBE PREDICTOR mindsdb.[predictor_name].features;
+DESCRIBE MODEL mindsdb.[predictor_name].features;
 ```
 
 On execution, we get:
@@ -41,7 +41,7 @@ Where:
 Let's look at an example using the `home_rentals_model` model.
 
 ```sql
-DESCRIBE PREDICTOR mindsdb.home_rentals_model.features;
+DESCRIBE MODEL mindsdb.home_rentals_model.features;
 ```
 
 On execution, we get:
@@ -62,18 +62,18 @@ On execution, we get:
 
 Here the `rental_price` column is the `target` column to be predicted. As for the `feature` columns, these are used to train the ML model to predict the value of the `rental_price` column.
 
-## `#!sql DESCRIBE PREDICTOR ... MODEL` Statement
+## `#!sql DESCRIBE MODEL ... MODEL` Statement
 
 ### Description
 
-The `DESCRIBE PREDICTOR mindsdb.[predictor_name].model` statement displays the performance of the candidate models.
+The `DESCRIBE MODEL mindsdb.[predictor_name].model` statement displays the performance of the candidate models.
 
 ### Syntax
 
 Here is the syntax:
 
 ```sql
-DESCRIBE PREDICTOR mindsdb.[predictor_name].model;
+DESCRIBE MODEL mindsdb.[predictor_name].model;
 ```
 
 On execution, we get:
@@ -102,7 +102,7 @@ Where:
 Let's look at an example using the `home_rentals_model` model.
 
 ```sql
-DESCRIBE PREDICTOR mindsdb.home_rentals_model.model;
+DESCRIBE MODEL mindsdb.home_rentals_model.model;
 ```
 
 On execution, we get:
@@ -119,18 +119,18 @@ On execution, we get:
 
 The value of the `accuracy_functions` column is stored in the `performance` column. For example, the `r2_score` value of the `Neural` model is `0.9861694189913056`.
 
-## `#!sql DESCRIBE PREDICTOR ... ENSEMBLE` Statement
+## `#!sql DESCRIBE MODEL ... ENSEMBLE` Statement
 
 ### Description
 
-The `DESCRIBE PREDICTOR mindsdb.[predictor_name].ensemble` statement displays the parameters used to select the best candidate model.
+The `DESCRIBE MODEL mindsdb.[predictor_name].ensemble` statement displays the parameters used to select the best candidate model.
 
 ### Syntax
 
 Here is the syntax:
 
 ```sql
-DESCRIBE PREDICTOR mindsdb.[predictor_name].ensemble;
+DESCRIBE MODEL mindsdb.[predictor_name].ensemble;
 ```
 
 On execution, we get:
@@ -155,7 +155,7 @@ Where:
 Let's look at an example using the `home_rentals_model` model.
 
 ```sql
-DESCRIBE PREDICTOR mindsdb.home_rentals_model.ensemble;
+DESCRIBE MODEL mindsdb.home_rentals_model.ensemble;
 ```
 
 On execution, we get:
@@ -278,4 +278,4 @@ On execution, we get:
 ```
 
 !!! TIP "Need More Info?"
-    If you need more information on how to `#!sql DESCRIBE PREDICTOR` or understand the results, feel free to ask us on the [community Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).
+    If you need more information on how to `#!sql DESCRIBE MODEL` or understand the results, feel free to ask us on the [community Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).

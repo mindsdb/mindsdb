@@ -69,6 +69,19 @@ class DatabaseController:
             for x in self.get_list(company_id=company_id, filter_type=filter_type)
         )
 
+    def get_integration(self, integration_id, company_id=None):
+        # get integration by id
+
+        # TODO get directly from db?
+        for rec in self.get_list(company_id=company_id):
+            if rec['id'] == integration_id and rec['type'] == 'data':
+                return {
+                    'name': rec['name'],
+                    'type': rec['type'],
+                    'engine': rec['engine'],
+                    'id': rec['id']
+                }
+
     def exists(self, db_name: str, company_id: Optional[int]) -> bool:
         return db_name in self.get_dict(company_id=company_id)
 

@@ -274,11 +274,12 @@ class FileHandler(DatabaseHandler):
 
     @staticmethod
     def _get_csv_dialect(buffer) -> csv.Dialect:
-        sample = buffer.read(256 * 1024)
+        sample = buffer.readline()  # trying to get dialect from header
         buffer.seek(0)
         try:
             accepted_csv_delimiters = [',', '\t', ';']
             dialect = csv.Sniffer().sniff(sample, delimiters=accepted_csv_delimiters)
+            dialect.doublequote = True  # assume that all csvs have " as string escape
         except csv.Error:
             dialect = None
         return dialect

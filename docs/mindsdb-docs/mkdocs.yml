@@ -111,6 +111,7 @@ nav:
       - PREDICTOR: sql/create/predictor.md
       - TABLE: sql/create/table.md
       - VIEW: sql/create/view.md
+      - ML_ENGINE: sql/create/ml_engine.md
     - UPDATE: sql/api/update.md
     - INSERT INTO: sql/api/insert.md
     - DESCRIBE PREDICTOR: sql/api/describe.md
@@ -119,6 +120,8 @@ nav:
     - SELECT: sql/api/select.md
     - SELECT from files: sql/api/select_files.md
     - JOIN: sql/api/join.md
+  - REST API:
+    - SQL Queries: rest/sql.md
   - Mongo API:
     - Collection Structure: mongo/collection-structure.md
     - Insert():
@@ -157,6 +160,7 @@ nav:
       - MindsDB Installation for Development: contribute/install.md
       - Bug Reports and Feature Requests: contribute/issues.md
       - Building a New Integration: contribute/integrations.md
+      - Building an ML Engine: contribute/ml_handlers.md
       - Writing Documentation: contribute/docs.md
       - Docs Style Guide: docs-rules.md
       - Testing and Improving Test Coverage: contribute/tests.md

@@ -1,6 +1,7 @@
 from unittest.mock import patch
 import datetime as dt
 import tempfile
+import pytest
 
 import pandas as pd
 import numpy as np
@@ -407,6 +408,20 @@ class Test(BaseExecutorMockPredictor):
             assert 'is system database' in str(e)
         else:
             raise Exception('SqlApiException expected')
+
+    def test_wrong_using(self):
+        with pytest.raises(Exception) as exc_info:
+            ret = self.command_executor.execute_command(parse_sql(
+                '''
+                    CREATE PREDICTOR task_model
+                    FROM mindsdb
+                    (select * from vtasks)
+                    PREDICT a
+                    using a=1 b=2  -- no ',' here
+                ''',
+                dialect='mindsdb'))
+
+        assert 'Syntax error' in str(exc_info.value)
 
 
 class TestComplexQueries(BaseExecutorMockPredictor):

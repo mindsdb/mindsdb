@@ -1609,3 +1609,40 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
       "database": "yugabyte_db"
     };
     ```
+      "host": "<uuid>.hana.trial-us10.hanacloud.ondemand.com",
+      "port": "443", 
+      "schema": "MINDSDB",
+      "encrypt": true
+  };
+  ```
+    
+### openGauss
+
+=== "Template"
+
+    ```sql
+    CREATE DATABASE opengauss_datasource                 --- display name for the database
+    WITH ENGINE='opengauss',                             --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                                  --- host name or IP address
+      "port": ,                                     --- port used to make TCP/IP connection
+      "database": " ",                              --- database name
+      "user": " ",                                  --- database user
+      "password": " ",                              --- database password
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE opengauss_datasource
+    WITH ENGINE='opengauss',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 5432,
+      "database": "opengauss",
+      "user": "mindsdb",
+      "password": "password"
+    };
+    ```
+

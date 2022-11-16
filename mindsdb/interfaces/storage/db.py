@@ -106,7 +106,6 @@ class Predictor(Base):
     mindsdb_version = Column(String)
     native_version = Column(String)
     integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'), nullable=False)
-    # data_integration_id = Column(ForeignKey('integration.id', name='fk_data_integration_id'), nullable=True)
     data_integration_ref = Column(Json)
     fetch_data_query = Column(String)
     is_custom = Column(Boolean)

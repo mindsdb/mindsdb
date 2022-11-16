@@ -110,8 +110,9 @@ class IntegrationController:
         for model in models:
             if (
                 model.data_integration_ref is not None
-                and model.data_integration_ref.get('type') == 'data'
-                and model.data_integration_ref.get('id') is not None
+                and model.data_integration_ref.get('type') == 'integration'
+                and isinstance(model.data_integration_ref.get('id'), str)
+                and model.data_integration_ref.get('id').isdigit()
             ):
                 data_integration_id = int(model['data_integration_ref']['id'])
                 if data_integration_id == integration_record.id:

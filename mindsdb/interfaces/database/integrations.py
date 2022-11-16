@@ -112,9 +112,9 @@ class IntegrationController:
                 model.data_integration_ref is not None
                 and model.data_integration_ref.get('type') == 'integration'
                 and isinstance(model.data_integration_ref.get('id'), int)
+                and model.data_integration_ref['id'] == integration_record.id
             ):
-                if model['data_integration_ref']['id'] == integration_record.id:
-                    model.data_integration_ref = None
+                model.data_integration_ref = None
 
         db.session.delete(integration_record)
         db.session.commit()

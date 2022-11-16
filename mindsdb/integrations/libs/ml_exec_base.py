@@ -274,7 +274,7 @@ class BaseMLEngineExec:
         training_data_df = None
 
         fetch_data_query = None
-        data_integration_id = None
+        data_integration_ref = None
         # get data for learn
         if statement.integration_name is not None:
             fetch_data_query = statement.query_str
@@ -349,7 +349,7 @@ class BaseMLEngineExec:
             company_id=self.company_id,
             name=model_name,
             integration_id=self.integration_id,
-            data_integration_id=data_integration_id,    # data_integration_ref
+            data_integration_ref=data_integration_ref,
             fetch_data_query=fetch_data_query,
             mindsdb_version=mindsdb_version,
             to_predict=target,
@@ -401,11 +401,13 @@ class BaseMLEngineExec:
                 error_message=f"Error: model '{model_name}' does not exists"
             )
 
+        data_integration_ref = base_predictor_record.data_integration_ref
+
         new_predictor_record = db.Predictor(
             company_id=self.company_id,
             name=base_predictor_record.name,
             integration_id=base_predictor_record.integration_id,
-            data_integration_id=base_predictor_record.data_integration_id,
+            data_integration_ref=data_integration_ref,
             fetch_data_query=base_predictor_record.fetch_data_query,
             mindsdb_version=mindsdb_version,
             to_predict=base_predictor_record.to_predict,
@@ -418,14 +420,29 @@ class BaseMLEngineExec:
         db.session.add(new_predictor_record)
         db.session.commit()
 
-        data_handler_meta = self.handler_controller.get_by_id(base_predictor_record.data_integration_id)
-        data_handler = self.handler_controller.get_handler(data_handler_meta['name'])
-        ast = self.parser(base_predictor_record.fetch_data_query, dialect=self.dialect)
-        response = data_handler.query(ast)
-        if response.type == RESPONSE_TYPE.ERROR:
-            return response
-        else:
-            training_data_df = response.data_frame
+        if data_integration_ref.get('type') == 'data':
+            data_integration_id = data_integration_ref.get('id')
+            data_handler_meta = self.handler_controller.get_by_id(data_integration_id)
+            data_handler = self.handler_controller.get_handler(data_handler_meta['name'])
+            ast = self.parser(base_predictor_record.fetch_data_query, dialect=self.dialect)
+            response = data_handler.query(ast)
+            if response.type == RESPONSE_TYPE.ERROR:
+                return response
+            else:
+                training_data_df = response.data_frame
+        elif data_integration_ref.get('type') == 'view':
+            sql_session = make_sql_session(self.company_id)
+            sqlquery = SQLQuery(
+                base_predictor_record.fetch_data_query,
+                session=sql_session
+            )
+            response = sqlquery.fetch(view='dataframe')
+            if response['success'] is False:
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Error during query execution: {base_predictor_record.fetch_data_query}"
+                )
+            training_data_df = response['result']
 
         new_predictor_record.training_data_columns_count = len(training_data_df.columns)
         new_predictor_record.training_data_rows_count = len(training_data_df)

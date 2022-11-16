@@ -37,7 +37,7 @@ We're ready to move to MindsDB.
 We execute the command below to create a predictor in MindsDB based on the created model.
 
 ```sql
-CREATE PREDICTOR mindsdb.byom_mlflow 
+CREATE MODEL mindsdb.byom_mlflow 
 PREDICT `1`  -- `1` is the target column name
 USING 
     url.predict='http://localhost:5000/invocations', 
@@ -146,7 +146,7 @@ Finally, we start serving by going to the directory where you called the script 
 We execute the command below to create a predictor in MindsDB based on the created model.
 
 ```sql
-CREATE PREDICTOR mindsdb.byom_mlflow_nlp
+CREATE MODEL mindsdb.byom_mlflow_nlp
 PREDICT `target`
 USING 
     url.predict='http://localhost:5000/invocations',

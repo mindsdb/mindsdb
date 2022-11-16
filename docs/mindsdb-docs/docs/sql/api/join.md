@@ -79,7 +79,7 @@ On execution, we get:
 Let's create and train a time series predictor using this statement:
 
 ```sql
-CREATE PREDICTOR mindsdb.house_sales_model
+CREATE MODEL mindsdb.house_sales_model
 FROM example_db
   (SELECT * FROM demo_data.house_sales)
 PREDICT MA

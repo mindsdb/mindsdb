@@ -82,7 +82,7 @@ It returns a dictionary containing the `prediction` key. It stores the predictio
 Once you start the RayServe-wrapped model, you can create and train it in MindsDB.
 
 ```sql
-CREATE PREDICTOR mindsdb.byom_ray_serve
+CREATE MODEL mindsdb.byom_ray_serve
 FROM mydb (
     SELECT number_of_rooms, initial_price, rental_price 
     FROM test_data.home_rentals
@@ -317,7 +317,7 @@ Please note that the specifics of the schema/table and how to ingest the CSV dat
 Now, we can create and train this custom model in MindsDB.
 
 ```sql
-CREATE PREDICTOR mindsdb.byom_ray_serve_nlp
+CREATE MODEL mindsdb.byom_ray_serve_nlp
 FROM maria (
     SELECT text, target
     FROM test.nlp_kaggle_train
@@ -335,7 +335,7 @@ You can check the model status using this query:
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='byom_ray_serve_nlp';
 ```
 

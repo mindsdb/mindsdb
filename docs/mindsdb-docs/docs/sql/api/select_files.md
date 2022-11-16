@@ -4,7 +4,7 @@
 
 The `#!sql SELECT * FROM files.[file_name]` statement is used to select data from a file.
 
-First, you upload a file to the MindsDB Cloud Editor by following [this guide](/sql/create/file/). And then, you can [`#!sql CREATE PREDICTOR`](/sql/create/predictor/) from the uploaded file.
+First, you upload a file to the MindsDB Cloud Editor by following [this guide](/sql/create/file/). And then, you can [`#!sql CREATE MODEL`](/sql/create/predictor/) from the uploaded file.
 
 ## Syntax
 
@@ -61,10 +61,10 @@ On execution, we get:
 +-----------------+---------------------+-------+----------+----------------+---------------+--------------+--------------+
 ```
 
-Now let's create a predictor using the uploaded file. You can learn more about the [`#!sql CREATE PREDICTOR` command here](/sql/create/predictor/).
+Now let's create a predictor using the uploaded file. You can learn more about the [`#!sql CREATE MODEL` command here](/sql/create/predictor/).
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
+CREATE MODEL mindsdb.home_rentals_model
 FROM files
     (SELECT * from home_rentals)
 PREDICT rental_price;

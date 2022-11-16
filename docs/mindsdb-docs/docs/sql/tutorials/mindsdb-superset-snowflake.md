@@ -69,7 +69,8 @@ show tables
 MINDSDB database comes with the predictors and commands tables. The predictors table lets us see the status of our predictive models. For example, assuming that we have already trained our predictive model for forecasting the number of rides, we’ll see the following.
 
 ```sql
-SELECT name, status FROM MINDSDB.PREDICTORS;
+SELECT name, status 
+FROM mindsdb.models;
 ```
 
 ![show status](/assets/sql/tutorials/snowflake-superset/15-query.png)
@@ -77,16 +78,16 @@ SELECT name, status FROM MINDSDB.PREDICTORS;
 The process of training a predictive model using MindsDB is as simple as creating a view or a table.
 
 ```sql
-CREATE PREDICTOR mindsdb.rides_forecaster_demo FROM snf (
+CREATE MODEL mindsdb.rides_forecaster_demo FROM snf (
 SELECT ROUTE, RIDES, DATE
 FROM CHICAGO_TRANSIT_AUTHORITY.PUBLIC.CTA_BUS_RIDES_LATEST WHERE DATE > '2020-01-01') 
 PREDICT RIDES ORDER BY DATE GROUP BY ROUTE
 WINDOW 10 HORIZON 7;
 ```
 
-Let’s discuss the statement above. We create a predictor table using the `CREATE PREDICTOR` statement and specifying the database from which the training data comes. The code in `yellow` selects the filtered training data. After that, we use the `PREDICT` keyword to define the column whose data we want to forecast.
+Let’s discuss the statement above. We create a predictor table using the `CREATE MODEL` statement and specifying the database from which the training data comes. The code in `yellow` selects the filtered training data. After that, we use the `PREDICT` keyword to define the column whose data we want to forecast.
 Next, there are standard SQL clauses, such as `ORDER BY, GROUP BY, WINDOW, and HORIZON`. We use the `ORDER BY` clause and the DATE column as its argument. By doing so, we emphasize that we deal with a time-series problem. We order the rows by date. The `GROUP BY` clause divides the data into partitions. Here, each of them relates to a particular bus route. We take into account just the last ten rows for every given prediction. Hence, we use `WINDOW` 10. To prepare the forecast of the number of bus rides for the next week, we define `HORIZON` 7.
-Now, you can execute the CREATE PREDICTOR statement and wait until your predictive model is complete. The MINDSDB.PREDICTORS table stores its name as rides_forecaster_demo and its status as training. Once your predictive model is ready, the status changes to complete.
+Now, you can execute the `CREATE MODEL` statement and wait until your predictive model is complete. The `mindsdb.models` table stores its name as rides_forecaster_demo and its status as training. Once your predictive model is ready, the status changes to complete.
 
 ## Step 3: Getting the Forecasts
 
@@ -109,7 +110,7 @@ Let’s run the query above to forecast the number of rides for route 171 in the
 
 Now we know the number of rides for route 171 in the next seven days. We could do it in the same way for all the other routes.
 
-Thanks to the special SQL syntax that includes CREATE PREDICTOR, PREDICT, and > LATEST, MindsDB makes it straightforward to run predictors on our chosen data.
+Thanks to the special SQL syntax that includes `CREATE MODEL`, `PREDICT`, and `> LATEST`, MindsDB makes it straightforward to run predictors on our chosen data.
 Now, let’s visualize our predictions.
 
 ## Visualizing the Results using Apache Superset

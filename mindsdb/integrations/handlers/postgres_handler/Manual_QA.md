@@ -39,7 +39,7 @@ FROM postgres_test (
 
 ```
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='diabetes_predictor';
 ```
 

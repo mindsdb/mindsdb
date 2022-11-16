@@ -35,7 +35,7 @@ class InformationSchemaDataNode(DataNode):
         'MODELS_VERSIONS': ['NAME', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
         'DATABASES': ['NAME', 'TYPE', 'ENGINE'],
         'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
-        'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS']
+        'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR']
     }
 
     def __init__(self, session):
@@ -153,15 +153,19 @@ class InformationSchemaDataNode(DataNode):
         handlers = self.integration_controller.get_handlers_import_status()
         ml_handlers = {
             key: val for key, val in handlers.items()
-            if val['import']['success'] is True and val['type'] == 'ml'}
+            if val.get('type') == 'ml'
+        }
 
         data = []
         for _key, val in ml_handlers.items():
             connection_args = val.get('connection_args')
             if connection_args is not None:
                 connection_args = str(dict(connection_args))
+            import_success = val.get('import', {}).get('success')
+            import_error = val.get('import', {}).get('error_message')
             data.append([
-                val['name'], val.get('title'), val.get('description'), val.get('version'), connection_args
+                val['name'], val.get('title'), val.get('description'), val.get('version'),
+                connection_args, import_success, import_error
             ])
 
         df = pd.DataFrame(data, columns=columns)

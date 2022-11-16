@@ -10,8 +10,7 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
-from mindsdb.utilities.log import log
-
+from mindsdb.utilities.log import get_log
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -19,6 +18,9 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
+
+log = get_log()
 
 
 class SQLAnyHandler(DatabaseHandler):

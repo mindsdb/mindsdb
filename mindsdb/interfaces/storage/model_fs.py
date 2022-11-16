@@ -130,12 +130,12 @@ class HandlerStorage:
 
     # folder
 
-    def folder_get(self, name):
+    def folder_get(self, name, update=True):
         # pull folder and return path
         name = name.lower().replace(' ', '_')
         name = re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
 
-        self.fileStorage.pull_path(name)
+        self.fileStorage.pull_path(name, update=update)
         return str(self.fileStorage.get_path(name))
 
     def folder_sync(self, name):

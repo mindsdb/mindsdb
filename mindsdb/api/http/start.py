@@ -16,6 +16,7 @@ from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
 from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
+from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
@@ -63,6 +64,7 @@ def start(verbose, no_studio, with_nlp):
     api.add_namespace(sql_ns)
     api.add_namespace(analysis_ns)
     api.add_namespace(handlers_ns)
+    api.add_namespace(tree_ns)
     if with_nlp:
         api.add_namespace(nlp_ns)
 
@@ -103,11 +105,6 @@ def start(verbose, no_studio, with_nlp):
         request.company_id = company_id
         request.user_class = user_class
 
-        request.model_controller = WithKWArgsWrapper(
-            current_app.original_model_controller,
-            company_id=company_id
-        )
-
         request.integration_controller = WithKWArgsWrapper(
             current_app.original_integration_controller,
             company_id=company_id
@@ -115,6 +112,11 @@ def start(verbose, no_studio, with_nlp):
 
         request.file_controller = WithKWArgsWrapper(
             current_app.original_file_controller,
+            company_id=company_id
+        )
+
+        request.database_controller = WithKWArgsWrapper(
+            current_app.original_database_controller,
             company_id=company_id
         )
 

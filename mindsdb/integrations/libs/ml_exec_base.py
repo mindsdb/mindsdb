@@ -32,9 +32,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropPredictor
 )
 
-
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
-
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.response import (
@@ -50,13 +48,13 @@ from mindsdb.interfaces.model.functions import (
     get_model_records
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
-
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.functions import mark_process
 from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
+
 from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
 import torch.multiprocessing as mp
@@ -348,7 +346,7 @@ class BaseMLEngineExec:
             p.join()
 
     def predict(self, model_name: str, data: list, pred_format: str = 'dict',
-                project_name: str = None, version=None):
+                project_name: str = None, version=None, params: dict = None):
         """ Generates predictions with some model and input data. """
         if isinstance(data, dict):
             data = [data]
@@ -366,7 +364,8 @@ class BaseMLEngineExec:
         ml_handler = self.get_ml_handler(predictor_record.id)
 
         args = {
-            'pred_format': pred_format
+            'pred_format': pred_format,
+            'predict_params': {} if params is None else params
         }
         # FIXME
         if self.handler_class.__name__ == 'LightwoodHandler':

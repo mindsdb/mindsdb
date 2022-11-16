@@ -1,4 +1,3 @@
-import os
 import copy
 import base64
 import shutil
@@ -10,6 +9,7 @@ from copy import deepcopy
 from collections import OrderedDict
 
 from sqlalchemy import func, or_
+import sqlalchemy as sa
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
@@ -20,7 +20,6 @@ from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers_client.db_client import DBServiceClient
-from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
 
 class IntegrationController:
@@ -35,7 +34,7 @@ class IntegrationController:
         integration_record = db.Integration(
             name=name,
             engine=engine,
-            data=connection_args,
+            data=connection_args or {},
             company_id=company_id
         )
         db.session.add(integration_record)
@@ -47,8 +46,10 @@ class IntegrationController:
             self._add_integration_record(name, engine, connection_args, company_id)
             return
 
-        log.logger.debug("%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
-                  self.__class__.__name__, name, engine, connection_args, company_id)
+        log.logger.debug(
+            "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
+            self.__class__.__name__, name, engine, connection_args, company_id
+        )
         handlers_meta = self.get_handlers_import_status()
         handler_meta = handlers_meta[engine]
         accept_connection_args = handler_meta.get('connection_args')
@@ -106,7 +107,7 @@ class IntegrationController:
 
         # check linked predictors
         predictor = db.session.query(db.Predictor.name).filter(
-            db.Predictor.status != PREDICTOR_STATUS.DELETED,
+            db.Predictor.deleted_at == sa.null(),
             or_(
                 db.Predictor.integration_id == integration_record.id,
                 db.Predictor.data_integration_id == integration_record.id,
@@ -117,13 +118,13 @@ class IntegrationController:
 
         # unlink integration from deleted predictors
         for predictor in db.session.query(db.Predictor).filter(
-            db.Predictor.status == PREDICTOR_STATUS.DELETED,
+            db.Predictor.deleted_at != sa.null(),
             db.Predictor.integration_id == integration_record.id
         ):
             predictor.integration_id = None
 
         for predictor in db.session.query(db.Predictor).filter(
-            db.Predictor.status == PREDICTOR_STATUS.DELETED,
+            db.Predictor.deleted_at != sa.null(),
             db.Predictor.data_integration_id == integration_record.id
         ):
             predictor.data_integration_id = None
@@ -305,13 +306,15 @@ class IntegrationController:
             ).first()
 
         integration_data = self._get_integration_record_data(integration_record, True)
+        if integration_data is None:
+            raise Exception(f"Can't find integration_record for handler '{name}'")
         connection_data = integration_data.get('connection_data', {})
         integration_engine = integration_data['engine']
         integration_name = integration_data['name']
         log.logger.debug("%s get_handler: connection_data=%s, engine=%s", self.__class__.__name__, connection_data, integration_engine)
 
         if integration_engine not in self.handler_modules:
-            raise Exception(f"Cant find handler for '{integration_name}' ({integration_engine})")
+            raise Exception(f"Can't find handler for '{integration_name}' ({integration_engine})")
 
         integration_meta = self.handlers_import_status[integration_engine]
         connection_args = integration_meta.get('connection_args')

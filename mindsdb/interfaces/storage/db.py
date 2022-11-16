@@ -85,7 +85,7 @@ class PREDICTOR_STATUS:
     GENERATING = 'generating'
     ERROR = 'error'
     VALIDATION = 'validation'
-    DELETED = 'deleted'
+    DELETED = 'deleted'  # TODO remove it?
 
 
 PREDICTOR_STATUS = PREDICTOR_STATUS()

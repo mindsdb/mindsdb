@@ -25,7 +25,9 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import ModelStorage, HandlerStorage
 
 from mindsdb.integrations.libs.handler_helpers import define_ml_handler
-from mindsdb.utilities.log import log
+from mindsdb.utilities.log import get_log
+
+log = get_log()
 
 class BaseMLWrapper:
     """Base abstract class contains some general methods."""

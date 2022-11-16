@@ -300,10 +300,14 @@ class BaseMLEngineExec:
             data_integration_meta = databases_meta[integration_name]
             # TODO improve here. Suppose that it is view
             if data_integration_meta['type'] == 'project':
-                # KEEP HERE
-                data_integration_id = self.handler_controller.get(name='views')['id']
+                data_integration_ref = {
+                    'type': 'view'
+                }
             else:
-                data_integration_id = data_integration_meta['id']
+                data_integration_ref = {
+                    'type': 'integration',
+                    'id': data_integration_meta['id']
+                }
 
         problem_definition = {'target': target}
 
@@ -345,7 +349,7 @@ class BaseMLEngineExec:
             company_id=self.company_id,
             name=model_name,
             integration_id=self.integration_id,
-            data_integration_id=data_integration_id,
+            data_integration_id=data_integration_id,    # data_integration_ref
             fetch_data_query=fetch_data_query,
             mindsdb_version=mindsdb_version,
             to_predict=target,

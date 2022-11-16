@@ -128,7 +128,6 @@ class BaseExecutorTest(BaseUnitTest):
 
         from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
         from mindsdb.interfaces.database.integrations import IntegrationController
-        from mindsdb.interfaces.database.views import ViewController
         from mindsdb.interfaces.file.file_controller import FileController
         from mindsdb.interfaces.model.model_controller import ModelController
         from mindsdb.interfaces.database.projects import ProjectController

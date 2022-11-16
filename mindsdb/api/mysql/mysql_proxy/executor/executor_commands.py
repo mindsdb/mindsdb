@@ -503,6 +503,8 @@ class ExecuteCommands:
         elif type(statement) == DropView:
             return self.answer_drop_view(statement)
         elif type(statement) == Delete:
+            if statement.table.parts[-1].lower() == 'models_versions':
+                return self.answer_delete_model_version(statement)
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
             if statement.table.parts[-1] != 'predictors':
@@ -521,6 +523,9 @@ class ExecuteCommands:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
             if statement.from_select is None:
+                if statement.table.parts[-1].lower() == 'models_versions':
+                    return self.answer_update_model_version(statement)
+
                 raise ErNotSupportedYet('Update is not implemented')
             else:
                 SQLQuery(
@@ -662,7 +667,18 @@ class ExecuteCommands:
         if integration_record is None:
             raise Exception(f"Model '{model_name}' does not have linked integration")
 
-        ml_handler = self.session.integration_controller.get_handler(integration_record.name)
+        ml_handler = None
+        if statement.using is not None:
+            # repack using with lower names
+            statement.using = {k.lower(): v for k, v in statement.using.items()}
+
+            if 'engine' in statement.using:
+                ml_integration_name = statement.using.pop('engine')
+                ml_handler = self.session.integration_controller.get_handler(ml_integration_name)
+
+        # use current ml handler
+        if ml_handler is None:
+            ml_handler = self.session.integration_controller.get_handler(integration_record.name)
 
         # region check if there is already predictor retraing
         is_cloud = self.session.config.get('cloud', False)
@@ -685,10 +701,7 @@ class ExecuteCommands:
                     "Can't start retrain while exists predictor in status 'training' or 'generating'"
                 )
         # endregion
-
-        result = ml_handler.query(statement)
-        if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
+        self.session.model_controller.retrain_model(statement, ml_handler)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -914,15 +927,15 @@ class ExecuteCommands:
         integration_name = integration_name.lower()
 
         ml_integration_name = 'lightwood'
-        if statement.using is not None and statement.using.get('engine') is not None:
-            using = {k.lower(): v for k, v in statement.using.items()}
-            ml_integration_name = using.get('engine', ml_integration_name)
+        if statement.using is not None:
+            # repack using with lower names
+            statement.using = {k.lower(): v for k, v in statement.using.items()}
+
+            ml_integration_name = statement.using.pop('engine', ml_integration_name)
 
         ml_handler = self.session.integration_controller.get_handler(ml_integration_name)
 
-        result = ml_handler.query(statement)
-        if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
+        self.session.model_controller.create_model(statement, ml_handler)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1337,6 +1350,65 @@ class ExecuteCommands:
             columns=query.columns_list,
             data=data['result'],
         )
+
+    def answer_update_model_version(self, statement):
+
+        # get project name
+        if len(statement.table.parts) > 1:
+            project_name = statement.table.parts[0]
+        else:
+            project_name = self.session.database
+
+        project_datanode = self.datahub.get(project_name)
+        if project_datanode is None:
+            raise Exception(f'Project not found: {project_name}')
+
+        # get list of model versions using filter
+        query = Select(
+            targets=[Identifier('version'), Identifier('name'), Identifier('project')],
+            from_table=Identifier('models_versions'),
+            where=statement.where,
+        )
+
+        models, _ = project_datanode.query(
+            query=query,
+            session=self.session
+        )
+
+        # get columns for update
+        kwargs = {}
+        for k, v in statement.update_columns.items():
+            if isinstance(v, Constant):
+                v = v.value
+            kwargs[k.lower()] = v
+        self.session.model_controller.update_model_version(models, **kwargs)
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_delete_model_version(self, statement):
+        # get project name
+        if len(statement.table.parts) > 1:
+            project_name = statement.table.parts[0]
+        else:
+            project_name = self.session.database
+
+        project_datanode = self.datahub.get(project_name)
+        if project_datanode is None:
+            raise Exception(f'Project not found: {project_name}')
+
+        # get list of model versions using filter
+        query = Select(
+            targets=[Identifier('version'), Identifier('name'), Identifier('project')],
+            from_table=Identifier('models_versions'),
+            where=statement.where,
+        )
+
+        models, _ = project_datanode.query(
+            query=query,
+            session=self.session
+        )
+
+        self.session.model_controller.delete_model_version(models)
+        return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def change_default_db(self, db_name):
         # That fix for bug in mssql: it keeps connection for a long time, but after some time mssql can

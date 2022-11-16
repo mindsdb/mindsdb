@@ -31,8 +31,8 @@ class InformationSchemaDataNode(DataNode):
         'CHARACTER_SETS': ['CHARACTER_SET_NAME', 'DEFAULT_COLLATE_NAME', 'DESCRIPTION', 'MAXLEN'],
         'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
         # MindsDB specific:
-        'MODELS': ['NAME', 'PROJECT', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
-        'MODELS_VERSIONS': ['NAME', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
+        'MODELS': ['NAME', 'PROJECT', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
+        'MODELS_VERSIONS': ['NAME', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
         'DATABASES': ['NAME', 'TYPE', 'ENGINE'],
         'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
         'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR']
@@ -261,9 +261,9 @@ class InformationSchemaDataNode(DataNode):
                 if table_meta['type'] != 'model':
                     continue
                 data.append([
-                    table_name, project_name, table_meta['status'], table_meta['accuracy'], table_meta['predict'],
+                    table_name, project_name, table_meta['version'], table_meta['status'], table_meta['accuracy'], table_meta['predict'],
                     table_meta['update_status'], table_meta['mindsdb_version'], table_meta['error'],
-                    table_meta['select_data_query'], table_meta['training_options']
+                    table_meta['select_data_query'], table_meta['training_options'], table_meta['label']
                 ])
             # TODO optimise here
             # if target_table is not None and target_table != project_name:
@@ -298,7 +298,7 @@ class InformationSchemaDataNode(DataNode):
                     table_name, project_name, table_meta['active'], table_meta['version'], table_meta['status'],
                     table_meta['accuracy'], table_meta['predict'], table_meta['update_status'],
                     table_meta['mindsdb_version'], table_meta['error'], table_meta['select_data_query'],
-                    table_meta['training_options']
+                    table_meta['training_options'], table_meta['label']
                 ])
 
         df = pd.DataFrame(data, columns=columns)
@@ -412,12 +412,7 @@ class InformationSchemaDataNode(DataNode):
             raise exc.ErNotSupportedYet('Information schema: Not implemented.')
 
         dataframe = self.get_dataframe_funcs[table_name](query=query)
-
-        try:
-            data = query_df(dataframe, query, session=self.session)
-        except Exception as e:
-            print(f'Exception! {e}')
-            return [], []
+        data = query_df(dataframe, query, session=self.session)
 
         columns_info = [
             {

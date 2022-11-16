@@ -1499,6 +1499,36 @@ or
   };
   ```
     
+### openGauss
+
+=== "Template"
+
+    ```sql
+    CREATE DATABASE opengauss_datasource                 --- display name for the database
+    WITH ENGINE='opengauss',                             --- name of the MindsDB handler
+    PARAMETERS={
+      "host": " ",                                  --- host name or IP address
+      "port": ,                                     --- port used to make TCP/IP connection
+      "database": " ",                              --- database name
+      "user": " ",                                  --- database user
+      "password": " ",                              --- database password
+    };
+    ```
+
+=== "Example"
+
+    ```sql
+    CREATE DATABASE opengauss_datasource
+    WITH ENGINE='opengauss',
+    PARAMETERS={
+      "host": "127.0.0.1",
+      "port": 5432,
+      "database": "opengauss",
+      "user": "mindsdb",
+      "password": "password"
+    };
+    ```
+
 ## Connecting Through Ngrok
 
 When connecting your local database to MindsDB Cloud, you need to expose the local database server to be publicly accessible using [Ngrok Tunnel](https://ngrok.com). The free tier offers all you need to get started.

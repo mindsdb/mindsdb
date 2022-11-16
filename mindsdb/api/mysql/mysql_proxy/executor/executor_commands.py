@@ -164,7 +164,7 @@ class ExecuteCommands:
             model_name = statement.name.parts[-1]
 
             try:
-                project = self.session.database_controller.get_project(db_name)
+                project = self.session.database_controller.get_project(database_name)
                 project.drop_table(model_name)
             except Exception as e:
                 if not statement.if_exists:

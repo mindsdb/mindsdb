@@ -91,6 +91,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='merlion', data={}, engine='merlion')
         db.session.add(r)
+        r = db.Integration(name='xgboost', data={}, engine='xgboost')
+        db.session.add(r)
         r = db.Integration(name='lightwood', data={}, engine='lightwood')
         db.session.add(r)
         db.session.flush()

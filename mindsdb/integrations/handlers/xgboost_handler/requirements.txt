@@ -1,0 +1,10 @@
+mindsdb>=22.6.2.1
+mindsdb_sql >= 0.4.0
+pandas <=1.4.3
+
+
+numpy>=1.22.3
+scikit-learn>=1.1.0,<=1.1.2
+xgboost>=1.6.0,<=1.6.2
+optuna>=2.9.0
+category_encoders>=2.4.0,<=2.5.1

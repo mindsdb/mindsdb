@@ -44,7 +44,7 @@ Where:
 Below is the query that creates and trains the `home_rentals_model` model to predict the `rental_price` value. The inner `SELECT` statement provides all real estate listing data used to train the model.
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
+CREATE MODEL mindsdb.home_rentals_model
 FROM integration
     (SELECT * FROM house_rentals_data)
 PREDICT rental_price;
@@ -79,7 +79,7 @@ Query OK, 0 rows affected (x.xxx sec)
 ```
 
 !!! tip "Dataset for Training and Dataset for Joining"
-    In this example, we used the same dataset (`integration.home_rentals_data`) for training the model (see the `CREATE PREDICTOR` statement above) and for joining with the model to make predictions (see the `CREATE VIEW` statement above). It doesn't happen like that in real-world scenarios.
+    In this example, we used the same dataset (`integration.home_rentals_data`) for training the model (see the `CREATE MODEL` statement above) and for joining with the model to make predictions (see the `CREATE VIEW` statement above). It doesn't happen like that in real-world scenarios.
     Normally, you use the old data to train the model, and then you join the new data with this model to make predictions.
 
     Consider the `old_data` dataset that stores data from the years 2019-2021 and the `new_data` dataset that stores data from the year 2022.
@@ -87,7 +87,7 @@ Query OK, 0 rows affected (x.xxx sec)
     We train the model with the `old_data` dataset like this:
 
     ```sql
-    CREATE PREDICTOR mindsdb.data_model
+    CREATE MODEL mindsdb.data_model
     FROM integration
         (SELECT * FROM old_data)
     PREDICT column;
@@ -122,7 +122,7 @@ GROUP BY 1
 2. Creating predictor from view
 
 ```sql
-CREATE predictor house_sales_model
+CREATE MODEL house_sales_model
 FROM mindsdb (
   SELECT * FROM house_v
 ) PREDICT ma

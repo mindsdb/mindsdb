@@ -23,7 +23,7 @@ You can briefly introduce the dataset you use.
 
 ## Training a Predictor
 
-Here you use the [`CREATE PREDICTOR`](/sql/create/predictor/) command to create a predictor.
+Here you use the [`CREATE MODEL`](/sql/create/predictor/) command to create a predictor.
 
 ## Status of a Predictor
 

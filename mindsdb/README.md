@@ -91,12 +91,12 @@ On execution, you should get:
 
 ---
 
-## 4. Creating a Predictor [`#!sql CREATE PREDICTOR`](/sql/create/predictor/)
+## 4. Creating a Predictor [`#!sql CREATE MODEL`](/sql/create/predictor/)
 
-Now you are ready to create your first predictor. Use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor/) syntax by copying and pasting this command into your SQL client:
+Now you are ready to create your first predictor. Use the [`#!sql CREATE MODEL`](/sql/create/predictor/) syntax by copying and pasting this command into your SQL client:
 
 ```sql 
-CREATE PREDICTOR mindsdb.home_rentals_predictor
+CREATE MODEL mindsdb.home_rentals_predictor
 FROM example_data
   (SELECT * FROM demo_data.home_rentals)
 PREDICT rental_price;
@@ -114,7 +114,7 @@ A predictor may take a couple of minutes for the training to complete. You can m
 
 ```sql
 SELECT status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='home_rentals_predictor';
 ```
 

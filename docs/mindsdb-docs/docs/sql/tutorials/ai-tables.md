@@ -60,10 +60,12 @@ When a table doesn’t have an exact match the query will return a null value. T
 Let’s create a debt model that allows us to approximate the debt value for any income value. We’ll train this debt model using the income table’s data.
 
 ```sql
-CREATE PREDICTOR mindsdb.debt_model FROM income_table PREDICT debt;
+CREATE MODEL mindsdb.debt_model 
+FROM income_table 
+PREDICT debt;
 ```
 
-MindsDB provides the **CREATE PREDICTOR** statement. When we execute this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows.
+MindsDB provides the **CREATE MODEL** statement. When we execute this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows.
 
 ![Income vs Debt model](/assets/sql/tutorials/snowflake-superset/7-debt-income-query-ml.jpg)
 

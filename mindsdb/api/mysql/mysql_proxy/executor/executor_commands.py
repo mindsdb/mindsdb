@@ -508,7 +508,7 @@ class ExecuteCommands:
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
             if statement.table.parts[-1] != 'predictors':
-                raise ErBadTableError("Only 'DELETE' from table 'mindsdb.predictors' is possible at this moment")
+                raise ErBadTableError("Only 'DELETE' from table 'mindsdb.models' is possible at this moment")
             self.delete_predictor_query(statement)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Insert:

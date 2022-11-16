@@ -68,7 +68,7 @@ class ProjectDataNode(DataNode):
 
         # region is it query to 'models' or 'models_versions'?
         query_table = query.from_table.parts[0]
-        # region FIXME temporary fix to not broke queries to 'mindsdb.predictors'. Can be deleted it after 1.12.2022
+        # region FIXME temporary fix to not broke queries to 'mindsdb.models'. Can be deleted it after 1.12.2022
         if query_table == 'predictors':
             query.from_table.parts[0] = 'models'
             query_table = 'models'

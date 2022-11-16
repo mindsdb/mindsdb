@@ -212,7 +212,7 @@ Now, we create predictors based on the `example_db.demo_data.used_car_price` tab
 === "Using the Base Table"
 
     ```sql
-    CREATE PREDICTOR mindsdb.price_predictor
+    CREATE MODEL mindsdb.price_predictor
     FROM example_db
     (SELECT * FROM demo_data.used_car_price)
     PREDICT price;
@@ -227,7 +227,8 @@ Now, we create predictors based on the `example_db.demo_data.used_car_price` tab
 === "Using the Base Table + 2 More Columns"
 
     ```sql
-    CREATE PREDICTOR mindsdb.price_predictor_plus_2_columns
+
+    CREATE MODEL mindsdb.price_predictor_plus_2_columns
     FROM mindsdb
         (SELECT * FROM used_car_price_plus_2_columns)
     PREDICT price;
@@ -242,7 +243,7 @@ Now, we create predictors based on the `example_db.demo_data.used_car_price` tab
 === "Using the Base Table + 4 More Columns"
 
     ```sql
-    CREATE PREDICTOR mindsdb.price_predictor_plus_another_2_columns
+    CREATE MODEL mindsdb.price_predictor_plus_another_2_columns
     FROM mindsdb
         (SELECT * FROM used_car_price_plus_another_2_columns)
     PREDICT price;
@@ -255,7 +256,7 @@ Now, we create predictors based on the `example_db.demo_data.used_car_price` tab
     ```
 
 !!! note "Dropping a Predictor"
-    If you want to drop a predictor, run the command `DROP PREDICTOR predictor_name;`.
+    If you want to drop a predictor, run the command `DROP MODEL predictor_name;`.
 
 #### Predictor Status
 
@@ -504,7 +505,7 @@ On execution, we get:
 Let's create a predictor with the `car_sales` table as input data.
 
 ```sql
-CREATE PREDICTOR mindsdb.price_predictor_car_sales
+CREATE MODEL mindsdb.price_predictor_car_sales
 FROM example_db
   (SELECT * FROM demo_data.car_sales)
 PREDICT price;
@@ -519,7 +520,7 @@ Query OK, 0 rows affected (x.xxx sec)
 Now, let's create a predictor for the table that is a `JOIN` between the `car_sales` and `car_info` tables.
 
 ```sql
-CREATE PREDICTOR mindsdb.price_predictor_car_sales_info
+CREATE MODEL mindsdb.price_predictor_car_sales_info
 FROM mindsdb
   (SELECT * FROM car_sales_info)
 PREDICT price;

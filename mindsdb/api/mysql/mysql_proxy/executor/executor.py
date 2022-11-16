@@ -85,7 +85,7 @@ class Executor:
             ]
 
             # TODO:
-            #   select * from mindsdb.predictors doesn't invoke prepare_steps and columns_list is empty
+            #   select * from mindsdb.models doesn't invoke prepare_steps and columns_list is empty
             self.columns = sqlquery.columns_list
 
     def stmt_execute(self, param_values):

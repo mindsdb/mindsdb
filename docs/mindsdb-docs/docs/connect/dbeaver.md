@@ -66,7 +66,7 @@ To finally make sure that our MinsdDB database connection works, let's run some 
 
 ```sql
 SELECT *
-FROM mindsdb.predictors;
+FROM mindsdb.models;
 ```
 
 On execution, we get:

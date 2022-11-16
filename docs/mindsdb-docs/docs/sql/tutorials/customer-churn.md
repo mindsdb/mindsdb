@@ -107,10 +107,10 @@ Where:
 
 ## Training a Predictor
 
-Let's create and train the machine learning model. For that, we use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) statement and specify the input columns used to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
+Let's create and train the machine learning model. For that, we use the [`#!sql CREATE MODEL`](/sql/create/predictor) statement and specify the input columns used to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
 
 ```sql
-CREATE PREDICTOR mindsdb.customer_churn_predictor
+CREATE MODEL mindsdb.customer_churn_predictor
 FROM files
   (SELECT * FROM churn)
 PREDICT Churn;
@@ -124,7 +124,7 @@ A predictor may take a couple of minutes for the training to complete. You can m
 
 ```sql
 SELECT status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='customer_churn_predictor';
 ```
 

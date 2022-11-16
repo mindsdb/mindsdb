@@ -102,12 +102,12 @@ On execution, we get:
 
 To learn more about MindsDB tables structure, check out [this guide](sql/table-structure/).
 
-## 5. Creating a Predictor Using [`#!sql CREATE PREDICTOR`](/sql/create/predictor/)
+## 5. Creating a Predictor Using [`#!sql CREATE MODEL`](/sql/create/predictor/)
 
-Now you are ready to create your first predictor. Use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor/) statement, as below.
+Now you are ready to create your first predictor. Use the [`#!sql CREATE MODEL`](/sql/create/predictor/) statement, as below.
 
 ```sql 
-CREATE PREDICTOR mindsdb.home_rentals_predictor
+CREATE MODEL mindsdb.home_rentals_predictor
 FROM example_data
   (SELECT * FROM demo_data.home_rentals)
 PREDICT rental_price;
@@ -125,7 +125,7 @@ It may take a couple of minutes until the predictor is trained. You can monitor 
 
 ```sql
 SELECT status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='home_rentals_predictor';
 ```
 
@@ -147,6 +147,18 @@ Or:
 +----------+
 | complete |
 +----------+
+```
+
+Alternatively, you can use the `SHOW MODELS` command as below.
+
+```sql
+SHOW MODELS [FROM *database_project_name*] [LIKE *model_name*] [WHERE *filter*];
+```
+
+Here is an example:
+
+```sql
+SHOW MODELS FROM mindsdb LIKE 'home_rentals_predictor' WHERE status='complete';
 ```
 
 !!! attention "The status of the predictor must be `complete` before you can start making predictions."

@@ -74,10 +74,10 @@ Select the `Run` button or Shift+Enter to execute the syntax. Once the Database 
 
 We can create a machine learning predictive model by using simple SQL statements executed in the SQL Editor.
 
-To create and train a new machine learning model we will need to use the CREATE PREDICTOR statement:
+To create and train a new machine learning model we will need to use the `CREATE MODEL` statement:
 
 ```sql
-CREATE PREDICTOR mindsdb.predictor_name
+CREATE MODEL mindsdb.predictor_name
 FROM integration_name
     (SELECT column_name, column_name2 FROM table_name)
 PREDICT column_name;
@@ -92,7 +92,7 @@ The required values that we need to provide are:
 To train the model that will predict the risk of heart disease as target we will run:
 
 ```sql
-CREATE PREDICTOR patients_target
+CREATE MODEL patients_target
 FROM mindsdb_predictions
     (SELECT * FROM heart_disease)
 PREDICT target;
@@ -106,7 +106,7 @@ What we did here was to create a predictor called `patients_target `to predict t
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='patients_target';
 ```
 

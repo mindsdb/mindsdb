@@ -108,15 +108,15 @@ nav:
     - PROJECTS: sql/project.md
     - CREATE:
       - DATABASE: sql/create/databases.md
-      - PREDICTOR: sql/create/predictor.md
+      - MODEL: sql/create/predictor.md
       - TABLE: sql/create/table.md
       - VIEW: sql/create/view.md
       - ML_ENGINE: sql/create/ml_engine.md
     - UPDATE: sql/api/update.md
     - INSERT INTO: sql/api/insert.md
-    - DESCRIBE PREDICTOR: sql/api/describe.md
+    - DESCRIBE MODEL: sql/api/describe.md
     - RETRAIN: sql/api/retrain.md
-    - DROP PREDICTOR: sql/api/drop.md
+    - DROP MODEL: sql/api/drop.md
     - SELECT: sql/api/select.md
     - SELECT from files: sql/api/select_files.md
     - JOIN: sql/api/join.md

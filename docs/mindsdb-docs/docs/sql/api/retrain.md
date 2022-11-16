@@ -22,14 +22,14 @@ Query OK, 0 rows affected (0.058 sec)
 
 ## When to `#!sql RETRAIN` the Model?
 
-It is advised to `#!sql RETRAIN` the predictor whenever the `update_status` column value from the `mindsdb.predictors` table is set to `available`.
+It is advised to `#!sql RETRAIN` the predictor whenever the `update_status` column value from the `mindsdb.models` table is set to `available`.
 
 Here is when the `update_status` column value is set to `available`:
 
 - When the new version of MindsDB is available that causes the predictor to become obsolete.
 - When the new data is available in the table that was used to train the predictor.
 
-To find out whether you need to retrain your model, query the `mindsdb.predictors` table and look for the `update_status` column.
+To find out whether you need to retrain your model, query the `mindsdb.models` table and look for the `update_status` column.
 
 Here are the possible values of the `update_status` column:
 
@@ -43,7 +43,7 @@ Let's run the query.
 
 ```sql
 SELECT name, update_status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name = '[predictor_name]';
 ```
 
@@ -72,7 +72,7 @@ First, we check the status of the predictor.
 
 ```sql
 SELECT name, update_status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name = 'home_rentals_model';
 ```
 
@@ -102,7 +102,7 @@ Now, let's check the status again.
 
 ```sql
 SELECT  name, update_status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name = 'home_rentals_model';
 ```
 
@@ -120,7 +120,7 @@ And after the retraining process is completed:
 
 ```sql
 SELECT  name, update_status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name = 'home_rentals_model';
 ```
 

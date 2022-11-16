@@ -70,10 +70,3 @@ class ViewController:
             raise Exception(f"There are multiple views with name/id: {name}/{id}")
         record = records[0]
         return self._get_view_record_data(record)
-
-    def get_all(self, company_id=None):
-        view_records = db.session.query(db.View).filter_by(company_id=company_id).all()
-        views_dict = {}
-        for record in view_records:
-            views_dict[record.name] = self._get_view_record_data(record)
-        return views_dict

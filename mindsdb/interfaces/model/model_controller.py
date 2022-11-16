@@ -162,8 +162,7 @@ class ModelController():
             for predictor_record in predictors_records:
                 model_data = self.get_model_data(predictor_record=predictor_record, company_id=company_id)
                 if (
-                    is_cloud is True
-                    and model_data.get('status') in ['generating', 'training']
+                    model_data.get('status') in ['generating', 'training']
                     and isinstance(model_data.get('created_at'), str) is True
                     and (dt.datetime.now() - parse_datetime(model_data.get('created_at'))) < dt.timedelta(hours=1)
                 ):

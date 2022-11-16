@@ -69,12 +69,12 @@ class DatabaseController:
             for x in self.get_list(company_id=company_id, filter_type=filter_type)
         )
 
-    def get(self, integration_id, company_id=None):
+    def get_integration(self, integration_id, company_id=None):
         # get integration by id
 
         # TODO get directly from db?
         for rec in self.get_list(company_id=company_id):
-            if rec['id'] == integration_id:
+            if rec['id'] == integration_id and rec['type'] in ('data', 'view'):
                 return {
                     'name': rec['name'],
                     'type': rec['type'],

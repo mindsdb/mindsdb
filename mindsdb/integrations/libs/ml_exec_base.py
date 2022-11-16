@@ -273,7 +273,7 @@ class BaseMLEngineExec:
         if data_integration_id is not None:
 
             # get data from integration
-            integration_name = self.database_controller.get(data_integration_id)['name']
+            integration_name = self.database_controller.get_integration(data_integration_id)['name']
             query = Select(
                 targets=[Star()],
                 from_table=NativeQuery(

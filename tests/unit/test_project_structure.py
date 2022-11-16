@@ -285,4 +285,45 @@ class TestProjectStructure(BaseExecutorDummyML):
         ret = self.run_sql('select * from proj.models_versions')
         assert len(ret) == 0
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_view(self, data_handler):
+        df = pd.DataFrame([
+            {'a': 1, 'b': dt.datetime(2020, 1, 1)},
+            {'a': 2, 'b': dt.datetime(2020, 1, 2)},
+            {'a': 1, 'b': dt.datetime(2020, 1, 3)},
+        ])
+        self.set_handler(data_handler, name='pg', tables={'tasks': df})
+
+        self.run_sql('''
+            create view mindsdb.vtasks (
+                select * from pg.tasks where a=1
+            )
+        ''')
+
+        # -- create model --
+        self.run_sql(
+            '''
+                CREATE PREDICTOR mindsdb.task_model
+                from mindsdb (select * from vtasks)
+                PREDICT a
+                using engine='dummy_ml'
+            '''
+        )
+        self.wait_predictor('mindsdb', 'task_model')
+
+        # check input to data handler
+        assert data_handler().query.call_args[0][0].to_string() == 'SELECT * FROM tasks WHERE tasks.a = 1'
+
+        # use model
+        ret = self.run_sql('''
+             SELECT m.*
+               FROM mindsdb.vtasks as t
+               JOIN mindsdb.task_model as m
+        ''')
+
+        assert len(ret) == 2
+        assert ret.predicted[0] == 42
+
+
+
 

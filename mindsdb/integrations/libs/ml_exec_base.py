@@ -17,7 +17,6 @@ In particular, three big components are included:
 """
 
 import datetime as dt
-from dateutil.parser import parse as parse_datetime
 import traceback
 import importlib
 
@@ -26,11 +25,6 @@ import pandas as pd
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import Identifier, Select, Show, Star, NativeQuery
-from mindsdb_sql.parser.dialects.mindsdb import (
-    RetrainPredictor,
-    CreatePredictor,
-    DropPredictor
-)
 
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
 from mindsdb.utilities.config import Config
@@ -44,8 +38,7 @@ from mindsdb.utilities.hooks import after_predict as after_predict_hook
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.model.functions import (
-    get_model_record,
-    get_model_records
+    get_model_record
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS

@@ -73,7 +73,9 @@ class TestProjectStructure(BaseExecutorDummyML):
                 CREATE PREDICTOR proj.task_model
                 from pg (select * from tasks)
                 PREDICT a
-                using engine='dummy_ml',  tag = 'first'
+                using engine='dummy_ml',  
+                tag = 'first',
+                join_learn_process=true
             '''
         )
         self.wait_predictor('proj', 'task_model')
@@ -102,7 +104,8 @@ class TestProjectStructure(BaseExecutorDummyML):
                 retrain proj.task_model
                 from pg (select * from tasks where a=2)
                 PREDICT b
-                using tag = 'second'
+                using tag = 'second',
+                join_learn_process=true
             '''
         )
         self.wait_predictor('proj', 'task_model', {'tag': 'second'})

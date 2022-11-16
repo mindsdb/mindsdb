@@ -78,6 +78,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         )
         self.wait_predictor('proj', 'task_model')
 
+        # check input to data handler
         assert data_handler().native_query.call_args[0][0] == 'select * from tasks'
 
         # tag works in create model
@@ -162,13 +163,14 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # ================ working with inactive versions =================
 
-        # run 3st version model and check used model version
+        # run 3rd version model and check used model version
         ret = self.run_sql('''
              SELECT m.*
                FROM pg.tasks as t
                JOIN proj.task_model.3 as m
         ''')
 
+        # 3rd version was used
         models = self.get_models()
         model_id = ret.predictor_id[0]
         assert models[model_id].label == 'third'
@@ -178,7 +180,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         model_id = ret.predictor_id[0]
         assert models[model_id].label == 'third'
 
-        # not existing version
+        # check exception: not existing version
         with pytest.raises(Exception) as exc_info:
             self.run_sql(
                 'SELECT * from proj.task_model.4 where a=1 and b=2',
@@ -187,7 +189,7 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # ================== managing versions =========================
 
-        # show models command
+        # check 'show models' command in different combination
         # Show models <from | in> <project> where <expr>
         ret = self.run_sql('Show models')
         assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
@@ -201,6 +203,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         ret = self.run_sql("Show models where name='task_model'")
         assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
 
+        # model is not exists
         ret = self.run_sql("Show models from proj where name='xxx'")
         assert len(ret) == 0
 
@@ -269,6 +272,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         ret = self.run_sql('select * from proj.models')
         assert len(ret) == 0
 
+        # versions are also deleted
         ret = self.run_sql('select * from proj.models_versions')
         assert len(ret) == 0
 

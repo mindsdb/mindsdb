@@ -67,6 +67,8 @@ ctx = mp.get_context('spawn')
 def learn_process(class_path, company_id, integration_id,
                   predictor_id, training_data_df, target,
                   problem_definition, set_active):
+    # Train a model. Is run in subprocess
+
     db.init()
 
     predictor_record = db.Predictor.query.with_for_update().get(predictor_id)

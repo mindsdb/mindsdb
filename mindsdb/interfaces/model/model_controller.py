@@ -248,7 +248,9 @@ class ModelController():
 
         self.fs_store.push()
 
-    def process_create_statement(self, statement, database_controller, handler_controller):
+    def prepare_create_statement(self, statement, database_controller, handler_controller):
+        # extract data from Create model or Retrain statement and prepare it for using in crate and retrain functions
+
         # TODO use database_controller handler_controller internally
 
         project_name = statement.name.parts[0].lower()
@@ -307,7 +309,7 @@ class ModelController():
         )
 
     def create_model(self, statement, ml_handler, company_id: int):
-        params = self.process_create_statement(statement,
+        params = self.prepare_create_statement(statement,
                                                ml_handler.database_controller,
                                                ml_handler.handler_controller)
 
@@ -330,7 +332,7 @@ class ModelController():
             if set_active in ('0', 0, None):
                 set_active = False
 
-        params = self.process_create_statement(statement,
+        params = self.prepare_create_statement(statement,
                                                ml_handler.database_controller,
                                                ml_handler.handler_controller)
 

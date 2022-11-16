@@ -70,6 +70,8 @@ class DatabaseController:
         )
 
     def get(self, integration_id, company_id=None):
+        # get integration by id
+
         # TODO get directly from db?
         for rec in self.get_list(company_id=company_id):
             if rec['id'] == integration_id:

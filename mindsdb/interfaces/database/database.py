@@ -74,7 +74,7 @@ class DatabaseController:
 
         # TODO get directly from db?
         for rec in self.get_list(company_id=company_id):
-            if rec['id'] == integration_id and rec['type'] in ('data', 'view'):
+            if rec['id'] == integration_id and rec['type'] == 'data':
                 return {
                     'name': rec['name'],
                     'type': rec['type'],

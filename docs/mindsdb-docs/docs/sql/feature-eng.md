@@ -125,7 +125,7 @@ Let's prepare and verify the data. Here, we create the views and query them to e
 
     ```sql
     SELECT *
-    FROM views.used_car_price_plus_2_columns
+    FROM mindsdb.used_car_price_plus_2_columns
     LIMIT 5;
     ```
 
@@ -184,7 +184,7 @@ Let's prepare and verify the data. Here, we create the views and query them to e
 
     ```sql
     SELECT *
-    FROM views.used_car_price_plus_another_2_columns
+    FROM mindsdb.used_car_price_plus_another_2_columns
     LIMIT 5;
     ```
 
@@ -227,9 +227,10 @@ Now, we create predictors based on the `example_db.demo_data.used_car_price` tab
 === "Using the Base Table + 2 More Columns"
 
     ```sql
+
     CREATE MODEL mindsdb.price_predictor_plus_2_columns
-    FROM views
-    (SELECT * FROM used_car_price_plus_2_columns)
+    FROM mindsdb
+        (SELECT * FROM used_car_price_plus_2_columns)
     PREDICT price;
     ```
 
@@ -243,8 +244,8 @@ Now, we create predictors based on the `example_db.demo_data.used_car_price` tab
 
     ```sql
     CREATE MODEL mindsdb.price_predictor_plus_another_2_columns
-    FROM views
-    (SELECT * FROM used_car_price_plus_another_2_columns)
+    FROM mindsdb
+        (SELECT * FROM used_car_price_plus_another_2_columns)
     PREDICT price;
     ```
 
@@ -481,7 +482,7 @@ Let's verify the view by selecting from it.
 
 ```sql
 SELECT *
-FROM views.car_sales_info
+FROM mindsdb.car_sales_info
 LIMIT 5;
 ```
 
@@ -520,7 +521,7 @@ Now, let's create a predictor for the table that is a `JOIN` between the `car_sa
 
 ```sql
 CREATE MODEL mindsdb.price_predictor_car_sales_info
-FROM views
+FROM mindsdb
   (SELECT * FROM car_sales_info)
 PREDICT price;
 ```

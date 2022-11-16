@@ -12,7 +12,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -90,7 +90,7 @@ class S3Handler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.error(f'Error connecting to AWS with the given credentials, {e}!')
+            log.logger.error(f'Error connecting to AWS with the given credentials, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -139,7 +139,7 @@ class S3Handler(DatabaseHandler):
                 data_frame=df
             )
         except Exception as e:
-            log.error(f'Error running query: {query} on {self.connection_data["key"]} in {self.connection_data["bucket"]}!')
+            log.logger.error(f'Error running query: {query} on {self.connection_data["key"]} in {self.connection_data["bucket"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

@@ -35,7 +35,7 @@ integrations                      # Contains integrations source codes
 
 In technical terms, a handler is a self-contained Python package having everything required for MindsDB to interact with it. It includes aspects like dependencies, unit tests, and continuous integration logic. It is up to the author to determine the nature of the package, for example, closed or open source, version control, and more. Although, we encourage opening pull requests to expand the default set of supported tools.
 
-The entry point is a class definition that should inherit either from the `integrations.libs.base_handler.DatabaseHandler` class or the `integrations.libs.base_handler.PredictiveHandler` class, depending on the type of the handler. The `integrations.libs.base_handler.BaseHandler` class defines all the methods that must be overwritten in order to achieve a functional implementation.
+The entry point is a class definition that should inherit either from the `integrations.libs.base.DatabaseHandler` class or the `integrations.libs.base.PredictiveHandler` class, depending on the type of the handler. The `integrations.libs.base.BaseHandler` class defines all the methods that must be overwritten in order to achieve a functional implementation.
 
 !!! note "Handler's Structure"
     The handler's structure is not enforced, and the package design is up to the author.

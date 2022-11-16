@@ -104,6 +104,7 @@ class DatabaseHandler(BaseHandler):
     """
     Base class for handlers associated to data storage systems (e.g. databases, data warehouses, streaming services, etc.)
     """
+
     def __init__(self, name: str):
         super().__init__(name)
 
@@ -114,6 +115,7 @@ class PredictiveHandler(BaseHandler):
 
     Base class for handlers associated to predictive systems.
     """
+
     def __init__(self, name: str):
         super().__init__(name)
 
@@ -191,3 +193,6 @@ class BaseMLEngine:
         Used to connect with external sources (e.g. a REST API) that the engine will require to use any other methods.
         """
         raise NotImplementedError
+
+    def close(self):
+        pass

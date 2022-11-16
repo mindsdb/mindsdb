@@ -250,10 +250,19 @@ class TestProjectStructure(BaseExecutorDummyML):
         with pytest.raises(Exception) as exc_info:
             self.run_sql('''
                delete from proj.models_versions 
-               where version=3 
-               and model='task_model'
+               where version=1 
+               and name='task_model'
             ''')
-        assert 'is not found' in str(exc_info.value)
+        assert "Can't remove active version" in str(exc_info.value)
+
+        # exception with deleting non-existing version
+        with pytest.raises(Exception) as exc_info:
+            self.run_sql('''
+               delete from proj.models_versions 
+               where version=11 
+               and name='task_model'
+            ''')
+        assert "is not found" in str(exc_info.value)
 
         # ----------------------------------------------------
 

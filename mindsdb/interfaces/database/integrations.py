@@ -19,6 +19,7 @@ from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers_client.db_client import DBServiceClient
+from mindsdb.interfaces.model.functions import get_model_records
 
 
 class IntegrationController:
@@ -105,38 +106,17 @@ class IntegrationController:
         integration_record = db.session.query(db.Integration).filter_by(company_id=company_id, name=name).first()
 
         # check linked predictors
-        predictor = db.session.query(db.Predictor.name).filter(
-            db.Predictor.deleted_at == sa.null(),
-            or_(
-                db.Predictor.integration_id == integration_record.id,
-                db.Predictor.data_integration_id == integration_record.id,
-            )
-        ).first()
-        if predictor is not None:
-            raise Exception(f'Unable to drop: is linked to predictor {predictor.name}')
+        models = get_model_records(company_id=company_id)
+        for model in models:
+            if (
+                model.data_integration_ref is not None
+                and model.data_integration_ref.get('type') == 'data'
+                and model.data_integration_ref.get('id') is not None
+            ):
+                data_integration_id = int(model['data_integration_ref']['id'])
+                if data_integration_id == integration_record.id:
+                    model.data_integration_ref = None
 
-        # unlink integration from deleted predictors
-        for predictor in db.session.query(db.Predictor).filter(
-            db.Predictor.deleted_at != sa.null(),
-            db.Predictor.integration_id == integration_record.id
-        ):
-            predictor.integration_id = None
-
-        for predictor in db.session.query(db.Predictor).filter(
-            db.Predictor.deleted_at != sa.null(),
-            db.Predictor.data_integration_id == integration_record.id
-        ):
-            predictor.data_integration_id = None
-
-        # integrations_dir = Config()['paths']['integrations']
-        # folder_name = f'integration_files_{company_id}_{integration_record.id}'
-        # integration_dir = os.path.join(integrations_dir, folder_name)
-        # if os.path.isdir(integration_dir):
-        #     shutil.rmtree(integration_dir)
-        # try:
-        #     FsStore().delete(folder_name)
-        # except Exception:
-        #     pass
         db.session.delete(integration_record)
         db.session.commit()
 

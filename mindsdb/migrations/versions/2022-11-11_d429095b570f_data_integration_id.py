@@ -39,13 +39,17 @@ def upgrade():
         ''').fetchall()
 
         for predictor in predictors:
-            data_integration_ref = {'type': 'integration', 'id': predictor['data_integration_id']}
+            data_integration_ref = None
+            if predictor['data_integration_id'] is not None:
+                data_integration_ref = {'type': 'integration', 'id': predictor['data_integration_id']}
             if predictor['data_integration_id'] == views_integration_id:
                 data_integration_ref = {'type': 'view'}
+            if isinstance(data_integration_ref, dict):
+                data_integration_ref = json.dumps(data_integration_ref)
             conn.execute(text('''
                 update predictor set data_integration_ref = :data_integration_ref where id = :id
             '''), {
-                'data_integration_ref': json.dumps(data_integration_ref),
+                'data_integration_ref': data_integration_ref,
                 'id': predictor['id']
             })
 

@@ -54,7 +54,7 @@ class ViewController:
             'query': record.query
         }
 
-    def get(self, id=None, name=None, project_name=None, company_id):
+    def get(self, company_id, id=None, name=None, project_name=None):
         project_record = db.session.query(db.Project).filter_by(
             name=project_name,
             company_id=company_id,

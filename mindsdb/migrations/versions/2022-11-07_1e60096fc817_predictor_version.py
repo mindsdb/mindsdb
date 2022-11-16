@@ -7,7 +7,7 @@ Create Date: 2022-11-07 16:43:47.301692
 """
 from alembic import op
 import sqlalchemy as sa
-import mindsdb.interfaces.storage.db
+import mindsdb.interfaces.storage.db as db
 
 
 
@@ -24,6 +24,26 @@ def upgrade():
         batch_op.add_column(sa.Column('label', sa.String(), nullable=True))
         batch_op.add_column(sa.Column('version', sa.Integer(), nullable=True))
 
+    # update current predictor versions
+    conn = op.get_bind()
+    session = sa.orm.Session(bind=conn)
+
+    key0 = (None, None, None)
+    for p in session.query(db.Predictor)\
+            .order_by(db.Predictor.name, db.Predictor.id)\
+            .all():
+
+        key = (p.company_id, p.project_id, p.name.lower())
+
+        # it is different name or project or company
+        if key != key0:
+            version = 1
+            key0 = key
+
+        p.version = version
+        version += 1
+
+    session.commit()
     # ### end Alembic commands ###
 
 

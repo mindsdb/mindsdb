@@ -76,20 +76,16 @@ class Project:
         )
 
         data = []
-        i = 0
+
         for predictor_record, integraion_record in records:
             predictor_data = deepcopy(predictor_record.data) or {}
-            if len(data) == 0 or data[-1]['name'] != predictor_record.name:
-                i = 1
-            else:
-                i += 1
             predictor_meta = {
                 'type': 'model',
                 'id': predictor_record.id,
                 'engine': integraion_record.engine,
                 'engine_name': integraion_record.name,
                 'active': predictor_record.active,
-                'version': i,
+                'version': predictor_record.version,
                 'status': predictor_record.status,
                 'accuracy': None,
                 'predict': predictor_record.to_predict[0],

@@ -451,7 +451,11 @@ class SQLQuery():
 
         def get_all_query_tables(node, is_table, **kwargs):
             if is_table and isinstance(node, Identifier):
-                query_tables.append(node.parts[-1])
+                table_name = node.parts[-1]
+                if table_name.isdigit():
+                    # is predictor version
+                    table_name = node.parts[-2]
+                query_tables.append(table_name)
 
         query_traversal(self.query, get_all_query_tables)
 
@@ -776,7 +780,7 @@ class SQLQuery():
 
             columns_collection = ColumnsCollection()
             for column in columns_info:
-                columns_collection.add(table_name, column)
+                columns_collection.add(table, column)
 
             data = {
                 'values': [],
@@ -878,9 +882,14 @@ class SQLQuery():
                 where_data = step.row_dict
                 project_datanode = self.datahub.get(project_name)
 
+                version = None
+                if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
+                    version = int(step.predictor.parts[-1])
+
                 predictions = project_datanode.predict(
                     model_name=predictor_name,
-                    data=where_data
+                    data=where_data,
+                    version=version
                 )
 
                 data = [{(key, key): value for key, value in row.items()} for row in predictions]
@@ -984,9 +993,13 @@ class SQLQuery():
                     data = predictor_cache.get(key)
 
                     if data is None:
+                        version = None
+                        if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
+                            version = int(step.predictor.parts[-1])
                         data = project_datanode.predict(
                             model_name=predictor_name,
-                            data=where_data
+                            data=where_data,
+                            version=version
                         )
                         if data is not None and isinstance(data, list):
                             predictor_cache.set(key, data)

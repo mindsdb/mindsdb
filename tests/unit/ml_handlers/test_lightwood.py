@@ -115,4 +115,4 @@ class TestLW(BaseExecutorTest):
            where t.a='b' and t.t > latest
         ''')
         # LW can predict
-        assert list(ret.x) == [42, 43, 44]
+        assert list(round(ret.x)) == [42, 43, 44]

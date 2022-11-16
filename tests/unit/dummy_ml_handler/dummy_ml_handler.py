@@ -9,4 +9,5 @@ class DummyHandler(BaseMLEngine):
 
     def predict(self, df, args=None):
         df['predicted'] = 42
-        return df[['predicted']]
+        df['predictor_id'] = self.model_storage.predictor_id
+        return df[['predicted', 'predictor_id']]

@@ -23,7 +23,7 @@ depends_on = None
 
 def upgrade():
     with op.batch_alter_table('predictor', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('data_integration', db.Json(), nullable=True))
+        batch_op.add_column(sa.Column('data_integration_ref', db.Json(), nullable=True))
 
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
@@ -39,13 +39,13 @@ def upgrade():
         ''').fetchall()
 
         for predictor in predictors:
-            data_integration = {'type': 'integration', 'id': predictor['data_integration_id']}
+            data_integration_ref = {'type': 'integration', 'id': predictor['data_integration_id']}
             if predictor['data_integration_id'] == views_integration_id:
-                data_integration = {'type': 'view'}
+                data_integration_ref = {'type': 'view'}
             conn.execute(text('''
-                update predictor set data_integration = :data_integration where id = :id
+                update predictor set data_integration_ref = :data_integration_ref where id = :id
             '''), {
-                'data_integration': json.dumps(data_integration),
+                'data_integration_ref': json.dumps(data_integration_ref),
                 'id': predictor['id']
             })
 
@@ -78,16 +78,16 @@ def downgrade():
     session.commit()
 
     predictors = conn.execute('''
-        select id, data_integration_id from predictor
+        select id, data_integration_ref from predictor
     ''').fetchall()
 
     for predictor in predictors:
-        data_integration = predictor['data_integration_id']
-        if data_integration is None:
+        data_integration_ref = predictor['data_integration_ref']
+        if data_integration_ref is None:
             continue
-        data_integration = json.loads(data_integration)
-        data_integration_id = data_integration.get('id')
-        if data_integration['type'] == 'view':
+        data_integration_ref = json.loads(data_integration_ref)
+        data_integration_id = data_integration_ref.get('id')
+        if data_integration_ref['type'] == 'view':
             data_integration_id = views_integration.id
 
         conn.execute(text('''
@@ -99,4 +99,4 @@ def downgrade():
 
     with op.batch_alter_table('predictor', schema=None) as batch_op:
         batch_op.create_foreign_key('fk_data_integration_id', 'integration', ['data_integration_id'], ['id'])
-        batch_op.drop_column('data_integration')
+        batch_op.drop_column('data_integration_ref')

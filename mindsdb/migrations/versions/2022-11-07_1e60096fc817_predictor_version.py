@@ -30,7 +30,10 @@ def upgrade():
 
     key0 = (None, None, None)
     for p in session.query(db.Predictor)\
-            .order_by(db.Predictor.name, db.Predictor.id)\
+            .order_by(db.Predictor.company_id,
+                      db.Predictor.project_id,
+                      db.Predictor.name,
+                      db.Predictor.id)\
             .all():
 
         key = (p.company_id, p.project_id, p.name.lower())

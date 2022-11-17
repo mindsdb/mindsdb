@@ -170,6 +170,22 @@
             },
             "tutorials"
           ]
+        },
+        {
+          "group": "Contributing Guide",
+          "pages": [
+            "contribute/install",
+            "contribute/issues",
+            "contribute/integrations",
+            "contribute/docs",
+            "docs-rules",
+            "contribute/tests",
+            "contribute/tutorials"
+          ]
+        },
+        {
+          "group": "Community",
+          "pages": ["contribute", "community"]
         }
       ]
     }

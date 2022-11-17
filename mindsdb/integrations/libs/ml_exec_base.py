@@ -260,8 +260,6 @@ class BaseMLEngineExec:
 
         target = problem_definition['target']
         training_data_df = None
-
-        fetch_data_query = None
         data_integration_ref = None
 
         # get data for learn

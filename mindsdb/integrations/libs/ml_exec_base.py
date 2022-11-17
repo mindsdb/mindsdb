@@ -294,8 +294,6 @@ class BaseMLEngineExec:
                     'id': data_integration_meta['id']
                 }
 
-        problem_definition = {'target': target}
-
         training_data_columns_count, training_data_rows_count = 0, 0
         if training_data_df is not None:
             training_data_columns_count = len(training_data_df.columns)

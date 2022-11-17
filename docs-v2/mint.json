@@ -198,5 +198,10 @@
     "linkedin": "https://www.linkedin.com/company/mindsdb",
     "youtube": "https://www.youtube.com/channel/UC5_wBOLCWath6q1iTgPPD5A",
     "medium": "https://medium.com/mindsdb"
+  },
+  "analytics": {
+    "gtm": {
+      "tagId": "GTM-MNN47J3"
+    }
   }
 }

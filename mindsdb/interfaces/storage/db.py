@@ -61,6 +61,8 @@ class Json(types.TypeDecorator):
         return json.dumps(value, cls=NumpyEncoder) if value is not None else None
 
     def process_result_value(self, value, dialect):  # select
+        if isinstance(value, dict):
+            return value
         return json.loads(value) if value is not None else None
 
 

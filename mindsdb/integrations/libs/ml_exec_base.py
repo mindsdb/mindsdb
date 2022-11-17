@@ -163,6 +163,14 @@ class BaseMLEngineExec:
         elif self.execution_method == 'remote':
             raise NotImplementedError()
 
+        elif self.execution_method == 'ray':
+
+            from .ray_node import RayWrapper
+
+            handler = RayWrapper()
+            handler.init_handler(class_path, company_id, integration_id, predictor_id)
+            return handler
+
         else:
             handlerStorage = HandlerStorage(company_id, integration_id)
             modelStorage = ModelStorage(company_id, predictor_id)

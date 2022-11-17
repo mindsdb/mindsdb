@@ -13,7 +13,7 @@ title = 'Lightwood'
 name = 'lightwood'
 type = HANDLER_TYPE.ML
 permanent = True
-
+execution_method = 'ray'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'import_error'

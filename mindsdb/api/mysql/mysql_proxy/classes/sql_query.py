@@ -1597,6 +1597,7 @@ class SQLQuery():
             # dateinfer reads sql date 2020-04-01 as yyyy-dd-mm. workaround for in
             for date_format, pattern in (
                     ('%Y-%m-%d', '[\d]{4}-[\d]{2}-[\d]{2}'),
+                    ('%Y-%m-%d %H:%M:%S', '[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}'),
                     # ('%Y', '[\d]{4}')
             ):
                 if re.match(pattern, samples[0]):
@@ -1658,12 +1659,15 @@ class SQLQuery():
 
             # convert predictor_data
             if len(predictor_data) > 0:
+                # TODO: convert this into a method and call it for both predictor and table data
                 if isinstance(predictor_data[0][order_col], str):
                     samples = [row[order_col] for row in predictor_data]
                     date_format = get_date_format(samples)
 
                     for row in predictor_data:
                         row[order_col] = dt.datetime.strptime(row[order_col], date_format)
+                elif isinstance(predictor_data[0][order_col], dt.datetime):
+                    pass  # check because dt.datetime is instance of dt.date but here we don't need to add HH:MM:SS
                 elif isinstance(predictor_data[0][order_col], dt.date):
                     # convert to datetime
                     for row in predictor_data:
@@ -1676,6 +1680,8 @@ class SQLQuery():
 
                 for row in table_data:
                     row[order_col] = dt.datetime.strptime(row[order_col], date_format)
+            elif isinstance(table_data[0][order_col], dt.datetime):
+                pass  # check because dt.datetime is instance of dt.date but here we don't need to add HH:MM:SS
             elif isinstance(table_data[0][order_col], dt.date):
                 # convert to datetime
                 for row in table_data:

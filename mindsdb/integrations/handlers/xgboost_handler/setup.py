@@ -1,5 +1,8 @@
 from setuptools import setup, find_packages
 
+from setup import install_deps
+from .__about__ import __dict__ as about
+
 pkgs, new_links = install_deps()
 
 setup(
@@ -11,7 +14,7 @@ setup(
     author=about['__author__'],
     author_email=about['__email__'],
     description=about['__description__'],
-    long_description=long_description,
+    long_description=F"{about['__title__']} version:{about['__version__']}",
     long_description_content_type="text/markdown",
     packages=find_packages(),
     install_requires=pkgs,

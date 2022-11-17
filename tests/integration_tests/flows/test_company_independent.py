@@ -311,16 +311,6 @@ class TestCompanyIndependent:
 
         for cid, char in [(CID_A, 'a'), (CID_B, 'b')]:
             self.sql_via_http(
-                """
-                    CREATE DATABASE views
-                    ENGINE 'views'
-                    PARAMETERS {}
-                """,
-                company_id=cid,
-                expected_resp_type=RESPONSE_TYPE.OK
-            )
-
-            self.sql_via_http(
                 query.format(f'test_view_{char}', char),
                 company_id=cid,
                 expected_resp_type=RESPONSE_TYPE.OK

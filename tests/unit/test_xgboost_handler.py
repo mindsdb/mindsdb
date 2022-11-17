@@ -21,11 +21,11 @@ import requests
 
 class TestXgboost(BaseExecutorTest):
     def get_titanic_train_df(self) -> pd.DataFrame:
-        df = pd.read_csv("/home/drill/Data/titanic/train.csv")
+        df = pd.read_csv("https://raw.githubusercontent.com/agconti/kaggle-titanic/master/data/train.csv")
         return df
 
     def get_titanic_test_df(self) -> pd.DataFrame:
-        df = pd.read_csv("/home/drill/Data/titanic/test.csv")
+        df = pd.read_csv("https://raw.githubusercontent.com/agconti/kaggle-titanic/master/data/test.csv")
         return df
 
     def run_mindsdb_sql(self, sql):

@@ -1,15 +1,15 @@
-# `#!sql DROP PREDICTOR` Statement
+# `#!sql DROP MODEL` Statement
 
 ## Description
 
-The `#!sql DROP PREDICTOR` statement deletes the model table.
+The `#!sql DROP MODEL` statement deletes the model table.
 
 ## Syntax
 
 Here is the syntax:
 
 ```sql
-DROP PREDICTOR [predictor_name];
+DROP MODEL [predictor_name];
 ```
 
 On execution, we get:
@@ -30,7 +30,7 @@ Let's list all the available predictor tables.
 
 ```sql
 SELECT name
-FROM mindsdb.predictors;
+FROM mindsdb.models;
 ```
 
 On execution, we get:
@@ -47,7 +47,7 @@ On execution, we get:
 Now we delete the `home_rentals_model` table.
 
 ```sql
-DROP PREDICTOR home_rentals_model;
+DROP MODEL home_rentals_model;
 ```
 
 On execution, we get:
@@ -56,11 +56,11 @@ On execution, we get:
 Query OK, 0 rows affected (0.058 sec)
 ```
 
-We can check if the deletion was successful by querying the `mindsdb.predictors` table again.
+We can check if the deletion was successful by querying the `mindsdb.models` table again.
 
 ```sql
 SELECT name
-FROM mindsdb.predictors;
+FROM mindsdb.models;
 ```
 
 On execution, we get:

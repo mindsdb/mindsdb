@@ -1,15 +1,15 @@
-# `#!sql CREATE PREDICTOR` Statement
+# `#!sql CREATE MODEL` Statement
 
 ## Description
 
-The `CREATE PREDICTOR` statement creates and trains a new ML model.
+The `CREATE MODEL` statement creates and trains a new ML model.
 
 ## Syntax
 
 Here is the syntax:
 
 ```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
+CREATE MODEL mindsdb.[predictor_name]
 FROM [integration_name]
     (SELECT [column_name, ...] FROM [table_name])
 PREDICT [target_column]
@@ -32,11 +32,11 @@ Where:
 | `PREDICT [target_column]`                       | `target_column` is the column to be predicted.                                                                                                  |
 
 !!! TIP "Checking Model Status"
-    After you run the `#!sql CREATE PREDICTOR` statement, you can check the status of the training process by querying the `#!sql mindsdb.predictors` table.
+    After you run the `#!sql CREATE MODEL` statement, you can check the status of the training process by querying the `#!sql mindsdb.models` table.
 
     ```sql
     SELECT *
-    FROM mindsdb.predictors
+    FROM mindsdb.models
     WHERE name='[predictor_name]';
     ```
 
@@ -55,7 +55,7 @@ Where:
 This example shows how to create and train a machine learning model called `home_rentals_model` and predict the rental prices for real estate properties inside the dataset.
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
+CREATE MODEL mindsdb.home_rentals_model
 FROM db_integration 
     (SELECT * FROM house_rentals_data)
 PREDICT rental_price;
@@ -67,11 +67,11 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-To check the predictor status, query the [`#!sql mindsdb.predictors`](/sql/table-structure/#the-predictors-table) table.
+To check the predictor status, query the [`#!sql mindsdb.models`](/sql/table-structure/#the-predictors-table) table.
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='home_rentals_model';
 ```
 
@@ -85,7 +85,7 @@ On execution, we get:
 +--------------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
 ```
 
-## `#!sql CREATE PREDICTOR` with the `#!sql USING` Statement
+## `#!sql CREATE MODEL` with the `#!sql USING` Statement
 
 ### Description
 
@@ -98,7 +98,7 @@ In the upcoming version of MindsDB, it will be possible to choose another ML fra
 Here is the syntax:
 
 ```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
+CREATE MODEL mindsdb.[predictor_name]
 FROM [integration_name]
     (SELECT [column_name, ...] FROM [table_name])
 PREDICT [target_column]
@@ -156,7 +156,7 @@ The most common use cases of configuring predictors use `#!sql encoders` and `#!
 Here we use the `home_rentals` dataset and specify particular `#!sql encoders` for some columns and a LightGBM `#!sql model`.
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
+CREATE MODEL mindsdb.home_rentals_model
 FROM db_integration
     (SELECT * FROM home_rentals)
 PREDICT rental_price
@@ -180,7 +180,7 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-## `#!sql CREATE PREDICTOR` From File
+## `#!sql CREATE MODEL` From File
 
 To create a predictor from a file, you should first upload a file to MindsDB. Follow [this guide](https://docs.mindsdb.com/sql/create/file/) to see how to do that.
 
@@ -193,7 +193,7 @@ This statement is used to create and train a model from a file or a database tab
 Here is the syntax:
 
 ```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
+CREATE MODEL mindsdb.[predictor_name]
 FROM files
     (SELECT * FROM [file_name])
 PREDICT target_column;
@@ -219,7 +219,7 @@ Where:
 Here we uploaded the `home_rentals` dataset as a file.
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
+CREATE MODEL mindsdb.home_rentals_model
 FROM files
     (SELECT * from home_rentals)
 PREDICT rental_price;
@@ -231,7 +231,7 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-## `#!sql CREATE PREDICTOR` For Time Series Models
+## `#!sql CREATE MODEL` For Time Series Models
 
 ### Description
 
@@ -242,7 +242,7 @@ To train a time series model, MindsDB provides additional statements.
 Here is the syntax:
 
 ```sql
-CREATE PREDICTOR mindsdb.[predictor_name]
+CREATE MODEL mindsdb.[predictor_name]
 FROM [integration_name]
     (SELECT [sequential_column], [partition_column], [other_column], [target_column]
      FROM [table_name])
@@ -278,7 +278,7 @@ Where:
 Here is an example:
 
 ```sql
-CREATE PREDICTOR mindsdb.inventory_model
+CREATE MODEL mindsdb.inventory_model
 FROM db_integration
     (SELECT * FROM inventory)
 PREDICT units_in_inventory

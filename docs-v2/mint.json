@@ -117,6 +117,59 @@
             "mongo/find",
             "mongo/delete"
           ]
+        },
+        {
+          "group": "Using Custom Models",
+          "pages": [
+            "custom-model/mlflow",
+            "custom-model/ray-serve",
+            "custom-model/huggingface",
+            "custom-model/openai"
+          ]
+        },
+        {
+          "group": "Tutorials",
+          "pages": [
+            {
+              "group": "Regression",
+              "pages": ["sql/tutorials/home-rentals"]
+            },
+            {
+              "group": "Classification",
+              "pages": ["sql/tutorials/customer-churn"]
+            },
+            {
+              "group": "Time Series",
+              "pages": [
+                "sql/tutorials/house-sales-forecasting",
+                "sql/tutorials/eeg-forecasting"
+              ]
+            }
+          ]
+        },
+        {
+          "group": "Community Tutorials",
+          "pages": [
+            {
+              "group": "Regression",
+              "pages": [
+                "sql/tutorials/insurance-cost-prediction",
+                "sql/tutorials/bodyfat",
+                "sql/tutorials/process-quality"
+              ]
+            },
+            {
+              "group": "Classification",
+              "pages": [
+                "sql/tutorials/crop-prediction",
+                "sql/tutorials/diabetes",
+                "sql/tutorials/spam-emails-tutorial",
+                "sql/tutorials/mushrooms",
+                "sql/tutorials/heart-disease"
+              ]
+            },
+            "tutorials"
+          ]
         }
       ]
     }

@@ -67,6 +67,10 @@ jobs:
           cat mindsdb/interfaces/storage/db.py | grep integration
 
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
+        
+          # need fix in LW. not working yet 
+          # env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
+          # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_lightwood.py
 
           env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
         

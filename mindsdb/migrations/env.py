@@ -22,22 +22,22 @@ fileConfig(config.config_file_name)
 import os
 
 
-# init database
 
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
 
-# initialize config
-if not 'MINDSDB_CONFIG_PATH' in os.environ:
+# initialize
+
+if 'MINDSDB_CONFIG_PATH' not in os.environ:
     os.environ['MINDSDB_CONFIG_PATH'] = 'absent'
 Config()
 
-# init database
 db.init()
 
 target_metadata = db.Base.metadata
 
 config.set_main_option('sqlalchemy.url', os.environ['MINDSDB_DB_CON'])
+
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

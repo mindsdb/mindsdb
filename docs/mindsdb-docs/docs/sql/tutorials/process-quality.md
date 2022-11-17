@@ -59,7 +59,7 @@ Use the following query to create a Predictor that will foretell the silica_conc
 > The row number is limited to 5000 to speed up training but you can keep the whole dataset.
 
 ```sql
-CREATE PREDICTOR mindsdb.process_quality_predictor
+CREATE MODEL mindsdb.process_quality_predictor
 FROM files (
     SELECT iron_feed, silica_feed, starch_flow, amina_flow, ore_pulp_flow,
            ore_pulp_ph, ore_pulp_density,flotation_column_01_air_flow,
@@ -85,7 +85,7 @@ Now the Predictor will begin training. You can check the status with the followi
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='process_quality_predictor';
 ```
 

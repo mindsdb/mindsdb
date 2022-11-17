@@ -8,7 +8,7 @@ Note: This is work in progress, please join our slack channel if you have any qu
 
 ### Train new model
 
-To train a new model, you will need to `insert()` a new document inside the mindsdb.predictors collection.
+To train a new model, you will need to `insert()` a new document inside the `mindsdb.models` collection.
 
 
 The object sent to the `insert()` for training the new model should contain:
@@ -83,7 +83,7 @@ This `INSERT` query will train a new model called `churn` that predicts the cust
 
 #### Model training status
 
-To check that the training finished successfully, you can `find()` the model status inside mindsdb.predictors collection e.g.:
+To check that the training finished successfully, you can `find()` the model status inside `mindsdb.models` collection e.g.:
 
 ```sql
 db.predictors.find()

@@ -117,6 +117,8 @@ class Predictor(Base):
     training_data_rows_count = Column(Integer)
     training_start_at = Column(DateTime)
     training_stop_at = Column(DateTime)
+    label = Column(String, nullable=True)
+    version = Column(Integer, default=1)
 
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)

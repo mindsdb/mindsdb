@@ -94,7 +94,7 @@ When a table doesn’t have an exact match, the query returns an empty set or nu
 Let’s create a `debt_model` model that allows us to approximate the `debt` value for any `income` value. We train the `debt_model` model using the data from the `income_table` table.
 
 ```sql
-CREATE PREDICTOR mindsdb.debt_model
+CREATE MODEL mindsdb.debt_model
 FROM income_table 
 PREDICT debt;
 ```
@@ -105,7 +105,7 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-MindsDB provides the [`#!sql CREATE PREDICTOR`](/sql/create/predictor/) statement. On execution of this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows:
+MindsDB provides the [`#!sql CREATE MODEL`](/sql/create/predictor/) statement. On execution of this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows:
 
 <figure markdown> 
     ![Income vs Debt model](/assets/sql/income_vs_debt_predictor.png){ width="800", loading=lazy  }

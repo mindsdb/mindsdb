@@ -4,6 +4,7 @@ import os
 from unittest import mock
 import json
 import datetime as dt
+import importlib
 
 import pandas as pd
 import numpy as np
@@ -91,6 +92,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='merlion', data={}, engine='merlion')
         db.session.add(r)
+        r = db.Integration(name='dummy_ml', data={}, engine='dummy_ml')
+        db.session.add(r)
         r = db.Integration(name='lightwood', data={}, engine='lightwood')
         db.session.add(r)
         db.session.flush()
@@ -122,7 +125,10 @@ class BaseExecutorTest(BaseUnitTest):
         super().setup_method()
         self.set_executor()
 
-    def set_executor(self, to_mock_model_controller=False):
+    def set_executor(self,
+                     mock_lightwood=False,
+                     mock_model_controller=False,
+                     import_dummy_ml=False):
         # creates executor instance with mocked model_interface
         from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 
@@ -138,7 +144,7 @@ class BaseExecutorTest(BaseUnitTest):
         integration_controller = IntegrationController()
         self.file_controller = FileController()
 
-        if to_mock_model_controller:
+        if mock_model_controller:
             model_controller = mock.Mock()
             self.mock_model_controller = model_controller
         else:
@@ -152,7 +158,12 @@ class BaseExecutorTest(BaseUnitTest):
         server_obj.original_project_controller = ProjectController()
         server_obj.original_database_controller = DatabaseController()
 
-        if to_mock_model_controller:
+        if import_dummy_ml:
+            handler_module = importlib.import_module('tests.unit.dummy_ml_handler')
+            handler_meta = integration_controller._get_handler_meta(handler_module)
+            integration_controller.handlers_import_status[handler_meta['name']] = handler_meta
+
+        if mock_lightwood:
             predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
             self.mock_predict = predict_patcher.__enter__()
 
@@ -248,15 +259,6 @@ class BaseExecutorTest(BaseUnitTest):
 
         mock_handler().query.side_effect = query_f
 
-class BaseExecutorTestMockModel(BaseExecutorTest):
-    """
-        Set up executor: mock data handler and LW handler
-    """
-
-    def setup_method(self):
-        super().setup_method()
-        self.set_executor(to_mock_model_controller=True)
-
     def set_project(self, project):
         r = self.db.Project.query.filter_by(name=project['name']).first()
         if r is not None:
@@ -268,6 +270,25 @@ class BaseExecutorTestMockModel(BaseExecutorTest):
         )
         self.db.session.add(r)
         self.db.session.commit()
+
+class BaseExecutorDummyML(BaseExecutorTest):
+    """
+        Set up executor: mock data handler
+    """
+
+    def setup_method(self):
+        super().setup_method()
+        self.set_executor(import_dummy_ml=True)
+
+
+class BaseExecutorMockPredictor(BaseExecutorTest):
+    """
+        Set up executor: mock data handler and LW handler
+    """
+
+    def setup_method(self):
+        super().setup_method()
+        self.set_executor(mock_lightwood=True, mock_model_controller=True)
 
     def set_predictor(self, predictor):
         # fill model_interface mock with predictor data for test case

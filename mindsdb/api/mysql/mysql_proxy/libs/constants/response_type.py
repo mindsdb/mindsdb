@@ -2,7 +2,6 @@ class RESPONSE_TYPE:
     __slots__ = ()
     OK = 'ok'
     TABLE = 'table'
-    QUERY = 'query'
     ERROR = 'error'
 
 

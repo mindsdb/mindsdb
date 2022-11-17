@@ -22,7 +22,6 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
-from mindsdb.interfaces.database.database import DatabaseController
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -119,6 +118,7 @@ class ModelController():
         return models
 
     def delete_model(self, model_name: str, company_id: int, project_name: str = 'mindsdb'):
+        from mindsdb.interfaces.database.database import DatabaseController
 
         project_record = db.Project.query.filter(
             (func.lower(db.Project.name) == func.lower(project_name))

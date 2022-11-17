@@ -164,7 +164,8 @@ class ExecuteCommands:
             model_name = statement.name.parts[-1]
 
             try:
-                self.session.model_controller.delete_model(model_name, project_name=database_name)
+                project = self.session.database_controller.get_project(database_name)
+                project.drop_table(model_name)
             except Exception as e:
                 if not statement.if_exists:
                     raise e
@@ -898,10 +899,10 @@ class ExecuteCommands:
             if sqlquery.fetch()['success'] != True:
                 raise SqlApiException('Wrong view query')
 
-        self.session.view_controller.add(
+        project = self.session.database_controller.get_project(project_name)
+        project.create_view(
             view_name,
-            query=query_str,
-            project_name=project_name
+            query=query_str
         )
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -914,7 +915,8 @@ class ExecuteCommands:
                 db_name = name.parts[0]
             else:
                 db_name = self.session.database
-            self.session.view_controller.delete(view_name, project_name=db_name)
+            project = self.session.database_controller.get_project(db_name)
+            project.drop_table(view_name)
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 

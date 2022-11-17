@@ -260,11 +260,10 @@ class BaseMLEngineExec:
 
         target = problem_definition['target']
         training_data_df = None
+        data_integration_ref = None
 
         # get data for learn
-
         if data_integration_id is not None:
-
             # get data from integration
             integration_name = self.database_controller.get_integration(data_integration_id)['name']
             query = Select(
@@ -281,6 +280,19 @@ class BaseMLEngineExec:
             result = sqlquery.fetch(view='dataframe')
 
             training_data_df = result['result']
+
+            databases_meta = self.database_controller.get_dict()
+            data_integration_meta = databases_meta[integration_name]
+            # TODO improve here. Suppose that it is view
+            if data_integration_meta['type'] == 'project':
+                data_integration_ref = {
+                    'type': 'view'
+                }
+            else:
+                data_integration_ref = {
+                    'type': 'integration',
+                    'id': data_integration_meta['id']
+                }
 
         training_data_columns_count, training_data_rows_count = 0, 0
         if training_data_df is not None:
@@ -302,7 +314,7 @@ class BaseMLEngineExec:
             company_id=self.company_id,
             name=model_name,
             integration_id=self.integration_id,
-            data_integration_id=data_integration_id,
+            data_integration_ref=data_integration_ref,
             fetch_data_query=fetch_data_query,
             mindsdb_version=mindsdb_version,
             to_predict=target,

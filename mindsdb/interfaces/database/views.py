@@ -2,7 +2,7 @@ from mindsdb.interfaces.storage import db
 
 
 class ViewController:
-    def add(self, name, query, project_name, company_id=None):
+    def add(self, name, query, project_name, company_id):
         from mindsdb.interfaces.database.database import DatabaseController
 
         database_controller = DatabaseController()
@@ -32,7 +32,7 @@ class ViewController:
         db.session.add(view_record)
         db.session.commit()
 
-    def delete(self, name, project_name, company_id=None):
+    def delete(self, name, project_name, company_id):
         project_record = db.session.query(db.Project).filter_by(
             name=project_name,
             company_id=company_id,
@@ -54,7 +54,7 @@ class ViewController:
             'query': record.query
         }
 
-    def get(self, id=None, name=None, project_name=None, company_id=None):
+    def get(self, company_id, id=None, name=None, project_name=None):
         project_record = db.session.query(db.Project).filter_by(
             name=project_name,
             company_id=company_id,
@@ -70,10 +70,3 @@ class ViewController:
             raise Exception(f"There are multiple views with name/id: {name}/{id}")
         record = records[0]
         return self._get_view_record_data(record)
-
-    def get_all(self, company_id=None):
-        view_records = db.session.query(db.View).filter_by(company_id=company_id).all()
-        views_dict = {}
-        for record in view_records:
-            views_dict[record.name] = self._get_view_record_data(record)
-        return views_dict

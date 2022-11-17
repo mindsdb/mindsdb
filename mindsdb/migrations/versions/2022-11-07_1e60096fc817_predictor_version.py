@@ -10,7 +10,6 @@ import sqlalchemy as sa
 import mindsdb.interfaces.storage.db as db
 
 
-
 # revision identifiers, used by Alembic.
 revision = '1e60096fc817'
 down_revision = '43c52d23845a'

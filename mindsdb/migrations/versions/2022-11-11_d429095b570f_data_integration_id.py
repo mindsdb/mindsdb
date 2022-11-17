@@ -1,7 +1,7 @@
 """data-integration-id
 
 Revision ID: d429095b570f
-Revises: 43c52d23845a
+Revises: 1e60096fc817
 Create Date: 2022-11-11 14:00:58.386307
 
 """
@@ -16,7 +16,7 @@ import mindsdb.interfaces.storage.db as db
 
 # revision identifiers, used by Alembic.
 revision = 'd429095b570f'
-down_revision = '43c52d23845a'
+down_revision = '1e60096fc817'
 branch_labels = None
 depends_on = None
 

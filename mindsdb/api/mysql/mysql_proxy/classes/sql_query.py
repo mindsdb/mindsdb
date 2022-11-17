@@ -1657,35 +1657,26 @@ class SQLQuery():
             # convert strings to date
             # it is making side effect on original data by changing it but let it be
 
-            # convert predictor_data
-            if len(predictor_data) > 0:
-                # TODO: convert this into a method and call it for both predictor and table data
-                if isinstance(predictor_data[0][order_col], str):
-                    samples = [row[order_col] for row in predictor_data]
+            def _cast_samples(data, order_col):
+                if isinstance(data[0][order_col], str):
+                    samples = [row[order_col] for row in data]
                     date_format = get_date_format(samples)
 
-                    for row in predictor_data:
+                    for row in data:
                         row[order_col] = dt.datetime.strptime(row[order_col], date_format)
-                elif isinstance(predictor_data[0][order_col], dt.datetime):
+                elif isinstance(data[0][order_col], dt.datetime):
                     pass  # check because dt.datetime is instance of dt.date but here we don't need to add HH:MM:SS
-                elif isinstance(predictor_data[0][order_col], dt.date):
+                elif isinstance(data[0][order_col], dt.date):
                     # convert to datetime
-                    for row in predictor_data:
+                    for row in data:
                         row[order_col] = dt.datetime.combine(row[order_col], dt.datetime.min.time())
 
             # convert predictor_data
-            if isinstance(table_data[0][order_col], str):
-                samples = [row[order_col] for row in table_data]
-                date_format = get_date_format(samples)
+            if len(predictor_data) > 0:
+                _cast_samples(predictor_data, order_col)
 
-                for row in table_data:
-                    row[order_col] = dt.datetime.strptime(row[order_col], date_format)
-            elif isinstance(table_data[0][order_col], dt.datetime):
-                pass  # check because dt.datetime is instance of dt.date but here we don't need to add HH:MM:SS
-            elif isinstance(table_data[0][order_col], dt.date):
-                # convert to datetime
-                for row in table_data:
-                    row[order_col] = dt.datetime.combine(row[order_col], dt.datetime.min.time())
+            # convert table data
+            _cast_samples(table_data, order_col)
 
             # convert args to date
             samples = [

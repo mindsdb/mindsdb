@@ -4,6 +4,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.utilities.context import context as ctx
 
 
 class StreamController():
@@ -12,11 +13,11 @@ class StreamController():
         'kafka': Kafka
     }
 
-    def __init__(self, company_id):
+    def __init__(self):
         self.config = Config()
-        self.company_id = company_id
+        self.company_id = ctx.company_id
         self.integration_controller = WithKWArgsWrapper(
-            IntegrationController(), company_id=company_id
+            IntegrationController(), company_id=ctx.company_id
         )
 
     def setup(self, db_alias):

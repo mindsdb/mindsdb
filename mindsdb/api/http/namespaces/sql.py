@@ -11,6 +11,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiUnknownError
 )
 import mindsdb.utilities.hooks as hooks
+from mindsdb.utilities.context import context as ctx
 
 
 @ns_conf.route('/query')
@@ -27,8 +28,8 @@ class Query(Resource):
         error_traceback = None
 
         mysql_proxy = FakeMysqlProxy(
-            company_id=request.company_id,
-            user_class=request.user_class
+            company_id=ctx.company_id,
+            user_class=ctx.user_class
         )
         mysql_proxy.set_context(context)
         try:
@@ -82,7 +83,7 @@ class Query(Resource):
         query_response['context'] = context
 
         hooks.after_api_query(
-            company_id=request.company_id,
+            company_id=ctx.company_id,
             api='http',
             command=None,
             payload=query,
@@ -101,7 +102,7 @@ class ListDatabases(Resource):
     @ns_conf.doc('list_databases')
     def get(self):
         listing_query = 'SHOW DATABASES'
-        mysql_proxy = FakeMysqlProxy(company_id=request.company_id)
+        mysql_proxy = FakeMysqlProxy(company_id=ctx.company_id)
         try:
             result = mysql_proxy.process_query(listing_query)
 

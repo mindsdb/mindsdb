@@ -23,7 +23,6 @@ from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities import log
 from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
-from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
@@ -31,6 +30,7 @@ from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.functions import args_parse
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
+from mindsdb.utilities.context import context as ctx
 
 # is_ray_worker = False
 # if sys.argv[0].endswith('ray/workers/default_worker.py'):
@@ -40,8 +40,6 @@ from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 # is_pytest = os.path.basename(sys.argv[0]).split('.')[0] == 'pytest'
 #
 # if not is_ray_worker:
-
-COMPANY_ID = os.environ.get('MINDSDB_COMPANY_ID', None)
 
 
 def close_api_gracefully(apis):
@@ -66,7 +64,7 @@ def close_api_gracefully(apis):
 
 if __name__ == '__main__':
     # ----------------  __init__.py section ------------------
-
+    ctx.set_default()
     args = args_parse()
 
     # ---- CHECK SYSTEM ----
@@ -130,7 +128,7 @@ if __name__ == '__main__':
     # need configure migration behavior by env_variables
     # leave 'is_cloud' for now, but needs to be removed further
     run_migration_separately = os.environ.get("SEPARATE_MIGRATIONS", False)
-    if run_migration_separately in (False, "false","False", 0, "0", ""):
+    if run_migration_separately in (False, "false", "False", 0, "0", ""):
         run_migration_separately = False
     else:
         run_migration_separately = True
@@ -147,7 +145,7 @@ if __name__ == '__main__':
         # Figure this one out later
         pass
 
-    integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
+    integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=None)
     if args.install_handlers is not None:
         handlers_list = [s.strip() for s in args.install_handlers.split(',')]
         # import_meta = handler_meta.get('import', {})
@@ -170,8 +168,7 @@ if __name__ == '__main__':
     print(f"Storage path:\n   {config['paths']['root']}")
 
     # @TODO Backwards compatibility for tests, remove later
-    model_controller = WithKWArgsWrapper(ModelController(), company_id=COMPANY_ID)
-    integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=COMPANY_ID)
+    integration_controller = WithKWArgsWrapper(IntegrationController(), company_id=None)
     for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
         import_meta = handler_meta.get('import', {})
         dependencies = import_meta.get('dependencies')
@@ -231,7 +228,7 @@ if __name__ == '__main__':
             except Exception as e:
                 log.logger.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 
-        stream_controller = StreamController(COMPANY_ID)
+        stream_controller = StreamController()
         for integration_name, integration_meta in integration_controller.get_all(sensitive_info=True).items():
             if (
                 integration_meta.get('type') in stream_controller.known_dbs
@@ -240,8 +237,6 @@ if __name__ == '__main__':
                 print(f"Setting up stream: {integration_name}")
                 stream_controller.setup(integration_name)
         del stream_controller
-
-    del model_controller
     # @TODO Backwards compatibility for tests, remove later
 
     if args.api is None:

@@ -78,6 +78,7 @@ from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
+from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.hooks as hooks
 
 
@@ -618,15 +619,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         Handle new incoming connections
         :return:
         """
+        ctx.set_default()
+
         self.server.hook_before_handle()
 
         logger.debug('handle new incoming connection')
         cloud_connection = self.is_cloud_connection()
+
+        ctx.company_id = cloud_connection.get('company_id')
+
         self.init_session(company_id=cloud_connection.get('company_id'))
         if cloud_connection['is_cloud'] is False:
             if self.handshake() is False:
                 return
         else:
+            ctx.user_class = cloud_connection['user_class']
             self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
             self.session.database = cloud_connection['database']
             self.session.username = 'cloud'

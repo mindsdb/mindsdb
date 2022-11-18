@@ -21,6 +21,7 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.database.database import DatabaseController
+from mindsdb.utilities.context import context as ctx
 
 OP_REPLY = 1
 OP_UPDATE = 2001
@@ -264,6 +265,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         self.request = ssl_socket
 
     def handle(self):
+        ctx.set_default()
         logger.debug('connect')
         logger.debug(str(self.server.socket))
 

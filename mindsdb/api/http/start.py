@@ -23,6 +23,7 @@ from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities.context import context as ctx
 
 
 def start(verbose, no_studio, with_nlp):
@@ -83,6 +84,7 @@ def start(verbose, no_studio, with_nlp):
 
     @app.before_request
     def before_request():
+        ctx.set_default()
         company_id = request.headers.get('company-id')
         user_class = request.headers.get('user-class')
 
@@ -102,8 +104,11 @@ def start(verbose, no_studio, with_nlp):
         else:
             user_class = 0
 
-        request.company_id = company_id
-        request.user_class = user_class
+        ctx.company_id = company_id
+        ctx.user_class = user_class
+
+        # request.company_id = company_id
+        # request.user_class = user_class
 
         request.integration_controller = WithKWArgsWrapper(
             current_app.original_integration_controller,

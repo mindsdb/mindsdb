@@ -4,12 +4,13 @@ from flask_restx import Resource, abort
 from mindsdb.api.http.namespaces.configs.streams import ns_conf
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.model.functions import get_model_record
+from mindsdb.utilities.context import context as ctx
 
 STREAM_INTEGRATION_TYPES = ('kafka', 'redis')
 
 
 def get_streams():
-    streams = db.session.query(db.Stream).filter_by(company_id=request.company_id).all()
+    streams = db.session.query(db.Stream).filter_by(company_id=ctx.company_id).all()
     streams_as_dicts = []
     for s in streams:
         streams_as_dicts.append({
@@ -70,14 +71,14 @@ class Stream(Resource):
             # because '_' is not allowed in pod name - replace it.
             name = name.replace('_', '-')
 
-        if db.session.query(db.Stream).filter_by(company_id=request.company_id, name=name).first() is not None:
+        if db.session.query(db.Stream).filter_by(company_id=ctx.company_id, name=name).first() is not None:
             return abort(404, 'Stream "{}" already exists'.format(name))
 
-        if get_model_record(company_id=request.company_id, name=params['predictor'], ml_handler_name='lightwood') is None:
+        if get_model_record(company_id=ctx.company_id, name=params['predictor'], ml_handler_name='lightwood') is None:
             return abort(404, 'Predictor "{}" doesn\'t exist'.format(params['predictor']))
 
         stream = db.Stream(
-            company_id=request.company_id,
+            company_id=ctx.company_id,
             name=name,
             integration=params.get('integration'),
             predictor=params['predictor'],
@@ -97,7 +98,7 @@ class Stream(Resource):
 
     @ns_conf.doc("delete_stream")
     def delete(self, name):
-        stream = db.session.query(db.Stream).filter_by(company_id=request.company_id, name=name).first()
+        stream = db.session.query(db.Stream).filter_by(company_id=ctx.company_id, name=name).first()
         if stream is None:
             return abort(404, 'Stream "{}" doesn\'t exist'.format(name))
         db.session.delete(stream)

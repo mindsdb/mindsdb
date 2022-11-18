@@ -5,7 +5,7 @@
 
 If you haven’t already, identify the service to be enabled with MindsDB and make sure it is running. Otherwise skip to step 2.
 
-![type:video](https://youtube.com/embed/XLJ7xD9BRu8)
+<iframe src="https://player.vimeo.com/video/768117001?h=0966ac32da" width="640" height="564" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
 
 ## 2. Add MindsDB to your service Allowlist
 
@@ -18,7 +18,7 @@ Add the following IP addresses to allow MindsDB to connect to your MariaDB servi
 52.14.91.162
 ```
 
-![type:video](https://youtube.com/embed/zaUM5kw8vJs)
+<iframe src="https://player.vimeo.com/video/768116526?h=a1383e1ba2" width="640" height="564" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
 
 ## 3. Download your service .pem file
 
@@ -26,19 +26,19 @@ A [certificate authority chain](https://mariadb.com/products/skysql/docs/connect
 
 From your selected service, click on the world globe icon (Connect to service). In the Login Credentials section, click Download. The `aws_skysql_chain.pem` file will download onto your machine.
 
-![type:video](https://youtube.com/embed/tBCrPSPHKds)
+<iframe src="https://player.vimeo.com/video/768116804?h=eab6e8e2ff" width="640" height="564" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
 
 ## 4. Publically Expose your service .pem File
 
 Select secure storage for the `aws_skysql_chain.pem` file that allows a working public URL or localpath.
 
-![type:video](https://youtube.com/embed/nCPvBmnV7as)
+<iframe src="https://player.vimeo.com/video/768116895?h=f44c2e1dda" width="640" height="564" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
 
 ## 5. Link [MindsDB](https://cloud.mindsdb.com) to your MariaDB SkySQL Service
 
 To print the query template, select Add Data in either the top or side navigation and choose MariaDB SkySQL from the list. Fill in the values and run query to complete the setup.
 
-![type:video](https://youtube.com/embed/Qbz2HJMVj94)
+<iframe src="https://player.vimeo.com/video/768116343?h=9a13053947" width="640" height="564" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
 
 === "Template"
 

@@ -99,10 +99,10 @@ Once the database integration is successful we can query the table from the data
 
 Now we are ready to create our own predictor. We will start by using the SQL Editor to execute simple SQL syntax to create and train a machine learning predictive model.
 
-The predictor we will and be trained to determine if a mushroom is edible or poisonous.The following CREATE PREDICTOR statement is used to create predictors:
+The predictor we will and be trained to determine if a mushroom is edible or poisonous.The following `CREATE MODEL` statement is used to create predictors:
 
 ```sql
-CREATE PREDICTOR mindsdb.predictor_name
+CREATE MODEL mindsdb.predictor_name
 FROM integration_name
     (SELECT column_name, column_name2 FROM table_name)
 PREDICT column_name;
@@ -116,7 +116,7 @@ The required values that we need to provide are:
 Use the following query to create a predictor that will predict the `target_class` for the specific field parameters.
 
 ```sql
-CREATE PREDICTOR mushroom_predictor
+CREATE MODEL mushroom_predictor
 FROM mindsdb_predictions
     (SELECT * FROM mushrooms)
 PREDICT class;
@@ -130,7 +130,7 @@ The predictor was created successfully and has started training. To check the st
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='mushroom_predictor';
 ```
 

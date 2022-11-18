@@ -145,21 +145,10 @@ def run_learn(df: DataFrame, args: dict, model_storage) -> None:
     predictor_record.training_start_at = datetime.now()
     db.session.commit()
 
-    try:
-        run_generate(df, predictor_id, args)
-        run_fit(predictor_id, df, company_id)
+    run_generate(df, predictor_id, args)
+    run_fit(predictor_id, df, company_id)
 
-        predictor_record.status = PREDICTOR_STATUS.COMPLETE
-    except Exception as e:
-        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-        print(traceback.format_exc())
-
-        error_message = format_exception_error(e)
-
-        predictor_record.data = {"error": error_message}
-        predictor_record.status = PREDICTOR_STATUS.ERROR
-        db.session.commit()
-
+    predictor_record.status = PREDICTOR_STATUS.COMPLETE
     predictor_record.training_stop_at = datetime.now()
     db.session.commit()
 

@@ -40,10 +40,10 @@ First we need to switch to using the mindsdb database.
 USE mindsdb;
 ```
 
-We will start by training a model with the CREATE PREDICTOR command using all columns from the dataset we uploaded.
+We will start by training a model with the CREATE MODEL command using all columns from the dataset we uploaded.
 
 ```sql
-CREATE PREDICTOR mindsdb.spam_predictor
+CREATE MODEL mindsdb.spam_predictor
 FROM files
     (SELECT * FROM spam_predict)
 PREDICT Spam;
@@ -53,7 +53,7 @@ We can check the status of the model by querying the name we used as the predict
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='spam_predictor';
 ```
 

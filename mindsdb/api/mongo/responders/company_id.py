@@ -16,7 +16,6 @@ class Responce(Responder):
         for name in [
             'model_controller',
             'integration_controller',
-            'view_controller',
             'project_controller',
             'database_controller'
         ]:

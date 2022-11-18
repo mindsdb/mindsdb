@@ -91,7 +91,7 @@ The training endpoints must return a JSON that contains the keys `status` set to
 Once you start this RayServe-wrapped model you can train it using a query like this one:
 
 ```sql
-CREATE PREDICTOR mindsdb.byom_ray_serve
+CREATE MODEL mindsdb.byom_ray_serve
 FROM mydb (
     SELECT number_of_rooms, initial_price, rental_price 
     FROM test_data.home_rentals
@@ -315,7 +315,7 @@ target INT
 Next, we can register and train the above custom model using the following query:
 
 ```sql
-CREATE PREDICTOR mindsdb.byom_ray_serve_nlp
+CREATE MODEL mindsdb.byom_ray_serve_nlp
 FROM maria (
     SELECT text, target
     FROM test.nlp_kaggle_train
@@ -327,7 +327,7 @@ dtype_dict={"text": "rich_text", "target": "integer"},
 format='ray_server';
 ```
 
-Training will take a while given that this model is a neural network rather than a simple logistic regression. You can check its status with the query `SELECT * FROM mindsdb.predictors WHERE name = 'byom_ray_serve_nlp';`, much like you'd do with a "normal" MindsDB predictor.
+Training will take a while given that this model is a neural network rather than a simple logistic regression. You can check its status with the query `SELECT * FROM mindsdb.models WHERE name = 'byom_ray_serve_nlp';`, much like you'd do with a "normal" MindsDB predictor.
 
 Once the predictor's status becomes `trained` we can query it for predictions as usual:
 
@@ -366,7 +366,7 @@ With `<run-id>` given in the output of the command `python train.py` used for ac
 Next, we're going to bring this model into MindsDB:
 
 ```sql
-CREATE PREDICTOR mindsdb.byom_mlflow 
+CREATE MODEL mindsdb.byom_mlflow 
 PREDICT `1`  -- `1` is the target column name
 USING 
 url.predict='http://localhost:5000/invocations', 
@@ -467,7 +467,7 @@ Finally, serving is simple. Go to the directory where you called the above scrip
 At this point, the rest is essentially the same as in the previous example. You can link the MLflow model with these SQL statements:
 
 ```sql
-CREATE PREDICTOR mindsdb.byom_mlflow_nlp
+CREATE MODEL mindsdb.byom_mlflow_nlp
 PREDICT `target`
 USING 
     url.predict='http://localhost:5000/invocations',

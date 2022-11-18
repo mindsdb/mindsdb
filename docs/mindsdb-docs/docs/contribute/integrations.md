@@ -35,7 +35,7 @@ integrations                      # Contains integrations source codes
 
 In technical terms, a handler is a self-contained Python package having everything required for MindsDB to interact with it. It includes aspects like dependencies, unit tests, and continuous integration logic. It is up to the author to determine the nature of the package, for example, closed or open source, version control, and more. Although, we encourage opening pull requests to expand the default set of supported tools.
 
-The entry point is a class definition that should inherit either from the `integrations.libs.base_handler.DatabaseHandler` class or the `integrations.libs.base_handler.PredictiveHandler` class, depending on the type of the handler. The `integrations.libs.base_handler.BaseHandler` class defines all the methods that must be overwritten in order to achieve a functional implementation.
+The entry point is a class definition that should inherit either from the `integrations.libs.base.DatabaseHandler` class or the `integrations.libs.base.PredictiveHandler` class, depending on the type of the handler. The `integrations.libs.base.BaseHandler` class defines all the methods that must be overwritten in order to achieve a functional implementation.
 
 !!! note "Handler's Structure"
     The handler's structure is not enforced, and the package design is up to the author.
@@ -52,7 +52,7 @@ Let's review the purpose of each method.
 | `disconnect()`         | It gracefully closes connections established in the `connect()` method.                                                                                                                                                                                      |
 | `check_connection()`   | It evaluates if the connection is alive and healthy. This method is called frequently.                                                                                                                                                                       |
 | `native_query()`       | It parses any *native* statement string and acts upon it (for example, raw SQL commands).                                                                                                                                                                    |
-| `query()`              | It takes a parsed SQL command in the form of an abstract syntax tree and executes it. A good example is the `CREATE PREDICTOR` statement for predictive handlers, which is a *non-native* syntax as databases have no notion of a `PREDICTOR` entity.        |
+| `query()`              | It takes a parsed SQL command in the form of an abstract syntax tree and executes it. A good example is the `CREATE MODEL` statement for predictive handlers, which is a *non-native* syntax as databases have no notion of a `MODEL` entity.        |
 | `get_tables()`         | It lists and returns all the available tables. Each handler decides what a `table` means for the underlying system when interacting with it from the data layer. Typically, these are actual tables for data handlers and predictive handlers.               |
 | `get_columns()`        | It returns columns of a table registered in the handler with the respective data type.                                                                                                                                                                       |
 

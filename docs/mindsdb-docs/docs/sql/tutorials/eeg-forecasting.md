@@ -88,14 +88,14 @@ Where:
 
 ## Training a Predictor
 
-Let's create and train the machine learning model. For that, we use the [`#!sql CREATE PREDICTOR`](/sql/create/predictor) statement and specify the input columns used to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
+Let's create and train the machine learning model. For that, we use the [`#!sql CREATE MODEL`](/sql/create/predictor) statement and specify the input columns used to train `#!sql FROM` (features) and what we want to `#!sql PREDICT` (labels).
 
 The `eyeDetection` column is our target variable. The interesting thing about this example is that we aim to forecast *labels* that are not strictly numerical. Even though this example is simple (because the variable is a binary category), this can easily be generalized to more than two categories.
 
 We order the measurements by the `Timestamps` column that shows readings frequency of approximately 8 miliseconds.
 
 ```sql
-CREATE PREDICTOR mindsdb.eeg_eye_forecast
+CREATE MODEL mindsdb.eeg_eye_forecast
 FROM files
   (SELECT * FROM eeg_eye)
 PREDICT eyeDetection
@@ -112,7 +112,7 @@ A predictor may take a couple of minutes for the training to complete. You can m
 
 ```sql
 SELECT status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='eeg_eye_forecast';
 ```
 

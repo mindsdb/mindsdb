@@ -16,8 +16,10 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 
 
 def analyze_df(df: DataFrame) -> dict:
+    if len(df) == 0:
+        return {}
     analysis = lightwood.analyze_dataset(df)
-    analysis = analysis.to_dict()
+    return analysis.to_dict()
 
 
 @ns_conf.route('/query')

@@ -127,7 +127,7 @@ class HuggingFaceHandler(BaseMLEngine):
         ###### get stuff from model folder
         args = self.model_storage.json_get('args')
 
-        hf_model_storage_path = self.engine_storage.folder_get(args['model_name'])
+        hf_model_storage_path = self.engine_storage.folder_get(args['model_name'], update=False)
 
         pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
                                          tokenizer=hf_model_storage_path)

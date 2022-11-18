@@ -49,3 +49,5 @@
 - A Twitter Thread by [Prakash Gatiyala](https://twitter.com/PrakashGatiyal1/status/1586822595676352512?s=20&t=QQl8r6aXqLxyVExGbJe2eg)
 
 - A Twitter Thread by [Prathik Shetty](https://twitter.com/I_am_prathik/status/1587193982253400064?s=20&t=-mIBPrMUrngfh2mRp12AzA)
+
+- A Twitter Thread by [Rutam Prita Mishra](https://twitter.com/RutamHere/status/1587180480352616448)

@@ -1,5 +1,6 @@
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.utilities.context import context as ctx
 
 
 class Responce(Responder):
@@ -13,6 +14,10 @@ class Responce(Responder):
 
         mindsdb_env['user_class'] = user_class
         mindsdb_env['company_id'] = company_id
+
+        ctx.company_id = company_id
+        ctx.user_class = user_class
+
         for name in [
             'model_controller',
             'integration_controller',

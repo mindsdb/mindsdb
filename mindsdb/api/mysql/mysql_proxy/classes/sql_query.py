@@ -892,6 +892,11 @@ class SQLQuery():
                     version=version,
                     params=step.params,
                 )
+                # update predictions with input data
+                for row in predictions:
+                    for k, v in where_data.items():
+                        if k not in row:
+                            row[k] = v
 
                 data = [{(key, key): value for key, value in row.items()} for row in predictions]
 

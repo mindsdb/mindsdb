@@ -96,6 +96,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='lightwood', data={}, engine='lightwood')
         db.session.add(r)
+        r = db.Integration(name='mlflow', data={}, engine='mlflow')
+        db.session.add(r)
         db.session.flush()
         self.lw_integration_id = r.id
 

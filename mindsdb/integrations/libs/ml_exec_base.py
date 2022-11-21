@@ -56,18 +56,53 @@ ctx = mp.get_context('spawn')
 
 @mark_process(name='learn')
 def learn_process(class_path, company_id, integration_id,
-                  predictor_id, training_data_df, target,
-                  problem_definition, set_active):
-    # Train a model. Is run in subprocess
-
+                  predictor_id, data_integration_ref, fetch_data_query,
+                  project_name, problem_definition, set_active):
     db.init()
 
     predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-
-    predictor_record.training_start_at = dt.datetime.now()
-    db.session.commit()
-
     try:
+        target = problem_definition['target']
+        training_data_df = None
+
+        database_controller = WithKWArgsWrapper(
+            DatabaseController(),
+            company_id=company_id
+        )
+
+        sql_session = make_sql_session(company_id)
+        if data_integration_ref['type'] == 'integration':
+            integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
+            query = Select(
+                targets=[Star()],
+                from_table=NativeQuery(
+                    integration=Identifier(integration_name),
+                    query=fetch_data_query
+                )
+            )
+            sqlquery = SQLQuery(query, session=sql_session)
+        elif data_integration_ref['type'] == 'view':
+            project = database_controller.get_project(project_name)
+            query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+            view_query_ast = project.query_view(query_ast)
+            sqlquery = SQLQuery(view_query_ast, session=sql_session)
+
+        result = sqlquery.fetch(view='dataframe')
+        training_data_df = result['result']
+
+        training_data_columns_count, training_data_rows_count = 0, 0
+        if training_data_df is not None:
+            training_data_columns_count = len(training_data_df.columns)
+            training_data_rows_count = len(training_data_df)
+
+            if target not in training_data_df.columns:
+                raise Exception(
+                    f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
+
+        predictor_record.training_data_columns_count = training_data_columns_count
+        predictor_record.training_data_rows_count = training_data_rows_count
+        db.session.commit()
+
         module_name, class_name = class_path
         module = importlib.import_module(module_name)
         HandlerClass = getattr(module, class_name)
@@ -79,6 +114,10 @@ def learn_process(class_path, company_id, integration_id,
             engine_storage=handlerStorage,
             model_storage=modelStorage,
         )
+
+        if hasattr(ml_handler, 'create_validation'):
+            ml_handler.create_validation(target, df=training_data_df, args=problem_definition)
+
         ml_handler.create(target, df=training_data_df, args=problem_definition)
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
 
@@ -245,7 +284,7 @@ class BaseMLEngineExec:
 
     def learn(
         self, model_name, project_name,
-        data_integration_id=None,
+        data_integration_ref=None,
         fetch_data_query=None,
         problem_definition=None,
         join_learn_process=False,
@@ -255,58 +294,9 @@ class BaseMLEngineExec:
         set_active=False,
     ):
         # TODO move to model_controller
-
         """ Trains a model given some data-gathering SQL statement. """
 
         target = problem_definition['target']
-        training_data_df = None
-        data_integration_ref = None
-
-        # get data for learn
-        if data_integration_id is not None:
-            # get data from integration
-            integration_name = self.database_controller.get_integration(data_integration_id)['name']
-            query = Select(
-                targets=[Star()],
-                from_table=NativeQuery(
-                    integration=Identifier(integration_name),
-                    query=fetch_data_query
-                )
-            )
-            sql_session = make_sql_session(self.company_id)
-
-            # execute as query
-            sqlquery = SQLQuery(query, session=sql_session)
-            result = sqlquery.fetch(view='dataframe')
-
-            training_data_df = result['result']
-
-            databases_meta = self.database_controller.get_dict()
-            data_integration_meta = databases_meta[integration_name]
-            # TODO improve here. Suppose that it is view
-            if data_integration_meta['type'] == 'project':
-                data_integration_ref = {
-                    'type': 'view'
-                }
-            else:
-                data_integration_ref = {
-                    'type': 'integration',
-                    'id': data_integration_meta['id']
-                }
-
-        training_data_columns_count, training_data_rows_count = 0, 0
-        if training_data_df is not None:
-            training_data_columns_count = len(training_data_df.columns)
-            training_data_rows_count = len(training_data_df)
-
-            # checks
-            if target not in training_data_df.columns:
-                raise Exception(
-                    f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
-
-        # handler-side validation
-        if hasattr(self.handler_class, 'create_validation'):
-            self.handler_class.create_validation(target, df=training_data_df, args=problem_definition)
 
         project = self.database_controller.get_project(name=project_name)
 
@@ -321,8 +311,8 @@ class BaseMLEngineExec:
             learn_args=problem_definition,
             data={'name': model_name},
             project_id=project.id,
-            training_data_columns_count=training_data_columns_count,
-            training_data_rows_count=training_data_rows_count,
+            training_data_columns_count=None,
+            training_data_rows_count=None,
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING,
             label=label,
@@ -341,8 +331,9 @@ class BaseMLEngineExec:
             self.company_id,
             self.integration_id,
             predictor_record.id,
-            training_data_df,
-            target,
+            data_integration_ref,
+            fetch_data_query,
+            project_name,
             problem_definition,
             set_active
         )
@@ -397,4 +388,3 @@ class BaseMLEngineExec:
             rows_out_count=len(predictions)
         )
         return predictions
-

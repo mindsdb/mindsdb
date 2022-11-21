@@ -60,6 +60,7 @@ def learn_process(class_path, company_id, integration_id,
                   project_name, problem_definition, set_active):
     db.init()
 
+    predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
     try:
         target = problem_definition['target']
         training_data_df = None
@@ -98,7 +99,6 @@ def learn_process(class_path, company_id, integration_id,
                 raise Exception(
                     f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
-        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
         predictor_record.training_data_columns_count = training_data_columns_count
         predictor_record.training_data_rows_count = training_data_rows_count
         db.session.commit()

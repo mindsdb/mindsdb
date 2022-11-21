@@ -14,7 +14,6 @@ from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers_client.db_client import DBServiceClient
@@ -216,10 +215,7 @@ class IntegrationController:
         )
 
         if handler_type == 'files':
-            handler_ars['file_controller'] = WithKWArgsWrapper(
-                FileController(),
-                company_id=ctx.company_id
-            )
+            handler_ars['file_controller'] = FileController()
         elif self.handler_modules.get(handler_type, False).type == HANDLER_TYPE.ML:
             handler_ars['handler_controller'] = IntegrationController()
             handler_ars['company_id'] = ctx.company_id

@@ -21,7 +21,7 @@ class Responce(Responder):
         for name in [
             'model_controller',
             # 'integration_controller',
-            'project_controller',
+            # 'project_controller',
             'database_controller'
         ]:
             mindsdb_env[name] = WithKWArgsWrapper(

@@ -3,7 +3,6 @@ from mindsdb.interfaces.stream.kafka.kafkadb import Kafka
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.database.integrations import IntegrationController
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.context import context as ctx
 
 

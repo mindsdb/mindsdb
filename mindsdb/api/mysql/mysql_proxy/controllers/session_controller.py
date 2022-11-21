@@ -12,7 +12,6 @@
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.utilities import logger
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities.context import context as ctx
 
 
@@ -35,22 +34,10 @@ class SessionController():
 
         self.config = Config()
 
-        self.model_controller = WithKWArgsWrapper(
-            server.original_model_controller,
-            company_id=ctx.company_id
-        )
-
+        self.model_controller = server.original_model_controller
         self.integration_controller = server.original_integration_controller
-
-        self.project_controller = WithKWArgsWrapper(
-            server.original_project_controller,
-            company_id=ctx.company_id
-        )
-
-        self.database_controller = WithKWArgsWrapper(
-            server.original_database_controller,
-            company_id=ctx.company_id
-        )
+        self.project_controller = server.original_project_controller
+        self.database_controller = server.original_database_controller
 
         self.datahub = init_datahub(self)
 

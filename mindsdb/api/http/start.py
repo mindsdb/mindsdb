@@ -19,7 +19,6 @@ from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
@@ -112,15 +111,9 @@ def start(verbose, no_studio, with_nlp):
 
         request.integration_controller = current_app.original_integration_controller
 
-        request.file_controller = WithKWArgsWrapper(
-            current_app.original_file_controller,
-            company_id=company_id
-        )
+        request.file_controller = current_app.original_file_controller
 
-        request.database_controller = WithKWArgsWrapper(
-            current_app.original_database_controller,
-            company_id=company_id
-        )
+        request.database_controller = current_app.original_database_controller
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

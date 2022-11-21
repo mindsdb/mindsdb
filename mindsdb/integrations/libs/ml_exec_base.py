@@ -35,7 +35,6 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb import __version__ as mindsdb_version
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.model.functions import (
     get_model_record
@@ -47,11 +46,12 @@ from mindsdb.utilities.functions import mark_process
 from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
+from mindsdb.utilities.context import context as ctx
 
 from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
 import torch.multiprocessing as mp
-ctx = mp.get_context('spawn')
+mp.get_context('spawn')
 
 
 @mark_process(name='learn')
@@ -66,10 +66,7 @@ def learn_process(class_path, context_dump, integration_id,
         target = problem_definition['target']
         training_data_df = None
 
-        database_controller = WithKWArgsWrapper(
-            DatabaseController(),
-            company_id=ctx.company_id
-        )
+        database_controller = DatabaseController()
 
         sql_session = make_sql_session()
         if data_integration_ref['type'] == 'integration':
@@ -164,15 +161,9 @@ class BaseMLEngineExec:
         self.integration_id = kwargs.get('integration_id')
         self.execution_method = kwargs.get('execution_method')
 
-        self.model_controller = WithKWArgsWrapper(
-            ModelController(),
-            company_id=self.company_id
-        )
+        self.model_controller = ModelController()
 
-        self.database_controller = WithKWArgsWrapper(
-            DatabaseController(),
-            company_id=self.company_id
-        )
+        self.database_controller = DatabaseController()
 
         self.parser = parse_sql
         self.dialect = 'mindsdb'

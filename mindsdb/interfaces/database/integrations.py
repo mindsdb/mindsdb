@@ -310,7 +310,6 @@ class IntegrationController:
         if handler_type == 'ml':
             handler_ars['storage_factory'] = FileStorageFactory(
                 resource_group=RESOURCE_GROUP.PREDICTOR,
-                company_id=ctx.company_id,
                 sync=True
             )
         from mindsdb.integrations.libs.base import BaseMLEngine

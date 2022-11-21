@@ -313,8 +313,7 @@ class LightwoodHandler(BaseMLEngine):
         db.session.commit()
 
         json_storage = get_json_storage(
-            resource_id=predictor_record.id,
-            company_id=predictor_record.company_id
+            resource_id=predictor_record.id
         )
         json_storage.set('json_ai', json_ai.to_dict())
 
@@ -336,7 +335,6 @@ class LightwoodHandler(BaseMLEngine):
         db.session.commit()
 
         json_storage = get_json_storage(
-            resource_id=predictor_record.id,
-            company_id=predictor_record.company_id
+            resource_id=predictor_record.id
         )
         json_storage.delete('json_ai')

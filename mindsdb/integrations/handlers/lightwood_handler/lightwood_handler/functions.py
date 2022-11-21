@@ -67,14 +67,13 @@ def run_generate(df: DataFrame, predictor_id: int, args: dict = None):
     db.session.commit()
 
     json_storage = get_json_storage(
-        resource_id=predictor_id,
-        company_id=predictor_record.company_id
+        resource_id=predictor_id
     )
     json_storage.set('json_ai', json_ai.to_dict())
 
 
 @mark_process(name='learn')
-def run_fit(predictor_id: int, df: pd.DataFrame, company_id: int) -> None:
+def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
     try:
         predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
         assert predictor_record is not None
@@ -138,14 +137,13 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
 def run_learn(df: DataFrame, args: dict, model_storage) -> None:
     # FIXME
     predictor_id = model_storage.predictor_id
-    company_id = model_storage.company_id
 
     predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
     predictor_record.training_start_at = datetime.now()
     db.session.commit()
 
     run_generate(df, predictor_id, args)
-    run_fit(predictor_id, df, company_id)
+    run_fit(predictor_id, df)
 
     predictor_record.status = PREDICTOR_STATUS.COMPLETE
     predictor_record.training_stop_at = datetime.now()
@@ -181,8 +179,7 @@ def run_update(predictor_id: int, df: DataFrame, company_id: int):
         db.session.commit()
 
         json_storage = get_json_storage(
-            resource_id=predictor_id,
-            company_id=predictor_record.company_id
+            resource_id=predictor_id
         )
         json_storage.set('json_ai', json_ai.to_dict())
 

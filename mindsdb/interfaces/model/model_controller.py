@@ -54,8 +54,7 @@ class ModelController():
         data['status'] = predictor_record.status
 
         json_storage = get_json_storage(
-            resource_id=predictor_record.id,
-            company_id=predictor_record.company_id
+            resource_id=predictor_record.id
         )
         data['json_ai'] = json_storage.get('json_ai')
 
@@ -192,8 +191,7 @@ class ModelController():
         # Serialize a predictor record into a dictionary 
         # move into the Predictor db class itself if we use it again somewhere
         json_storage = get_json_storage(
-            resource_id=predictor_record.id,
-            company_id=predictor_record.company_id
+            resource_id=predictor_record.id
         )
         predictor_record_serialized = {
             'name': predictor_record.name,

@@ -1,3 +1,4 @@
+import sys
 import copy
 import tempfile
 import os
@@ -159,8 +160,13 @@ class BaseExecutorTest(BaseUnitTest):
         server_obj.original_database_controller = DatabaseController()
 
         if import_dummy_ml:
-            handler_module = importlib.import_module('tests.unit.dummy_ml_handler')
-            handler_meta = integration_controller._get_handler_meta(handler_module)
+            spec = importlib.util.spec_from_file_location('dummy_ml_handler', './tests/unit/dummy_ml_handler/__init__.py')
+            foo = importlib.util.module_from_spec(spec)
+            sys.modules["dummy_ml_handler"] = foo
+            spec.loader.exec_module(foo)
+
+            handler_module = sys.modules["dummy_ml_handler"]
+            handler_meta =  integration_controller._get_handler_meta(handler_module)
             integration_controller.handlers_import_status[handler_meta['name']] = handler_meta
 
         if mock_lightwood:
@@ -171,8 +177,7 @@ class BaseExecutorTest(BaseUnitTest):
             self.mock_create = create_patcher.__enter__()
 
         sql_session = SessionController(
-            server=server_obj,
-            company_id=None
+            server=server_obj
         )
         sql_session.database = 'mindsdb'
 

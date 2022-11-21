@@ -11,8 +11,7 @@ def run_sql_command(mindsdb_env, ast_query):
     server_obj.original_database_controller = mindsdb_env['original_database_controller']
 
     sql_session = SessionController(
-        server=server_obj,
-        company_id=mindsdb_env['company_id']
+        server=server_obj
     )
     sql_session.database = 'mindsdb'
 

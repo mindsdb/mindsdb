@@ -63,7 +63,6 @@ exclude =
   mindsdb/migrations/versions/2021-11-30_17c3d2384711_init.py
   mindsdb/migrations/versions/2022-01-26_47f97b83cee4_views.py
   mindsdb/migrations/versions/2022-08-25_6a54ba55872e_view_integration.py
-  mindsdb/utilities/cache.py
   mindsdb/utilities/log.py
   tests/handler_tests/test_storage_handler.py
   tests/integration_tests/flows/test_mysql_bin_api.py

@@ -12,6 +12,7 @@ from mindsdb.utilities import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.files import ns_conf
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.context import context as ctx
 
 
 @ns_conf.route('/')
@@ -91,7 +92,7 @@ class File(Resource):
 
             config = Config()
             is_cloud = config.get('cloud', False)
-            if is_cloud is True and request.user_class != 1:
+            if is_cloud is True and ctx.user_class != 1:
                 info = requests.head(url)
                 file_size = info.headers.get('Content-Length')
                 try:

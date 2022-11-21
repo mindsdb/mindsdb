@@ -27,10 +27,7 @@ class Query(Resource):
         error_text = None
         error_traceback = None
 
-        mysql_proxy = FakeMysqlProxy(
-            company_id=ctx.company_id,
-            user_class=ctx.user_class
-        )
+        mysql_proxy = FakeMysqlProxy()
         mysql_proxy.set_context(context)
         try:
             result = mysql_proxy.process_query(query)
@@ -102,7 +99,7 @@ class ListDatabases(Resource):
     @ns_conf.doc('list_databases')
     def get(self):
         listing_query = 'SHOW DATABASES'
-        mysql_proxy = FakeMysqlProxy(company_id=ctx.company_id)
+        mysql_proxy = FakeMysqlProxy()
         try:
             result = mysql_proxy.process_query(listing_query)
 

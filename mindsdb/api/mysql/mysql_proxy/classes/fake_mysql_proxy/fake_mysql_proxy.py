@@ -5,7 +5,7 @@ from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import MysqlProxy
-
+from mindsdb.utilities.context import context as ctx
 
 def empty_fn():
     pass
@@ -16,7 +16,7 @@ class Dummy:
 
 
 class FakeMysqlProxy(MysqlProxy):
-    def __init__(self, company_id, user_class):
+    def __init__(self):
         request = Dummy()
         client_address = ['', '']
         server = Dummy()
@@ -37,8 +37,8 @@ class FakeMysqlProxy(MysqlProxy):
 
         self.session = SessionController(
             server=self.server,
-            company_id=company_id,
-            user_class=user_class
+            company_id=ctx.company_id,
+            user_class=ctx.user_class
         )
         self.session.database = 'mindsdb'
 

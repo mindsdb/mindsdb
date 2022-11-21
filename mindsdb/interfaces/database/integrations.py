@@ -72,7 +72,6 @@ class IntegrationController:
             store = FileStorage(
                 resource_group=RESOURCE_GROUP.INTEGRATION,
                 resource_id=integration_id,
-                company_id=ctx.company_id,
                 sync=False
             )
             store.add(files_dir, '')
@@ -242,7 +241,6 @@ class IntegrationController:
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=resource_id,
-            company_id=ctx.company_id,
             root_dir='tmp',
             sync=False
         )
@@ -290,7 +288,6 @@ class IntegrationController:
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=integration_record.id,
-            company_id=ctx.company_id,
             sync=True,
         )
 

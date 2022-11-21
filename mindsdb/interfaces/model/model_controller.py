@@ -19,7 +19,7 @@ from mindsdb.interfaces.model.functions import (
     get_model_records
 )
 from mindsdb.interfaces.storage.json import get_json_storage
-from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
+from mindsdb.interfaces.storage.model_fs import ModelStorage
 from mindsdb.utilities.context import context as ctx
 
 IS_PY36 = sys.version_info[1] <= 6
@@ -168,7 +168,7 @@ class ModelController():
                 predictor_record.deleted_at = dt.datetime.now()
             else:
                 db.session.delete(predictor_record)
-            modelStorage = ModelStorage(ctx.company_id, predictor_record.id)
+            modelStorage = ModelStorage(predictor_record.id)
             modelStorage.delete()
         db.session.commit()
 
@@ -430,7 +430,7 @@ class ModelController():
                 model_record.deleted_at = dt.datetime.now()
             else:
                 db.session.delete(model_record)
-            modelStorage = ModelStorage(ctx.company_id, model_record.id)
+            modelStorage = ModelStorage(model_record.id)
             modelStorage.delete()
 
         db.session.commit()

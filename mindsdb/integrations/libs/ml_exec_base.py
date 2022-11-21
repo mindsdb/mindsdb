@@ -105,8 +105,8 @@ def learn_process(class_path, context_dump, integration_id,
         module = importlib.import_module(module_name)
         HandlerClass = getattr(module, class_name)
 
-        handlerStorage = HandlerStorage(ctx.company_id, integration_id)
-        modelStorage = ModelStorage(ctx.company_id, predictor_id)
+        handlerStorage = HandlerStorage(integration_id)
+        modelStorage = ModelStorage(predictor_id)
 
         ml_handler = HandlerClass(
             engine_storage=handlerStorage,
@@ -175,28 +175,28 @@ class BaseMLEngineExec:
     def get_ml_handler(self, predictor_id=None):
         # returns instance or wrapper over it
 
-        company_id, integration_id = self.company_id, self.integration_id
+        integration_id = self.integration_id
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
         if self.execution_method == 'subprocess':
             handler = MLHandlerWrapper()
 
-            handler.init_handler(class_path, company_id, integration_id, predictor_id)
+            handler.init_handler(class_path, integration_id, predictor_id, ctx.dump())
             return handler
 
         elif self.execution_method == 'subprocess_keep':
             handler = MLHandlerPersistWrapper()
 
-            handler.init_handler(class_path, company_id, integration_id, predictor_id)
+            handler.init_handler(class_path, integration_id, predictor_id, ctx.dump())
             return handler
 
         elif self.execution_method == 'remote':
             raise NotImplementedError()
 
         else:
-            handlerStorage = HandlerStorage(company_id, integration_id)
-            modelStorage = ModelStorage(company_id, predictor_id)
+            handlerStorage = HandlerStorage(integration_id)
+            modelStorage = ModelStorage(predictor_id)
 
             ml_handler = self.handler_class(
                 engine_storage=handlerStorage,

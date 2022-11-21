@@ -90,7 +90,6 @@ def run_fit(predictor_id: int, df: pd.DataFrame, company_id: int) -> None:
         fs = FileStorage(
             resource_group=RESOURCE_GROUP.PREDICTOR,
             resource_id=predictor_id,
-            company_id=company_id,
             sync=True
         )
         predictor.save(fs.folder_path / fs.folder_name)
@@ -193,7 +192,6 @@ def run_update(predictor_id: int, df: DataFrame, company_id: int):
         fs = FileStorage(
             resource_group=RESOURCE_GROUP.PREDICTOR,
             resource_id=predictor_id,
-            company_id=company_id,
             sync=True
         )
         predictor.save(fs.folder_path / fs.folder_name)

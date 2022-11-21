@@ -1,5 +1,5 @@
 import sys
-from mindsdb_sql.parser.ast import Identifier, Constant, Star, Select, Join, BinaryOperation
+from mindsdb_sql.parser.ast import Identifier, Constant, BinaryOperation
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.model.model_controller import ModelController

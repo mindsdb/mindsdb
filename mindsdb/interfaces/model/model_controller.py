@@ -11,7 +11,6 @@ import numpy as np
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.json_encoder import json_serialiser
 from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper

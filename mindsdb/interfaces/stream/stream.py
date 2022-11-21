@@ -16,9 +16,7 @@ class StreamController():
     def __init__(self):
         self.config = Config()
         self.company_id = ctx.company_id
-        self.integration_controller = WithKWArgsWrapper(
-            IntegrationController(), company_id=ctx.company_id
-        )
+        self.integration_controller = IntegrationController()
 
     def setup(self, db_alias):
         try:

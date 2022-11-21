@@ -40,10 +40,7 @@ class SessionController():
             company_id=ctx.company_id
         )
 
-        self.integration_controller = WithKWArgsWrapper(
-            server.original_integration_controller,
-            company_id=ctx.company_id
-        )
+        self.integration_controller = server.original_integration_controller
 
         self.project_controller = WithKWArgsWrapper(
             server.original_project_controller,

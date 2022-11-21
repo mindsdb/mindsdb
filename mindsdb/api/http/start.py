@@ -110,10 +110,7 @@ def start(verbose, no_studio, with_nlp):
         # request.company_id = company_id
         # request.user_class = user_class
 
-        request.integration_controller = WithKWArgsWrapper(
-            current_app.original_integration_controller,
-            company_id=company_id
-        )
+        request.integration_controller = current_app.original_integration_controller
 
         request.file_controller = WithKWArgsWrapper(
             current_app.original_file_controller,

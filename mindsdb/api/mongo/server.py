@@ -15,7 +15,6 @@ import datetime as dt
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import RespondersCollection, Session
 from mindsdb.api.mongo.utilities import logger
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
@@ -339,21 +338,11 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         self.mindsdb_env = {
             'config': config,
-            'original_model_controller': ModelController(),
-            'original_integration_controller': IntegrationController(),
-            'original_project_controller': ProjectController(),
-            'original_database_controller': DatabaseController()
+            'model_controller': ModelController(),
+            'integration_controller': IntegrationController(),
+            'project_controller': ProjectController(),
+            'database_controller': DatabaseController()
         }
-        for name in [
-            'model_controller',
-            'integration_controller',
-            'project_controller',
-            'database_controller'
-        ]:
-            self.mindsdb_env[name] = WithKWArgsWrapper(
-                self.mindsdb_env[f'original_{name}'],
-                company_id=None
-            )
 
         respondersCollection = RespondersCollection()
 

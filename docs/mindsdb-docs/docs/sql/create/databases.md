@@ -47,6 +47,7 @@ Where:
 ## Example
 
 ### Connecting a Data Source
+
 Here is an example of how to connect to a MySQL database.
 
 ```sql
@@ -334,7 +335,8 @@ Let's look at sample codes showing how to connect to each of the supported integ
       "port": ,                                 --- port used to make TCP/IP connection
       "database": " ",                          --- database name
       "user": " ",                              --- database user
-      "password": " "                           --- database password
+      "password": " ",                          --- database password
+      "protocol": " "                           --- optional, http or https (defaults to `native`)
     };
     ```
 
@@ -1613,6 +1615,7 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
       "schema": "MINDSDB",
       "encrypt": true
   };
+
   ```
     
 ### openGauss
@@ -1644,4 +1647,3 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
       "password": "password"
     };
     ```
-

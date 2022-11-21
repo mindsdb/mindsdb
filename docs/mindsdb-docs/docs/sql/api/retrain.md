@@ -11,7 +11,13 @@ Retraining takes at least as much time as the training process of the predictor 
 Here is the syntax:
 
 ```sql
-RETRAIN mindsdb.[predictor_name];
+RETRAIN project_name.predictor_name
+[FROM integration_name
+    (SELECT column_name, ... FROM table_name)
+PREDICT target_name
+USING engine = 'engine_name',
+      tag = 'tag_name',
+      active = 0/1];
 ```
 
 On execution, we get:
@@ -19,6 +25,31 @@ On execution, we get:
 ```sql
 Query OK, 0 rows affected (0.058 sec)
 ```
+
+Where:
+
+| Expressions                                     | Description                                                                                                                                               |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project_name`                                  | Name of the project where the model resides.                                                                                                              |
+| `predictor_name`                                | Name of the model to be retrained.                                                                                                                        |
+| `integration_name`                              | Optional. Name of the integration created using the [`#!sql CREATE DATABASE`](/sql/create/databases/) statement or [file upload](/sql/api/select_files/). |
+| `(SELECT column_name, ... FROM table_name)`     | Optional. Selecting data to be used for training and validation.                                                                                          |
+| `target_column`                                 | Optional. Column to be predicted.                                                                                                                         |
+| `engine_name`                                   | You can optionally provide an ML engine, based on which the model is retrained.                                                                           |
+| `tag_name`                                      | You can optionally provide a tag that is visible in the `training_options` column of the `mindsdb.models` table.                                          |
+| `active`                                        | Optional. Setting it to `0` causes the retrained version to be inactive. And setting it to `1` causes the retrained version to be active.                 |
+
+!!! note "Model Versions"
+    Every time the model is retrained, its new version is created with the incremented version number.
+
+    You can query for all model versions like this:
+
+    ```sql
+    SELECT *
+    FROM project_name.models_versions;
+    ```
+
+    For more information on managing model versions, check out our [docs here](/sql/api/manage-models-versions/).
 
 ## When to `#!sql RETRAIN` the Model?
 
@@ -44,7 +75,7 @@ Let's run the query.
 ```sql
 SELECT name, update_status
 FROM mindsdb.models
-WHERE name = '[predictor_name]';
+WHERE name = 'predictor_name';
 ```
 
 On execution, we get:
@@ -53,7 +84,7 @@ On execution, we get:
 +------------------+---------------+
 | name             | update_status |
 +------------------+---------------+
-| [predictor_name] | up_to_date    |
+| predictor_name   | up_to_date    |
 +------------------+---------------+
 ```
 
@@ -61,7 +92,7 @@ Where:
 
 | Name               | Description                                                  |
 | ------------------ | ------------------------------------------------------------ |
-| `[predictor_name]` | Name of the model to be retrained.                           |
+| `predictor_name`   | Name of the model to be retrained.                           |
 | `update_status`    | Column informing whether the model needs to be retrained.    |
 
 ## Example
@@ -86,7 +117,7 @@ On execution, we get:
 +--------------------+---------------+
 ```
 
-The `available` value of the `update_status` column informs us that the new data is available, and we can retrain the model.
+The `available` value of the `update_status` column informs us that we should retrain the model.
 
 ```sql
 RETRAIN mindsdb.home_rentals_model;
@@ -101,7 +132,7 @@ Query OK, 0 rows affected (0.058 sec)
 Now, let's check the status again.
 
 ```sql
-SELECT  name, update_status
+SELECT name, update_status
 FROM mindsdb.models
 WHERE name = 'home_rentals_model';
 ```
@@ -119,7 +150,7 @@ On execution, we get:
 And after the retraining process is completed:
 
 ```sql
-SELECT  name, update_status
+SELECT name, update_status
 FROM mindsdb.models
 WHERE name = 'home_rentals_model';
 ```
@@ -133,3 +164,5 @@ On execution, we get:
 | home_rentals_model | up_to_date    |
 +--------------------+---------------+
 ```
+
+Now you have two versions of the `home_rentals_model` model. To learn about managing model versions, check out our [docs here](/sql/api/manage-models-versions/).

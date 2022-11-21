@@ -32,7 +32,7 @@ analysis_blocks=[
 ];
 ```
 
-Once you train a model, querying it lets you observe the reported importance scores within the `{target_name}_explain` column returned in the prediction table.
+Once you train a model, use the `DESCRIBE model_name;` command to see the reported importance scores.
 
 ## Example
 
@@ -68,8 +68,8 @@ PREDICT rental_price
 USING
     engine = 'lightwood',
     analysis_blocks=[
-    {"module": "PermutationFeatureImportance", 
-    "args": {"row_limit": 0}}
+        {"module": "PermutationFeatureImportance", 
+        "args": {"row_limit": 0}}
     ];
 ```
 
@@ -111,4 +111,20 @@ On execution, we get:
 +----+--------------+--------------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
-*** rental_price_explain does not have info on PermutationFeatureImportance
+Here is how you can check the importance scores for all columns:
+
+```sql
+DESCRIBE home_rentals_model;
+```
+
+On execution, we get:
+
+```sql
++------------------+----------------------------------------------------------------------------------------------------------------------+----------------+-------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+|accuracies        |column_importance                                                                                                     |outputs         |inputs                                                                                     |model                                                                                                                                               |
++------------------+----------------------------------------------------------------------------------------------------------------------+----------------+-------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+|{"r2_score":0.999}|{"days_on_market":0.09,"location":0.042,"neighborhood":0,"number_of_bathrooms":0,"number_of_rooms":0.292,"sqft":0.999}|["rental_price"]|["number_of_rooms","number_of_bathrooms","sqft","location","days_on_market","neighborhood"]|encoders --> dtype_dict --> dependency_dict --> model --> problem_definition --> identifiers --> imputers --> analysis_blocks --> accuracy_functions|
++------------------+----------------------------------------------------------------------------------------------------------------------+----------------+-------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Please note that the `rental_price` column is not listed here, as it is the target column. The column importance scores are presented for all the feature columns.

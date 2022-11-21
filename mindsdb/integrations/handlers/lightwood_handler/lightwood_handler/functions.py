@@ -209,8 +209,7 @@ def run_update(predictor_id: int, df: DataFrame, company_id: int):
 
         predictor_records = get_model_records(
             active=None,
-            name=predictor_record.name,
-            company_id=company_id
+            name=predictor_record.name
         )
         predictor_records = [
             x for x in predictor_records

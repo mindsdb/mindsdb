@@ -227,7 +227,7 @@ class BaseMLEngineExec:
 
     def get_columns(self, table_name: str) -> Response:
         """ Retrieves standard info about a model, e.g. data types. """  # noqa
-        predictor_record = get_model_record(company_id=self.company_id, name=table_name, ml_handler_name=self.name)
+        predictor_record = get_model_record(name=table_name, ml_handler_name=self.name)
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -348,8 +348,7 @@ class BaseMLEngineExec:
             data = [data]
         df = pd.DataFrame(data)
         predictor_record = get_model_record(
-            company_id=self.company_id, name=model_name,
-            ml_handler_name=self.name, project_name=project_name,
+            name=model_name, ml_handler_name=self.name, project_name=project_name,
             version=version
         )
         if predictor_record is None:

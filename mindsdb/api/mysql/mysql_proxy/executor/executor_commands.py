@@ -659,7 +659,6 @@ class ExecuteCommands:
         database_name, model_name = statement.name.parts
 
         model_record = get_model_record(
-            company_id=self.session.company_id,
             name=model_name,
             project_name=database_name,
             except_absent=True
@@ -684,10 +683,7 @@ class ExecuteCommands:
         # region check if there is already predictor retraing
         is_cloud = self.session.config.get('cloud', False)
         if is_cloud and self.session.user_class == 0:
-            models = get_model_records(
-                company_id=self.session.company_id,
-                active=None
-            )
+            models = get_model_records(active=None)
             longest_training = None
             for p in models:
                 if (

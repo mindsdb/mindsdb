@@ -74,7 +74,7 @@ class Stream(Resource):
         if db.session.query(db.Stream).filter_by(company_id=ctx.company_id, name=name).first() is not None:
             return abort(404, 'Stream "{}" already exists'.format(name))
 
-        if get_model_record(company_id=ctx.company_id, name=params['predictor'], ml_handler_name='lightwood') is None:
+        if get_model_record(name=params['predictor'], ml_handler_name='lightwood') is None:
             return abort(404, 'Predictor "{}" doesn\'t exist'.format(params['predictor']))
 
         stream = db.Stream(

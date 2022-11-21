@@ -445,7 +445,7 @@ class SQLQuery():
         databases_names.append('information_schema')   # TEMP
 
         predictor_metadata = []
-        predictors_records = get_model_records(company_id=self.session.company_id)
+        predictors_records = get_model_records()
 
         query_tables = []
 

@@ -106,7 +106,7 @@ class IntegrationController:
         integration_record = db.session.query(db.Integration).filter_by(company_id=company_id, name=name).first()
 
         # check linked predictors
-        models = get_model_records(company_id=company_id)
+        models = get_model_records()
         for model in models:
             if (
                 model.data_integration_ref is not None

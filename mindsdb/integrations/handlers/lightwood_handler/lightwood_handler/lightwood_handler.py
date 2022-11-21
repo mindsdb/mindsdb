@@ -305,7 +305,7 @@ class LightwoodHandler(BaseMLEngine):
         return pd.DataFrame(data)
 
     def edit_json_ai(self, name: str, json_ai: dict):
-        predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
+        predictor_record = get_model_record(name=name, ml_handler_name='lightwood')
         assert predictor_record is not None
 
         json_ai = lightwood.JsonAI.from_dict(json_ai)
@@ -328,7 +328,7 @@ class LightwoodHandler(BaseMLEngine):
         if self.config.get('cloud', False):
             raise Exception('Code editing prohibited on cloud')
 
-        predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
+        predictor_record = get_model_record(name=name, ml_handler_name='lightwood')
         assert predictor_record is not None
 
         lightwood.predictor_from_code(code)

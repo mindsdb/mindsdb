@@ -37,22 +37,22 @@ class SessionController():
 
         self.model_controller = WithKWArgsWrapper(
             server.original_model_controller,
-            company_id=company_id
+            company_id=ctx.company_id
         )
 
         self.integration_controller = WithKWArgsWrapper(
             server.original_integration_controller,
-            company_id=company_id
+            company_id=ctx.company_id
         )
 
         self.project_controller = WithKWArgsWrapper(
             server.original_project_controller,
-            company_id=company_id
+            company_id=ctx.company_id
         )
 
         self.database_controller = WithKWArgsWrapper(
             server.original_database_controller,
-            company_id=company_id
+            company_id=ctx.company_id
         )
 
         self.datahub = init_datahub(self)

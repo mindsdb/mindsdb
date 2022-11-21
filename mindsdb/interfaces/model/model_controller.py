@@ -36,7 +36,7 @@ class ModelController():
 
     def get_model_data(self, company_id: int, name: str = None, predictor_record=None, ml_handler_name='lightwood') -> dict:
         if predictor_record is None:
-            predictor_record = get_model_record(company_id=company_id, except_absent=True, name=name, ml_handler_name=ml_handler_name)
+            predictor_record = get_model_record(except_absent=True, name=name, ml_handler_name=ml_handler_name)
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -87,7 +87,7 @@ class ModelController():
     def get_models(self, company_id: int, with_versions=False, ml_handler_name='lightwood', integration_id=None):
         models = []
         show_active = True if with_versions is False else None
-        for predictor_record in get_model_records(company_id=company_id, active=show_active, ml_handler_name=ml_handler_name, integration_id=integration_id):
+        for predictor_record in get_model_records(active=show_active, ml_handler_name=ml_handler_name, integration_id=integration_id):
             model_data = self.get_model_data(predictor_record=predictor_record, company_id=company_id)
             reduced_model_data = {}
 
@@ -148,7 +148,6 @@ class ModelController():
         project = database_controller.get_project(project_name)
 
         predictors_records = get_model_records(
-            company_id=company_id,
             name=model_name,
             ml_handler_name=integration_record.name,
             project_id=project.id,
@@ -178,16 +177,16 @@ class ModelController():
         db.session.commit()
 
     def rename_model(self, old_name, new_name, company_id: int):
-        model_record = get_model_record(company_id=company_id, name=new_name)
+        model_record = get_model_record(name=new_name)
         if model_record is None:
             raise Exception(f"Model with name '{new_name}' already exists")
 
-        for model_record in get_model_records(company_id=company_id, name=old_name):
+        for model_record in get_model_records(name=old_name):
             model_record.name = new_name
         db.session.commit()
 
     def export_predictor(self, name: str, company_id: int) -> json:
-        predictor_record = get_model_record(company_id=company_id, name=name, except_absent=True)
+        predictor_record = get_model_record(name=name, except_absent=True)
 
         fs_name = f'predictor_{company_id}_{predictor_record.id}'
         self.fs_store.pull()
@@ -343,7 +342,6 @@ class ModelController():
         base_predictor_record = get_model_record(
             name=params['model_name'],
             project_name=params['project_name'],
-            company_id=ml_handler.company_id,
             active=True
         )
 
@@ -355,7 +353,6 @@ class ModelController():
         models = get_model_records(
             name=params['model_name'],
             project_name=params['project_name'],
-            company_id=ml_handler.company_id,
             deleted_at=None,
             active=None,
         )
@@ -399,7 +396,6 @@ class ModelController():
         model = models[0]
 
         model_record = get_model_record(
-            company_id=company_id,
             name=model['NAME'],
             project_name=model['PROJECT'],
             version=model['VERSION']
@@ -426,7 +422,6 @@ class ModelController():
 
         for model in models:
             model_record = get_model_record(
-                company_id=company_id,
                 name=model['NAME'],
                 project_name=model['PROJECT'],
                 version=model['VERSION']

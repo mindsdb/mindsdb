@@ -7,7 +7,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.database.database import DatabaseController
 
 
-def make_sql_session(company_id):
+def make_sql_session():
     server_obj = type('', (), {})()
     server_obj.original_integration_controller = IntegrationController()
     server_obj.original_model_controller = ModelController()
@@ -15,8 +15,7 @@ def make_sql_session(company_id):
     server_obj.original_database_controller = DatabaseController()
 
     sql_session = SessionController(
-        server=server_obj,
-        company_id=company_id
+        server=server_obj
     )
     sql_session.database = 'mindsdb'
     return sql_session

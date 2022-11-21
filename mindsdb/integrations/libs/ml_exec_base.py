@@ -70,7 +70,7 @@ def learn_process(class_path, company_id, integration_id,
             company_id=company_id
         )
 
-        sql_session = make_sql_session(company_id)
+        sql_session = make_sql_session()
         if data_integration_ref['type'] == 'integration':
             integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
             query = Select(

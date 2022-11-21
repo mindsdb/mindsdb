@@ -20,14 +20,14 @@ class DatabaseController:
             project.delete()
             return
         elif db_type == 'data':
-            self.integration_controller.delete(name, company_id=company_id)
+            self.integration_controller.delete(name)
             return
         else:
             raise Exception(f"Database with type '{db_type}' cannot be deleted")
 
     def get_list(self, company_id: Optional[int], filter_type: Optional[str] = None):
         projects = self.project_controller.get_list(company_id=company_id)
-        integrations = self.integration_controller.get_all(company_id=company_id)
+        integrations = self.integration_controller.get_all()
         result = [{
             'name': 'information_schema',
             'type': 'system',

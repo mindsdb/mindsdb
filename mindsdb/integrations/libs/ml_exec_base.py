@@ -55,9 +55,10 @@ ctx = mp.get_context('spawn')
 
 
 @mark_process(name='learn')
-def learn_process(class_path, company_id, integration_id,
+def learn_process(class_path, context_dump, integration_id,
                   predictor_id, data_integration_ref, fetch_data_query,
                   project_name, problem_definition, set_active):
+    ctx.load(context_dump)
     db.init()
 
     predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
@@ -67,7 +68,7 @@ def learn_process(class_path, company_id, integration_id,
 
         database_controller = WithKWArgsWrapper(
             DatabaseController(),
-            company_id=company_id
+            company_id=ctx.company_id
         )
 
         sql_session = make_sql_session()
@@ -107,8 +108,8 @@ def learn_process(class_path, company_id, integration_id,
         module = importlib.import_module(module_name)
         HandlerClass = getattr(module, class_name)
 
-        handlerStorage = HandlerStorage(company_id, integration_id)
-        modelStorage = ModelStorage(company_id, predictor_id)
+        handlerStorage = HandlerStorage(ctx.company_id, integration_id)
+        modelStorage = ModelStorage(ctx.company_id, predictor_id)
 
         ml_handler = HandlerClass(
             engine_storage=handlerStorage,
@@ -128,7 +129,7 @@ def learn_process(class_path, company_id, integration_id,
                 name=predictor_record.name,
                 project_id=predictor_record.project_id,
                 active=True,
-                company_id=company_id,
+                company_id=ctx.company_id,
             )
             for p in predictors_records:
                 p.active = False
@@ -301,7 +302,7 @@ class BaseMLEngineExec:
         project = self.database_controller.get_project(name=project_name)
 
         predictor_record = db.Predictor(
-            company_id=self.company_id,
+            company_id=ctx.company_id,
             name=model_name,
             integration_id=self.integration_id,
             data_integration_ref=data_integration_ref,
@@ -328,7 +329,7 @@ class BaseMLEngineExec:
         p = HandlerProcess(
             learn_process,
             class_path,
-            self.company_id,
+            ctx.dump(),
             self.integration_id,
             predictor_record.id,
             data_integration_ref,

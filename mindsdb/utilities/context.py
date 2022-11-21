@@ -35,5 +35,12 @@ class Context:
         del storage['name']
         self._storage.set(storage)
 
+    def dump(self) -> dict:
+        storage = deepcopy(self._storage.get({}))
+        return storage
+
+    def load(self, storage: dict) -> None:
+        self._storage.set(storage)
+
 
 context = Context()

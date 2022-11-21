@@ -6,7 +6,7 @@ from pathlib import Path
 
 from werkzeug.exceptions import HTTPException
 from waitress import serve
-from flask import send_from_directory, request, current_app
+from flask import send_from_directory, request
 from flask_compress import Compress
 
 from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
@@ -105,15 +105,6 @@ def start(verbose, no_studio, with_nlp):
 
         ctx.company_id = company_id
         ctx.user_class = user_class
-
-        # request.company_id = company_id
-        # request.user_class = user_class
-
-        request.integration_controller = current_app.original_integration_controller
-
-        request.file_controller = current_app.original_file_controller
-
-        request.database_controller = current_app.original_database_controller
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

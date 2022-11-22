@@ -133,7 +133,7 @@ def learn_process(class_path, company_id, integration_id,
             )
             for model in models:
                 model.active = False
-            models = [x for x in models if model.status == PREDICTOR_STATUS.COMPLETE]
+            models = [x for x in models if x.status == PREDICTOR_STATUS.COMPLETE]
             models.sort(key=lambda x: x.created_at)
             models[-1].active = True
 

@@ -155,7 +155,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.client_capabilities = None
         super().__init__(request, client_address, server)
 
-    def init_session(self, company_id=None):
+    def init_session(self):
         logger.debug('New connection [{ip}:{port}]'.format(
             ip=self.client_address[0], port=self.client_address[1]))
         logger.debug(self.__dict__)
@@ -164,9 +164,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.server.connection_id = 0
         self.server.connection_id += 1
         self.connection_id = self.server.connection_id
-        self.session = SessionController(
-            server=self.server
-        )
+        self.session = SessionController()
 
         if hasattr(self.server, 'salt') and isinstance(self.server.salt, str):
             self.salt = self.server.salt
@@ -627,7 +625,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         ctx.company_id = cloud_connection.get('company_id')
 
-        self.init_session(company_id=cloud_connection.get('company_id'))
+        self.init_session()
         if cloud_connection['is_cloud'] is False:
             if self.handshake() is False:
                 return

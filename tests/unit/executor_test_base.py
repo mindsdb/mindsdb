@@ -137,11 +137,7 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.interfaces.database.integrations import IntegrationController
         from mindsdb.interfaces.file.file_controller import FileController
         from mindsdb.interfaces.model.model_controller import ModelController
-        from mindsdb.interfaces.database.projects import ProjectController
-        from mindsdb.interfaces.database.database import DatabaseController
         from mindsdb.utilities.context import context as ctx
-
-        server_obj = type('', (), {})()
 
         integration_controller = IntegrationController()
         self.file_controller = FileController()
@@ -173,9 +169,7 @@ class BaseExecutorTest(BaseUnitTest):
             self.mock_create = create_patcher.__enter__()
 
         ctx.set_default()
-        sql_session = SessionController(
-            server=server_obj
-        )
+        sql_session = SessionController()
         sql_session.database = 'mindsdb'
 
         self.command_executor = ExecuteCommands(sql_session, executor=None)

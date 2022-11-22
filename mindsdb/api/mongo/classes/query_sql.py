@@ -3,11 +3,7 @@ from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteComm
 
 
 def run_sql_command(mindsdb_env, ast_query):
-    server_obj = type('', (), {})()
-
-    sql_session = SessionController(
-        server=server_obj
-    )
+    sql_session = SessionController()
     sql_session.database = 'mindsdb'
 
     command_executor = ExecuteCommands(sql_session, executor=None)

@@ -1,9 +1,5 @@
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CHARSET_NUMBERS
-from mindsdb.interfaces.model.model_controller import ModelController
-from mindsdb.interfaces.database.integrations import IntegrationController
-from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import MysqlProxy
 from mindsdb.utilities.context import context as ctx
 
@@ -31,9 +27,7 @@ class FakeMysqlProxy(MysqlProxy):
         self.client_address = client_address
         self.server = server
 
-        self.session = SessionController(
-            server=self.server
-        )
+        self.session = SessionController()
         self.session.database = 'mindsdb'
 
     def is_cloud_connection(self):

@@ -24,7 +24,7 @@ class SessionController():
     This class manages the server session
     '''
 
-    def __init__(self, server) -> object:
+    def __init__(self) -> object:
         """
         Initialize the session
         """

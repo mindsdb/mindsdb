@@ -122,6 +122,7 @@ def learn_process(class_path, company_id, integration_id,
         ml_handler.create(target, df=training_data_df, args=problem_definition)
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
 
+        db.session.commit()
         # if retrain and set_active after success creation
         if set_active is True:
             models = get_model_records(

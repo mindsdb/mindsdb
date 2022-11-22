@@ -134,7 +134,6 @@ class BaseExecutorTest(BaseUnitTest):
 
         from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
         from mindsdb.interfaces.database.integrations import IntegrationController
-        from mindsdb.interfaces.database.views import ViewController
         from mindsdb.interfaces.file.file_controller import FileController
         from mindsdb.interfaces.model.model_controller import ModelController
         from mindsdb.interfaces.database.projects import ProjectController
@@ -156,7 +155,6 @@ class BaseExecutorTest(BaseUnitTest):
 
         server_obj.original_integration_controller = integration_controller
         server_obj.original_model_controller = model_controller
-        server_obj.original_view_controller = ViewController()
         server_obj.original_project_controller = ProjectController()
         server_obj.original_database_controller = DatabaseController()
 

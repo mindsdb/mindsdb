@@ -164,7 +164,8 @@ class ExecuteCommands:
             model_name = statement.name.parts[-1]
 
             try:
-                self.session.model_controller.delete_model(model_name, project_name=database_name)
+                project = self.session.database_controller.get_project(database_name)
+                project.drop_table(model_name)
             except Exception as e:
                 if not statement.if_exists:
                     raise e
@@ -508,7 +509,7 @@ class ExecuteCommands:
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
             if statement.table.parts[-1] != 'predictors':
-                raise ErBadTableError("Only 'DELETE' from table 'mindsdb.predictors' is possible at this moment")
+                raise ErBadTableError("Only 'DELETE' from table 'mindsdb.models' is possible at this moment")
             self.delete_predictor_query(statement)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Insert:
@@ -898,10 +899,10 @@ class ExecuteCommands:
             if sqlquery.fetch()['success'] != True:
                 raise SqlApiException('Wrong view query')
 
-        self.session.view_controller.add(
+        project = self.session.database_controller.get_project(project_name)
+        project.create_view(
             view_name,
-            query=query_str,
-            project_name=project_name
+            query=query_str
         )
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -914,7 +915,8 @@ class ExecuteCommands:
                 db_name = name.parts[0]
             else:
                 db_name = self.session.database
-            self.session.view_controller.delete(view_name, project_name=db_name)
+            project = self.session.database_controller.get_project(db_name)
+            project.drop_table(view_name)
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 

@@ -39,7 +39,7 @@ Where:
 | `select_data_query`                             | Object that stores the data collection name to be used for training and validation and additional arguments for filtering the data.   |
 
 !!! TIP "Checking Predictor Status"
-    After running the `db.predictors.insert()` method, execute the `db.predictors.find()` method from the `mindsdb.predictors` collection to check the status of the model.
+    After running the `db.predictors.insert()` method, execute the `db.predictors.find()` method from the `mindsdb.models` collection to check the status of the model.
 
     ```sql
     db.predictors.find({name: "model_name"});
@@ -70,7 +70,7 @@ WriteResult({
 
 ### Checking Predictor Status
 
-To check the predictor status, query the [`mindsdb.predictors`](/mongo/collection-structure/#the-predictors-collection) using the `db.predictors.find()` command.
+To check the predictor status, query the [`mindsdb.models`](/mongo/collection-structure/#the-predictors-collection) using the `db.predictors.find()` command.
 
 ```sql
 db.predictors.find({name: "home_rentals_model"});

@@ -7,8 +7,7 @@ Create Date: 2022-11-07 16:43:47.301692
 """
 from alembic import op
 import sqlalchemy as sa
-import mindsdb.interfaces.storage.db as db
-
+from sqlalchemy.sql import text
 
 
 # revision identifiers, used by Alembic.
@@ -29,18 +28,29 @@ def upgrade():
     session = sa.orm.Session(bind=conn)
 
     key0 = (None, None, None)
-    for p in session.query(db.Predictor)\
-            .order_by(db.Predictor.name, db.Predictor.id)\
-            .all():
-
-        key = (p.company_id, p.project_id, p.name.lower())
+    models = conn.execute('''
+        select company_id, project_id, name, id
+        from predictor
+        order by company_id, project_id, name, created_at
+    ''').fetchall()
+    for model in models:
+        key = (model['company_id'], model['project_id'], model['name'].lower())
 
         # it is different name or project or company
         if key != key0:
             version = 1
             key0 = key
 
-        p.version = version
+        conn.execute(
+            text("""
+                update predictor
+                set version = :version
+                where id = :id
+            """), {
+                'version': version,
+                'id': model['id']
+            }
+        )
         version += 1
 
     session.commit()

@@ -65,10 +65,10 @@ Once you have confirmed the file has successfully uploaded and the data can be r
 
 ## Create and train a machine learning model.
 
-With the CREATE PREDICTOR statement, we can create a machine learning model:
+With the CREATE MODEL statement, we can create a machine learning model:
 
 ```sql
-CREATE PREDICTOR mindsdb.predictor_name
+CREATE MODEL mindsdb.predictor_name
 FROM files 
         (SELECT column_name, column_name2 FROM file_name)
 PREDICT column_name;
@@ -83,7 +83,7 @@ The required values that we need to provide are:
 For our case, we'll enter the following syntax:
 
 ```sql
-CREATE PREDICTOR bodyfat_predictor
+CREATE MODEL bodyfat_predictor
 FROM files
         (SELECT * FROM bodyfat)
 PREDICT Bodyfat;
@@ -100,7 +100,7 @@ At this point, the predictor will immediately begin training.  Check the status 
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='bodyfat_predictor';
 ```
 

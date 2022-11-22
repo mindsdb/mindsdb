@@ -22,7 +22,6 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
-from mindsdb.interfaces.database.database import DatabaseController
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -119,6 +118,7 @@ class ModelController():
         return models
 
     def delete_model(self, model_name: str, company_id: int, project_name: str = 'mindsdb'):
+        from mindsdb.interfaces.database.database import DatabaseController
 
         project_record = db.Project.query.filter(
             (func.lower(db.Project.name) == func.lower(project_name))
@@ -260,7 +260,7 @@ class ModelController():
             problem_definition['target'] = statement.targets[0].parts[-1]
 
         # get data for learn
-        data_integration_id = None
+        data_integration_ref = None
         fetch_data_query = None
         if statement.integration_name is not None:
             fetch_data_query = statement.query_str
@@ -270,9 +270,14 @@ class ModelController():
             data_integration_meta = databases_meta[integration_name]
             # TODO improve here. Suppose that it is view
             if data_integration_meta['type'] == 'project':
-                data_integration_id = handler_controller.get(name='views')['id']
+                data_integration_ref = {
+                    'type': 'view'
+                }
             else:
-                data_integration_id = data_integration_meta['id']
+                data_integration_ref = {
+                    'type': 'integration',
+                    'id': data_integration_meta['id']
+                }
 
         label = None
         if statement.using is not None:
@@ -300,7 +305,7 @@ class ModelController():
         return dict(
             model_name=model_name,
             project_name=project_name,
-            data_integration_id=data_integration_id,
+            data_integration_ref=data_integration_ref,
             fetch_data_query=fetch_data_query,
             problem_definition=problem_definition,
             join_learn_process=join_learn_process,
@@ -362,8 +367,8 @@ class ModelController():
 
         # get params from predictor if not defined
 
-        if params['data_integration_id'] is None:
-            params['data_integration_id'] = base_predictor_record.data_integration_id
+        if params['data_integration_ref'] is None:
+            params['data_integration_ref'] = base_predictor_record.data_integration_ref
         if params['fetch_data_query'] is None:
             params['fetch_data_query'] = base_predictor_record.fetch_data_query
 

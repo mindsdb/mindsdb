@@ -57,7 +57,7 @@ Now we can create a machine learning model with `crops` columns serving as featu
 In the SQL Editor, type in the below syntax to create and train a machine learning predictive model:
 
 ```sql
-CREATE PREDICTOR crop_predictor
+CREATE MODEL crop_predictor
 FROM files
     (SELECT * FROM crops)
 PREDICT label;
@@ -71,7 +71,7 @@ Now the predictor will begin training. You can check the status of the predictor
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='crop_predictor';
 ```
 

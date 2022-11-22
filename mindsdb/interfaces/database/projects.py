@@ -6,8 +6,13 @@ from collections import OrderedDict
 import sqlalchemy as sa
 import numpy as np
 
+from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql import parse_sql
+
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
+from mindsdb.interfaces.model.model_controller import ModelController
+from mindsdb.interfaces.database.views import ViewController
 
 
 class Project:
@@ -62,6 +67,44 @@ class Project:
             self.company_id = None
             self.id = None
         db.session.commit()
+
+    def drop_table(self, table_name: str):
+        tables = self.get_tables()
+        if table_name not in tables:
+            raise Exception(f"Table '{table_name}' do not exists")
+        table_meta = tables[table_name]
+        if table_meta['type'] == 'model':
+            ModelController().delete_model(
+                table_name,
+                project_name=self.name,
+                company_id=self.company_id
+            )
+        elif table_meta['type'] == 'view':
+            ViewController().delete(
+                table_name,
+                project_name=self.name,
+                company_id=self.company_id
+            )
+        else:
+            raise Exception(f"Can't delete table '{table_name}' because of it type: {table_meta['type']}")
+
+    def create_view(self, name: str, query: str):
+        ViewController().add(
+            name,
+            query=query,
+            project_name=self.name,
+            company_id=self.company_id
+        )
+
+    def query_view(self, query: ASTNode) -> ASTNode:
+        view_name = query.from_table.parts[-1]
+        view_meta = ViewController().get(
+            name=view_name,
+            project_name=self.name,
+            company_id=self.company_id
+        )
+        subquery_ast = parse_sql(view_meta['query'], dialect='mindsdb')
+        return subquery_ast
 
     def get_models(self):
         records = (

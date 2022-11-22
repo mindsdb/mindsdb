@@ -170,6 +170,22 @@
             },
             "tutorials"
           ]
+        },
+        {
+          "group": "Contributing Guide",
+          "pages": [
+            "contribute/install",
+            "contribute/issues",
+            "contribute/integrations",
+            "contribute/docs",
+            "docs-rules",
+            "contribute/tests",
+            "contribute/tutorials"
+          ]
+        },
+        {
+          "group": "Community",
+          "pages": ["contribute", "community"]
         }
       ]
     }
@@ -182,5 +198,10 @@
     "linkedin": "https://www.linkedin.com/company/mindsdb",
     "youtube": "https://www.youtube.com/channel/UC5_wBOLCWath6q1iTgPPD5A",
     "medium": "https://medium.com/mindsdb"
+  },
+  "analytics": {
+    "gtm": {
+      "tagId": "GTM-MNN47J3"
+    }
   }
 }

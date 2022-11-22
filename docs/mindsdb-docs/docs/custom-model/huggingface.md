@@ -6,9 +6,6 @@ HuggingFace facilitates building, training, and deploying ML models.
 
 We use the `#!sql CREATE PREDICTOR` statement to bring the HuggingFace models to MindsDB.
 
-!!! note "Upload a File"
-    Before proceeding, please upload [the `hf_test.csv` file](/assets/hf_test.csv) with data to MindsDB Cloud. Here is the [guide on how to upload a file to MindsDB Cloud](/sql/create/file).
-
 Let's go through some sample models.
 
 ### Model 1: Spam Classifier
@@ -29,7 +26,7 @@ USING
 On execution, we get:
 
 ```sql
-Query OK, 0 rows affected (x.xxx sec)
+Query successfully completed
 ```
 
 Before querying for predictions, we should verify the status of the `spam_classifier` model.
@@ -54,7 +51,7 @@ Once the status is `complete`, we can query for predictions.
 
 ```sql
 SELECT h.*, t.text_spammy AS input_text
-FROM files.hf_test AS t
+FROM example_db.demo_data.hf_test AS t
 JOIN mindsdb.spam_classifier AS h;
 ```
 
@@ -88,7 +85,7 @@ USING
 On execution, we get:
 
 ```sql
-Query OK, 0 rows affected (x.xxx sec)
+Query successfully completed
 ```
 
 Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
@@ -113,7 +110,7 @@ Once the status is `complete`, we can query for predictions.
 
 ```sql
 SELECT h.*, t.text_short AS input_text
-FROM files.hf_test AS t
+FROM example_db.demo_data.hf_test AS t
 JOIN mindsdb.sentiment_classifier AS h;
 ```
 
@@ -147,7 +144,7 @@ USING
 On execution, we get:
 
 ```sql
-Query OK, 0 rows affected (x.xxx sec)
+Query successfully completed
 ```
 
 Before querying for predictions, we should verify the status of the `zero_shot_tcd` model.
@@ -172,7 +169,7 @@ Once the status is `complete`, we can query for predictions.
 
 ```sql
 SELECT h.*, t.text_short AS input_text
-FROM files.hf_test AS t
+FROM example_db.demo_data.hf_test AS t
 JOIN mindsdb.zero_shot_tcd AS h;
 ```
 
@@ -207,7 +204,7 @@ USING
 On execution, we get:
 
 ```sql
-Query OK, 0 rows affected (x.xxx sec)
+Query successfully completed
 ```
 
 Before querying for predictions, we should verify the status of the `translator_en_fr` model.
@@ -232,7 +229,7 @@ Once the status is `complete`, we can query for predictions.
 
 ```sql
 SELECT h.*, t.text_short AS input_text
-FROM files.hf_test AS t
+FROM example_db.demo_data.hf_test AS t
 JOIN mindsdb.translator_en_fr AS h;
 ```
 
@@ -253,7 +250,7 @@ On execution, we get:
 Here is an example of a summarisation.
 
 ```sql
-CREATE PREDICTOR mindsdb.summarizer_10_20
+CREATE MODEL mindsdb.summarizer_10_20
 PREDICT text_summary
 USING
   engine = 'huggingface',
@@ -267,7 +264,7 @@ USING
 On execution, we get:
 
 ```sql
-Query OK, 0 rows affected (x.xxx sec)
+Query successfully completed
 ```
 
 Before querying for predictions, we should verify the status of the `summarizer_10_20` model.
@@ -292,7 +289,7 @@ Once the status is `complete`, we can query for predictions.
 
 ```sql
 SELECT h.*, t.text_long AS input_text
-FROM files.hf_test AS t
+FROM example_db.demo_data.hf_test AS t
 JOIN mindsdb.summarizer_10_20 AS h;
 ```
 

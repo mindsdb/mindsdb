@@ -665,9 +665,14 @@ class ExecuteCommands:
             project_name=database_name,
             except_absent=True
         )
-        integration_record = get_predictor_integration(model_record)
-        if integration_record is None:
-            raise Exception(f"Model '{model_name}' does not have linked integration")
+
+        if statement.integration_name is None:
+            if model_record.data_integration_ref is None:
+                raise Exception('The model does not have an associated dataset')
+            if model_record.data_integration_ref['type'] == 'integration':
+                integration = self.session.integration_controller.get_by_id(model_record.data_integration_ref['id'])
+                if integration is None:
+                    raise Exception('The database from which the model was trained no longer exists')
 
         ml_handler = None
         if statement.using is not None:
@@ -680,6 +685,9 @@ class ExecuteCommands:
 
         # use current ml handler
         if ml_handler is None:
+            integration_record = get_predictor_integration(model_record)
+            if integration_record is None:
+                raise Exception('ML engine model was trained with does not esxists')
             ml_handler = self.session.integration_controller.get_handler(integration_record.name)
 
         # region check if there is already predictor retraing

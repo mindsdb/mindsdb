@@ -47,6 +47,7 @@ from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.model.functions import get_model_records
 
 from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
@@ -120,18 +121,17 @@ def learn_process(class_path, context_dump, integration_id,
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
 
         # if retrain and set_active after success creation
-        if set_active:
-            # deactivate current active version
-            predictors_records = db.Predictor.query.filter_by(
+        if set_active is True:
+            models = get_model_records(
                 name=predictor_record.name,
                 project_id=predictor_record.project_id,
-                active=True,
-                company_id=ctx.company_id,
+                active=None
             )
-            for p in predictors_records:
-                p.active = False
-
-            predictor_record.active = True
+            for model in models:
+                model.active = False
+            models = [x for x in models if model.status == PREDICTOR_STATUS.COMPLETE]
+            models.sort(key=lambda x: x.created_at)
+            models[-1].active = True
 
     except Exception as e:
         print(traceback.format_exc())
@@ -283,7 +283,7 @@ class BaseMLEngineExec:
         label=None,
         version=1,
         is_retrain=False,
-        set_active=False,
+        set_active=True,
     ):
         # TODO move to model_controller
         """ Trains a model given some data-gathering SQL statement. """

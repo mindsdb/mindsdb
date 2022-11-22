@@ -15,12 +15,12 @@
   "topbarLinks": [
     {
       "name": "Login",
-      "url": "https://cloud.mindsdb.com/login?_ga=2.76853205.110032987.1662510529-777220306.1662510529&_gl=1*1hj9usc*_ga*Nzc3MjIwMzA2LjE2NjI1MTA1Mjk.*_ga_7LGFPGV6XV*MTY2MjYxMDkyMC41LjEuMTY2MjYxMTI4OC4wLjAuMA.."
+      "url": "https://cloud.mindsdb.com/login"
     }
   ],
   "topbarCtaButton": {
     "name": "Get Started",
-    "url": "https://cloud.mindsdb.com/?_ga=2.76853205.110032987.1662510529-777220306.1662510529&_gl=1*1z00u3p*_ga*Nzc3MjIwMzA2LjE2NjI1MTA1Mjk.*_ga_7LGFPGV6XV*MTY2MjYxMDkyMC41LjEuMTY2MjYxMTMwMy4wLjAuMA.."
+    "url": "https://cloud.mindsdb.com"
   },
   "anchors": [
     {

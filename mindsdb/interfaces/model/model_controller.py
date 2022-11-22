@@ -330,7 +330,7 @@ class ModelController():
 
     def retrain_model(self, statement, ml_handler, company_id: int):
         # active setting
-        set_active = None
+        set_active = True
         if statement.using is not None:
             set_active = statement.using.pop('active', True)
             if set_active in ('0', 0, None):

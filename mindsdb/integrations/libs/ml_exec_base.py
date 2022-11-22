@@ -124,19 +124,6 @@ def learn_process(class_path, company_id, integration_id,
 
         # if retrain and set_active after success creation
         if set_active is True:
-            # deactivate current active version
-            predictors_records = db.Predictor.query.filter_by(
-                name=predictor_record.name,
-                project_id=predictor_record.project_id,
-                active=True,
-                company_id=company_id,
-            )
-            for p in predictors_records:
-                p.active = False
-
-            predictor_record.active = True
-        elif set_active is None:
-            # set active the last added model with 'comlete' status
             models = get_model_records(
                 company_id=company_id,
                 name=predictor_record.name,
@@ -305,7 +292,7 @@ class BaseMLEngineExec:
         label=None,
         version=1,
         is_retrain=False,
-        set_active=None,
+        set_active=True,
     ):
         # TODO move to model_controller
         """ Trains a model given some data-gathering SQL statement. """

@@ -330,7 +330,7 @@ class ModelController():
 
     def retrain_model(self, statement, ml_handler, company_id: int):
         # active setting
-        set_active = True
+        set_active = None
         if statement.using is not None:
             set_active = statement.using.pop('active', True)
             if set_active in ('0', 0, None):
@@ -364,8 +364,6 @@ class ModelController():
             version0 = 1
 
         params['version'] = version0 + 1
-
-        # get params from predictor if not defined
 
         if params['data_integration_ref'] is None:
             params['data_integration_ref'] = base_predictor_record.data_integration_ref

@@ -22,7 +22,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.fs import ModelStorage, HandlerStorage
+from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 
 from mindsdb.integrations.libs.handler_helpers import define_ml_handler
 from mindsdb.utilities.log import get_log

@@ -202,11 +202,13 @@ class BaseMLEngineExec:
         elif self.execution_method == 'remote':
             raise NotImplementedError()
 
-        elif self.execution_method == 'ray':
+        elif self.execution_method == 'ray' and 'ray_service' in self.config:
+            from mindsdb.integrations.handlers_client.ml_ray_client import MLHandlerRayClient
 
-            from .ray_node import RayWrapper
+            url = self.config['ray_service']['url']
+            token = self.config['ray_service']['token']
 
-            handler = RayWrapper()
+            handler = MLHandlerRayClient(url, token)
             handler.init_handler(class_path, company_id, integration_id, predictor_id)
             return handler
 

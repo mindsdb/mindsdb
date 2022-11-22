@@ -634,7 +634,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
             self.session.database = cloud_connection['database']
             self.session.username = 'cloud'
-            self.session.user_class = cloud_connection['user_class']
             self.session.auth = True
 
         while True:

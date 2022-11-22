@@ -11,9 +11,6 @@ class Responce(Responder):
         user_class = query.get('user_class', 0)
         need_response = query.get('need_response', False)
 
-        mindsdb_env['user_class'] = user_class
-        mindsdb_env['company_id'] = company_id
-
         ctx.company_id = company_id
         ctx.user_class = user_class
 

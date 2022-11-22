@@ -88,6 +88,7 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.utilities.context import context as ctx
 
 
 def _get_show_where(statement: ASTNode, from_name: Optional[str] = None,
@@ -683,7 +684,7 @@ class ExecuteCommands:
 
         # region check if there is already predictor retraing
         is_cloud = self.session.config.get('cloud', False)
-        if is_cloud and self.session.user_class == 0:
+        if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)
             longest_training = None
             for p in models:

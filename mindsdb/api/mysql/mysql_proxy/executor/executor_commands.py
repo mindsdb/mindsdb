@@ -87,6 +87,7 @@ from mindsdb.interfaces.model.functions import (
     get_predictor_integration
 )
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
+from mindsdb.interfaces.database.projects import ProjectController
 
 
 def _get_show_where(statement: ASTNode, from_name: Optional[str] = None,
@@ -802,7 +803,7 @@ class ExecuteCommands:
         connection_args = statement.parameters
 
         if engine == 'mindsdb':
-            self.session.project_controller.add(database_name)
+            ProjectController().add(database_name)
         else:
             self._create_integration(database_name, engine, connection_args)
 

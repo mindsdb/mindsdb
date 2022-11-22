@@ -139,6 +139,7 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.interfaces.model.model_controller import ModelController
         from mindsdb.interfaces.database.projects import ProjectController
         from mindsdb.interfaces.database.database import DatabaseController
+        from mindsdb.utilities.context import context as ctx
 
         server_obj = type('', (), {})()
 
@@ -176,6 +177,7 @@ class BaseExecutorTest(BaseUnitTest):
             create_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.create')
             self.mock_create = create_patcher.__enter__()
 
+        ctx.set_default()
         sql_session = SessionController(
             server=server_obj
         )

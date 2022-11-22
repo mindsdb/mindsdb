@@ -18,6 +18,8 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     logger
 )
+import logging
+logger = logging.getLogger("mindsdb.main")
 
 
 from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
@@ -100,6 +102,7 @@ class Executor:
         self.do_execute()
 
     def query_execute(self, sql):
+        logger.info("%s.query_execute: sql - %s", self.__class__.__name__, sql)
         resp = self.execute_external(sql)
         if resp is not None:
             # is already executed
@@ -164,6 +167,7 @@ class Executor:
             return True
 
     def parse(self, sql):
+        logger.info("%s.parse: sql - %s", self.__class__.__name__, sql)
         self.sql = sql
         sql_lower = sql.lower()
         self.sql_lower = sql_lower.replace('`', '')
@@ -215,6 +219,7 @@ class Executor:
 
     def do_execute(self):
         # it can be already run at prepare state
+        logger.info("%s.do_execute", self.__class__.__name__)
         if self.is_executed:
             return
 

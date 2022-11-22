@@ -365,8 +365,6 @@ class ModelController():
 
         params['version'] = version0 + 1
 
-        # get params from predictor if not defined
-
         if params['data_integration_ref'] is None:
             params['data_integration_ref'] = base_predictor_record.data_integration_ref
         if params['fetch_data_query'] is None:

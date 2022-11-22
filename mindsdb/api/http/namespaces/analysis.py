@@ -16,6 +16,8 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 
 
 def analyze_df(df: DataFrame) -> dict:
+    if len(df) == 0:
+        return {}
     analysis = lightwood.analyze_dataset(df)
     return analysis.to_dict()
 

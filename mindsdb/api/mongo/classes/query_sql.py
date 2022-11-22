@@ -7,7 +7,6 @@ def run_sql_command(mindsdb_env, ast_query):
 
     server_obj.original_integration_controller = mindsdb_env['original_integration_controller']
     server_obj.original_model_controller = mindsdb_env['original_model_controller']
-    server_obj.original_view_controller = mindsdb_env['original_view_controller']
     server_obj.original_project_controller = mindsdb_env['original_project_controller']
     server_obj.original_database_controller = mindsdb_env['original_database_controller']
 

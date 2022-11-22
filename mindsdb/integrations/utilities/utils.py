@@ -9,10 +9,6 @@ from mindsdb.interfaces.database.database import DatabaseController
 
 def make_sql_session():
     server_obj = type('', (), {})()
-    server_obj.original_integration_controller = IntegrationController()
-    server_obj.original_model_controller = ModelController()
-    server_obj.original_project_controller = ProjectController()
-    server_obj.original_database_controller = DatabaseController()
 
     sql_session = SessionController(
         server=server_obj

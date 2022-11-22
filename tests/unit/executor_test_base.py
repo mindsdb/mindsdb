@@ -155,11 +155,6 @@ class BaseExecutorTest(BaseUnitTest):
         # no predictors yet
         # self.mock_model_controller.get_models.side_effect = lambda: []
 
-        server_obj.original_integration_controller = integration_controller
-        server_obj.original_model_controller = model_controller
-        server_obj.original_project_controller = ProjectController()
-        server_obj.original_database_controller = DatabaseController()
-
         if import_dummy_ml:
             spec = importlib.util.spec_from_file_location('dummy_ml_handler', './tests/unit/dummy_ml_handler/__init__.py')
             foo = importlib.util.module_from_spec(spec)

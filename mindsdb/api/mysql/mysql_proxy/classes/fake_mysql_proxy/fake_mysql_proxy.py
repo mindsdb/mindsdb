@@ -22,10 +22,6 @@ class FakeMysqlProxy(MysqlProxy):
         server = Dummy()
         server.connection_id = 0
         server.hook_before_handle = empty_fn
-        server.original_model_controller = ModelController()
-        server.original_integration_controller = IntegrationController()
-        server.original_project_controller = ProjectController()
-        server.original_database_controller = DatabaseController()
 
         self.charset = 'utf8'
         self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']

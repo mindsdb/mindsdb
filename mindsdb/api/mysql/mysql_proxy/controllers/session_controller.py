@@ -13,6 +13,10 @@ from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.utilities import logger
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.model.model_controller import ModelController
+from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.database.database import DatabaseController
+from mindsdb.interfaces.database.integrations import IntegrationController
 
 
 class SessionController():
@@ -34,10 +38,10 @@ class SessionController():
 
         self.config = Config()
 
-        self.model_controller = server.original_model_controller
-        self.integration_controller = server.original_integration_controller
-        self.project_controller = server.original_project_controller
-        self.database_controller = server.original_database_controller
+        self.model_controller = ModelController()
+        self.integration_controller = IntegrationController()
+        self.project_controller = ProjectController()
+        self.database_controller = DatabaseController()
 
         self.datahub = init_datahub(self)
 

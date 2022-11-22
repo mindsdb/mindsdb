@@ -835,11 +835,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.connection_id = 0
         server.hook_before_handle = empty_fn
 
-        server.original_model_controller = ModelController()
-        server.original_integration_controller = IntegrationController()
-        server.original_project_controller = ProjectController()
-        server.original_database_controller = DatabaseController()
-
         atexit.register(MysqlProxy.server_close, srv=server)
 
         # Activate the server; this will keep running until you

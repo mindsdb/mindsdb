@@ -10,7 +10,6 @@ exclude =
   __init__.py,
   # TODO: clean up this code
 
-  mindsdb/api/mongo/*
   mindsdb/api/mysql/mysql_proxy/*
   mindsdb/api/mysql/mysql_proxy/external_libs/mysql_scramble.py
   mindsdb/integrations/handlers/access_handler/access_handler.py

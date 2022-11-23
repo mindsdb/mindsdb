@@ -9,7 +9,7 @@ class Responce(Responder):
 
         if query['featureCompatibilityVersion']:
             res = {
-                "featureCompatibilityVersion" :
+                "featureCompatibilityVersion":
                     {
                         "version": "3.6"
                     },

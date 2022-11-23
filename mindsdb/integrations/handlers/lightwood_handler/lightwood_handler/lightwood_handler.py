@@ -85,8 +85,8 @@ class LightwoodHandler(BaseMLEngine):
         columns = [x.lower() for x in df.columns]
         if target.lower() not in columns:
             raise Exception(f"There is no column '{target}' in dataframe")
-        
-        if 'timeseries_settings' in args:
+
+        if 'timeseries_settings' in args and args['timeseries_settings'].get('is_timeseries') is True:
             tss = args['timeseries_settings']
             if 'order_by' in tss and tss['order_by'].lower() not in columns:
                 raise Exception(f"There is no column '{tss['order_by']}' in dataframe")

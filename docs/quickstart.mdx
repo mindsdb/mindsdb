@@ -1,7 +1,8 @@
 ---
 title: Quickstart
-description: Follow the steps below to start making data forecasts with MindsDB using standard SQL.
 ---
+
+Follow the steps below to start making data forecasts with MindsDB using standard SQL.
 
 Check out our [Getting Started Guide](/getting-started/) to set up and work with
 MindsDB using your own data and models.
@@ -22,20 +23,23 @@ You can use the MindsDB Cloud SQL Editor or open your preferred SQL client, such
 as DBeaver or MySQL CLI, and connect to MindsDB.
 
 <Tabs>
+
   <Tab title="Using the MindsDB Cloud SQL Editor">
     Log in to your MindsDB Cloud account. The
     [Editor](https://cloud.mindsdb.com/editor) is the first thing you'll see!
   </Tab>
+
   <Tab title="Using a third-party SQL Client">
     To connect to MindsDB from a third-party SQL client, use the connection details
     below.
 
     ```bash
-    "user":[your_mindsdb_cloud_username],   # your Mindsdb Cloud email address is your username
-    "password":[your_mindsdb_cloud_password],
-    "host":"cloud.mindsdb.com",
-    "port":"3306"
+    "user": your_mindsdb_cloud_username,   # your Mindsdb Cloud email address is your username
+    "password": your_mindsdb_cloud_password,
+    "host": "cloud.mindsdb.com",
+    "port": "3306"
     ```
+
     <Tip>
       If you do not have a preferred SQL client yet, we recommend using the [MindsDB
       SQL Editor](https://cloud.mindsdb.com/editor) or [DBeaver Community
@@ -43,8 +47,8 @@ as DBeaver or MySQL CLI, and connect to MindsDB.
       set up your MindsDB SQL Editor. And [here](connect/dbeaver/), you'll find how
       to connect to MindsDB from DBeaver.
     </Tip>
-
   </Tab>
+
 </Tabs>
 
 ## 3. Connecting a Database Using [`CREATE DATABASE`](/sql/create/databases/)
@@ -120,10 +124,10 @@ On execution, we get:
 To learn more about MindsDB tables structure, check out
 [this guide](sql/table-structure/).
 
-## 5. Creating a Predictor Using [`CREATE PREDICTOR`](/sql/create/predictor/)
+## 5. Creating a Model Using [`CREATE MODEL`](/sql/create/predictor/)
 
 Now you are ready to create your first predictor. Use the
-[`CREATE PREDICTOR`](/sql/create/predictor/) statement, as below.
+[`CREATE MODEL`](/sql/create/predictor/) statement, as below.
 
 ```sql
 CREATE MODEL mindsdb.home_rentals_predictor
@@ -146,7 +150,7 @@ the status of your predictor by executing the following command:
 ```sql
 SELECT status
 FROM mindsdb.models
-WHERE name='home_rentals_predictor';
+WHERE name = 'home_rentals_predictor';
 ```
 
 On execution, we get:
@@ -172,13 +176,19 @@ Or:
 Alternatively, you can use the `SHOW MODELS` command as below.
 
 ```sql
-SHOW MODELS [FROM database_project_name] [LIKE model_name] [WHERE filter];
+SHOW MODELS
+[FROM database_project_name]
+[LIKE model_name]
+[WHERE filter];
 ```
 
 Here is an example:
 
 ```sql
-SHOW MODELS FROM mindsdb LIKE 'home_rentals_predictor' WHERE status='complete';
+SHOW MODELS
+FROM mindsdb
+LIKE 'home_rentals_predictor'
+WHERE status='complete';
 ```
 
 <Warning>

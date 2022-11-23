@@ -70,6 +70,12 @@ class Config():
             'root': os.environ['MINDSDB_STORAGE_DIR']
         }
 
+        if os.environ.get('S3_BUCKET') is not None:
+            if 'permanent_storage' not in self._override_config:
+                self._override_config['permanent_storage'] = {}
+            self._override_config['permanent_storage']['location'] = 's3'
+            self._override_config['permanent_storage']['bucket'] = os.environ.get('S3_BUCKET')
+
         # content - temporary storage for entities
         paths['content'] = os.path.join(paths['root'], 'content')
         # storage - persist storage for entities

@@ -55,7 +55,7 @@ ctx = mp.get_context('spawn')
 
 
 @mark_process(name='learn')
-def learn_process(class_path, company_id, integration_id,
+def learn_process(execution_method, class_path, company_id, integration_id,
                   predictor_id, data_integration_ref, fetch_data_query,
                   project_name, problem_definition, set_active):
     db.init()
@@ -103,16 +103,12 @@ def learn_process(class_path, company_id, integration_id,
         predictor_record.training_data_rows_count = training_data_rows_count
         db.session.commit()
 
-        module_name, class_name = class_path
-        module = importlib.import_module(module_name)
-        HandlerClass = getattr(module, class_name)
-
-        handlerStorage = HandlerStorage(company_id, integration_id)
-        modelStorage = ModelStorage(company_id, predictor_id)
-
-        ml_handler = HandlerClass(
-            engine_storage=handlerStorage,
-            model_storage=modelStorage,
+        ml_handler = get_ml_handler(
+            execution_method,
+            class_path,
+            company_id,
+            integration_id,
+            predictor_id,
         )
 
         if hasattr(ml_handler, 'create_validation'):
@@ -145,6 +141,50 @@ def learn_process(class_path, company_id, integration_id,
 
     predictor_record.training_stop_at = dt.datetime.now()
     db.session.commit()
+
+def get_ml_handler(execution_method, class_path, company_id, integration_id, predictor_id=None):
+    # returns instance or wrapper over it
+
+    config = Config()
+
+    if execution_method == 'subprocess':
+        handler = MLHandlerWrapper()
+
+        handler.init_handler(class_path, company_id, integration_id, predictor_id)
+        return handler
+
+    elif execution_method == 'subprocess_keep':
+        handler = MLHandlerPersistWrapper()
+
+        handler.init_handler(class_path, company_id, integration_id, predictor_id)
+        return handler
+
+    elif execution_method == 'remote':
+        raise NotImplementedError()
+
+    elif execution_method == 'ray' and 'ray_service' in config.get_all():
+        from mindsdb.integrations.handlers_client.ray_client import MLHandlerRayClient
+
+        url = config.get('ray_service')['url']
+        token = config.get('ray_service')['token']
+
+        handler = MLHandlerRayClient(url, token)
+        handler.init_handler(class_path, company_id, integration_id, predictor_id)
+        return handler
+
+    else:
+        handlerStorage = HandlerStorage(company_id, integration_id)
+        modelStorage = ModelStorage(company_id, predictor_id)
+
+        module_name, class_name = class_path
+        module = importlib.import_module(module_name)
+        HandlerClass = getattr(module, class_name)
+
+        ml_handler = HandlerClass(
+            engine_storage=handlerStorage,
+            model_storage=modelStorage,
+        )
+        return ml_handler
 
 
 class BaseMLEngineExec:
@@ -179,48 +219,6 @@ class BaseMLEngineExec:
         self.is_connected = True
 
         self.handler_class = kwargs['handler_class']
-
-    def get_ml_handler(self, predictor_id=None):
-        # returns instance or wrapper over it
-
-        company_id, integration_id = self.company_id, self.integration_id
-
-        class_path = [self.handler_class.__module__, self.handler_class.__name__]
-
-        if self.execution_method == 'subprocess':
-            handler = MLHandlerWrapper()
-
-            handler.init_handler(class_path, company_id, integration_id, predictor_id)
-            return handler
-
-        elif self.execution_method == 'subprocess_keep':
-            handler = MLHandlerPersistWrapper()
-
-            handler.init_handler(class_path, company_id, integration_id, predictor_id)
-            return handler
-
-        elif self.execution_method == 'remote':
-            raise NotImplementedError()
-
-        elif self.execution_method == 'ray' and 'ray_service' in self.config:
-            from mindsdb.integrations.handlers_client.ml_ray_client import MLHandlerRayClient
-
-            url = self.config['ray_service']['url']
-            token = self.config['ray_service']['token']
-
-            handler = MLHandlerRayClient(url, token)
-            handler.init_handler(class_path, company_id, integration_id, predictor_id)
-            return handler
-
-        else:
-            handlerStorage = HandlerStorage(company_id, integration_id)
-            modelStorage = ModelStorage(company_id, predictor_id)
-
-            ml_handler = self.handler_class(
-                engine_storage=handlerStorage,
-                model_storage=modelStorage,
-            )
-            return ml_handler
 
     def get_tables(self) -> Response:
         """ Returns all models currently registered that belong to the ML engine."""
@@ -337,6 +335,7 @@ class BaseMLEngineExec:
 
         p = HandlerProcess(
             learn_process,
+            self.execution_method,
             class_path,
             self.company_id,
             self.integration_id,
@@ -367,7 +366,14 @@ class BaseMLEngineExec:
                 model_name = f'{model_name}.{version}'
             raise Exception(f"Error: model '{model_name}' does not exists!")
 
-        ml_handler = self.get_ml_handler(predictor_record.id)
+        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+        ml_handler = get_ml_handler(
+            self.execution_method,
+            class_path,
+            self.company_id,
+            self.integration_id,
+            predictor_record.id,
+        )
 
         args = {
             'pred_format': pred_format,

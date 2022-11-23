@@ -7,10 +7,10 @@ from flask.json import JSONEncoder
 
 class CustomJSONEncoder(JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, date):
-            return obj.strftime("%Y-%m-%d")
         if isinstance(obj, datetime):
             return obj.strftime("%Y-%m-%dT%H:%M:%S.%f")
+        if isinstance(obj, date):
+            return obj.strftime("%Y-%m-%d")
         if isinstance(obj, timedelta):
             return str(obj)
         if isinstance(obj, np.bool_):

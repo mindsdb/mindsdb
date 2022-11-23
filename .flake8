@@ -8,8 +8,8 @@ ignore =
   C901    # Function is too complex
 exclude =
   __init__.py,
+  build/*
   # TODO: clean up this code
-
   mindsdb/api/mysql/mysql_proxy/*
   mindsdb/api/mysql/mysql_proxy/external_libs/mysql_scramble.py
   mindsdb/integrations/handlers/access_handler/access_handler.py

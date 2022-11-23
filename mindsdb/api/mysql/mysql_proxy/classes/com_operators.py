@@ -17,7 +17,7 @@ def f_or(*args):
 
 
 def f_like(s, p):
-    p = '^{}$'.format(p.replace('%', '[\s\S]*'))
+    p = '^{}$'.format(p.replace('%', r'[\s\S]*'))
 
     return re.match(p, s) is not None
 

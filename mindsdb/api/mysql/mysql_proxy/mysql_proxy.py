@@ -248,12 +248,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
                 if new_method == 'caching_sha2_password' and self.session.is_ssl is False:
                     logger.warning(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                                'error: cant switch to caching_sha2_password without SSL')
+                                   'error: cant switch to caching_sha2_password without SSL')
                     self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg='caching_sha2_password without SSL not supported').send()
                     return False
 
                 logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                          f'switch auth method to {new_method}')
+                             f'switch auth method to {new_method}')
                 password = switch_auth(new_method)
 
                 if new_method == 'caching_sha2_password':
@@ -277,11 +277,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 password = switch_auth()
         elif 'mysql_native_password' in client_auth_plugin:
             logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                      'check auth using mysql_native_password')
+                         'check auth using mysql_native_password')
             password = handshake_resp.enc_password.value
         else:
             logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                      'unknown method, possible ERROR. Try to switch to mysql_native_password')
+                         'unknown method, possible ERROR. Try to switch to mysql_native_password')
             password = switch_auth('mysql_native_password')
 
         try:
@@ -289,7 +289,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         except Exception:
             self.session.database = None
         logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                  f'connecting to database {self.session.database}')
+                     f'connecting to database {self.session.database}')
 
         auth_data = self.server.check_auth(username, password, scramble_func, self.salt, self.session.company_id)
         if auth_data['success']:

@@ -3,15 +3,18 @@ max-line-length = 120
 select = C,E,F,W,B,B9
 ignore = 
   #  E402
-  E501,   # Line too long
-  W503,   # Line break occurred before a binary operator
-  C901    # Function is too complex
+  # Line too long
+  E501,
+  # Line break occurred before a binary operator
+  W503,
+  # Function is too complex
+  C901
+per-file-ignores =
+  mindsdb/api/mysql/mysql_proxy/libs/constants/mysql.py: E241
 exclude =
   __init__.py,
   build/*
   # TODO: clean up this code
-  mindsdb/api/mysql/mysql_proxy/*
-  mindsdb/api/mysql/mysql_proxy/external_libs/mysql_scramble.py
   mindsdb/integrations/handlers/access_handler/access_handler.py
   mindsdb/integrations/handlers/airtable_handler/airtable_handler.py
   mindsdb/integrations/handlers/bigquery_handler/tests/test_bigquery_handler.py

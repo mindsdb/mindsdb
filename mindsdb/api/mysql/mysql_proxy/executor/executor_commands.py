@@ -39,7 +39,6 @@ from mindsdb_sql.parser.ast import (
     Alter,
     Update,
     CreateTable,
-    TableColumn,
     Identifier,
     DropTables,
     Operation,
@@ -47,10 +46,7 @@ from mindsdb_sql.parser.ast import (
     DropView,
     Union,
 )
-from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast import Identifier
-from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities import log
@@ -58,23 +54,16 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErBadDbError,
     ErBadTableError,
-    ErKeyColumnDoesNotExist,
     ErTableExistError,
-    ErDubFieldName,
-    ErDbDropDelete,
-    ErNonInsertableTable,
     ErNotSupportedYet,
-    ErSqlSyntaxError,
-    ErSqlWrongArguments,
+    ErSqlWrongArguments
 )
-from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case, download_file
+from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery, Column
 )
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
-    ERR,
     TYPES,
     SERVER_VARIABLES,
 )
@@ -904,7 +893,7 @@ class ExecuteCommands:
             query.limit = Constant(1)
 
             sqlquery = SQLQuery(query, session=self.session)
-            if sqlquery.fetch()['success'] != True:
+            if sqlquery.fetch()['success'] is not True:
                 raise SqlApiException('Wrong view query')
 
         project = self.session.database_controller.get_project(project_name)

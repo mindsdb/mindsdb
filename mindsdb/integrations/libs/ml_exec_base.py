@@ -72,24 +72,25 @@ def learn_process(class_path, company_id, integration_id,
         )
 
         sql_session = make_sql_session(company_id)
-        if data_integration_ref['type'] == 'integration':
-            integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
-            query = Select(
-                targets=[Star()],
-                from_table=NativeQuery(
-                    integration=Identifier(integration_name),
-                    query=fetch_data_query
+        if data_integration_ref is not None:
+            if data_integration_ref['type'] == 'integration':
+                integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
+                query = Select(
+                    targets=[Star()],
+                    from_table=NativeQuery(
+                        integration=Identifier(integration_name),
+                        query=fetch_data_query
+                    )
                 )
-            )
-            sqlquery = SQLQuery(query, session=sql_session)
-        elif data_integration_ref['type'] == 'view':
-            project = database_controller.get_project(project_name)
-            query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
-            view_query_ast = project.query_view(query_ast)
-            sqlquery = SQLQuery(view_query_ast, session=sql_session)
+                sqlquery = SQLQuery(query, session=sql_session)
+            elif data_integration_ref['type'] == 'view':
+                project = database_controller.get_project(project_name)
+                query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+                view_query_ast = project.query_view(query_ast)
+                sqlquery = SQLQuery(view_query_ast, session=sql_session)
 
-        result = sqlquery.fetch(view='dataframe')
-        training_data_df = result['result']
+            result = sqlquery.fetch(view='dataframe')
+            training_data_df = result['result']
 
         training_data_columns_count, training_data_rows_count = 0, 0
         if training_data_df is not None:

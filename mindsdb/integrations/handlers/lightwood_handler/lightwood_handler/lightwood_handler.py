@@ -9,6 +9,7 @@ from dateutil.parser import parse as parse_datetime
 from collections import OrderedDict
 import psutil
 import pandas as pd
+from type_infer.dtype import dtype
 import lightwood
 from lightwood.api.high_level import ProblemDefinition
 from mindsdb_sql import parse_sql
@@ -20,7 +21,6 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropPredictor
 )
 from lightwood import __version__ as lightwood_version
-from lightwood.api import dtype
 import numpy as np
 
 from mindsdb.integrations.libs.base import PredictiveHandler

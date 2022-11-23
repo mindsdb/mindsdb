@@ -27,7 +27,7 @@ class LightwoodHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # region create permanent integrations
-        for integration_name in ['files', 'views', 'lightwood']:
+        for integration_name in ['files', 'lightwood']:
             integration_record = db.Integration(
                 name=integration_name,
                 data={},

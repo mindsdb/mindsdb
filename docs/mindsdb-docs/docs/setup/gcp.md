@@ -1,2 +1,0 @@
-!!! warning "Documentation WIP"
-    Note: This documentation is work in progress, for now you can follow up to [Deploying MindsDB on Google Cloud Platform](https://community.ops.io/rutamhere/deploying-mindsdb-on-google-cloud-platform-41h9) tutorial.

@@ -3,7 +3,6 @@ from mindsdb_sql.parser.ast import Identifier, Constant, Star, Select, Join, Bin
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.model.model_controller import ModelController
-from mindsdb.interfaces.database.views import ViewController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.database.database import DatabaseController
 
@@ -12,7 +11,6 @@ def make_sql_session(company_id):
     server_obj = type('', (), {})()
     server_obj.original_integration_controller = IntegrationController()
     server_obj.original_model_controller = ModelController()
-    server_obj.original_view_controller = ViewController()
     server_obj.original_project_controller = ProjectController()
     server_obj.original_database_controller = DatabaseController()
 

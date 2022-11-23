@@ -1,6 +1,0 @@
-mkdocs 
-mkdocs-material
-mkdocs-redirects
-mkdocs-table-reader-plugin == 0.3.0
-pymdown-extensions 
-pygments 

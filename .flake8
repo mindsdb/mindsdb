@@ -1,7 +1,11 @@
 [flake8]
-max-line-length = 88
+max-line-length = 120
 select = C,E,F,W,B,B9
-ignore = E203, E402, E501, E713, W503, C901, F401, F403, F405, F541, F821,
+ignore = 
+  #  E402
+  E501,   # Line too long
+  W503,   # Line break occurred before a binary operator
+  C901    # Function is too complex
 exclude =
   __init__.py,
   # TODO: clean up this code

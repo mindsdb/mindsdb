@@ -8,8 +8,7 @@ from pathlib import Path
 from copy import deepcopy
 from collections import OrderedDict
 
-from sqlalchemy import func, or_
-import sqlalchemy as sa
+from sqlalchemy import func
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config

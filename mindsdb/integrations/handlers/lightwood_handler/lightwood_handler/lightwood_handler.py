@@ -77,6 +77,25 @@ class NumpyJSONEncoder(json.JSONEncoder):
 class LightwoodHandler(BaseMLEngine):
     name = 'lightwood'
 
+    @staticmethod
+    def create_validation(target, args=None, **kwargs):
+        if 'df' not in kwargs:
+            return
+        df = kwargs['df']
+        columns = [x.lower() for x in df.columns]
+        if target.lower() not in columns:
+            raise Exception(f"There is no column '{target}' in dataframe")
+        
+        if 'timeseries_settings' in args:
+            tss = args['timeseries_settings']
+            if 'order_by' in tss and tss['order_by'].lower() not in columns:
+                raise Exception(f"There is no column '{tss['order_by']}' in dataframe")
+            if isinstance(tss.get('group_by'), list):
+                for column in tss['group_by']:
+                    if column.lower() not in columns:
+                        raise Exception(f"There is no column '{column}' in dataframe")
+
+
     def create(self, target, df, args):
         args['target'] = target
         run_learn(

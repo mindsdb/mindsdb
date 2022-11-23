@@ -126,7 +126,7 @@ Now you are ready to create your first predictor. Use the
 [`CREATE PREDICTOR`](/sql/create/predictor/) statement, as below.
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_predictor
+CREATE MODEL mindsdb.home_rentals_predictor
 FROM example_data
   (SELECT * FROM demo_data.home_rentals)
 PREDICT rental_price;
@@ -145,7 +145,7 @@ the status of your predictor by executing the following command:
 
 ```sql
 SELECT status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='home_rentals_predictor';
 ```
 
@@ -169,9 +169,20 @@ Or:
 +----------+
 ```
 
+Alternatively, you can use the `SHOW MODELS` command as below.
+
+```sql
+SHOW MODELS [FROM database_project_name] [LIKE model_name] [WHERE filter];
+```
+
+Here is an example:
+
+```sql
+SHOW MODELS FROM mindsdb LIKE 'home_rentals_predictor' WHERE status='complete';
+```
+
 <Warning>
-  The status of the predictor must be `complete` before you can start making
-  predictions.
+  The status of the predictor must be `complete` before you can start making predictions.
 </Warning>
 
 ## 7. Making a Prediction Using [`SELECT`](/sql/api/select/)
@@ -201,7 +212,6 @@ On execution, we get:
 ```
 
 <Check>
-**Congratulations**! If you got this far, you have successfully trained a predictive model using SQL
+**Congratulations!** If you got this far, you have successfully trained a predictive model using SQL
 and got the future data!
-
 </Check>

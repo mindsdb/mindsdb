@@ -22,7 +22,6 @@ class GetRoot(Resource):
         return result
 
 
-
 @ns_conf.route('/<db_name>')
 @ns_conf.param('db_name', "Name of the database")
 class GetLeaf(Resource):
@@ -59,17 +58,18 @@ class GetLeaf(Resource):
             tables = response.data_frame.to_dict(orient='records')
 
             schemas = defaultdict(list)
-            # schemas = [x.get('table_schema') for x in tables]
-            for x in tables:
-                schama = x.get('table_schema')
+
+            for table_meta in tables:
+                table_meta = {key.lower(): val for key, val in table_meta.items()}
+                schama = table_meta.get('table_schema')
                 schemas[schama].append({
-                    'name': x['table_name'],
+                    'name': table_meta['table_name'],
                     'class': 'table',
-                    'type': table_types.get(x.get('table_type')),
+                    'type': table_types.get(table_meta.get('table_type')),
                     'engine': None,
                     'deletable': False
                 })
-            if len(schemas) == 1 and schemas.keys()[0] is None:
+            if len(schemas) == 1 and list(schemas.keys())[0] is None:
                 tables = schemas[None]
             else:
                 tables = [{

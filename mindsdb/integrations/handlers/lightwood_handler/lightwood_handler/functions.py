@@ -1,27 +1,26 @@
 import os
-import traceback
-import tempfile
-from pathlib import Path
 import json
 import requests
-from datetime import datetime
+import tempfile
+import traceback
 import dataclasses
+from pathlib import Path
+from datetime import datetime
 
 import pandas as pd
 from pandas.core.frame import DataFrame
+
 import lightwood
 from lightwood.api.types import ProblemDefinition, JsonAI
 
-import mindsdb.interfaces.storage.db as db
-from mindsdb.interfaces.storage import db
-from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities import log
+from mindsdb.utilities.functions import mark_process
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.interfaces.model.functions import (
-    get_model_record,
     get_model_records
 )
+from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.fs import FileStorage, RESOURCE_GROUP
 from mindsdb.interfaces.storage.json import get_json_storage
 
@@ -153,9 +152,62 @@ def run_learn(df: DataFrame, args: dict, model_storage) -> None:
     db.session.commit()
 
 
-def run_adjust(name, db_name, from_data, datasource_id, company_id):
-    # @TODO: Actually implement this
-    return 0
+@mark_process(name='learn')
+def run_adjust(predictor_id: int, df: DataFrame, company_id: int, args: dict, model_storage):  # @TODO: settle on final signature
+    try:
+        predictor_record = db.Predictor.query.filter_by(id=predictor_id).first()
+
+        # TODO: Copy DB record into new version
+
+        # TODO move this to ModelStorage (don't work with database directly)
+        predictor_record.data = {'training_log': 'training'}
+        predictor_record.training_start_at = datetime.now()
+        predictor_record.status = PREDICTOR_STATUS.ADJUSTING  # TODO: what about parallel execution?
+        db.session.commit()
+
+        predictor = lightwood.predictor_from_code(predictor_record.code)
+        predictor.adjust(df, args=args)
+
+        fs = FileStorage(
+            resource_group=RESOURCE_GROUP.PREDICTOR,
+            resource_id=predictor_id,
+            company_id=company_id,
+            sync=True
+        )
+        predictor.save(fs.folder_path / fs.folder_name)
+        fs.push()
+
+        predictor_record.update_status = 'up_to_date'
+        predictor_record.status = PREDICTOR_STATUS.COMPLETE
+        predictor_record.training_stop_at = datetime.now()
+        db.session.commit()
+
+        predictor_records = get_model_records(
+            active=None,
+            name=predictor_record.name,
+            company_id=company_id
+        )
+        predictor_records = [
+            x for x in predictor_records
+            if x.training_stop_at is not None
+        ]
+        predictor_records.sort(key=lambda x: x.training_stop_at)
+        for record in predictor_records:
+            record.active = False
+        predictor_records[-1].active = True
+        db.session.commit()
+
+    except Exception as e:
+        log.logger.error(e)
+        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
+        print(traceback.format_exc())
+        error_message = format_exception_error(e)
+        predictor_record.data = {"error": error_message}
+        db.session.commit()
+
+    if predictor_record.training_stop_at is None:
+        predictor_record.training_stop_at = datetime.now()
+        db.session.commit()
 
 
 @mark_process(name='learn')

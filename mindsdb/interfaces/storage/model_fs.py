@@ -8,6 +8,7 @@ from .fs import RESOURCE_GROUP, FileStorageFactory
 
 from .json import get_json_storage
 
+
 class ModelStorage:
     """
     This class deals with all model-related storage requirements, from setting status to storing artifacts.

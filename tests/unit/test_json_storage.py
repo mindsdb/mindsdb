@@ -30,7 +30,6 @@ class Test(unittest.TestCase):
         db.init()
         migrate.migrate_to_head()
 
-
     def test_1_insert(self):
         storage_1 = get_json_storage(1)
         storage_1['x'] = {'y': 1}

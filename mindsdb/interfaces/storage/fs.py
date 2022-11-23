@@ -1,5 +1,4 @@
 import os
-import re
 import shutil
 import hashlib
 from pathlib import Path
@@ -14,15 +13,16 @@ except Exception:
     # Only required for remote storage on s3
     pass
 
+from mindsdb.utilities.config import Config
+
+
 @dataclass(frozen=True)
 class RESOURCE_GROUP:
     PREDICTOR = 'predictor'
     INTEGRATION = 'integration'
 
+
 RESOURCE_GROUP = RESOURCE_GROUP()
-
-
-from mindsdb.utilities.config import Config
 
 
 def copy(src, dst):
@@ -351,4 +351,3 @@ class FileStorageFactory:
             sync=self.sync,
             resource_id=resource_id
         )
-

@@ -72,5 +72,25 @@ exclude =
   tests/unit/test_executor.py
   tests/unit/test_mongodb_handler.py
   tests/unit/test_mongodb_server.py
+  tests/integration_tests/flows/conftest.py
+  tests/unit/ml_handlers/test_huggingface.py
+  tests/integration_tests/flows/test_http.py
+  tests/unit/ml_handlers/test_mlflow.py
+  tests/unit/ml_handlers/test_huggingface.py
+  tests/unit/ml_handlers/test_ludwig.py
+  tests/unit/ml_handlers/test_lightwood.py
+  tests/unit/test_predictor_params.py
+  tests/unit/test_project_structure.py
+  tests/unit/test_merlion_handler.py
+  tests/handler_tests/test_mysql_handler.py
+  tests/handler_tests/test_mariadb_handler.py
+  tests/handler_tests/test_postgres_handler.py
+  mindsdb/integrations/handlers_client/ml_client.py
+  mindsdb/integrations/handlers_client/db_client.py
+  mindsdb/integrations/handlers/byom_handler/byom_handler.py
+  mindsdb/integrations/handlers/byom_handler/proc_wrapper.py
+  mindsdb/integrations/handlers/*
+  mindsdb/__main__.py
+  mindsdb/integrations/handlers_wrapper
 
 max-complexity = 18

@@ -1,6 +1,7 @@
 import os
 from mindsdb.interfaces.storage import db
 
+
 def fmt_log_record(log_record):
     return {
         'log_from': 'mindsdb',

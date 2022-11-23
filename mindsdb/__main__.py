@@ -130,7 +130,7 @@ if __name__ == '__main__':
     # need configure migration behavior by env_variables
     # leave 'is_cloud' for now, but needs to be removed further
     run_migration_separately = os.environ.get("SEPARATE_MIGRATIONS", False)
-    if run_migration_separately in (False, "false","False", 0, "0", ""):
+    if run_migration_separately in (False, "false", "False", 0, "0", ""):
         run_migration_separately = False
     else:
         run_migration_separately = True

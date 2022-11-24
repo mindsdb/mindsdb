@@ -29,6 +29,7 @@ from mindsdb.utilities.log import get_log
 
 log = get_log()
 
+
 class BaseMLWrapper:
     """Base abstract class contains some general methods."""
     def __init__(self, name):
@@ -125,10 +126,9 @@ class MLHandlerWrapper(BaseMLWrapper):
         integration_id = 0
         handler_class = self._get_handler_class()
         common_args = self._get_handler_general_data()
-        company_id = common_args["company_id"]
         predictor_id = common_args["predictor_id"]
-        engineStorage = HandlerStorage(company_id, integration_id)
-        modelStorage = ModelStorage(company_id, predictor_id)
+        engineStorage = HandlerStorage(integration_id)
+        modelStorage = ModelStorage(predictor_id)
         handler = handler_class(engine_storage=engineStorage,
                                 model_storage=modelStorage)
         return handler

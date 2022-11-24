@@ -3,8 +3,6 @@ import time
 from flask import request
 from flask_restx import Resource
 from pandas.core.frame import DataFrame
-
-import lightwood
 from dataprep_ml.insights import analyze_dataset
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Constant, Identifier
@@ -43,10 +41,7 @@ class QueryAnalysis(Resource):
             ast.limit = Constant(limit)
             query = str(ast)
 
-        mysql_proxy = FakeMysqlProxy(
-            company_id=request.company_id,
-            user_class=request.user_class
-        )
+        mysql_proxy = FakeMysqlProxy()
         mysql_proxy.set_context(context)
 
         try:

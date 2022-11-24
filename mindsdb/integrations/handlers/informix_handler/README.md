@@ -72,8 +72,8 @@ rm OneDB-Linux64-ODBC-Driver.tar
 * After running  above command you need to go in `.bashrc` file and add enviroment variable there
 
 ```bash
-export INFORMIXDIR = $HOME/Informix/home/informix/cli/onedb-odbc-driver
-export LD_LIBRARY_PATH=${INFORMIXDIR}/lib:${INFORMIXDIR}/lib/esql:${INFORMIXDIR}/lib/cli
+export INFORMIXDIR=$HOME/Informix/home/informix/cli/onedb-odbc-driver
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}${INFORMIXDIR}/lib:${INFORMIXDIR}/lib/esql:${INFORMIXDIR}/lib/cli
 ```
 * Now you are done with setting Enviroment variable.
 * Running below command clone IfxPy repo , build a wheel and install it .

@@ -1,5 +1,6 @@
-import os
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities.context import context as ctx
+
 
 def fmt_log_record(log_record):
     return {
@@ -13,7 +14,7 @@ def fmt_log_record(log_record):
 
 def get_logs(min_timestamp, max_timestamp, context, level, log_from, limit):
     logs = db.session.query(db.Log).filter(
-        db.Log.company_id == os.environ.get('MINDSDB_COMPANY_ID', None),
+        db.Log.company_id == ctx.company_id,
         db.Log.created_at > min_timestamp
     )
 

@@ -12,6 +12,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.project_datanode import ProjectDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
+from mindsdb.interfaces.database.projects import ProjectController
 
 
 class InformationSchemaDataNode(DataNode):
@@ -41,7 +42,7 @@ class InformationSchemaDataNode(DataNode):
     def __init__(self, session):
         self.session = session
         self.integration_controller = session.integration_controller
-        self.project_controller = session.project_controller
+        self.project_controller = ProjectController()
         self.database_controller = session.database_controller
 
         self.persis_datanodes = {}

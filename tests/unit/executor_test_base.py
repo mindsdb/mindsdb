@@ -59,6 +59,10 @@ class BaseUnitTest:
         db.init()
         cls.db = db
 
+        from multiprocessing import dummy
+        mp_patcher = mock.patch('torch.multiprocessing.get_context').__enter__()
+        mp_patcher.side_effect = lambda x: dummy
+
     @staticmethod
     def teardown_class(cls):
 

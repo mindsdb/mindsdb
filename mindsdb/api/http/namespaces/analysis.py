@@ -3,8 +3,6 @@ import time
 from flask import request
 from flask_restx import Resource
 from pandas.core.frame import DataFrame
-
-import lightwood
 from dataprep_ml.insights import analyze_dataset
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Constant, Identifier

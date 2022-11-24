@@ -86,7 +86,7 @@ class ValidateJsonAI(Resource):
         if json_ai is None:
             return 'Please provide json_ai', 400
         try:
-            lw_handler = request.integration_controller.get_handler('lightwood')
+            lw_handler = ca.integration_controller.get_handler('lightwood')
             code = lw_handler.code_from_json_ai(json_ai)
         except Exception as e:
             return {'error': str(e)}

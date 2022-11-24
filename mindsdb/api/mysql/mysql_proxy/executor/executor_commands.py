@@ -87,6 +87,8 @@ from mindsdb.interfaces.model.functions import (
     get_predictor_integration
 )
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
+from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.utilities.context import context as ctx
 
 
 def _get_show_where(statement: ASTNode, from_name: Optional[str] = None,
@@ -164,7 +166,8 @@ class ExecuteCommands:
             model_name = statement.name.parts[-1]
 
             try:
-                self.session.model_controller.delete_model(model_name, project_name=database_name)
+                project = self.session.database_controller.get_project(database_name)
+                project.drop_table(model_name)
             except Exception as e:
                 if not statement.if_exists:
                     raise e
@@ -658,14 +661,18 @@ class ExecuteCommands:
         database_name, model_name = statement.name.parts
 
         model_record = get_model_record(
-            company_id=self.session.company_id,
             name=model_name,
             project_name=database_name,
             except_absent=True
         )
-        integration_record = get_predictor_integration(model_record)
-        if integration_record is None:
-            raise Exception(f"Model '{model_name}' does not have linked integration")
+
+        if statement.integration_name is None:
+            if model_record.data_integration_ref is None:
+                raise Exception('The model does not have an associated dataset')
+            if model_record.data_integration_ref['type'] == 'integration':
+                integration = self.session.integration_controller.get_by_id(model_record.data_integration_ref['id'])
+                if integration is None:
+                    raise Exception('The database from which the model was trained no longer exists')
 
         ml_handler = None
         if statement.using is not None:
@@ -678,15 +685,15 @@ class ExecuteCommands:
 
         # use current ml handler
         if ml_handler is None:
+            integration_record = get_predictor_integration(model_record)
+            if integration_record is None:
+                raise Exception('ML engine model was trained with does not esxists')
             ml_handler = self.session.integration_controller.get_handler(integration_record.name)
 
         # region check if there is already predictor retraing
         is_cloud = self.session.config.get('cloud', False)
-        if is_cloud and self.session.user_class == 0:
-            models = get_model_records(
-                company_id=self.session.company_id,
-                active=None
-            )
+        if is_cloud and ctx.user_class == 0:
+            models = get_model_records(active=None)
             longest_training = None
             for p in models:
                 if (
@@ -805,7 +812,7 @@ class ExecuteCommands:
         connection_args = statement.parameters
 
         if engine == 'mindsdb':
-            self.session.project_controller.add(database_name)
+            ProjectController().add(database_name)
         else:
             self._create_integration(database_name, engine, connection_args)
 
@@ -898,10 +905,10 @@ class ExecuteCommands:
             if sqlquery.fetch()['success'] != True:
                 raise SqlApiException('Wrong view query')
 
-        self.session.view_controller.add(
+        project = self.session.database_controller.get_project(project_name)
+        project.create_view(
             view_name,
-            query=query_str,
-            project_name=project_name
+            query=query_str
         )
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -914,7 +921,8 @@ class ExecuteCommands:
                 db_name = name.parts[0]
             else:
                 db_name = self.session.database
-            self.session.view_controller.delete(view_name, project_name=db_name)
+            project = self.session.database_controller.get_project(db_name)
+            project.drop_table(view_name)
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 

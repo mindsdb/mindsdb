@@ -12,6 +12,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.project_datanode import ProjectDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
+from mindsdb.interfaces.database.projects import ProjectController
 
 
 class InformationSchemaDataNode(DataNode):
@@ -41,8 +42,7 @@ class InformationSchemaDataNode(DataNode):
     def __init__(self, session):
         self.session = session
         self.integration_controller = session.integration_controller
-        self.view_controller = session.view_controller
-        self.project_controller = session.project_controller
+        self.project_controller = ProjectController()
         self.database_controller = session.database_controller
 
         self.persis_datanodes = {}
@@ -136,11 +136,11 @@ class InformationSchemaDataNode(DataNode):
 
     def get_integrations_names(self):
         integration_names = self.integration_controller.get_all().keys()
-        # remove files and views from list to prevent doubling in 'select from INFORMATION_SCHEMA.TABLES'
+        # remove files from list to prevent doubling in 'select from INFORMATION_SCHEMA.TABLES'
         return [
             x.lower()
             for x in integration_names
-            if x not in ('files', 'views')
+            if x not in ('files', )
         ]
 
     def get_projects_names(self):
@@ -228,8 +228,6 @@ class InformationSchemaDataNode(DataNode):
         for ds_name in self.get_integrations_names():
             if target_table is not None and target_table != ds_name:
                 continue
-            if ds_name == 'views':
-                continue
             try:
                 ds = self.get(ds_name)
                 ds_tables = ds.get_tables()
@@ -279,7 +277,6 @@ class InformationSchemaDataNode(DataNode):
         data = [
             [x['name'], x['type'], x['engine']]
             for x in project
-            if x['engine'] != 'views'
         ]
 
         df = pd.DataFrame(data, columns=columns)

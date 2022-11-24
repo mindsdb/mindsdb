@@ -57,8 +57,8 @@ import time
 from abc import ABC
 from pathlib import Path
 import hashlib
-import json
-import dill
+import typing as t
+
 import pandas as pd
 import walrus
 
@@ -71,7 +71,7 @@ def dataframe_checksum(df: pd.DataFrame):
     return checksum
 
 
-def json_checksum(obj: [dict, list]):
+def json_checksum(obj: t.Union[dict, list]):
     checksum = str_checksum(CustomJSONEncoder().encode(obj))
     return checksum
 

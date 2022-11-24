@@ -6,8 +6,14 @@ from collections import OrderedDict
 import sqlalchemy as sa
 import numpy as np
 
+from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql import parse_sql
+
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
+from mindsdb.interfaces.model.model_controller import ModelController
+from mindsdb.interfaces.database.views import ViewController
+from mindsdb.utilities.context import context as ctx
 
 
 class Project:
@@ -20,10 +26,10 @@ class Project:
         p.id = db_record.id
         return p
 
-    def create(self, name: str, company_id: int):
+    def create(self, name: str):
         existing_record = db.Project.query.filter(
             (db.Project.name == name)
-            & (db.Project.company_id == company_id)
+            & (db.Project.company_id == ctx.company_id)
             & (db.Project.deleted_at == sa.null())
         ).first()
         if existing_record is not None:
@@ -31,12 +37,12 @@ class Project:
 
         record = db.Project(
             name=name,
-            company_id=company_id
+            company_id=ctx.company_id
         )
 
         self.record = record
         self.name = name
-        self.company_id = company_id
+        self.company_id = ctx.company_id
 
         db.session.add(record)
         db.session.commit()
@@ -63,12 +69,46 @@ class Project:
             self.id = None
         db.session.commit()
 
+    def drop_table(self, table_name: str):
+        tables = self.get_tables()
+        if table_name not in tables:
+            raise Exception(f"Table '{table_name}' do not exists")
+        table_meta = tables[table_name]
+        if table_meta['type'] == 'model':
+            ModelController().delete_model(
+                table_name,
+                project_name=self.name
+            )
+        elif table_meta['type'] == 'view':
+            ViewController().delete(
+                table_name,
+                project_name=self.name
+            )
+        else:
+            raise Exception(f"Can't delete table '{table_name}' because of it type: {table_meta['type']}")
+
+    def create_view(self, name: str, query: str):
+        ViewController().add(
+            name,
+            query=query,
+            project_name=self.name
+        )
+
+    def query_view(self, query: ASTNode) -> ASTNode:
+        view_name = query.from_table.parts[-1]
+        view_meta = ViewController().get(
+            name=view_name,
+            project_name=self.name
+        )
+        subquery_ast = parse_sql(view_meta['query'], dialect='mindsdb')
+        return subquery_ast
+
     def get_models(self):
         records = (
             db.session.query(db.Predictor, db.Integration).filter_by(
                 project_id=self.id,
                 deleted_at=sa.null(),
-                company_id=self.company_id
+                company_id=ctx.company_id
             )
             .join(db.Integration, db.Integration.id == db.Predictor.integration_id)
             .order_by(db.Predictor.name, db.Predictor.id)
@@ -108,7 +148,7 @@ class Project:
         records = (
             db.session.query(db.View).filter_by(
                 project_id=self.id,
-                company_id=self.company_id
+                company_id=ctx.company_id
             )
             .order_by(db.View.name, db.View.id)
             .all()
@@ -143,7 +183,7 @@ class Project:
     def get_columns(self, table_name: str):
         # at the moment it works only for models
         predictor_record = db.Predictor.query.filter_by(
-            company_id=self.company_id,
+            company_id=ctx.company_id,
             project_id=self.id,
             name=table_name
         ).first()
@@ -158,19 +198,19 @@ class ProjectController:
     def __init__(self):
         pass
 
-    def get_list(self, company_id: int = None) -> List[Project]:
+    def get_list(self) -> List[Project]:
         records = db.Project.query.filter(
-            (db.Project.company_id == company_id)
+            (db.Project.company_id == ctx.company_id)
             & (db.Project.deleted_at == sa.null())
         ).order_by(db.Project.name)
 
         return [Project.from_record(x) for x in records]
 
-    def get(self, id: int = None, name: str = None, deleted: bool = False, company_id: int = None) -> Project:
+    def get(self, id: int = None, name: str = None, deleted: bool = False) -> Project:
         if id is not None and name is not None:
             raise ValueError("Both 'id' and 'name' is None")
 
-        q = db.Project.query.filter_by(company_id=company_id)
+        q = db.Project.query.filter_by(company_id=ctx.company_id)
 
         if id is not None:
             q = q.filter_by(id=id)
@@ -188,7 +228,7 @@ class ProjectController:
 
         return Project.from_record(record)
 
-    def add(self, name: str, company_id: int = None) -> Project:
+    def add(self, name: str) -> Project:
         project = Project()
-        project.create(name=name, company_id=company_id)
+        project.create(name=name)
         return project

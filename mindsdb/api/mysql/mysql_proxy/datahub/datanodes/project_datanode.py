@@ -91,17 +91,10 @@ class ProjectDataNode(DataNode):
         # endregion
 
         # region query to views
-        views_handler = self.integration_controller.create_tmp_handler(
-            handler_type='views',
-            connection_data={}
-        )
-        response = views_handler.query(query, db_name=self.project.name)
-
-        if response.resp_type != 'query':
-            raise Exception(f'Cant execute view query: {response.error_message}')
+        view_query_ast = self.project.query_view(query)
 
         renderer = SqlalchemyRender('mysql')
-        query_str = renderer.get_string(response.query, with_failback=True)
+        query_str = renderer.get_string(view_query_ast, with_failback=True)
 
         sqlquery = SQLQuery(
             query_str,

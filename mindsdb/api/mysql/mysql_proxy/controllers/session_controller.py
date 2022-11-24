@@ -12,7 +12,10 @@
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.utilities import logger
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
+from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.model.model_controller import ModelController
+from mindsdb.interfaces.database.database import DatabaseController
+from mindsdb.interfaces.database.integrations import IntegrationController
 
 
 class SessionController():
@@ -20,45 +23,21 @@ class SessionController():
     This class manages the server session
     '''
 
-    def __init__(self, server, company_id: int = None, user_class: int = None) -> object:
+    def __init__(self) -> object:
         """
         Initialize the session
-        :param company_id:
         """
 
         self.username = None
-        self.user_class = user_class
         self.auth = False
-        self.company_id = company_id
         self.logging = logger
         self.database = None
 
         self.config = Config()
 
-        self.model_controller = WithKWArgsWrapper(
-            server.original_model_controller,
-            company_id=company_id
-        )
-
-        self.integration_controller = WithKWArgsWrapper(
-            server.original_integration_controller,
-            company_id=company_id
-        )
-
-        self.view_controller = WithKWArgsWrapper(
-            server.original_view_controller,
-            company_id=company_id
-        )
-
-        self.project_controller = WithKWArgsWrapper(
-            server.original_project_controller,
-            company_id=company_id
-        )
-
-        self.database_controller = WithKWArgsWrapper(
-            server.original_database_controller,
-            company_id=company_id
-        )
+        self.model_controller = ModelController()
+        self.integration_controller = IntegrationController()
+        self.database_controller = DatabaseController()
 
         self.datahub = init_datahub(self)
 

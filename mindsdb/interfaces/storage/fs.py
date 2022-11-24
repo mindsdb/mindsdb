@@ -14,6 +14,7 @@ except Exception:
     pass
 
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.context import context as ctx
 
 
 @dataclass(frozen=True)
@@ -161,24 +162,22 @@ def FsStore():
 
 
 class FileStorage:
-    def __init__(self, resource_group: str, resource_id: int, company_id: Optional[int] = None,
+    def __init__(self, resource_group: str, resource_id: int,
                  root_dir: str = 'content', sync: bool = True):
         """
             Args:
                 resource_group (str)
                 resource_id (int)
-                company_id (Optional[int])
                 root_dir (str)
                 sync (bool)
         """
 
         self.resource_group = resource_group
         self.resource_id = resource_id
-        self.company_id = company_id
         self.root_dir = root_dir
         self.sync = sync
 
-        self.folder_name = f'{resource_group}_{company_id}_{resource_id}'
+        self.folder_name = f'{resource_group}_{ctx.company_id}_{resource_id}'
 
         config = Config()
         self.fs_store = FsStore()
@@ -336,17 +335,15 @@ class FileStorage:
 
 
 class FileStorageFactory:
-    def __init__(self, resource_group: str, company_id: Optional[int] = None,
+    def __init__(self, resource_group: str,
                  root_dir: str = 'content', sync: bool = True):
         self.resource_group = resource_group
-        self.company_id = company_id
         self.root_dir = root_dir
         self.sync = sync
 
     def __call__(self, resource_id: int):
         return FileStorage(
             resource_group=self.resource_group,
-            company_id=self.company_id,
             root_dir=self.root_dir,
             sync=self.sync,
             resource_id=resource_id

@@ -441,10 +441,9 @@ class SQLQuery():
     def create_planner(self):
         databases_names = self.session.database_controller.get_list()
         databases_names = [x['name'] for x in databases_names]
-        databases_names.append('information_schema')   # TEMP
 
         predictor_metadata = []
-        predictors_records = get_model_records(company_id=self.session.company_id)
+        predictors_records = get_model_records()
 
         query_tables = []
 

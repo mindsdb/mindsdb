@@ -66,7 +66,6 @@ exclude =
   mindsdb/migrations/env.py
   mindsdb/utilities/cache.py
   mindsdb/utilities/log.py
-  mindsdb/utilities/loop.py
   tests/handler_tests/test_storage_handler.py
   tests/integration_tests/flows/test_mysql_bin_api.py
   tests/prediction_latency_test/*

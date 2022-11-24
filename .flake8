@@ -1,8 +1,7 @@
 [flake8]
 max-line-length = 120
-select = C,E,F,W,B,B9
-ignore = 
-  #  E402
+ignore =
+  # E402
   # Line too long
   E501,
   # Line break occurred before a binary operator
@@ -91,8 +90,6 @@ exclude =
   tests/handler_tests/test_mysql_handler.py
   tests/handler_tests/test_mariadb_handler.py
   tests/handler_tests/test_postgres_handler.py
-  mindsdb/integrations/handlers_client/ml_client.py
-  mindsdb/integrations/handlers_client/db_client.py
   mindsdb/integrations/handlers/byom_handler/byom_handler.py
   mindsdb/integrations/handlers/byom_handler/proc_wrapper.py
   mindsdb/integrations/handlers/*

@@ -175,6 +175,7 @@ class BaseExecutorTest(BaseUnitTest):
         ctx.set_default()
         sql_session = SessionController()
         sql_session.database = 'mindsdb'
+        sql_session.integration_controller = integration_controller
 
         self.command_executor = ExecuteCommands(sql_session, executor=None)
 

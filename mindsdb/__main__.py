@@ -27,9 +27,7 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
-
 from mindsdb.utilities.fs import create_dirs_recursive
-from mindsdb.utilities.functions import args_parse
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 
 # is_ray_worker = False

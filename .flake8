@@ -9,6 +9,7 @@ ignore =
   # Function is too complex
   C901
 per-file-ignores =
+  mindsdb/__main__.py: E402
   mindsdb/api/mysql/mysql_proxy/libs/constants/mysql.py: E241
 exclude =
   __init__.py,
@@ -93,7 +94,6 @@ exclude =
   mindsdb/integrations/handlers/byom_handler/byom_handler.py
   mindsdb/integrations/handlers/byom_handler/proc_wrapper.py
   mindsdb/integrations/handlers/*
-  mindsdb/__main__.py
   mindsdb/integrations/handlers_wrapper
 
 max-complexity = 18

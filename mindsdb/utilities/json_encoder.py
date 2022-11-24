@@ -10,7 +10,7 @@ class CustomJSONEncoder(JSONEncoder):
         if isinstance(obj, timedelta):
             return str(obj)
         if isinstance(obj, datetime):
-            return obj.strftime("%Y-%m-%dT%H:%M:%S.%f")
+            return obj.strftime("%Y-%m-%d %H:%M:%S.%f")
         if isinstance(obj, date):
             return obj.strftime("%Y-%m-%d")
         if isinstance(obj, np.bool_):

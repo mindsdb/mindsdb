@@ -63,6 +63,7 @@ def learn_process(class_path, context_dump, integration_id,
     db.init()
 
     predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
+
     try:
         target = problem_definition['target']
         training_data_df = None
@@ -70,24 +71,25 @@ def learn_process(class_path, context_dump, integration_id,
         database_controller = DatabaseController()
 
         sql_session = make_sql_session()
-        if data_integration_ref['type'] == 'integration':
-            integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
-            query = Select(
-                targets=[Star()],
-                from_table=NativeQuery(
-                    integration=Identifier(integration_name),
-                    query=fetch_data_query
+        if data_integration_ref is not None:
+            if data_integration_ref['type'] == 'integration':
+                integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
+                query = Select(
+                    targets=[Star()],
+                    from_table=NativeQuery(
+                        integration=Identifier(integration_name),
+                        query=fetch_data_query
+                    )
                 )
-            )
-            sqlquery = SQLQuery(query, session=sql_session)
-        elif data_integration_ref['type'] == 'view':
-            project = database_controller.get_project(project_name)
-            query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
-            view_query_ast = project.query_view(query_ast)
-            sqlquery = SQLQuery(view_query_ast, session=sql_session)
+                sqlquery = SQLQuery(query, session=sql_session)
+            elif data_integration_ref['type'] == 'view':
+                project = database_controller.get_project(project_name)
+                query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+                view_query_ast = project.query_view(query_ast)
+                sqlquery = SQLQuery(view_query_ast, session=sql_session)
 
-        result = sqlquery.fetch(view='dataframe')
-        training_data_df = result['result']
+            result = sqlquery.fetch(view='dataframe')
+            training_data_df = result['result']
 
         training_data_columns_count, training_data_rows_count = 0, 0
         if training_data_df is not None:
@@ -120,6 +122,7 @@ def learn_process(class_path, context_dump, integration_id,
         ml_handler.create(target, df=training_data_df, args=problem_definition)
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
 
+        db.session.commit()
         # if retrain and set_active after success creation
         if set_active is True:
             models = get_model_records(
@@ -129,10 +132,9 @@ def learn_process(class_path, context_dump, integration_id,
             )
             for model in models:
                 model.active = False
-            models = [x for x in models if model.status == PREDICTOR_STATUS.COMPLETE]
+            models = [x for x in models if x.status == PREDICTOR_STATUS.COMPLETE]
             models.sort(key=lambda x: x.created_at)
             models[-1].active = True
-
     except Exception as e:
         print(traceback.format_exc())
         error_message = format_exception_error(e)

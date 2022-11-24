@@ -4,8 +4,8 @@ import copy
 from datetime import datetime
 
 import pandas as pd
+from type_infer.dtype import dtype
 import lightwood
-from lightwood.api import dtype
 import numpy as np
 
 import mindsdb.interfaces.storage.db as db
@@ -50,6 +50,25 @@ class NumpyJSONEncoder(json.JSONEncoder):
 
 class LightwoodHandler(BaseMLEngine):
     name = 'lightwood'
+
+    @staticmethod
+    def create_validation(target, args=None, **kwargs):
+        if 'df' not in kwargs:
+            return
+        df = kwargs['df']
+        columns = [x.lower() for x in df.columns]
+        if target.lower() not in columns:
+            raise Exception(f"There is no column '{target}' in dataframe")
+
+        if 'timeseries_settings' in args and args['timeseries_settings'].get('is_timeseries') is True:
+            tss = args['timeseries_settings']
+            if 'order_by' in tss and tss['order_by'].lower() not in columns:
+                raise Exception(f"There is no column '{tss['order_by']}' in dataframe")
+            if isinstance(tss.get('group_by'), list):
+                for column in tss['group_by']:
+                    if column.lower() not in columns:
+                        raise Exception(f"There is no column '{column}' in dataframe")
+
 
     def create(self, target, df, args):
         args['target'] = target

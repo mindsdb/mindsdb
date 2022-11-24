@@ -328,5 +328,17 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert ret.predicted[0] == 42
 
 
+    def test_empty_df(self):
+        # -- create model --
+        self.run_sql(
+            '''
+                CREATE PREDICTOR mindsdb.task_model
+                PREDICT a
+                using engine='dummy_ml',
+                join_learn_process=true
+            '''
+        )
+        self.wait_predictor('mindsdb', 'task_model')
+
 
 

@@ -1746,10 +1746,6 @@ class SQLQuery():
                 # unknown operation, add anyway
                 data2.append(row)
 
-        # final date/time cast into str
-        for idx in range(len(data2)):
-            data2[idx][order_col] = str(data2[idx][order_col])
-
         return data2
 
     def _make_list_result_view(self, data):

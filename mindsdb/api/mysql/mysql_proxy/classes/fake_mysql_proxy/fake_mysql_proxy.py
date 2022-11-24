@@ -1,7 +1,7 @@
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CHARSET_NUMBERS
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import MysqlProxy
-from mindsdb.utilities.context import context as ctx
+
 
 def empty_fn():
     pass

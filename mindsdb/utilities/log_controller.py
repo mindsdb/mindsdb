@@ -2,7 +2,6 @@ from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
 
 
-
 def fmt_log_record(log_record):
     return {
         'log_from': 'mindsdb',

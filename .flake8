@@ -89,6 +89,5 @@ exclude =
   mindsdb/integrations/handlers/byom_handler/byom_handler.py
   mindsdb/integrations/handlers/byom_handler/proc_wrapper.py
   mindsdb/integrations/handlers/*
-  mindsdb/integrations/handlers_wrapper
 
 max-complexity = 18

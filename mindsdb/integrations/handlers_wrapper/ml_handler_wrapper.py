@@ -9,8 +9,8 @@ Basic usage:
 
 """
 import traceback
-import pickle
 import json
+
 from pandas import read_json
 from flask import Flask, request
 
@@ -19,12 +19,9 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.const import PREDICTOR_STATUS
-
-from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import ModelStorage, HandlerStorage
-
 from mindsdb.integrations.libs.handler_helpers import define_ml_handler
+from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import get_log
 
 log = get_log()
@@ -59,7 +56,7 @@ class BaseMLWrapper:
 
 
 class MLHandlerWrapper(BaseMLWrapper):
-    def __init__(self,  name):
+    def __init__(self, name):
         """ Wrapper Init.
         Args:
             name: name of the service
@@ -67,13 +64,13 @@ class MLHandlerWrapper(BaseMLWrapper):
         super().__init__(name)
 
         # CONVERT METHODS TO FLASK API ENDPOINTS
-        check_connect_route = self.app.route("/check_connection", methods = ["GET", ])
+        check_connect_route = self.app.route("/check_connection", methods=["GET", ])
         self.check_connection = check_connect_route(self.check_connection)
 
-        predict_route = self.app.route("/predict", methods = ["GET", ])
+        predict_route = self.app.route("/predict", methods=["GET", ])
         self.predict = predict_route(self.predict)
 
-        query_create = self.app.route("/create", methods = ["POST", ])
+        query_create = self.app.route("/create", methods=["POST", ])
         self.create = query_create(self.create)
 
     def _get_handler_general_data(self) -> dict:
@@ -139,7 +136,6 @@ class MLHandlerWrapper(BaseMLWrapper):
                                 error_message=None)
         return result.to_json(), 200
 
-
     def create(self):
         """See 'create' method in MLHandler"""
         try:
@@ -172,4 +168,3 @@ class MLHandlerWrapper(BaseMLWrapper):
                               error_code=1,
                               error_message=msg)
             return result.to_json(), 500
-

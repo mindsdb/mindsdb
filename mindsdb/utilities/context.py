@@ -9,8 +9,7 @@ class Context:
     '''
     __slots__ = ('_storage',)
 
-    def __init__(self) -> None:
-        storage = ContextVar(f'mindsdb.context<{id(self)}>')
+    def __init__(self, storage) -> None:
         object.__setattr__(self, '_storage', storage)
 
     def set_default(self) -> None:
@@ -43,4 +42,5 @@ class Context:
         self._storage.set(storage)
 
 
-context = Context()
+_context_var = ContextVar('mindsdb.context')
+context = Context(_context_var)

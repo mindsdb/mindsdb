@@ -310,7 +310,8 @@ class FileHandler(DatabaseHandler):
         files_meta = self.file_controller.get_files()
         data = [{
             'TABLE_NAME': x['name'],
-            'TABLE_ROWS': x['row_count']
+            'TABLE_ROWS': x['row_count'],
+            'TABLE_TYPE': 'BASE TABLE'
         } for x in files_meta]
         return Response(
             RESPONSE_TYPE.TABLE,

@@ -9,6 +9,7 @@ from dateutil.parser import parse as parse_datetime
 from collections import OrderedDict
 import psutil
 import pandas as pd
+from type_infer.dtype import dtype
 import lightwood
 from lightwood.api.high_level import ProblemDefinition
 from mindsdb_sql import parse_sql
@@ -20,7 +21,6 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropPredictor
 )
 from lightwood import __version__ as lightwood_version
-from lightwood.api import dtype
 import numpy as np
 
 from mindsdb.integrations.libs.base import PredictiveHandler
@@ -85,8 +85,8 @@ class LightwoodHandler(BaseMLEngine):
         columns = [x.lower() for x in df.columns]
         if target.lower() not in columns:
             raise Exception(f"There is no column '{target}' in dataframe")
-        
-        if 'timeseries_settings' in args:
+
+        if 'timeseries_settings' in args and args['timeseries_settings'].get('is_timeseries') is True:
             tss = args['timeseries_settings']
             if 'order_by' in tss and tss['order_by'].lower() not in columns:
                 raise Exception(f"There is no column '{tss['order_by']}' in dataframe")

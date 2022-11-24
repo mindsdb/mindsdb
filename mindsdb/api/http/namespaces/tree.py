@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from flask import request
+from flask import current_app as ca
 from flask_restx import Resource
 
 from mindsdb.api.http.utils import http_error
@@ -11,7 +11,7 @@ from mindsdb.api.http.namespaces.configs.tree import ns_conf
 class GetRoot(Resource):
     @ns_conf.doc('get_tree_root')
     def get(self):
-        databases = request.database_controller.get_list()
+        databases = ca.database_controller.get_list()
         result = [{
             'name': x['name'],
             'class': 'db',
@@ -27,7 +27,7 @@ class GetRoot(Resource):
 class GetLeaf(Resource):
     @ns_conf.doc('get_tree_leaf')
     def get(self, db_name):
-        databases = request.database_controller.get_dict()
+        databases = ca.database_controller.get_dict()
         if db_name not in databases:
             return http_error(
                 400,
@@ -36,7 +36,7 @@ class GetLeaf(Resource):
             )
         db = databases[db_name]
         if db['type'] == 'project':
-            project = request.database_controller.get_project(db_name)
+            project = ca.database_controller.get_project(db_name)
             tables = project.get_tables()
             tables = [{
                 'name': key,
@@ -47,7 +47,7 @@ class GetLeaf(Resource):
                 'deletable': val.get('deletable')
             } for key, val in tables.items()]
         elif db['type'] == 'data':
-            handler = request.integration_controller.get_handler(db_name)
+            handler = ca.integration_controller.get_handler(db_name)
             response = handler.get_tables()
             if response.type != 'table':
                 return []

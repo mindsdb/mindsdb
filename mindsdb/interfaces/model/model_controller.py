@@ -11,17 +11,16 @@ import numpy as np
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.storage.fs import FsStore
-from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.json_encoder import json_serialiser
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.interfaces.model.functions import (
     get_model_record,
     get_model_records
 )
 from mindsdb.interfaces.storage.json import get_json_storage
-from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
+from mindsdb.interfaces.storage.model_fs import ModelStorage
+from mindsdb.utilities.context import context as ctx
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -34,9 +33,9 @@ class ModelController():
         self.config = Config()
         self.fs_store = FsStore()
 
-    def get_model_data(self, company_id: int, name: str = None, predictor_record=None, ml_handler_name='lightwood') -> dict:
+    def get_model_data(self, name: str = None, predictor_record=None, ml_handler_name='lightwood') -> dict:
         if predictor_record is None:
-            predictor_record = get_model_record(company_id=company_id, except_absent=True, name=name, ml_handler_name=ml_handler_name)
+            predictor_record = get_model_record(except_absent=True, name=name, ml_handler_name=ml_handler_name)
 
         data = deepcopy(predictor_record.data)
         data['dtype_dict'] = predictor_record.dtype_dict
@@ -55,8 +54,7 @@ class ModelController():
         data['status'] = predictor_record.status
 
         json_storage = get_json_storage(
-            resource_id=predictor_record.id,
-            company_id=predictor_record.company_id
+            resource_id=predictor_record.id
         )
         data['json_ai'] = json_storage.get('json_ai')
 
@@ -65,7 +63,7 @@ class ModelController():
                 data['accuracy'] = float(np.mean(list(data['accuracies'].values())))
         return data
 
-    def get_model_description(self, name: str, company_id: int):
+    def get_model_description(self, name: str):
         """
         Similar to `get_model_data` but meant to be seen directly by the user, rather than parsed by something like the Studio predictor view.
 
@@ -74,7 +72,7 @@ class ModelController():
         :returns: Dictionary of the analysis (meant to be foramtted by the APIs and displayed as json/yml/whatever)
         """ # noqa
         model_description = {}
-        model_data = self.get_model_data(name=name, company_id=company_id)
+        model_data = self.get_model_data(name=name)
 
         model_description['accuracies'] = model_data['accuracies']
         model_description['column_importances'] = model_data['column_importances']
@@ -84,11 +82,11 @@ class ModelController():
 
         return model_description
 
-    def get_models(self, company_id: int, with_versions=False, ml_handler_name='lightwood', integration_id=None):
+    def get_models(self, with_versions=False, ml_handler_name='lightwood', integration_id=None):
         models = []
         show_active = True if with_versions is False else None
-        for predictor_record in get_model_records(company_id=company_id, active=show_active, ml_handler_name=ml_handler_name, integration_id=integration_id):
-            model_data = self.get_model_data(predictor_record=predictor_record, company_id=company_id)
+        for predictor_record in get_model_records(active=show_active, ml_handler_name=ml_handler_name, integration_id=integration_id):
+            model_data = self.get_model_data(predictor_record=predictor_record)
             reduced_model_data = {}
 
             for k in ['name', 'version', 'is_active', 'predict', 'status',
@@ -117,12 +115,12 @@ class ModelController():
             models.append(reduced_model_data)
         return models
 
-    def delete_model(self, model_name: str, company_id: int, project_name: str = 'mindsdb'):
+    def delete_model(self, model_name: str, project_name: str = 'mindsdb'):
         from mindsdb.interfaces.database.database import DatabaseController
 
         project_record = db.Project.query.filter(
             (func.lower(db.Project.name) == func.lower(project_name))
-            & (db.Project.company_id == company_id)
+            & (db.Project.company_id == ctx.company_id)
             & (db.Project.deleted_at == null())
         ).first()
         if project_record is None:
@@ -131,7 +129,7 @@ class ModelController():
         model_record = db.Predictor.query.filter(
             func.lower(db.Predictor.name) == func.lower(model_name),
             db.Predictor.project_id == project_record.id,
-            db.Predictor.company_id == company_id
+            db.Predictor.company_id == ctx.company_id
         ).first()
         if model_record is None:
             raise Exception(f"Model '{model_name}' does not exists")
@@ -140,15 +138,11 @@ class ModelController():
         if integration_record is None:
             raise Exception(f"Can't determine integration of '{model_name}'")
 
-        database_controller = WithKWArgsWrapper(
-            DatabaseController(),
-            company_id=company_id
-        )
+        database_controller = DatabaseController()
 
         project = database_controller.get_project(project_name)
 
         predictors_records = get_model_records(
-            company_id=company_id,
             name=model_name,
             ml_handler_name=integration_record.name,
             project_id=project.id,
@@ -160,7 +154,7 @@ class ModelController():
         is_cloud = self.config.get('cloud', False)
         if is_cloud:
             for predictor_record in predictors_records:
-                model_data = self.get_model_data(predictor_record=predictor_record, company_id=company_id)
+                model_data = self.get_model_data(predictor_record=predictor_record)
                 if (
                     model_data.get('status') in ['generating', 'training']
                     and isinstance(model_data.get('created_at'), str) is True
@@ -173,23 +167,23 @@ class ModelController():
                 predictor_record.deleted_at = dt.datetime.now()
             else:
                 db.session.delete(predictor_record)
-            modelStorage = ModelStorage(company_id, predictor_record.id)
+            modelStorage = ModelStorage(predictor_record.id)
             modelStorage.delete()
         db.session.commit()
 
-    def rename_model(self, old_name, new_name, company_id: int):
-        model_record = get_model_record(company_id=company_id, name=new_name)
+    def rename_model(self, old_name, new_name):
+        model_record = get_model_record(name=new_name)
         if model_record is None:
             raise Exception(f"Model with name '{new_name}' already exists")
 
-        for model_record in get_model_records(company_id=company_id, name=old_name):
+        for model_record in get_model_records(name=old_name):
             model_record.name = new_name
         db.session.commit()
 
-    def export_predictor(self, name: str, company_id: int) -> json:
-        predictor_record = get_model_record(company_id=company_id, name=name, except_absent=True)
+    def export_predictor(self, name: str) -> json:
+        predictor_record = get_model_record(name=name, except_absent=True)
 
-        fs_name = f'predictor_{company_id}_{predictor_record.id}'
+        fs_name = f'predictor_{ctx.company_id}_{predictor_record.id}'
         self.fs_store.pull()
         local_predictor_savefile = os.path.join(self.fs_store.folder_path, fs_name)
         predictor_binary = open(local_predictor_savefile, 'rb').read()
@@ -197,8 +191,7 @@ class ModelController():
         # Serialize a predictor record into a dictionary 
         # move into the Predictor db class itself if we use it again somewhere
         json_storage = get_json_storage(
-            resource_id=predictor_record.id,
-            company_id=predictor_record.company_id
+            resource_id=predictor_record.id
         )
         predictor_record_serialized = {
             'name': predictor_record.name,
@@ -218,14 +211,14 @@ class ModelController():
 
         return json.dumps(predictor_record_serialized, default=json_serialiser)
 
-    def import_predictor(self, name: str, payload: json, company_id: int) -> None:
+    def import_predictor(self, name: str, payload: json) -> None:
         prs = json.loads(payload)
 
         predictor_record = db.Predictor(
             name=name,
             data=prs['data'],
             to_predict=prs['to_predict'],
-            company_id=company_id,
+            company_id=ctx.company_id,
             mindsdb_version=prs['mindsdb_version'],
             native_version=prs['native_version'],
             is_custom=prs['is_custom'],
@@ -241,7 +234,7 @@ class ModelController():
         db.session.commit()
 
         predictor_binary = base64.b64decode(prs['predictor_binary'])
-        fs_name = f'predictor_{company_id}_{predictor_record.id}'
+        fs_name = f'predictor_{ctx.company_id}_{predictor_record.id}'
         with open(os.path.join(self.fs_store.folder_path, fs_name), 'wb') as fp:
             fp.write(predictor_binary)
 
@@ -312,7 +305,7 @@ class ModelController():
             label=label
         )
 
-    def create_model(self, statement, ml_handler, company_id: int):
+    def create_model(self, statement, ml_handler):
         params = self.prepare_create_statement(statement,
                                                ml_handler.database_controller,
                                                ml_handler.handler_controller)
@@ -328,7 +321,7 @@ class ModelController():
 
         ml_handler.learn(**params)
 
-    def retrain_model(self, statement, ml_handler, company_id: int):
+    def retrain_model(self, statement, ml_handler):
         # active setting
         set_active = True
         if statement.using is not None:
@@ -343,7 +336,6 @@ class ModelController():
         base_predictor_record = get_model_record(
             name=params['model_name'],
             project_name=params['project_name'],
-            company_id=ml_handler.company_id,
             active=True
         )
 
@@ -355,7 +347,6 @@ class ModelController():
         models = get_model_records(
             name=params['model_name'],
             project_name=params['project_name'],
-            company_id=ml_handler.company_id,
             deleted_at=None,
             active=None,
         )
@@ -378,7 +369,7 @@ class ModelController():
         params['set_active'] = set_active
         ml_handler.learn(**params)
 
-    def update_model_version(self, models, company_id: int, active=None):
+    def update_model_version(self, models, active=None):
         if active is None:
             raise NotImplementedError(f'Update is not supported')
 
@@ -397,7 +388,6 @@ class ModelController():
         model = models[0]
 
         model_record = get_model_record(
-            company_id=company_id,
             name=model['NAME'],
             project_name=model['PROJECT'],
             version=model['VERSION']
@@ -410,7 +400,7 @@ class ModelController():
             db.Predictor.name == model_record.name,
             db.Predictor.project_id == model_record.project_id,
             db.Predictor.active == True,
-            db.Predictor.company_id == company_id,
+            db.Predictor.company_id == ctx.company_id,
             db.Predictor.id != model_record.id
         )
         for p in model_records:
@@ -418,13 +408,12 @@ class ModelController():
 
         db.session.commit()
 
-    def delete_model_version(self, models, company_id: int):
+    def delete_model_version(self, models):
         if len(models) == 0:
             raise Exception(f"Version to delete is not found")
 
         for model in models:
             model_record = get_model_record(
-                company_id=company_id,
                 name=model['NAME'],
                 project_name=model['PROJECT'],
                 version=model['VERSION']
@@ -437,7 +426,7 @@ class ModelController():
                 model_record.deleted_at = dt.datetime.now()
             else:
                 db.session.delete(model_record)
-            modelStorage = ModelStorage(company_id, model_record.id)
+            modelStorage = ModelStorage(model_record.id)
             modelStorage.delete()
 
         db.session.commit()

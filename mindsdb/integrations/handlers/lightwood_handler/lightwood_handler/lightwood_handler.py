@@ -1,51 +1,25 @@
-import os
 import sys
 import json
-
-from datetime import datetime, timedelta
-from typing import Dict, List, Any
 import copy
-from dateutil.parser import parse as parse_datetime
-from collections import OrderedDict
-import psutil
+from datetime import datetime
+
 import pandas as pd
 from type_infer.dtype import dtype
 import lightwood
-from lightwood.api.high_level import ProblemDefinition
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant, Select, Show, Star, NativeQuery
-from mindsdb_sql.parser.dialects.mindsdb import (
-    RetrainPredictor,
-    CreatePredictor,
-    DropPredictor
-)
-from lightwood import __version__ as lightwood_version
 import numpy as np
 
-from mindsdb.integrations.libs.base import PredictiveHandler
-from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
-from mindsdb.integrations.utilities.processes import HandlerProcess
-from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
-from mindsdb.utilities.functions import mark_process
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.const import PREDICTOR_STATUS
-from mindsdb import __version__ as mindsdb_version
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
-from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.model.functions import (
     get_model_record,
     get_model_records
 )
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -350,7 +324,7 @@ class LightwoodHandler(BaseMLEngine):
         return pd.DataFrame(data)
 
     def edit_json_ai(self, name: str, json_ai: dict):
-        predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
+        predictor_record = get_model_record(name=name, ml_handler_name='lightwood')
         assert predictor_record is not None
 
         json_ai = lightwood.JsonAI.from_dict(json_ai)
@@ -358,8 +332,7 @@ class LightwoodHandler(BaseMLEngine):
         db.session.commit()
 
         json_storage = get_json_storage(
-            resource_id=predictor_record.id,
-            company_id=predictor_record.company_id
+            resource_id=predictor_record.id
         )
         json_storage.set('json_ai', json_ai.to_dict())
 
@@ -373,7 +346,7 @@ class LightwoodHandler(BaseMLEngine):
         if self.config.get('cloud', False):
             raise Exception('Code editing prohibited on cloud')
 
-        predictor_record = get_model_record(company_id=self.company_id, name=name, ml_handler_name='lightwood')
+        predictor_record = get_model_record(name=name, ml_handler_name='lightwood')
         assert predictor_record is not None
 
         lightwood.predictor_from_code(code)
@@ -381,7 +354,6 @@ class LightwoodHandler(BaseMLEngine):
         db.session.commit()
 
         json_storage = get_json_storage(
-            resource_id=predictor_record.id,
-            company_id=predictor_record.company_id
+            resource_id=predictor_record.id
         )
         json_storage.delete('json_ai')

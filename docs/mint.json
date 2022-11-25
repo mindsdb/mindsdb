@@ -106,6 +106,12 @@
           ]
         },
         {
+          "group": "REST API",
+          "pages": [
+            "rest/sql"
+          ]
+        },
+        {
           "group": "Mongo API",
           "pages": [
             "mongo/collection-structure",

@@ -17,7 +17,7 @@ def f_or(*args):
 
 
 def f_like(s, p):
-    p = '^{}$'.format(p.replace('%', '[\s\S]*'))
+    p = '^{}$'.format(p.replace('%', r'[\s\S]*'))
 
     return re.match(p, s) is not None
 
@@ -60,8 +60,8 @@ operator_map = {
     'IS NOT': operator.ne,
     'LIKE': f_like,
     'NOT LIKE': lambda s, p: not f_like(s, p),
-    'IN': lambda v, l: v in l,
-    'NOT IN': lambda v, l: v not in l,
+    'IN': lambda v, ll: v in ll,
+    'NOT IN': lambda v, ll: v not in ll,
     'AND': f_and,
     'OR': f_or,
     '||': f_add

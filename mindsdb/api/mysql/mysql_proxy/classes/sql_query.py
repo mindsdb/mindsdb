@@ -66,7 +66,6 @@ from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
     get_model_records,
-    get_predictor_integration,
     get_predictor_project
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import (
@@ -1600,9 +1599,9 @@ class SQLQuery():
         def get_date_format(samples):
             # dateinfer reads sql date 2020-04-01 as yyyy-dd-mm. workaround for in
             for date_format, pattern in (
-                    ('%Y-%m-%d', '[\d]{4}-[\d]{2}-[\d]{2}'),
-                    ('%Y-%m-%d %H:%M:%S', '[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}'),
-                    # ('%Y', '[\d]{4}')
+                ('%Y-%m-%d', r'[\d]{4}-[\d]{2}-[\d]{2}'),
+                ('%Y-%m-%d %H:%M:%S', r'[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}'),
+                # ('%Y', '[\d]{4}')
             ):
                 if re.match(pattern, samples[0]):
                     # suggested format

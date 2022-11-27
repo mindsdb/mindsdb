@@ -51,8 +51,7 @@ jobs:
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
           pip install torch==1.7.0+cpu torchvision==0.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html;
-        fi
-      shell: bash
+        fi shell: bash
       env:
         CHECK_FOR_UPDATES: False
     - name: Install lightwood/staging if it's not mindsdb/stable
@@ -107,24 +106,24 @@ jobs:
           echo -e "\n===============test company independent===============\n"
           pytest -vx tests/integration_tests/flows/test_company_independent.py
 
-          # mkdir -p ~/.ssh/
-          # echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
-          # sudo chmod 600 ~/.ssh/db_machine
-          # echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
-          # sudo chmod 600 ~/.ssh/db_machine_ms
-          # echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
-          # sudo chmod 644 ~/.mindsdb_credentials.json
+          mkdir -p ~/.ssh/
+          echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
+          sudo chmod 600 ~/.ssh/db_machine
+          echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
+          sudo chmod 600 ~/.ssh/db_machine_ms
+          echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
+          sudo chmod 644 ~/.mindsdb_credentials.json
 
-          # export USE_EXTERNAL_DB_SERVER="1"
+          export USE_EXTERNAL_DB_SERVER="1"
 
 
-          # # Kafka Stream
-          # echo -e "\n===============\ntest Kafka Stream\n===============\n"
-          # python tests/integration_tests/flows/test_kafka.py
+          # Kafka Stream
+          echo -e "\n===============\ntest Kafka Stream\n===============\n"
+          python tests/integration_tests/flows/test_kafka.py
 
-          # # Redis Stream
-          # echo -e "\n===============\ntest Redis Stream\n===============\n"
-          # python tests/integration_tests/flows/test_redis.py
+          # Redis Stream
+          echo -e "\n===============\ntest Redis Stream\n===============\n"
+          python tests/integration_tests/flows/test_redis.py
         
         fi
       shell: bash

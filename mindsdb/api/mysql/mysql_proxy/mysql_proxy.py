@@ -437,51 +437,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'is_cloud': False
         }
 
-    # --------------
-
-    def to_mysql_columns(self, columns_list):
-
-        result = []
-
-        database = None if self.session.database == '' else self.session.database.lower()
-        for column_record in columns_list:
-
-            field_type = column_record.type
-
-            column_type = TYPES.MYSQL_TYPE_VAR_STRING
-            # is already in mysql protocol type?
-            if isinstance(field_type, int):
-                column_type = field_type
-            # pandas checks
-            elif isinstance(field_type, np_dtype):
-                if pd_types.is_integer_dtype(field_type):
-                    column_type = TYPES.MYSQL_TYPE_LONG
-                elif pd_types.is_numeric_dtype(field_type):
-                    column_type = TYPES.MYSQL_TYPE_DOUBLE
-                elif pd_types.is_datetime64_any_dtype(field_type):
-                    column_type = TYPES.MYSQL_TYPE_DATETIME
-            # lightwood checks
-            elif field_type == dtype.date:
-                column_type = TYPES.MYSQL_TYPE_DATE
-            elif field_type == dtype.datetime:
-                column_type = TYPES.MYSQL_TYPE_DATETIME
-            elif field_type == dtype.float:
-                column_type = TYPES.MYSQL_TYPE_DOUBLE
-            elif field_type == dtype.integer:
-                column_type = TYPES.MYSQL_TYPE_LONG
-
-            result.append({
-                'database': column_record.database or database,
-                #  TODO add 'original_table'
-                'table_name': column_record.table_name,
-                'name': column_record.name,
-                'alias': column_record.alias or column_record.name,
-                # NOTE all work with text-type, but if/when wanted change types to real,
-                # it will need to check all types casts in BinaryResultsetRowPacket
-                'type': column_type
-            })
-        return result
-
     def process_query(self, sql):
         executor = Executor(
             session=self.session,
@@ -499,7 +454,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
-                columns=self.to_mysql_columns(executor.columns),
+                columns = executor.to_mysql_columns(),
+                # columns=self.to_mysql_columns(executor.columns),
                 data=executor.data,
                 status=executor.server_status
             )
@@ -533,7 +489,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 packages.append(self.packet(EofPacket, status=status))
 
         if len(executor.columns) > 0:
-            columns_def = self.to_mysql_columns(executor.columns)
+            # columns_def = self.to_mysql_columns(executor.columns)
+            columns_def = executor.to_mysql_columns()
             packages.extend(
                 self._get_column_defenition_packets(columns_def)
             )
@@ -558,7 +515,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.send_query_answer(resp)
 
         # TODO prepared_stmt['type'] == 'lock' is not used but it works
-        columns_def = self.to_mysql_columns(executor.columns)
+        # columns_def = self.to_mysql_columns(executor.columns)
+        columns_def = executor.to_mysql_columns()
         packages = [self.packet(ColumnCountPacket, count=len(columns_def))]
 
         packages.extend(self._get_column_defenition_packets(columns_def))
@@ -591,7 +549,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.send_query_answer(resp)
 
         packages = []
-        columns = self.to_mysql_columns(executor.columns)
+        # columns = self.to_mysql_columns(executor.columns)
+        columns = executor.columns
         for row in executor.data[fetched:limit]:
             packages.append(
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns)

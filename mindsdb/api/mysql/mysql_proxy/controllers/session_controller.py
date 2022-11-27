@@ -91,6 +91,17 @@ class SessionController():
     def unregister_stmt(self, stmt_id):
         del self.prepared_stmts[stmt_id]
 
+    def to_json(self):
+        return {
+                "username": self.username,
+                "user_class": self.user_class,
+                "auth": self.auth,
+                "company_id": self.company_id,
+                "database": self.database,
+                "prepared_stmts": self.prepared_stmts,
+                "packet_sequence_number": self.packet_sequence_number,
+                }
+
 
 class ServerSessionContorller(SessionController):
     def __init__(self, server, company_id=None, user_class=None):

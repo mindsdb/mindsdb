@@ -1,4 +1,6 @@
 import mindsdb_sql
+from numpy import dtype as np_dtype
+from pandas.api import types as pd_types
 from mindsdb_sql.parser.ast import (
     Insert,
     Set,
@@ -16,6 +18,10 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErBadDbError,
     SqlApiException,
     logger
+)
+from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
+    TYPES,
 )
 import logging
 logger = logging.getLogger("mindsdb.main")
@@ -204,7 +210,7 @@ class Executor:
 
     def to_json(self):
         params = {
-                "columns": self.columns,
+                "columns": self.to_mysql_columns(),
                 "params": self.params,
                 "data": self.data,
                 "state_track": self.state_track,
@@ -212,3 +218,46 @@ class Executor:
                 "is_executed": self.is_executed,
                 }
         return params
+
+    def to_mysql_columns(self):
+
+        result = []
+
+        database = None if self.session.database == '' else self.session.database.lower()
+        for column_record in self.columns:
+
+            field_type = column_record.type
+
+            column_type = TYPES.MYSQL_TYPE_VAR_STRING
+            # is already in mysql protocol type?
+            if isinstance(field_type, int):
+                column_type = field_type
+            # pandas checks
+            elif isinstance(field_type, np_dtype):
+                if pd_types.is_integer_dtype(field_type):
+                    column_type = TYPES.MYSQL_TYPE_LONG
+                elif pd_types.is_numeric_dtype(field_type):
+                    column_type = TYPES.MYSQL_TYPE_DOUBLE
+                elif pd_types.is_datetime64_any_dtype(field_type):
+                    column_type = TYPES.MYSQL_TYPE_DATETIME
+            # lightwood checks
+            elif field_type == dtype.date:
+                column_type = TYPES.MYSQL_TYPE_DATE
+            elif field_type == dtype.datetime:
+                column_type = TYPES.MYSQL_TYPE_DATETIME
+            elif field_type == dtype.float:
+                column_type = TYPES.MYSQL_TYPE_DOUBLE
+            elif field_type == dtype.integer:
+                column_type = TYPES.MYSQL_TYPE_LONG
+
+            result.append({
+                'database': column_record.database or database,
+                #  TODO add 'original_table'
+                'table_name': column_record.table_name,
+                'name': column_record.name,
+                'alias': column_record.alias or column_record.name,
+                # NOTE all work with text-type, but if/when wanted change types to real,
+                # it will need to check all types casts in BinaryResultsetRowPacket
+                'type': column_type
+            })
+        return result

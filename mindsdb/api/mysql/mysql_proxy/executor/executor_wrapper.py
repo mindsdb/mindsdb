@@ -31,11 +31,11 @@ class ExecutorService:
         self.index = default_router(self.index)
 
         delete_executer_router = self.app.route("/executor", methods = ["DELETE", "DEL", ])
-        self.executor = delete_executer_router(self.executor)
+        self.del_executor = delete_executer_router(self.del_executor)
 
 
         delete_session_router = self.app.route("/session", methods = ["DELETE", "DEL"])
-        self.session = delete_session_router(self.session)
+        self.del_session = delete_session_router(self.del_session)
 
         stmt_prepare_router = self.app.route("/stmt_prepare", methods = ["POST", ])
         self.stmt_prepare = stmt_prepare_router(self.stmt_prepare)
@@ -69,12 +69,23 @@ class ExecutorService:
             logger.info("%s: creating new session. id - %s, company_id - %s, user_class - %s",
                     self.__class__.__name__,
                     session_id,
-                    params["company_id"],
-                    params["user_class"]
+                    params["session"]["company_id"],
+                    params["session"]["user_class"]
                 )
-            session = ServiceSessionController(params["company_id"], params["user_class"])
+            session = ServiceSessionController(params["session"]["company_id"], params["session"]["user_class"])
             self.sessions_cache[session_id] = session
+        session.database = params["session"]["database"]
+        session.username = params["session"]["username"]
+        session.auth = params["session"]["auth"]
+        session.prepared_stmts = params["session"]["prepared_stmts"]
+        session.packet_sequence_number = params["session"]["packet_sequence_number"]
         sqlserver = SqlServerStub(connection_id=params["connection_id"])
+
+        logger.info("%s: session info - id=%s, params=%s",
+                self.__class__.__name__,
+                session_id,
+                session.to_json(),
+            )
         logger.info("%s: creating new executor. id - %s, session_id - %s",
                 self.__class__.__name__,
                 exec_id,
@@ -92,19 +103,21 @@ class ExecutorService:
         """ Default GET endpoint - '/'."""
         return "An Executor Wrapper", 200
 
-    def executor(self):
+    def del_executor(self):
         # to delete executors
         exec_id = request.json.get("id")
         logger.info("%s: removing executor instance. id - %s", self.__class__.__name__, exec_id)
         if exec_id is not None and exec_id in self.executors_cache:
             del self.executors_cache[exec_id]
+        return "", 200
 
-    def session(self):
+    def del_session(self):
         # to delete sessions
         session_id = request.json.get("id")
         logger.info("%s: removing session instance. id - %s", self.__class__.__name__, session_id)
         if session_id is not None and session_id in self.sessions_cache:
             del self.sessions_cache[session_id]
+        return "", 200
 
     def stmt_prepare(self):
         params = request.json
@@ -130,6 +143,10 @@ class ExecutorService:
         executor = self._get_executor(params)
         sql = params.get("sql")
         executor.query_execute(sql)
+        logger.info("%s.query_execute: executor.data(type of %s) - %s", self.__class__.__name__, type(executor.data), executor.data)
+        logger.info("%s.query_execute: executor.columns(type of %s) - %s", self.__class__.__name__, type(executor.columns), executor.columns)
+        logger.info("%s.query_execute: executor.params(type of %s) - %s", self.__class__.__name__, type(executor.params), executor.params)
+
         resp = executor.to_json()
         return resp, 200
 

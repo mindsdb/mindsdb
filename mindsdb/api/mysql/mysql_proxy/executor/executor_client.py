@@ -39,6 +39,9 @@ class ExecutorClient:
         self.sql = ''
         self.sql_lower = ''
 
+    def to_mysql_columns(self):
+        return self.columns
+
     @sending_attempts()
     def _do(self, endpoint, _type="get", **params) -> requests.Response:
         """Performs several attempts to send a request to the service.
@@ -79,10 +82,11 @@ class ExecutorClient:
             connection_id = -1
         return {
             "id": self.id,
-            "session_id": self.session.id,
             "connection_id": connection_id,
-            "company_id": self.session.company_id,
-            "user_class": self.session.user_class,
+            "session_id": self.session.id,
+            # "company_id": self.session.company_id,
+            # "user_class": self.session.user_class,
+            "session": self.session.to_json(),
                 }
 
     def _update_attrs(self, response_json: dict):
@@ -160,14 +164,13 @@ class ExecutorClient:
         except Exception:
             msg = traceback.format_exc()
             logger.info("%s.query_execute: error reading response json: %s", self.__class__.__name__, msg)
-        try:
-            query = pickle.loads(response.content)
-            logger.info("%s.query_execute: success unpickle query object", self.__class__.__name__)
-            self.query = query
-        except Exception as e:
-            msg = traceback.format_exc()
-            logger.info("%s.query_execute: error unpickle query object: %s", self.__class__.__name__, msg)
-            raise e
+        # try:
+        #     query = pickle.loads(response.content)
+        #     logger.info("%s.query_execute: success unpickle query object", self.__class__.__name__)
+        #     self.query = query
+        # except Exception as e:
+        #     msg = traceback.format_exc()
+        #     logger.info("%s.query_execute: error unpickle query object: %s", self.__class__.__name__, msg)
 
     def execute_external(self, sql):
         json_data = self.default_json()

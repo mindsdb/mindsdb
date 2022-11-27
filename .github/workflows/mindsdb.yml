@@ -51,7 +51,8 @@ jobs:
       run: |
         if [ "$RUNNER_OS" == "Windows" ]; then
           pip install torch==1.7.0+cpu torchvision==0.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html;
-        fi shell: bash
+        fi
+      shell: bash
       env:
         CHECK_FOR_UPDATES: False
     - name: Install lightwood/staging if it's not mindsdb/stable
@@ -60,8 +61,6 @@ jobs:
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
     - name: Run integration api and flow tests
       run: |
-        python3 -m flake8
-
         if [ "$RUNNER_OS" == "Linux" ]; then
           # Unit tests
           # echo -e "\n===============\nUnit tests\n===============\n"

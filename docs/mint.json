@@ -40,7 +40,6 @@
       "pages": [
         "quickstart",
         "what-is-mindsdb",
-        "getting-started",
         {
           "group": "Deployment",
           "pages": [
@@ -90,6 +89,7 @@
           "pages": [
             "sql/table-structure",
             "sql/native-queries",
+            "sql/project",
             {
               "group": "CREATE",
               "pages": [

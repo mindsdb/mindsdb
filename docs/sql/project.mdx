@@ -1,4 +1,7 @@
-# The `PROJECT` Entity
+---
+title: The PROJECT Entity
+sidebarTitle: MindsDB Projects
+---
 
 MindsDB introduces the `PROJECT` entity that lets you create projects to store your ML experiments.
 
@@ -32,41 +35,41 @@ There are two ways you can list all your databases and projects:
 
 1. Use the `SHOW DATABASES` command:
 
-   ```sql
-   SHOW DATABASES;
-   ```
+    ```sql
+    SHOW DATABASES;
+    ```
 
-   On execution, we get:
+    On execution, we get:
 
-   ```sql
-   +----------------------+
-   | Database             |
-   +----------------------+
-   | information_schema   |
-   | mindsdb              |
-   | project_alpha        |
-   | project_beta         |
-   +----------------------+
-   ```
+    ```sql
+    +----------------------+
+    | Database             |
+    +----------------------+
+    | information_schema   |
+    | mindsdb              |
+    | project_alpha        |
+    | project_beta         |
+    +----------------------+
+    ```
 
 2. Use the `SHOW FULL DATABASES` command to get more details:
 
-   ```sql
-   SHOW FULL DATABASES;
-   ```
+    ```sql
+    SHOW FULL DATABASES;
+    ```
 
-   On execution, we get:
+    On execution, we get:
 
-   ```sql
-   +----------------------+----------+-----------+
-   | Database             | TYPE     | ENGINE    |
-   +----------------------+----------+-----------+
-   | information_schema   | system   | [NULL]    |
-   | mindsdb              | project  | [NULL]    |
-   | project_alpha        | project  | [NULL]    |
-   | project_beta         | project  | [NULL]    |
-   +----------------------+----------+-----------+
-   ```
+    ```sql
+    +----------------------+----------+-----------+
+    | Database             | TYPE     | ENGINE    |
+    +----------------------+----------+-----------+
+    | information_schema   | system   | [NULL]    |
+    | mindsdb              | project  | [NULL]    |
+    | project_alpha        | project  | [NULL]    |
+    | project_beta         | project  | [NULL]    |
+    +----------------------+----------+-----------+
+    ```
 
 ### Dropping `PROJECTS`
 
@@ -83,9 +86,8 @@ Query OK, 0 rows affected (x.xxx sec)
 ```
 
 <Note>
-  Cannot Drop a Project. Please note that if your project stores at least one
-  model, it cannot be removed. In this case, you should first drop all the
-  models belonging to this project, and then, you can remove the project.
+   **Cannot Drop a Project**
+   Please note that if your project stores at least one model, it cannot be removed. In this case, you should first drop all the models belonging to this project, and then, you can remove the project.
 </Note>
 
 ## Working with `MODELS`
@@ -130,10 +132,10 @@ On execution, we get:
 And if you want to list all the models from a defined project, run either of the commands below.
 
 ```sql
-SHOW MODELS
+SHOW MODELS 
 FROM project_alpha;
 -- or
-SELECT *
+SELECT * 
 FROM project_alpha.models;
 ```
 
@@ -151,9 +153,9 @@ On execution, we get:
 Here is how to run a detailed search:
 
 ```sql
-SHOW MODELS
-FROM project_alpha
-LIKE 'model_a'
+SHOW MODELS 
+FROM project_alpha 
+LIKE 'model_a' 
 WHERE status='complete';
 ```
 
@@ -188,7 +190,7 @@ There is a `models_versions` table for each project that stores all the versions
 Here is how to query for all model versions from all the projects:
 
 ```sql
-SELECT *
+SELECT * 
 FROM information_schema.models_versions;
 ```
 
@@ -204,8 +206,9 @@ On execution, we get:
 +-------+-------------+------+-------+--------+--------+-------+-------------+---------------+------+------------------------+--------------------+
 ```
 
-!!! note "Example"
-If there is more training data available, you don't need to recreate your model. Instead, use the `RETRAIN` command.
+<Note>
+   **Example**
+    If there is more training data available, you don't need to recreate your model. Instead, use the `RETRAIN` command.
 
     ```sql
     RETRAIN project_alpha.model_b;
@@ -214,7 +217,7 @@ If there is more training data available, you don't need to recreate your model.
     After the retraining process completes, here is what you get:
 
     ```sql
-    SELECT *
+    SELECT * 
     FROM information_schema.models_versions;
     ```
 
@@ -232,6 +235,7 @@ If there is more training data available, you don't need to recreate your model.
     ```
 
     Now, the `model_b` model has two records storing its two versions, out of which one is active.
+</Note>
 
 You can also query for model versions of a project using this `SELECT` statement:
 
@@ -259,7 +263,7 @@ Here is how to query for tables from all databases/projects/schemas:
 
 ```sql
 SELECT table_schema, table_name, table_type
-FROM information_schema.tables
+FROM information_schema.tables 
 WHERE table_type IN ('BASE TABLE', 'MODEL');
 ```
 
@@ -281,82 +285,86 @@ On execution, we get:
 +--------------+----------------+------------+
 ```
 
-!!! note "Default Tables"
-Please note that each project contains two tables by default. These are the `models` table and the `models_versions` table.
+<Note>
+   **Default Tables**
+    Please note that each project contains two tables by default. These are the `models` table and the `models_versions` table.
+</Note>
 
 There are also shortcut commands to query for the tables:
 
 1. Querying for tables from the default project:
 
-   ```sql
-   SHOW TABLES;
-   ```
+    ```sql
+    SHOW TABLES;
+    ```
 
-   On execution, we get:
+    On execution, we get:
 
-   ```sql
-   +---------------------+
-   |Tables_in_mindsdb    |
-   +---------------------+
-   |models               |
-   |models_versions      |
-   +---------------------+
-   ```
+    ```sql
+    +---------------------+
+    |Tables_in_mindsdb    |
+    +---------------------+
+    |models               |
+    |models_versions      |
+    +---------------------+
+    ```
 
-   Or, to get more details:
+    Or, to get more details:
 
-   ```sql
-   SHOW FULL TABLES;
-   ```
+    ```sql
+    SHOW FULL TABLES;
+    ```
 
-   On execution, we get:
+    On execution, we get:
 
-   ```sql
-   +---------------------+-----------+
-   |Tables_in_mindsdb    |Table_type |
-   +---------------------+-----------+
-   |models               |BASE TABLE |
-   |models_versions      |BASE TABLE |
-   +---------------------+-----------+
-   ```
+    ```sql
+    +---------------------+-----------+
+    |Tables_in_mindsdb    |Table_type |
+    +---------------------+-----------+
+    |models               |BASE TABLE |
+    |models_versions      |BASE TABLE |
+    +---------------------+-----------+
+    ```
 
-   !!! note "How to Set a Default Project"
-   The default project is set to `mindsdb`. If you want to change it, run the `USE project_name;` command.
-
+   <Note>
+      **How to Set a Default Project**
+      The default project is set to `mindsdb`. If you want to change it, run the `USE project_name;` command.
+   </Note>
+   
 2. Querying for tables from a defined project:
 
-   ```sql
-   SHOW TABLES FROM project_alpha;
-   ```
+    ```sql
+    SHOW TABLES FROM project_alpha;
+    ```
 
-   On execution, we get:
+    On execution, we get:
 
-   ```sql
-   +-------------------------+
-   |Tables_in_project_alpha  |
-   +-------------------------+
-   |models                   |
-   |models_versions          |
-   |model_a                  |
-   |model_b                  |
-   +-------------------------+
-   ```
+    ```sql
+    +-------------------------+
+    |Tables_in_project_alpha  |
+    +-------------------------+
+    |models                   |
+    |models_versions          |
+    |model_a                  |
+    |model_b                  |
+    +-------------------------+
+    ```
 
-   Or, to get more details:
+    Or, to get more details:
 
-   ```sql
-   SHOW FULL TABLES FROM project_alpha;
-   ```
+    ```sql
+    SHOW FULL TABLES FROM project_alpha;
+    ```
 
-   On execution, we get:
+    On execution, we get:
 
-   ```sql
-   +-------------------------+-----------+
-   |Tables_in_project_alpha  |Table_type |
-   +-------------------------+-----------+
-   |models                   |BASE TABLE |
-   |models_versions          |BASE TABLE |
-   |model_a                  |MODEL      |
-   |model_b                  |MODEL      |
-   +-------------------------+-----------+
-   ```
+    ```sql
+    +-------------------------+-----------+
+    |Tables_in_project_alpha  |Table_type |
+    +-------------------------+-----------+
+    |models                   |BASE TABLE |
+    |models_versions          |BASE TABLE |
+    |model_a                  |MODEL      |
+    |model_b                  |MODEL      |
+    +-------------------------+-----------+
+    ```

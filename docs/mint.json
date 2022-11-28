@@ -89,6 +89,7 @@
           "group": "SQL API",
           "pages": [
             "sql/table-structure",
+            "sql/native-queries",
             {
               "group": "CREATE",
               "pages": [

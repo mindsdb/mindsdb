@@ -110,6 +110,7 @@
             "sql/api/insert",
             "sql/api/describe",
             "sql/api/retrain",
+            "sql/api/manage-models-versions",
             "sql/api/drop",
             "sql/api/select",
             "sql/api/select-files",

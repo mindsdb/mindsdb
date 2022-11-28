@@ -5,18 +5,19 @@ sidebarTitle: Train a Model
 
 ## Description
 
-The `CREATE MODEL` statement creates and trains a new ML model.
+The `CREATE MODEL` statement creates and trains a machine learning (ML) model.
 
 ## Syntax
 
 Here is the syntax:
 
 ```sql
-CREATE MODEL mindsdb.[predictor_name]
-FROM [integration_name]
-    (SELECT [column_name, ...] FROM [table_name])
-PREDICT [target_column]
-[USING [parameter_key]=['parameter_value']];
+CREATE MODEL project_name.predictor_name
+[FROM integration_name
+    (SELECT column_name, ... FROM table_name)]
+PREDICT target_column
+[USING engine = 'engine_name',
+       tag = 'tag_name'];
 ```
 
 On execution, we get:
@@ -29,10 +30,13 @@ Where:
 
 | Expressions                                     | Description                                                                                                                                     |
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[predictor_name]`                              | Name of the model to be created.                                                                                                                |
-| `[integration_name]`                            | Name of the integration created using the [`#!sql CREATE DATABASE`](/sql/create/databases/) statement or [file upload](/sql/api/select_files/). |
-| `(SELECT [column_name, ...] FROM [table_name])` | `SELECT` statement for selecting data to be used for training and validation.                                                                   |
-| `PREDICT [target_column]`                       | `target_column` is the column to be predicted.                                                                                                  |
+| `project_name`                                  | Name of the project where the model is created. By default, the `mindsdb` project is used.                                                      |
+| `predictor_name`                                | Name of the model to be created.                                                                                                                |
+| `integration_name`                              | Name of the integration created using the [`#!sql CREATE DATABASE`](/sql/create/databases/) statement or [file upload](/sql/api/select_files/). |
+| `(SELECT column_name, ... FROM table_name)`     | Selecting data to be used for training and validation.                                                                                          |
+| `target_column`                                 | Column to be predicted.                                                                                                                         |
+| `engine_name`                                   | You can optionally provide an ML engine, based on which the model is created.                                                                   |
+| `tag_name`                                      | You can optionally provide a tag that is visible in the `training_options` column of the `mindsdb.models` table.                                |
 
 <Tip>
     **Checking Model Status** After you run the `#!sql CREATE MODEL` statement, you can check the status of the training process by querying the `#!sql mindsdb.models` table.
@@ -40,17 +44,17 @@ Where:
     ```sql
     SELECT *
     FROM mindsdb.models
-    WHERE name='[predictor_name]';
+    WHERE name = 'predictor_name';
     ```
 
     On execution, we get:
 
     ```sql
-    +------------------------+-----------------------------------+----------------------------------------+-----------------------+-------------+---------------+-----+-----------------+----------------+
-    |name                    |status                             |accuracy                                |predict                |update_status|mindsdb_version|error|select_data_query|training_options|
-    +------------------------+-----------------------------------+----------------------------------------+-----------------------+-------------+---------------+-----+-----------------+----------------+
-    |predictor_name          |generating or training or complete |number depending on the accuracy metric |column_to_be_predicted |up_to_date   |22.7.5.0       |     |                 |                |
-    +------------------------+-----------------------------------+----------------------------------------+-----------------------+-------------+---------------+-----+-----------------+----------------+
+    +---------------+-----------------------------------+----------------------------------------+-----------------------+-------------+---------------+-----+-----------------+----------------+
+    |name           |status                             |accuracy                                |predict                |update_status|mindsdb_version|error|select_data_query|training_options|
+    +---------------+-----------------------------------+----------------------------------------+-----------------------+-------------+---------------+-----+-----------------+----------------+
+    |predictor_name |generating or training or complete |number depending on the accuracy metric |column_to_be_predicted |up_to_date   |22.7.5.0       |     |                 |                |
+    +---------------+-----------------------------------+----------------------------------------+-----------------------+-------------+---------------+-----+-----------------+----------------+
     ```
 </Tip>
 
@@ -62,7 +66,9 @@ This example shows how to create and train a machine learning model called `home
 CREATE MODEL mindsdb.home_rentals_model
 FROM db_integration 
     (SELECT * FROM house_rentals_data)
-PREDICT rental_price;
+PREDICT rental_price
+USING engine = 'lightwood',
+      tag = 'test model';
 ```
 
 On execution, we get:
@@ -76,20 +82,20 @@ To check the predictor status, query the [`#!sql mindsdb.models`](/sql/table-str
 ```sql
 SELECT *
 FROM mindsdb.models
-WHERE name='home_rentals_model';
+WHERE name = 'home_rentals_model';
 ```
 
 On execution, we get:
 
 ```sql
-+--------------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
-| name               | status   | accuracy           | predict      | update_status | mindsdb_version | error | select_data_query | training_options |
-+--------------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
-| home_rentals_model | complete | 0.9991920992432087 | rental_price | up_to_date    | 22.5.1.0        | NULL  |                   |                  |
-+--------------------+----------+--------------------+--------------+---------------+-----------------+-------+-------------------+------------------+
++--------------------+----------+-----------+--------------+---------------+-----------------+-------+---------------------------------+----------------------------------------------------------------------------------+
+| name               | status   | accuracy  | predict      | update_status | mindsdb_version | error | select_data_query               | training_options                                                                 |
++--------------------+----------+-----------+--------------+---------------+-----------------+-------+---------------------------------+----------------------------------------------------------------------------------+
+| home_rentals_model | complete | 0.999     | rental_price | up_to_date    | 22.11.3.2       | NULL  | SELECT * FROM house_rentals_data| {'target': 'rental_price', 'using': {'engine': 'lightwood', 'tag': 'test model'}}|
++--------------------+----------+-----------+--------------+---------------+-----------------+-------+---------------------------------+----------------------------------------------------------------------------------+
 ```
 
-## `#!sql CREATE MODEL` with the `#!sql USING` Statement
+## Tuning the Lightwood ML Engine Features
 
 ### Description
 
@@ -102,11 +108,11 @@ In the upcoming version of MindsDB, it will be possible to choose another ML fra
 Here is the syntax:
 
 ```sql
-CREATE MODEL mindsdb.[predictor_name]
-FROM [integration_name]
-    (SELECT [column_name, ...] FROM [table_name])
-PREDICT [target_column]
-USING [parameter_key] = ['parameter_value'];
+CREATE MODEL project_name.predictor_name
+FROM integration_name
+    (SELECT column_name, ... FROM table_name)
+PREDICT target_column
+USING parameter_key = 'parameter_value';
 ```
 
 On execution, we get:
@@ -121,7 +127,7 @@ It grants access to configure how each column is encoded. By default, the AutoML
 
 ```sql
 ...
-USING encoders.[column_name].module='value';
+USING encoders.[column_name].module = 'value';
 ```
 
 To learn more about `#!sql encoders` and their options, visit the [Lightwood documentation page on `#!sql encoders`](https://lightwood.io/encoder.html).
@@ -132,7 +138,7 @@ It allows you to specify the type of machine learning algorithm to learn from th
 
 ```sql
 ...
-USING model.args={"key": value};
+USING model.args = {"key": value};
 ```
 
 Module options:
@@ -165,10 +171,10 @@ FROM db_integration
     (SELECT * FROM home_rentals)
 PREDICT rental_price
 USING
-    encoders.location.module='CategoricalAutoEncoder',
+    encoders.location.module = 'CategoricalAutoEncoder',
     encoders.rental_price.module = 'NumericEncoder',
     encoders.rental_price.args.positive_domain = 'True',
-    model.args={"submodels":[
+    model.args = {"submodels":[
                     {"module": "LightGBM",
                      "args": {
                           "stop_after": 12,
@@ -197,9 +203,9 @@ This statement is used to create and train a model from a file or a database tab
 Here is the syntax:
 
 ```sql
-CREATE MODEL mindsdb.[predictor_name]
+CREATE MODEL project_name.predictor_name
 FROM files
-    (SELECT * FROM [file_name])
+    (SELECT * FROM file_name)
 PREDICT target_column;
 ```
 
@@ -246,17 +252,18 @@ To train a time series model, MindsDB provides additional statements.
 Here is the syntax:
 
 ```sql
-CREATE MODEL mindsdb.[predictor_name]
-FROM [integration_name]
-    (SELECT [sequential_column], [partition_column], [other_column], [target_column]
-     FROM [table_name])
-PREDICT [target_column]
+CREATE MODEL project_name.predictor_name
+FROM integration_name
+    (SELECT sequential_column, partition_column,
+            other_column, target_column
+     FROM table_name)
+PREDICT target_column
 
-ORDER BY [sequential_column]
-GROUP BY [partition_column]
+ORDER BY sequential_column
+GROUP BY partition_column
 
-WINDOW [int]
-HORIZON [int];
+WINDOW int
+HORIZON int;
 ```
 
 On execution, we get:
@@ -269,10 +276,10 @@ Where:
 
 | Expressions                              | Description                                                                                                                                                                                                                                                        |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ORDER BY [sequential_column]`           | The column by which time series is ordered. It can be a date or anything that defines the sequence of events.                                                                                                                                                      |
-| `GROUP BY [partition_column]`            | It is optional. The column by which rows that make a partition are grouped. For example, if you want to forecast the inventory for all items in the store, you can partition the data by `product_id`, so each distinct `product_id` has its own time series.      |
-| `WINDOW [int]`                           | The number of rows to look back at when making a prediction. It comes after the rows are ordered by the column defined in `ORDER BY` and split into groups by the column(s) defined in `GROUP BY`. This could be interpreted as "Always use the previous 10 rows". |
-| `HORIZON [int]`                          | It is optional. The number of future predictions (it is 1 by default).                                                                                                                                                                                             |
+| `ORDER BY sequential_column`             | The column by which time series is ordered. It can be a date or anything that defines the sequence of events.                                                                                                                                                      |
+| `GROUP BY partition_column`              | It is optional. The column by which rows that make a partition are grouped. For example, if you want to forecast the inventory for all items in the store, you can partition the data by `product_id`, so each distinct `product_id` has its own time series.      |
+| `WINDOW int`                             | The number of rows to look back at when making a prediction. It comes after the rows are ordered by the column defined in `ORDER BY` and split into groups by the column(s) defined in `GROUP BY`. This could be interpreted as "Always use the previous 10 rows". |
+| `HORIZON int`                            | It is optional. The number of future predictions. It is 1 by default.                                                                                                                                                                                              |
 
 <Warning>
     **Getting a Prediction from a Time Series Model** Due to the nature of time series forecasting, you need to use the [`#!sql JOIN`](/sql/api/join) statement to get results.

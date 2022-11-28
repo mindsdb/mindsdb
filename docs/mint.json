@@ -79,6 +79,7 @@
             "connect/tableau"
           ]
         },
+        "sql/create/datasetup",
         "sql/create/file",
         "sql/data-insights",
         "sql/feature-eng",

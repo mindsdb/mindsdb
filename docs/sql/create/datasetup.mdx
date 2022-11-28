@@ -99,26 +99,6 @@ On execution, we get:
 +--------------------+
 ```
 
-### Getting Linked Databases Metadata
-
-You can get metadata about the linked databases by querying the
-`mindsdb.datasources` table.
-
-```sql
-SELECT *
-FROM mindsdb.datasources;
-```
-
-On execution, we get:
-
-```sql
-+------------------+---------------+--------------+------+-----------+
-| name             | database_type | host         | port | user      |
-+------------------+---------------+--------------+------+-----------+
-| mysql_datasource | mysql         | 3.220.66.106 | 3306 | root      |
-+------------------+---------------+--------------+------+-----------+
-```
-
 ## Making your Local Database Available to MindsDB
 
 When connecting your local database to MindsDB Cloud, you should expose the

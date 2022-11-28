@@ -83,6 +83,7 @@
         "sql/create/file",
         "sql/data-insights",
         "sql/create/predictor2",
+        "sql/api/select2",
         "sql/feature-eng",
         {
           "group": "SQL API",

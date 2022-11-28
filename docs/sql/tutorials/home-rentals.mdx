@@ -120,12 +120,12 @@ x variable in simple linear regression).
 ## Training a Predictor
 
 Let's create and train the machine learning model. For that, we use the
-[`CREATE PREDICTOR`](/sql/create/predictor) statement and specify the
+[`CREATE MODEL`](/sql/create/predictor) statement and specify the
 input columns used to train `FROM` (features) and what we want to
 `PREDICT` (labels).
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
+CREATE MODEL mindsdb.home_rentals_model
 FROM example_db
   (SELECT * FROM demo_data.home_rentals)
 PREDICT rental_price;
@@ -141,7 +141,7 @@ monitor the status of the predictor by using this SQL command:
 
 ```sql
 SELECT status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='home_rentals_model';
 ```
 

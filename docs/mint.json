@@ -42,15 +42,20 @@
         "what-is-mindsdb",
         {
           "group": "Deployment",
-          "pages": [
-            "setup/self-hosted/docker",
+          "pages": [  
             {
-              "group": "Self Hosting",
+              "group": "Self-Hosted",
               "pages": [
-                "setup/self-hosted/pip/windows",
-                "setup/self-hosted/pip/linux",
-                "setup/self-hosted/pip/macos",
-                "setup/self-hosted/pip/source"
+                "setup/self-hosted/docker",
+                {
+                  "group": "pip",
+                  "pages": [
+                    "setup/self-hosted/pip/windows",
+                    "setup/self-hosted/pip/linux",
+                    "setup/self-hosted/pip/macos",
+                    "setup/self-hosted/pip/source"
+                  ]
+                }
               ]
             },
             "setup/custom-config",
@@ -96,7 +101,8 @@
                 "sql/create/databases",
                 "sql/create/predictor",
                 "sql/create/table",
-                "sql/create/view"
+                "sql/create/view",
+                "sql/create/ml-engine"
               ]
             },
             "sql/api/update",
@@ -167,7 +173,7 @@
               "pages": [
                 "sql/tutorials/crop-prediction",
                 "sql/tutorials/diabetes",
-                "sql/tutorials/spam-emails-tutorial",
+                "sql/tutorials/spam_emails_tutorial",
                 "sql/tutorials/mushrooms",
                 "sql/tutorials/heart-disease"
               ]
@@ -181,6 +187,7 @@
             "contribute/install",
             "contribute/issues",
             "contribute/integrations",
+            "contribute/ml-handlers",
             "contribute/docs",
             "docs-rules",
             "contribute/tests",

@@ -29,23 +29,22 @@ On execution, we get:
 
 Where:
 
-| Name                              | Description                                                         |
-| --------------------------------- | ------------------------------------------------------------------- |
-| `[integration_name].[table_name]` | Name of the data source table used as input for making predictions. |
-| `mindsdb.[predictor_name]`        | Name of the model table used to make predictions.                   |
-| `p.value`                         | Predicted value stored in the output table.                         |
+| Name                                | Description                                                         |
+| ----------------------------------- | ------------------------------------------------------------------- |
+| `[integration_name].[table_name]`   | Name of the data source table used as input for making predictions. |
+| `mindsdb.[predictor_name]`          | Name of the model table used to make predictions.                   |
+| `p.value`                           | Predicted value stored in the output table.                         |
 
 ## Example 1
 
-Let's join the `home_rentals` table with the `home_rentals_model` model using
-this statement:
+Let's join the `home_rentals` table with the `home_rentals_model` model using this statement:
 
 ```sql
-SELECT t.rental_price AS real_price,
+SELECT t.rental_price AS real_price, 
        m.rental_price AS predicted_price,
-       t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market
-FROM example_db.demo_data.home_rentals AS t
-JOIN mindsdb.home_rentals_model AS m
+       t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market 
+FROM example_db.demo_data.home_rentals AS t 
+JOIN mindsdb.home_rentals_model AS m 
 LIMIT 100;
 ```
 
@@ -83,7 +82,7 @@ On execution, we get:
 Let's create and train a time series predictor using this statement:
 
 ```sql
-CREATE PREDICTOR mindsdb.house_sales_model
+CREATE MODEL mindsdb.house_sales_model
 FROM example_db
   (SELECT * FROM demo_data.house_sales)
 PREDICT MA
@@ -105,7 +104,7 @@ Now, you can query it to get the predictions like this:
 ```sql
 SELECT m.saledate as date,
        m.ma AS forecast
-FROM mindsdb.house_sales_model AS m
+FROM mindsdb.house_sales_model AS m 
 JOIN example_db.demo_data.house_sales AS t
 WHERE t.saledate > LATEST
 AND t.type = 'house'

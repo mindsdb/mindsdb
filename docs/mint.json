@@ -88,6 +88,7 @@
         "sql/data-insights",
         "sql/create/predictor2",
         "sql/api/select2",
+        "sql/feature-importance",
         "sql/feature-eng",
         {
           "group": "SQL API",

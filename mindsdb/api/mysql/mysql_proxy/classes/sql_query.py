@@ -531,6 +531,9 @@ class SQLQuery():
         dn = self.datahub.get(step.integration)
         query = step.query
 
+        if dn is None:
+            raise SqlApiUnknownError(f'Unknown integration name: {step.integration}')
+
         if query is None:
             table_alias = (self.database, 'result', 'result')
 

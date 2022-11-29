@@ -1,9 +1,9 @@
-import os
 from threading import Thread
 
 from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
 from mindsdb.utilities import log
 import mindsdb.interfaces.storage.db as db
+from mindsdb.utilities.context import context as ctx
 
 
 class Integration:
@@ -11,7 +11,7 @@ class Integration:
         self.config = config
         self.name = name
         self.mindsdb_database = config['api']['mysql']['database']
-        self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
+        self.company_id = ctx.company_id
 
     def setup(self):
         raise NotImplementedError

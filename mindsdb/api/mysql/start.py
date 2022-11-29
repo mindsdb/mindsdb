@@ -3,6 +3,7 @@ from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities import log
 
+
 def start(verbose=False):
     db.init()
 

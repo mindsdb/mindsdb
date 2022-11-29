@@ -7,7 +7,7 @@ from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn,
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 
 
 class IntegrationDataNode(DataNode):
@@ -130,7 +130,7 @@ class IntegrationDataNode(DataNode):
             result = self.integration_handler.native_query(native_query)
 
         if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
+            raise Exception(f'Error in {self.integration_name}: {result.error_message}')
         if result.type == RESPONSE_TYPE.OK:
             return
 

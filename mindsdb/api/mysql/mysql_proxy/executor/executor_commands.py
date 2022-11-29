@@ -39,7 +39,6 @@ from mindsdb_sql.parser.ast import (
     Alter,
     Update,
     CreateTable,
-    TableColumn,
     Identifier,
     DropTables,
     Operation,
@@ -47,10 +46,7 @@ from mindsdb_sql.parser.ast import (
     DropView,
     Union,
 )
-from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast import Identifier
-from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities import log
@@ -58,23 +54,16 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErBadDbError,
     ErBadTableError,
-    ErKeyColumnDoesNotExist,
     ErTableExistError,
-    ErDubFieldName,
-    ErDbDropDelete,
-    ErNonInsertableTable,
     ErNotSupportedYet,
-    ErSqlSyntaxError,
-    ErSqlWrongArguments,
+    ErSqlWrongArguments
 )
-from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case, download_file
+from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery, Column
 )
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
-    ERR,
     TYPES,
     SERVER_VARIABLES,
 )
@@ -87,6 +76,8 @@ from mindsdb.interfaces.model.functions import (
     get_predictor_integration
 )
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
+from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.utilities.context import context as ctx
 
 
 def _get_show_where(statement: ASTNode, from_name: Optional[str] = None,
@@ -659,7 +650,6 @@ class ExecuteCommands:
         database_name, model_name = statement.name.parts
 
         model_record = get_model_record(
-            company_id=self.session.company_id,
             name=model_name,
             project_name=database_name,
             except_absent=True
@@ -691,11 +681,8 @@ class ExecuteCommands:
 
         # region check if there is already predictor retraing
         is_cloud = self.session.config.get('cloud', False)
-        if is_cloud and self.session.user_class == 0:
-            models = get_model_records(
-                company_id=self.session.company_id,
-                active=None
-            )
+        if is_cloud and ctx.user_class == 0:
+            models = get_model_records(active=None)
             longest_training = None
             for p in models:
                 if (
@@ -814,7 +801,7 @@ class ExecuteCommands:
         connection_args = statement.parameters
 
         if engine == 'mindsdb':
-            self.session.project_controller.add(database_name)
+            ProjectController().add(database_name)
         else:
             self._create_integration(database_name, engine, connection_args)
 
@@ -904,7 +891,7 @@ class ExecuteCommands:
             query.limit = Constant(1)
 
             sqlquery = SQLQuery(query, session=self.session)
-            if sqlquery.fetch()['success'] != True:
+            if sqlquery.fetch()['success'] is not True:
                 raise SqlApiException('Wrong view query')
 
         project = self.session.database_controller.get_project(project_name)

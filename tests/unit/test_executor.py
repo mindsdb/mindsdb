@@ -314,6 +314,66 @@ class Test(BaseExecutorMockPredictor):
         assert ret_df.t.min() == dt.datetime(2020, 1, 2)
         assert ret_df.t.max() == dt.datetime(2020, 1, 3)
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_ts_predictor_fix_order_by_modification(self, mock_handler):
+        # set integration data
+
+        df = pd.DataFrame([
+            {'a': 1, 't': dt.datetime(2020, 1, 1, 10, 0, 0), 'g': 'x'},
+            {'a': 2, 't': dt.datetime(2020, 1, 1, 10, 1, 0), 'g': 'x'},
+            {'a': 3, 't': dt.datetime(2020, 1, 1, 10, 2, 0), 'g': 'x'},
+        ])
+        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
+
+        # --- use TS predictor ---
+
+        predictor = {
+            'name': 'task_model',
+            'predict': 'a',
+            'problem_definition': {
+                'timeseries_settings': {
+                    'is_timeseries': True,
+                    'window': 2,
+                    'order_by': 't',
+                    'horizon': 3
+                }
+            },
+            'dtypes': {
+                'a': dtype.integer,
+                't': dtype.date,
+                'g': dtype.categorical,
+            },
+            'predicted_value': ''
+        }
+        self.set_predictor(predictor)
+
+        # set predictor output
+        predict_result = [
+            # window
+            {'a': 2, 't': dt.datetime(2020, 1, 1, 10, 1, 0), 'g': 'x', '__mindsdb_row_id': 2},
+            {'a': 3, 't': dt.datetime(2020, 1, 1, 10, 2, 0), 'g': 'x', '__mindsdb_row_id': 3},
+            # horizon
+            {'a': 1, 't': dt.datetime(2020, 1, 1, 10, 3, 0), 'g': 'x', '__mindsdb_row_id': None},
+            {'a': 1, 't': dt.datetime(2020, 1, 1, 10, 4, 0), 'g': 'x', '__mindsdb_row_id': None},
+            {'a': 1, 't': dt.datetime(2020, 1, 1, 10, 5, 0), 'g': 'x', '__mindsdb_row_id': None},
+        ]
+        predict_result = pd.DataFrame(predict_result)
+        self.mock_predict.side_effect = lambda *a, **b: predict_result
+
+        # > latest ______________________
+        ret = self.command_executor.execute_command(parse_sql(f'''
+                 select t.t as t0, p.* from pg.tasks t
+                 join mindsdb.task_model p
+                 where t.t > latest
+             ''', dialect='mindsdb'))
+        assert ret.error_code is None
+
+        ret_df = self.ret_to_df(ret)
+        assert ret_df.shape[0] == 3
+        assert ret_df.t.min() == dt.datetime(2020, 1, 1, 10, 3, 0)
+        # table shouldn't join
+        assert ret_df.t0[0] is None
+
     def test_ts_predictor_file(self):
         # set integration data
 

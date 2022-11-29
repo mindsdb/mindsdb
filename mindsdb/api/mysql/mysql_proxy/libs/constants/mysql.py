@@ -14,6 +14,7 @@
 
 MAX_PACKET_SIZE = 16777215
 
+
 # capabilities description can be found on page 67 https://books.google.ru/books?id=5TjrxYHRAwEC&printsec=frontcover#v=onepage&q&f=false
 # https://mariadb.com/kb/en/connection/
 # https://dev.mysql.com/doc/internals/en/capability-flags.html
@@ -611,6 +612,7 @@ class ERR(object):
     ER_NON_INSERTABLE_TABLE = 1471
     ER_NOT_SUPPORTED_YET = 1235
 
+
 ERR = ERR()
 
 
@@ -631,6 +633,7 @@ WARN = WARN()
 
 # CHARACTER SET NUMBERS
 
+# noqa
 CHARSET_NUMBERS = {
     "big5_chinese_ci":          1,
     "latin2_czech_cs":          2,
@@ -855,95 +858,95 @@ CHARSET_NUMBERS = {
 
 
 SQL_RESERVED_WORDS = [
-        "ALL",
-        "ANALYSE",
-        "ANALYZE",
-        "AND",
-        "ANY",
-        "AS",
-        "ASC",
-        "AUTHORIZATION",
-        "BETWEEN",
-        "BINARY",
-        "BOTH",
-        "CASE",
-        "CAST",
-        "CHECK",
-        "COLLATE",
-        "COLUMN",
-        "CONSTRAINT",
-        "CREATE",
-        "CROSS",
-        "CURRENT_DATE",
-        "CURRENT_TIME",
-        "CURRENT_TIMESTAMP",
-        "CURRENT_USER",
-        "DEFAULT",
-        "DEFERRABLE",
-        "DESC",
-        "DISTINCT",
-        "DO",
-        "ELSE",
-        "END",
-        "EXCEPT",
-        "FALSE",
-        "FOR",
-        "FOREIGN",
-        "FREEZE",
-        "FROM",
-        "FULL",
-        "GRANT",
-        "GROUP",
-        "HAVING",
-        "ILIKE",
-        "IN",
-        "INITIALLY",
-        "INNER",
-        "INTERSECT",
-        "INTO",
-        "IS",
-        "ISNULL",
-        "JOIN",
-        "LEADING",
-        "LEFT",
-        "LIKE",
-        "LIMIT",
-        "LOCALTIME",
-        "LOCALTIMESTAMP",
-        "NATURAL",
-        "NEW",
-        "NOT",
-        "NOTNULL",
-        "NULL",
-        "OFF",
-        "OFFSET",
-        "OLD",
-        "ON",
-        "ONLY",
-        "OR",
-        "ORDER",
-        "OUTER",
-        "OVERLAPS",
-        "PLACING",
-        "PRIMARY",
-        "REFERENCES",
-        "RIGHT",
-        "SELECT",
-        "SESSION_USER",
-        "SIMILAR",
-        "SOME",
-        "TABLE",
-        "THEN",
-        "TO",
-        "TRAILING",
-        "TRUE",
-        "UNION",
-        "UNIQUE",
-        "USER",
-        "USING",
-        "VERBOSE",
-        "WHEN",
-        "WHERE"
+    "ALL",
+    "ANALYSE",
+    "ANALYZE",
+    "AND",
+    "ANY",
+    "AS",
+    "ASC",
+    "AUTHORIZATION",
+    "BETWEEN",
+    "BINARY",
+    "BOTH",
+    "CASE",
+    "CAST",
+    "CHECK",
+    "COLLATE",
+    "COLUMN",
+    "CONSTRAINT",
+    "CREATE",
+    "CROSS",
+    "CURRENT_DATE",
+    "CURRENT_TIME",
+    "CURRENT_TIMESTAMP",
+    "CURRENT_USER",
+    "DEFAULT",
+    "DEFERRABLE",
+    "DESC",
+    "DISTINCT",
+    "DO",
+    "ELSE",
+    "END",
+    "EXCEPT",
+    "FALSE",
+    "FOR",
+    "FOREIGN",
+    "FREEZE",
+    "FROM",
+    "FULL",
+    "GRANT",
+    "GROUP",
+    "HAVING",
+    "ILIKE",
+    "IN",
+    "INITIALLY",
+    "INNER",
+    "INTERSECT",
+    "INTO",
+    "IS",
+    "ISNULL",
+    "JOIN",
+    "LEADING",
+    "LEFT",
+    "LIKE",
+    "LIMIT",
+    "LOCALTIME",
+    "LOCALTIMESTAMP",
+    "NATURAL",
+    "NEW",
+    "NOT",
+    "NOTNULL",
+    "NULL",
+    "OFF",
+    "OFFSET",
+    "OLD",
+    "ON",
+    "ONLY",
+    "OR",
+    "ORDER",
+    "OUTER",
+    "OVERLAPS",
+    "PLACING",
+    "PRIMARY",
+    "REFERENCES",
+    "RIGHT",
+    "SELECT",
+    "SESSION_USER",
+    "SIMILAR",
+    "SOME",
+    "TABLE",
+    "THEN",
+    "TO",
+    "TRAILING",
+    "TRUE",
+    "UNION",
+    "UNIQUE",
+    "USER",
+    "USING",
+    "VERBOSE",
+    "WHEN",
+    "WHERE"
 ]
 
 SERVER_VARIABLES = {
@@ -992,6 +995,7 @@ SERVER_VARIABLES = {
     '@@transaction_isolation': ('REPEATABLE-READ', TYPES.MYSQL_TYPE_VAR_STRING, CHARSET_NUMBERS['utf8_general_ci']),
 }
 
+
 class SESSION_TRACK(object):
     __slots__ = ()
     SESSION_TRACK_SYSTEM_VARIABLES = 0x00
@@ -1001,19 +1005,22 @@ class SESSION_TRACK(object):
     SESSION_TRACK_TRANSACTION_CHARACTERISTICS = 0x04
     SESSION_TRACK_TRANSACTION_STATE = 0x05
 
+
 SESSION_TRACK = SESSION_TRACK()
 
 ALL = vars()
 
-def VAR_NAME(val, prefix=''):
-  global ALL
 
-  for key in ALL.keys():
-    value = ALL[key]
-    if value == val and key != 'val':
-      if prefix == '' or (prefix != '' and prefix == key[:len(prefix)]):
-        return key
-  return None
+def VAR_NAME(val, prefix=''):
+    global ALL
+
+    for key in ALL.keys():
+        value = ALL[key]
+        if value == val and key != 'val':
+            if prefix == '' or (prefix != '' and prefix == key[:len(prefix)]):
+                return key
+    return None
+
 
 def getConstName(consts, value):
     attrs = [x for x in dir(consts) if x.startswith('__') is False]

@@ -28,51 +28,22 @@ Query OK, 0 rows affected (0.058 sec)
 
 ## When to `RETRAIN` the Model?
 
-It is advised to `RETRAIN` the predictor whenever the `update_status`
-column value from the `mindsdb.predictors` table is set to `available`.
+It is essential to `RETRAIN` the predictor whenever the `update_status`
+column value from the `mindsdb.models` table is set to `available`.
 
-Here is when the `update_status` column value is set to `available`:
-
-- When the new version of MindsDB is available that causes the predictor to
-  become obsolete.
-- When the new data is available in the table that was used to train the
-  predictor.
+The `update_status` column value is set to `available` when MindsDB is updated to a new version that is not backward-compatible with the existing models.
+Then, the existing models become obsolete and must be retrained.
 
 To find out whether you need to retrain your model, query the
-`mindsdb.predictors` table and look for the `update_status` column.
+`mindsdb.models` table and look for the `update_status` column.
 
 Here are the possible values of the `update_status` column:
 
-| Name         | Description                                                                   |
-| ------------ | ----------------------------------------------------------------------------- |
-| `available`  | It indicates that the model should be updated.                                |
-| `updating`   | It indicates that the retraining process of the model takes place.            |
-| `up_to_date` | It indicates that your model is up to date and does not need to be retrained. |
+- `available` - it indicates that the model should be updated,
+- `updating` - it indicates that the retraining process of the model takes place,
+- `up_to_date` - it indicates that your model is up to date and does not need to be retrained.
 
-Let's run the query.
-
-```sql
-SELECT name, update_status
-FROM mindsdb.predictors
-WHERE name = '[predictor_name]';
-```
-
-On execution, we get:
-
-```sql
-+------------------+---------------+
-| name             | update_status |
-+------------------+---------------+
-| [predictor_name] | up_to_date    |
-+------------------+---------------+
-```
-
-Where:
-
-| Name               | Description                                               |
-| ------------------ | --------------------------------------------------------- |
-| `[predictor_name]` | Name of the model to be retrained.                        |
-| `update_status`    | Column informing whether the model needs to be retrained. |
+Also, it is advised to `RETRAIN` the predictor whenever the training data was updated or added.
 
 ## Example
 

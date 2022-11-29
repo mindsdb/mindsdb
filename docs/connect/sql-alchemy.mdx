@@ -1,10 +1,10 @@
 ---
 title: MindsDB and SQL Alchemy
 sidebarTitle: SQL Alchemy
-description:
-  "SQL Alchemy is a Python package, or a Python SQL toolkit, that provides
-  object-relational mapping features for the Python programming language."
 ---
+
+SQL Alchemy is a Python package, or a Python SQL toolkit, that provides
+object-relational mapping features for the Python programming language.
 
 SQL Alchemy facilitates working with databases and Python. You can download it
 [here](https://www.sqlalchemy.org/) or run a `pip install sqlalchemy` command if
@@ -43,6 +43,20 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
                         print("Connection could not be made due to the following error: \n", ex)
         ```
 
+        Please note that we use the following connection details:
+
+        - Username is your MindsDB Cloud email address
+        - Password is your MindsDB Cloud password
+        - Host is `cloud.mindsdb.com`
+        - Port is `3306`
+        - Database name is left empty
+
+        To create a database connection, execute the code above. On success, the following output is expected:
+
+        ```bash
+        Connection to the cloud.mindsdb.com for user MindsDB-Cloud-Username created successfully.
+        ```
+
         </Tab>
         <Tab title="Connecting Local MindsDB to SQL Alchemy">
         You can use the Python code below to connect your Cloud MindsDB database to SQL Alchemy.
@@ -71,23 +85,25 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
                 except Exception as ex:
                         print("Connection could not be made due to the following error: \n", ex)
         ```
-        </Tab>
 
+        Please note that we use the following connection details:
+
+        - Username is `mindsdb`
+        - Password is left empty
+        - Host is `127.0.0.1`
+        - Port is `47335`
+        - Database name is left empty
+
+        To create a database connection, execute the code above. On success, the following output is expected:
+
+        ```bash
+        Connection to the 127.0.0.1 for user mindsdb created successfully.
+        ```
+        </Tab>
 </Tabs>
 
-Please note that we use the following connection details:
+<br />
 
-- Username is `mindsdb`
-- Password is left empty
-- Host is `127.0.0.1`
-- Port is `47335`
-- Database name is left empty
-
-To create a database connection, execute the code above. On success, the following output is expected:
-
-```bash
-Connection to the 127.0.0.1 for user mindsdb created successfully.
-```
 
 <Note>
   The Sqlachemy `create_engine` is lazy. This implies any human error when

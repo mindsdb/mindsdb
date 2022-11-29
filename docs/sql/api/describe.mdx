@@ -1,24 +1,22 @@
 ---
-title: DESCRIBE PREDICTOR Statement
-sidebarTitle: DESCRIBE PREDICTOR
-description:
-  "The DESCRIBE PREDICTOR statement is used to display the attributes of an
-  existing model."
+title: DESCRIBE MODEL Statement
+sidebarTitle: DESCRIBE MODEL
 ---
 
-## `DESCRIBE PREDICTOR ... FEATURES` Statement
+The `DESCRIBE MODEL` statement is used to display the attributes of an existing model.
+
+## `DESCRIBE MODEL ... FEATURES` Statement
 
 ### Description
 
-The `DESCRIBE PREDICTOR mindsdb.[predictor_name].features` statement displays
-how the model encoded the data before the training process.
+The `DESCRIBE MODEL mindsdb.[predictor_name].features` statement displays how the model encoded the data before the training process.
 
 ### Syntax
 
 Here is the syntax:
 
 ```sql
-DESCRIBE PREDICTOR mindsdb.[predictor_name].features;
+DESCRIBE MODEL mindsdb.[predictor_name].features;
 ```
 
 On execution, we get:
@@ -33,20 +31,20 @@ On execution, we get:
 
 Where:
 
-| Name               | Description                                      |
-| ------------------ | ------------------------------------------------ |
-| `[predictor_name]` | Name of the model to be described.               |
-| `column`           | Data columns that were used to create the model. |
-| `type`             | Data type of the column.                         |
-| `encoder`          | Encoder type used for the column.                |
-| `role`             | Role of the column (`feature` or `target`).      |
+| Name                 | Description                                           |
+| -------------------- | ----------------------------------------------------- |
+| `[predictor_name]`   | Name of the model to be described.                    |
+| `column`             | Data columns that were used to create the model.      |
+| `type`               | Data type of the column.                              |
+| `encoder`            | Encoder type used for the column.                     |
+| `role`               | Role of the column (`feature` or `target`).           |
 
 ### Example
 
 Let's look at an example using the `home_rentals_model` model.
 
 ```sql
-DESCRIBE PREDICTOR mindsdb.home_rentals_model.features;
+DESCRIBE MODEL mindsdb.home_rentals_model.features;
 ```
 
 On execution, we get:
@@ -65,23 +63,20 @@ On execution, we get:
 +---------------------+-------------+----------------+---------+
 ```
 
-Here the `rental_price` column is the `target` column to be predicted. As for
-the `feature` columns, these are used to train the ML model to predict the value
-of the `rental_price` column.
+Here the `rental_price` column is the `target` column to be predicted. As for the `feature` columns, these are used to train the ML model to predict the value of the `rental_price` column.
 
-## `DESCRIBE PREDICTOR ... MODEL` Statement
+## `DESCRIBE MODEL ... MODEL` Statement
 
 ### Description
 
-The `DESCRIBE PREDICTOR mindsdb.[predictor_name].model` statement displays the
-performance of the candidate models.
+The `DESCRIBE MODEL mindsdb.[predictor_name].model` statement displays the performance of the candidate models.
 
 ### Syntax
 
 Here is the syntax:
 
 ```sql
-DESCRIBE PREDICTOR mindsdb.[predictor_name].model;
+DESCRIBE MODEL mindsdb.[predictor_name].model;
 ```
 
 On execution, we get:
@@ -96,21 +91,21 @@ On execution, we get:
 
 Where:
 
-| Name                 | Description                                                                                                                                                                                                                                                                                                                       |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[predictor_name]`   | Name of the model to be described.                                                                                                                                                                                                                                                                                                |
-| `name`               | Name of the candidate model.                                                                                                                                                                                                                                                                                                      |
-| `performance`        | Accuracy value from 0 to 1, depending on the type of the model.                                                                                                                                                                                                                                                                   |
-| `training_time`      | Time elapsed for the training of the model.                                                                                                                                                                                                                                                                                       |
-| `selected`           | `1` for the best performing model and `0` for the rest.                                                                                                                                                                                                                                                                           |
-| `accuracy_functions` | It stores the `r2_score` value for regression predictions, the `balanced_accuracy_score` value for classification predictions, and the `bounded_ts_accuracy` value for time series predictions. The values vary between 0 and 1, where 1 indicates a perfect predictor, based on results obtained for a held out portion of data. |
+| Name                       | Description                                                                                                                                                                                                                                                                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[predictor_name]`         | Name of the model to be described.                                                                                                                                                                                                                                                                                                     |
+| `name`                     | Name of the candidate model.                                                                                                                                                                                                                                                                                                           |
+| `performance`              | Accuracy value from 0 to 1, depending on the type of the model.                                                                                                                                                                                                                                                                        |
+| `training_time`            | Time elapsed for the training of the model.                                                                                                                                                                                                                                                                                            |
+| `selected`                 | `1` for the best performing model and `0` for the rest.                                                                                                                                                                                                                                                                                |
+| `accuracy_functions`       | It stores the `r2_score` value for regression predictions, the `balanced_accuracy_score` value for classification predictions, and the `bounded_ts_accuracy` value for time series predictions. The values vary between 0 and 1, where 1 indicates a perfect predictor, based on results obtained for a held out portion of data.      |
 
 ### Example
 
 Let's look at an example using the `home_rentals_model` model.
 
 ```sql
-DESCRIBE PREDICTOR mindsdb.home_rentals_model.model;
+DESCRIBE MODEL mindsdb.home_rentals_model.model;
 ```
 
 On execution, we get:
@@ -125,23 +120,20 @@ On execution, we get:
 +------------+--------------------+----------------------+----------+---------------------+
 ```
 
-The value of the `accuracy_functions` column is stored in the `performance`
-column. For example, the `r2_score` value of the `Neural` model is
-`0.9861694189913056`.
+The value of the `accuracy_functions` column is stored in the `performance` column. For example, the `r2_score` value of the `Neural` model is `0.9861694189913056`.
 
-## `DESCRIBE PREDICTOR ... ENSEMBLE` Statement
+## `DESCRIBE MODEL ... ENSEMBLE` Statement
 
 ### Description
 
-The `DESCRIBE PREDICTOR mindsdb.[predictor_name].ensemble` statement displays
-the parameters used to select the best candidate model.
+The `DESCRIBE MODEL mindsdb.[predictor_name].ensemble` statement displays the parameters used to select the best candidate model.
 
 ### Syntax
 
 Here is the syntax:
 
 ```sql
-DESCRIBE PREDICTOR mindsdb.[predictor_name].ensemble;
+DESCRIBE MODEL mindsdb.[predictor_name].ensemble;
 ```
 
 On execution, we get:
@@ -156,17 +148,17 @@ On execution, we get:
 
 Where:
 
-| Name               | Description                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------------ |
-| `[predictor_name]` | Name of the model to be described.                                                         |
-| `ensemble`         | Object of the JSON type describing the parameters used to select the best candidate model. |
+| Name                  | Description                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| `[predictor_name]`    | Name of the model to be described.                                                         |
+| `ensemble`            | Object of the JSON type describing the parameters used to select the best candidate model. |
 
 ### Example
 
 Let's look at an example using the `home_rentals_model` model.
 
 ```sql
-DESCRIBE PREDICTOR mindsdb.home_rentals_model.ensemble;
+DESCRIBE MODEL mindsdb.home_rentals_model.ensemble;
 ```
 
 On execution, we get:
@@ -288,8 +280,7 @@ On execution, we get:
 +----------------------------------------------------------------------+
 ```
 
-<Tip>
-  Need More Info?" If you need more information on how to `DESCRIBE PREDICTOR`
-  or understand the results, feel free to ask us on the [community Slack
-  workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).
-</Tip>
+<Note>
+    **Need More Info?**
+    If you need more information on how to `DESCRIBE MODEL` or understand the results, feel free to ask us on the [community Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).
+</Note>

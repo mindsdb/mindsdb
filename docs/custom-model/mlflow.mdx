@@ -1,9 +1,10 @@
 ---
 title: "MindsDB and MLflow"
 sidebarTitle: "MLflow"
-description: "MLflow allows you to create, train, and serve machine learning models, apart
-from other features, such as organizing experiments, tracking metrics, and more."
 ---
+
+MLflow allows you to create, train, and serve machine learning models, apart
+from other features, such as organizing experiments, tracking metrics, and more.
 
 Here, we present two usage examples of the MLflow.
 
@@ -54,7 +55,7 @@ We execute the command below to create a predictor in MindsDB based on the
 created model.
 
 ```sql
-CREATE PREDICTOR mindsdb.byom_mlflow
+CREATE MODEL mindsdb.byom_mlflow
 PREDICT `1`  -- `1` is the target column name
 USING
     url.predict='http://localhost:5000/invocations',
@@ -183,7 +184,7 @@ We execute the command below to create a predictor in MindsDB based on the
 created model.
 
 ```sql
-CREATE PREDICTOR mindsdb.byom_mlflow_nlp
+CREATE MODEL mindsdb.byom_mlflow_nlp
 PREDICT `target`
 USING
     url.predict='http://localhost:5000/invocations',

@@ -1,12 +1,13 @@
 ---
-title: "House Sales Forecasting"
-description:
-  "In this tutorial, we'll create and train a machine learning model, or as we
-  call it, an AI Table or a predictor. By querying the model, we'll predict the
-  real estate sales using a multivariate time series strategy."
+title: "Forecasting Quarterly House Sales with MindsDB"
+sidebarTitle: "House Sales"
 ---
 
 ## Introduction
+
+In this tutorial, we'll create and train a machine learning model, or as we
+call it, an `AI Table` or a `predictor`. By querying the model, we'll predict the
+real estate sales using a multivariate time series strategy.
 
 Make sure you have access to a working MindsDB installation, either locally or
 at [MindsDB Cloud](https://cloud.mindsdb.com/).
@@ -110,12 +111,12 @@ column used to train the model (the x variable in simple linear regression).
 ## Training a Predictor
 
 Let's create and train the machine learning model. For that, we use the
-[`CREATE PREDICTOR`](/sql/create/predictor) statement and specify the
+[`CREATE MODEL`](/sql/create/predictor) statement and specify the
 input columns used to train `FROM` (features) and what we want to
 `PREDICT` (labels).
 
 ```sql
-CREATE PREDICTOR mindsdb.house_sales_predictor
+CREATE MODEL mindsdb.house_sales_predictor
 FROM files
   (SELECT * FROM house_sales)
 PREDICT MA
@@ -142,7 +143,7 @@ monitor the status of the predictor by using this SQL command:
 
 ```sql
 SELECT status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='house_sales_predictor';
 ```
 

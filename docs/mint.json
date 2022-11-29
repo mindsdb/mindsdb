@@ -40,18 +40,22 @@
       "pages": [
         "quickstart",
         "what-is-mindsdb",
-        "getting-started",
         {
           "group": "Deployment",
-          "pages": [
-            "setup/self-hosted/docker",
+          "pages": [  
             {
-              "group": "Self Hosting",
+              "group": "Self-Hosted",
               "pages": [
-                "setup/self-hosted/pip/windows",
-                "setup/self-hosted/pip/linux",
-                "setup/self-hosted/pip/macos",
-                "setup/self-hosted/pip/source"
+                "setup/self-hosted/docker",
+                {
+                  "group": "pip",
+                  "pages": [
+                    "setup/self-hosted/pip/windows",
+                    "setup/self-hosted/pip/linux",
+                    "setup/self-hosted/pip/macos",
+                    "setup/self-hosted/pip/source"
+                  ]
+                }
               ]
             },
             "setup/custom-config",
@@ -79,26 +83,34 @@
             "connect/tableau"
           ]
         },
+        "sql/create/datasetup",
         "sql/create/file",
         "sql/data-insights",
+        "sql/create/predictor2",
+        "sql/api/select2",
+        "sql/feature-importance",
         "sql/feature-eng",
         {
           "group": "SQL API",
           "pages": [
             "sql/table-structure",
+            "sql/native-queries",
+            "sql/project",
             {
               "group": "CREATE",
               "pages": [
                 "sql/create/databases",
                 "sql/create/predictor",
                 "sql/create/table",
-                "sql/create/view"
+                "sql/create/view",
+                "sql/create/ml-engine"
               ]
             },
             "sql/api/update",
             "sql/api/insert",
             "sql/api/describe",
             "sql/api/retrain",
+            "sql/api/manage-models-versions",
             "sql/api/drop",
             "sql/api/select",
             "sql/api/select-files",
@@ -169,7 +181,7 @@
               "pages": [
                 "sql/tutorials/crop-prediction",
                 "sql/tutorials/diabetes",
-                "sql/tutorials/spam-emails-tutorial",
+                "sql/tutorials/spam_emails_tutorial",
                 "sql/tutorials/mushrooms",
                 "sql/tutorials/heart-disease"
               ]
@@ -183,6 +195,7 @@
             "contribute/install",
             "contribute/issues",
             "contribute/integrations",
+            "contribute/ml-handlers",
             "contribute/docs",
             "docs-rules",
             "contribute/tests",

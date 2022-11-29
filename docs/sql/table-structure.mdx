@@ -1,140 +1,186 @@
 ---
-title: MindsDB Tables Structure
+title: MindsDB Default Structure
 ---
 
-## MindsDB Default Tables
+On start-up, MindsDB consists of one system database (`information_schema`), one default project (`mindsdb`), and two base tables (`models` and `models_versions`) that belong to the default project.
 
-On start-up, the MindsDB database consists of 2 tables: `predictors` and
-`databases`.
-
-You can verify it by running the following SQL command:
+You can verify it by running the following SQL commands:
 
 ```sql
-SHOW tables;
+SHOW [FULL] DATABASES;
 ```
 
 On execution, we get:
 
 ```sql
-+----------------------+
-| Tables_in_mindsdb    |
-+----------------------+
-| predictors           |
-| databases            |
-+----------------------+
++----------------------+---------+--------+
+| Database             | TYPE    | ENGINE |
++----------------------+---------+--------+
+| information_schema   | system  | [NULL] |
+| mindsdb              | project | [NULL] |
+| files                | data    | files  |
++----------------------+---------+--------+
 ```
 
-## The `predictors` Table
+And:
 
-At first, the `predictors` table is empty. But, as soon as you create your first
-machine learning model, you'll see it as a new record in the `predictors` table.
+```sql
+SHOW [FULL] TABLES;
+```
+
+On execution, we get:
+
+```sql
++----------------------+-------------+
+| Tables_in_mindsdb    | Table_type  |
++----------------------+-------------+
+| models               | BASE TABLE  |
+| models_versions      | BASE TABLE  |
++----------------------+-------------+
+```
+
+## The `information_schema` Database
+
+The `information_schema` database contains all the system tables, such as `databases`, `tables`, `columns`, `ml_engines`, etc.
+
+You can query for any system information using this query template:
 
 ```sql
 SELECT *
-FROM mindsdb.predictors;
+FROM information_schema.table_name;
+```
+
+Don't forget to replace *table_name* with the table of your interest.
+
+Let's query for the following:
+
+* The `databases` table lists all the databases including their name, type, and engine.
+
+  ```sql
+  SELECT *
+  FROM information_schema.databases;
+  ```
+
+  On execution, we get:
+
+  ```sql
+  +------------------+-------+--------+
+  |NAME              |TYPE   |ENGINE  |
+  +------------------+-------+--------+
+  |information_schema|system |[NULL]  |
+  |mindsdb           |project|[NULL]  |
+  |my_new_project    |project|[NULL]  |
+  |files             |data   |files   |
+  +------------------+-------+--------+
+  ```
+
+* The `handlers` table lists all the available ML handlers.
+
+  ```sql
+  SELECT *
+  FROM information_schema.handlers;
+  -- or
+  SHOW HANDLERS;
+  ```
+
+  On execution, we get:
+
+  ```sql
+  +------------------+------------+---------------------------------+-------+------------------------------------------------------------------------------+----------------+----------------------+------+
+  |NAME              |TITLE       |DESCRIPTION                      |VERSION|CONNECTION_ARGS                                                               |IMPORT_SUCCESS  |IMPORT_ERROR          |FIELD8|
+  +------------------+------------+---------------------------------+-------+------------------------------------------------------------------------------+----------------+----------------------+------+
+  |merlion           |Merlion     |MindsDB handler for Merlion      |0.0.1  |[NULL]                                                                        |true            |[NULL]                |      |
+  |byom              |BYOM        |MindsDB handler for BYOM         |0.0.1  |{'model_code': {'type': 'path', 'description': 'The path name to model code'}}|true            |[NULL]                |      |
+  |ludwig            |Ludwig      |MindsDB handler for Ludwig AutoML|0.0.2  |[NULL]                                                                        |false           |No module named 'dask'|      |
+  |lightwood         |Lightwood   |[NULL]                           |1.0.0  |[NULL]                                                                        |true            |[NULL]                |      |
+  |huggingface       |Hugging Face|MindsDB handler for Higging Face |0.0.1  |[NULL]                                                                        |true            |[NULL]                |      |
+  +------------------+------------+---------------------------------+-------+------------------------------------------------------------------------------+----------------+----------------------+------+
+  ```
+
+* The `ml_engines` table lists all the ML engines. These are the instantiated ML handlers. Check out our [docs on the `CREATE ML _ENGINE` command](/sql/create/ml_engine/) to learn more.
+
+  ```sql
+  SELECT *
+  FROM information_schema.ml_engines;
+  -- or
+  SHOW ML_ENGINES;
+  ```
+
+  On execution, we get:
+
+  ```sql
+  +------------------+-----------+----------------+
+  |NAME              |HANDLER    |CONNECTION_DATA |
+  +------------------+-----------+----------------+
+  |huggingface       |huggingface|{'password': ''}|
+  |lightwood         |lightwood  |{'password': ''}|
+  +------------------+-----------+----------------+
+  ```
+
+## The `mindsdb` Project
+
+You create models and views within projects. The default project is `mindsdb`. But you can create your projects using the `CREATE DATABASE` statement, as below:
+
+```sql
+CREATE DATABASE my_new_project;
+```
+
+Here is how to create a model within your project:
+
+```sql
+CREATE MODEL my_new_project.my_model
+FROM integration_name
+    (SELECT * FROM table_name)
+PREDICT target;
+```
+
+And here is how to create a view within your project:
+
+```sql
+CREATE VIEW my_new_project.my_view (
+    SELECT *
+    FROM integration_name.table_name
+);
+```
+
+Please replace the *integration_name* and *table_name* placeholders with your database name and your table name respectively.
+
+<Note>
+    **What If Names of a Model and a View are the Same?**
+    Please note that if you use the same name for a model and a view stored in one project, then MindsDB adds `_view` to the view name.
+</Note>
+
+Now you can verify that the model and view are within your project:
+
+```sql
+SHOW FULL TABLES FROM my_new_project;
 ```
 
 On execution, we get:
 
 ```sql
-+-------+---------+-----------+----------+----------------+------------------+--------+--------------------+-------------------+
-|name   |status   |accuracy   |predict   |update_status   |mindsdb_version   |error   |select_data_query   |training_options   |
-+-------+---------+-----------+----------+----------------+------------------+--------+--------------------+-------------------+
-|       |         |           |          |                |                  |        |                    |                   |
-+-------+---------+-----------+----------+----------------+------------------+--------+--------------------+-------------------+
++------------------------------+-------------+
+| Tables_in_my_new_project     | Table_type  |
++------------------------------+-------------+
+| models                       | BASE TABLE  |
+| models_versions              | BASE TABLE  |
+| my_model                     | MODEL       |
+| my_view                      | VIEW        |
++------------------------------+-------------+
 ```
 
-Where:
+## The `models` and `models_versions` Tables
 
-| Column name         | Description                                                                      |
-| ------------------- | -------------------------------------------------------------------------------- |
-| `name`              | The name of the ML model.                                                        |
-| `status`            | Training status having one of the values: generating, training, complete, error. |
-| `accuracy`          | The accuracy of the ML model.                                                    |
-| `predict`           | The name of the target variable column to be predicted.                          |
-| `update_status`     | Training update status (up_to_date or updating).                                 |
-| `mindsdb_version`   | The version of MindsDB under which this ML model was created.                    |
-| `error`             | In the case of an error, it contains an error message.                           |
-| `select_data_query` | SQL select query to create the datasource.                                       |
-| `training options`  | Additional training parameters.                                                  |
+The `mindsdb` project and every project that you create contain these two tables by default:
 
-### Example
+* The `models` table stores information about the modes within the project, such as `name`, `status`, `accuracy`, and more.
 
-To create a predictor, follow
-[this guide](https://docs.mindsdb.com/sql/create/predictor/).
+* The `models_versions` table stores information about all present and past versions of each model.
 
-```sql
-SELECT *
-FROM mindsdb.predictors;
-```
+For more information on the `models` and `models_versions` tables, visit our [docs on the `PROJECT` entity](/sql/project/).
 
-On execution, we get:
+## The `files` Database
 
-```sql
-+-----------------+--------+------------------+-------+-------------+---------------+-----+-----------------+----------------+
-|name             |status  |accuracy          |predict|update_status|mindsdb_version|error|select_data_query|training_options|
-+-----------------+--------+------------------+-------+-------------+---------------+-----+-----------------+----------------+
-|house_sales_model|complete|0.4658770134240238|ma     |up_to_date   |22.7.5.1       |     |                 |                |
-+-----------------+--------+------------------+-------+-------------+---------------+-----+-----------------+----------------+
-```
+It is another default database that stores all the files uploaded by you to MindsDB Cloud.
 
-## The `databases` Table
-
-At first, the `databases` table contains two records:
-
-- `files` is one of the default databases within the `mindsdb` database. It
-  stores all the files uploaded to the MindsDB Cloud editor. Following
-  [this guide](https://docs.mindsdb.com/sql/create/file/), you can find out how
-  to upload files to MindsDB.
-
-- `views` is one of the default databases within the `mindsdb` database. It
-  stores all the views. [Here](https://docs.mindsdb.com/sql/create/view/) is how
-  you can create a view in MindsDB.
-
-```sql
-SELECT *
-FROM mindsdb.databases;
-```
-
-On execution, we get:
-
-```sql
-+-------+----------------+-------+-------+-------+
-|name   |database_type   |host   |port   |user   |
-+-------+----------------+-------+-------+-------+
-|files  |files           |[NULL] |[NULL] |[NULL] |
-|views  |views           |[NULL] |[NULL] |[NULL] |
-+-------+----------------+-------+-------+-------+
-```
-
-Where:
-
-| Column name     | Description                                    |
-| --------------- | ---------------------------------------------- |
-| `name`          | The name of the database.                      |
-| `database_type` | The type or engine of the database.            |
-| `host`          | The host of the database connected to MindsDB. |
-| `port`          | The port of the database connected to MindsDB. |
-| `user`          | The user of the database connected to MindsDB. |
-
-### Example
-
-To create a database within MindsDB, follow
-[this guide](https://docs.mindsdb.com/sql/create/databases/).
-
-```sql
-SELECT *
-FROM mindsdb.databases;
-```
-
-On execution, we get:
-
-```sql
-+-------------+----------------+---------------+-------+------------+
-|name         |database_type   |host           |port   |user        |
-+-------------+----------------+---------------+-------+------------+
-|files        |files           |[NULL]         |[NULL] |[NULL]      |
-|views        |views           |[NULL]         |[NULL] |[NULL]      |
-|example_db   |postgres        |3.220.66.106   |5432   |demo_user   |
-+-------------+----------------+---------------+-------+------------+
-```
+Here is how you can [upload files to MindsDB](/sql/create/file/).

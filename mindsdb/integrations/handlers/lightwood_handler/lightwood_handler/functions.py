@@ -151,60 +151,61 @@ def run_learn(df: DataFrame, args: dict, model_storage) -> None:
 
 @mark_process(name='learn')
 def run_adjust(df: DataFrame, args: dict, model_storage):
-    try:
-        predictor_id = model_storage.predictor_id
-        predictor_record = db.Predictor.query.filter_by(id=predictor_id).first()
+    if False:
+        try:
+            predictor_id = model_storage.predictor_id
+            predictor_record = db.Predictor.query.filter_by(id=predictor_id).first()
 
-        # TODO: Copy DB record into new version
+            # TODO: Copy DB record into new version
 
-        # TODO move this to ModelStorage (don't work with database directly)
-        predictor_record.data = {'training_log': 'training'}
-        predictor_record.training_start_at = datetime.now()
-        predictor_record.status = PREDICTOR_STATUS.ADJUSTING  # TODO: parallel execution?
-        db.session.commit()
+            # TODO move this to ModelStorage (don't work with database directly)
+            predictor_record.data = {'training_log': 'training'}
+            predictor_record.training_start_at = datetime.now()
+            predictor_record.status = PREDICTOR_STATUS.ADJUSTING  # TODO: parallel execution?
+            db.session.commit()
 
-        predictor = lightwood.predictor_from_code(predictor_record.code)
-        predictor.adjust(df, args=args)
+            predictor = lightwood.predictor_from_code(predictor_record.code)
+            predictor.adjust(df, args=args)
 
-        fs = FileStorage(
-            resource_group=RESOURCE_GROUP.PREDICTOR,
-            resource_id=predictor_id,
-            sync=True
-        )
-        predictor.save(fs.folder_path / fs.folder_name)
-        fs.push()
+            fs = FileStorage(
+                resource_group=RESOURCE_GROUP.PREDICTOR,
+                resource_id=predictor_id,
+                sync=True
+            )
+            predictor.save(fs.folder_path / fs.folder_name)
+            fs.push()
 
-        predictor_record.update_status = 'up_to_date'
-        predictor_record.status = PREDICTOR_STATUS.COMPLETE
-        predictor_record.training_stop_at = datetime.now()
-        db.session.commit()
+            predictor_record.update_status = 'up_to_date'
+            predictor_record.status = PREDICTOR_STATUS.COMPLETE
+            predictor_record.training_stop_at = datetime.now()
+            db.session.commit()
 
-        predictor_records = get_model_records(
-            active=None,
-            name=predictor_record.name,
-        )
-        predictor_records = [
-            x for x in predictor_records
-            if x.training_stop_at is not None
-        ]
-        predictor_records.sort(key=lambda x: x.training_stop_at)
-        for record in predictor_records:
-            record.active = False
-        predictor_records[-1].active = True
-        db.session.commit()
+            predictor_records = get_model_records(
+                active=None,
+                name=predictor_record.name,
+            )
+            predictor_records = [
+                x for x in predictor_records
+                if x.training_stop_at is not None
+            ]
+            predictor_records.sort(key=lambda x: x.training_stop_at)
+            for record in predictor_records:
+                record.active = False
+            predictor_records[-1].active = True
+            db.session.commit()
 
-    except Exception as e:
-        log.logger.error(e)
-        predictor_id = model_storage.predictor_id
-        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-        print(traceback.format_exc())
-        error_message = format_exception_error(e)
-        predictor_record.data = {"error": error_message}
-        db.session.commit()
+        except Exception as e:
+            log.logger.error(e)
+            predictor_id = model_storage.predictor_id
+            predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
+            print(traceback.format_exc())
+            error_message = format_exception_error(e)
+            predictor_record.data = {"error": error_message}
+            db.session.commit()
 
-    if predictor_record.training_stop_at is None:
-        predictor_record.training_stop_at = datetime.now()
-        db.session.commit()
+        if predictor_record.training_stop_at is None:
+            predictor_record.training_stop_at = datetime.now()
+            db.session.commit()
 
 
 @mark_process(name='learn')

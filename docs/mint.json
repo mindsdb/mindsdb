@@ -83,7 +83,7 @@
             "connect/tableau"
           ]
         },
-        "sql/create/datasetup",
+        "sql/create/databases2",
         "sql/create/file",
         "sql/data-insights",
         "sql/create/predictor2",

@@ -19,6 +19,8 @@ In particular, three big components are included:
 import datetime as dt
 import traceback
 import importlib
+from copy import deepcopy
+from typing import Optional
 
 import pandas as pd
 
@@ -320,7 +322,7 @@ class BaseMLEngineExec:
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
         p = HandlerProcess(
-            learn_process,
+            adjust_process,
             class_path,
             ctx.dump(),
             self.integration_id,
@@ -382,4 +384,52 @@ class BaseMLEngineExec:
         )
         return predictions
 
-    # @TODO: adjust method here?
+    def adjust(
+            self, model_name, project_name,
+            data_integration_ref=None,
+            fetch_data_query=None,
+            join_learn_process=False,
+            label=None,
+            version=1,
+            set_active=True,
+            overwrite=False,
+            args: Optional[dict] = None
+    ):
+        # generate new record from latest version as starting point
+        predictor_records = get_model_records(
+            active=None,
+            name=model_name,
+        )
+        predictor_records = [
+            x for x in predictor_records
+            if x.training_stop_at is not None
+        ]
+        predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
+
+        predictor_record = deepcopy(predictor_records[0])
+        predictor_record.training_start_at = dt.datetime.now()
+        predictor_record.status = PREDICTOR_STATUS.GENERATING
+        predictor_record.label = label
+        predictor_record.version = version
+        predictor_record.active = False
+
+        db.session.add(predictor_record)
+        db.session.commit()
+
+        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+
+        p = HandlerProcess(
+            adjust_process,
+            class_path,
+            ctx.dump(),
+            self.integration_id,
+            predictor_record.id,
+            data_integration_ref,
+            fetch_data_query,
+            project_name,
+            None,  # problem_definition
+            set_active
+        )
+        p.start()
+        if join_learn_process is True:
+            p.join()

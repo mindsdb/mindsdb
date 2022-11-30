@@ -1,6 +1,7 @@
 import sys
 import json
 import copy
+from typing import Optional, Dict
 from datetime import datetime
 
 import pandas as pd
@@ -24,7 +25,7 @@ from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.integrations.libs.base import BaseMLEngine
 
 from .utils import unpack_jsonai_old_args
-from .functions import run_learn, run_update
+from .functions import run_learn, run_update, run_adjust
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -69,12 +70,18 @@ class LightwoodHandler(BaseMLEngine):
                     if column.lower() not in columns:
                         raise Exception(f"There is no column '{column}' in dataframe")
 
-
-    def create(self, target, df, args):
+    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         args['target'] = target
         run_learn(
             df,
             args,   # Problem definition and JsonAI override
+            self.model_storage
+        )
+
+    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        run_adjust(
+            df,
+            args,
             self.model_storage
         )
 

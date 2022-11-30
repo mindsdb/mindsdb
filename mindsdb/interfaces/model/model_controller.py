@@ -369,6 +369,96 @@ class ModelController():
         params['set_active'] = set_active
         ml_handler.learn(**params)
 
+    def prepare_adjust_statement(self, statement, database_controller):
+        project_name = statement.name.parts[0].lower()
+        model_name = statement.name.parts[1].lower()
+
+        # get data for adjust
+        # TODO: refactor into common method (also used in learn)
+        data_integration_ref = None
+        fetch_data_query = None
+        if statement.integration_name is not None:
+            fetch_data_query = statement.query_str
+            integration_name = statement.integration_name.parts[0]
+
+            databases_meta = database_controller.get_dict()
+            data_integration_meta = databases_meta[integration_name]
+            # TODO improve here. Suppose that it is view
+            if data_integration_meta['type'] == 'project':
+                data_integration_ref = {
+                    'type': 'view'
+                }
+            else:
+                data_integration_ref = {
+                    'type': 'integration',
+                    'id': data_integration_meta['id']
+                }
+
+        label = None
+        args = {}
+        if statement.using is not None:
+            label = statement.using.pop('tag', None)
+            args = statement.using
+
+        join_learn_process = args.pop('join_learn_process', False)
+
+        return dict(
+            model_name=model_name,
+            project_name=project_name,
+            data_integration_ref=data_integration_ref,
+            fetch_data_query=fetch_data_query,
+            args=args,
+            join_learn_process=join_learn_process,
+            label=label
+        )
+
+    def adjust_model(self, statement, ml_handler):
+        # active setting
+        set_active = True
+        if statement.using is not None:
+            set_active = statement.using.pop('active', True)
+            if set_active in ('0', 0, None):
+                set_active = False
+
+        params = self.prepare_adjust_statement(statement, ml_handler.database_controller)
+
+        base_predictor_record = get_model_record(
+            name=params['model_name'],
+            project_name=params['project_name'],
+            active=True
+        )
+
+        model_name = params['model_name']
+        if base_predictor_record is None:
+            raise Exception(f"Error: model '{model_name}' does not exists")
+
+        # get max current version
+        models = get_model_records(
+            name=params['model_name'],
+            project_name=params['project_name'],
+            deleted_at=None,
+            active=None,
+        )
+        version0 = max([m.version for m in models])
+        if version0 is None:
+            version0 = 1
+
+        params['version'] = version0 + 1
+
+        if params['data_integration_ref'] is None:
+            params['data_integration_ref'] = base_predictor_record.data_integration_ref
+        if params['fetch_data_query'] is None:
+            params['fetch_data_query'] = base_predictor_record.fetch_data_query
+
+        problem_definition = base_predictor_record.learn_args.copy()
+        problem_definition.update(params['problem_definition'])
+        params['problem_definition'] = problem_definition
+
+        params['is_retrain'] = False  # TODO: OK?
+        params['set_active'] = set_active
+        params['overwrite'] = False # TODO: pending
+        ml_handler.adjust(**params)
+
     def update_model_version(self, models, active=None):
         if active is None:
             raise NotImplementedError(f'Update is not supported')

@@ -150,8 +150,9 @@ def run_learn(df: DataFrame, args: dict, model_storage) -> None:
 
 
 @mark_process(name='learn')
-def run_adjust(predictor_id: int, df: DataFrame, company_id: int, args: dict, model_storage):  # @TODO: settle on final signature
+def run_adjust(df: DataFrame, args: dict, model_storage):
     try:
+        predictor_id = model_storage.predictor_id
         predictor_record = db.Predictor.query.filter_by(id=predictor_id).first()
 
         # TODO: Copy DB record into new version
@@ -159,7 +160,7 @@ def run_adjust(predictor_id: int, df: DataFrame, company_id: int, args: dict, mo
         # TODO move this to ModelStorage (don't work with database directly)
         predictor_record.data = {'training_log': 'training'}
         predictor_record.training_start_at = datetime.now()
-        predictor_record.status = PREDICTOR_STATUS.ADJUSTING  # TODO: what about parallel execution?
+        predictor_record.status = PREDICTOR_STATUS.ADJUSTING  # TODO: parallel execution?
         db.session.commit()
 
         predictor = lightwood.predictor_from_code(predictor_record.code)
@@ -168,7 +169,6 @@ def run_adjust(predictor_id: int, df: DataFrame, company_id: int, args: dict, mo
         fs = FileStorage(
             resource_group=RESOURCE_GROUP.PREDICTOR,
             resource_id=predictor_id,
-            company_id=company_id,
             sync=True
         )
         predictor.save(fs.folder_path / fs.folder_name)
@@ -182,7 +182,6 @@ def run_adjust(predictor_id: int, df: DataFrame, company_id: int, args: dict, mo
         predictor_records = get_model_records(
             active=None,
             name=predictor_record.name,
-            company_id=company_id
         )
         predictor_records = [
             x for x in predictor_records
@@ -196,6 +195,7 @@ def run_adjust(predictor_id: int, df: DataFrame, company_id: int, args: dict, mo
 
     except Exception as e:
         log.logger.error(e)
+        predictor_id = model_storage.predictor_id
         predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
         print(traceback.format_exc())
         error_message = format_exception_error(e)

@@ -104,6 +104,10 @@ class SessionController():
 
 
 class ServerSessionContorller(SessionController):
+    """SessionController implementation for case of Executor service.
+    The difference with SessionController is that there is an id in this one.
+    The instance uses the id to synchronize its settings with the appropriate
+    ServiceSessionController instance on the Executor side."""
     def __init__(self, server, company_id=None, user_class=None):
         super().__init__(server, company_id, user_class)
         self.id = f"session_{uuid4()}"
@@ -117,11 +121,14 @@ class ServerSessionContorller(SessionController):
         logger.debug("%s.__init__: executor url - %s", self.__class__.__name__, self.executor_url)
 
     def __del__(self):
+        """Terminate the appropriate ServiceSessionController instance as well."""
         url = self.executor_url + "/" + "session"
         requests.delete(url, json={"id":self.id})
 
 
 class ServiceSessionController(SessionController):
+    """Slight modification of SessionController class to use it in Executor service.
+    The class doens't depend from mysql server."""
 
     def __init__(self, company_id=None, user_class=None):
         """

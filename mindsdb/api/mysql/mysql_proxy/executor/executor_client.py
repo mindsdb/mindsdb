@@ -10,6 +10,11 @@ from mindsdb.integrations.libs.net_helpers import sending_attempts
 logger = get_log("main")
 
 class ExecutorClient:
+    """The class has the same public API with Executor
+    It is used to work with Executor service.
+    Thus instead of handling all incoming requests in place,
+    it forwards them to Executor service, recieves responses and
+    returns results back to a calling code."""
     def __init__(self, session, sqlserver):
         self.id = f"executor_{uuid4()}"
         self.headers = {"Content-Type": "application/json"}
@@ -33,9 +38,7 @@ class ExecutorClient:
         self.state_track = None
         self.server_status = None
 
-
-        # self.predictor_metadata = {}
-
+        # additional attributes used in handling query process
         self.sql = ''
         self.sql_lower = ''
 
@@ -70,12 +73,14 @@ class ExecutorClient:
         return r
 
     def __del__(self):
+        """Delete the appropriate ExecutorService instance(on the side of Executor service) as well."""
         url = f"{self.base_url}/executor"
         logger.info("%s.%s: delete an appropriate executor instance on the serverside", self.__class__.__name__, self.id)
         self._do(url, "delete", json={"id": self.id})
 
 
     def default_json(self):
+        """Store all required data to instanciate ExecutorService instance into json."""
         if hasattr(self.sqlserver, "connection_id"):
             connection_id = self.sqlserver.connection_id
         else:
@@ -84,12 +89,11 @@ class ExecutorClient:
             "id": self.id,
             "connection_id": connection_id,
             "session_id": self.session.id,
-            # "company_id": self.session.company_id,
-            # "user_class": self.session.user_class,
             "session": self.session.to_json(),
                 }
 
     def _update_attrs(self, response_json: dict):
+        """Updates attributes by values received from the Executor service."""
         for attr in response_json:
             if hasattr(self, attr):
                 logger.info("%s: updating %s attribute, new value - %s", self.__class__.__name__, attr, response_json[attr])
@@ -177,7 +181,7 @@ class ExecutorClient:
         json_data["sql"] = sql
         logger.info("%s.execute_external: json=%s", self.__class__.__name__, json_data)
         return
-        response = None
+        # response = None
         # try:
         #     response = self._do("execute_external", _type="post", json=json_data)
         #     logger.info("%s.execute_external result:status_code=%s, body=%s", self.__class__.__name__, response.status_code, response.text)

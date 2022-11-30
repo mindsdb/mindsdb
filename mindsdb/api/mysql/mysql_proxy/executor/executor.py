@@ -220,6 +220,8 @@ class Executor:
         return params
 
     def to_mysql_columns(self):
+        """Converts raw columns data into convinient format(list of lists) for the futher usage.
+        Plus, it is also converts column types into internal ones."""
 
         result = []
 

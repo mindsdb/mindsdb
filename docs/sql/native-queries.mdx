@@ -70,8 +70,7 @@ The first line (`SELECT * FROM example_db`) informs MindsDB that we select from 
 We can create a view based on a native query.
 
 ```sql
-CREATE VIEW cars (
-    SELECT * FROM example_db (
+CREATE VIEW cars FROM example_db (
         SELECT 
             model, 
             year, 
@@ -85,7 +84,6 @@ CREATE VIEW cars (
             COUNT(*) OVER (PARTITION BY model, year) AS units_to_sell, -- how many units of a certain model are sold in a year
             ROUND((CAST(tax AS decimal) / price), 3) AS tax_div_price -- value of tax divided by price of a car
         FROM demo_data.used_car_price
-    )
 );
 ```
 
@@ -94,5 +92,3 @@ On execution, we get:
 ```sql
 Query OK, 0 rows affected (x.xxx sec)
 ```
-
-Here we have two nesting levels: the native query is nested within the `SELECT` statement, and the `SELECT` statement is nested within the `CREATE VIEW` statement.

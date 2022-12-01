@@ -11,7 +11,7 @@ class JiraHandlerTest(unittest.TestCase):
             "jira_url": "https://jira.linuxfoundation.org/",
             "user_id": "balaceg",
             "api_key": "4Rhq&Ehd#KV4an!",
-            "jira_query": "project = RELENG and status != Done"
+            "jira_query": "project = RELENG and status = 'In Progress'"
         }
         cls.handler = JiraHandler('test_jira_handler', cls.kwargs)
 

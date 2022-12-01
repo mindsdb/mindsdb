@@ -22,7 +22,7 @@ The required arguments to establish a connection are,
 * `jira_query`: Jira Search Query
 
 ## Usage
-In order to make use of this handler and connect to an Access database in MindsDB, the following syntax can be used,
+In order to make use of this handler and connect to an Jira in MindsDB, the following syntax can be used,
 ~~~~sql
 CREATE DATABASE jira_source
 WITH
@@ -40,4 +40,4 @@ Now, you can use this established connection to query your table as follows,
 SELECT * FROM jira_source.example_tbl
 ~~~~
 
-At the moment, only `SELECT` queries are allowed to be executed through `duckdb`. This, however, has no restriction on running machine learning algorithms against your data in Airtable using `CREATE PREDICTOR` statements.
+At the moment, only `SELECT` queries are allowed to be executed through `duckdb`. This, however, has no restriction on running machine learning algorithms against your data in Jira using `CREATE PREDICTOR` statements.

@@ -68,8 +68,6 @@ class JiraHandler(DatabaseHandler):
         df = pd.json_normalize(results["issues"])
         fields_name= ["key", "fields.summary","fields.status.name", "fields.reporter.name","fields.assignee.name","fields.priority.name"]
         df = df[fields_name]
-        df = df.rename(columns={'key': 'Ticket_No', 'fields.summary': 'Summary','fields.reporter.name':'Reporter','fields.assignee.name':'Assignee','fields.priority.name':'Priority','fields.status.name':'Status'})
-
 
         globals()[self.connection_data['table_name']] = df
         self.connection = duckdb.connect()
@@ -190,7 +188,6 @@ class JiraHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         response = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
@@ -200,6 +197,7 @@ class JiraHandler(DatabaseHandler):
                 }
             )
         )
+        
 
         return response
 
@@ -233,5 +231,5 @@ connection_args_example = OrderedDict(
     jira_url ='https://jira.linuxfoundation.org/',
     user_id='balaceg',
     api_key='4Rhq&Ehd#KV4an!',
-    jira_query = 'project = RELENG and status != Done'
+    jira_query = 'project = RELENG and status = In Progress'
 )

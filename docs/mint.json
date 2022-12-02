@@ -12,6 +12,18 @@
     "ultraLight": "#CCEFE9",
     "ultraDark": "#0D5E4F"
   },
+  "openApi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
+  "api": {
+    "baseUrl": [
+      "https://alpha.mindsdb.com/",
+      "https://cloud.mindsdb.com/",
+      "https://127.0.0.1/"
+    ],
+    "auth": {
+      "method": "api-key",
+      "name": "X-API-KEY"
+    }
+  },
   "topbarLinks": [
     {
       "name": "Login",
@@ -34,7 +46,6 @@
       "url": "https://github.com/mindsdb/mindsdb"
     }
   ],
-  "openApi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "navigation": [
     {
       "group": "Guides",
@@ -122,7 +133,16 @@
           "group": "REST API",
           "pages": [
             "rest/sql",
-            "rest/databases/create-database"
+            {
+              "group": "Databases",
+              "pages":[
+                "rest/list-databases",
+                "rest/list-database",
+                "rest/create-databases",
+                "rest/update-databases",
+                "rest/delete-databases"
+              ]
+            }
           ]
         },
         {

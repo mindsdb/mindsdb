@@ -15,7 +15,7 @@ servers:
     description: MindsDB Production cloud server
   - url: 'http://alpha.mindsdb.com/v1/api'
     description: MindsDB Alpha cloud server
-  - url: 'http://127.0.0.1/v1'
+  - url: 'http://127.0.0.1/v1/api'
     description: MindsDB local deployments
 components:
   securitySchemes:
@@ -150,6 +150,51 @@ paths:
                 items:
                   type: string
   'databases/{databaseName}':
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: Gets info about existing database.
+      description: This endpoint retrieves a specific database info.
+      parameters:
+        - name: databaseName
+          in: path
+          description: databaseName to select
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object with database informations
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Database not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
     delete:
       security:
         - ApiKeyAuth: []

@@ -149,7 +149,7 @@ paths:
                 type: object
                 items:
                   type: string
-  'databases/{databaseName}':
+  '/databases/{databaseName}':
     get:
       security:
         - ApiKeyAuth: []

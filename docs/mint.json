@@ -34,6 +34,7 @@
       "url": "https://github.com/mindsdb/mindsdb"
     }
   ],
+  "openApi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "navigation": [
     {
       "group": "Guides",
@@ -120,7 +121,8 @@
         {
           "group": "REST API",
           "pages": [
-            "rest/sql"
+            "rest/sql",
+            "rest/databases/create-database"
           ]
         },
         {

@@ -32,13 +32,14 @@ class Executor:
 
         self.query = None
 
-        # returns
+        # returned values
+        # all this attributes needs to be added in
+        # self.json() method
         self.columns = []
         self.params = []
         self.data = None
         self.state_track = None
         self.server_status = None
-
         self.is_executed = False
 
         # self.predictor_metadata = {}

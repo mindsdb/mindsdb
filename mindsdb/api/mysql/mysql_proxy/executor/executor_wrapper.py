@@ -1,3 +1,4 @@
+import traceback
 from flask import Flask, request
 
 from mindsdb.utilities.config import Config
@@ -125,58 +126,88 @@ class ExecutorService:
         return "", 200
 
     def stmt_prepare(self):
-        params = request.json
-        logger.info("%s.stmt_prepare: json received - %s", self.__class__.__name__, params)
-        executor = self._get_executor(params)
-        sql = params.get("sql")
-        executor.stmt_prepare(sql)
-        resp = executor.to_json()
-        return resp, 200
+        try:
+            params = request.json
+            logger.info("%s.stmt_prepare: json received - %s", self.__class__.__name__, params)
+            executor = self._get_executor(params)
+            sql = params.get("sql")
+            executor.stmt_prepare(sql)
+            resp = executor.to_json()
+            return resp, 200
+        except Exception:
+            err_msg = traceback.format_exc()
+            logger.error("%s.stmt_prepare: execution error - %s", err_msg)
+            return {"error": err_msg}, 500
 
     def stmt_execute(self):
-        params = request.json
-        logger.info("%s.stmt_execute: json received - %s", self.__class__.__name__, params)
-        executor = self._get_executor(params)
-        param_values = params.get("param_values")
-        executor.stmt_execute(param_values)
-        resp = executor.to_json()
-        return resp, 200
+        try:
+            params = request.json
+            logger.info("%s.stmt_execute: json received - %s", self.__class__.__name__, params)
+            executor = self._get_executor(params)
+            param_values = params.get("param_values")
+            executor.stmt_execute(param_values)
+            resp = executor.to_json()
+            return resp, 200
+        except Exception:
+            err_msg = traceback.format_exc()
+            logger.error("%s.stmt_execute: execution error - %s", err_msg)
+            return {"error": err_msg}, 500
 
     def query_execute(self):
-        params = request.json
-        logger.info("%s.query_execute: json received - %s", self.__class__.__name__, params)
-        executor = self._get_executor(params)
-        sql = params.get("sql")
-        executor.query_execute(sql)
-        logger.info("%s.query_execute: executor.data(type of %s) - %s", self.__class__.__name__, type(executor.data), executor.data)
-        logger.info("%s.query_execute: executor.columns(type of %s) - %s", self.__class__.__name__, type(executor.columns), executor.columns)
-        logger.info("%s.query_execute: executor.params(type of %s) - %s", self.__class__.__name__, type(executor.params), executor.params)
+        try:
+            params = request.json
+            logger.info("%s.query_execute: json received - %s", self.__class__.__name__, params)
+            executor = self._get_executor(params)
+            sql = params.get("sql")
+            executor.query_execute(sql)
+            logger.info("%s.query_execute: executor.data(type of %s) - %s", self.__class__.__name__, type(executor.data), executor.data)
+            logger.info("%s.query_execute: executor.columns(type of %s) - %s", self.__class__.__name__, type(executor.columns), executor.columns)
+            logger.info("%s.query_execute: executor.params(type of %s) - %s", self.__class__.__name__, type(executor.params), executor.params)
 
-        resp = executor.to_json()
-        return resp, 200
+            resp = executor.to_json()
+            return resp, 200
+        except Exception:
+            err_msg = traceback.format_exc()
+            logger.error("%s.query_execute: execution error - %s", err_msg)
+            return {"error": err_msg}, 500
 
     def execute_external(self):
-        params = request.json
-        logger.info("%s.execute_external: json received - %s", self.__class__.__name__, params)
-        executor = self._get_executor(params)
-        sql = params.get("sql")
-        executor.execute_external(sql)
-        resp = executor.to_json()
-        return resp, 200
+        try:
+            params = request.json
+            logger.info("%s.execute_external: json received - %s", self.__class__.__name__, params)
+            executor = self._get_executor(params)
+            sql = params.get("sql")
+            executor.execute_external(sql)
+            resp = executor.to_json()
+            return resp, 200
+        except Exception:
+            err_msg = traceback.format_exc()
+            logger.error("%s.execute_external: execution error - %s", err_msg)
+            return {"error": err_msg}, 500
 
     def parse(self):
-        params = request.json
-        logger.info("%s.parse: json received - %s", self.__class__.__name__, params)
-        executor = self._get_executor(params)
-        sql = params.get("sql")
-        executor.parse(sql)
-        resp = executor.to_json()
-        return resp, 200
+        try:
+            params = request.json
+            logger.info("%s.parse: json received - %s", self.__class__.__name__, params)
+            executor = self._get_executor(params)
+            sql = params.get("sql")
+            executor.parse(sql)
+            resp = executor.to_json()
+            return resp, 200
+        except Exception:
+            err_msg = traceback.format_exc()
+            logger.error("%s.parse: execution error - %s", err_msg)
+            return {"error": err_msg}, 500
 
     def do_execute(self):
-        params = request.json
-        logger.info("%s.do_execute: json received - %s", self.__class__.__name__, params)
-        executor = self._get_executor(params)
-        executor.do_execute()
-        resp = executor.to_json()
-        return resp, 200
+        try:
+            params = request.json
+            logger.info("%s.do_execute: json received - %s", self.__class__.__name__, params)
+            executor = self._get_executor(params)
+            executor.do_execute()
+            resp = executor.to_json()
+            return resp, 200
+        except Exception:
+            err_msg = traceback.format_exc()
+            logger.error("%s.do_execute: execution error - %s", err_msg)
+            return {"error": err_msg}, 500

@@ -1,3 +1,4 @@
+import sys
 import copy
 import tempfile
 import os
@@ -58,6 +59,10 @@ class BaseUnitTest:
         from mindsdb.interfaces.storage import db
         db.init()
         cls.db = db
+
+        from multiprocessing import dummy
+        mp_patcher = mock.patch('torch.multiprocessing.get_context').__enter__()
+        mp_patcher.side_effect = lambda x: dummy
 
     @staticmethod
     def teardown_class(cls):
@@ -136,10 +141,7 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.interfaces.database.integrations import IntegrationController
         from mindsdb.interfaces.file.file_controller import FileController
         from mindsdb.interfaces.model.model_controller import ModelController
-        from mindsdb.interfaces.database.projects import ProjectController
-        from mindsdb.interfaces.database.database import DatabaseController
-
-        server_obj = type('', (), {})()
+        from mindsdb.utilities.context import context as ctx
 
         integration_controller = IntegrationController()
         self.file_controller = FileController()
@@ -153,14 +155,14 @@ class BaseExecutorTest(BaseUnitTest):
         # no predictors yet
         # self.mock_model_controller.get_models.side_effect = lambda: []
 
-        server_obj.original_integration_controller = integration_controller
-        server_obj.original_model_controller = model_controller
-        server_obj.original_project_controller = ProjectController()
-        server_obj.original_database_controller = DatabaseController()
-
         if import_dummy_ml:
-            handler_module = importlib.import_module('tests.unit.dummy_ml_handler')
-            handler_meta = integration_controller._get_handler_meta(handler_module)
+            spec = importlib.util.spec_from_file_location('dummy_ml_handler', './tests/unit/dummy_ml_handler/__init__.py')
+            foo = importlib.util.module_from_spec(spec)
+            sys.modules["dummy_ml_handler"] = foo
+            spec.loader.exec_module(foo)
+
+            handler_module = sys.modules["dummy_ml_handler"]
+            handler_meta =  integration_controller._get_handler_meta(handler_module)
             integration_controller.handlers_import_status[handler_meta['name']] = handler_meta
 
         if mock_lightwood:
@@ -170,11 +172,10 @@ class BaseExecutorTest(BaseUnitTest):
             create_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.create')
             self.mock_create = create_patcher.__enter__()
 
-        sql_session = SessionController(
-            server=server_obj,
-            company_id=None
-        )
+        ctx.set_default()
+        sql_session = SessionController()
         sql_session.database = 'mindsdb'
+        sql_session.integration_controller = integration_controller
 
         self.command_executor = ExecuteCommands(sql_session, executor=None)
 

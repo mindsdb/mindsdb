@@ -1,23 +1,10 @@
 import sys
-from mindsdb_sql.parser.ast import Identifier, Constant, Star, Select, Join, BinaryOperation
+from mindsdb_sql.parser.ast import Identifier, Constant, BinaryOperation
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.interfaces.database.integrations import IntegrationController
-from mindsdb.interfaces.model.model_controller import ModelController
-from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.database.database import DatabaseController
 
 
-def make_sql_session(company_id):
-    server_obj = type('', (), {})()
-    server_obj.original_integration_controller = IntegrationController()
-    server_obj.original_model_controller = ModelController()
-    server_obj.original_project_controller = ProjectController()
-    server_obj.original_database_controller = DatabaseController()
-
-    sql_session = SessionController(
-        server=server_obj,
-        company_id=company_id
-    )
+def make_sql_session():
+    sql_session = SessionController()
     sql_session.database = 'mindsdb'
     return sql_session
 

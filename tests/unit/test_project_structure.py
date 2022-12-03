@@ -73,7 +73,7 @@ class TestProjectStructure(BaseExecutorDummyML):
                 CREATE PREDICTOR proj.task_model
                 from pg (select * from tasks)
                 PREDICT a
-                using engine='dummy_ml',  
+                using engine='dummy_ml',
                 tag = 'first',
                 join_learn_process=true
             '''
@@ -327,6 +327,18 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert len(ret) == 2
         assert ret.predicted[0] == 42
 
+
+    def test_empty_df(self):
+        # -- create model --
+        self.run_sql(
+            '''
+                CREATE PREDICTOR mindsdb.task_model
+                PREDICT a
+                using engine='dummy_ml',
+                join_learn_process=true
+            '''
+        )
+        self.wait_predictor('mindsdb', 'task_model')
 
 
 

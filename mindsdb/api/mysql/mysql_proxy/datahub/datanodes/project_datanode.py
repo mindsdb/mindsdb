@@ -1,10 +1,5 @@
 from copy import deepcopy
 
-import numpy as np
-
-from sqlalchemy.types import (
-    Integer, Float, Text
-)
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast import (
@@ -14,8 +9,7 @@ from mindsdb_sql.parser.ast import (
 )
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 

@@ -3,3 +3,4 @@ netifaces >= 0.11.0
 mysql-connector-python==8.0.29
 pytest
 pytest-subtests
+flake8

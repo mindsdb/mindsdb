@@ -1,12 +1,6 @@
 import mindsdb_sql
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
-from mindsdb_sql.parser.ast import (
-    Insert,
-    Set,
-    Alter,
-    Update
-)
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import utils as planner_utils
 
@@ -182,7 +176,7 @@ class Executor:
         except Exception as mdb_error:
             try:
                 self.query = parse_sql(sql, dialect='mysql')
-            except Exception as e:
+            except Exception:
                 # not all statements are parsed by parse_sql
                 logger.warning(f'SQL statement is not parsed by mindsdb_sql: {sql}')
 

@@ -27,7 +27,6 @@ class JiraHandler(DatabaseHandler):
     """
 
     name = 'jira'
-
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
         Initialize the handler.
@@ -59,18 +58,12 @@ class JiraHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
         
-        jira_instance = Jira(
+        self.connection = Jira(
             url=self.connection_data['jira_url'],
             username=self.connection_data['user_id'],
             password=self.connection_data['api_key'],
             cloud=True)
-        results = jira_instance.jql(self.connection_data['jira_query'])
-        df = pd.json_normalize(results["issues"])
-        fields_name= ["key", "fields.summary","fields.status.name", "fields.reporter.name","fields.assignee.name","fields.priority.name"]
-        df = df[fields_name]
-
-        globals()[self.connection_data['table_name']] = df
-        self.connection = duckdb.connect()
+        
         self.is_connected = True
 
         return self.connection
@@ -123,29 +116,24 @@ class JiraHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         connection = self.connect()
-        cursor = connection.cursor()
-        try:
-            cursor.execute(query)
-            result = cursor.fetchall()
+        results = connection.jql(self.connection_data['jira_query'])
+        df = pd.json_normalize(results["issues"])
+        fields_name= ["key", "fields.summary","fields.status.name", "fields.reporter.name","fields.assignee.name","fields.priority.name"]
+        locals()[self.connection_data['table_name']] = df[fields_name]
+        try:            
+            result = duckdb.query(query)
             if result:
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cursor.description]
-                    )
-                )
-
+                response = Response(RESPONSE_TYPE.TABLE,data_frame=result.df())                   
             else:
                 response = Response(RESPONSE_TYPE.OK)
-                connection.commit()
+
         except Exception as e:
             log.error(f'Error running query  {query} on jira handler')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
             )
-
+        
         if need_to_close is True:
             self.disconnect()
 
@@ -188,16 +176,18 @@ class JiraHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
+        query = 'SELECT * FROM '+ str(self.connection_data['table_name'])+ ' LIMIT 10'
+        result = self.native_query(query)
+
         response = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 {
-                    'column_name': list(globals()[self.connection_data['table_name']].columns),
-                    'data_type': globals()[self.connection_data['table_name']].dtypes
+                    'column_name': result.data_frame.columns,
+                    'data_type': result.data_frame.dtypes
                 }
             )
         )
-        
 
         return response
 

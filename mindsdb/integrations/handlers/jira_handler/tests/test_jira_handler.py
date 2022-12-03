@@ -19,7 +19,7 @@ class JiraHandlerTest(unittest.TestCase):
         assert self.handler.check_connection()
 
     def test_1_native_query_select(self):
-        query = "SELECT * FROM project"
+        query = "SELECT * FROM project LIMIT 10"
         result = self.handler.native_query(query)
         assert result.type is RESPONSE_TYPE.TABLE
 

@@ -74,9 +74,8 @@ class ExecutorClient:
 
     def __del__(self):
         """Delete the appropriate ExecutorService instance(on the side of Executor service) as well."""
-        url = f"{self.base_url}/executor"
         logger.info("%s.%s: delete an appropriate executor instance on the serverside", self.__class__.__name__, self.id)
-        self._do(url, "delete", json={"id": self.id})
+        self._do("/executor", "delete", json={"id": self.id})
 
 
     def default_json(self):

@@ -9,6 +9,7 @@ WORKDIR /
 # Install our reqs
 COPY requirements.txt /
 RUN pip install -r requirements.txt --no-cache-dir
+RUN pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
 # Install our app
 COPY ./mindsdb /mindsdb/mindsdb
 

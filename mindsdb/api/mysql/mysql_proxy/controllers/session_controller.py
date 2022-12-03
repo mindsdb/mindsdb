@@ -28,7 +28,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.database.database import DatabaseController
 
 
-class SessionController():
+class SessionController:
     '''
     This class manages the server session
     '''
@@ -77,9 +77,7 @@ class SessionController():
     def to_json(self):
         return {
                 "username": self.username,
-                "user_class": self.user_class,
                 "auth": self.auth,
-                "company_id": self.company_id,
                 "database": self.database,
                 "prepared_stmts": self.prepared_stmts,
                 "packet_sequence_number": self.packet_sequence_number,
@@ -91,8 +89,8 @@ class ServerSessionContorller(SessionController):
     The difference with SessionController is that there is an id in this one.
     The instance uses the id to synchronize its settings with the appropriate
     ServiceSessionController instance on the Executor side."""
-    def __init__(self, server, company_id=None, user_class=None):
-        super().__init__(server, company_id, user_class)
+    def __init__(self):
+        super().__init__()
         self.id = f"session_{uuid4()}"
         executor_host = os.environ.get("MINDSDB_EXECUTOR_HOSTNAME")
         executor_port = os.environ.get("MINDSDB_EXECUTOR_PORT")
@@ -109,51 +107,49 @@ class ServerSessionContorller(SessionController):
         requests.delete(url, json={"id":self.id})
 
 
-class ServiceSessionController(SessionController):
-    """Slight modification of SessionController class to use it in Executor service.
-    The class doens't depend from mysql server."""
-
-    def __init__(self, company_id=None, user_class=None):
-        """
-        Initialize the session
-        :param company_id:
-        """
-
-        self.username = None
-        self.user_class = user_class
-        self.auth = False
-        self.company_id = company_id
-        self.logging = logger
-        self.database = None
-
-        self.config = Config()
-
-        self.model_controller = WithKWArgsWrapper(
-            ModelController(),
-            company_id=company_id
-        )
-
-        self.integration_controller = WithKWArgsWrapper(
-            IntegrationController(),
-            company_id=company_id
-        )
-
-        self.view_controller = WithKWArgsWrapper(
-            ViewController(),
-            company_id=company_id
-        )
-
-        self.project_controller = WithKWArgsWrapper(
-            ProjectController(),
-            company_id=company_id
-        )
-
-        self.database_controller = WithKWArgsWrapper(
-            DatabaseController(),
-            company_id=company_id
-        )
-
-        self.datahub = init_datahub(self)
-
-        self.prepared_stmts = {}
-        self.packet_sequence_number = 0
+# class ServiceSessionController(SessionController):
+#     """Slight modification of SessionController class to use it in Executor service.
+#     The class doens't depend from mysql server."""
+# 
+#     def __init__(self):
+#         """
+#         Initialize the session
+#         :param company_id:
+#         """
+# 
+#         self.username = None
+#         self.auth = False
+#         self.logging = logger
+#         self.database = None
+# 
+#         self.config = Config()
+# 
+#         self.model_controller = WithKWArgsWrapper(
+#             ModelController(),
+#             company_id=company_id
+#         )
+# 
+#         self.integration_controller = WithKWArgsWrapper(
+#             IntegrationController(),
+#             company_id=company_id
+#         )
+# 
+#         self.view_controller = WithKWArgsWrapper(
+#             ViewController(),
+#             company_id=company_id
+#         )
+# 
+#         self.project_controller = WithKWArgsWrapper(
+#             ProjectController(),
+#             company_id=company_id
+#         )
+# 
+#         self.database_controller = WithKWArgsWrapper(
+#             DatabaseController(),
+#             company_id=company_id
+#         )
+# 
+#         self.datahub = init_datahub(self)
+# 
+#         self.prepared_stmts = {}
+#         self.packet_sequence_number = 0

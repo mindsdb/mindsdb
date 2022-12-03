@@ -6,6 +6,7 @@ import requests
 from mindsdb.utilities.log import (
     get_log
 )
+from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.libs.net_helpers import sending_attempts
 logger = get_log("main")
 
@@ -85,10 +86,14 @@ class ExecutorClient:
         else:
             connection_id = -1
         return {
+        # We have to send context between client and server
+        # here we dump the current value of the context
+        # to send it to the Executor service
             "id": self.id,
             "connection_id": connection_id,
             "session_id": self.session.id,
             "session": self.session.to_json(),
+            "context": ctx.dump(),
                 }
 
     def _update_attrs(self, response_json: dict):

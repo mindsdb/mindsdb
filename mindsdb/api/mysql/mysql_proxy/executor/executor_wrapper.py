@@ -5,8 +5,10 @@ from mindsdb.utilities.log import (
     initialize_log,
     get_log
 )
+from mindsdb.utilities.context import context as ctx
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import ServiceSessionController
+from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+# from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import ServiceSessionController
 
 
 Config()
@@ -57,6 +59,10 @@ class ExecutorService:
         logger.info("%s: base params and route have been initialized", self.__class__.__name__)
 
     def _get_executor(self, params):
+        # We have to send context between client and server
+        # here we load the context json received from the client(mindsdb)
+        # to the local context instance in this Flask thread
+        ctx.load(params["context"])
         exec_id = params["id"]
         if exec_id in self.executors_cache:
             logger.info("%s: executor %s found in cache", self.__class__.__name__, exec_id)
@@ -66,13 +72,12 @@ class ExecutorService:
             logger.info("%s: session %s found in cache", self.__class__.__name__, session_id)
             session = self.sessions_cache[session_id]
         else:
-            logger.info("%s: creating new session. id - %s, company_id - %s, user_class - %s",
+            logger.info("%s: creating new session. id - %s, params - %s",
                     self.__class__.__name__,
                     session_id,
-                    params["session"]["company_id"],
-                    params["session"]["user_class"]
+                    params["session"],
                 )
-            session = ServiceSessionController(params["session"]["company_id"], params["session"]["user_class"])
+            session = SessionController()
             self.sessions_cache[session_id] = session
         session.database = params["session"]["database"]
         session.username = params["session"]["username"]

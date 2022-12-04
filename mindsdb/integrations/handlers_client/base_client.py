@@ -1,8 +1,10 @@
 """Parent class for all clients - DB and ML."""
+import logging
 import requests
 from pandas import read_json
 from mindsdb.integrations.libs.net_helpers import sending_attempts
-from mindsdb.utilities import log
+# from mindsdb.utilities import log
+logger = logging.getLogger("mindsdb.main")
 
 
 class BaseClient:
@@ -20,11 +22,12 @@ class BaseClient:
     # in case of local lightwood installation
     def __getattr__(self, attr):
         """Delegates all calls to a handler instance if self.as_service == False."""
-        log.logger.info("calling '%s' as: ", attr)
+        logger.info("calling '%s' as: ", attr)
         if self.__dict__["as_service"]:
-            log.logger.info("service")
+            logger.info("%s works in a service mode. calling %s attribute", self.__class__.__name__, attr)
             return getattr(self, attr)
-        log.logger.info("handler")
+        logger.info("handler")
+        logger.info("%s works in a local mode. calling %s attribute", self.__class__.__name__, attr)
         handler = self.__dict__["handler"]
         return getattr(handler, attr)
 
@@ -68,5 +71,6 @@ class BaseClient:
             headers.update(self.headers)
         params["headers"] = headers
 
+        logger.info("%s: calling url - %s, params - %s", self.__class__.__name__, url, params)
         r = call(url, **params)
         return r

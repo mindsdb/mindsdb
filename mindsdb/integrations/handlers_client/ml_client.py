@@ -25,10 +25,11 @@ import pandas as pd
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.integrations.handlers_client.base_client import BaseClient
 from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
 
 
-log = get_log()
+log = get_log("main")
 
 
 class MLClient(BaseClient):
@@ -86,6 +87,12 @@ class MLClient(BaseClient):
         self.model_info = {"company_id": company_id,
                            "predictor_id": predictor_id,
                            "type": "huggingface"}
+
+    def default_json(self):
+        return {
+                "context": ctx.dump()
+                }
+
 
     def check_connection(self) -> StatusResponse:
         """ Check a connection to the MLHandler.

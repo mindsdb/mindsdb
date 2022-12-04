@@ -320,6 +320,8 @@ class IntegrationController:
         if isinstance(HandlerClass, type) and issubclass(HandlerClass, BaseMLEngine):
             handler_ars['handler_class'] = HandlerClass
             handler_ars['execution_method'] = getattr(self.handler_modules[integration_engine], 'execution_method', None)
+            handler_ars['integration_engine'] = integration_engine
+            print(f"GET HANDLERS: handler_ars - {handler_ars}")
             handler = BaseMLEngineExec(**handler_ars)
         else:
             handler = HandlerClass(**handler_ars)

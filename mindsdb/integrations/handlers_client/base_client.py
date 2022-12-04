@@ -1,8 +1,10 @@
 """Parent class for all clients - DB and ML."""
+import logging
 import requests
 from pandas import read_json
 from mindsdb.integrations.libs.net_helpers import sending_attempts
-from mindsdb.utilities import log
+# from mindsdb.utilities import log
+logger = logging.getLogger("mindsdb.main")
 
 
 class BaseClient:
@@ -16,17 +18,30 @@ class BaseClient:
         self.headers = {"Content-Type": "application/json"}
         self.as_service = as_service
 
-    # Make the wrapper a very thin layout between user and LightwoodHandler
-    # in case of local lightwood installation
-    def __getattr__(self, attr):
+    # Make the wrapper a very thin layout between user and Handler
+    # in case of monolithic usage
+    def __getattribute__(self, attr):
         """Delegates all calls to a handler instance if self.as_service == False."""
-        log.logger.info("calling '%s' as: ", attr)
-        if self.__dict__["as_service"]:
-            log.logger.info("service")
-            return getattr(self, attr)
-        log.logger.info("handler")
-        handler = self.__dict__["handler"]
-        return getattr(handler, attr)
+        name =  object.__getattribute__(self, "__class__").__name__
+        logger.info("%s: calling '%s' attribute", name, attr)
+        # attrs_dict = object.__getattribute__(self, "__dict__")
+        # logger.info("%s: __dict__ - %s", name, attrs_dict)
+        try:
+            handler = object.__getattribute__(self, "handler")
+            as_service = object.__getattribute__(self, "as_service")
+            if as_service:
+                logger.info("%s works in a service mode. calling %s attribute", name, attr)
+                try:
+                    return object.__getattribute__(self, attr)
+                except AttributeError:
+                    logger.info("%s: '%s' attribute not found, get it from local handler instance", name, attr)
+                    # handler = attrs_dict["handler"]
+                    return getattr(handler, attr)
+            logger.info("%s works in a local mode. calling %s attribute", name, attr)
+            # handler = self.__dict__["handler"]
+            return getattr(handler, attr)
+        except AttributeError:
+            return object.__getattribute__(self, attr)
 
     def _convert_response(self, resp):
         """Converts data_frame from json to pandas.DataFrame object.
@@ -68,5 +83,6 @@ class BaseClient:
             headers.update(self.headers)
         params["headers"] = headers
 
+        logger.info("%s: calling url - %s, params - %s", self.__class__.__name__, url, params)
         r = call(url, **params)
         return r

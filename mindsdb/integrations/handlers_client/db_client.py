@@ -25,7 +25,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.handlers_client.base_client import BaseClient
-from mindsdb.integrations.libs.handler_helpers import define_handler as define_db_handler
+from mindsdb.integrations.libs.handler_helpers import get_handler as define_db_handler
 from mindsdb.utilities import log
 
 

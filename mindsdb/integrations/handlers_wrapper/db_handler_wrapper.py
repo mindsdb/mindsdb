@@ -26,7 +26,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.handler_helpers import define_handler
+from mindsdb.integrations.libs.handler_helpers import get_handler
 from mindsdb.utilities import log
 
 
@@ -35,8 +35,8 @@ class BaseDBWrapper:
 
     def __init__(self, **kwargs):
         name = kwargs.get("name")
-        _type = kwargs.get("type")
-        handler_class = define_handler(_type)
+        _type = kwargs.get("engine", None) or kwargs.get("type")
+        handler_class = get_handler(_type)
         self.handler = handler_class(**kwargs)
         self.app = Flask(name)
 

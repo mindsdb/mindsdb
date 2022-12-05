@@ -135,19 +135,18 @@ class ColumnsCollection:
             groups[x[:3]].append(x[3:])
         return list(groups.items())
 
-    def del_duplicate_columns(self, table_name=None):
-        if table_name is None:
-            self.__columns = list(set(self.__columns))
-        else:
-            new_columns = []
-            for x in self.__columns:
-                if (
-                    x[:3] != table_name or (
-                        x not in new_columns
-                    )
-                ):
-                    new_columns.append(x)
-            self.__columns = new_columns
+    def del_duplicate_columns(self):
+        col_idx = []
+        to_del = []
+        for i, col in enumerate(self.__columns):
+            if col not in col_idx:
+                col_idx.append(col)
+            else:
+                to_del.append(i)
+
+        to_del.sort(reverse=True)
+        for i in to_del:
+            self.__columns.pop(i)
 
     def del_table_columns(self, table_name):
         self.__columns = [

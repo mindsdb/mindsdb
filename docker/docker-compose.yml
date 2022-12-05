@@ -25,6 +25,9 @@ services:
       - '47335:47335'
     command: bash -c "cd /mindsdb && python -m mindsdb"
     environment:
+      MINDSDB_EXECUTOR_SERVICE: "True"
+      MINDSDB_EXECUTOR_HOSTNAME: "executor"
+      MINDSDB_EXECUTOR_PORT: 5002
       MINDSDB_ML_SERVICE_HOST: "ml_service"
       MINDSDB_ML_SERVICE_PORT: 5001
       MINDSDB_DB_SERVICE_HOST: "db_service"
@@ -43,19 +46,19 @@ services:
       timeout: 4s
       retries: 100
 
-        # mysql_db:
-        #   image: "mindsdb/mysql-handler-test"
-        #   ports:
-        #     - 3307:3306
-        #   command: --secure-file-priv=/
-        #   environment:
-        #     MYSQL_ROOT_PASSWORD: "supersecret"
-        #     MYSQL_DATABASE: "test"
-        #   healthcheck:
-        #     test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD' ]
-        #     interval: 120s
-        #     timeout: 4s
-        #     retries: 100
+        #   mysql_db:
+        #     image: "mindsdb/mysql-handler-test"
+        #     ports:
+        #       - 3307:3306
+        #     command: --secure-file-priv=/
+        #     environment:
+        #       MYSQL_ROOT_PASSWORD: "supersecret"
+        #       MYSQL_DATABASE: "test"
+        #     healthcheck:
+        #       test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD' ]
+        #       interval: 120s
+        #       timeout: 4s
+        #       retries: 100
 
 
   ml_service:
@@ -93,6 +96,32 @@ services:
     environment:
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
 
+    healthcheck:
+      test:  ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 120s
+      timeout: 4s
+      retries: 100
+
+  executor:
+    build:
+      context: ../
+      dockerfile: ./docker/executor.Dockerfile
+    ports:
+      - 5500:5000
+    depends_on:
+      - mindsdb
+    environment:
+      # have to share mindsdb database, because it doens't work without it
+      PORT: 5002
+      MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      MINDSDB_ML_SERVICE_HOST: "ml_service"
+      MINDSDB_ML_SERVICE_PORT: 5001
+      MINDSDB_DB_SERVICE_HOST: "db_service"
+      MINDSDB_DB_SERVICE_PORT: 5000
+    volumes:
+      - type: bind
+        source: ../
+        target: /mindsdb
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:5000"]
       interval: 120s

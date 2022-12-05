@@ -17,4 +17,4 @@ ENV PORT 5000
 ENV HOST "0.0.0.0"
 ENV PYTHONPATH "/mindsdb"
 EXPOSE $PORT
-ENTRYPOINT ["python3", "/mindsdb/mindsdb/integrations/handlers_wrapper/ml_handler_service.py"]
+ENTRYPOINT ["python3", "/mindsdb/mindsdb/integrations/handlers_wrapper/db_handler_service.py"]

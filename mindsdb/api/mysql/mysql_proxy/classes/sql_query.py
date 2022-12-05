@@ -66,7 +66,6 @@ from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
     get_model_records,
-    get_predictor_integration,
     get_predictor_project
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import (
@@ -531,6 +530,9 @@ class SQLQuery():
     def _fetch_dataframe_step(self, step):
         dn = self.datahub.get(step.integration)
         query = step.query
+
+        if dn is None:
+            raise SqlApiUnknownError(f'Unknown integration name: {step.integration}')
 
         if query is None:
             table_alias = (self.database, 'result', 'result')
@@ -1600,8 +1602,9 @@ class SQLQuery():
         def get_date_format(samples):
             # dateinfer reads sql date 2020-04-01 as yyyy-dd-mm. workaround for in
             for date_format, pattern in (
-                    ('%Y-%m-%d', '[\d]{4}-[\d]{2}-[\d]{2}'),
-                    # ('%Y', '[\d]{4}')
+                ('%Y-%m-%d', r'[\d]{4}-[\d]{2}-[\d]{2}'),
+                ('%Y-%m-%d %H:%M:%S', r'[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}'),
+                # ('%Y', '[\d]{4}')
             ):
                 if re.match(pattern, samples[0]):
                     # suggested format
@@ -1660,30 +1663,26 @@ class SQLQuery():
             # convert strings to date
             # it is making side effect on original data by changing it but let it be
 
-            # convert predictor_data
-            if len(predictor_data) > 0:
-                if isinstance(predictor_data[0][order_col], str):
-                    samples = [row[order_col] for row in predictor_data]
+            def _cast_samples(data, order_col):
+                if isinstance(data[0][order_col], str):
+                    samples = [row[order_col] for row in data]
                     date_format = get_date_format(samples)
 
-                    for row in predictor_data:
+                    for row in data:
                         row[order_col] = dt.datetime.strptime(row[order_col], date_format)
-                elif isinstance(predictor_data[0][order_col], dt.date):
+                elif isinstance(data[0][order_col], dt.datetime):
+                    pass  # check because dt.datetime is instance of dt.date but here we don't need to add HH:MM:SS
+                elif isinstance(data[0][order_col], dt.date):
                     # convert to datetime
-                    for row in predictor_data:
+                    for row in data:
                         row[order_col] = dt.datetime.combine(row[order_col], dt.datetime.min.time())
 
             # convert predictor_data
-            if isinstance(table_data[0][order_col], str):
-                samples = [row[order_col] for row in table_data]
-                date_format = get_date_format(samples)
+            if len(predictor_data) > 0:
+                _cast_samples(predictor_data, order_col)
 
-                for row in table_data:
-                    row[order_col] = dt.datetime.strptime(row[order_col], date_format)
-            elif isinstance(table_data[0][order_col], dt.date):
-                # convert to datetime
-                for row in table_data:
-                    row[order_col] = dt.datetime.combine(row[order_col], dt.datetime.min.time())
+            # convert table data
+            _cast_samples(table_data, order_col)
 
             # convert args to date
             samples = [

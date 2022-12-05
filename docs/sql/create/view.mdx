@@ -5,18 +5,16 @@ sidebarTitle: VIEW
 
 ## Description
 
-The `CREATE VIEW` statement creates a view, which is a saved SELECT statement executed every time we call this view, as opposed to a table that stores its data in columns and rows.
+The `CREATE VIEW` statement creates a view, which is a saved `SELECT` statement executed every time we call this view, as opposed to a table that stores its data in columns and rows.
 
-In MindsDB, the `CREATE VIEW` statement is commonly used to create **AI
-Tables**. An AI Table is a virtual table created by joining the data source
-table with the prediction model.
+In MindsDB, the `CREATE VIEW` statement is commonly used to create **AI Tables**. An AI Table is a virtual table created by joining the data source table with the prediction model.
 
 ## Syntax
 
 Here is the syntax:
 
 ```sql
-CREATE VIEW mindsdb.[ai_table_name] AS (
+CREATE VIEW [project_name].[view_name] AS (
     SELECT
         a.[column_name1],
         a.[column_name2],
@@ -35,22 +33,21 @@ Query OK, 0 rows affected (x.xxx sec)
 
 Where:
 
-| Name                                  | Description                                                                            |
-| ------------------------------------- | -------------------------------------------------------------------------------------- |
-| `[ai_table_name]`                     | Name of the view or the AI Table.                                                      |
-| `[column_name1], [column_name2], ...` | Columns of the data source table that are the input for the model to make predictions. |
-| `[model_column]`                      | Name of the target column to be predicted.                                             |
-| `[integration_name].[table_name]`     | Data source table name along with the integration where it resides.                    |
-| `[predictor_name]`                    | Name of the model.                                                                     |
+| Name                                  | Description                                                                              |
+| ------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `[project_name]`                      | Name of the project to store the view.                                                   |
+| `[view_name]`                         | Name of the view.                                                                        |
+| `[column_name1], [column_name2], ...` | Columns of the data source table that are the input for the model to make predictions.   |
+| `[model_column]`                      | Name of the target column to be predicted.                                               |
+| `[integration_name].[table_name]`     | Data source table name along with the integration where it resides.                      |
+| `[predictor_name]`                    | Name of the model.                                                                       |
 
 ## Example
 
-Below is the query that creates and trains the `home_rentals_model` model to
-predict the `rental_price` value. The inner `SELECT` statement provides all real
-estate listing data used to train the model.
+Below is the query that creates and trains the `home_rentals_model` model to predict the `rental_price` value. The inner `SELECT` statement provides all real estate listing data used to train the model.
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
+CREATE MODEL mindsdb.home_rentals_model
 FROM integration
     (SELECT * FROM house_rentals_data)
 PREDICT rental_price;
@@ -62,15 +59,9 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-Now, we can [`JOIN`](/sql/api/join/) the `home_rentals_data` table with
-the `home_rentals_model` model to make predictions. By creating a view (using
-the `CREATE VIEW` statement) that is based on the `SELECT` statement
-joining the data and model tables, we create an AI Table.
+Now, we can [`JOIN`](/sql/api/join/) the `home_rentals_data` table with the `home_rentals_model` model to make predictions. By creating a view (using the `CREATE VIEW` statement) that is based on the `SELECT` statement joining the data and model tables, we create an AI Table.
 
-Here, the `SELECT` statement joins the data source table and the model table.
-The input data for making predictions consists of the `sqft`,
-`number_of_bathrooms`, and `location` columns. These are joined with the
-`rental_price` column that stores predicted values.
+Here, the `SELECT` statement joins the data source table and the model table. The input data for making predictions consists of the `sqft`, `number_of_bathrooms`, and `location` columns. These are joined with the `rental_price` column that stores predicted values.
 
 ```sql
 CREATE VIEW mindsdb.home_rentals_predictions AS (
@@ -90,24 +81,18 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-<Tip> 
-**Dataset for Training and Dataset for Joining**
+<Note>
+    **Dataset for Training and Dataset for Joining**
 
-In this example, we used the same dataset (`integration.home_rentals_data`) for
-training the model (see the `CREATE PREDICTOR` statement above) and for joining
-with the model to make predictions (see the `CREATE VIEW` statement above). It
-doesn't happen like that in real-world scenarios. Normally, you use the old data
-to train the model, and then you join the new data with this model to make
-predictions.
-
-</Tip>
+    In this example, we used the same dataset (`integration.home_rentals_data`) for training the model (see the `CREATE MODEL` statement above) and for joining with the model to make predictions (see the `CREATE VIEW` statement above). It doesn't happen like that in real-world scenarios.
+    Normally, you use the old data to train the model, and then you join the new data with this model to make predictions.
 
     Consider the `old_data` dataset that stores data from the years 2019-2021 and the `new_data` dataset that stores data from the year 2022.
 
     We train the model with the `old_data` dataset like this:
 
     ```sql
-    CREATE PREDICTOR mindsdb.data_model
+    CREATE MODEL mindsdb.data_model
     FROM integration
         (SELECT * FROM old_data)
     PREDICT column;
@@ -126,25 +111,25 @@ predictions.
         JOIN mindsdb.data_model AS p
     );
     ```
+</Note>
 
 ## USING VIEW
 
 Examples to use view
 
-1. Complex select on view (it is grouping in this example). It performs on
-   mindsdb side
+1. Complex select on view (it is grouping in this example). It performs on mindsdb side
 
 ```sql
-SELECT type, last(bedrooms)
-FROM views.house_v
+SELECT type, last(bedrooms) 
+FROM mindsdb.house_v
 GROUP BY 1
 ```
 
 2. Creating predictor from view
 
 ```sql
-CREATE predictor house_sales_model
-FROM views (
+CREATE MODEL house_sales_model
+FROM mindsdb (
   SELECT * FROM house_v
 ) PREDICT ma
 ORDER BY saledate
@@ -155,7 +140,7 @@ WINDOW 1 HORIZON 4
 3. Using predictor with view
 
 ```sql
-SELECT * FROM views.house_v
+SELECT * FROM mindsdb.house_v
 JOIN mindsdb.house_sales_model
-WHERE house_v.saledate > latest
+WHERE house_v.saledate > latest 
 ```

@@ -9,6 +9,12 @@ HuggingFace facilitates building, training, and deploying ML models.
 
 We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the HuggingFace models to MindsDB.
 
+<Note>
+    **Using Local Installation of MindsDB**
+
+    Please note that if you use local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the HuggingFace models.
+</Note>
+
 Let's go through some sample models.
 
 ### Model 1: Spam Classifier
@@ -23,7 +29,7 @@ USING
   task = 'text-classification',
   model_name = 'mrm8488/bert-tiny-finetuned-sms-spam-detection',
   input_column = 'text_spammy',
-  labels = ['ham','spam'];
+  labels = ['ham', 'spam'];
 ```
 
 On execution, we get:
@@ -72,7 +78,7 @@ On execution, we get:
 
 ### Model 2: Sentiment Classifier
 
-Here is an example of a multi-value classification. The model determines a sentiment of a text string, where possible values are negative (`neg`), neutral (`neu`), and positive (`pos`).
+Here is an example of a multi-value classification. The model determines a sentiment of a text string, where possible values are `negative`, `neutral`, and `positive`.
 
 ```sql
 CREATE MODEL mindsdb.sentiment_classifier
@@ -82,7 +88,7 @@ USING
   task = 'text-classification',
   model_name = 'cardiffnlp/twitter-roberta-base-sentiment',
   input_column = 'text_short',
-  labels = ['neg','neu','pos'];
+  labels = ['negative', 'neutral', 'positive'];
 ```
 
 On execution, we get:
@@ -102,11 +108,11 @@ WHERE name = 'sentiment_classifier';
 On execution, we get:
 
 ```sql
-+--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|NAME                |PROJECT|STATUS  |ACCURACY|PREDICT  |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                                                                                    |
-+--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|sentiment_classifier|mindsdb|complete|[NULL]  |sentiment|up_to_date   |22.10.2.1      |[NULL]|[NULL]           |{'target': 'sentiment', 'using': {'engine': 'huggingface', 'task': 'text-classification', 'model_name': 'cardiffnlp/twitter-roberta-base-sentiment', 'input_column': 'text_short', 'labels': ['neg', 'neu', 'pos']}}|
-+--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
++--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|NAME                |PROJECT|STATUS  |ACCURACY|PREDICT  |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                                                                                                  |
++--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|sentiment_classifier|mindsdb|complete|[NULL]  |sentiment|up_to_date   |22.10.2.1      |[NULL]|[NULL]           |{'target': 'sentiment', 'using': {'engine': 'huggingface', 'task': 'text-classification', 'model_name': 'cardiffnlp/twitter-roberta-base-sentiment', 'input_column': 'text_short', 'labels': ['negative', 'neutral', 'positive']}}|
++--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -120,13 +126,13 @@ JOIN mindsdb.sentiment_classifier AS h;
 On execution, we get:
 
 ```sql
-+---------+--------------------------------------------------------------------------------------+-------------------+
-|sentiment|sentiment_explain                                                                     |input_text         |
-+---------+--------------------------------------------------------------------------------------+-------------------+
-|neg      |{'neg': 0.9732725620269775, 'neu': 0.022419845685362816, 'pos': 0.004307641182094812} |I hate Australia   |
-|pos      |{'pos': 0.7607280015945435, 'neu': 0.2332666665315628, 'neg': 0.006005281116813421}   |I want to dance    |
-|pos      |{'pos': 0.9835041761398315, 'neu': 0.014900505542755127, 'neg': 0.0015953202964738011}|Baking is the best |
-+---------+--------------------------------------------------------------------------------------+-------------------+
++---------+----------------------------------------------------------------------------------------------------+-------------------+
+|sentiment|sentiment_explain                                                                                   |input_text         |
++---------+----------------------------------------------------------------------------------------------------+-------------------+
+|negative |{'negative': 0.9679920077323914, 'neutral': 0.02736542373895645, 'positive': 0.0046426113694906235} |I hate tacos       |
+|positive |{'positive': 0.7607280015945435, 'neutral': 0.2332666665315628, 'negative': 0.006005281116813421}   |I want to dance    |
+|positive |{'positive': 0.9835041761398315, 'neutral': 0.014900505542755127, 'negative': 0.0015953202964738011}|Baking is the best |
++---------+----------------------------------------------------------------------------------------------------+-------------------+
 ```
 
 ### Model 3: Zero-Shot Classifier
@@ -182,7 +188,7 @@ On execution, we get:
 +-------+--------------------------------------------------------------------------------------------------+-------------------+
 |topic  |topic_explain                                                                                     |input_text         |
 +-------+--------------------------------------------------------------------------------------------------+-------------------+
-|travel |{'travel': 0.8343215584754944, 'dancing': 0.08680055290460587, 'cooking': 0.07887797057628632}    |I hate Australia   |
+|cooking|{'cooking': 0.7530364990234375, 'travel': 0.1607145369052887, 'dancing': 0.08624900877475739}     |I hate tacos       |
 |dancing|{'dancing': 0.9746809601783752, 'travel': 0.015539299696683884, 'cooking': 0.009779711253941059}  |I want to dance    |
 |cooking|{'cooking': 0.9936348795890808, 'travel': 0.0034196735359728336, 'dancing': 0.0029454431496560574}|Baking is the best |
 +-------+--------------------------------------------------------------------------------------------------+-------------------+
@@ -242,7 +248,7 @@ On execution, we get:
 +-------------------------------+-------------------+
 |translated                     |input_text         |
 +-------------------------------+-------------------+
-|Je déteste l'Australie         |I hate Australia   |
+|Je déteste les tacos           |I hate tacos       |
 |Je veux danser                 |I want to dance    |
 |La boulangerie est la meilleure|Baking is the best |
 +-------------------------------+-------------------+
@@ -302,7 +308,7 @@ On execution, we get:
 +--------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |text_summary                                                                                                  |input_text                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 +--------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|Australia is a sovereign country comprising the mainland of the Australian continent, the island of Tasmania  |Australia, officially the Commonwealth of Australia, is a sovereign country comprising the mainland of the Australian continent, the island of Tasmania, and numerous smaller islands.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+|A taco is a traditional Mexican food consisting of a small hand-sized corn- or                                |A taco is a traditional Mexican food consisting of a small hand-sized corn- or wheat-based tortilla topped with a filling. The tortilla is then folded around the filling and eaten by hand. A taco can be made with a variety of fillings, including beef, pork, chicken, seafood, beans, vegetables, and cheese, allowing for great versatility and variety.                                                                                                                                                                                                                                                                                                                                              |
 |Dance is a performing art form consisting of sequences of movement, either improvised or purposefully selected|Dance is a performing art form consisting of sequences of movement, either improvised or purposefully selected. This movement has aesthetic and often symbolic value.[nb 1] Dance can be categorized and described by its choreography, by its repertoire of movements, or by its historical period or place of origin.                                                                                                                                                                                                                                                                                                                                                                                     |
 |Baking is a method of preparing food that uses dry heat, typically in an oven                                 |Baking is a method of preparing food that uses dry heat, typically in an oven, but can also be done in hot ashes, or on hot stones. The most common baked item is bread but many other types of foods can be baked. Heat is gradually transferred from the surface of cakes, cookies, and pieces of bread to their center. As heat travels through, it transforms batters and doughs into baked goods and more with a firm dry crust and a softer center. Baking can be combined with grilling to produce a hybrid barbecue variant by using both methods simultaneously, or one after the other. Baking is related to barbecuing because the concept of the masonry oven is similar to that of a smoke pit.|
 +--------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+

@@ -1,6 +1,6 @@
 ---
-title: "EEG Forecasting"
-description: "Forecasting Eye State from Electroencephalogram Readings with MindsDB"
+title: Forecasting Eye State from Electroencephalogram Readings with MindsDB
+sidebarTitle: Brain Activity
 ---
 
 ## Introduction
@@ -113,7 +113,7 @@ linear regression).
 ## Training a Predictor
 
 Let's create and train the machine learning model. For that, we use the
-[`CREATE PREDICTOR`](/sql/create/predictor) statement and specify the
+[`CREATE MODEL`](/sql/create/predictor) statement and specify the
 input columns used to train `FROM` (features) and what we want to
 `PREDICT` (labels).
 
@@ -126,7 +126,7 @@ We order the measurements by the `Timestamps` column that shows readings
 frequency of approximately 8 miliseconds.
 
 ```sql
-CREATE PREDICTOR mindsdb.eeg_eye_forecast
+CREATE MODEL mindsdb.eeg_eye_forecast
 FROM files
   (SELECT * FROM eeg_eye)
 PREDICT eyeDetection
@@ -146,7 +146,7 @@ monitor the status of the predictor by using this SQL command:
 
 ```sql
 SELECT status
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='eeg_eye_forecast';
 ```
 

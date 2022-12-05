@@ -1,9 +1,10 @@
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 
+
 class FastAuthFail(Packet):
     def setup(self):
-        self.cont = Datum('int<1>', 4) # 0x04
+        self.cont = Datum('int<1>', 4)  # 0x04
 
     @property
     def body(self):

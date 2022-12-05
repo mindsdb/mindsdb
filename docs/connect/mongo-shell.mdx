@@ -1,8 +1,9 @@
 ---
 title: MindsDB and MongoDB Shell
 sidebarTitle: MongoDB Shell
-description: "MongoDB Shell is the quickest way to connect and work with MongoDB."
 ---
+
+MongoDB Shell is the quickest way to connect and work with MongoDB.
 
 MindsDB provides a powerful MongoDB API that allows users to connect to it using
 the [MongoDB Shell](https://www.mongodb.com/try/download/shell). Please note
@@ -21,20 +22,17 @@ mongo --host [hostname] --port [TCP/IP port number] -u [user] -p [password]
 Here are the commands that allow you to connect to either a local MindsDB
 installation or a MindsDB Cloud instance.
 
-<Tabs>
-  <Tab title="Self-Hosted Local Deployment">
-    ```bash
+<CodeGroup>
+
+    ```bash Self-Hosted Local Deployment
     mongo --host 127.0.0.1 --port 47336
     ```
-  
-  </Tab>
-  <Tab title="MindsDB Cloud">
-    ```bash
+
+    ```bash MindsDB Cloud
     mongo --host cloud.mindsdb.com -u [mindsdb_cloud_username] -p [mindsdb_cloud_password]
     ```
 
-  </Tab>
-</Tabs>
+</CodeGroup>
 
 On execution, we get:
 

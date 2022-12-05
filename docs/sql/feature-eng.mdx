@@ -1,20 +1,17 @@
 ---
-title: "Feature Engineering"
-description: "The more data you have, the more accurate predictions you get."
+title: Feature Engineering in MindsDB
+sidebarTitle: Feature Engineering
 ---
 
-We recommend you provide the predictor with as many historical data rows and
-data columns as possible to make your predictions even more accurate. The
-examples presented here prove this hypothesis.
+The more data you have, the more accurate predictions you get.
 
-If you want to follow the examples, please
-[sign up for the MindsDB Cloud account here](https://cloud.mindsdb.com/register).
+We recommend you provide the predictor with as many historical data rows and data columns as possible to make your predictions even more accurate. The examples presented here prove this hypothesis.
+
+If you want to follow the examples, please [sign up for the MindsDB Cloud account here](https://cloud.mindsdb.com/register).
 
 ## Prerequisites
 
-The base table is available in the `example_db` integration in the MindsDB Cloud
-Editor. In order to be able to use it, you must first create a database like
-this:
+The base table is available in the `example_db` integration in the MindsDB Cloud Editor. In order to be able to use it, you must first create a database like this:
 
 ```sql
 CREATE DATABASE example_db
@@ -40,30 +37,25 @@ Once that's done, you can run the following commands with us.
 
 ### Introduction
 
-Here, we'll create several predictors using the same table, increasing the
-number of data columns with each step.
+Here, we'll create several predictors using the same table, increasing the number of data columns with each step.
 
-We start with the base table and create a predictor based on it. Then we add two
-columns to our base table and again create a predictor based on the enhanced
-table. At last, we add another two columns and create a predictor.
+We start with the base table and create a predictor based on it. Then we add two columns to our base table and again create a predictor based on the enhanced table. At last, we add another two columns and create a predictor.
 
-By comparing the accuracies of the predictors, we'll find that more data results
-in more accurate predictions.
+By comparing the accuracies of the predictors, we'll find that more data results in more accurate predictions.
 
 Let's get started.
 
 ### Let's Run the Codes
 
-Here, we go through the codes for the base table and enhanced base tables
-simultaneously.
+Here, we go through the codes for the base table and enhanced base tables simultaneously.
 
 #### Data Setup
 
-Let's prepare and verify the data. Here, we create the views and query them to
-ensure the input for the predictors is in order.
+Let's prepare and verify the data. Here, we create the views and query them to ensure the input for the predictors is in order.
 
 <Tabs>
-    <Tab title="Using the Base Table">
+  <Tab title="Using the Base Table">
+
     Let's start by querying the data from the `example_db.demo_data.used_car_price` table, which is our base table.
 
     ```sql
@@ -88,37 +80,39 @@ ensure the input for the predictors is in order.
 
     Where:
 
-    | Name           | Description                                              |
-    | -------------- | -------------------------------------------------------- |
-    | `model`        | Model of the car.                                        |
-    | `year`         | Year of production.                                      |
-    | `price`        | Price of the car.                                        |
-    | `transmission` | Transmission (`Manual`, or `Automatic`, or `Semi-Auto`). |
-    | `mileage`      | Mileage of the car.                                      |
-    | `fueltype`     | Fuel type of the car.                                    |
-    | `tax`          | Tax.                                                     |
-    | `mpg`          | Miles per gallon.                                        |
-    | `enginesize`   | Engine size of the car.                                  |
-    </Tab>
-    <Tab title="Using the Base Table + 2 More Columns">
+    | Name           | Description                                                 |
+    |----------------|-------------------------------------------------------------|
+    | `model`        | Model of the car.                                           |
+    | `year`         | Year of production.                                         |
+    | `price`        | Price of the car.                                           |
+    | `transmission` | Transmission (`Manual`, or `Automatic`, or `Semi-Auto`).    |
+    | `mileage`      | Mileage of the car.                                         |
+    | `fueltype`     | Fuel type of the car.                                       |
+    | `tax`          | Tax.                                                        |
+    | `mpg`          | Miles per gallon.                                           |
+    | `enginesize`   | Engine size of the car.                                     |
+
+  </Tab>
+  <Tab title="Using the Base Table + 2 More Columns">
+
     Let's create a view based on the `example_db.demo_data.used_car_price` table, and add two more columns. Please note that we replace the `mpg` column with the `kml` column.
 
-    The added columns are:
-    - the `kml` column, calculated from the `mpg` column using the formula like in the query below, stands for `kilometers per liter`,
-    - the `years_old` column, calculated by subtracting car's year from the current date, stands for car's age.
+    The added columns are:<br></br>
+    - the `kml` column, calculated from the `mpg` column using the formula like in the query below, stands for `kilometers per liter`,<br></br>
+    - the `years_old` column, calculated by subtracting car's year from the current date, stands for car's age.<br></br>
 
     ```sql
     CREATE VIEW used_car_price_plus_2_columns (
     SELECT * FROM example_db (
-        SELECT
-        model,
-        year,
-        price,
-        transmission,
-        mileage,
-        fueltype,
+        SELECT 
+        model, 
+        year, 
+        price, 
+        transmission, 
+        mileage, 
+        fueltype, 
         tax,
-        enginesize,
+        enginesize, 
         ROUND(CAST((mpg / 2.3521458) AS numeric), 1) AS kml, -- mpg (miles per galon) is replaced with kml (kilometers per liter)
         (date_part('year', CURRENT_DATE)-year) AS years_old -- age of a car
         FROM demo_data.used_car_price
@@ -136,7 +130,7 @@ ensure the input for the predictors is in order.
 
     ```sql
     SELECT *
-    FROM views.used_car_price_plus_2_columns
+    FROM mindsdb.used_car_price_plus_2_columns
     LIMIT 5;
     ```
 
@@ -153,28 +147,29 @@ ensure the input for the predictors is in order.
     | A3  |2019|17300|Manual      |1998   |Petrol  |145|49.6|1         |21.1|3        |
     +-----+----+-----+------------+-------+--------+---+----+----------+----+---------+
     ```
-    </Tab>
-    <Tab title="Using the Base Table + 4 More Columns">
+  </Tab>
+  <Tab title="Using the Base Table + 4 More Columns">
+
     Let's create a view based on the `example_db.demo_data.used_car_price` table, and add four more columns. Please note that we replace the `mpg` column with the `kml` column.
 
-    The added columns are:
-    - the `kml` column, calculated from the `mpg` column using the formula like in the query below, stands for `kilometers per liter`,
-    - the `years_old` column, calculated by subtracting car's year from the current date, stands for car's age,
-    - the `units_to_sell` column, calculated using the `OVER` and `PARTITION BY` clauses, indicates how many units of a certain car model are sold in a year,
-    - the `tax_div_price` column, calculated by dividing the `tax` column by the `price` column.
+    The added columns are:<br></br>
+    - the `kml` column, calculated from the `mpg` column using the formula like in the query below, stands for `kilometers per liter`,<br></br>
+    - the `years_old` column, calculated by subtracting car's year from the current date, stands for car's age,<br></br>
+    - the `units_to_sell` column, calculated using the `OVER` and `PARTITION BY` clauses, indicates how many units of a certain car model are sold in a year,<br></br>
+    - the `tax_div_price` column, calculated by dividing the `tax` column by the `price` column.<br></br>
 
     ```sql
     CREATE VIEW used_car_price_plus_another_2_columns (
     SELECT * FROM example_db (
-        SELECT
-        model,
-        year,
-        price,
-        transmission,
-        mileage,
-        fueltype,
+        SELECT 
+        model, 
+        year, 
+        price, 
+        transmission, 
+        mileage, 
+        fueltype, 
         tax,
-        enginesize,
+        enginesize, 
         ROUND(CAST((mpg / 2.3521458) AS numeric), 1) AS kml, -- mpg (miles per galon) is replaced with kml (kilometers per liter)
         (date_part('year', CURRENT_DATE)-year) AS years_old, -- age of a car
         COUNT(*) OVER (PARTITION BY model, year) AS units_to_sell, -- how many units of a certain model are sold in a year
@@ -194,7 +189,7 @@ ensure the input for the predictors is in order.
 
     ```sql
     SELECT *
-    FROM views.used_car_price_plus_another_2_columns
+    FROM mindsdb.used_car_price_plus_another_2_columns
     LIMIT 5;
     ```
 
@@ -211,77 +206,80 @@ ensure the input for the predictors is in order.
     | A1  |2011|6475 |Manual      |45000  |Diesel  |0  |70.6|1.6       |30.0|11       |5            |0.000        |
     +-----+----+-----+------------+-------+--------+---+----+----------+----+---------+-------------+-------------+
     ```
-    </Tab>
-
+  </Tab>
 </Tabs>
 
 <Note>
-**Dropping a View**
-
-If you want to drop a view, run the command `DROP VIEW view_name;`.
-
+  **Dropping a View** If you want to drop a view, run the command `DROP VIEW view_name;`.
 </Note>
 
 #### Creating Predictors
 
-Now, we create predictors based on the `example_db.demo_data.used_car_price`
-table and its extensions.
+Now, we create predictors based on the `example_db.demo_data.used_car_price` table and its extensions.
 
 <Tabs>
-    <Tab title="Using the Base Table">
+  <Tab title="Using the Base Table">
+
     ```sql
-    CREATE PREDICTOR mindsdb.price_predictor
+    CREATE MODEL mindsdb.price_predictor
     FROM example_db
     (SELECT * FROM demo_data.used_car_price)
     PREDICT price;
     ```
 
-    </Tab>
-    <Tab title="Using the Base Table + 2 More Columns">
+    On execution, we get:
+
     ```sql
-    CREATE PREDICTOR mindsdb.price_predictor_plus_2_columns
-    FROM views
-    (SELECT * FROM used_car_price_plus_2_columns)
+    Query OK, 0 rows affected (x.xxx sec)
+    ```
+  </Tab>
+  <Tab title="Using the Base Table + 2 More Columns">
+
+    ```sql
+
+    CREATE MODEL mindsdb.price_predictor_plus_2_columns
+    FROM mindsdb
+        (SELECT * FROM used_car_price_plus_2_columns)
     PREDICT price;
     ```
 
-    </Tab>
-    <Tab title="Using the Base Table + 4 More Columns">
+    On execution, we get:
+
     ```sql
-    CREATE PREDICTOR mindsdb.price_predictor_plus_another_2_columns
-    FROM views
-    (SELECT * FROM used_car_price_plus_another_2_columns)
+    Query OK, 0 rows affected (x.xxx sec)
+    ```
+  </Tab>
+  <Tab title="Using the Base Table + 4 More Columns">
+
+    ```sql
+    CREATE MODEL mindsdb.price_predictor_plus_another_2_columns
+    FROM mindsdb
+        (SELECT * FROM used_car_price_plus_another_2_columns)
     PREDICT price;
     ```
 
-    </Tab>
+    On execution, we get:
 
+    ```sql
+    Query OK, 0 rows affected (x.xxx sec)
+    ```
+  </Tab>
 </Tabs>
 
-On execution, we get:
-
-```sql
-Query OK, 0 rows affected (x.xxx sec)
-```
-
 <Note>
-**Dropping a Predictor**
-
-If you want to drop a predictor, run the command
-`DROP PREDICTOR predictor_name;`.
-
+    **Dropping a Predictor** If you want to drop a predictor, run the command `DROP MODEL predictor_name;`.
 </Note>
 
 #### Predictor Status
 
-Finally, let's check the predictor status whose value is `generating` at first,
-then `training`, and at last, `complete`.
+Finally, let's check the predictor status whose value is `generating` at first, then `training`, and at last, `complete`.
 
 <Tabs>
-    <Tab title="Using the Base Table">
+  <Tab title="Using the Base Table">
+
     ```sql
     SELECT *
-    FROM mindsdb.predictors
+    FROM mindsdb.models
     WHERE name='price_predictor';
     ```
 
@@ -294,11 +292,12 @@ then `training`, and at last, `complete`.
     |price_predictor|complete|0.963   |price    |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM demo_data.used_car_price|                |
     +---------------+--------+--------+---------+-------------+---------------+------+--------------------------------------+----------------+
     ```
-    </Tab>
-    <Tab title="Using the Base Table + 2 More Columns">
+  </Tab>
+  <Tab title="Using the Base Table + 2 More Columns">
+
     ```sql
     SELECT *
-    FROM mindsdb.predictors
+    FROM mindsdb.models
     WHERE name='price_predictor_plus_2_columns';
     ```
 
@@ -311,11 +310,12 @@ then `training`, and at last, `complete`.
     |price_predictor_plus_2_columns|complete|0.965   |price    |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM used_car_price_plus_2_columns|                |
     +------------------------------+--------+--------+---------+-------------+---------------+------+-------------------------------------------+----------------+
     ```
-    </Tab>
-    <Tab title="Using the Base Table + 4 More Columns">
+  </Tab>
+  <Tab title="Using the Base Table + 4 More Columns">
+
     ```sql
     SELECT *
-    FROM mindsdb.predictors
+    FROM mindsdb.models
     WHERE name='price_predictor_plus_another_2_columns';
     ```
 
@@ -328,20 +328,16 @@ then `training`, and at last, `complete`.
     |price_predictor_plus_another_2_columns|complete|0.982   |price    |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM used_car_price_plus_another_2_columns|                |
     +--------------------------------------+--------+--------+---------+-------------+---------------+------+---------------------------------------------------+----------------+
     ```
-    </Tab>
-
+  </Tab>
 </Tabs>
 
 ### Accuracy Comparison
 
-Once the training process of all three predictors completes, we see the accuracy
-values.
+Once the training process of all three predictors completes, we see the accuracy values.
 
-- For the base table, we get an accuracy value of `0.963`.
-- For the base table with two more data columns, we get an accuracy value of
-  `0.965`. The accuracy value increased, as expected.
-- For the base table with four more data columns, we get an accuracy value of
-  `0.982`. The accuracy value increased again, as expected.
+* For the base table, we get an accuracy value of `0.963`.
+* For the base table with two more data columns, we get an accuracy value of `0.965`. The accuracy value increased, as expected.
+* For the base table with four more data columns, we get an accuracy value of `0.982`. The accuracy value increased again, as expected.
 
 ### True vs Predicted Price Comparison
 
@@ -357,23 +353,19 @@ Let's compare how close the predicted price values are to the true price.
 +-------+-------+---------------+-----------+-----------+--------------+----------------+----------------+---------------+
 ```
 
-The prices predicted by the third predictor, having the highest accuracy value,
-are the closest to the true price, as expected.
+The prices predicted by the third predictor, having the highest accuracy value, are the closest to the true price, as expected.
 
 ## Example: Joining Data Tables
 
 ### Introduction
 
-We start by creating a predictor from the `car_sales` table. Then, we add more
-data by joining the `car_sales` and `car_info` tables. We create a predictor
-based on the `car_sales_info` view.
+We start by creating a predictor from the `car_sales` table. Then, we add more data by joining the `car_sales` and `car_info` tables. We create a predictor based on the `car_sales_info` view.
 
 Let's get started.
 
 ### Let's Run the Codes
 
-Here, we go through the codes using partial tables and the full table after
-joining the data.
+Here, we go through the codes using partial tables and the full table after joining the data.
 
 #### Data Setup
 
@@ -401,15 +393,15 @@ On execution, we get:
 
 Where:
 
-| Name           | Description                                              |
-| -------------- | -------------------------------------------------------- |
-| `model`        | Model of the car.                                        |
-| `year`         | Year of production.                                      |
-| `price`        | Price of the car.                                        |
-| `transmission` | Transmission (`Manual`, or `Automatic`, or `Semi-Auto`). |
-| `mileage`      | Mileage of the car.                                      |
-| `fueltype`     | Fuel type of the car.                                    |
-| `tax`          | Tax.                                                     |
+| Name           | Description                                                 |
+|----------------|-------------------------------------------------------------|
+| `model`        | Model of the car.                                           |
+| `year`         | Year of production.                                         |
+| `price`        | Price of the car.                                           |
+| `transmission` | Transmission (`Manual`, or `Automatic`, or `Semi-Auto`).    |
+| `mileage`      | Mileage of the car.                                         |
+| `fueltype`     | Fuel type of the car.                                       |
+| `tax`          | Tax.                                                        |
 
 And here is the `car_info` table:
 
@@ -435,17 +427,16 @@ On execution, we get:
 
 Where:
 
-| Name           | Description                                              |
-| -------------- | -------------------------------------------------------- |
-| `model`        | Model of the car.                                        |
-| `year`         | Year of production.                                      |
-| `transmission` | Transmission (`Manual`, or `Automatic`, or `Semi-Auto`). |
-| `fueltype`     | Fuel type of the car.                                    |
-| `mpg`          | Miles per gallon.                                        |
-| `enginesize`   | Engine size of the car.                                  |
+| Name           | Description                                                 |
+|----------------|-------------------------------------------------------------|
+| `model`        | Model of the car.                                           |
+| `year`         | Year of production.                                         |
+| `transmission` | Transmission (`Manual`, or `Automatic`, or `Semi-Auto`).    |
+| `fueltype`     | Fuel type of the car.                                       |
+| `mpg`          | Miles per gallon.                                           |
+| `enginesize`   | Engine size of the car.                                     |
 
-Let's join the `car_sales` and `car_info` tables on the `model`, `year`,
-`transmission`, and `fueltype` columns.
+Let's join the `car_sales` and `car_info` tables on the `model`, `year`, `transmission`, and `fueltype` columns.
 
 ```sql
 SELECT * FROM example_db
@@ -461,13 +452,8 @@ SELECT * FROM example_db
 LIMIT 5;
 ```
 
-<Note> 
-**Nested `SELECT` Statements**
-
-Please note that we use the nested `SELECT` statement in order to trigger native
-query at the MindsDB Cloud Editor. Here, the `example_db` database is a
-PostgreSQL database, so we trigger PostgreSQL-native syntax.
-
+<Note>
+    **Nested `SELECT` Statements** Please note that we use the nested `SELECT` statement in order to trigger native query at the MindsDB Cloud Editor. Here, the `example_db` database is a PostgreSQL database, so we trigger PostgreSQL-native syntax.
 </Note>
 
 On execution, we get:
@@ -487,7 +473,7 @@ On execution, we get:
 Now, we create a view based on the `JOIN` query:
 
 ```sql
-CREATE VIEW car_sales_info
+CREATE VIEW car_sales_info 
 (
     SELECT * FROM example_db
     (
@@ -512,7 +498,7 @@ Let's verify the view by selecting from it.
 
 ```sql
 SELECT *
-FROM views.car_sales_info
+FROM mindsdb.car_sales_info
 LIMIT 5;
 ```
 
@@ -535,7 +521,7 @@ On execution, we get:
 Let's create a predictor with the `car_sales` table as input data.
 
 ```sql
-CREATE PREDICTOR mindsdb.price_predictor_car_sales
+CREATE MODEL mindsdb.price_predictor_car_sales
 FROM example_db
   (SELECT * FROM demo_data.car_sales)
 PREDICT price;
@@ -547,12 +533,11 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-Now, let's create a predictor for the table that is a `JOIN` between the
-`car_sales` and `car_info` tables.
+Now, let's create a predictor for the table that is a `JOIN` between the `car_sales` and `car_info` tables.
 
 ```sql
-CREATE PREDICTOR mindsdb.price_predictor_car_sales_info
-FROM views
+CREATE MODEL mindsdb.price_predictor_car_sales_info
+FROM mindsdb
   (SELECT * FROM car_sales_info)
 PREDICT price;
 ```
@@ -571,7 +556,7 @@ We start with the predictor based on the partial table.
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='price_predictor_car_sales';
 ```
 
@@ -589,7 +574,7 @@ And now, for the predictor based on the full table.
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='price_predictor_car_sales_info';
 ```
 
@@ -605,7 +590,4 @@ On execution, we get:
 
 ### Accuracy Comparison
 
-The accuracy values are 0.912 for both the predictors. The predictor already
-learns how the combination of `model+year+transmission+fueltype` affects the
-price, so joining more data columns doesn't play a role in this particular
-example.
+The accuracy values are 0.912 for both the predictors. The predictor already learns how the combination of `model+year+transmission+fueltype` affects the price, so joining more data columns doesn't play a role in this particular example.

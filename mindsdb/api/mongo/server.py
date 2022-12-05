@@ -58,6 +58,7 @@ class DateCodec(TypeCodec):
     def transform_bson(self, value):
         return dt.datetime(value.year, value.month, value.day)
 
+
 type_registry = TypeRegistry([NPIntCodec(), DateCodec()])
 
 

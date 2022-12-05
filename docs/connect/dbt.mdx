@@ -1,11 +1,10 @@
 ---
-title: "DBT"
-description:
-  "DBT is a development framework that facilitates data transformation
-  processes."
+title: MindsDB and DBT
+sidebarTitle: DBT
 ---
 
-You can read more about DBT [here](https://www.getdbt.com/).
+DBT is a development framework that facilitates data transformation
+processes. You can read more about DBT [here](https://www.getdbt.com/).
 
 ## Usage
 
@@ -30,45 +29,42 @@ adapter by executing this command: `pip install dbt-mindsdb`.
 
 2.  Configure your `profiles.yml` file:
 
-<Tip>
-  What MindsDB Supports" Currently, MindsDB supports only user/password
-  authentication. Please see below `~/.dbt/profiles.yml` file for details.
-</Tip>
+    <Tip>
+      What MindsDB Supports" Currently, MindsDB supports only user/password
+      authentication. Please see below `~/.dbt/profiles.yml` file for details.
+    </Tip>
 
-<Tabs>
-<Tab title="Self-Hosted Local Deployment">
-    ```yml
-    mindsdb:
-      outputs:
-      dev:
-        type: mindsdb
-        database: "mindsdb"
-        host: "127.0.0.1"
-        port: 47335
-        schema: "mindsdb"
-        username: "mindsdb"
-        password: ""
-      target: dev
+    <CodeGroup>
+
+    ```yml Self-Hosted Local Deployment
+        mindsdb:
+          outputs:
+          dev:
+            type: mindsdb
+            database: "mindsdb"
+            host: "127.0.0.1"
+            port: 47335
+            schema: "mindsdb"
+            username: "mindsdb"
+            password: ""
+          target: dev
     ```
 
-  </Tab>
-  <Tab title="MindsDB Cloud">
-  ```yml
-  mindsdb:
-    outputs:
-    dev:
-      type: mindsdb
-      database: "mindsdb"
-      host: "cloud.mindsdb.com"
-      port: 3306
-      schema: "[dbt schema]"
-      username: "[mindsdb cloud username]" # your Mindsdb Cloud email address is your username
-      password: "[mindsdb cloud password]"
-    target: dev
-  ```
+    ```yml MindsDB Cloud
+      mindsdb:
+        outputs:
+        dev:
+          type: mindsdb
+          database: "mindsdb"
+          host: "cloud.mindsdb.com"
+          port: 3306
+          schema: "[dbt schema]"
+          username: "[mindsdb cloud username]" # your Mindsdb Cloud email address is your username
+          password: "[mindsdb cloud password]"
+        target: dev
+    ```
 
-</Tab>
-</Tabs>
+    </CodeGroup>
 
 Let's list the required data fields.
 

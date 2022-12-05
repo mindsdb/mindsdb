@@ -1,6 +1,8 @@
 import re
 import ast as py_ast
-from mindsdb_sql.parser.ast import *
+import typing as t
+
+from mindsdb_sql.parser.ast import OrderBy, Identifier, Star, Select, Constant, BinaryOperation, Tuple, Latest
 
 
 class MongoToAst:
@@ -29,10 +31,10 @@ class MongoToAst:
                 skip = step['args'][0]
 
         return self.find(collection, filter=filter,
-             sort=sort, projection=projection,
-             limit=limit, skip=skip)
+                         sort=sort, projection=projection,
+                         limit=limit, skip=skip)
 
-    def find(self, collection: [list, str],
+    def find(self, collection: t.Union[list, str],
              filter=None, sort=None, projection=None,
              limit=None, skip=None, **kwargs):
         # https://www.mongodb.com/docs/v4.2/reference/method/db.collection.find/
@@ -179,7 +181,7 @@ class MongoWhereParser:
     def to_ast(self):
         # parse as python string
         # replace '=' with '=='
-        query = re.sub(r'([^=><])=([^=])',r'\1==\2', self.query)
+        query = re.sub(r'([^=><])=([^=])', r'\1==\2', self.query)
 
         tree = py_ast.parse(query, mode='eval')
         return self.process(tree.body)
@@ -253,6 +255,3 @@ class MongoWhereParser:
     @staticmethod
     def test(cls):
         assert cls('this.a ==1 and "te" >= latest').to_string() == "a = 1 AND 'te' >= LATEST"
-
-
-

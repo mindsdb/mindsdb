@@ -1,9 +1,10 @@
 ---
-title: "What is MindsDB?"
-description: "Data that lives in your database is a valuable asset. MindsDB enables you to use
-your data and make forecasts. It speeds up the ML development process by
-bringing machine learning into the database."
+title: What is MindsDB?
 ---
+
+Data that lives in your database is a valuable asset. MindsDB enables you to use
+your data and make forecasts. It speeds up the ML development process by
+bringing machine learning into the database.
 
 With MindsDB, you can build, train, optimize, and deploy your ML models without
 the need for other platforms. And to get the forecasts, simply query your data
@@ -105,7 +106,7 @@ for any `income` value. We train the `debt_model` model using the data from the
 `income_table` table.
 
 ```sql
-CREATE PREDICTOR mindsdb.debt_model
+CREATE MODEL mindsdb.debt_model
 FROM income_table
 PREDICT debt;
 ```
@@ -116,7 +117,7 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-MindsDB provides the [`CREATE PREDICTOR`](/sql/create/predictor/)
+MindsDB provides the [`CREATE MODEL`](/sql/create/predictor/)
 statement. On execution of this statement, the predictive model works in the
 background, automatically creating a vector representation of the data that can
 be visualized as follows:
@@ -218,22 +219,22 @@ a polar bear.
 
 Here is what you can do:
 
-- [x] Go ahead and try out MindsDB by following our tutorials, and in case of
+* Go ahead and try out MindsDB by following our tutorials, and in case of
       problems, you can always
       [report an issue here](https://github.com/mindsdb/mindsdb/issues/new/choose).
 
-- [x] Are you familiar with Python? You can then help us out in resolving open
+* Are you familiar with Python? You can then help us out in resolving open
       issues. At first, have a look at
-      [issues labeled with the `good first issue` tag](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22),
+      [issues labeled with the good first issue tag](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22),
       as these should be easy to start.
 
-- [x] You can also help us with documentation and tutorials. Here is how you can
+* You can also help us with documentation and tutorials. Here is how you can
       contribute by writing
-      [documentation](https://docs.mindsdb.com/contribute/docs/) and
-      [tutorials](https://docs.mindsdb.com/sql/tutorials/home-rentals/). Don't
-      forget to follow the [style guide](https://docs.mindsdb.com/docs-rules/).
+      [documentation](/contribute/docs/) and
+      [tutorials](/sql/tutorials/home-rentals/). Don't
+      forget to follow the [style guide](/docs-rules/).
 
-- [x] Share with your friends and spread the word about MindsDB.
+* Share with your friends and spread the word about MindsDB.
 
-- [x] Join our team! We are a fast-growing company, so we always have
+* Join our team! We are a fast-growing company, so we always have
       [a few open positions](https://mindsdb.com/careers/).

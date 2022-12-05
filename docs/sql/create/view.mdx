@@ -5,9 +5,9 @@ sidebarTitle: VIEW
 
 ## Description
 
-The `#!sql CREATE VIEW` statement creates a view, which is a saved `SELECT` statement executed every time we call this view, as opposed to a table that stores its data in columns and rows.
+The `CREATE VIEW` statement creates a view, which is a saved `SELECT` statement executed every time we call this view, as opposed to a table that stores its data in columns and rows.
 
-In MindsDB, the `#!sql CREATE VIEW` statement is commonly used to create **AI Tables**. An AI Table is a virtual table created by joining the data source table with the prediction model.
+In MindsDB, the `CREATE VIEW` statement is commonly used to create **AI Tables**. An AI Table is a virtual table created by joining the data source table with the prediction model.
 
 ## Syntax
 
@@ -59,7 +59,7 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-Now, we can [`#!sql JOIN`](/sql/api/join/) the `home_rentals_data` table with the `home_rentals_model` model to make predictions. By creating a view (using the `#!sql CREATE VIEW` statement) that is based on the `SELECT` statement joining the data and model tables, we create an AI Table.
+Now, we can [`JOIN`](/sql/api/join/) the `home_rentals_data` table with the `home_rentals_model` model to make predictions. By creating a view (using the `CREATE VIEW` statement) that is based on the `SELECT` statement joining the data and model tables, we create an AI Table.
 
 Here, the `SELECT` statement joins the data source table and the model table. The input data for making predictions consists of the `sqft`, `number_of_bathrooms`, and `location` columns. These are joined with the `rental_price` column that stores predicted values.
 

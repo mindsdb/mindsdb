@@ -23,7 +23,7 @@ USING
   task = 'text-classification',
   model_name = 'mrm8488/bert-tiny-finetuned-sms-spam-detection',
   input_column = 'text_spammy',
-  labels = ['ham','spam'];
+  labels = ['ham', 'spam'];
 ```
 
 On execution, we get:
@@ -72,7 +72,7 @@ On execution, we get:
 
 ### Model 2: Sentiment Classifier
 
-Here is an example of a multi-value classification. The model determines a sentiment of a text string, where possible values are negative (`neg`), neutral (`neu`), and positive (`pos`).
+Here is an example of a multi-value classification. The model determines a sentiment of a text string, where possible values are `negative`, `neutral`, and `positive`.
 
 ```sql
 CREATE MODEL mindsdb.sentiment_classifier
@@ -82,7 +82,7 @@ USING
   task = 'text-classification',
   model_name = 'cardiffnlp/twitter-roberta-base-sentiment',
   input_column = 'text_short',
-  labels = ['neg','neu','pos'];
+  labels = ['negative', 'neutral', 'positive'];
 ```
 
 On execution, we get:
@@ -102,11 +102,11 @@ WHERE name = 'sentiment_classifier';
 On execution, we get:
 
 ```sql
-+--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|NAME                |PROJECT|STATUS  |ACCURACY|PREDICT  |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                                                                                    |
-+--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|sentiment_classifier|mindsdb|complete|[NULL]  |sentiment|up_to_date   |22.10.2.1      |[NULL]|[NULL]           |{'target': 'sentiment', 'using': {'engine': 'huggingface', 'task': 'text-classification', 'model_name': 'cardiffnlp/twitter-roberta-base-sentiment', 'input_column': 'text_short', 'labels': ['neg', 'neu', 'pos']}}|
-+--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
++--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|NAME                |PROJECT|STATUS  |ACCURACY|PREDICT  |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                                                                                                  |
++--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|sentiment_classifier|mindsdb|complete|[NULL]  |sentiment|up_to_date   |22.10.2.1      |[NULL]|[NULL]           |{'target': 'sentiment', 'using': {'engine': 'huggingface', 'task': 'text-classification', 'model_name': 'cardiffnlp/twitter-roberta-base-sentiment', 'input_column': 'text_short', 'labels': ['negative', 'neutral', 'positive']}}|
++--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -120,13 +120,13 @@ JOIN mindsdb.sentiment_classifier AS h;
 On execution, we get:
 
 ```sql
-+---------+--------------------------------------------------------------------------------------+-------------------+
-|sentiment|sentiment_explain                                                                     |input_text         |
-+---------+--------------------------------------------------------------------------------------+-------------------+
-|neg      |{'neg': 0.9679920077323914, 'neu': 0.02736542373895645, 'pos': 0.0046426113694906235} |I hate tacos       |
-|pos      |{'pos': 0.7607280015945435, 'neu': 0.2332666665315628, 'neg': 0.006005281116813421}   |I want to dance    |
-|pos      |{'pos': 0.9835041761398315, 'neu': 0.014900505542755127, 'neg': 0.0015953202964738011}|Baking is the best |
-+---------+--------------------------------------------------------------------------------------+-------------------+
++---------+----------------------------------------------------------------------------------------------------+-------------------+
+|sentiment|sentiment_explain                                                                                   |input_text         |
++---------+----------------------------------------------------------------------------------------------------+-------------------+
+|negative |{'negative': 0.9679920077323914, 'neutral': 0.02736542373895645, 'positive': 0.0046426113694906235} |I hate tacos       |
+|positive |{'positive': 0.7607280015945435, 'neutral': 0.2332666665315628, 'negative': 0.006005281116813421}   |I want to dance    |
+|positive |{'positive': 0.9835041761398315, 'neutral': 0.014900505542755127, 'negative': 0.0015953202964738011}|Baking is the best |
++---------+----------------------------------------------------------------------------------------------------+-------------------+
 ```
 
 ### Model 3: Zero-Shot Classifier

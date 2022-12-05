@@ -11,7 +11,7 @@ info:
     name: GNU General Public License v3.0
     url: 'https://github.com/mindsdb/mindsdb/blob/staging/LICENSE'
 servers:
-  - url: 'https://cloud.mindsdb.com/v1/api/'
+  - url: 'https://cloud.mindsdb.com/v1/api'
     description: MindsDB Production cloud server
   - url: 'http://alpha.mindsdb.com/v1/api'
     description: MindsDB Alpha cloud server
@@ -39,6 +39,7 @@ paths:
                 type: array
                 items:
                   type: string
+                  examples: db1
         '401':
           description: Invalid API key error message
           content:
@@ -47,6 +48,9 @@ paths:
                 type: object
                 items:
                   type: string
+              example:
+                title: error
+                detail: Invalid API Key provided
         '500':
           description: Server error
           content:
@@ -55,6 +59,9 @@ paths:
                 type: object
                 items:
                   type: string
+              example:
+                title: error
+                detail: Server error
     post:
       security:
         - ApiKeyAuth: []

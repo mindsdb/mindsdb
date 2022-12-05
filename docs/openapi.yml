@@ -370,6 +370,48 @@ paths:
                 type: object
                 items:
                   type: string
+    post:
+      security:
+        - ApiKeyAuth: []
+      summary: This endpoint fetches predictions from the model.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model_name:
+                  type: string
+                  description: Name of the project where the model is created
+                data:
+                  type: string
+                  description: The data for querying the model as SQL Statment or FILE
+      responses:
+        '200':
+          description: Prediction data
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
   '/models/{modelName}/describe':
     get:
       security:

@@ -370,4 +370,56 @@ paths:
                 type: object
                 items:
                   type: string
-  
+  '/models/{modelName}/describe':
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: Describe a model
+      description: This endpoint returns the attributes of a specific model.
+      parameters:
+        - name: modelName
+          in: path
+          description: The name of the model
+          required: true
+          schema:
+            type: string
+        - name: features
+          in: query
+          description: Include how the model encoded data info
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: A JSON object with model informations
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string

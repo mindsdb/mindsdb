@@ -27,13 +27,14 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb.integrations.handlers_client.base_client import BaseClient
+from mindsdb.integrations.handlers_client.base_client import BaseClient, Switcher
 from mindsdb.integrations.libs.handler_helpers import get_handler
 # from mindsdb.utilities.log import logger
 import logging
 logger = logging.getLogger("mindsdb.main")
 
 
+@Switcher
 class DBServiceClient(BaseClient):
     """The client to connect to DBHanlder service
 
@@ -67,20 +68,19 @@ class DBServiceClient(BaseClient):
         if host is None or port is None:
             as_service = False
             logger.info("%s.__init__: no host and/or port of DBService have provided. Handler all db request locally", self.__class__.__name__)
+        else:
+            self.base_url = f"http://{host}:{port}"
+            self.handler_kwargs = kwargs
+            # no clue why it has provided!!!!!
+            for a in ("fs_store", "file_storage"):
+                if a in self.handler_kwargs:
+                    del self.handler_kwargs[a]
+            logger.info("%s.__init__: DBService url - %s", self.__class__.__name__, self.base_url)
         super().__init__(as_service=as_service)
 
-        self.base_url = f"http://{host}:{port}"
-        self.handler_kwargs = kwargs
-
-        # no clue why it has provided!!!!!
-        for a in ("fs_store", "file_storage"):
-            if a in self.handler_kwargs:
-                del self.handler_kwargs[a]
         self.handler_type = handler_type
-        logger.info("%s.__init__: DBService url - %s", self.__class__.__name__, self.base_url)
-        if not self.as_service:
-            handler_class = get_handler(self.handler_type)
-            self.handler = handler_class(handler_class.name, **kwargs)
+        handler_class = get_handler(self.handler_type)
+        self.handler = handler_class(**kwargs)
 
 
     def context(self):

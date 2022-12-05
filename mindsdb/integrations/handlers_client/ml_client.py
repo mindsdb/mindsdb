@@ -31,22 +31,13 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.handlers_client.base_client import BaseClient
+from mindsdb.integrations.handlers_client.base_client import BaseClient, Switcher
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
 
 
 logger = get_log("main")
-
-class Switcher:
-    def __init__(self, client_class):
-        self.client_class = client_class
-    def __call__(self, **kwargs):
-        client = self.client_class(**kwargs)
-        if client.as_service:
-            return client
-        return client.handler
 
 
 @Switcher

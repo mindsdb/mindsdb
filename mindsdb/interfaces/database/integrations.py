@@ -334,7 +334,8 @@ class IntegrationController:
             handler = MLClient(**handler_ars)
         else:
 
-            logger.debug("%s.get_handler: create a client to db service of %s type", self.__class__.__name__, integration_engine)
+            logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
+            print("%s.get_handler: create a client to db service of %s type. args - %s" % (self.__class__.__name__, integration_engine, handler_ars))
             handler = DBServiceClient(integration_engine, **handler_ars)
 
         return handler

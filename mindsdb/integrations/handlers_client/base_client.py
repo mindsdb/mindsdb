@@ -6,6 +6,14 @@ from mindsdb.integrations.libs.net_helpers import sending_attempts
 # from mindsdb.utilities import log
 logger = logging.getLogger("mindsdb.main")
 
+class Switcher:
+    def __init__(self, client_class):
+        self.client_class = client_class
+    def __call__(self, *args, **kwargs):
+        client = self.client_class(*args, **kwargs)
+        if client.as_service:
+            return client
+        return client.handler
 
 class BaseClient:
     """A base parent class for DB and ML client implementations.

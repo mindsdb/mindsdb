@@ -136,11 +136,19 @@
             {
               "group": "Databases",
               "pages":[
-                "rest/list-databases",
-                "rest/list-database",
-                "rest/create-databases",
-                "rest/update-databases",
-                "rest/delete-databases"
+                "rest/databases/list-databases",
+                "rest/databases/list-database",
+                "rest/databases/create-databases",
+                "rest/databases/update-databases",
+                "rest/databases/delete-databases"
+              ]
+            },
+            {
+              "group": "Models",
+              "pages":[
+                "rest/models/train-model",
+                "rest/models/list-model",
+                "rest/models/list-models"
               ]
             }
           ]

@@ -200,7 +200,7 @@ paths:
       security:
         - ApiKeyAuth: []
       summary: Deletes an existing database.
-      description: This endpoint retrieves all databases created by the user.
+      description: This endpoint deletes a database connection.
       parameters:
         - name: databaseName
           in: path
@@ -389,7 +389,7 @@ paths:
                   description: The data for querying the model as SQL Statment or FILE
       responses:
         '200':
-          description: Prediction data
+          description: Model training started
           content:
             application/json:
               schema:
@@ -398,6 +398,51 @@ paths:
                   type: string
         '401':
           description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    delete:
+      security:
+        - ApiKeyAuth: []
+      summary: Deletes an existing model.
+      description: This endpoint deletes a model.
+      parameters:
+        - name: modelName
+          in: path
+          description: modelName to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON array of database names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Database not found
           content:
             application/json:
               schema:

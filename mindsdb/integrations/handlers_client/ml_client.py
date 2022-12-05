@@ -39,7 +39,17 @@ from mindsdb.utilities.log import get_log
 
 logger = get_log("main")
 
+class Switcher:
+    def __init__(self, client_class):
+        self.client_class = client_class
+    def __call__(self, **kwargs):
+        client = self.client_class(**kwargs)
+        if client.as_service:
+            return client
+        return client.handler
 
+
+@Switcher
 class MLClient(BaseClient):
     """ The client to connect to MLHanlder service
 

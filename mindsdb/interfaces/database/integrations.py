@@ -19,6 +19,8 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
+import logging
+logger = logging.getLogger("mindsdb.main")
 
 from mindsdb.utilities.log import get_log
 
@@ -257,10 +259,9 @@ class IntegrationController:
             connection_data=connection_data
         )
 
-        if as_service:
-            logger.debug("%s create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-            return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
-        return self.handler_modules[handler_type].Handler(**handler_ars)
+        logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
+        return DBServiceClient(handler_type, **handler_ars)
+        # return self.handler_modules[handler_type].Handler(**handler_ars)
 
     def get_handler(self, name, case_sensitive=False):
         if case_sensitive:
@@ -328,15 +329,13 @@ class IntegrationController:
             handler_ars['execution_method'] = getattr(self.handler_modules[integration_engine], 'execution_method', None)
             handler_ars['integration_engine'] = integration_engine
             print(f"GET HANDLERS: handler_ars - {handler_ars}")
-            logger.info("%s get_handler: create a ML client, params - %s", self.__class__.__name__, handler_ars)
+            logger.info("%s.get_handler: create a ML client, params - %s", self.__class__.__name__, handler_ars)
             # handler = BaseMLEngineExec(**handler_ars)
             handler = MLClient(**handler_ars)
         else:
-            handler = HandlerClass(**handler_ars)
 
-        if as_service:
-            logger.debug("%s get_handler: create a client to db service of %s type", self.__class__.__name__, handler_type)
-            return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
+            logger.debug("%s.get_handler: create a client to db service of %s type", self.__class__.__name__, integration_engine)
+            handler = DBServiceClient(integration_engine, **handler_ars)
 
         return handler
 

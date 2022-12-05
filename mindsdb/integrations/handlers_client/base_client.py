@@ -23,29 +23,15 @@ class BaseClient:
     def __getattr__(self, attr):
         logger.info("%s: getting '%s' attribute from handler", self.__class__.__name__, attr)
         return getattr(self.handler, attr)
-
-    # def __getattribute__(self, attr):
-    #     """Delegates all calls to a handler instance if self.as_service == False."""
-    #     name =  object.__getattribute__(self, "__class__").__name__
-    #     logger.info("%s: calling '%s' attribute", name, attr)
-    #     # attrs_dict = object.__getattribute__(self, "__dict__")
-    #     # logger.info("%s: __dict__ - %s", name, attrs_dict)
-    #     try:
-    #         handler = object.__getattribute__(self, "handler")
-    #         as_service = object.__getattribute__(self, "as_service")
-    #         if as_service:
-    #             logger.info("%s works in a service mode. calling %s attribute", name, attr)
-    #             try:
-    #                 return object.__getattribute__(self, attr)
-    #             except AttributeError:
-    #                 logger.info("%s: '%s' attribute not found, get it from local handler instance", name, attr)
-    #                 # handler = attrs_dict["handler"]
-    #                 return getattr(handler, attr)
-    #         logger.info("%s works in a local mode. calling %s attribute", name, attr)
-    #         # handler = self.__dict__["handler"]
-    #         return getattr(handler, attr)
-    #     except AttributeError:
-    #         return object.__getattribute__(self, attr)
+        # """Delegates all calls to a handler instance if self.as_service == False."""
+        # logger.info("calling '%s' as: ", attr)
+        # if self.__dict__["as_service"]:
+        #     logger.info("%s works in a service mode. calling %s attribute", self.__class__.__name__, attr)
+        #     return getattr(self, attr)
+        # logger.info("handler")
+        # logger.info("%s works in a local mode. calling %s attribute", self.__class__.__name__, attr)
+        # handler = self.__dict__["handler"]
+        # return getattr(handler, attr)
 
     def _convert_response(self, resp):
         """Converts data_frame from json to pandas.DataFrame object.

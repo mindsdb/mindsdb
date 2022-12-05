@@ -18,8 +18,10 @@ Basic usage:
     app.run(debug=True, host=host, port=port)
 
 """
+import json
 import pickle
 import traceback
+import base64
 from flask import Flask, request
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -27,23 +29,33 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.handler_helpers import get_handler
-from mindsdb.utilities import log
+# from mindsdb.utilities.log import logger
+# import logging
+# logger = logging.getLogger("mindsdb.main")
+from mindsdb.utilities.config import Config
+from mindsdb.utilities.log import (
+    initialize_log,
+    get_log
+)
+Config()
+initialize_log(logger_name="main")
+logger = get_log("main")
 
 
 class BaseDBWrapper:
     """Base abstract class contains some general methods."""
 
     def __init__(self, **kwargs):
-        name = kwargs.get("name")
-        _type = kwargs.get("engine", None) or kwargs.get("type")
-        handler_class = get_handler(_type)
-        self.handler = handler_class(**kwargs)
+        name = kwargs.get("name", self.__class__.__name__)
+        # _type = kwargs.get("type")
+        # handler_class = get_handler(_type)
+        # self.handler = handler_class(**kwargs)
         self.app = Flask(name)
 
         # self.index becomes a flask API endpoint
         default_router = self.app.route("/")
         self.index = default_router(self.index)
-        log.logger.info("%s: base params and route have been initialized", self.__class__.__name__)
+        logger.info("%s: base params and route have been initialized", self.__class__.__name__)
 
     def index(self):
         """ Default GET endpoint - '/'."""
@@ -52,6 +64,12 @@ class BaseDBWrapper:
     def run(self, **kwargs):
         """ Launch internal Flask application."""
         self.app.run(**kwargs)
+
+    def get_handler(self, _json):
+        handler_class = get_handler(_json["handler_type"])
+        logger.info("%s.get_handler: requested instance of %s handler", self.__class__.__name__, handler_class)
+        return handler_class(**_json["handler_kwargs"])
+
 
 
 class DBHandlerWrapper(BaseDBWrapper):
@@ -86,26 +104,28 @@ class DBHandlerWrapper(BaseDBWrapper):
 
         query_route = self.app.route("/query", methods=["GET", ])
         self.query = query_route(self.query)
-        log.logger.info("%s: additional params and routes have been initialized", self.__class__.__name__)
+        logger.info("%s: additional params and routes have been initialized", self.__class__.__name__)
 
     def connect(self):
         try:
-            self.handler.connect()
+            handler = self.get_handler(request.json)
+            handler.connect()
             return {"status": "OK"}, 200
         except Exception:
             msg = traceback.format_exc()
-            log.logger.error(msg)
+            logger.error(msg)
             return {"status": "FAIL", "error": msg}, 500
 
     def check_connection(self):
         """Check connection to the database server."""
-        log.logger.info("%s: calling 'check_connection'", self.__class__.__name__)
+        logger.info("%s: calling 'check_connection'", self.__class__.__name__)
         try:
-            result = self.handler.check_connection()
+            handler = self.get_handler(request.json)
+            result = handler.check_connection()
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()
-            log.logger.error(msg)
+            logger.error(msg)
             result = StatusResponse(success=False,
                                     error_message=msg)
             return result.to_json(), 500
@@ -113,13 +133,14 @@ class DBHandlerWrapper(BaseDBWrapper):
     def native_query(self):
         """Execute received string query."""
         query = request.json.get("query")
-        log.logger.info("%s: calling 'native_query' with query - %s", self.__class__.__name__, query)
+        logger.info("%s: calling 'native_query' with query - %s", self.__class__.__name__, query)
         try:
-            result = self.handler.native_query(query)
+            handler = self.get_handler(request.json)
+            result = handler.native_query(query)
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()
-            log.logger.error(msg)
+            logger.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)
@@ -127,42 +148,69 @@ class DBHandlerWrapper(BaseDBWrapper):
 
     def query(self):
         """Execute received query object"""
-        s_query = request.get_data()
-        query = pickle.loads(s_query)
-        log.logger.info("%s: calling 'query' with query - %s", self.__class__.__name__, query)
+        logger.info("%s: calling 'query'", self.__class__.__name__)
+        logger.info("%s: calling 'query', raw data - %s", self.__class__.__name__, request.get_data())
+        # _json = json.loads(request.get_data())
+        # logger.info("%s: calling 'query', data in json - %s", self.__class__.__name__, _json)
         try:
-            result = self.handler.query(query)
+            # Have received json with context and
+            # serialized query object
+            # it is not possible to send json and data separately
+            # so need use base64 to encode serialized object string back in bytes
+            _json_bytes = request.get_data()
+            # query = pickle.loads(s_query)
+            _json = json.loads(_json_bytes)
+            logger.info("%s: json decoded - %s", self.__class__.__name__, _json)
+            b64_query_bytes = _json["query"].encode("utf-8")
+            s_query = base64.b64decode(b64_query_bytes)
+            query = pickle.loads(s_query)
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error(msg)
+            result = Response(resp_type=RESPONSE_TYPE.ERROR,
+                              error_code=1,
+                              error_message=msg)
+            return result.to_json(), 500
+
+        logger.info("%s: calling 'query' with query - %s", self.__class__.__name__, query)
+        try:
+            # logger.info("%s: calling 'query' with json(text) - %s", self.__class__.__name__, request.body)
+            # handler = self.get_handler(request.json)
+            handler = self.get_handler(_json)
+            result = handler.query(query)
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()
-            log.logger.error(msg)
+            logger.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)
             return result.to_json(), 500
 
     def get_tables(self):
-        log.logger.info("%s: calling 'get_tables'", self.__class__.__name__)
+        logger.info("%s: calling 'get_tables'", self.__class__.__name__)
         try:
-            result = self.handler.get_tables()
+            handler = self.get_handler(request.json)
+            result = handler.get_tables()
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()
-            log.logger.error(msg)
+            logger.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)
             return result.to_json(), 500
 
     def get_columns(self):
-        table = request.json.get("table")
+        logger.info("%s: calling 'get_columns' for table - %s", self.__class__.__name__, table)
         try:
-            log.logger.info("%s: calling 'get_columns' for table - %s", self.__class__.__name__, table)
-            result = self.handler.get_columns(table)
+            table = request.json.get("table")
+            handler = self.get_handler(request.json)
+            result = handler.get_columns(table)
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()
-            log.logger.error(msg)
+            logger.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)

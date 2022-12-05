@@ -9,6 +9,11 @@
  *******************************************************
 """
 
+import os
+from uuid import uuid4
+
+import requests
+
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
 from mindsdb.api.mysql.mysql_proxy.utilities import logger
 from mindsdb.utilities.config import Config
@@ -16,8 +21,14 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.database.integrations import IntegrationController
 
+from mindsdb.interfaces.model.model_controller import ModelController
+from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.views import ViewController
+from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.database.database import DatabaseController
 
-class SessionController():
+
+class SessionController:
     '''
     This class manages the server session
     '''
@@ -62,3 +73,83 @@ class SessionController():
 
     def unregister_stmt(self, stmt_id):
         del self.prepared_stmts[stmt_id]
+
+    def to_json(self):
+        return {
+                "username": self.username,
+                "auth": self.auth,
+                "database": self.database,
+                "prepared_stmts": self.prepared_stmts,
+                "packet_sequence_number": self.packet_sequence_number,
+                }
+
+
+class ServerSessionContorller(SessionController):
+    """SessionController implementation for case of Executor service.
+    The difference with SessionController is that there is an id in this one.
+    The instance uses the id to synchronize its settings with the appropriate
+    ServiceSessionController instance on the Executor side."""
+    def __init__(self):
+        super().__init__()
+        self.id = f"session_{uuid4()}"
+        executor_host = os.environ.get("MINDSDB_EXECUTOR_HOSTNAME")
+        executor_port = os.environ.get("MINDSDB_EXECUTOR_PORT")
+        if executor_host and executor_port:
+            self.executor_url = f"http://{executor_host}:{executor_port}"
+        else:
+            self.executor_url = "http://localhost:5500"
+
+        logger.debug("%s.__init__: executor url - %s", self.__class__.__name__, self.executor_url)
+
+    def __del__(self):
+        """Terminate the appropriate ServiceSessionController instance as well."""
+        url = self.executor_url + "/" + "session"
+        requests.delete(url, json={"id":self.id})
+
+
+# class ServiceSessionController(SessionController):
+#     """Slight modification of SessionController class to use it in Executor service.
+#     The class doens't depend from mysql server."""
+# 
+#     def __init__(self):
+#         """
+#         Initialize the session
+#         :param company_id:
+#         """
+# 
+#         self.username = None
+#         self.auth = False
+#         self.logging = logger
+#         self.database = None
+# 
+#         self.config = Config()
+# 
+#         self.model_controller = WithKWArgsWrapper(
+#             ModelController(),
+#             company_id=company_id
+#         )
+# 
+#         self.integration_controller = WithKWArgsWrapper(
+#             IntegrationController(),
+#             company_id=company_id
+#         )
+# 
+#         self.view_controller = WithKWArgsWrapper(
+#             ViewController(),
+#             company_id=company_id
+#         )
+# 
+#         self.project_controller = WithKWArgsWrapper(
+#             ProjectController(),
+#             company_id=company_id
+#         )
+# 
+#         self.database_controller = WithKWArgsWrapper(
+#             DatabaseController(),
+#             company_id=company_id
+#         )
+# 
+#         self.datahub = init_datahub(self)
+# 
+#         self.prepared_stmts = {}
+#         self.packet_sequence_number = 0

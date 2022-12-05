@@ -114,7 +114,8 @@
             "sql/api/drop",
             "sql/api/select",
             "sql/api/select-files",
-            "sql/api/join"
+            "sql/api/join",
+            "sql/api/use"
           ]
         },
         {

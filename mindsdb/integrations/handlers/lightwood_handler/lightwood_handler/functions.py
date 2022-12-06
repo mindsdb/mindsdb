@@ -156,7 +156,7 @@ def run_adjust(df: DataFrame, args: dict, model_storage):
         base_predictor_record = db.Predictor.query.filter_by(
             id=base_predictor_id,
             status=PREDICTOR_STATUS.COMPLETE
-        ).last()
+        ).first()  # TODO should this be last instead?
 
         predictor_id = model_storage.predictor_id
         predictor_record = db.Predictor.query.filter_by(id=predictor_id).first()
@@ -164,7 +164,7 @@ def run_adjust(df: DataFrame, args: dict, model_storage):
         # TODO move this to ModelStorage (don't work with database directly)
         predictor_record.data = {'training_log': 'training'}
         predictor_record.training_start_at = datetime.now()
-        predictor_record.status = PREDICTOR_STATUS.ADJUSTING  # TODO: parallel execution?
+        predictor_record.status = PREDICTOR_STATUS.ADJUSTING  # TODO: parallel execution block
         db.session.commit()
 
         base_fs = FileStorage(
@@ -184,7 +184,7 @@ def run_adjust(df: DataFrame, args: dict, model_storage):
         predictor.save(fs.folder_path / fs.folder_name)
         fs.push()
 
-        predictor_record.data = predictor.model_analysis.to_dict()  # todo: update accuracy?
+        predictor_record.data = predictor.model_analysis.to_dict()  # todo: update accuracy in LW as post-adjust hook
         predictor_record.code = base_predictor_record.code
         predictor_record.update_status = 'up_to_date'
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
@@ -213,8 +213,6 @@ def run_adjust(df: DataFrame, args: dict, model_storage):
         error_message = format_exception_error(e)
         predictor_record.data = {"error": error_message}
         db.session.commit()
-
-    # todo: change so that it only becomes active after a successful update call
 
     if predictor_record.training_stop_at is None:
         predictor_record.training_stop_at = datetime.now()

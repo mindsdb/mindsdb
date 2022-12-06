@@ -88,7 +88,6 @@ class LightwoodHandler(BaseMLEngine):
     def predict(self, df, args=None):
         pred_format = args['pred_format']
         predictor_code = args['code']
-        dtype_dict = args['dtype_dict']
         learn_args = args['learn_args']
         pred_args = args.get('predict_params', {})
         self.model_storage.fileStorage.pull()
@@ -97,6 +96,7 @@ class LightwoodHandler(BaseMLEngine):
             self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name,
             predictor_code
         )
+        dtype_dict = predictor.dtype_dict
 
         predictions = predictor.predict(df, args=pred_args)
         predictions = predictions.to_dict(orient='records')

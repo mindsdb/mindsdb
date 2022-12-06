@@ -25,7 +25,7 @@ from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.integrations.libs.base import BaseMLEngine
 
 from .utils import unpack_jsonai_old_args
-from .functions import run_learn, run_update, run_adjust
+from .functions import run_learn, run_adjust
 
 IS_PY36 = sys.version_info[1] <= 6
 

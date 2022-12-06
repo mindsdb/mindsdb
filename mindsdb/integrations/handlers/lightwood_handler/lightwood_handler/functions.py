@@ -182,6 +182,7 @@ def run_adjust(df: DataFrame, args: dict, model_storage):
         predictor.save(fs.folder_path / fs.folder_name)
         fs.push()
 
+        predictor_record.data = predictor.model_analysis.to_dict()  # todo: update accuracy?
         predictor_record.code = base_predictor_record.code
         predictor_record.update_status = 'up_to_date'
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
@@ -212,84 +213,6 @@ def run_adjust(df: DataFrame, args: dict, model_storage):
         db.session.commit()
 
     # todo: change so that it only becomes active after a successful update call
-
-    if predictor_record.training_stop_at is None:
-        predictor_record.training_stop_at = datetime.now()
-        db.session.commit()
-
-
-# todo: deprecated?
-@mark_process(name='learn')
-def run_update(predictor_id: int, df: DataFrame, company_id: int):
-    try:
-        predictor_record = db.Predictor.query.filter_by(id=predictor_id).first()
-
-        problem_definition = predictor_record.learn_args
-        problem_definition['target'] = predictor_record.to_predict[0]
-
-        if 'join_learn_process' in problem_definition:
-            del problem_definition['join_learn_process']
-
-        if 'stop_training_in_x_seconds' in problem_definition:
-            problem_definition['time_aim'] = problem_definition['stop_training_in_x_seconds']
-
-        json_ai = lightwood.json_ai_from_problem(df, problem_definition)
-
-        # TODO move it to ModelStorage (don't work with database directly)
-        predictor_record.code = lightwood.code_from_json_ai(json_ai)
-        predictor_record.data = {'training_log': 'training'}
-        predictor_record.training_start_at = datetime.now()
-        predictor_record.status = PREDICTOR_STATUS.TRAINING
-        db.session.commit()
-
-        json_storage = get_json_storage(
-            resource_id=predictor_id
-        )
-        json_storage.set('json_ai', json_ai.to_dict())
-
-        predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
-        predictor.learn(df)
-
-        fs = FileStorage(
-            resource_group=RESOURCE_GROUP.PREDICTOR,
-            resource_id=predictor_id,
-            sync=True
-        )
-        predictor.save(fs.folder_path / fs.folder_name)
-        fs.push()
-
-        predictor_record.data = predictor.model_analysis.to_dict()
-        predictor_record.update_status = 'up_to_date'
-        predictor_record.dtype_dict = predictor.dtype_dict
-
-        predictor_record.status = PREDICTOR_STATUS.COMPLETE
-        predictor_record.training_stop_at = datetime.now()
-        db.session.commit()
-
-        predictor_records = get_model_records(
-            active=None,
-            name=predictor_record.name
-        )
-        predictor_records = [
-            x for x in predictor_records
-            if x.training_stop_at is not None
-        ]
-        predictor_records.sort(key=lambda x: x.training_stop_at)
-        for record in predictor_records:
-            record.active = False
-        predictor_records[-1].active = True
-        db.session.commit()
-    except Exception as e:
-        log.logger.error(e)
-        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-        print(traceback.format_exc())
-
-        error_message = format_exception_error(e)
-
-        predictor_record.data = {"error": error_message}
-
-        # old_predictor_record.update_status = 'update_failed'   # TODO
-        db.session.commit()
 
     if predictor_record.training_stop_at is None:
         predictor_record.training_stop_at = datetime.now()

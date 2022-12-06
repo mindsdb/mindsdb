@@ -355,12 +355,6 @@ class BaseMLEngineExec:
                     error_message=f"Cant determine how to show '{statement.category}'"
                 )
             return response
-        # if type(statement) == CreatePredictor:
-        #     return self.learn(statement)
-        # elif type(statement) == RetrainPredictor:
-        #     return self.retrain(statement)
-        # elif type(statement) == DropPredictor:
-        #     return self.drop(statement)
         elif type(statement) == Select:
             model_name = statement.from_table.parts[-1]
             where_data = get_where_data(statement.where)

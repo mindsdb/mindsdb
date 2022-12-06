@@ -157,6 +157,7 @@ def run_adjust(df: DataFrame, args: dict, model_storage):
 
         predictor_id = model_storage.predictor_id
         predictor_record = db.Predictor.query.filter_by(id=predictor_id).first()
+        # predictor_record = db.Predictor.query.with_for_update().get(predictor_id)  # ?
 
         # TODO move this to ModelStorage (don't work with database directly)
         predictor_record.data = {'training_log': 'training'}
@@ -181,6 +182,7 @@ def run_adjust(df: DataFrame, args: dict, model_storage):
         predictor.save(fs.folder_path / fs.folder_name)
         fs.push()
 
+        predictor_record.code = base_predictor_record.code
         predictor_record.update_status = 'up_to_date'
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
         predictor_record.training_stop_at = datetime.now()

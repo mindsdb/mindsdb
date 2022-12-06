@@ -153,11 +153,13 @@ def run_learn(df: DataFrame, args: dict, model_storage) -> None:
 def run_adjust(df: DataFrame, args: dict, model_storage):
     try:
         base_predictor_id = args['base_model_id']
-        base_predictor_record = db.Predictor.query.filter_by(id=base_predictor_id).first()
+        base_predictor_record = db.Predictor.query.filter_by(
+            id=base_predictor_id,
+            status=PREDICTOR_STATUS.COMPLETE
+        ).last()
 
         predictor_id = model_storage.predictor_id
         predictor_record = db.Predictor.query.filter_by(id=predictor_id).first()
-        # predictor_record = db.Predictor.query.with_for_update().get(predictor_id)  # ?
 
         # TODO move this to ModelStorage (don't work with database directly)
         predictor_record.data = {'training_log': 'training'}

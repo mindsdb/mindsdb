@@ -1,11 +1,11 @@
 ---
-title: SELECT from files Statement
-sidebarTitle: SELECT from files
+title: SELECT FROM files Statement
+sidebarTitle: SELECT FROM files
 ---
 
 ## Description
 
-The `SELECT * FROM files.[file_name]` statement is used to select data from a file.
+The `SELECT * FROM files.file_name` statement is used to select data from a file.
 
 First, you upload a file to the MindsDB Cloud Editor by following
 [this guide](/sql/create/file/). And then, you can
@@ -17,7 +17,7 @@ Here is the syntax:
 
 ```sql
 SELECT *
-FROM files.[file_name];
+FROM files.file_name;
 ```
 
 On execution, we get:
@@ -34,7 +34,7 @@ Where:
 
 | Name          | Description                                                                                         |
 | ------------- | --------------------------------------------------------------------------------------------------- |
-| `[file_name]` | Name of the file uploaded to the MindsDB Cloud Editor by following [this guide](/sql/create/file/). |
+| `file_name`   | Name of the file uploaded to the MindsDB Cloud Editor by following [this guide](/sql/create/file/). |
 | `column`      | Name of the column from the file.                                                                   |
 
 ## Example

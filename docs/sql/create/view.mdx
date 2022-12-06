@@ -14,14 +14,11 @@ In MindsDB, the `CREATE VIEW` statement is commonly used to create **AI Tables**
 Here is the syntax:
 
 ```sql
-CREATE VIEW [project_name].[view_name] AS (
-    SELECT
-        a.[column_name1],
-        a.[column_name2],
-        a.[column_name3],
-        p.[model_column] AS model_column
-    FROM [integration_name].[table_name] AS a
-    JOIN mindsdb.[predictor_name] AS p
+CREATE VIEW project_name.view_name AS (
+    SELECT a.column_name, ...,
+           p.model_column AS model_column
+    FROM integration_name.table_name AS a
+    JOIN mindsdb.predictor_name AS p
 );
 ```
 
@@ -35,12 +32,12 @@ Where:
 
 | Name                                  | Description                                                                              |
 | ------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `[project_name]`                      | Name of the project to store the view.                                                   |
-| `[view_name]`                         | Name of the view.                                                                        |
-| `[column_name1], [column_name2], ...` | Columns of the data source table that are the input for the model to make predictions.   |
-| `[model_column]`                      | Name of the target column to be predicted.                                               |
-| `[integration_name].[table_name]`     | Data source table name along with the integration where it resides.                      |
-| `[predictor_name]`                    | Name of the model.                                                                       |
+| `project_name`                        | Name of the project to store the view.                                                   |
+| `view_name`                           | Name of the view.                                                                        |
+| `a.column_name, ...`                  | Columns of the data source table that are the input for the model to make predictions.   |
+| `p.model_column`                      | Name of the target column to be predicted.                                               |
+| `integration_name.table_name`         | Data source table name along with the integration where it resides.                      |
+| `predictor_name`                      | Name of the model.                                                                       |
 
 ## Example
 

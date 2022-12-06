@@ -134,7 +134,7 @@ It grants access to configure how each column is encoded. By default, the AutoML
 
 ```sql
 ...
-USING encoders.[column_name].module = 'value';
+USING encoders.column_name.module = 'value';
 ```
 
 To learn more about `encoders` and their options, visit the [Lightwood documentation page on `encoders`](https://lightwood.io/encoder.html).
@@ -226,9 +226,9 @@ Where:
 
 | Name                          | Description                                                                       |
 | ----------------------------- | --------------------------------------------------------------------------------- |
-| `[predictor_name]`            | Name of the model to be created.                                                  |
-| `[file_name]`                 | Name of the file uploaded via the MindsDB editor.                                 |
-| `(SELECT * FROM [file_name])` | `SELECT` statement for selecting the data to be used for training and validation. |
+| `predictor_name`              | Name of the model to be created.                                                  |
+| `file_name`                   | Name of the file uploaded via the MindsDB editor.                                 |
+| `(SELECT * FROM file_name)`   | `SELECT` statement for selecting the data to be used for training and validation. |
 | `target_column`               | `target_column` is the column to be predicted.                                    |
 
 ### Example

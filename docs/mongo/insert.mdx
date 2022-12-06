@@ -45,7 +45,7 @@ Where:
 Checking Predictor Status
 
 After running the `db.predictors.insert()`
-method, execute the `db.predictors.find()` method from the `mindsdb.predictors`
+method, execute the `db.predictors.find()` method from the `mindsdb.models`
 collection to check the status of the model.
 
 ```sql
@@ -82,7 +82,7 @@ WriteResult({
 ### Checking Predictor Status
 
 To check the predictor status, query the
-[`mindsdb.predictors`](/mongo/collection-structure/#the-predictors-collection)
+`mindsdb.models` table
 using the `db.predictors.find()` command.
 
 ```sql

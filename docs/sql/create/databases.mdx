@@ -19,7 +19,7 @@ Let's review the syntax for the `CREATE DATABASE` command.
 CREATE DATABASE datasource_name
 [WITH] [ENGINE [=] engine_name] [,]
 [PARAMETERS [=] {
-  "key":"value",
+  "key": "value",
   ...
 }];
 ```
@@ -36,7 +36,7 @@ Where:
 | ------------------- | --------------------------------------------------------------------------------- |
 | `datasource_name`   | Identifier for the data source to be created.                                     |
 | `engine_name`       | Engine to be selected depending on the database connection.                       |
-| `PARAMETERS`        | `{"key":"value"}` object with the connection parameters specific for each engine. |
+| `PARAMETERS`        | `{"key": "value"}` object with the connection parameters specific for each engine. |
 
 <Note>
 **SQL Commands Resulting in the Same Output** Please note that the
@@ -114,10 +114,10 @@ Then [create a free account at Ngrok](https://dashboard.ngrok.com/signup) to get
 an auth token that you can use to configure your Ngrok instance.
 
 Once installed and configured, run the following command to obtain the host and
-port for your localhost at `[port-number]`.
+port for your localhost at `port-number`.
 
 ```bash
-ngrok tcp [port-number]
+ngrok tcp port-number
 ```
 
 Here is an example. Assuming that you run a PostgreSQL database at

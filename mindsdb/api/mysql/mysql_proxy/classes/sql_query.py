@@ -8,7 +8,7 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-
+import copy
 import re
 from collections import OrderedDict, defaultdict
 import hashlib
@@ -257,12 +257,11 @@ def replaceQueryVar(where, var_value, var_name):
 
 
 def join_query_data(target, source):
-    target['values'].extend(source['values'])
-    target['tables'].extend(source['tables'])
-    target['tables'] = list(set(target['tables']))
-
-    target['columns'].extend(source['columns'])
-    target['columns'].del_duplicate_columns()
+    if len(target.get_columns()) == 0:
+        target = source
+    else:
+        target.add_records(source.get_records())
+    return target
 
 
 def is_empty_prediction_row(predictor_value):
@@ -291,15 +290,37 @@ class Column:
         self.flags = flags
         self.charset = charset
 
+    def get_hash_name(self, prefix):
+        table_name = self.table_name if self.table_alias is None else self.table_alias
+        name = self.name if self.alias is None else self.alias
+
+        name = f'{prefix}_{table_name}_{name}'
+        return name
+
     def __repr__(self):
         return f'{self.__class__.__name__}({self.__dict__})'
 
 
 class ResultSet:
-    def __init__(self):
-        self.columns = []
+    def __init__(self, length=0):
+        self._columns = []
         # records is list of lists with the same length as columns
-        self.records = []
+        self._records = []
+        for i in range(length):
+            self._records.append([])
+
+        self.is_prediction = False
+
+    def __repr__(self):
+        col_names = ', '.join([col.name for col in self._columns])
+        data = '\n'.join([str(rec) for rec in self._records[:20]])
+
+        if len(self._records) > 20:
+            data += '\n...'
+
+        return f'{self.__class__.__name__}({col_names}: {self.length()} rows)\n {data}'
+
+    # --- converters ---
 
     def from_step_data(self, step_data):
 
@@ -308,7 +329,7 @@ class ResultSet:
                 type = None
                 if 'types' in step_data:
                     type = step_data['types'].get(table, {}).get(col[0])
-                self.columns.append(Column(
+                self._columns.append(Column(
                     name=col[0],
                     alias=col[1],
                     type=type,
@@ -319,46 +340,71 @@ class ResultSet:
 
         for row in step_data['values']:
             data_row = []
-            for col in self.columns:
+            for col in self._columns:
                 col_key = (col.name, col.alias)
                 table_key = (col.database, col.table_name, col.table_alias)
                 val = row[table_key][col_key]
 
                 data_row.append(val)
 
-            self.records.append(data_row)
+            self._records.append(data_row)
 
-    def from_df(self, df, database, table_name):
+        self.is_prediction = step_data.get('is_prediction', False)
+        return self
+
+    def from_df(self, df, database, table_name, table_alias=None):
 
         resp_dict = df.to_dict(orient='split')
 
-        self.records = resp_dict['data']
+        self._records = resp_dict['data']
 
         for col in resp_dict['columns']:
-            self.columns.append(Column(
+            self._columns.append(Column(
                 name=col,
                 table_name=table_name,
+                table_alias=table_alias,
                 database=database,
                 type=df.dtypes[col]
             ))
+        return self
+
+    def from_df_cols(self, df, col_names):
+
+        resp_dict = df.to_dict(orient='split')
+
+        self._records = resp_dict['data']
+
+        for col in resp_dict['columns']:
+            self._columns.append(col_names[col])
+        return self
 
     def to_df(self):
-        columns = [
-            col.name if col.alias is None else col.alias
-            for col in self.columns
-        ]
+        columns = self.get_column_names()
+        return pd.DataFrame(self._records, columns=columns)
 
-        return pd.DataFrame(self.records, columns=columns)
+    def to_df_cols(self, prefix=''):
+        # returns dataframe and dict of columns
+        #   can be restored to ResultSet by from_df_cols method
+
+        columns = []
+        col_names = {}
+        for col in self._columns:
+            name = col.get_hash_name(prefix)
+            columns.append(name)
+            col_names[name] = col
+
+        return pd.DataFrame(self._records, columns=columns), col_names
 
     def to_step_data(self):
         step_data = {
             'values': [],
             'columns': ColumnsCollection(),
             'types': {},
-            'tables': []
+            'tables': [],
+            'is_prediction': self.is_prediction
         }
 
-        for col in self.columns:
+        for col in self._columns:
             col_key = (col.name, col.alias)
             table_key = (col.database, col.table_name, col.table_alias)
 
@@ -370,11 +416,11 @@ class ResultSet:
             if col.type is not None:
                 step_data['types'][table_key][col.name] = col.type
 
-        for rec in self.records:
+        for rec in self._records:
             row = {}
             for table in step_data['tables']:
                 row[table] = {}
-            for i, col in enumerate(self.columns):
+            for i, col in enumerate(self._columns):
                 col_key = (col.name, col.alias)
                 table_key = (col.database, col.table_name, col.table_alias)
 
@@ -383,18 +429,118 @@ class ResultSet:
             step_data['values'].append(row)
         return step_data
 
-    def clear_records(self):
-        self.records = []
+    # --- tables ---
 
-    def replace_records(self, records):
-        self.clear_records()
-        for rec in records:
-            self.add_record(rec)
+    def get_tables(self):
+        tables_idx = []
+        tables = []
+        cols = ['database', 'table_name', 'table_alias']
+        for col in self._columns:
+            table = (col.database, col.table_name, col.table_alias)
+            if table not in tables_idx:
+                tables_idx.append(table)
+                tables.append(dict(zip(cols, table)))
+        return tables
 
-    def add_record(self, rec):
-        if len(rec) != len(self.columns):
+    # --- columns ---
+
+    def _locate_column(self, col):
+        col_idx = None
+        for i, col0 in enumerate(self._columns):
+            if col0 is col:
+                col_idx = i
+                break
+        if col_idx is None:
+            raise ErSqlWrongArguments(f'Column is not found: {col}')
+        return col_idx
+
+    def add_column(self, col, values=None):
+        self._columns.append(col)
+
+        if values is None:
+            values = []
+        # update records
+        if len(self._records) > 0:
+            for rec in self._records:
+                if len(values) > 0:
+                    value = values.pop(0)
+                else:
+                    value = None
+                rec.append(value)
+
+    def del_column(self, col):
+        idx = self._locate_column(col)
+        self._columns.pop(idx)
+        for row in self._records:
+            row.pop(idx)
+
+    def get_columns(self):
+        return self._columns
+
+    def get_column_names(self):
+        columns = [
+            col.name if col.alias is None else col.alias
+            for col in self._columns
+        ]
+        return columns
+
+    def find_columns(self, alias=None, table_alias=None):
+        col_list = []
+        for col in self.get_columns():
+            if alias is not None and col.alias.lower() != alias.lower():
+                continue
+            if table_alias is not None and col.table_alias.lower() != table_alias.lower():
+                continue
+            col_list.append(col)
+
+        return col_list
+
+    def copy_column_to(self, col, result_set2):
+        # copy with values
+        idx = self._locate_column(col)
+
+        values = [row[idx] for row in self._records]
+
+        col2 = copy.deepcopy(col)
+
+        result_set2.add_column(col2, values)
+        return col2
+
+    # --- records ---
+
+    def add_records(self, data):
+        names = self.get_column_names()
+        for rec in data:
+            # if len(rec) != len(self._columns):
+            #     raise ErSqlWrongArguments(f'Record length mismatch columns length: {len(rec)} != {len(self._columns)}')
+
+            record = [
+                rec[name]
+                for name in names
+            ]
+            self._records.append(record)
+
+    def get_records_raw(self):
+        return self._records
+
+    def add_record_raw(self, rec):
+        if len(rec) != len(self._columns):
             raise ErSqlWrongArguments(f'Record length mismatch columns length: {len(rec)} != {len(self.columns)}')
-        self.records.append(rec)
+        self._records.append(rec)
+
+    def get_records(self):
+        # in dicts
+        names = self.get_column_names()
+        records = []
+        for row in self._records:
+            records.append(dict(zip(names, row)))
+        return records
+
+    # def clear_records(self):
+    #     self._records = []
+
+    def length(self):
+        return len(self._records)
 
 
 class SQLQuery():
@@ -555,57 +701,49 @@ class SQLQuery():
             subquery = SQLQuery(data, session=self.session)
             return subquery.fetched_data
 
-        columns = [(column['name'], column['name']) for column in columns_info]
+        result = ResultSet()
+        for column in columns_info:
+            result.add_column(Column(
+                name=column['name'],
+                type=column.get('type'),
+                table_name=table_alias[1],
+                table_alias=table_alias[2],
+                database=table_alias[0]
+            ))
+        result.add_records(data)
 
-        data = [{(key, key): value for key, value in row.items()} for row in data]
-        data = [{table_alias: x} for x in data]
+        return result.to_step_data()
 
-        col_types = {
-            column['name']: column['type']
-            for column in columns_info
-        }
-        columns_collection = ColumnsCollection()
-        for column in columns:
-            columns_collection.add(table_alias, column)
-        data = {
-            'values': data,
-            'columns': columns_collection,
-            'tables': [table_alias],
-            'types': {table_alias: col_types}
-        }
-        return data
-
-    def _multiple_steps(self, step):
-        data = {
-            'values': [],
-            'columns': ColumnsCollection(),
-            'tables': []
-        }
-        for substep in step.steps:
+    def _multiple_steps(self, steps):
+        data = ResultSet()
+        for substep in steps:
             sub_data = self._fetch_dataframe_step(substep)
-            join_query_data(data, sub_data)
+            sub_data = ResultSet().from_step_data(sub_data)
+            data = join_query_data(data, sub_data)
         return data
 
     def _multiple_steps_reduce(self, step, vars):
         if step.reduce != 'union':
             raise ErLogicError(f'Unknown MultipleSteps type: {step.reduce}')
 
-        data = {
-            'values': [],
-            'columns': ColumnsCollection(),
-            'tables': []
-        }
+        data = ResultSet()
+
+        # mark vars
+        steps = []
+        for substep in step.steps:
+            if isinstance(substep, FetchDataframeStep) is False:
+                raise ErLogicError(f'Wrong step type for MultipleSteps: {step}')
+            substep = copy.deepcopy(substep)
+            markQueryVar(substep.query.where)
+            steps.append(substep)
 
         for var_group in vars:
-            for substep in step.steps:
-                if isinstance(substep, FetchDataframeStep) is False:
-                    raise ErLogicError(f'Wrong step type for MultipleSteps: {step}')
-                markQueryVar(substep.query.where)
+            steps2 = copy.deepcopy(steps)
             for name, value in var_group.items():
-                for substep in step.steps:
+                for substep in steps2:
                     replaceQueryVar(substep.query.where, value, name)
-            sub_data = self._multiple_steps(step)
-            join_query_data(data, sub_data)
+            sub_data = self._multiple_steps(steps2)
+            data = join_query_data(data, sub_data)
 
         return data
 
@@ -760,33 +898,32 @@ class SQLQuery():
             predictor_name = step.predictor.parts[-1]
             dn = self.datahub.get(self.mindsdb_database_name)
             columns = dn.get_table_columns(predictor_name)
-            table_name = (self.mindsdb_database_name, predictor_name, predictor_name)
-            columns_collection = ColumnsCollection()
+
+            data = ResultSet()
             for column_name in columns:
-                columns_collection.add(table_name, (column_name, column_name))
-            data = {
-                'values': [],
-                'columns': columns_collection,
-                'tables': [table_name]
-            }
+                data.add_column(Column(
+                    name=column_name,
+                    table_name=predictor_name,
+                    database=self.mindsdb_database_name
+                ))
+            data = data.to_step_data()
+
         elif type(step) == GetTableColumns:
             table = step.table
             dn = self.datahub.get(step.namespace)
-            ds_query = Select(from_table=Identifier(table), targets=[Star()])
+            ds_query = Select(from_table=Identifier(table), targets=[Star()], limit=Constant(0))
 
             data, columns_info = dn.query(ds_query, session=self.session)
 
-            table_alias = (self.database, table, table)
-
-            columns_collection = ColumnsCollection()
+            data = ResultSet()
             for column in columns_info:
-                columns_collection.add(table, column)
-
-            data = {
-                'values': [],
-                'columns': columns_collection,
-                'tables': [table_alias]
-            }
+                data.add_column(Column(
+                    name=column['name'],
+                    type=column.get('type'),
+                    table_name=table,
+                    database=self.database
+                ))
+            data = data.to_step_data()
         elif type(step) == FetchDataframeStep:
             data = self._fetch_dataframe_step(step)
         elif type(step) == UnionStep:
@@ -797,9 +934,9 @@ class SQLQuery():
             right_result.from_step_data(steps_data[step.right.step_num])
 
             # count of columns have to match
-            if len(left_result.columns) != len(right_result.columns):
+            if len(left_result.get_columns()) != len(right_result.get_columns()):
                 raise ErSqlWrongArguments(
-                    f'UNION columns count mismatch: {len(left_result.columns)} != {len(right_result.columns)} ')
+                    f'UNION columns count mismatch: {len(left_result.get_columns())} != {len(right_result.get_columns())} ')
 
             # types have to match
             # TODO: return checking type later
@@ -810,41 +947,37 @@ class SQLQuery():
             #         if type1 != type2:
             #             raise ErSqlWrongArguments(f'UNION types mismatch: {type1} != {type2}')
 
-            records = []
+            result = ResultSet()
+            for col in left_result.get_columns():
+                result.add_column(col)
+
             records_hashes = []
-            for rec in left_result.records + right_result.records:
+            for row in left_result.get_records_raw() + right_result.get_records_raw():
                 if step.unique:
-                    checksum = hashlib.sha256(str(rec).encode()).hexdigest()
+                    checksum = hashlib.sha256(str(row).encode()).hexdigest()
                     if checksum in records_hashes:
                         continue
                     records_hashes.append(checksum)
-                records.append(rec)
+                result.add_record_raw(row)
 
-            left_result.replace_records(records)
-
-            data = left_result.to_step_data()
+            data = result.to_step_data()
 
         elif type(step) == MapReduceStep:
             try:
                 if step.reduce != 'union':
                     raise ErLogicError(f'Unknown MapReduceStep type: {step.reduce}')
 
-                step_data = steps_data[step.values.step_num]
+                step_data = ResultSet().from_step_data(steps_data[step.values.step_num])
                 vars = []
-                step_data_values = step_data['values']
-                for row in step_data_values:
+                for row in step_data.get_records():
                     var_group = {}
                     vars.append(var_group)
-                    for row_data in row.values():
-                        for name, value in row_data.items():
-                            if name[0] != '__mindsdb_row_id':
-                                var_group[name[1] or name[0]] = value
+                    for name, value in row.items():
+                        if name != '__mindsdb_row_id':
+                            var_group[name] = value
 
-                data = {
-                    'values': [],
-                    'columns': ColumnsCollection(),
-                    'tables': []
-                }
+                data = ResultSet()
+
                 substep = step.step
                 if type(substep) == FetchDataframeStep:
                     query = substep.query
@@ -853,16 +986,19 @@ class SQLQuery():
                         for name, value in var_group.items():
                             replaceQueryVar(query.where, value, name)
                         sub_data = self._fetch_dataframe_step(substep)
-                        if len(data['columns']) == 0:
-                            data['columns'] = sub_data['columns']
-                        if len(data['tables']) == 0:
-                            data['tables'] = sub_data['tables']
-                        data['values'].extend(sub_data['values'])
+                        sub_data = ResultSet().from_step_data(sub_data)
+                        if len(data.get_columns()) == 0:
+                            data = sub_data
+                        else:
+                            data.add_records(sub_data.get_records())
+
                         unmarkQueryVar(query.where)
                 elif type(substep) == MultipleSteps:
                     data = self._multiple_steps_reduce(substep, vars)
                 else:
                     raise ErLogicError(f'Unknown step type: {step.step}')
+
+                data = data.to_step_data()
             except Exception as e:
                 raise SqlApiUnknownError(f'error in map reduce step: {e}') from e
         elif type(step) == MultipleSteps:
@@ -871,10 +1007,12 @@ class SQLQuery():
             data = None
             for substep in step.steps:
                 subdata = self.execute_step(substep, steps_data)
+                subdata = ResultSet().from_step_data(subdata)
                 if data is None:
                     data = subdata
                 else:
-                    data['values'].extend(subdata['values'])
+                    data.add_records(subdata.get_records())
+            data = data.to_step_data()
         elif type(step) == ApplyPredictorRowStep:
             try:
                 project_name = step.namespace
@@ -886,7 +1024,7 @@ class SQLQuery():
                 if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                     version = int(step.predictor.parts[-1])
 
-                predictions = project_datanode.predict(
+                predictions, columns_dtypes = project_datanode.predict(
                     model_name=predictor_name,
                     data=where_data,
                     version=version,
@@ -898,26 +1036,26 @@ class SQLQuery():
                         if k not in row:
                             row[k] = v
 
-                data = [{(key, key): value for key, value in row.items()} for row in predictions]
-
                 table_name = get_preditor_alias(step, self.database)
-                values = [{table_name: x} for x in data]
 
-                columns_collection = ColumnsCollection()
-                if len(data) > 0:
-                    row = data[0]
-                    for key in row.keys():
-                        columns_collection.add(table_name, key)
+                result = ResultSet()
+                result.is_prediction = True
+                if len(predictions) > 0:
+                    cols = list(predictions[0].keys())
                 else:
                     cols = project_datanode.get_table_columns(predictor_name)
-                    for col in cols:
-                        columns_collection.add(table_name, (col, col))
 
-                data = {
-                    'values': values,
-                    'columns': columns_collection,
-                    'tables': [table_name]
-                }
+                for col in cols:
+                    result.add_column(Column(
+                        name=col,
+                        table_name=table_name[1],
+                        table_alias=table_name[2],
+                        database=table_name[0],
+                        type=columns_dtypes.get(col)
+                    ))
+                result.add_records(predictions)
+
+                data = result.to_step_data()
             except Exception as e:
                 if isinstance(e, SqlApiException):
                     raise e
@@ -927,34 +1065,26 @@ class SQLQuery():
             try:
                 # set row_id
                 data = steps_data[step.dataframe.step_num]
-                row_id_col = ('__mindsdb_row_id', '__mindsdb_row_id')
-                for table in data['columns'].tables():
-                    data['columns'].add(table, row_id_col)
+                data = ResultSet().from_step_data(data)
 
-                row_count = len(data['values'])
+                for table in data.get_tables():
+                    row_id_col = Column(
+                        name='__mindsdb_row_id',
+                        database=table['database'],
+                        table_name=table['table_name'],
+                        table_alias=table['table_alias']
+                    )
 
-                for i, row in enumerate(data['values']):
-                    for n, table_name in enumerate(row):
-                        row[table_name][row_id_col] = self.row_id + i + n * row_count
-                # shift counter
-                self.row_id += self.row_id + row_count * len(data['tables'])
+                    values = list(range(self.row_id, self.row_id + data.length()))
+                    data.add_column(row_id_col, values)
+                    self.row_id += data.length()
+
+                steps_data[step.dataframe.step_num] = data.to_step_data()
 
                 project_name = step.namespace
                 predictor_name = step.predictor.parts[0]
 
-                where_data = []
-                for row in steps_data[step.dataframe.step_num]['values']:
-                    new_row = {}
-                    for table_name in row:
-                        keys_intersection = set(new_row) & set(row[table_name])
-                        if len(keys_intersection) > 0:
-                            raise ErLogicError(
-                                f'The predictor got two identical keys from different datasources: {keys_intersection}'
-                            )
-                        new_row.update(row[table_name])
-                    where_data.append(new_row)
-
-                where_data = [{key[1]: value for key, value in row.items()} for row in where_data]
+                where_data = data.get_records()
 
                 predictor_metadata = {}
                 for pm in self.predictor_metadata:
@@ -983,14 +1113,19 @@ class SQLQuery():
                 #             row[key] = str(row[key])
 
                 table_name = get_preditor_alias(step, self.database)
-                columns_collection = ColumnsCollection()
-                dn = self.datahub.get(self.mindsdb_database_name)
+                result = ResultSet()
+                result.is_prediction = True
+
                 project_datanode = self.datahub.get(project_name)
                 if len(where_data) == 0:
                     cols = project_datanode.get_table_columns(predictor_name) + ['__mindsdb_row_id']
                     for col in cols:
-                        columns_collection.add(table_name, (col, col))
-                    values = []
+                        result.add_column(Column(
+                            name=col,
+                            database=table_name[0],
+                            table_name=table_name[1],
+                            table_alias=table_name[2]
+                        ))
                 else:
                     predictor_id = predictor_metadata['id']
                     key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
@@ -1002,7 +1137,7 @@ class SQLQuery():
                         version = None
                         if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                             version = int(step.predictor.parts[-1])
-                        data = project_datanode.predict(
+                        data, columns_dtypes = project_datanode.predict(
                             model_name=predictor_name,
                             data=where_data,
                             version=version,
@@ -1012,171 +1147,79 @@ class SQLQuery():
                             predictor_cache.set(key, data)
 
                     if len(data) > 0:
-                        row = data[0]
-                        for key in row.keys():
-                            columns_collection.add(table_name, (key, key))
+                        cols = list(data[0].keys())
+                        for col in cols:
+                            result.add_column(Column(
+                                name=col,
+                                table_name=table_name[1],
+                                table_alias=table_name[2],
+                                database=table_name[0],
+                                type=columns_dtypes.get(col)
+                            ))
 
                     # apply filter
                     if is_timeseries:
                         data = self.apply_ts_filter(data, where_data, step, predictor_metadata)
 
-                    data = [{(key, key): value for key, value in row.items()} for row in data]
+                    result.add_records(data)
 
-                    values = [{table_name: x} for x in data]
+                data = result.to_step_data()
 
-                data = {
-                    'values': values,
-                    'columns': columns_collection,
-                    'tables': [table_name],
-                    'types': {table_name: self.model_types},
-                    'is_prediction': True  # for join step
-                }
             except Exception as e:
                 raise SqlApiUnknownError(f'error in apply predictor step: {e}') from e
         elif type(step) == JoinStep:
             try:
-                left_data = steps_data[step.left.step_num]
-                right_data = steps_data[step.right.step_num]
-
-                # FIXME https://github.com/mindsdb/mindsdb_sql/issues/136
-                # is_timeseries = False
-                # if True in [type(step) == ApplyTimeseriesPredictorStep for step in plan.steps]:
-                #     right_data = steps_data[step.left.step_num]
-                #     left_data = steps_data[step.right.step_num]
-                #     is_timeseries = True
-
                 if step.query.condition is not None:
                     raise ErNotSupportedYet('At this moment supported only JOIN without condition')
 
-                if len(left_data['tables']) == 0 or len(right_data['tables']) == 0:
-                    raise ErLogicError('Table for join is not found')
+                left_data = ResultSet().from_step_data(steps_data[step.left.step_num])
+                right_data = ResultSet().from_step_data(steps_data[step.right.step_num])
+                df_a, names_a = left_data.to_df_cols(prefix='A')
+                df_b, names_b = right_data.to_df_cols(prefix='B')
 
-                if (
-                        len(left_data['tables']) != 1 or len(right_data['tables']) != 1
-                        or left_data['tables'][0] == right_data['tables'][0]
-                ):
-                    raise ErNotSupportedYet('At this moment supported only JOIN of two different tables')
+                a_row_id = left_data.find_columns('__mindsdb_row_id')[0].get_hash_name(prefix='A')
+                b_row_id = right_data.find_columns('__mindsdb_row_id')[0].get_hash_name(prefix='B')
 
-                data = {
-                    'values': [],
-                    'columns': ColumnsCollection(),
-                    'tables': list(set(left_data['tables'] + right_data['tables'])),
-                    'types': {}
-                }
-
-                for data_part in [left_data, right_data]:
-                    data['columns'].extend(data_part['columns'])
-                    for table_name in data_part['columns'].tables():
-                        if table_name not in data['types']:
-                            data['types'][table_name] = {}
-                        if table_name not in data['columns'].tables():
-                            data['types'][table_name] = data_part.get('types', {}).get(table_name, {}).copy()
-                        else:
-                            data['types'][table_name].update(data_part.get('types', {}).get(table_name, {}))
-                data['columns'].del_duplicate_columns()
-
-                left_key = left_data['tables'][0]
-                right_key = right_data['tables'][0]
-
-                left_columns_map = OrderedDict()
-                left_columns_map_reverse = OrderedDict()
-                for i, column_name in enumerate(left_data['columns'].table_columns(left_key)):
-                    left_columns_map[f'a{i}'] = column_name
-                    left_columns_map_reverse[column_name] = f'a{i}'
-
-                right_columns_map = {}
-                right_columns_map_reverse = {}
-                for i, column_name in enumerate(right_data['columns'].table_columns(right_key)):
-                    right_columns_map[f'b{i}'] = column_name
-                    right_columns_map_reverse[column_name] = f'b{i}'
-
-                left_df_data = []
-                for row in left_data['values']:
-                    row = row[left_key]
-                    left_df_data.append({left_columns_map_reverse[key]: value for key, value in row.items()})
-
-                right_df_data = []
-                for row in right_data['values']:
-                    row = row[right_key]
-                    right_df_data.append({right_columns_map_reverse[key]: value for key, value in row.items()})
-
-                df_a = pd.DataFrame(left_df_data, columns=left_columns_map.keys())
-                df_b = pd.DataFrame(right_df_data, columns=right_columns_map.keys())
-
-                a_name = 'table_a'
-                b_name = 'table_b'
                 con = duckdb.connect(database=':memory:')
-                con.register(a_name, df_a)
-                con.register(b_name, df_b)
+                con.register('table_a', df_a)
+                con.register('table_b', df_b)
 
                 join_type = step.query.join_type.lower()
                 if join_type == 'join':
                     # join type is not specified. using join to prediction data
-                    if left_data.get('is_prediction'):
+                    if left_data.is_prediction:
                         join_type = 'left join'
-                    elif right_data.get('is_prediction'):
+                    elif right_data.is_prediction:
                         join_type = 'right join'
 
                 resp_df = con.execute(f"""
-                    SELECT * FROM {a_name} as ta {join_type} {b_name} as tb
-                    ON ta.{left_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
-                     = tb.{right_columns_map_reverse[('__mindsdb_row_id', '__mindsdb_row_id')]}
+                    SELECT * FROM table_a as ta {join_type} table_b as tb
+                    ON ta.{a_row_id} = tb.{b_row_id}
                 """).fetchdf()
-                con.unregister(a_name)
-                con.unregister(b_name)
+                con.unregister('table_a')
+                con.unregister('table_b')
                 con.close()
 
                 resp_df = resp_df.replace({np.nan: None})
-                resp_dict = resp_df.to_dict(orient='records')
 
-                for row in resp_dict:
-                    new_row = {left_key: {}, right_key: {}}
-                    for key, value in row.items():
-                        if key.startswith('a'):
-                            new_row[left_key][left_columns_map[key]] = value
-                        else:
-                            new_row[right_key][right_columns_map[key]] = value
-                    data['values'].append(new_row)
+                names_a.update(names_b)
+                data = ResultSet().from_df_cols(resp_df, col_names=names_a)
+
+                data = data.to_step_data()
 
             except Exception as e:
                 raise SqlApiUnknownError(f'error in join step: {e}') from e
 
         elif type(step) == FilterStep:
+            # used only in join of two regular tables
             step_data = steps_data[step.dataframe.step_num]
+            result_set = ResultSet().from_step_data(step_data)
 
-            # dicts to look up column and table
-            column_idx = {}
-            tables_idx = {}
-            col_table_idx = {}
-
-            # prepare columns for dataframe. column name contains table name
-            cols = set()
-            for table, col_list in step_data['columns'].group_by_table():
-                _, t_name, t_alias = table
-
-                tables_idx[t_name] = t_name
-                tables_idx[t_alias] = t_name
-                for column in col_list:
-                    # table_column
-                    c_name, c_alias = column
-
-                    col_name = f'{t_name}^{c_name}'
-                    cols.add(col_name)
-
-                    col_table_idx[col_name] = (table, column)
-                    column_idx[c_name] = t_name
-
-            # prepare dict for dataframe
-            result = []
-            for row in step_data['values']:
-                data_row = {}
-                for table, col_list in step_data['columns'].group_by_table():
-                    for col in col_list:
-                        col_name = f'{table[1]}^{col[0]}'
-                        data_row[col_name] = row[table][col]
-                result.append(data_row)
-
-            df = pd.DataFrame(result, columns=list(cols))
+            df, col_names = result_set.to_df_cols()
+            col_idx = {}
+            for name, col in col_names.items():
+                col_idx[col.alias] = name
+                col_idx[(col.table_alias, col.alias)] = name
 
             # analyze condition and change name of columns
             def check_fields(node, is_table=None, **kwargs):
@@ -1187,16 +1230,15 @@ class SQLQuery():
                     col_name = node.parts[-1]
 
                     if len(node.parts) == 1:
-                        if col_name not in column_idx:
-                            raise ErKeyColumnDoesNotExist(f'Table not found for column: {col_name}')
-                        table_name = column_idx[col_name]
+                        key = col_name
                     else:
                         table_name = node.parts[-2]
+                        key = (table_name, col_name)
 
-                        # maybe it is alias
-                        table_name = tables_idx[table_name]
+                    if key not in col_idx:
+                        raise ErKeyColumnDoesNotExist(f'Table not found for column: {key}')
 
-                    new_name = f'{table_name}^{col_name}'
+                    new_name = col_idx[key]
                     return Identifier(parts=[new_name])
 
             where_query = step.query
@@ -1206,212 +1248,112 @@ class SQLQuery():
 
             res = query_df(df, query)
 
-            resp_dict = res.to_dict(orient='records')
+            result_set2 = ResultSet().from_df_cols(res, col_names)
 
-            # convert result to dict-dict structure
-            values = []
-            for row in resp_dict:
-                value = {}
-                for key, v in row.items():
-                    # find original table and col
-                    table, column = col_table_idx[key]
-                    if table not in value:
-                        value[table] = {}
-                    value[table][column] = v
-
-                values.append(value)
-
-            data = {
-                'tables': step_data['tables'],
-                'columns': step_data['columns'],
-                'values': values,
-                'types': step_data.get('types', {})
-            }
+            data = result_set2.to_step_data()
 
         elif type(step) == LimitOffsetStep:
             try:
                 step_data = steps_data[step.dataframe.step_num]
-                data = {
-                    'values': step_data['values'].copy(),
-                    'columns': step_data['columns'].copy(),
-                    'tables': step_data['tables'].copy(),
-                    'types': step_data.get('types', {}).copy(),
-                }
+                step_data = ResultSet().from_step_data(step_data)
+
+                step_data2 = ResultSet()
+                for col in step_data.get_columns():
+                    step_data2.add_column(col)
+
+                records = step_data.get_records()
+
                 if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
-                    data['values'] = data['values'][step.offset.value:]
+                    records = records[step.offset.value:]
                 if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
-                    data['values'] = data['values'][:step.limit.value]
+                    records = records[:step.limit.value]
+
+                step_data2.add_records(records)
+
+                data = step_data2.to_step_data()
+
             except Exception as e:
                 raise SqlApiUnknownError(f'error in limit offset step: {e}') from e
         elif type(step) == ProjectStep:
             try:
                 step_data = steps_data[step.dataframe.step_num]
+                rs_in = ResultSet().from_step_data(step_data)
+                rs_out = ResultSet(length=rs_in.length())
 
-                columns = ColumnsCollection()
                 for column_identifier in step.columns:
                     if type(column_identifier) == Star:
-                        for table_name, table_columns_list in step_data['columns'].group_by_table():
-                            for column in table_columns_list:
-                                columns.add(table_name, column)
+                        for column in rs_in.get_columns():
+                            rs_in.copy_column_to(column, rs_out)
 
                     elif type(column_identifier) == Identifier:
-                        appropriate_table = None
-                        columns_to_copy = None
 
                         column_name_parts = column_identifier.parts
                         column_alias = column_identifier.parts[-1] if column_identifier.alias is None else '.'.join(
                             column_identifier.alias.parts)
+
                         if len(column_name_parts) > 2:
                             raise ErSqlWrongArguments(
                                 f'Column name must contain no more than 2 parts. Got name: {column_identifier}')
                         elif len(column_name_parts) == 1:
                             column_name = column_name_parts[0]
 
-                            for table_name, table_columns in step_data['columns'].group_by_table():
-                                table_col_idx = {}
-                                for x in table_columns:
-                                    name = x[1] or x[0]
-                                    table_col_idx[name] = x
-
-                                column_exists = get_column_in_case(list(table_col_idx.keys()), column_name)
-                                if column_exists:
-                                    if appropriate_table is not None and not step.ignore_doubles:
-                                        raise ErLogicError(
-                                            f'Found multiple appropriate tables for column {column_name}')
-                                    else:
-                                        appropriate_table = table_name
-                                        new_col = (column_name, column_alias)
-                                        cur_col = table_col_idx[column_exists]
-
-                                        columns.add(appropriate_table, new_col)
-                                        if cur_col != new_col:
-                                            columns_to_copy = cur_col, new_col
-                                        break
-
-                            if appropriate_table is None:
+                            col_list = rs_in.find_columns(column_name)
+                            if len(col_list) == 0:
                                 raise SqlApiException(f'Can not find appropriate table for column {column_name}')
+                            elif len(col_list) > 1 and not step.ignore_doubles:
+                                raise ErLogicError(f'Found multiple appropriate tables for column {column_name}')
+
+                            col_added = rs_in.copy_column_to(col_list[0], rs_out)
+                            col_added.alias = column_alias
 
                         elif len(column_name_parts) == 2:
                             table_name_or_alias = column_name_parts[0]
                             column_name = column_name_parts[1]
 
-                            for table_name, table_columns in step_data['columns'].group_by_table():
-                                checking_table_name_or_alias = table_name[2] or table_name[1]
-                                if table_name_or_alias.lower() == checking_table_name_or_alias.lower():
-                                    # support select table.*
-                                    if isinstance(column_name, Star):
-                                        # add all by table
-                                        appropriate_table = table_name
-                                        for column in step_data['columns'].table_columns(appropriate_table):
-                                            columns.add(appropriate_table, column)
-                                        break
+                            # support select table.*
+                            if isinstance(column_name, Star):
+                                # add all by table
+                                for col in rs_in.find_columns(table_alias=table_name_or_alias):
+                                    rs_in.copy_column_to(col, rs_out)
+                            else:
+                                col_list = rs_in.find_columns(column_name, table_alias=table_name_or_alias)
+                                if len(col_list) == 0:
+                                    raise SqlApiException(f'Can not find appropriate table for column {table_name_or_alias}.{column_name}')
 
-                                    table_col_idx = {}
-                                    for x in table_columns:
-                                        name = x[1] or x[0]
-                                        table_col_idx[name] = x
-
-                                    column_exists = get_column_in_case(list(table_col_idx.keys()), column_name)
-                                    if column_exists:
-                                        appropriate_table = table_name
-                                        new_col = (column_name, column_alias)
-                                        cur_col = table_col_idx[column_exists]
-
-                                        columns.add(appropriate_table, new_col)
-                                        if cur_col != new_col:
-                                            columns_to_copy = cur_col, new_col
-
-                                        break
-                                    else:
-                                        raise ErLogicError(f'Can not find column "{column_name}" in table "{table_name}"')
-                            if appropriate_table is None:
-                                raise ErLogicError(f'Can not find appropriate table for column {column_name}')
+                                col_added = rs_in.copy_column_to(col_list[0], rs_out)
+                                col_added.alias = column_alias
                         else:
                             raise ErSqlWrongArguments('Undefined column name')
-
-                        if columns_to_copy is not None:
-                            col_from, col_to = columns_to_copy
-                            for row in step_data['values']:
-                                row[appropriate_table][col_to] = row[appropriate_table][col_from]
-                            # TODO copy types?
 
                     else:
                         raise ErKeyColumnDoesNotExist(f'Unknown column type: {column_identifier}')
 
-                data = {
-                    'tables': step_data['tables'],
-                    'columns': columns,
-                    'values': step_data['values'],  # TODO keep values only for columns
-                    'types': step_data.get('types', {})
-                }
+                data = rs_out.to_step_data()
             except Exception as e:
                 if isinstance(e, SqlApiException):
                     raise e
                 raise SqlApiUnknownError(f'error on project step: {e} ') from e
         elif type(step) == GroupByStep:
+            # used only in join of two regular tables
             step_data = steps_data[step.dataframe.step_num]
+            step_data = ResultSet().from_step_data(step_data)
 
-            result = []
-            cols = set()
-            for _, col_list in step_data['columns'].group_by_table():
-                for col in col_list:
-                    cols.add(col[1])
-
-            for row in step_data['values']:
-                data_row = {}
-                for table, col_list in step_data['columns'].group_by_table():
-                    for col in col_list:
-                        data_row[col[1]] = row[table][col]
-                result.append(data_row)
-
-            df = pd.DataFrame(result, columns=list(cols))
+            df = step_data.to_df()
 
             query = Select(targets=step.targets, from_table='df', group_by=step.columns).to_string()
             res = query_df(df, query)
 
-            resp_dict = res.to_dict(orient='records')
-
             # stick all columns to first table
-            appropriate_table = step_data['tables'][0]
+            appropriate_table = step_data.get_tables()[0]
 
-            columns_list = []
-            columns = []
-            for key, dtyp in res.dtypes.items():
-                columns_list.append(
-                    Column(database=appropriate_table[0],
-                           table_name=appropriate_table[1],
-                           table_alias=appropriate_table[2],
-                           name=key,
-                           type=dtyp,
-                           alias=key)
-                )
-                columns.append((key, key))
+            data = ResultSet()
 
-            values = []
-            for row in resp_dict:
-                row2 = {
-                    (key, key): value
-                    for key, value in row.items()
-                }
-
-                values.append(
-                    {
-                        appropriate_table: row2
-                    }
-                )
+            data.from_df(res, appropriate_table['database'], appropriate_table['table_name'], appropriate_table['table_alias'])
 
             # columns are changed
-            self.columns_list = columns_list
-            types = step_data.get('types', {})
-            columns_collection = ColumnsCollection()
-            for column in columns:
-                columns_collection.add(appropriate_table, column)
-            data = {
-                'tables': [appropriate_table],
-                'columns': columns_collection,
-                'values': values,
-                'types': types  # copy
-            }
+            self.columns_list = data.get_columns()
+
+            data = data.to_step_data()
 
         elif type(step) == SubSelectStep:
             step_data = steps_data[step.dataframe.step_num]
@@ -1433,7 +1375,7 @@ class SQLQuery():
 
             result2 = ResultSet()
             # get database from first column
-            database = result.columns[0].database
+            database = result.get_columns()[0].database
             result2.from_df(res, database, table_name)
 
             data = result2.to_step_data()
@@ -1449,69 +1391,43 @@ class SQLQuery():
                     is_replace = True
 
             step_data = step.dataframe.result_data
+            data = ResultSet().from_step_data(step_data)
             integration_name = step.table.parts[0]
-            table_name_parts = step.table.parts[1:]
+            table_name = Identifier(parts=step.table.parts[1:])
 
             dn = self.datahub.get(integration_name)
 
             if hasattr(dn, 'create_table') is False:
                 raise ErNotSupportedYet(f"Creating table in '{integration_name}' is not supporting")
 
-            # region del 'service' columns
-            new_columns = ColumnsCollection()
-            for table, column in step_data['columns']:
-                if column[-1] not in ('__mindsdb_row_id', '__mdb_forecast_offset'):
-                    new_columns.add(table, column)
-            step_data['columns'] = new_columns
-            # endregion
+            #  del 'service' columns
+            for col in data.find_columns('__mindsdb_row_id'):
+                data.del_column(col)
+            for col in data.find_columns('__mdb_forecast_offset'):
+                data.del_column(col)
 
             # region del columns filtered at projection step
             if self.columns_list is not None:
                 filtered_column_names = [x.name for x in self.columns_list]
-                new_table_columns = ColumnsCollection()
-                for table, column in step_data['columns']:
-                    if column[0].startswith('predictor.'):
-                        new_table_columns.append(column)
-                    elif column[0] in filtered_column_names:
-                        new_table_columns.append(column)
-                    step_data['columns'] = new_table_columns
+                for col in data.get_columns():
+                    if col.name.startswith('predictor.'):
+                        continue
+                    if col.name in filtered_column_names:
+                        continue
+                    data.del_column(col)
             # endregion
 
             # drop double names
             col_names = set()
-            if len(step_data['tables']) > 1:
-                # set prefixes for column if it doubled
-
-                for table in step_data['tables']:
-                    table_name = table[1]
-                    col_map = []
-                    col_list = []
-                    for column in step_data['columns'].table_columns(table):
-                        alias = column[1]
-                        if alias not in col_names:
-                            col_names.add(alias)
-                            col_list.append(column)
-                        else:
-                            column_new = (f'{table_name}.{column[0]}', f'{table_name}.{column[1]}')
-                            col_list.append(column_new)
-                            col_map.append([column, column_new])
-
-                    # replace columns
-                    step_data['columns'].del_table_columns(table)
-                    for column in col_list:
-                        step_data['columns'].add(table, column)
-
-                    # replace in values
-                    for row in step_data['values']:
-                        table_row = row[table]
-
-                        for column, column_new in col_map:
-                            table_row[column_new] = table_row.pop(column)
+            for col in data.get_columns():
+                if col.alias in col_names:
+                    data.del_column(col)
+                else:
+                    col_names.add(col.alias)
 
             dn.create_table(
-                table_name_parts=table_name_parts,
-                columns=step_data['columns'],
-                data=step_data['values'],
+                table_name=table_name,
+                result_set=data,
                 is_replace=is_replace,
                 is_create=is_create
             )
@@ -1555,16 +1471,15 @@ class SQLQuery():
             query_traversal(update_query, prepare_map_index)
 
             # check all params is input data:
-            data_header = [col.alias for col in result.columns]
+            data_header = [col.alias for col in result.get_columns()]
 
             for param_name, _ in params_map_index:
                 if param_name not in data_header:
                     raise ErSqlWrongArguments(f'Field {param_name} not found in input data. Input fields: {data_header}')
 
             # perform update
-            for values in result.records:
+            for row in result.get_records():
                 # run update from every row from input data
-                row = dict(zip(data_header, values))
 
                 # fill params:
                 for param_name, param in params_map_index:

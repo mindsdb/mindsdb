@@ -367,6 +367,7 @@ class BaseMLEngineExec:
 
         ml_handler.close()
 
+        columns_dtypes = dict(predictions.dtypes)
         # mdb indexes
         if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
             predictions['__mindsdb_row_id'] = df['__mindsdb_row_id']
@@ -380,4 +381,4 @@ class BaseMLEngineExec:
             columns_in_count=df.shape[1],
             rows_out_count=len(predictions)
         )
-        return predictions
+        return predictions, columns_dtypes

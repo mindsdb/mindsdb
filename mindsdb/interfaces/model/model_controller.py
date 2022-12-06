@@ -341,7 +341,7 @@ class ModelController():
 
         model_name = params['model_name']
         if base_predictor_record is None:
-            raise Exception(f"Error: model '{model_name}' does not exists")
+            raise Exception(f"Error: model '{model_name}' does not exist")
 
         # get max current version
         models = get_model_records(
@@ -369,7 +369,8 @@ class ModelController():
         params['set_active'] = set_active
         ml_handler.learn(**params)
 
-    def prepare_adjust_statement(self, statement, database_controller):
+    @staticmethod
+    def prepare_adjust_statement(statement, database_controller):
         project_name = statement.name.parts[0].lower()
         model_name = statement.name.parts[1].lower()
 
@@ -430,7 +431,7 @@ class ModelController():
 
         model_name = params['model_name']
         if base_predictor_record is None:
-            raise Exception(f"Error: model '{model_name}' does not exists")
+            raise Exception(f"Error: model '{model_name}' does not exist")
 
         # get max current version
         models = get_model_records(
@@ -450,14 +451,10 @@ class ModelController():
         if params['fetch_data_query'] is None:
             params['fetch_data_query'] = base_predictor_record.fetch_data_query
 
-        problem_definition = base_predictor_record.learn_args.copy()
-        problem_definition.update(params['problem_definition'])
-        params['problem_definition'] = problem_definition
-
-        params['is_retrain'] = False  # TODO: OK?
+        # params['is_retrain'] = False  # TODO: OK?
         params['set_active'] = set_active
-        params['overwrite'] = False # TODO: pending
-        ml_handler.adjust(**params)
+        params['overwrite'] = False  # TODO: pending, keep?
+        ml_handler.update(**params)
 
     def update_model_version(self, models, active=None):
         if active is None:

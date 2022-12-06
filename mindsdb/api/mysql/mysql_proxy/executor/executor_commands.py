@@ -9,6 +9,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatasource,
     RetrainPredictor,
     CreatePredictor,
+    AdjustPredictor,
     CreateMLEngine,
     DropMLEngine,
     DropDatasource,
@@ -174,6 +175,8 @@ class ExecuteCommands:
                 return self.answer_describe_predictor(statement.value.parts[-1])
         elif type(statement) == RetrainPredictor:
             return self.answer_retrain_predictor(statement)
+        elif type(statement) == AdjustPredictor:
+            return self.answer_adjust_predictor(statement)
         elif type(statement) == Show:
             sql_category = statement.category.lower()
             if hasattr(statement, 'modes'):
@@ -698,6 +701,53 @@ class ExecuteCommands:
                 )
         # endregion
         self.session.model_controller.retrain_model(statement, ml_handler)
+
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_adjust_predictor(self, statement):
+        # TODO: refactor into common method (some parts are verbatim from retrain)
+        if len(statement.name.parts) == 1:
+            statement.name.parts = [
+                self.session.database,
+                statement.name.parts[0]
+            ]
+        database_name, model_name = statement.name.parts
+
+        model_record = get_model_record(
+            name=model_name,
+            project_name=database_name,
+            except_absent=True
+        )
+
+        if statement.using is not None:
+            # repack using with lower names
+            statement.using = {k.lower(): v for k, v in statement.using.items()}
+
+        # use current ml handler
+        integration_record = get_predictor_integration(model_record)
+        if integration_record is None:
+            raise Exception('The ML engine that the model was trained with does not exist.')
+        ml_handler = self.session.integration_controller.get_handler(integration_record.name)
+
+        # region check if there is already predictor retraing
+        is_cloud = self.session.config.get('cloud', False)
+        if is_cloud and ctx.user_class == 0:
+            models = get_model_records(active=None)
+            longest_training = None
+            for p in models:
+                if (
+                    p.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
+                    and p.training_start_at is not None and p.training_stop_at is None
+                ):
+                    training_time = datetime.datetime.now() - p.training_start_at
+                    if longest_training is None or training_time > longest_training:
+                        longest_training = training_time
+            if longest_training is not None and longest_training > datetime.timedelta(hours=1):
+                raise SqlApiException(
+                    "Can't start model adjustment while in status 'training' or 'generating'"
+                )
+        # endregion
+        self.session.model_controller.adjust_model(statement, ml_handler)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 

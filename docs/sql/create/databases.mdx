@@ -179,11 +179,6 @@ However, if you have to `RETRAIN` your predictors, please ensure the database
 connection has the same name you used when creating the predictor to avoid
 failing to retrain.
 
-!!! info "Work in progress" Please note that this feature is a beta version. If
-you have questions about the supported data sources or experience some issues,
-[reach out to us on Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ)
-or open a [GitHub issue](https://github.com/mindsdb/mindsdb/issues).
-
 ## Supported Integrations
 
 The list of databases supported by MindsDB keeps growing. Here are the currently
@@ -514,6 +509,39 @@ integrations.
     </Tab>
 </Tabs>
 
+### Databend
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE databend_datasource     --- display name for the database
+    WITH ENGINE = 'databend',               --- name of the MindsDB handler
+    PARAMETERS = {
+      "protocol": " ",                      --- protocol used to query Databend (defaults to `native` if left blank); supported protocols: native, http, https
+      "user": " ",                          --- username used to authenticate with the Databend warehouse
+      "port": ,                             --- TCP/IP port of the Databend warehouse
+      "password": " ",                      --- password used to authenticate with the Databend warehouse
+      "host": " ",                          --- host name or IP address of the Databend warehouse (use '127.0.0.1' instead of 'localhost' when connecting to a local server)
+      "database": " "                       --- database name used when connecting to the Databend warehouse
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE databend_datasource
+    WITH ENGINE = 'databend',
+    PARAMETERS = {
+      "protocol": "native",
+      "user": "databend_user",
+      "port": 443,
+      "password": "password",
+      "host": "127.0.0.1",
+      "database": "databend_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
 ### Databricks
 
 <Tabs>
@@ -743,6 +771,31 @@ integrations.
     </Tab>
 </Tabs>
 
+### Google Sheets
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE sheets_datasource       --- display name for the database
+    WITH ENGINE = 'sheets',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "spreadsheet_id": " ",                --- unique ID of the Google Sheet
+      "sheet_name": " "                     --- name of the Google Sheet
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE sheets_datasource
+    WITH ENGINE = 'sheets',
+    PARAMETERS = {
+      "spreadsheet_id": "abc1234567",       --- located in the URL: https://docs.google.com/spreadsheets/d/abc1234567/edit#gid=0
+      "sheet_name": "Invoice"
+    };
+    ```
+    </Tab>
+</Tabs>
+
 ### Hive
 
 <Tabs>
@@ -771,6 +824,37 @@ integrations.
       "port": 10000,
       "database": "hive_db",
       "auth": "CUSTOM"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+### Impala
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE impala_datasource      --- display name for the database
+    WITH ENGINE = 'impala',                --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                         --- database user
+      "password": " ",                     --- database password
+      "host": " ",                         --- host name or IP address
+      "port": ,                            --- port used to make TCP/IP connection
+      "database": " "                      --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE impala_datasource
+    WITH ENGINE = 'impala',
+    PARAMETERS = {
+      "user": "impala_user",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 21050,
+      "database": "impala_db"
     };
     ```
     </Tab>
@@ -1157,6 +1241,39 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
     </Tab>
 </Tabs>
 
+### OrioleDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE orioledb_datasource      --- display name for the database
+    WITH ENGINE = 'orioledb',                --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                           --- database user
+      "password": " ",                       --- database password
+      "host": " ",                           --- host name or IP address
+      "port": ,                              --- port used to make TCP/IP connection
+      "server": " ",                         --- sets the current server
+      "database": " "                        --- sets the current database
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE orioledb_datasource
+    WITH ENGINE = 'orioledb',
+    PARAMETERS = {
+      "user": "orioledb_user",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 55505,
+      "server": "server_name",
+      "database": "oriole_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
 ### Pinot
 
 <Tabs>
@@ -1186,6 +1303,37 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
       "controller_port": 9000,
       "path": "/query/sql",
       "scheme": "http"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+### PlanetScale
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE planetscale_datasource     --- display name for the database
+    WITH ENGINE = 'planet_scale',              --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                             --- host name or IP address
+      "port": ,                                --- port used to make TCP/IP connection
+      "user": " ",                             --- database user
+      "password": " ",                         --- database password
+      "database": " "                          --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE planetscale_datasource
+    WITH ENGINE = 'planet_scale',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 3306,
+      "user": "planetscale_user",
+      "password": "password",
+      "database": "planetscale_db"
     };
     ```
     </Tab>
@@ -1439,6 +1587,74 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
     </Tab>
 </Tabs>
 
+### Solr
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE solr_datasource   --- display name for the database
+    WITH ENGINE = 'solr',             --- name of the MindsDB handler
+    PARAMETERS = {
+      "username": " ",                --- optional, username used to authenticate with the Solr server
+      "password": " ",                --- optional, password used to authenticate with the Solr server
+      "host": " ",                    --- host name or IP address of the Solr serve
+      "port": ,                       --- port number of the Solr server
+      "server_path": " ",             --- defaults to `solr` if left blank
+      "collection": " ",              --- Solr Collection name
+      "use_ssl": " "                  --- defaults to `false` if left blank; refer to https://pypi.org/project/sqlalchemy-solr/
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE solr_datasource
+    WITH ENGINE = 'solr',
+    PARAMETERS = {
+      "username": "solr_user",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 8981,
+      "server_path": "solr",
+      "collection": "collection_name",
+      "use_ssl": "false"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+### SQL Anywhere
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE sqlany_datasource   --- display name for the database
+    WITH ENGINE = 'sqlany',             --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                      --- username
+      "password": " ",                  --- password
+      "host": " ",                      --- host name or IP address of the SAP SQL Anywhere instance
+      "port": ,                         --- port number of the SAP SQL Anywhere instance
+      "server": " ",                    --- sets the current server
+      "database": " "                   --- sets the current database
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE sqlany_datasource
+    WITH ENGINE = 'sqlany',
+    PARAMETERS = {
+      "user": "sqlany_user",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 55505,
+      "server": "server_name",
+      "database": "sqlany_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
 ### SQLite
 
 <Tabs>
@@ -1493,25 +1709,56 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
     </Tab>
 </Tabs>
 
-### Teradata
+### TDEngine
 
 <Tabs>
     <Tab title="Template">
     ```sql
-    CREATE DATABASE display_name     --- display name for the database
-    WITH ENGINE = 'teradata',        --- name of the MindsDB handler
+    CREATE DATABASE tdengine_datasource   --- display name for the database
+    WITH ENGINE = 'tdengine',             --- name of the MindsDB handler
     PARAMETERS = {
-      "host": " ",                   --- host name or IP address
-      "user": " ",                   --- database user
-      "password": " ",               --- database password
-      "database": " ",               --- database name
-      "port":                        --- port used to make TCP/IP connection
+      "user": " ",                        --- server username
+      "password": " ",                    --- server password
+      "url": " ",                         --- URL to the TDEngine server (for local server, it is localhost:6041 by default)
+      "token": " ",                       --- unique token provided when using TDEngine Cloud
+      "database": " "                     --- database name
     };
     ```
     </Tab>
     <Tab title="Example">
     ```sql
-    CREATE DATABASE display_name
+    CREATE DATABASE tdengine_datasource
+    WITH ENGINE = 'tdengine',
+    PARAMETERS = {
+      "user": "tdengine_user",
+      "password": "password",
+      "url": "localhost:6041",
+      "token": "token",
+      "database": "tdengine_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+### Teradata
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE teradata_datasource     --- display name for the database
+    WITH ENGINE = 'teradata',               --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address
+      "user": " ",                          --- database user
+      "password": " ",                      --- database password
+      "database": " ",                      --- database name
+      "port":                               --- port used to make TCP/IP connection
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE teradata_datasource
     WITH ENGINE = 'teradata',
     PARAMETERS = {
       "host": "127.0.0.1",
@@ -1560,20 +1807,20 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 <Tabs>
     <Tab title="Template">
     ```sql
-    CREATE DATABASE display_name         --- display name for the database
-    WITH ENGINE = 'timescaledb',         --- name of the MindsDB handler
+    CREATE DATABASE timescaledb_datasource    --- display name for the database
+    WITH ENGINE = 'timescaledb',              --- name of the MindsDB handler
     PARAMETERS = {
-      "user": " ",                       --- database user
-      "password": " ",                   --- database password
-      "host": " ",                       --- host name or IP address
-      "port": ,                          --- port used to make TCP/IP connection
-      "database": " "                    --- database name
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "database": " "                         --- database name
     };
     ```
     </Tab>
     <Tab title="Example">
     ```sql
-    CREATE DATABASE display_name
+    CREATE DATABASE timescaledb_datasource
     WITH ENGINE = 'timescaledb',
     PARAMETERS = {
       "user": "timescaledb",
@@ -1678,20 +1925,20 @@ Follow the [Mongo API documentation](/mongo/collection-structure/) for details.
 <Tabs>
     <Tab title="Template">
     ```sql
-    CREATE DATABASE display_name       --- display name for the database
-    WITH ENGINE = 'yugabyte',          --- name of the MindsDB handler
+    CREATE DATABASE yugabyte_datasource       --- display name for the database
+    WITH ENGINE = 'yugabyte',                 --- name of the MindsDB handler
     PARAMETERS = {
-      "user": " ",                     --- database user
-      "password": " ",                 --- database password
-      "host": " ",                     --- host name or IP address
-      "port": ,                        --- port used to make TCP/IP connection
-      "database": " "                  --- database name
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "database": " "                         --- database name
     };
     ```
     </Tab>
     <Tab title="Example">
     ```sql
-    CREATE DATABASE display_name
+    CREATE DATABASE yugabyte_datasource
     WITH ENGINE = 'yugabyte',
     PARAMETERS = {
       "user": "yugabyte",

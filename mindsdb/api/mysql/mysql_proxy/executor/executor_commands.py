@@ -644,7 +644,7 @@ class ExecuteCommands:
             data=data
         )
 
-    def answer_retrain_predictor(self, statement):
+    def _get_model_record(self, statement):
         if len(statement.name.parts) == 1:
             statement.name.parts = [
                 self.session.database,
@@ -657,6 +657,29 @@ class ExecuteCommands:
             project_name=database_name,
             except_absent=True
         )
+        return model_record
+
+    def _sync_predictor_check(self, phase_name):
+        """ Checks if there is already a predictor retraining or adjusting """
+        is_cloud = self.session.config.get('cloud', False)
+        if is_cloud and ctx.user_class == 0:
+            models = get_model_records(active=None)
+            longest_training = None
+            for p in models:
+                if (
+                        p.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
+                        and p.training_start_at is not None and p.training_stop_at is None
+                ):
+                    training_time = datetime.datetime.now() - p.training_start_at
+                    if longest_training is None or training_time > longest_training:
+                        longest_training = training_time
+            if longest_training is not None and longest_training > datetime.timedelta(hours=1):
+                raise SqlApiException(
+                    f"Can't start {phase_name} process while predictor is in status 'training' or 'generating'"
+                )
+
+    def answer_retrain_predictor(self, statement):
+        model_record = self._get_model_record(statement)
 
         if statement.integration_name is None:
             if model_record.data_integration_ref is None:
@@ -682,42 +705,13 @@ class ExecuteCommands:
                 raise Exception('ML engine model was trained with does not esxists')
             ml_handler = self.session.integration_controller.get_handler(integration_record.name)
 
-        # region check if there is already predictor retraing
-        is_cloud = self.session.config.get('cloud', False)
-        if is_cloud and ctx.user_class == 0:
-            models = get_model_records(active=None)
-            longest_training = None
-            for p in models:
-                if (
-                    p.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
-                    and p.training_start_at is not None and p.training_stop_at is None
-                ):
-                    training_time = datetime.datetime.now() - p.training_start_at
-                    if longest_training is None or training_time > longest_training:
-                        longest_training = training_time
-            if longest_training is not None and longest_training > datetime.timedelta(hours=1):
-                raise SqlApiException(
-                    "Can't start retrain while exists predictor in status 'training' or 'generating'"
-                )
-        # endregion
+        self._sync_predictor_check(phase_name='retrain')
         self.session.model_controller.retrain_model(statement, ml_handler)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_adjust_predictor(self, statement):
-        # TODO: refactor into common method (some parts are verbatim from retrain)
-        if len(statement.name.parts) == 1:
-            statement.name.parts = [
-                self.session.database,
-                statement.name.parts[0]
-            ]
-        database_name, model_name = statement.name.parts
-
-        model_record = get_model_record(
-            name=model_name,
-            project_name=database_name,
-            except_absent=True
-        )
+        model_record = self._get_model_record(statement)
 
         if statement.using is not None:
             # repack using with lower names
@@ -729,24 +723,7 @@ class ExecuteCommands:
             raise Exception('The ML engine that the model was trained with does not exist.')
         ml_handler = self.session.integration_controller.get_handler(integration_record.name)
 
-        # region check if there is already predictor retraing
-        is_cloud = self.session.config.get('cloud', False)
-        if is_cloud and ctx.user_class == 0:
-            models = get_model_records(active=None)
-            longest_training = None
-            for p in models:
-                if (
-                    p.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
-                    and p.training_start_at is not None and p.training_stop_at is None
-                ):
-                    training_time = datetime.datetime.now() - p.training_start_at
-                    if longest_training is None or training_time > longest_training:
-                        longest_training = training_time
-            if longest_training is not None and longest_training > datetime.timedelta(hours=1):
-                raise SqlApiException(
-                    "Can't start model adjustment while in status 'training' or 'generating'"
-                )
-        # endregion
+        self._sync_predictor_check(phase_name='adjust')
         self.session.model_controller.adjust_model(statement, ml_handler)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)

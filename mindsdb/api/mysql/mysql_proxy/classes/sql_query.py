@@ -80,89 +80,6 @@ from mindsdb.utilities.cache import get_cache, json_checksum
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
 
 
-# class ColumnsCollection:
-#     def __init__(self):
-#         self.__columns = []
-#
-#     def add(self, table, column):
-#         self.__columns.append(tuple(table) + tuple(column))
-#
-#     def __getitem__(self, key):
-#         return self.__columns[key]
-#
-#     def __setitem__(self, key, value):
-#         self.__columns[key] = value
-#
-#     def __iter__(self):
-#         self.__n = 0
-#         return self
-#
-#     def __next__(self):
-#         n = self.__n
-#         if n < len(self.__columns):
-#             self.__n += 1
-#             return self.__columns[n][:3], self.__columns[n][3:]
-#         else:
-#             raise StopIteration
-#
-#     def __len__(self):
-#         return len(self.__columns)
-#
-#     def items(self):
-#         collection = defaultdict(list)
-#         for el in self.__columns:
-#             collection[el[:3]].append(el[3:])
-#         return collection.items()
-#
-#     def tables(self):
-#         return set(
-#             x[:3] for x in self.__columns
-#         )
-#
-#     def table_columns(self, table_name):
-#         return [x[3:] for x in self.__columns if x[:3] == table_name]
-#
-#     def extend(self, columns_collection):
-#         for table_name, column_name in columns_collection:
-#             self.add(table_name, column_name)
-#
-#     def group_by_table(self):
-#         groups = defaultdict(list)
-#         for x in self.__columns:
-#             groups[x[:3]].append(x[3:])
-#         return list(groups.items())
-#
-#     def del_duplicate_columns(self):
-#         col_idx = []
-#         to_del = []
-#         for i, col in enumerate(self.__columns):
-#             if col not in col_idx:
-#                 col_idx.append(col)
-#             else:
-#                 to_del.append(i)
-#
-#         to_del.sort(reverse=True)
-#         for i in to_del:
-#             self.__columns.pop(i)
-#
-#     def del_table_columns(self, table_name):
-#         self.__columns = [
-#             x for x in self.__columns
-#             if x[:3] != table_name
-#         ]
-#
-#     def from_dict(self, columns_dict):
-#         for table_name in columns_dict:
-#             for columns_name in columns_dict[table_name]:
-#                 self.add(table_name, columns_name)
-#
-#     def copy(self):
-#         new_obj = ColumnsCollection()
-#         for x in self.__columns:
-#             new_obj.add(x[:3], x[3:])
-#         return new_obj
-
-
 def get_preditor_alias(step, mindsdb_database):
     predictor_name = '.'.join(step.predictor.parts)
     predictor_alias = '.'.join(step.predictor.alias.parts) if step.predictor.alias is not None else predictor_name
@@ -320,36 +237,6 @@ class ResultSet:
 
     # --- converters ---
 
-    # def from_step_data(self, step_data):
-    #
-    #     for table, col_list in step_data['columns'].items():
-    #         for col in col_list:
-    #             type = None
-    #             if 'types' in step_data:
-    #                 type = step_data['types'].get(table, {}).get(col[0])
-    #             self._columns.append(Column(
-    #                 name=col[0],
-    #                 alias=col[1],
-    #                 type=type,
-    #                 table_name=table[1],
-    #                 table_alias=table[2],
-    #                 database=table[0]
-    #             ))
-    #
-    #     for row in step_data['values']:
-    #         data_row = []
-    #         for col in self._columns:
-    #             col_key = (col.name, col.alias)
-    #             table_key = (col.database, col.table_name, col.table_alias)
-    #             val = row[table_key][col_key]
-    #
-    #             data_row.append(val)
-    #
-    #         self._records.append(data_row)
-    #
-    #     self.is_prediction = step_data.get('is_prediction', False)
-    #     return self
-
     def from_df(self, df, database, table_name, table_alias=None):
 
         resp_dict = df.to_dict(orient='split')
@@ -392,40 +279,6 @@ class ResultSet:
             col_names[name] = col
 
         return pd.DataFrame(self._records, columns=columns), col_names
-
-    # def to_step_data(self):
-    #     step_data = {
-    #         'values': [],
-    #         'columns': ColumnsCollection(),
-    #         'types': {},
-    #         'tables': [],
-    #         'is_prediction': self.is_prediction
-    #     }
-    #
-    #     for col in self._columns:
-    #         col_key = (col.name, col.alias)
-    #         table_key = (col.database, col.table_name, col.table_alias)
-    #
-    #         if table_key not in step_data['tables']:
-    #             step_data['tables'].append(table_key)
-    #             step_data['types'][table_key] = {}
-    #
-    #         step_data['columns'].add(table_key, col_key)
-    #         if col.type is not None:
-    #             step_data['types'][table_key][col.name] = col.type
-    #
-    #     for rec in self._records:
-    #         row = {}
-    #         for table in step_data['tables']:
-    #             row[table] = {}
-    #         for i, col in enumerate(self._columns):
-    #             col_key = (col.name, col.alias)
-    #             table_key = (col.database, col.table_name, col.table_alias)
-    #
-    #             row[table_key][col_key] = rec[i]
-    #
-    #         step_data['values'].append(row)
-    #     return step_data
 
     # --- tables ---
 
@@ -655,12 +508,6 @@ class SQLQuery():
             result = data.to_df()
         else:
             result = data.get_records_raw()
-
-        # this is not used
-        # elif view == 'dict':
-        #     self.result = self._make_dict_result_view(data)
-        # else:
-        #     raise ErNotSupportedYet('Only "list" and "dict" views supported atm')
 
         return {
             'success': True,
@@ -1584,25 +1431,3 @@ class SQLQuery():
 
         return data2
 
-    # def _make_list_result_view(self, data):
-    #     result = []
-    #     for row in data['values']:
-    #         data_row = []
-    #         for column_record in self.columns_list:
-    #             table_name = (column_record.database, column_record.table_name, column_record.table_alias)
-    #             column_name = (column_record.name, column_record.alias)
-    #             if table_name in row is False:
-    #                 # try without alias
-    #                 table_name = (table_name[0], table_name[1], None)
-    #             data_row.append(row[table_name][column_name])
-    #         result.append(data_row)
-    #     return result
-
-    def _make_dict_result_view(self, data):
-        result = []
-        for row in data['values']:
-            data_row = {}
-            for table_name in row:
-                data_row.update(row[table_name])
-            result.append(data_row)
-        return result

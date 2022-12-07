@@ -725,3 +725,140 @@ paths:
                 type: object
                 items:
                   type: string
+  /tables:
+    post:
+      security:
+        - ApiKeyAuth: []
+      summary: This endpoint creates a new table with the predictions result-set.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_name:
+                  type: string
+                  description: Name of the project where the table is created
+                table_name:
+                  type: string
+                  description: Name of the table
+                query:
+                  type: string
+                  description: The SQL query that will save the result-set in a table.
+      responses:
+        '200':
+          description: Table created
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  'tables/{tableName}'
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: SELECT from Table
+      description: This endpoint retrieves the result-set from the Select on Table.
+      parameters:
+        - name: tableName
+          in: path
+          description: The name of the table
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object with SELECT data
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    delete:
+      security:
+        - ApiKeyAuth: []
+      summary: Deletes an existing view.
+      description: This endpoint deletes a table.
+      parameters:
+        - name: tableName
+          in: path
+          description: table name to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Succesfully deleted
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string

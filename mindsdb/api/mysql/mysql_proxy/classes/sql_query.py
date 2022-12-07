@@ -922,6 +922,8 @@ class SQLQuery():
                         )
                         if data is not None and isinstance(data, list):
                             predictor_cache.set(key, data)
+                    else:
+                        columns_dtypes = {}
 
                     if len(data) > 0:
                         cols = list(data[0].keys())

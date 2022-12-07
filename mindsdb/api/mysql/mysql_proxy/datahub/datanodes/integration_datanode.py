@@ -41,7 +41,7 @@ class IntegrationDataNode(DataNode):
     def get_table_columns(self, tableName):
         return []
 
-    def create_table(self, table_name:Identifier, result_set, is_replace=False, is_create=False):
+    def create_table(self, table_name: Identifier, result_set, is_replace=False, is_create=False):
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert

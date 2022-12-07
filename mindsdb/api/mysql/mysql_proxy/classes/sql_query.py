@@ -10,7 +10,7 @@
 """
 import copy
 import re
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 import hashlib
 import datetime as dt
 
@@ -63,7 +63,6 @@ from mindsdb_sql.planner.utils import query_traversal
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
-from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
     get_model_records,
     get_predictor_project

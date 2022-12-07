@@ -39,7 +39,7 @@ Where:
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `project_name`                                  | Name of the project where the model is created. By default, the `mindsdb` project is used.                                                      |
 | `predictor_name`                                | Name of the model to be created.                                                                                                                |
-| `integration_name`                              | Name of the integration created using the [`CREATE DATABASE`](/sql/create/databases/) statement or [file upload](/sql/api/select_files/). |
+| `integration_name`                              | Name of the integration created using the [`CREATE DATABASE`](/sql/create/databases/) statement or [file upload](/sql/api/select_files/).       |
 | `(SELECT column_name, ... FROM table_name)`     | Selecting data to be used for training and validation.                                                                                          |
 | `target_column`                                 | Column to be predicted.                                                                                                                         |
 | `engine_name`                                   | You can optionally provide an ML engine, based on which the model is created.                                                                   |
@@ -134,7 +134,7 @@ It grants access to configure how each column is encoded. By default, the AutoML
 
 ```sql
 ...
-USING encoders.[column_name].module = 'value';
+USING encoders.column_name.module = 'value';
 ```
 
 To learn more about `encoders` and their options, visit the [Lightwood documentation page on `encoders`](https://lightwood.io/encoder.html).
@@ -226,9 +226,9 @@ Where:
 
 | Name                          | Description                                                                       |
 | ----------------------------- | --------------------------------------------------------------------------------- |
-| `[predictor_name]`            | Name of the model to be created.                                                  |
-| `[file_name]`                 | Name of the file uploaded via the MindsDB editor.                                 |
-| `(SELECT * FROM [file_name])` | `SELECT` statement for selecting the data to be used for training and validation. |
+| `predictor_name`              | Name of the model to be created.                                                  |
+| `file_name`                   | Name of the file uploaded via the MindsDB editor.                                 |
+| `(SELECT * FROM file_name)`   | `SELECT` statement for selecting the data to be used for training and validation. |
 | `target_column`               | `target_column` is the column to be predicted.                                    |
 
 ### Example

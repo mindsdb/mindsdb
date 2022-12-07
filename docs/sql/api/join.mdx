@@ -12,18 +12,18 @@ The `JOIN` clause combines rows from the database table and the model table on a
 Here is the syntax:
 
 ```sql
-SELECT t.[column_name], p.[column_name] ...
-FROM [integration_name].[table_name] AS t
-JOIN mindsdb.[predictor_name] AS p;
+SELECT t.column_name, p.column_name, ...
+FROM integration_name.table_name AS t
+JOIN mindsdb.predictor_name AS p;
 ```
 
 On execution, we get:
 
 ```sql
 +-----------------+-----------------+
-| t.[column_name] | p.[column_name] |
+| t.column_name   | p.column_name   |
 +-----------------+-----------------+
-| t.[value]       | p.[value]       |
+| t.value         | p.value         |
 +-----------------+-----------------+
 ```
 
@@ -31,8 +31,8 @@ Where:
 
 | Name                                | Description                                                         |
 | ----------------------------------- | ------------------------------------------------------------------- |
-| `[integration_name].[table_name]`   | Name of the data source table used as input for making predictions. |
-| `mindsdb.[predictor_name]`          | Name of the model table used to make predictions.                   |
+| `integration_name.table_name`       | Name of the data source table used as input for making predictions. |
+| `mindsdb.predictor_name`            | Name of the model table used to make predictions.                   |
 | `p.value`                           | Predicted value stored in the output table.                         |
 
 ## Example 1

@@ -154,6 +154,15 @@
                 "rest/models/query-model",
                 "rest/models/delete-model"
               ]
+            },
+            {
+              "group": "Views",
+              "pages":[
+                "rest/views/create-view",
+                "rest/views/list-view",
+                "rest/views/list-views",
+                "rest/views/delete-views"
+              ]
             }
           ]
         },

@@ -6,7 +6,7 @@ MindsDB can be integrated with the most popular databases, as well as with the D
 
 To try out MindsDB right away without bringing in your own data or models, follow our [Quickstart guide](/quickstart/).
 
-### 1. Choose your MindsDB installation path.
+### 1. Create a MindsDB Cloud Account or Install MindsDB Locally
 
 <Tabs>
   <Tab title="MindsDB Cloud">
@@ -17,13 +17,13 @@ To try out MindsDB right away without bringing in your own data or models, follo
     instructions using [Docker](/setup/self-hosted/docker/).
   </Tab>
   <Tab title="pip">
-    You can also install MindsDB from source using pip
-    [Windows](/setup/self-hosted/pip/windows/) ,
-    [Mac](/setup/self-hosted/pip/macos/), [Linux](/setup/self-hosted/pip/linux/)
+    You can also install MindsDB using pip on
+    [Windows](/setup/self-hosted/pip/windows/),
+    [Mac](/setup/self-hosted/pip/macos/), and [Linux](/setup/self-hosted/pip/linux/)
   </Tab>
 </Tabs>
 
-### 2. Open your SQL client and connect to MindsDB.
+### 2. Connect to MindsDB from a SQL Client
 
 <Tip>
   If you do not have a preferred SQL client yet, we recommend using the [MindsDB
@@ -37,53 +37,72 @@ To try out MindsDB right away without bringing in your own data or models, follo
     <Tab title="MindsDB Cloud">
         a. Create a new MySQL connection.
 
-        ![DBeaver Create Connection](/assets/dbeaver-create-connection.png)
+            ![DBeaver Create Connection](/assets/dbeaver-create-connection.png)
 
-        b. Configure it using the following parameters, as well as the username and password you created above.
+        b. Configure it using the parameters below, as well as your username and password.
 
-        ```
-            Host: mysql.mindsdb.com
-            Port: 3306
-            Database: mindsdb
-        ```
+            ```
+            Host: `mysql.mindsdb.com`
+            Port: `3306`
+            Database: `mindsdb`
+            ```
 
-        ![DBeaver Configure Connection](/assets/dbeaver-configure-cloud-connection.png)
+            ![DBeaver Configure Connection](/assets/dbeaver-configure-cloud-connection.png)
     </Tab>
     <Tab title="Docker">
         a. Create a new MySQL connection.
 
-        ![DBeaver Create Connection](/assets/dbeaver-create-connection.png)
+            ![DBeaver Create Connection](/assets/dbeaver-create-connection.png)
 
         b. Configure it using the following parameters:
 
-        ```
-            Host: localhost
-            Port: 47335
-            Database: mindsdb
-            Username: mindsdb
-            Password: [leave it empty]
-        ```
+            ```
+            Host: `localhost`
+            Port: `47335`
+            Database: `mindsdb`
+            Username: `mindsdb`
+            Password: <leave it empty>
+            ```
 
-        ![DBeaver Configure Connection](/assets/dbeaver-configure-docker-connection.png)
+            ![DBeaver Configure Connection](/assets/dbeaver-configure-docker-connection.png)
     </Tab>
 
 </Tabs>
 
-### 3. Connect your data to MindsDB using [`CREATE DATABASE`](https://docs.mindsdb.com/sql/create/databases/).
+### 3. Connect your Data to MindsDB Using [`CREATE DATABASE`](https://docs.mindsdb.com/sql/create/databases/)
 
-![DBeaver Create Database](/assets/dbeaver-create-database.png)
+```sql
+CREATE DATABASE example_data
+WITH ENGINE = "postgres",
+PARAMETERS = {
+  "user": "demo_user",
+  "password": "demo_password",
+  "host": "3.220.66.106",
+  "port": "5432",
+  "database": "demo"
+};
+```
 
-### 4. You can now preview the available data with a standard `SELECT` statement.
+### 4. Preview the Available Data Using [`SELECT`](/sql/api/select/)
 
-![DBeaver Preview Data](/assets/dbeaver-preview-data.png)
+```sql
+SELECT *
+FROM example_data.demo_data.home_rentals
+LIMIT 10;
+```
 
-### 5. Now you are ready to create your model, using CREATE MODEL
+### 5. Create a Model Using [`CREATE MODEL`](/sql/create/predictor/)
 
 If you already have a model in MLFlow, you can connect to your model.
 
 <Tabs>
-    <Tab title="MindsDB is creating my model">
-        ![DBeaver Create Predictor](/assets/dbeaver-create-predictor-simple.png)
+    <Tab title="MindsDB creates my model">
+        ```sql
+        CREATE MODEL mindsdb.home_rentals_predictor
+        FROM example_data
+            (SELECT * FROM demo_data.home_rentals)
+        PREDICT rental_price;
+        ```
     </Tab>
     <Tab title="My model is in MLflow">
         ```html
@@ -106,12 +125,28 @@ If you already have a model in MLFlow, you can connect to your model.
 
 </Tabs>
 
-### 6. The [`SELECT`](/sql/api/select) statement allows you to make predictions based on features.
+### 6. Make Predictions Using [`SELECT`](/sql/api/select/)
 
-![DBeaver Home Rentals Prediction](/assets/dbeaver-home-rentals-prediction.png)
-![DBeaver Home Rentals Prediction Results](/assets/dbeaver-home-rentals-prediction-results.png)
+```sql
+SELECT rental_price
+FROM mindsdb.home_rentals_predictor
+WHERE number_of_bathrooms = 2
+AND sqft = 1000;
+```
 
-### 7. To integrate your predictions into your DBT workflow, you will need to make four changes:
+On execution, we get:
+
+```sql
++--------------+
+| rental_price |
++--------------+
+| 1130         |
++--------------+
+```
+
+### 7. Integrate your Predictions into the DBT Workflow
+
+To do so, you need to make the following changes:
 
 <CodeGroup>
 ```yml profiles.yml

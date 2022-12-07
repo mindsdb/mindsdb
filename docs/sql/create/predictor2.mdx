@@ -7,6 +7,13 @@ sidebarTitle: Train a Model
 
 The `CREATE MODEL` statement creates and trains a machine learning (ML) model.
 
+<Info>
+    **Updated the `CREATE PREDICTOR` Statement**
+
+    Please note that the `CREATE MODEL` statement is equivalent to the `CREATE PREDICTOR` statement.
+    We are transitioning to the `CREATE MODEL` statement, but the `CREATE PREDICTOR` statement still works.
+</Info>
+
 ## Syntax
 
 Here is the syntax:
@@ -32,14 +39,14 @@ Where:
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `project_name`                                  | Name of the project where the model is created. By default, the `mindsdb` project is used.                                                      |
 | `predictor_name`                                | Name of the model to be created.                                                                                                                |
-| `integration_name`                              | Name of the integration created using the [`#!sql CREATE DATABASE`](/sql/create/databases/) statement or [file upload](/sql/api/select_files/). |
+| `integration_name`                              | Name of the integration created using the [`CREATE DATABASE`](/sql/create/databases/) statement or [file upload](/sql/api/select_files/). |
 | `(SELECT column_name, ... FROM table_name)`     | Selecting data to be used for training and validation.                                                                                          |
 | `target_column`                                 | Column to be predicted.                                                                                                                         |
 | `engine_name`                                   | You can optionally provide an ML engine, based on which the model is created.                                                                   |
 | `tag_name`                                      | You can optionally provide a tag that is visible in the `training_options` column of the `mindsdb.models` table.                                |
 
 <Tip>
-    **Checking Model Status** After you run the `#!sql CREATE MODEL` statement, you can check the status of the training process by querying the `#!sql mindsdb.models` table.
+    **Checking Model Status** After you run the `CREATE MODEL` statement, you can check the status of the training process by querying the `mindsdb.models` table.
 
     ```sql
     SELECT *
@@ -77,7 +84,7 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-To check the predictor status, query the [`#!sql mindsdb.models`](/sql/table-structure/#the-predictors-table) table.
+To check the predictor status, query the [`mindsdb.models`](/sql/table-structure/#the-predictors-table) table.
 
 ```sql
 SELECT *
@@ -99,7 +106,7 @@ On execution, we get:
 
 ### Description
 
-In MindsDB, the underlying AutoML models are based on the [Lightwood](https://lightwood.io/) engine by default. This library generates models automatically based on the data and declarative problem definition. But the default configuration can be overridden using the `#!sql USING` statement that provides an option to configure specific parameters of the training process.
+In MindsDB, the underlying AutoML models are based on the [Lightwood](https://lightwood.io/) engine by default. This library generates models automatically based on the data and declarative problem definition. But the default configuration can be overridden using the `USING` statement that provides an option to configure specific parameters of the training process.
 
 In the upcoming version of MindsDB, it will be possible to choose another ML framework. Please note that the Lightwood engine is used by default.
 
@@ -121,7 +128,7 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-#### `#!sql encoders` Key
+#### `encoders` Key
 
 It grants access to configure how each column is encoded. By default, the AutoML engine tries to get the best match for the data.
 
@@ -130,9 +137,9 @@ It grants access to configure how each column is encoded. By default, the AutoML
 USING encoders.[column_name].module = 'value';
 ```
 
-To learn more about `#!sql encoders` and their options, visit the [Lightwood documentation page on `#!sql encoders`](https://lightwood.io/encoder.html).
+To learn more about `encoders` and their options, visit the [Lightwood documentation page on `encoders`](https://lightwood.io/encoder.html).
 
-#### `#!sql model` Key
+#### `model` Key
 
 It allows you to specify the type of machine learning algorithm to learn from the encoder data.
 
@@ -155,15 +162,15 @@ Module options:
 | [**SkTime**](https://lightwood.io/mixer.html#mixer.SkTime)               | This mixer is a wrapper around the popular time series library sktime.                                                                                                                                                                                                    |
 | [**Unit**](https://lightwood.io/mixer.html#mixer.Unit)                   | Special mixer that passes along whatever prediction is made by the target encoder without modifications. It is used for single-column predictive scenarios that may involve complex and/or expensive encoders (e.g. free-form text classification with transformers).     |
 
-To learn more about all the `#!sql model` options, visit the [Lightwood documentation page](https://lightwood.io/mixer.html).
+To learn more about all the `model` options, visit the [Lightwood documentation page](https://lightwood.io/mixer.html).
 
 #### Other Keys Supported by Lightwood in JsonAI
 
-The most common use cases of configuring predictors use `#!sql encoders` and `#!sql model` keys explained above. To see all the available keys, check out the [Lightwood documentation page on JsonAI](https://lightwood.io/api/types.html#api.types.JsonAI).
+The most common use cases of configuring predictors use `encoders` and `model` keys explained above. To see all the available keys, check out the [Lightwood documentation page on JsonAI](https://lightwood.io/api/types.html#api.types.JsonAI).
 
 ### Example
 
-Here we use the `home_rentals` dataset and specify particular `#!sql encoders` for some columns and a LightGBM `#!sql model`.
+Here we use the `home_rentals` dataset and specify particular `encoders` for some columns and a LightGBM `model`.
 
 ```sql
 CREATE MODEL mindsdb.home_rentals_model
@@ -190,7 +197,7 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-## `#!sql CREATE MODEL` From File
+## `CREATE MODEL` From File
 
 To create a predictor from a file, you should first upload a file to MindsDB. Follow [this guide](https://docs.mindsdb.com/sql/create/file/) to see how to do that.
 
@@ -241,7 +248,7 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-## `#!sql CREATE MODEL` For Time Series Models
+## `CREATE MODEL` For Time Series Models
 
 ### Description
 
@@ -282,7 +289,7 @@ Where:
 | `HORIZON int`                            | It is optional. The number of future predictions. It is 1 by default.                                                                                                                                                                                              |
 
 <Warning>
-    **Getting a Prediction from a Time Series Model** Due to the nature of time series forecasting, you need to use the [`#!sql JOIN`](/sql/api/join) statement to get results.
+    **Getting a Prediction from a Time Series Model** Due to the nature of time series forecasting, you need to use the [`JOIN`](/sql/api/join) statement to get results.
 </Warning>
 
 ### Example
@@ -306,7 +313,7 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-Now, to get the results, we use the [`#!sql JOIN`](/sql/api/join) statement.
+Now, to get the results, we use the [`JOIN`](/sql/api/join) statement.
 
 ```sql
 SELECT im.product_id, im.date, im.units_in_inventory AS predicted_units_in_inventory

@@ -771,12 +771,12 @@ paths:
                 type: object
                 items:
                   type: string
-  'tables/{tableName}'
+  '/tables/{tableName}':
     get:
       security:
         - ApiKeyAuth: []
       summary: SELECT from Table
-      description: This endpoint retrieves the result-set from the Select on Table.
+      description: This endpoint retrieves the Select result-set from the table.
       parameters:
         - name: tableName
           in: path
@@ -820,7 +820,7 @@ paths:
     delete:
       security:
         - ApiKeyAuth: []
-      summary: Deletes an existing view.
+      summary: Deletes an existing table.
       description: This endpoint deletes a table.
       parameters:
         - name: tableName

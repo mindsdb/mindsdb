@@ -9,7 +9,7 @@ MindsDB introduces the `PROJECT` entity that lets you create projects to store y
 
 ### Creating `PROJECTS`
 
-You can create projects to store your models, making the structure like:
+You can create projects to store your models, making the structure like this:
 
 ```
 project_alpha
@@ -49,6 +49,7 @@ There are two ways you can list all your databases and projects:
     | mindsdb              |
     | project_alpha        |
     | project_beta         |
+    | files                |
     +----------------------+
     ```
 
@@ -68,6 +69,7 @@ There are two ways you can list all your databases and projects:
     | mindsdb              | project  | [NULL]    |
     | project_alpha        | project  | [NULL]    |
     | project_beta         | project  | [NULL]    |
+    | files                | data     | files     |
     +----------------------+----------+-----------+
     ```
 
@@ -87,7 +89,9 @@ Query OK, 0 rows affected (x.xxx sec)
 
 <Note>
    **Cannot Drop a Project**
-   Please note that if your project stores at least one model, it cannot be removed. In this case, you should first drop all the models belonging to this project, and then, you can remove the project.
+
+   Please note that if your project stores at least one table, it cannot be removed. In this case, you should first drop all the tables, such as models and views, belonging to this project, and then, you can remove the project.
+   Please see the [Example](#example) section for details.
 </Note>
 
 ## Working with `MODELS`
@@ -208,6 +212,7 @@ On execution, we get:
 
 <Note>
    **Example**
+
     If there is more training data available, you don't need to recreate your model. Instead, use the `RETRAIN` command.
 
     ```sql
@@ -287,6 +292,7 @@ On execution, we get:
 
 <Note>
    **Default Tables**
+
     Please note that each project contains two tables by default. These are the `models` table and the `models_versions` table.
 </Note>
 
@@ -328,6 +334,7 @@ There are also shortcut commands to query for the tables:
 
    <Note>
       **How to Set a Default Project**
+      
       The default project is set to `mindsdb`. If you want to change it, run the `USE project_name;` command.
    </Note>
    
@@ -368,3 +375,98 @@ There are also shortcut commands to query for the tables:
     |model_b                  |MODEL      |
     +-------------------------+-----------+
     ```
+
+## Example
+
+Let's create a project.
+
+```sql
+CREATE DATABASE my_project;
+```
+
+To verify that the project was created successfully, let's run the command below.
+
+```sql
+SHOW FULL DATABASES;
+```
+
+On execution, we get:
+
+```sql
++------------------+-------+------+
+|Database          |TYPE   |ENGINE|
++------------------+-------+------+
+|information_schema|system |[NULL]|
+|mindsdb           |project|[NULL]|
+|my_project        |project|[NULL]|
+|files             |data   |files |
++------------------+-------+------+
+```
+
+<Note>
+    **Default Databases**
+
+    Please note that `information_schema`, `mindsdb`, and `files` are the default databases. For more information, please visit our docs on [MindsDB default structure](/sql/table-structure/).
+</Note>
+
+Now we create a model within the project.
+
+```sql
+CREATE MODEL my_project.my_model
+FROM example_db
+    (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price;
+```
+
+Also, let's create a view.
+
+```sql
+CREATE VIEW my_project.my_view (
+    SELECT * 
+    FROM example_db.demo_data.home_rentals
+);
+```
+
+Here is what we have in the `my_project` project.
+
+```sql
+SHOW TABLES FROM my_project;
+```
+
+On execution, we get:
+
+```sql
++--------------------+
+|Tables_in_my_project|
++--------------------+
+|models              |
+|models_versions     |
+|my_model            |
+|my_view             |
++--------------------+
+```
+
+Let's try to delete our project.
+
+```sql
+DROP DATABASE my_project;
+```
+
+On execution, we get:
+
+```sql
+Project 'my_project' can not be deleted, because it contains tables: my_model, my_view
+```
+
+Users should remove all project content before dropping a project.
+
+```sql
+DROP MODEL my_project.my_model;
+DROP VIEW my_project.my_view;
+```
+
+Now we can proceed to drop a project.
+
+```sql
+DROP DATABASE my_project;
+```

@@ -1,5 +1,6 @@
 ---
-title: "DBeaver"
+title: MindsDB and DBeaver
+sidebarTitle: DBeaver
 ---
 
 DBeaver is a database tool that allows you to connect to and work with
@@ -28,9 +29,6 @@ Now it's time to fill in the connection details.
 
 There are two options, as below.
 
-You can connect to your MindsDB Cloud account. To do that, please use the
-connection details below:
-
 <Tabs>
   <Tab title="Connecting to MindsDB Cloud account">
     You can connect to your MindsDB Cloud account. To do that, please use the connection details below:
@@ -38,9 +36,9 @@ connection details below:
     ```
     Hostname: `cloud.mindsdb.com`
     Port: `3306`
-    Username: *your MindsDB Cloud username*  # your Mindsdb Cloud email address is your username
-    Password: *your MindsDB Cloud password*
-    Database: *leave it empty*
+    Username: <your MindsDB Cloud username>
+    Password: <your MindsDB Cloud password>
+    Database: <leave it empty>
     ```
 
   </Tab>
@@ -51,8 +49,8 @@ connection details below:
     Hostname: `127.0.0.1`
     Port: `47334`
     Username: `mindsdb`
-    Password: *leave it empty*
-    Database: *leave it empty*
+    Password: <leave it empty>
+    Database: <leave it empty>
     ```
   </Tab>
 
@@ -77,20 +75,19 @@ To finally make sure that our MinsdDB database connection works, let's run some
 queries.
 
 ```sql
-SELECT *
-FROM mindsdb.models;
+SHOW FULL DATABASES;
 ```
 
 On execution, we get:
 
 ```sql
-+-------------------------+--------+------------------+------------------+-------------+---------------+-----+-----------------+----------------+
-|name                     |status  |accuracy          |predict           |update_status|mindsdb_version|error|select_data_query|training_options|
-+-------------------------+--------+------------------+------------------+-------------+---------------+-----+-----------------+----------------+
-|house_sales_model        |complete|0.4658770134240238|ma                |up_to_date   |22.7.5.1       |     |                 |                |
-|process_quality_predictor|complete|1.0               |silica_concentrate|up_to_date   |22.7.5.1       |     |                 |                |
-|home_rentals_model       |complete|0.9991920992432087|rental_price      |up_to_date   |22.7.4.0       |     |                 |                |
-+-------------------------+--------+------------------+------------------+-------------+---------------+-----+-----------------+----------------+
++----------------------+---------+--------+
+| Database             | TYPE    | ENGINE |
++----------------------+---------+--------+
+| information_schema   | system  | [NULL] |
+| mindsdb              | project | [NULL] |
+| files                | data    | files  |
++----------------------+---------+--------+
 ```
 
 Here is how it looks in DBeaver:

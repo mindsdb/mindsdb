@@ -23,9 +23,9 @@ from mindsdb.interfaces.database.integrations import IntegrationController
 
 
 class SessionController:
-    '''
+    """
     This class manages the server session
-    '''
+    """
 
     def __init__(self) -> object:
         """
@@ -56,13 +56,9 @@ class SessionController:
         while i in self.prepared_stmts and i < 100:
             i = i + 1
         if i == 100:
-            raise Exception('Too many unclosed queries')
+            raise Exception("Too many unclosed queries")
 
-        self.prepared_stmts[i] = dict(
-            type=None,
-            statement=statement,
-            fetched=0
-        )
+        self.prepared_stmts[i] = dict(type=None, statement=statement, fetched=0)
         return i
 
     def unregister_stmt(self, stmt_id):
@@ -70,12 +66,12 @@ class SessionController:
 
     def to_json(self):
         return {
-                "username": self.username,
-                "auth": self.auth,
-                "database": self.database,
-                "prepared_stmts": self.prepared_stmts,
-                "packet_sequence_number": self.packet_sequence_number,
-                }
+            "username": self.username,
+            "auth": self.auth,
+            "database": self.database,
+            "prepared_stmts": self.prepared_stmts,
+            "packet_sequence_number": self.packet_sequence_number,
+        }
 
 
 class ServerSessionContorller(SessionController):
@@ -83,6 +79,7 @@ class ServerSessionContorller(SessionController):
     The difference with SessionController is that there is an id in this one.
     The instance uses the id to synchronize its settings with the appropriate
     ServiceSessionController instance on the Executor side."""
+
     def __init__(self):
         super().__init__()
         self.id = f"session_{uuid4()}"
@@ -93,10 +90,16 @@ class ServerSessionContorller(SessionController):
         else:
             self.executor_url = "http://localhost:5500"
 
-        logger.info("%s.__init__: executor url - %s", self.__class__.__name__, self.executor_url)
+        logger.info(
+            "%s.__init__: executor url - %s", self.__class__.__name__, self.executor_url
+        )
 
     def __del__(self):
         """Terminate the appropriate ServiceSessionController instance as well."""
         url = self.executor_url + "/" + "session"
-        logger.info("%s.__del__: delete an appropriate ServiceSessionController with, id - %s on the Executor service side", self.__class__.__name__, self.id)
-        requests.delete(url, json={"id":self.id})
+        logger.info(
+            "%s.__del__: delete an appropriate ServiceSessionController with, id - %s on the Executor service side",
+            self.__class__.__name__,
+            self.id,
+        )
+        requests.delete(url, json={"id": self.id})

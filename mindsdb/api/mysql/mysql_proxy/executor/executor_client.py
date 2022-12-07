@@ -3,12 +3,12 @@ import traceback
 import pickle
 from uuid import uuid4
 import requests
-from mindsdb.utilities.log import (
-    get_log
-)
+from mindsdb.utilities.log import get_log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.libs.net_helpers import sending_attempts
+
 logger = get_log("main")
+
 
 class ExecutorClient:
     """The class has the same public API with Executor
@@ -34,7 +34,9 @@ class ExecutorClient:
             self.base_url = "http://localhost:5500"
             logger.debug("%s.__init__: %s", self.__class__.__name__, os.environ)
 
-        logger.debug("%s.__init__: executor url - %s", self.__class__.__name__, self.base_url)
+        logger.debug(
+            "%s.__init__: executor url - %s", self.__class__.__name__, self.base_url
+        )
         self.sqlserver = sqlserver
         self.session = session
         self.query = None
@@ -48,8 +50,8 @@ class ExecutorClient:
         self.is_executed = False
 
         # additional attributes used in handling query process
-        self.sql = ''
-        self.sql_lower = ''
+        self.sql = ""
+        self.sql_lower = ""
 
     def to_mysql_columns(self):
         return self.columns
@@ -65,7 +67,7 @@ class ExecutorClient:
 
         Raises:
             Exception if all attempts were failed.
-    
+
         """
         _type = _type.lower()
         call = getattr(requests, _type)
@@ -83,9 +85,12 @@ class ExecutorClient:
 
     def __del__(self):
         """Delete the appropriate ExecutorService instance(on the side of Executor service) as well."""
-        logger.debug("%s.%s: delete an appropriate executor instance on the serverside", self.__class__.__name__, self.id)
+        logger.debug(
+            "%s.%s: delete an appropriate executor instance on the serverside",
+            self.__class__.__name__,
+            self.id,
+        )
         self._do("/executor", "delete", json={"id": self.id})
-
 
     def default_json(self):
         """Store all required data to instanciate ExecutorService instance into json."""
@@ -94,21 +99,26 @@ class ExecutorClient:
         else:
             connection_id = -1
         return {
-        # We have to send context between client and server
-        # here we dump the current value of the context
-        # to send it to the Executor service
+            # We have to send context between client and server
+            # here we dump the current value of the context
+            # to send it to the Executor service
             "id": self.id,
             "connection_id": connection_id,
             "session_id": self.session.id,
             "session": self.session.to_json(),
             "context": ctx.dump(),
-                }
+        }
 
     def _update_attrs(self, response_json: dict):
         """Updates attributes by values received from the Executor service."""
         for attr in response_json:
             if hasattr(self, attr):
-                logger.debug("%s: updating %s attribute, new value - %s", self.__class__.__name__, attr, response_json[attr])
+                logger.debug(
+                    "%s: updating %s attribute, new value - %s",
+                    self.__class__.__name__,
+                    attr,
+                    response_json[attr],
+                )
                 setattr(self, attr, response_json[attr])
 
     def stmt_prepare(self, sql):
@@ -118,25 +128,45 @@ class ExecutorClient:
         response = None
         try:
             response = self._do("stmt_prepare", _type="post", json=json_data)
-            logger.info("%s.stmt_prepare result:status_code=%s", self.__class__.__name__, response.status_code)
-            logger.debug("%s.stmt_prepare result:body=%s", self.__class__.__name__, response.text)
+            logger.info(
+                "%s.stmt_prepare result:status_code=%s",
+                self.__class__.__name__,
+                response.status_code,
+            )
+            logger.debug(
+                "%s.stmt_prepare result:body=%s", self.__class__.__name__, response.text
+            )
         except Exception:
             msg = traceback.format_exc()
-            logger.error("%s.stmt_prepare: request has finished with error: %s", self.__class__.__name__, msg)
+            logger.error(
+                "%s.stmt_prepare: request has finished with error: %s",
+                self.__class__.__name__,
+                msg,
+            )
         try:
             resp = response.json()
         except Exception as e:
-            logger.error("%s.stmt_prepare: error reading response json: %s", self.__class__.__name__, e)
+            logger.error(
+                "%s.stmt_prepare: error reading response json: %s",
+                self.__class__.__name__,
+                e,
+            )
             raise e
         if response.status_code != requests.codes.ok and "error" in resp:
             err_msg = resp["error"]
-            logger.error("%s.stmt_prepare: executor service returned an error - %s", err_msg)
+            logger.error(
+                "%s.stmt_prepare: executor service returned an error - %s", err_msg
+            )
             raise Exception(err_msg)
         try:
             self._update_attrs(resp)
         except Exception as e:
             msg = traceback.format_exc()
-            logger.error("%s.stmt_prepare: error reading response json: %s", self.__class__.__name__, msg)
+            logger.error(
+                "%s.stmt_prepare: error reading response json: %s",
+                self.__class__.__name__,
+                msg,
+            )
             raise e
 
     def stmt_execute(self, param_values):
@@ -148,28 +178,48 @@ class ExecutorClient:
         response = None
         try:
             response = self._do("stmt_execute", _type="post", json=param_values)
-            logger.info("%s.stmt_execute result:status_code=%s", self.__class__.__name__, response.status_code)
-            logger.debug("%s.stmt_execute result:body=%s", self.__class__.__name__, response.text)
+            logger.info(
+                "%s.stmt_execute result:status_code=%s",
+                self.__class__.__name__,
+                response.status_code,
+            )
+            logger.debug(
+                "%s.stmt_execute result:body=%s", self.__class__.__name__, response.text
+            )
         except Exception:
             msg = traceback.format_exc()
-            logger.error("%s.stmt_execute: request has finished with error: %s", self.__class__.__name__, msg)
+            logger.error(
+                "%s.stmt_execute: request has finished with error: %s",
+                self.__class__.__name__,
+                msg,
+            )
 
         try:
             resp = response.json()
         except Exception as e:
-            logger.error("%s.stmt_execute: error reading response json: %s", self.__class__.__name__, e)
+            logger.error(
+                "%s.stmt_execute: error reading response json: %s",
+                self.__class__.__name__,
+                e,
+            )
             raise e
 
         if response.status_code != requests.codes.ok and "error" in resp:
             err_msg = resp["error"]
-            logger.error("%s.stmt_execute: executor service returned an error - %s", err_msg)
+            logger.error(
+                "%s.stmt_execute: executor service returned an error - %s", err_msg
+            )
             raise Exception(err_msg)
 
         try:
             self._update_attrs(resp)
         except Exception as e:
             msg = traceback.format_exc()
-            logger.error("%s.stmt_execute: error reading response json: %s", self.__class__.__name__, msg)
+            logger.error(
+                "%s.stmt_execute: error reading response json: %s",
+                self.__class__.__name__,
+                msg,
+            )
             raise e
 
     def query_execute(self, sql):
@@ -179,40 +229,66 @@ class ExecutorClient:
         response = None
         try:
             response = self._do("query_execute", _type="post", json=json_data)
-            logger.info("%s.query_execute result:status_code=%s", self.__class__.__name__, response.status_code)
-            logger.debug("%s.query_execute result:body=%s", self.__class__.__name__, response.text)
+            logger.info(
+                "%s.query_execute result:status_code=%s",
+                self.__class__.__name__,
+                response.status_code,
+            )
+            logger.debug(
+                "%s.query_execute result:body=%s",
+                self.__class__.__name__,
+                response.text,
+            )
         except Exception:
             msg = traceback.format_exc()
-            logger.error("%s.query_execute: request has finished with error: %s", self.__class__.__name__, msg)
+            logger.error(
+                "%s.query_execute: request has finished with error: %s",
+                self.__class__.__name__,
+                msg,
+            )
 
         try:
             resp = response.json()
         except Exception as e:
-            logger.error("%s.query_execute: error reading response json: %s", self.__class__.__name__, e)
+            logger.error(
+                "%s.query_execute: error reading response json: %s",
+                self.__class__.__name__,
+                e,
+            )
             raise e
 
         if response.status_code != requests.codes.ok and "error" in resp:
             err_msg = resp["error"]
-            logger.error("%s.query_execute: executor service returned an error - %s", err_msg)
+            logger.error(
+                "%s.query_execute: executor service returned an error - %s", err_msg
+            )
             raise Exception(err_msg)
 
         try:
             self._update_attrs(resp)
         except Exception as e:
             msg = traceback.format_exc()
-            logger.error("%s.query_execute: error reading response json: %s", self.__class__.__name__, msg)
+            logger.error(
+                "%s.query_execute: error reading response json: %s",
+                self.__class__.__name__,
+                msg,
+            )
             raise e
 
     def execute_external(self, sql):
         json_data = self.default_json()
         json_data["sql"] = sql
-        logger.info("%s.execute_external[NOT IMPLEMENTED]: json=%s", self.__class__.__name__, json_data)
+        logger.info(
+            "%s.execute_external[NOT IMPLEMENTED]: json=%s",
+            self.__class__.__name__,
+            json_data,
+        )
         return
 
     def parse(self, sql):
         self.sql = sql
         sql_lower = sql.lower()
-        self.sql_lower = sql_lower.replace('`', '')
+        self.sql_lower = sql_lower.replace("`", "")
 
         json_data = self.default_json()
         json_data["sql"] = sql
@@ -220,15 +296,27 @@ class ExecutorClient:
         response = None
         try:
             response = self._do("parse", _type="post", json=json_data)
-            logger.info("%s.parse result:status_code=%s", self.__class__.__name__, response.status_code)
-            logger.debug("%s.parse result:body=%s", self.__class__.__name__, response.text)
+            logger.info(
+                "%s.parse result:status_code=%s",
+                self.__class__.__name__,
+                response.status_code,
+            )
+            logger.debug(
+                "%s.parse result:body=%s", self.__class__.__name__, response.text
+            )
         except Exception:
             msg = traceback.format_exc()
-            logger.debug("%s.parse: request has finished with error: %s", self.__class__.__name__, msg)
+            logger.debug(
+                "%s.parse: request has finished with error: %s",
+                self.__class__.__name__,
+                msg,
+            )
         try:
             resp = response.json()
         except Exception as e:
-            logger.error("%s.parse: error reading response json: %s", self.__class__.__name__, e)
+            logger.error(
+                "%s.parse: error reading response json: %s", self.__class__.__name__, e
+            )
             raise e
 
         if response.status_code != requests.codes.ok and "error" in resp:
@@ -240,7 +328,11 @@ class ExecutorClient:
             self._update_attrs(resp)
         except Exception as e:
             msg = traceback.format_exc()
-            logger.error("%s.parse: error reading response json: %s", self.__class__.__name__, msg)
+            logger.error(
+                "%s.parse: error reading response json: %s",
+                self.__class__.__name__,
+                msg,
+            )
             raise e
 
     def do_execute(self):
@@ -250,17 +342,31 @@ class ExecutorClient:
         logger.info("%s.do_execute: json=%s", self.__class__.__name__, json_data)
         try:
             response = self._do("do_execute", _type="post", json=json_data)
-            logger.info("%s.do_execute result:status_code=%s", self.__class__.__name__, response.status_code)
-            logger.debug("%s.do_execute result:body=%s", self.__class__.__name__, response.text)
+            logger.info(
+                "%s.do_execute result:status_code=%s",
+                self.__class__.__name__,
+                response.status_code,
+            )
+            logger.debug(
+                "%s.do_execute result:body=%s", self.__class__.__name__, response.text
+            )
         except Exception as e:
             msg = traceback.format_exc()
-            logger.error("%s.do_execute: request has finished with error: %s", self.__class__.__name__, msg)
+            logger.error(
+                "%s.do_execute: request has finished with error: %s",
+                self.__class__.__name__,
+                msg,
+            )
             raise e
 
         try:
             resp = response.json()
         except Exception as e:
-            logger.error("%s.do_execute: error reading response json: %s", self.__class__.__name__, e)
+            logger.error(
+                "%s.do_execute: error reading response json: %s",
+                self.__class__.__name__,
+                e,
+            )
             raise e
 
         if response.status_code != requests.codes.ok and "error" in resp:
@@ -272,5 +378,9 @@ class ExecutorClient:
             self._update_attrs(resp)
         except Exception as e:
             msg = traceback.format_exc()
-            logger.error("%s.do_execute: error reading response json: %s", self.__class__.__name__, msg)
+            logger.error(
+                "%s.do_execute: error reading response json: %s",
+                self.__class__.__name__,
+                msg,
+            )
             raise e

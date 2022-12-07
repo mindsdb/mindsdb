@@ -23,7 +23,7 @@ from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.integrations.handlers_client.base_client import BaseClient, Switcher
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
@@ -36,7 +36,7 @@ logger = get_log()
 
 @Switcher
 class MLClient(BaseClient):
-    """ The client to connect to MLHanlder service
+    """The client to connect to MLHanlder service
 
     MLClient must provide same set of public API methods as MLHandlers do,
     including calling params and returning types.
@@ -53,8 +53,9 @@ class MLClient(BaseClient):
             company_id - id of the company.
             Last two args needed to instantiante engine and model storages
     """
+
     def __init__(self, **handler_kwargs: dict):
-        """ Init MLClient
+        """Init MLClient
 
         Args:
         as_service: supports back compatibility with the legacy.
@@ -77,7 +78,11 @@ class MLClient(BaseClient):
             logger.info("%s __init__: %s", self.__class__.__name__, msg)
         else:
             self.base_url = f"http://{host}:{port}"
-            logger.info("%s.__init__: ML Service base url - %s", self.__class__.__name__, self.base_url)
+            logger.info(
+                "%s.__init__: ML Service base url - %s",
+                self.__class__.__name__,
+                self.base_url,
+            )
         super().__init__(as_service=as_service)
 
         # need always instantiate handler instance
@@ -86,35 +91,54 @@ class MLClient(BaseClient):
 
         # remove all 'object' params from dict before sending it to the serverside.
         # all of them will be created there
-        for arg in ("handler_controller", "file_storage", "storage_factory", "handler_class"):
+        for arg in (
+            "handler_controller",
+            "file_storage",
+            "storage_factory",
+            "handler_class",
+        ):
             if arg in self.handler_kwargs:
                 del self.handler_kwargs[arg]
 
     def default_json(self):
         return {
-                "context": ctx.dump(),
-                "handler_args": self.handler_kwargs,
-                }
+            "context": ctx.dump(),
+            "handler_args": self.handler_kwargs,
+        }
 
     def get_columns(self, table_name: str) -> Response:
-        logger.info("%s.get_columns is calling with table_name - %s", self.__class__.__name__, table_name)
+        logger.info(
+            "%s.get_columns is calling with table_name - %s",
+            self.__class__.__name__,
+            table_name,
+        )
         response = None
         try:
             params = self.default_json()
             params["method_params"] = {"table_name": table_name}
             r = self._do("/get_columns", json=params)
             r = self._convert_response(r.json())
-            response = Response(data_frame=r.get("data_frame", None),
-                                resp_type=r.get("resp_type"),
-                                error_code=r.get("error_code", 0),
-                                error_message=r.get("error_message", None),
-                                query=r.get("query"))
-            logger.info("%s.get_columns: ml service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            response = Response(
+                data_frame=r.get("data_frame", None),
+                resp_type=r.get("resp_type"),
+                error_code=r.get("error_code", 0),
+                error_message=r.get("error_message", None),
+                query=r.get("query"),
+            )
+            logger.info(
+                "%s.get_columns: ml service has replied. error_code - %s",
+                self.__class__.__name__,
+                response.error_code,
+            )
         except Exception as e:
-            response = Response(error_message=str(e),
-                                error_code=1,
-                                resp_type=RESPONSE_TYPE.ERROR)
-            logger.error("%s.get_columns: call to ml service has finished with an error - %s", self.__class__.__name__, traceback.format_exc())
+            response = Response(
+                error_message=str(e), error_code=1, resp_type=RESPONSE_TYPE.ERROR
+            )
+            logger.error(
+                "%s.get_columns: call to ml service has finished with an error - %s",
+                self.__class__.__name__,
+                traceback.format_exc(),
+            )
 
         return response
 
@@ -126,22 +150,34 @@ class MLClient(BaseClient):
             params["method_params"] = {}
             r = self._do("/get_tables", json=params)
             r = self._convert_response(r.json())
-            response = Response(data_frame=r.get("data_frame", None),
-                                resp_type=r.get("resp_type"),
-                                error_code=r.get("error_code", 0),
-                                error_message=r.get("error_message", None),
-                                query=r.get("query"))
-            logger.info("%s.get_tables: ml service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            response = Response(
+                data_frame=r.get("data_frame", None),
+                resp_type=r.get("resp_type"),
+                error_code=r.get("error_code", 0),
+                error_message=r.get("error_message", None),
+                query=r.get("query"),
+            )
+            logger.info(
+                "%s.get_tables: ml service has replied. error_code - %s",
+                self.__class__.__name__,
+                response.error_code,
+            )
         except Exception as e:
-            response = Response(error_message=str(e),
-                                error_code=1,
-                                resp_type=RESPONSE_TYPE.ERROR)
-            logger.error("%s.get_tables: call to ml service has finished with an error - %s", self.__class__.__name__, traceback.format_exc())
+            response = Response(
+                error_message=str(e), error_code=1, resp_type=RESPONSE_TYPE.ERROR
+            )
+            logger.error(
+                "%s.get_tables: call to ml service has finished with an error - %s",
+                self.__class__.__name__,
+                traceback.format_exc(),
+            )
 
         return response
 
     def learn(
-        self, model_name, project_name,
+        self,
+        model_name,
+        project_name,
         data_integration_ref=None,
         fetch_data_query=None,
         problem_definition=None,
@@ -153,94 +189,152 @@ class MLClient(BaseClient):
     ):
 
         calling_params = {
-                "model_name": model_name,
-                "project_name": project_name,
-                "data_integration_ref": data_integration_ref,
-                "fetch_data_query": fetch_data_query,
-                "problem_definition": problem_definition,
-                "join_learn_process": join_learn_process,
-                "label": label,
-                "version": version,
-                "is_retrain": is_retrain,
-                "set_active": set_active,
-                }
-        logger.info("%s.learn is calling with params - %s", self.__class__.__name__, calling_params)
+            "model_name": model_name,
+            "project_name": project_name,
+            "data_integration_ref": data_integration_ref,
+            "fetch_data_query": fetch_data_query,
+            "problem_definition": problem_definition,
+            "join_learn_process": join_learn_process,
+            "label": label,
+            "version": version,
+            "is_retrain": is_retrain,
+            "set_active": set_active,
+        }
+        logger.info(
+            "%s.learn is calling with params - %s",
+            self.__class__.__name__,
+            calling_params,
+        )
         response = None
         try:
             params = self.default_json()
             params["method_params"] = calling_params
             r = self._do("/learn", _type="post", json=params)
             r = self._convert_response(r.json())
-            response = Response(data_frame=r.get("data_frame", None),
-                                resp_type=r.get("resp_type"),
-                                error_code=r.get("error_code", 0),
-                                error_message=r.get("error_message", None),
-                                query=r.get("query"))
-            logger.info("%s.learn: ml service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            response = Response(
+                data_frame=r.get("data_frame", None),
+                resp_type=r.get("resp_type"),
+                error_code=r.get("error_code", 0),
+                error_message=r.get("error_message", None),
+                query=r.get("query"),
+            )
+            logger.info(
+                "%s.learn: ml service has replied. error_code - %s",
+                self.__class__.__name__,
+                response.error_code,
+            )
         except Exception as e:
-            response = Response(error_message=str(e),
-                                error_code=1,
-                                resp_type=RESPONSE_TYPE.ERROR)
-            logger.error("%s.learn: call to ml service has finished with an error - %s", self.__class__.__name__, traceback.format_exc())
+            response = Response(
+                error_message=str(e), error_code=1, resp_type=RESPONSE_TYPE.ERROR
+            )
+            logger.error(
+                "%s.learn: call to ml service has finished with an error - %s",
+                self.__class__.__name__,
+                traceback.format_exc(),
+            )
         return response
 
     def native_query(self, query: str) -> Response:
-        logger.info("%s.native_query is calling with query - %s", self.__class__.__name__, query)
+        logger.info(
+            "%s.native_query is calling with query - %s", self.__class__.__name__, query
+        )
         response = None
         try:
             params = self.default_json()
             params["method_params"] = {"query": query}
             r = self._do("/native_query", json=params)
             r = self._convert_response(r.json())
-            response = Response(data_frame=r.get("data_frame", None),
-                                resp_type=r.get("resp_type"),
-                                error_code=r.get("error_code", 0),
-                                error_message=r.get("error_message", None),
-                                query=r.get("query"))
-            logger.info("%s.native_query: ml service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            response = Response(
+                data_frame=r.get("data_frame", None),
+                resp_type=r.get("resp_type"),
+                error_code=r.get("error_code", 0),
+                error_message=r.get("error_message", None),
+                query=r.get("query"),
+            )
+            logger.info(
+                "%s.native_query: ml service has replied. error_code - %s",
+                self.__class__.__name__,
+                response.error_code,
+            )
         except Exception as e:
-            response = Response(error_message=str(e),
-                                error_code=1,
-                                resp_type=RESPONSE_TYPE.ERROR)
-            logger.error("%s.native_query: call to ml service has finished with an error - %s", self.__class__.__name__, traceback.format_exc())
+            response = Response(
+                error_message=str(e), error_code=1, resp_type=RESPONSE_TYPE.ERROR
+            )
+            logger.error(
+                "%s.native_query: call to ml service has finished with an error - %s",
+                self.__class__.__name__,
+                traceback.format_exc(),
+            )
         return response
 
-    def predict(self, model_name: str, data: list, pred_format: str = 'dict',
-                project_name: str = None, version=None, params: dict = None):
+    def predict(
+        self,
+        model_name: str,
+        data: list,
+        pred_format: str = "dict",
+        project_name: str = None,
+        version=None,
+        params: dict = None,
+    ):
 
         calling_params = {
-                "model_name": model_name,
-                "data": data,
-                "pred_format": pred_format,
-                "project_name": project_name,
-                "version": version,
-                "params": params,
-                }
-        logger.info("%s.predict is calling with params - %s", self.__class__.__name__, calling_params)
+            "model_name": model_name,
+            "data": data,
+            "pred_format": pred_format,
+            "project_name": project_name,
+            "version": version,
+            "params": params,
+        }
+        logger.info(
+            "%s.predict is calling with params - %s",
+            self.__class__.__name__,
+            calling_params,
+        )
         response = None
         try:
             params = self.default_json()
             params["method_params"] = calling_params
             r = self._do("/predict", json=params)
             r = self._convert_response(r.json())
-            response = Response(data_frame=r.get("data_frame", None),
-                                resp_type=r.get("resp_type"),
-                                error_code=r.get("error_code", 0),
-                                error_message=r.get("error_message", None),
-                                query=r.get("query"))
+            response = Response(
+                data_frame=r.get("data_frame", None),
+                resp_type=r.get("resp_type"),
+                error_code=r.get("error_code", 0),
+                error_message=r.get("error_message", None),
+                query=r.get("query"),
+            )
             if response.error_code != 0 and reponse.error_message is not None:
-                logger.error("%s.predict: got error in ml service reply - %s", self.__class__.__name__, response.error_message)
+                logger.error(
+                    "%s.predict: got error in ml service reply - %s",
+                    self.__class__.__name__,
+                    response.error_message,
+                )
                 raise Exception(response.error_message)
-            logger.info("%s.predict: ml service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            logger.info(
+                "%s.predict: ml service has replied. error_code - %s",
+                self.__class__.__name__,
+                response.error_code,
+            )
             r = response.data_frame.to_dict(orient="records")
-            logger.info("%s.predict: ml service has replied. predictions - %s(type - %s)", self.__class__.__name__, r, type(r))
+            logger.info(
+                "%s.predict: ml service has replied. predictions - %s(type - %s)",
+                self.__class__.__name__,
+                r,
+                type(r),
+            )
             return r
         except Exception as e:
-            logger.error("%s.predict: call to ml service has finished with an error - %s", self.__class__.__name__, traceback.format_exc())
+            logger.error(
+                "%s.predict: call to ml service has finished with an error - %s",
+                self.__class__.__name__,
+                traceback.format_exc(),
+            )
             raise e
 
     def query(self, query: ASTNode) -> Response:
-        logger.info("%s.query is calling with query - %s", self.__class__.__name__, query)
+        logger.info(
+            "%s.query is calling with query - %s", self.__class__.__name__, query
+        )
         response = None
         try:
             query_b = pickle.dumps(query)
@@ -250,15 +344,25 @@ class MLClient(BaseClient):
             params["method_params"] = {"query": s_query}
             r = self._do("/query", json=params)
             r = self._convert_response(r.json())
-            response = Response(data_frame=r.get("data_frame", None),
-                                resp_type=r.get("resp_type"),
-                                error_code=r.get("error_code", 0),
-                                error_message=r.get("error_message", None),
-                                query=r.get("query"))
-            logger.info("%s.query: ml service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            response = Response(
+                data_frame=r.get("data_frame", None),
+                resp_type=r.get("resp_type"),
+                error_code=r.get("error_code", 0),
+                error_message=r.get("error_message", None),
+                query=r.get("query"),
+            )
+            logger.info(
+                "%s.query: ml service has replied. error_code - %s",
+                self.__class__.__name__,
+                response.error_code,
+            )
         except Exception as e:
-            response = Response(error_message=str(e),
-                                error_code=1,
-                                resp_type=RESPONSE_TYPE.ERROR)
-            logger.error("%s.query: call to ml service has finished with an error - %s", self.__class__.__name__, traceback.format_exc())
+            response = Response(
+                error_message=str(e), error_code=1, resp_type=RESPONSE_TYPE.ERROR
+            )
+            logger.error(
+                "%s.query: call to ml service has finished with an error - %s",
+                self.__class__.__name__,
+                traceback.format_exc(),
+            )
         return response

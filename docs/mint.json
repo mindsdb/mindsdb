@@ -126,7 +126,8 @@
             "sql/api/drop",
             "sql/api/select",
             "sql/api/select-files",
-            "sql/api/join"
+            "sql/api/join",
+            "sql/api/use"
           ]
         },
         {
@@ -201,24 +202,6 @@
         {
           "group": "Community Tutorials",
           "pages": [
-            {
-              "group": "Regression",
-              "pages": [
-                "sql/tutorials/insurance-cost-prediction",
-                "sql/tutorials/bodyfat",
-                "sql/tutorials/process-quality"
-              ]
-            },
-            {
-              "group": "Classification",
-              "pages": [
-                "sql/tutorials/crop-prediction",
-                "sql/tutorials/diabetes",
-                "sql/tutorials/spam_emails_tutorial",
-                "sql/tutorials/mushrooms",
-                "sql/tutorials/heart-disease"
-              ]
-            },
             "tutorials"
           ]
         },

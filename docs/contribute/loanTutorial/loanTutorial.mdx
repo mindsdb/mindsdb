@@ -66,7 +66,7 @@ Now that you have loaded your dataset, you are now to...
 Creating a predictor in MindsDB is as easy as four lines of code. Copy and paste the code below into your SQL editor to make a predictor
 
 ```
-CREATE PREDICTOR mindsdb.loanPredictor
+CREATE MODEL mindsdb.loanPredictor
 FROM files (
     SELECT * FROM files.loanData
 ) PREDICT good_bad_flag;
@@ -79,7 +79,7 @@ If all is successfull, you should see this screen below:
 To confirm this and view details of your model like the accuracy, use the following code:
 
 ```
-SELECT * FROM mindsdb.predictors WHERE name='loanPredictor';
+SELECT * FROM mindsdb.models WHERE name='loanPredictor';
 ```
 
 and you can see details of your model...

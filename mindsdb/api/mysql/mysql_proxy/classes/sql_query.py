@@ -1430,4 +1430,3 @@ class SQLQuery():
                 data2.append(row)
 
         return data2
-

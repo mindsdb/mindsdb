@@ -510,3 +510,173 @@ paths:
                 type: object
                 items:
                   type: string
+  '/models/{modelName}/retrain':
+    post:
+      security:
+        - ApiKeyAuth: []
+      summary: This endpoint retrains existing model.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                modelName:
+                  type: string
+                  description: Name of the model
+      responses:
+        '200':
+          description: Model training started
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  /views:
+    post:
+      security:
+        - ApiKeyAuth: []
+      summary: This endpoint creates a view which is a result-set of the SELECT statement.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_name:
+                  type: string
+                  description: Name of the project where the view is created
+                view_name:
+                  type: string
+                  description: Name of the view
+                query:
+                  type: string
+                  description: The SQL query that will save the result-set in a view.
+      responses:
+        '200':
+          description: View created
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: List all views in a project
+      description: This endpoint returns a list of all views
+      responses:
+        '200':
+          description: A JSON object with view names
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/views/{viewName}':
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: SELECT from VIEW
+      description: This endpoint retrieves the result-set from the view.
+      parameters:
+        - name: viewName
+          in: path
+          description: The name of the view
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object with SELECT data
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: View not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string

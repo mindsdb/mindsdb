@@ -680,3 +680,48 @@ paths:
                 type: object
                 items:
                   type: string
+    delete:
+      security:
+        - ApiKeyAuth: []
+      summary: Deletes an existing view.
+      description: This endpoint deletes a view.
+      parameters:
+        - name: viewName
+          in: path
+          description: view name to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Succesfully deleted
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: View not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string

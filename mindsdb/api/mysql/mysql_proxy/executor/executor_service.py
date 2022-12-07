@@ -9,10 +9,10 @@ from mindsdb.utilities.log import (
 
 
 if __name__ == "__main__":
-    Config()
+    config = Config()
     db.init()
-    # initialize_log(logger_name="main")
-    logger = get_log("main")
+    initialize_log(config=config, logger_name="mindsdb")
+    logger = get_log()
     app = ExecutorService()
     port = int(os.environ.get('PORT', 5500))
     host = os.environ.get('HOST', '0.0.0.0')

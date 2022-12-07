@@ -15,7 +15,14 @@ class ExecutorClient:
     It is used to work with Executor service.
     Thus instead of handling all incoming requests in place,
     it forwards them to Executor service, recieves responses and
-    returns results back to a calling code."""
+    returns results back to a calling code.
+
+    IMPORTANT: Since when MindsDB works in 'modularity' mode
+    ExecutorClient and ExecutorService do the same work as
+    Executor in monolithic mode these three objects have to have
+    same public API
+    """
+
     def __init__(self, session, sqlserver):
         self.id = f"executor_{uuid4()}"
         self.headers = {"Content-Type": "application/json"}

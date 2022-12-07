@@ -1,5 +1,4 @@
 import os
-import json
 from mindsdb.utilities.log import get_log
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
@@ -9,18 +8,15 @@ from mindsdb.utilities.log import (
     get_log
 )
 
-# log = get_log()
+log = get_log()
 
 
 if __name__ == "__main__":
-    Config()
+    config = Config()
     db.init()
-    logger = get_log("main")
-    params = os.environ.get('PARAMS', '{}')
-    kwargs = json.loads(params)
-    if "name" not in kwargs:
-        kwargs["name"] = __name__
-    app = MLHandlerWrapper(**kwargs)
+    initialize_log(config=config, logger_name="mindsdb")
+    logger = get_log()
+    app = MLHandlerWrapper(__name__)
     port = int(os.environ.get('PORT', 5001))
     host = os.environ.get('HOST', '0.0.0.0')
     logger.info("Running ML service: host=%s, port=%s", host, port)

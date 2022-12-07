@@ -21,12 +21,6 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.database.integrations import IntegrationController
 
-from mindsdb.interfaces.model.model_controller import ModelController
-from mindsdb.interfaces.database.integrations import IntegrationController
-from mindsdb.interfaces.database.views import ViewController
-from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.database.database import DatabaseController
-
 
 class SessionController:
     '''
@@ -99,57 +93,10 @@ class ServerSessionContorller(SessionController):
         else:
             self.executor_url = "http://localhost:5500"
 
-        logger.debug("%s.__init__: executor url - %s", self.__class__.__name__, self.executor_url)
+        logger.info("%s.__init__: executor url - %s", self.__class__.__name__, self.executor_url)
 
     def __del__(self):
         """Terminate the appropriate ServiceSessionController instance as well."""
         url = self.executor_url + "/" + "session"
+        logger.info("%s.__del__: delete an appropriate ServiceSessionController with, id - %s on the Executor service side", self.__class__.__name__, self.id)
         requests.delete(url, json={"id":self.id})
-
-
-# class ServiceSessionController(SessionController):
-#     """Slight modification of SessionController class to use it in Executor service.
-#     The class doens't depend from mysql server."""
-# 
-#     def __init__(self):
-#         """
-#         Initialize the session
-#         :param company_id:
-#         """
-# 
-#         self.username = None
-#         self.auth = False
-#         self.logging = logger
-#         self.database = None
-# 
-#         self.config = Config()
-# 
-#         self.model_controller = WithKWArgsWrapper(
-#             ModelController(),
-#             company_id=company_id
-#         )
-# 
-#         self.integration_controller = WithKWArgsWrapper(
-#             IntegrationController(),
-#             company_id=company_id
-#         )
-# 
-#         self.view_controller = WithKWArgsWrapper(
-#             ViewController(),
-#             company_id=company_id
-#         )
-# 
-#         self.project_controller = WithKWArgsWrapper(
-#             ProjectController(),
-#             company_id=company_id
-#         )
-# 
-#         self.database_controller = WithKWArgsWrapper(
-#             DatabaseController(),
-#             company_id=company_id
-#         )
-# 
-#         self.datahub = init_datahub(self)
-# 
-#         self.prepared_stmts = {}
-#         self.packet_sequence_number = 0

@@ -29,17 +29,10 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.handler_helpers import get_handler
-# from mindsdb.utilities.log import logger
-# import logging
-# logger = logging.getLogger("mindsdb.main")
-from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import (
-    initialize_log,
     get_log
 )
-Config()
-initialize_log(logger_name="main")
-logger = get_log("main")
+logger = get_log()
 
 
 class BaseDBWrapper:
@@ -47,9 +40,6 @@ class BaseDBWrapper:
 
     def __init__(self, **kwargs):
         name = kwargs.get("name", self.__class__.__name__)
-        # _type = kwargs.get("type")
-        # handler_class = get_handler(_type)
-        # self.handler = handler_class(**kwargs)
         self.app = Flask(name)
 
         # self.index becomes a flask API endpoint
@@ -118,14 +108,14 @@ class DBHandlerWrapper(BaseDBWrapper):
 
     def check_connection(self):
         """Check connection to the database server."""
-        logger.info("%s: calling 'check_connection'", self.__class__.__name__)
+        logger.info("%s.check_connection: calling 'check_connection'", self.__class__.__name__)
         try:
             handler = self.get_handler(request.json)
             result = handler.check_connection()
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()
-            logger.error(msg)
+            logger.error("%s.check_connection: error - %s", self.__class__.__name__, msg)
             result = StatusResponse(success=False,
                                     error_message=msg)
             return result.to_json(), 500
@@ -133,14 +123,14 @@ class DBHandlerWrapper(BaseDBWrapper):
     def native_query(self):
         """Execute received string query."""
         query = request.json.get("query")
-        logger.info("%s: calling 'native_query' with query - %s", self.__class__.__name__, query)
+        logger.info("%s.native_query: calling 'native_query' with query - %s", self.__class__.__name__, query)
         try:
             handler = self.get_handler(request.json)
             result = handler.native_query(query)
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()
-            logger.error(msg)
+            logger.error("%s.native_query: error - %s", self.__class__.__name__, msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)
@@ -148,34 +138,29 @@ class DBHandlerWrapper(BaseDBWrapper):
 
     def query(self):
         """Execute received query object"""
-        logger.info("%s: calling 'query'", self.__class__.__name__)
-        logger.info("%s: calling 'query', raw data - %s", self.__class__.__name__, request.get_data())
-        # _json = json.loads(request.get_data())
-        # logger.info("%s: calling 'query', data in json - %s", self.__class__.__name__, _json)
+        logger.info("%s.query: calling", self.__class__.__name__)
+        logger.debug("%s.query: calling with raw data - %s", self.__class__.__name__, request.get_data())
         try:
             # Have received json with context and
             # serialized query object
             # it is not possible to send json and data separately
             # so need use base64 to encode serialized object string back in bytes
             _json_bytes = request.get_data()
-            # query = pickle.loads(s_query)
             _json = json.loads(_json_bytes)
-            logger.info("%s: json decoded - %s", self.__class__.__name__, _json)
+            logger.debug("%s.query: json decoded - %s", self.__class__.__name__, _json)
             b64_query_bytes = _json["query"].encode("utf-8")
             s_query = base64.b64decode(b64_query_bytes)
             query = pickle.loads(s_query)
         except Exception:
             msg = traceback.format_exc()
-            logger.error(msg)
+            logger.error("%s.query: error - %s", self.__class__.__name__, msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)
             return result.to_json(), 500
 
-        logger.info("%s: calling 'query' with query - %s", self.__class__.__name__, query)
+        logger.debug("%s.query: with unpickle query - %s", self.__class__.__name__, query)
         try:
-            # logger.info("%s: calling 'query' with json(text) - %s", self.__class__.__name__, request.body)
-            # handler = self.get_handler(request.json)
             handler = self.get_handler(_json)
             result = handler.query(query)
             return result.to_json(), 200
@@ -188,29 +173,30 @@ class DBHandlerWrapper(BaseDBWrapper):
             return result.to_json(), 500
 
     def get_tables(self):
-        logger.info("%s: calling 'get_tables'", self.__class__.__name__)
+        logger.info("%s.get_tables: calling.", self.__class__.__name__)
         try:
             handler = self.get_handler(request.json)
             result = handler.get_tables()
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()
-            logger.error(msg)
+            logger.error("%s.get_tables: error - %s", self.__class__.__name__, msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)
             return result.to_json(), 500
 
     def get_columns(self):
-        logger.info("%s: calling 'get_columns' for table - %s", self.__class__.__name__, table)
+        logger.info("%s.get_columns: calling", self.__class__.__name__)
         try:
             table = request.json.get("table")
+            logger.info("%s.get_columns: calling for table - %s", self.__class__.__name__, table)
             handler = self.get_handler(request.json)
             result = handler.get_columns(table)
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()
-            logger.error(msg)
+            logger.error("%s.get_columns: error - %s", self.__class__.__name__, msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)

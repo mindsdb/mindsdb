@@ -9,7 +9,6 @@ Basic usage:
 
 """
 import traceback
-import json
 import base64
 import pickle
 
@@ -31,14 +30,10 @@ from mindsdb.utilities.config import Config
 # from mindsdb.utilities.log import get_log
 
 from mindsdb.utilities.log import (
-    initialize_log,
     get_log
 )
-Config()
-initialize_log(logger_name="main")
-logger = get_log("main")
 
-# logger = get_log()
+logger = get_log()
 
 
 class BaseMLWrapper:
@@ -107,26 +102,20 @@ class MLHandlerWrapper(BaseMLWrapper):
 
     def _get_handler(self):
         """Create handler instance."""
-        # seems that integration_id is senseless for models
         ctx.load(request.json.get("context"))
         params = request.json.get("handler_args")
+
         integration_id = params["integration_id"]
         _type = params["integration_engine"] or params.get("name", None)
+
         handler_class = get_handler(_type)
         params["handler_class"] = handler_class
         params["handler_controller"] = self._get_handler_controller()
         params["file_storage"] = self._get_file_storage(integration_id)
         params["storage_factory"] = self._get_storage_factory()
         logger.info("%s._get_handler: create handler. params - %s", self.__class__.__name__, params)
-        return BaseMLEngineExec(**params)
-        # common_args = self._get_handler_general_data()
-        # predictor_id = common_args["predictor_id"]
-        # engineStorage = HandlerStorage(integration_id)
-        # modelStorage = ModelStorage(predictor_id)
-        # handler = handler_class(engine_storage=engineStorage,
-                                # model_storage=modelStorage)
 
-        # return handler
+        return BaseMLEngineExec(**params)
 
 
     def get_columns(self):
@@ -207,9 +196,7 @@ class MLHandlerWrapper(BaseMLWrapper):
             predictions = handler.predict(**params)
             logger.info("%s.predict: got prediction result - %s(type - %s)", self.__class__.__name__, predictions, type(predictions))
             if predictions is not None:
-                # predicitons = read_json(predictions, orient="records")
                 predictions = DataFrame(predictions)
-            # predictions = DataFrame.from_dict(predictions, orient="columns")
             result = Response(resp_type=RESPONSE_TYPE.OK,
                               data_frame=predictions,
                               error_code=0,
@@ -242,56 +229,3 @@ class MLHandlerWrapper(BaseMLWrapper):
                               error_code=1,
                               error_message=msg)
             return result.to_json(), 500
-
-
-    # def _get_handler_class(self):
-    #     """ Specify handler class base on common handler data.
-    #     The method gets the data from the request json.
-    #     """
-    #     common_data = self._get_handler_general_data()
-    #     logger.info("%s: got common handler args from request - %s", self.__class__.__name__, common_data)
-    #     handler_class = define_ml_handler(common_data["type"])
-    #     logger.info("%s: handler class for '%s' type has defined - %s", self.__class__.__name__, common_data["type"], handler_class)
-    #     return handler_class
-
-    # def _get_create_data(self) -> dict:
-    #     """ Get 'create' model params from json in the request."""
-    #     logger.info("%s: getting training data from request", self.__class__.__name__)
-    #     data = {"target": request.json.get("target"),
-    #             "args": request.json.get("args", None)}
-    #     df = None
-    #     try:
-    #         df = request.json.get("df", None)
-    #         if df is not None:
-    #             df = read_json(df, orient="split")
-    #     except Exception:
-    #         logger.error("%s: error getting training dataframe from request", self.__class__.__name__)
-    #     data["df"] = df
-
-    #     return data
-
-    # def _get_predict_data(self):
-    #     """Get model 'predict' params from json in the request."""
-    #     logger.info("%s: getting predict data from request", self.__class__.__name__)
-    #     df = None
-    #     try:
-    #         df = request.json.get("df", None)
-    #         if df is not None:
-    #             df = read_json(df, orient="split")
-    #     except Exception:
-    #         logger.error("%s: error getting predict dataframe from request", self.__class__.__name__)
-    #     return {"df": df}
-    # 
-    # def check_connection(self):
-    #     logger.info("%s: calling 'check_connection'", self.__class__.__name__)
-    #     result = StatusResponse(success=True,
-    #                             error_message=None)
-    #     return result.to_json(), 200
-
-    # def _get_handler_general_data(self) -> dict:
-    #     """ Get common data for creating MLHandler instance from the request. """
-    #     return {"company_id": request.json.get("company_id", None),
-    #             "predictor_id": request.json.get("predictor_id", None),
-    #             "type": request.json.get("type")}
-
-

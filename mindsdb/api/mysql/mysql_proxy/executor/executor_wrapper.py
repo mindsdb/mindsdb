@@ -1,9 +1,9 @@
 import traceback
 from flask import Flask, request
 
-from mindsdb.utilities.config import Config
+# from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import (
-    initialize_log,
+    # initialize_log,
     get_log
 )
 from mindsdb.utilities.context import context as ctx
@@ -12,18 +12,28 @@ from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import Session
 # from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import ServiceSessionController
 
 
-Config()
-initialize_log(logger_name="main")
-logger = get_log("main")
+# Config()
+# initialize_log(logger_name="main")
+logger = get_log()
 
 
 class SqlServerStub:
+    """This class is just an emulation of Server object,
+    used by Executor.
+    In 'monilithic' mode of MindsDB work the Executor takes
+    some information from the sql server which. Here we emulate
+    this object."""
     def __init__(self, **kwargs):
         for arg in kwargs:
             setattr(self, arg, kwargs[arg])
 
 
 class ExecutorService:
+    """This is an Executor implementation for 'modular' mode of MindsDB.
+    It has two caches to cache Session and Executor instances.
+    By this way it supports work sessions. In addition it has a REST API
+    to receive requests and get responses back.
+    IMPORTANT: This class have to has same API as Executor."""
 
     def __init__(self):
         self.app = Flask(self.__class__.__name__)
@@ -160,9 +170,9 @@ class ExecutorService:
             executor = self._get_executor(params)
             sql = params.get("sql")
             executor.query_execute(sql)
-            logger.info("%s.query_execute: executor.data(type of %s) - %s", self.__class__.__name__, type(executor.data), executor.data)
-            logger.info("%s.query_execute: executor.columns(type of %s) - %s", self.__class__.__name__, type(executor.columns), executor.columns)
-            logger.info("%s.query_execute: executor.params(type of %s) - %s", self.__class__.__name__, type(executor.params), executor.params)
+            logger.debug("%s.query_execute: executor.data(type of %s) - %s", self.__class__.__name__, type(executor.data), executor.data)
+            logger.debug("%s.query_execute: executor.columns(type of %s) - %s", self.__class__.__name__, type(executor.columns), executor.columns)
+            logger.debug("%s.query_execute: executor.params(type of %s) - %s", self.__class__.__name__, type(executor.params), executor.params)
 
             resp = executor.to_json()
             return resp, 200

@@ -91,8 +91,7 @@ class Config():
             'paths': paths,
             "log": {
                 "level": {
-                    # "console": "INFO",
-                    "console": "DEBUG",
+                    "console": "INFO",
                     "file": "DEBUG",
                     "db": "WARNING"
                 }

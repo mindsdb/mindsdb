@@ -17,14 +17,27 @@ from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     TYPES,
 )
-import logging
-logger = logging.getLogger("mindsdb.main")
+# import logging
+# logger = logging.getLogger("mindsdb.main")
 
 
 from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
 
 
 class Executor:
+    """This class stores initial and intermediatea params
+    between different steps of query execution. And it is also
+    creates a separate instance of ExecuteCommands to execute the current
+    query step.
+
+    IMPORTANT: A public API of this class is a contract.
+    And there are at least 2 classes strongly depend on it:
+        ExecuctorClient
+        ExecutorService.
+    These classes do the same work as Executor when
+    MindsDB works in 'modularity' mode.
+    Thus please make sure that IF you change the API,
+    you must update the API of these two classes as well!"""
 
     def __init__(self, session, sqlserver):
         self.session = session

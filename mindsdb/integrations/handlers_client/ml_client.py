@@ -6,14 +6,8 @@ MLClient must provide same set of public API methods as MLHandlers do,
 including calling params and returning types.
 
     Typical usage example:
-    client = MLClient(HuggingFaceHandler,
-                      as_service=True,
-                      connection_data={"host": "SERVICE(OR_CONTAINER)HOST",
-                                       "port": "SERVICE_PORTS"},
-                      company_id=COMPANY_ID,
-                      predictor_id=PREDICTOR_ID
-
-    status_response = client.check_connection()
+    client = MLClient(**handler_kwargs)
+    result = client.get_tables()
     print(status_response.status, status_response.error_message)
 
 """
@@ -37,7 +31,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
 
 
-logger = get_log("main")
+logger = get_log()
 
 
 @Switcher
@@ -85,7 +79,8 @@ class MLClient(BaseClient):
             self.base_url = f"http://{host}:{port}"
             logger.info("%s.__init__: ML Service base url - %s", self.__class__.__name__, self.base_url)
         super().__init__(as_service=as_service)
-        # if not self.as_service:
+
+        # need always instantiate handler instance
         self.handler = BaseMLEngineExec(**handler_kwargs)
         self.handler_kwargs = handler_kwargs
 
@@ -100,27 +95,6 @@ class MLClient(BaseClient):
                 "context": ctx.dump(),
                 "handler_args": self.handler_kwargs,
                 }
-
-
-    # def check_connection(self) -> StatusResponse:
-    #     """ Check a connection to the MLHandler.
-
-    #     Returns:
-    #         success status and error message if error occurs
-    #     """
-    #     logger.info("%s: calling 'check_connection'", self.__class__.__name__)
-    #     status = None
-    #     try:
-    #         r = self._do("/check_connection")
-    #         r = self._convert_response(r.json())
-    #         status = StatusResponse(success=r.get("success", False), error_message=r.get("error_message", ""))
-    #         logger.info("%s: ml service has replied", self.__class__.__name__)
-
-    #     except Exception as e:
-    #         status = StatusResponse(success=False, error_message=str(e))
-    #         logger.error("call to ml service has finished with an error: %s", traceback.format_exc())
-
-    #     return status
 
     def get_columns(self, table_name: str) -> Response:
         logger.info("%s.get_columns is calling with table_name - %s", self.__class__.__name__, table_name)
@@ -262,9 +236,6 @@ class MLClient(BaseClient):
             logger.info("%s.predict: ml service has replied. predictions - %s(type - %s)", self.__class__.__name__, r, type(r))
             return r
         except Exception as e:
-            # response = Response(error_message=str(e),
-            #                     error_code=1,
-            #                     resp_type=RESPONSE_TYPE.ERROR)
             logger.error("%s.predict: call to ml service has finished with an error - %s", self.__class__.__name__, traceback.format_exc())
             raise e
 

@@ -6,11 +6,8 @@ DBServiceClient must provide same set of public API methods as DBHandlers do,
 including calling params and returning types.
 
     Typical usage example:
-    client = DBServiceClient("mysql",
-                             as_service=True,
-                             connection_data={"host": "SERVICE(OR_CONTAINER)HOST",
-                                              "port": "SERVICE_PORTS"}
-                             )
+    client = DBServiceClient(handler_type, **hanlder_kwargs)
+                        
     status_response = client.check_connection()
     print(status_response.status, status_response.error_message)
 
@@ -29,9 +26,10 @@ from mindsdb.integrations.libs.response import (
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.handlers_client.base_client import BaseClient, Switcher
 from mindsdb.integrations.libs.handler_helpers import get_handler
-# from mindsdb.utilities.log import logger
-import logging
-logger = logging.getLogger("mindsdb.main")
+from mindsdb.utilities.log import get_log
+# import logging
+# logger = logging.getLogger("mindsdb.main")
+logger = get_log()
 
 
 @Switcher
@@ -42,12 +40,9 @@ class DBServiceClient(BaseClient):
     including calling params and returning types.
 
     Attributes:
-        as_service: supports back compatibility with the legacy.
-            if False - the DBServiceClient will be just a thin wrapper of DBHanlder instance
-            and will redirect all requests to it.
             Connects to a specified DBHandler otherwise
         handler_type: type of DBHandler if as_service=False or DBHandler service type otherwise
-        kwargs: connection args for db if as_service=False or to DBHandler service otherwise
+        handler_kwargs: dict of handler arguments, which depends from handler_type might be very various
     """
     def __init__(self, handler_type: str, **kwargs: dict):
         """Init DBServiceClient
@@ -78,6 +73,7 @@ class DBServiceClient(BaseClient):
             logger.info("%s.__init__: DBService url - %s", self.__class__.__name__, self.base_url)
         super().__init__(as_service=as_service)
 
+        # need always instantiate handler instance
         self.handler_type = handler_type
         handler_class = get_handler(self.handler_type)
         self.handler = handler_class(**kwargs)
@@ -184,24 +180,20 @@ class DBServiceClient(BaseClient):
         _json["query"] = b64_s_query_str
         logger.info("%s: calling 'query' for query - %s, json - %s", self.__class__.__name__, query, _json)
         try:
-            # r = self._do("/query", data=s_query, json=self.context())
             r = self._do("/query", data=json.dumps(_json))
-            # r = self._do("/query", data=s_query, json=_json)
-            # r = self._do("/query", data=json.dumps(_json), json=_json)
             r = self._convert_response(r.json())
             response = Response(data_frame=r.get("data_frame", None),
                                 resp_type=r.get("resp_type"),
                                 error_code=r.get("error_code", 0),
                                 error_message=r.get("error_message", None),
                                 query=r.get("query"))
-            logger.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            logger.info("%s.query: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
 
         except Exception as e:
-            # do some logging
             response = Response(error_message=str(e),
                                 error_code=1,
                                 resp_type=RESPONSE_TYPE.ERROR)
-            logger.error("call to db service has finished with an error: %s", traceback.format_exc())
+            logger.error("%s.query:call to db service has finished with an error: %s", self.__class__.__name__, traceback.format_exc())
 
         return response
 
@@ -224,13 +216,13 @@ class DBServiceClient(BaseClient):
                                 error_code=r.get("error_code", 0),
                                 error_message=r.get("error_message", None),
                                 query=r.get("query"))
-            logger.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            logger.info("%s.get_tables: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
 
         except Exception as e:
             response = Response(error_message=str(e),
                                 error_code=1,
                                 resp_type=RESPONSE_TYPE.ERROR)
-            logger.error("call to db service has finished with an error: %s", traceback.format_exc())
+            logger.error("%s.get_tables: call to db service has finished with an error - %s", self.__class__.__name__, traceback.format_exc())
 
         return response
 
@@ -257,11 +249,11 @@ class DBServiceClient(BaseClient):
                                 error_message=r.get("error_message", None),
                                 query=r.get("query"))
 
-            logger.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            logger.info("%s.get_columns: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
         except Exception as e:
             response = Response(error_message=str(e),
                                 error_code=1,
                                 resp_type=RESPONSE_TYPE.ERROR)
-            logger.error("call to db service has finished with an error: %s", traceback.format_exc())
+            logger.error("%s.get_columns: call to db service has finished with an error - %s", self.__class__.__name__, traceback.format_exc())
 
         return response

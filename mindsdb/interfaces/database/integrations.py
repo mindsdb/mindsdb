@@ -1,4 +1,3 @@
-import copy
 import base64
 import shutil
 import tempfile
@@ -276,10 +275,6 @@ class IntegrationController:
 
         integration_meta = self.handlers_import_status[integration_engine]
         connection_args = integration_meta.get('connection_args')
-        as_service = False
-        if 'as_service' in connection_data:
-            as_service = connection_data['as_service']
-            del connection_data['as_service']
         logger.debug("%s.get_handler: connection args - %s", self.__class__.__name__, connection_args)
 
         fs_store = FileStorage(

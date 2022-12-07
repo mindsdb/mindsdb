@@ -1,6 +1,5 @@
 import os
 import traceback
-import pickle
 from uuid import uuid4
 import requests
 from mindsdb.utilities.log import get_log

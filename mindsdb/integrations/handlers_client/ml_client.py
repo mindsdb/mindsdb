@@ -13,15 +13,12 @@ including calling params and returning types.
 """
 import os
 import base64
-from typing import Optional, Dict
 import traceback
 import pickle
 
-import pandas as pd
 
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
@@ -303,7 +300,7 @@ class MLClient(BaseClient):
                 error_message=r.get("error_message", None),
                 query=r.get("query"),
             )
-            if response.error_code != 0 and reponse.error_message is not None:
+            if response.error_code != 0 and response.error_message is not None:
                 logger.error(
                     "%s.predict: got error in ml service reply - %s",
                     self.__class__.__name__,

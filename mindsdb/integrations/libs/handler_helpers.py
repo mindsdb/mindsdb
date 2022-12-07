@@ -1,5 +1,6 @@
 import importlib
 
+
 def get_handler(_type):
     _type = _type.lower()
     # a crutch to fix bug in handler naming convention

@@ -1,5 +1,4 @@
 import os
-from mindsdb.utilities.log import get_log
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.handlers_wrapper.ml_handler_wrapper import MLHandlerWrapper

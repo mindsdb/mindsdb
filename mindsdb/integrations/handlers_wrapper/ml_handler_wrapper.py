@@ -12,18 +12,16 @@ import traceback
 import base64
 import pickle
 
-from pandas import read_json, DataFrame
+from pandas import DataFrame
 
 from flask import Flask, request
 
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.interfaces.storage.fs import (
-    FsStore,
     FileStorage,
     FileStorageFactory,
     RESOURCE_GROUP,
@@ -129,6 +127,7 @@ class MLHandlerWrapper(BaseMLWrapper):
             resource_id=integration_id,
             sync=True,
         )
+        return fs_store
 
     def _get_storage_factory(self):
         return FileStorageFactory(resource_group=RESOURCE_GROUP.PREDICTOR, sync=True)

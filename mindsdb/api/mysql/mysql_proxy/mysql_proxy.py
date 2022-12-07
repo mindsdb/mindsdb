@@ -23,9 +23,6 @@ import select
 import base64
 from typing import List, Dict
 
-from numpy import dtype as np_dtype
-from pandas.api import types as pd_types
-
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
@@ -34,7 +31,6 @@ from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapab
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.mysql.mysql_proxy.utilities import logger
-from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErWrongCharset,
@@ -49,7 +45,6 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
     ERR,
     COMMANDS,
-    TYPES,
     DEFAULT_AUTH_METHOD,
     SERVER_STATUS,
     CAPABILITIES
@@ -448,7 +443,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
-                columns = executor.to_mysql_columns(),
+                columns=executor.to_mysql_columns(),
                 data=executor.data,
                 status=executor.server_status
             )

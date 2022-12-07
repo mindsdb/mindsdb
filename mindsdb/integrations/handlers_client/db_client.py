@@ -7,7 +7,6 @@ including calling params and returning types.
 
     Typical usage example:
     client = DBServiceClient(handler_type, **hanlder_kwargs)
-                        
     status_response = client.check_connection()
     print(status_response.status, status_response.error_message)
 

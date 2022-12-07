@@ -5,10 +5,11 @@ import pytest
 
 import pandas as pd
 import numpy as np
-from lightwood.api import dtype
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+
+from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_executor.py
@@ -834,6 +835,8 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
                 FROM mindsdb
                 (select * from vtasks)
                 PREDICT a
+                using
+                join_learn_process=true
             ''',
             dialect='mindsdb'))
         assert ret.error_code is None

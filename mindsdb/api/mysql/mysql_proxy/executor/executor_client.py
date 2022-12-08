@@ -383,3 +383,50 @@ class ExecutorClient:
                 msg,
             )
             raise e
+
+    def change_default_db(self, new_db):
+
+        json_data = self.default_json()
+        json_data["new_db"] = new_db
+        logger.info("%s.change_default_db: json=%s", self.__class__.__name__, json_data)
+        response = None
+        try:
+            response = self._do("change_default_db", _type="put", json=json_data)
+            logger.info(
+                "%s.change_default_db result:status_code=%s",
+                self.__class__.__name__,
+                response.status_code,
+            )
+            logger.debug(
+                "%s.change_default_db result:body=%s", self.__class__.__name__, response.text
+            )
+        except Exception:
+            msg = traceback.format_exc()
+            logger.debug(
+                "%s.change_default_db: request has finished with error: %s",
+                self.__class__.__name__,
+                msg,
+            )
+        try:
+            resp = response.json()
+        except Exception as e:
+            logger.error(
+                "%s.change_default_db: error reading response json: %s", self.__class__.__name__, e
+            )
+            raise e
+
+        if response.status_code != requests.codes.ok and "error" in resp:
+            err_msg = resp["error"]
+            logger.error("%s.change_default_db: executor service returned an error - %s", err_msg)
+            raise Exception(err_msg)
+
+        try:
+            self._update_attrs(resp)
+        except Exception as e:
+            msg = traceback.format_exc()
+            logger.error(
+                "%s.change_default_db: error reading response json: %s",
+                self.__class__.__name__,
+                msg,
+            )
+            raise e

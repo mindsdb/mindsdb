@@ -645,7 +645,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                         session=self.session,
                         sqlserver=self
                     )
-                    executor.command_executor.change_default_db(new_database)
+                    executor.change_default_db(new_database)
 
                     response = SQLAnswer(RESPONSE_TYPE.OK)
                 elif p.type.value == COMMANDS.COM_FIELD_LIST:

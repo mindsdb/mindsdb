@@ -12,11 +12,6 @@ from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import (
     SessionController,
 )
 
-# from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import ServiceSessionController
-
-
-# Config()
-# initialize_log(logger_name="main")
 logger = get_log()
 
 
@@ -111,6 +106,13 @@ class ExecutorService:
             ],
         )
         self.do_execute = do_execute_router(self.do_execute)
+        change_default_db_router = self.app.route(
+            "/change_default_db",
+            methods=[
+                "PUT",
+            ],
+        )
+        self.change_default_db = change_default_db_router(self.change_default_db)
         logger.info(
             "%s: base params and route have been initialized", self.__class__.__name__
         )
@@ -306,4 +308,18 @@ class ExecutorService:
         except Exception:
             err_msg = traceback.format_exc()
             logger.error("%s.do_execute: execution error - %s", err_msg)
+            return {"error": err_msg}, 500
+
+    def change_default_db(self):
+        try:
+            params = request.json
+            logger.info("%s.change_default_db: json received - %s", self.__class__.__name__, params)
+            executor = self._get_executor(params)
+            new_db = params.get("new_db")
+            executor.change_default_db(new_db)
+            resp = executor.to_json()
+            return resp, 200
+        except Exception:
+            err_msg = traceback.format_exc()
+            logger.error("%s.change_default_db: execution error - %s", err_msg)
             return {"error": err_msg}, 500

@@ -60,6 +60,9 @@ class Executor:
 
         self.command_executor = ExecuteCommands(self.session, self)
 
+    def change_default_db(self, new_db):
+        self.command_executor.change_default_db(new_db)
+
     def stmt_prepare(self, sql):
 
         resp = self.execute_external(sql)

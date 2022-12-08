@@ -116,9 +116,6 @@ def learn_process(class_path, context_dump, integration_id,
             model_storage=modelStorage,
         )
 
-        if hasattr(ml_handler, 'create_validation'):
-            ml_handler.create_validation(target, df=training_data_df, args=problem_definition)
-
         ml_handler.create(target, df=training_data_df, args=problem_definition)
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
 
@@ -293,6 +290,10 @@ class BaseMLEngineExec:
         target = problem_definition['target']
 
         project = self.database_controller.get_project(name=project_name)
+
+        # handler-side validation
+        if hasattr(self.handler_class, 'create_validation'):
+            self.handler_class.create_validation(target, args=problem_definition)
 
         predictor_record = db.Predictor(
             company_id=ctx.company_id,

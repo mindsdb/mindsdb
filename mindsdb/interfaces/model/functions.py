@@ -3,6 +3,7 @@ from typing import Optional
 from sqlalchemy import null, func
 
 import mindsdb.interfaces.storage.db as db
+from mindsdb.utilities.context import context as ctx
 
 
 class PredictorRecordNotFound(Exception):
@@ -23,7 +24,11 @@ class MultiplePredictorRecordsFound(Exception):
         )
 
 
-def get_integration_record(company_id: int, name: str) -> db.Integration:
+def get_integration_record(name: str) -> db.Integration:
+    company_id = ctx.company_id
+    if company_id is None:
+        company_id = null()
+
     record = (
         db.session.query(db.Integration)
         .filter_by(company_id=company_id, name=name)
@@ -32,7 +37,11 @@ def get_integration_record(company_id: int, name: str) -> db.Integration:
     return record
 
 
-def get_project_record(company_id: int, name: str) -> db.Project:
+def get_project_record(name: str) -> db.Project:
+    company_id = ctx.company_id
+    if company_id is None:
+        company_id = null()
+
     project_record = (
         db.session.query(db.Project)
         .filter(
@@ -60,25 +69,25 @@ def get_predictor_project(record: db.Predictor) -> db.Project:
     return project_record
 
 
-def get_model_records(company_id: int, integration_id=None, active: bool = True, deleted_at=null(),
+def get_model_records(integration_id=None, active=True, deleted_at=null(),
                       project_name: Optional[str] = None, ml_handler_name: Optional[str] = None, **kwargs):
-    if company_id is None:
+    kwargs['company_id'] = ctx.company_id
+    if kwargs['company_id'] is None:
         kwargs['company_id'] = null()
-    else:
-        kwargs['company_id'] = company_id
-    kwargs['deleted_at'] = deleted_at
+
+    if deleted_at is not None:
+        kwargs['deleted_at'] = deleted_at
     if active is not None:
         kwargs['active'] = active
 
     if project_name is not None:
-        project_record = get_project_record(company_id=company_id, name=project_name)
+        project_record = get_project_record(name=project_name)
         if project_record is None:
             return []
         kwargs['project_id'] = project_record.id
 
     if ml_handler_name is not None:
         ml_handler_record = get_integration_record(
-            company_id=company_id,
             name=ml_handler_name
         )
         if ml_handler_record is None:
@@ -96,25 +105,29 @@ def get_model_records(company_id: int, integration_id=None, active: bool = True,
     )
 
 
-def get_model_record(company_id: int, except_absent=False, ml_handler_name: Optional[str] = None,
-                     project_name: Optional[str] = None, active: bool = True, deleted_at=null(), **kwargs):
-    if company_id is None:
+def get_model_record(except_absent=False, ml_handler_name: Optional[str] = None,
+                     project_name: Optional[str] = None, active: bool = True,
+                     deleted_at=null(), version: Optional[int] = None, **kwargs):
+    kwargs['company_id'] = ctx.company_id
+    if kwargs['company_id'] is None:
         kwargs['company_id'] = null()
-    else:
-        kwargs['company_id'] = company_id
+
     kwargs['deleted_at'] = deleted_at
     if active is not None:
-        kwargs['active'] = active
+        # not use active if version was chosen
+        if version is not None:
+            kwargs['version'] = version
+        else:
+            kwargs['active'] = active
 
     if project_name is not None:
-        project_record = get_project_record(company_id=company_id, name=project_name)
+        project_record = get_project_record(name=project_name)
         if project_record is None:
             return []
         kwargs['project_id'] = project_record.id
 
     if ml_handler_name is not None:
         ml_handler_record = get_integration_record(
-            company_id=company_id,
             name=ml_handler_name
         )
         if ml_handler_record is None:

@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import text
 
-import mindsdb.interfaces.storage.db
+import mindsdb.interfaces.storage.db    # noqa
 
 
 # revision identifiers, used by Alembic.

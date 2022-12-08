@@ -20,10 +20,10 @@ class SwitchOutPacket(Packet):
     '''
 
     def setup(self):
-        status = 0 if 'status' not in self._kwargs else self._kwargs['status']
+        status = 0 if 'status' not in self._kwargs else self._kwargs['status']  # noqa
         seed = self._kwargs['seed']
         method = self._kwargs['method']
-        self.eof_header = Datum('int<1>', int('0xfe',0))
+        self.eof_header = Datum('int<1>', int('0xfe', 0))
         self.authentication_plugin_name = Datum('string<NUL>', method)
         self.seed = Datum('string<NUL>', seed)
 

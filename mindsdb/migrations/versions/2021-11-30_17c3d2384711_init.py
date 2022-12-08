@@ -1,10 +1,17 @@
+import datetime
+
 from alembic.autogenerate import produce_migrations, render, api
 from alembic import context
+from sqlalchemy import UniqueConstraint
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
 
 # required for code execution
-import mindsdb.interfaces.storage.db
-from alembic import op
-import sqlalchemy as sa
+from alembic import op  # noqa
+import sqlalchemy as sa  # noqa
+
+import mindsdb.interfaces.storage.db    # noqa
+from mindsdb.interfaces.storage.db import Json, Array
 
 # revision identifiers, used by Alembic.
 revision = '17c3d2384711'
@@ -13,14 +20,6 @@ branch_labels = None
 depends_on = None
 
 # ========================================== current database state ========================================
-from mindsdb.interfaces.storage.db import Json, Array
-
-import datetime
-
-from sqlalchemy import UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
-
 
 Base = declarative_base()
 
@@ -141,7 +140,6 @@ def upgrade():
        First migration.
        Generates a migration script by difference between model and database and executes it
     '''
-
 
     target_metadata = Base.metadata
 

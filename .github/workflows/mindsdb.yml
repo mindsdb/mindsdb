@@ -61,13 +61,21 @@ jobs:
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
     - name: Run integration api and flow tests
       run: |
+        python3 -m flake8
+
         if [ "$RUNNER_OS" == "Linux" ]; then
           # Unit tests
           # echo -e "\n===============\nUnit tests\n===============\n"
           cat mindsdb/interfaces/storage/db.py | grep integration
 
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
+        
+          # need fix in LW. not working yet 
+          # env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
+          # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_lightwood.py
 
+          env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
+        
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
 
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py

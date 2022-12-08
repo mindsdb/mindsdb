@@ -12,6 +12,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.project_datanode import ProjectDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
+from mindsdb.interfaces.database.projects import ProjectController
 
 
 class InformationSchemaDataNode(DataNode):
@@ -31,18 +32,17 @@ class InformationSchemaDataNode(DataNode):
         'CHARACTER_SETS': ['CHARACTER_SET_NAME', 'DEFAULT_COLLATE_NAME', 'DESCRIPTION', 'MAXLEN'],
         'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
         # MindsDB specific:
-        'MODELS': ['NAME', 'PROJECT', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
-        'MODELS_VERSIONS': ['NAME', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS'],
+        'MODELS': ['NAME', 'PROJECT', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
+        'MODELS_VERSIONS': ['NAME', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
         'DATABASES': ['NAME', 'TYPE', 'ENGINE'],
         'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
-        'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS']
+        'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR']
     }
 
     def __init__(self, session):
         self.session = session
         self.integration_controller = session.integration_controller
-        self.view_controller = session.view_controller
-        self.project_controller = session.project_controller
+        self.project_controller = ProjectController()
         self.database_controller = session.database_controller
 
         self.persis_datanodes = {}
@@ -136,11 +136,11 @@ class InformationSchemaDataNode(DataNode):
 
     def get_integrations_names(self):
         integration_names = self.integration_controller.get_all().keys()
-        # remove files and views from list to prevent doubling in 'select from INFORMATION_SCHEMA.TABLES'
+        # remove files from list to prevent doubling in 'select from INFORMATION_SCHEMA.TABLES'
         return [
             x.lower()
             for x in integration_names
-            if x not in ('files', 'views')
+            if x not in ('files', )
         ]
 
     def get_projects_names(self):
@@ -153,15 +153,19 @@ class InformationSchemaDataNode(DataNode):
         handlers = self.integration_controller.get_handlers_import_status()
         ml_handlers = {
             key: val for key, val in handlers.items()
-            if val['import']['success'] is True and val['type'] == 'ml'}
+            if val.get('type') == 'ml'
+        }
 
         data = []
         for _key, val in ml_handlers.items():
             connection_args = val.get('connection_args')
             if connection_args is not None:
                 connection_args = str(dict(connection_args))
+            import_success = val.get('import', {}).get('success')
+            import_error = val.get('import', {}).get('error_message')
             data.append([
-                val['name'], val.get('title'), val.get('description'), val.get('version'), connection_args
+                val['name'], val.get('title'), val.get('description'), val.get('version'),
+                connection_args, import_success, import_error
             ])
 
         df = pd.DataFrame(data, columns=columns)
@@ -224,8 +228,6 @@ class InformationSchemaDataNode(DataNode):
         for ds_name in self.get_integrations_names():
             if target_table is not None and target_table != ds_name:
                 continue
-            if ds_name == 'views':
-                continue
             try:
                 ds = self.get(ds_name)
                 ds_tables = ds.get_tables()
@@ -257,9 +259,9 @@ class InformationSchemaDataNode(DataNode):
                 if table_meta['type'] != 'model':
                     continue
                 data.append([
-                    table_name, project_name, table_meta['status'], table_meta['accuracy'], table_meta['predict'],
+                    table_name, project_name, table_meta['version'], table_meta['status'], table_meta['accuracy'], table_meta['predict'],
                     table_meta['update_status'], table_meta['mindsdb_version'], table_meta['error'],
-                    table_meta['select_data_query'], table_meta['training_options']
+                    table_meta['select_data_query'], table_meta['training_options'], table_meta['label']
                 ])
             # TODO optimise here
             # if target_table is not None and target_table != project_name:
@@ -275,7 +277,6 @@ class InformationSchemaDataNode(DataNode):
         data = [
             [x['name'], x['type'], x['engine']]
             for x in project
-            if x['engine'] != 'views'
         ]
 
         df = pd.DataFrame(data, columns=columns)
@@ -294,7 +295,7 @@ class InformationSchemaDataNode(DataNode):
                     table_name, project_name, table_meta['active'], table_meta['version'], table_meta['status'],
                     table_meta['accuracy'], table_meta['predict'], table_meta['update_status'],
                     table_meta['mindsdb_version'], table_meta['error'], table_meta['select_data_query'],
-                    table_meta['training_options']
+                    table_meta['training_options'], table_meta['label']
                 ])
 
         df = pd.DataFrame(data, columns=columns)
@@ -408,12 +409,7 @@ class InformationSchemaDataNode(DataNode):
             raise exc.ErNotSupportedYet('Information schema: Not implemented.')
 
         dataframe = self.get_dataframe_funcs[table_name](query=query)
-
-        try:
-            data = query_df(dataframe, query, session=self.session)
-        except Exception as e:
-            print(f'Exception! {e}')
-            return [], []
+        data = query_df(dataframe, query, session=self.session)
 
         columns_info = [
             {

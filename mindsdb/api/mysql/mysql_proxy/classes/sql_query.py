@@ -66,7 +66,6 @@ from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case
 from mindsdb.interfaces.model.functions import (
     get_model_records,
-    get_predictor_integration,
     get_predictor_project
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import (
@@ -135,19 +134,18 @@ class ColumnsCollection:
             groups[x[:3]].append(x[3:])
         return list(groups.items())
 
-    def del_duplicate_columns(self, table_name=None):
-        if table_name is None:
-            self.__columns = list(set(self.__columns))
-        else:
-            new_columns = []
-            for x in self.__columns:
-                if (
-                    x[:3] != table_name or (
-                        x not in new_columns
-                    )
-                ):
-                    new_columns.append(x)
-            self.__columns = new_columns
+    def del_duplicate_columns(self):
+        col_idx = []
+        to_del = []
+        for i, col in enumerate(self.__columns):
+            if col not in col_idx:
+                col_idx.append(col)
+            else:
+                to_del.append(i)
+
+        to_del.sort(reverse=True)
+        for i in to_del:
+            self.__columns.pop(i)
 
     def del_table_columns(self, table_name):
         self.__columns = [
@@ -442,16 +440,19 @@ class SQLQuery():
     def create_planner(self):
         databases_names = self.session.database_controller.get_list()
         databases_names = [x['name'] for x in databases_names]
-        databases_names.append('information_schema')   # TEMP
 
         predictor_metadata = []
-        predictors_records = get_model_records(company_id=self.session.company_id)
+        predictors_records = get_model_records()
 
         query_tables = []
 
         def get_all_query_tables(node, is_table, **kwargs):
             if is_table and isinstance(node, Identifier):
-                query_tables.append(node.parts[-1])
+                table_name = node.parts[-1]
+                if table_name.isdigit():
+                    # is predictor version
+                    table_name = node.parts[-2]
+                query_tables.append(table_name)
 
         query_traversal(self.query, get_all_query_tables)
 
@@ -528,6 +529,9 @@ class SQLQuery():
     def _fetch_dataframe_step(self, step):
         dn = self.datahub.get(step.integration)
         query = step.query
+
+        if dn is None:
+            raise SqlApiUnknownError(f'Unknown integration name: {step.integration}')
 
         if query is None:
             table_alias = (self.database, 'result', 'result')
@@ -776,7 +780,7 @@ class SQLQuery():
 
             columns_collection = ColumnsCollection()
             for column in columns_info:
-                columns_collection.add(table_name, column)
+                columns_collection.add(table, column)
 
             data = {
                 'values': [],
@@ -878,10 +882,21 @@ class SQLQuery():
                 where_data = step.row_dict
                 project_datanode = self.datahub.get(project_name)
 
+                version = None
+                if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
+                    version = int(step.predictor.parts[-1])
+
                 predictions = project_datanode.predict(
                     model_name=predictor_name,
-                    data=where_data
+                    data=where_data,
+                    version=version,
+                    params=step.params,
                 )
+                # update predictions with input data
+                for row in predictions:
+                    for k, v in where_data.items():
+                        if k not in row:
+                            row[k] = v
 
                 data = [{(key, key): value for key, value in row.items()} for row in predictions]
 
@@ -984,9 +999,14 @@ class SQLQuery():
                     data = predictor_cache.get(key)
 
                     if data is None:
+                        version = None
+                        if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
+                            version = int(step.predictor.parts[-1])
                         data = project_datanode.predict(
                             model_name=predictor_name,
-                            data=where_data
+                            data=where_data,
+                            version=version,
+                            params=step.params,
                         )
                         if data is not None and isinstance(data, list):
                             predictor_cache.set(key, data)
@@ -1581,8 +1601,9 @@ class SQLQuery():
         def get_date_format(samples):
             # dateinfer reads sql date 2020-04-01 as yyyy-dd-mm. workaround for in
             for date_format, pattern in (
-                    ('%Y-%m-%d', '[\d]{4}-[\d]{2}-[\d]{2}'),
-                    # ('%Y', '[\d]{4}')
+                ('%Y-%m-%d', r'[\d]{4}-[\d]{2}-[\d]{2}'),
+                ('%Y-%m-%d %H:%M:%S', r'[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}'),
+                # ('%Y', '[\d]{4}')
             ):
                 if re.match(pattern, samples[0]):
                     # suggested format
@@ -1641,30 +1662,26 @@ class SQLQuery():
             # convert strings to date
             # it is making side effect on original data by changing it but let it be
 
-            # convert predictor_data
-            if len(predictor_data) > 0:
-                if isinstance(predictor_data[0][order_col], str):
-                    samples = [row[order_col] for row in predictor_data]
+            def _cast_samples(data, order_col):
+                if isinstance(data[0][order_col], str):
+                    samples = [row[order_col] for row in data]
                     date_format = get_date_format(samples)
 
-                    for row in predictor_data:
+                    for row in data:
                         row[order_col] = dt.datetime.strptime(row[order_col], date_format)
-                elif isinstance(predictor_data[0][order_col], dt.date):
+                elif isinstance(data[0][order_col], dt.datetime):
+                    pass  # check because dt.datetime is instance of dt.date but here we don't need to add HH:MM:SS
+                elif isinstance(data[0][order_col], dt.date):
                     # convert to datetime
-                    for row in predictor_data:
+                    for row in data:
                         row[order_col] = dt.datetime.combine(row[order_col], dt.datetime.min.time())
 
             # convert predictor_data
-            if isinstance(table_data[0][order_col], str):
-                samples = [row[order_col] for row in table_data]
-                date_format = get_date_format(samples)
+            if len(predictor_data) > 0:
+                _cast_samples(predictor_data, order_col)
 
-                for row in table_data:
-                    row[order_col] = dt.datetime.strptime(row[order_col], date_format)
-            elif isinstance(table_data[0][order_col], dt.date):
-                # convert to datetime
-                for row in table_data:
-                    row[order_col] = dt.datetime.combine(row[order_col], dt.datetime.min.time())
+            # convert table data
+            _cast_samples(table_data, order_col)
 
             # convert args to date
             samples = [

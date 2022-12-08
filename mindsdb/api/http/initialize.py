@@ -16,9 +16,9 @@ from flask.json import dumps
 from flask_restx import Api
 
 from mindsdb.__about__ import __version__ as mindsdb_version
-from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.config import Config
@@ -277,9 +277,9 @@ def initialize_flask(config, init_static_thread, no_studio):
 
 
 def initialize_interfaces(app):
-    app.original_model_controller = ModelController()
-    app.original_integration_controller = IntegrationController()
-    app.original_file_controller = FileController()
+    app.integration_controller = IntegrationController()
+    app.database_controller = DatabaseController()
+    app.file_controller = FileController()
     config = Config()
     app.config_obj = config
 

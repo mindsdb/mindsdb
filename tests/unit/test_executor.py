@@ -1,23 +1,23 @@
-import os.path
 from unittest.mock import patch
 import datetime as dt
-import pytest
 import tempfile
+import pytest
 
 import pandas as pd
 import numpy as np
-from lightwood.api import dtype
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
+from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
+
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
-from .executor_test_base import BaseExecutorTestMockModel
+from .executor_test_base import BaseExecutorMockPredictor
 
 
-class Test(BaseExecutorTestMockModel):
+class Test(BaseExecutorMockPredictor):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_integration_select(self, mock_handler):
 
@@ -315,6 +315,66 @@ class Test(BaseExecutorTestMockModel):
         assert ret_df.t.min() == dt.datetime(2020, 1, 2)
         assert ret_df.t.max() == dt.datetime(2020, 1, 3)
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_ts_predictor_fix_order_by_modification(self, mock_handler):
+        # set integration data
+
+        df = pd.DataFrame([
+            {'a': 1, 't': dt.datetime(2020, 1, 1, 10, 0, 0), 'g': 'x'},
+            {'a': 2, 't': dt.datetime(2020, 1, 1, 10, 1, 0), 'g': 'x'},
+            {'a': 3, 't': dt.datetime(2020, 1, 1, 10, 2, 0), 'g': 'x'},
+        ])
+        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
+
+        # --- use TS predictor ---
+
+        predictor = {
+            'name': 'task_model',
+            'predict': 'a',
+            'problem_definition': {
+                'timeseries_settings': {
+                    'is_timeseries': True,
+                    'window': 2,
+                    'order_by': 't',
+                    'horizon': 3
+                }
+            },
+            'dtypes': {
+                'a': dtype.integer,
+                't': dtype.date,
+                'g': dtype.categorical,
+            },
+            'predicted_value': ''
+        }
+        self.set_predictor(predictor)
+
+        # set predictor output
+        predict_result = [
+            # window
+            {'a': 2, 't': dt.datetime(2020, 1, 1, 10, 1, 0), 'g': 'x', '__mindsdb_row_id': 2},
+            {'a': 3, 't': dt.datetime(2020, 1, 1, 10, 2, 0), 'g': 'x', '__mindsdb_row_id': 3},
+            # horizon
+            {'a': 1, 't': dt.datetime(2020, 1, 1, 10, 3, 0), 'g': 'x', '__mindsdb_row_id': None},
+            {'a': 1, 't': dt.datetime(2020, 1, 1, 10, 4, 0), 'g': 'x', '__mindsdb_row_id': None},
+            {'a': 1, 't': dt.datetime(2020, 1, 1, 10, 5, 0), 'g': 'x', '__mindsdb_row_id': None},
+        ]
+        predict_result = pd.DataFrame(predict_result)
+        self.mock_predict.side_effect = lambda *a, **b: predict_result
+
+        # > latest ______________________
+        ret = self.command_executor.execute_command(parse_sql(f'''
+                 select t.t as t0, p.* from pg.tasks t
+                 join mindsdb.task_model p
+                 where t.t > latest
+             ''', dialect='mindsdb'))
+        assert ret.error_code is None
+
+        ret_df = self.ret_to_df(ret)
+        assert ret_df.shape[0] == 3
+        assert ret_df.t.min() == dt.datetime(2020, 1, 1, 10, 3, 0)
+        # table shouldn't join
+        assert ret_df.t0[0] is None
+
     def test_ts_predictor_file(self):
         # set integration data
 
@@ -410,8 +470,22 @@ class Test(BaseExecutorTestMockModel):
         else:
             raise Exception('SqlApiException expected')
 
+    def test_wrong_using(self):
+        with pytest.raises(Exception) as exc_info:
+            ret = self.command_executor.execute_command(parse_sql(
+                '''
+                    CREATE PREDICTOR task_model
+                    FROM mindsdb
+                    (select * from vtasks)
+                    PREDICT a
+                    using a=1 b=2  -- no ',' here
+                ''',
+                dialect='mindsdb'))
 
-class TestComplexQueries(BaseExecutorTestMockModel):
+        assert 'Syntax error' in str(exc_info.value)
+
+
+class TestComplexQueries(BaseExecutorMockPredictor):
     df = pd.DataFrame([
         {'a': 1, 'b': 'aaa', 'c': dt.datetime(2020, 1, 1)},
         {'a': 2, 'b': 'bbb', 'c': dt.datetime(2020, 1, 2)},
@@ -588,7 +662,7 @@ class TestComplexQueries(BaseExecutorTestMockModel):
     #         self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
 
 
-class TestTableau(BaseExecutorTestMockModel):
+class TestTableau(BaseExecutorMockPredictor):
     task_table = pd.DataFrame([
         {'a': 1, 'b': 'one'},
         {'a': 2, 'b': 'two'},
@@ -714,7 +788,7 @@ class TestTableau(BaseExecutorTestMockModel):
         # 3: count rows, 4: sum of 'a', 5 max of prediction
         assert ret.data[0] == [2]
 
-class TestWithNativeQuery(BaseExecutorTestMockModel):
+class TestWithNativeQuery(BaseExecutorMockPredictor):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_integration_native_query(self, mock_handler):
 
@@ -761,6 +835,8 @@ class TestWithNativeQuery(BaseExecutorTestMockModel):
                 FROM mindsdb
                 (select * from vtasks)
                 PREDICT a
+                using
+                join_learn_process=true
             ''',
             dialect='mindsdb'))
         assert ret.error_code is None
@@ -906,85 +982,4 @@ class TestWithNativeQuery(BaseExecutorTestMockModel):
 
         # p is predicted value
         assert ret_df['p'][0] == predicted_value
-
-
-class TestProjectStructure(BaseExecutorTestMockModel):
-
-    def run_sql(self, sql):
-        ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
-        )
-        assert ret.error_code is None
-        if ret.data is not None:
-            columns = [
-                col.alias if col.alias is not None else col.name
-                for col in ret.columns
-            ]
-            return pd.DataFrame(ret.data, columns=columns)
-
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_flow(self, mock_handler):
-        # set up
-
-        df = pd.DataFrame([
-            {'a': 1, 'b': dt.datetime(2020, 1, 1)},
-            {'a': 2, 'b': dt.datetime(2020, 1, 2)},
-            {'a': 1, 'b': dt.datetime(2020, 1, 3)},
-        ])
-        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
-
-        predictor = {
-            'name': 'task_model',
-            'predict': 'p',
-            'dtypes': {
-                'p': dtype.float,
-                'a': dtype.integer,
-                'b': dtype.categorical
-            },
-            'predicted_value': 3.14
-        }
-        self.set_predictor(predictor)
-
-        # ----------------
-
-        # create folder
-        self.run_sql('create database proj')
-
-        # # create model
-        # self.run_sql(
-        #     '''
-        #         CREATE PREDICTOR proj.task_model
-        #         from pg (select * from tasks)
-        #         PREDICT a
-        #     '''
-        # )
-
-        # # use model
-        # ret = self.run_sql('''
-        #      SELECT m.p
-        #        FROM pg.tasks as t
-        #        JOIN proj.task_model as m
-        # ''')
-        # print(ret)
-
-        # # retrain predictor
-        # self.run_sql(
-        #     '''
-        #         Retrain proj.task_model
-        #         from pg (select * from tasks where a=2)
-        #         PREDICT a
-        #     '''
-        # )
-
-        # list of versions
-
-        # run predict with old version
-
-        # switch version
-
-        # drop version
-
-        # drop predictor
-
-        # all the same with TS
 

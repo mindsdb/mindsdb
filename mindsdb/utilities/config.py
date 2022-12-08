@@ -6,6 +6,7 @@ from mindsdb.utilities.fs import create_directory
 
 from mindsdb.utilities.fs import get_or_create_data_dir
 
+
 def _merge_key_recursive(target_dict, source_dict, key):
     if key not in target_dict:
         target_dict[key] = source_dict[key]
@@ -30,7 +31,10 @@ class Config():
     def __init__(self):
         # initialize once
         global config
-        self.config_path = os.environ['MINDSDB_CONFIG_PATH']
+        self.config_path = os.environ.get('MINDSDB_CONFIG_PATH', 'absent')
+        self.use_docker_env = os.environ.get('MINDSDB_DOCKER_ENV', False)
+        if self.use_docker_env:
+            self.use_docker_env = True
         if config is None:
             config = self.init_config()
         self._config = config
@@ -96,11 +100,11 @@ class Config():
             "integrations": {},
             "api": {
                 "http": {
-                    "host": "127.0.0.1",
+                    "host": "127.0.0.1" if not self.use_docker_env else "0.0.0.0",
                     "port": "47334"
                 },
                 "mysql": {
-                    "host": "127.0.0.1",
+                    "host": "127.0.0.1" if not self.use_docker_env else "0.0.0.0",
                     "password": "",
                     "port": "47335",
                     "user": "mindsdb",

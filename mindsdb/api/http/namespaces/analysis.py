@@ -3,8 +3,7 @@ import time
 from flask import request
 from flask_restx import Resource
 from pandas.core.frame import DataFrame
-
-import lightwood
+from dataprep_ml.insights import analyze_dataset
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Constant, Identifier
 from mindsdb_sql.planner.utils import query_traversal
@@ -16,8 +15,10 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 
 
 def analyze_df(df: DataFrame) -> dict:
-    analysis = lightwood.analyze_dataset(df)
-    analysis = analysis.to_dict()
+    if len(df) == 0:
+        return {}
+    analysis = analyze_dataset(df)
+    return analysis.to_dict()
 
 
 @ns_conf.route('/query')
@@ -40,10 +41,7 @@ class QueryAnalysis(Resource):
             ast.limit = Constant(limit)
             query = str(ast)
 
-        mysql_proxy = FakeMysqlProxy(
-            company_id=request.company_id,
-            user_class=request.user_class
-        )
+        mysql_proxy = FakeMysqlProxy()
         mysql_proxy.set_context(context)
 
         try:

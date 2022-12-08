@@ -1,10 +1,5 @@
 from copy import deepcopy
 
-import numpy as np
-
-from sqlalchemy.types import (
-    Integer, Float, Text
-)
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast import (
@@ -14,8 +9,7 @@ from mindsdb_sql.parser.ast import (
 )
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
@@ -55,11 +49,11 @@ class ProjectDataNode(DataNode):
     def get_table_columns(self, table_name):
         return self.project.get_columns(table_name)
 
-    def predict(self, model_name: str, data) -> list:
+    def predict(self, model_name: str, data, version=None, params=None) -> list:
         project_tables = self.project.get_tables()
         predictor_table_meta = project_tables[model_name]
         handler = self.integration_controller.get_handler(predictor_table_meta['engine_name'])
-        predictions = handler.predict(model_name, data, project_name=self.project.name)
+        predictions = handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
         return predictions
 
     def query(self, query=None, native_query=None, session=None):
@@ -68,7 +62,7 @@ class ProjectDataNode(DataNode):
 
         # region is it query to 'models' or 'models_versions'?
         query_table = query.from_table.parts[0]
-        # region FIXME temporary fix to not broke queries to 'mindsdb.predictors'. Can be deleted it after 1.12.2022
+        # region FIXME temporary fix to not broke queries to 'mindsdb.models'. Can be deleted it after 1.12.2022
         if query_table == 'predictors':
             query.from_table.parts[0] = 'models'
             query_table = 'models'
@@ -91,17 +85,10 @@ class ProjectDataNode(DataNode):
         # endregion
 
         # region query to views
-        views_handler = self.integration_controller.create_tmp_handler(
-            handler_type='views',
-            connection_data={}
-        )
-        response = views_handler.query(query, db_name=self.project.name)
-
-        if response.resp_type != 'query':
-            raise Exception(f'Cant execute view query: {response.error_message}')
+        view_query_ast = self.project.query_view(query)
 
         renderer = SqlalchemyRender('mysql')
-        query_str = renderer.get_string(response.query, with_failback=True)
+        query_str = renderer.get_string(view_query_ast, with_failback=True)
 
         sqlquery = SQLQuery(
             query_str,

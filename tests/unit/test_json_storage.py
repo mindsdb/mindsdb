@@ -6,10 +6,9 @@ import json
 temp_dir = tempfile.mkdtemp(dir='/tmp/', prefix='lightwood_handler_test_')
 os.environ['MINDSDB_STORAGE_DIR'] = os.environ.get('MINDSDB_STORAGE_DIR', temp_dir)
 os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(os.environ['MINDSDB_STORAGE_DIR'], 'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
-from mindsdb.interfaces.storage import db
 
+from mindsdb.interfaces.storage import db   # noqa
 from mindsdb.migrations import migrate  # noqa
-
 from mindsdb.interfaces.storage.json import get_json_storage  # noqa
 
 
@@ -29,7 +28,6 @@ class Test(unittest.TestCase):
 
         db.init()
         migrate.migrate_to_head()
-
 
     def test_1_insert(self):
         storage_1 = get_json_storage(1)

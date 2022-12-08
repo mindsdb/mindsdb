@@ -156,7 +156,7 @@ def run_adjust(df: DataFrame, args: dict, model_storage):
         base_predictor_record = db.Predictor.query.filter_by(
             id=base_predictor_id,
             status=PREDICTOR_STATUS.COMPLETE
-        ).first()  # TODO should this be last instead?
+        ).first()
 
         predictor_id = model_storage.predictor_id
         predictor_record = db.Predictor.query.filter_by(id=predictor_id).first()

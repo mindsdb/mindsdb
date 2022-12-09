@@ -78,13 +78,20 @@ class TestLW(BaseExecutorTest):
 
         # test describe
         ret = self.run_sql('describe proj.modelx')
+        assert len(ret) == 1
+        for col in ('accuracies', 'column_importances', 'outputs', 'inputs', 'model'):
+            assert col in ret.columns
 
         ret = self.run_sql('describe proj.modelx.model')
+        for col in ['name', 'performance', 'training_time', 'selected', 'accuracy_functions']:
+            assert col in ret.columns
 
         ret = self.run_sql('describe proj.modelx.features')
+        for col in ['column', 'type', 'encoder', 'role']:
+            assert col in ret.columns
 
         ret = self.run_sql('describe proj.modelx.ensemble')
-
+        assert 'ensemble' in ret.columns
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_ts(self, mock_handler):

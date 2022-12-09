@@ -66,7 +66,7 @@ jobs:
           # echo -e "\n===============\nUnit tests\n===============\n"
           cat mindsdb/interfaces/storage/db.py | grep integration
 
-          env PYTHONPATH=./ pytest tests/unit/test_executor.py
+          # env PYTHONPATH=./ pytest tests/unit/test_executor.py
         
           # need fix in LW. not working yet 
           # env PYTHONPATH=./ pytest tests/unit/test_project_structure.py

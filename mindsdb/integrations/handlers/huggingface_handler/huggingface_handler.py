@@ -1,3 +1,5 @@
+from typing import Optional
+
 import pandas as pd
 import transformers
 from huggingface_hub import HfApi
@@ -187,7 +189,7 @@ class HuggingFaceHandler(BaseMLEngine):
 
         return pred_df
 
-    def describe(self, *args) -> pd.DataFrame:
+    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
 
         args = self.model_storage.json_get('args')
 

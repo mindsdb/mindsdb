@@ -1,7 +1,6 @@
 import re
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.interfaces.storage.db import PREDICTOR_STATUS
 
 from .fs import RESOURCE_GROUP, FileStorageFactory
 from .json import get_json_storage

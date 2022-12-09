@@ -1,4 +1,3 @@
-import json
 import datetime
 from typing import Optional
 from pathlib import Path

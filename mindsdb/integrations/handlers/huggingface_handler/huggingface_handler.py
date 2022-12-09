@@ -1,5 +1,7 @@
 import pandas as pd
 import transformers
+from huggingface_hub import HfApi
+
 from mindsdb.utilities import log
 
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -10,8 +12,31 @@ class HuggingFaceHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
+
         if 'using' in args:
             args = args['using']
+
+        hf_api = HfApi()
+
+        # check model is pytorch based
+        metadata = hf_api.model_info(args['model_name'])
+        if 'pytorch' not in metadata.tags:
+            raise Exception('Currently only PyTorch models are supported (https://huggingface.co/models?library=pytorch&sort=downloads). To request support for other ML backends, please contact us on our community slack (https://mindsdb.com/joincommunity).')  # noqa
+
+        # check model task
+        supported_tasks = ['text-classification',
+                           'zero-shot-classification',
+                           'translation',
+                           'summarization']
+
+        if metadata.pipeline_tag not in supported_tasks:
+            raise Exception(f'Not supported task for model: {metadata.pipeline_tag}.\
+             Should be one of {", ".join(supported_tasks)}')
+
+        if 'task' not in args:
+            args['task'] = metadata.pipeline_tag
+        elif args['task'] != metadata.pipeline_tag:
+            raise Exception(f'Task mismatch for model: {args["task"]}!={metadata.pipeline_tag}')
 
         # task, model_name, input_column is essential
         for key in ['task', 'model_name', 'input_column']:
@@ -52,12 +77,15 @@ class HuggingFaceHandler(BaseMLEngine):
         ####
         # Otherwise download it
         except OSError:
-            log.logger.debug(f"Downloading {model_name}...")
-            pipeline = transformers.pipeline(task=args['task_proper'], model=model_name)
+            try:
+                log.logger.debug(f"Downloading {model_name}...")
+                pipeline = transformers.pipeline(task=args['task_proper'], model=model_name)
 
-            pipeline.save_pretrained(hf_model_storage_path)
+                pipeline.save_pretrained(hf_model_storage_path)
 
-            log.logger.debug(f"Saved to {hf_model_storage_path}")
+                log.logger.debug(f"Saved to {hf_model_storage_path}")
+            except Exception:
+                raise Exception("Error while downloading and setting up the model. Please try a different model. We're working on expanding the list of supported models, so we would appreciate it if you let us know about this in our community slack (https://mindsdb.com/joincommunity).")  # noqa
         ####
 
         if 'max_length' in args:

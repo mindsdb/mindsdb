@@ -21,7 +21,7 @@ class HuggingFaceHandler(BaseMLEngine):
         # check model is pytorch based
         metadata = hf_api.model_info(args['model_name'])
         if 'pytorch' not in metadata.tags:
-            raise Exception('Currently only PyTorch models are supported (https://huggingface.co/models?library=pytorch&sort=downloads). To request support for other ML backends, please contact us on our community slack (https://mindsdbcommunity.slack.com/join/shared_invite/zt-1e2cxo4ts-dUuoryp8n2hhyymPlzjD0A#/shared-invite/email).')  # noqa
+            raise Exception('Currently only PyTorch models are supported (https://huggingface.co/models?library=pytorch&sort=downloads). To request support for other ML backends, please contact us on our community slack (https://mindsdb.com/joincommunity).')  # noqa
 
         # check model task
         supported_tasks = ['text-classification',
@@ -85,7 +85,7 @@ class HuggingFaceHandler(BaseMLEngine):
 
                 log.logger.debug(f"Saved to {hf_model_storage_path}")
             except Exception:
-                raise Exception("Error while downloading and setting up the model. Please try a different model. We're working on expanding the list of supported models, so we would appreciate it if you let us know about this in our community slack (https://mindsdbcommunity.slack.com/join/shared_invite/zt-1e2cxo4ts-dUuoryp8n2hhyymPlzjD0A#/shared-invite/email).")  # noqa
+                raise Exception("Error while downloading and setting up the model. Please try a different model. We're working on expanding the list of supported models, so we would appreciate it if you let us know about this in our community slack (https://mindsdb.com/joincommunity).")  # noqa
         ####
 
         if 'max_length' in args:

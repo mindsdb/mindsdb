@@ -20,7 +20,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropPredictor
 )
 from lightwood import __version__ as lightwood_version
-from lightwood.api import dtype
+from type_infer.dtype import dtype
 import numpy as np
 
 from mindsdb.integrations.libs.base import PredictiveHandler

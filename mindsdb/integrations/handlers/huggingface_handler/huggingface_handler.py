@@ -186,3 +186,12 @@ class HuggingFaceHandler(BaseMLEngine):
         pred_df = pd.DataFrame(output_list_tidy)
 
         return pred_df
+
+    def describe(self, *args) -> pd.DataFrame:
+
+        args = self.model_storage.json_get('args')
+
+        hf_api = HfApi()
+        metadata = hf_api.model_info(args['model_name'])
+
+        return pd.DataFrame([[args, metadata.__dict__]], columns=['model_args', 'metadata'])

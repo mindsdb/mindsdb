@@ -91,7 +91,7 @@ class ExecutorClient:
         )
         self._do("/executor", "delete", json={"id": self.id})
 
-    def default_json(self):
+    def _default_json(self):
         """Store all required data to instanciate ExecutorService instance into json."""
         if hasattr(self.sqlserver, "connection_id"):
             connection_id = self.sqlserver.connection_id
@@ -121,7 +121,7 @@ class ExecutorClient:
                 setattr(self, attr, response_json[attr])
 
     def stmt_prepare(self, sql):
-        json_data = self.default_json()
+        json_data = self._default_json()
         json_data["sql"] = sql
         logger.info("%s.stmt_prepare: json=%s", self.__class__.__name__, json_data)
         response = None
@@ -171,7 +171,7 @@ class ExecutorClient:
     def stmt_execute(self, param_values):
         if self.is_executed:
             return
-        json_data = self.default_json()
+        json_data = self._default_json()
         json_data["param_values"] = param_values
         logger.info("%s.stmt_execute: json=%s", self.__class__.__name__, json_data)
         response = None
@@ -222,7 +222,7 @@ class ExecutorClient:
             raise e
 
     def query_execute(self, sql):
-        json_data = self.default_json()
+        json_data = self._default_json()
         json_data["sql"] = sql
         logger.info("%s.query_execute: json=%s", self.__class__.__name__, json_data)
         response = None
@@ -275,7 +275,7 @@ class ExecutorClient:
             raise e
 
     def execute_external(self, sql):
-        json_data = self.default_json()
+        json_data = self._default_json()
         json_data["sql"] = sql
         logger.info(
             "%s.execute_external[NOT IMPLEMENTED]: json=%s",
@@ -289,7 +289,7 @@ class ExecutorClient:
         sql_lower = sql.lower()
         self.sql_lower = sql_lower.replace("`", "")
 
-        json_data = self.default_json()
+        json_data = self._default_json()
         json_data["sql"] = sql
         logger.info("%s.parse: json=%s", self.__class__.__name__, json_data)
         response = None
@@ -337,7 +337,7 @@ class ExecutorClient:
     def do_execute(self):
         if self.is_executed:
             return
-        json_data = self.default_json()
+        json_data = self._default_json()
         logger.info("%s.do_execute: json=%s", self.__class__.__name__, json_data)
         try:
             response = self._do("do_execute", _type="post", json=json_data)
@@ -386,7 +386,7 @@ class ExecutorClient:
 
     def change_default_db(self, new_db):
 
-        json_data = self.default_json()
+        json_data = self._default_json()
         json_data["new_db"] = new_db
         logger.info("%s.change_default_db: json=%s", self.__class__.__name__, json_data)
         response = None

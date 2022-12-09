@@ -205,7 +205,7 @@ class ExecutorService:
             executor = self._get_executor(params)
             sql = params.get("sql")
             executor.stmt_prepare(sql)
-            resp = executor.to_json()
+            resp = executor._to_json()
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
@@ -221,7 +221,7 @@ class ExecutorService:
             executor = self._get_executor(params)
             param_values = params.get("param_values")
             executor.stmt_execute(param_values)
-            resp = executor.to_json()
+            resp = executor._to_json()
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
@@ -256,7 +256,7 @@ class ExecutorService:
                 executor.params,
             )
 
-            resp = executor.to_json()
+            resp = executor._to_json()
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
@@ -274,7 +274,7 @@ class ExecutorService:
             executor = self._get_executor(params)
             sql = params.get("sql")
             executor.execute_external(sql)
-            resp = executor.to_json()
+            resp = executor._to_json()
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
@@ -288,7 +288,7 @@ class ExecutorService:
             executor = self._get_executor(params)
             sql = params.get("sql")
             executor.parse(sql)
-            resp = executor.to_json()
+            resp = executor._to_json()
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
@@ -303,7 +303,7 @@ class ExecutorService:
             )
             executor = self._get_executor(params)
             executor.do_execute()
-            resp = executor.to_json()
+            resp = executor._to_json()
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
@@ -317,7 +317,7 @@ class ExecutorService:
             executor = self._get_executor(params)
             new_db = params.get("new_db")
             executor.change_default_db(new_db)
-            resp = executor.to_json()
+            resp = executor._to_json()
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()

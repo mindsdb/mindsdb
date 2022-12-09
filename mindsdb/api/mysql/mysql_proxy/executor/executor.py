@@ -210,7 +210,7 @@ class Executor:
 
         self.state_track = ret.state_track
 
-    def to_json(self):
+    def _to_json(self):
         params = {
             "columns": self.to_mysql_columns(),
             "params": self.params,

@@ -23,12 +23,14 @@ class ModelStorage:
 
     def get_info(self):
         rec = db.Predictor.query.get(self.predictor_id)
-        return dict(status=rec.status, to_predict=rec.to_predict)
+        return dict(status=rec.status,
+                    to_predict=rec.to_predict,
+                    data=rec.data)
 
     def status_set(self, status, status_info=None):
         rec = db.Predictor.query.get(self.predictor_id)
         rec.status = status
-        if status == PREDICTOR_STATUS.ERROR and status_info is not None:
+        if status_info is not None:
             rec.data = status_info
         db.session.commit()
 

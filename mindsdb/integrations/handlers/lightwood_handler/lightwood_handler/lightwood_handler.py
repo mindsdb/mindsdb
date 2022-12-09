@@ -2,6 +2,7 @@ import sys
 import json
 import copy
 from datetime import datetime
+from typing import Optional
 
 import pandas as pd
 from type_infer.dtype import dtype
@@ -357,3 +358,93 @@ class LightwoodHandler(BaseMLEngine):
             resource_id=predictor_record.id
         )
         json_storage.delete('json_ai')
+
+    def _get_features_info(self):
+        ai_info = self.model_storage.json_get('json_ai')
+        if ai_info == {}:
+            raise Exception("predictor doesn't contain enough data to generate 'feature' attribute.")
+        data = []
+        dtype_dict = ai_info["dtype_dict"]
+        for column in dtype_dict:
+            c_data = []
+            c_data.append(column)
+            c_data.append(dtype_dict[column])
+            c_data.append(ai_info["encoders"][column]["module"])
+            if ai_info["encoders"][column]["args"].get("is_target", "False") == "True":
+                c_data.append("target")
+            else:
+                c_data.append("feature")
+            data.append(c_data)
+
+        return pd.DataFrame(data, columns=['column', 'type', 'encoder', 'role'])
+
+    def _get_model_info(self):
+        json_ai = self.model_storage.json_get('json_ai')
+        model_info = self.model_storage.get_info()
+        model_data = model_info['data']
+
+        accuracy_functions = json_ai.get('accuracy_functions')
+        if accuracy_functions:
+            accuracy_functions = str(accuracy_functions)
+
+        models_data = model_data.get("submodel_data", [])
+        if models_data == []:
+            raise Exception("predictor doesn't contain enough data to generate 'model' attribute")
+        data = []
+
+        for model in models_data:
+            m_data = []
+            m_data.append(model["name"])
+            m_data.append(model["accuracy"])
+            m_data.append(model.get("training_time", "unknown"))
+            m_data.append(1 if model["is_best"] else 0)
+            m_data.append(accuracy_functions)
+            data.append(m_data)
+
+        return pd.DataFrame(data, columns=['name', 'performance', 'training_time', 'selected', 'accuracy_functions'])
+
+    def _get_ensemble_data(self):
+        ai_info = self.model_storage.json_get('json_ai')
+        if ai_info == {}:
+            raise Exception("predictor doesn't contain enough data to generate 'ensamble' attribute. Please wait until predictor is complete.")
+        ai_info_str = json.dumps(ai_info, indent=2)
+
+        return pd.DataFrame([[ai_info_str]], columns=['ensemble'])
+
+    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+        if attribute is None:
+
+            model_description = {}
+
+            model_info = self.model_storage.get_info()
+            model_data = model_info['data']
+            to_predict = model_info['to_predict'][0]
+            json_ai = self.model_storage.json_get('json_ai')
+
+            if model_data.get('accuracies', None) is not None:
+                if len(model_data['accuracies']) > 0:
+                    model_data['accuracy'] = float(np.mean(list(model_data['accuracies'].values())))
+
+            model_columns = self.model_storage.columns_get()
+
+            model_description['accuracies'] = model_data['accuracies']
+            model_description['column_importances'] = model_data['column_importances']
+            model_description['outputs'] = [to_predict]
+            model_description['inputs'] = [col for col in model_columns if col not in model_description['outputs']]
+            model_description['model'] = ' --> '.join(str(k) for k in json_ai)
+
+            return pd.DataFrame([model_description])
+
+        else:
+            if attribute == "features":
+                return self._get_features_info()
+
+            elif attribute == "model":
+                return self._get_model_info()
+
+            elif attribute == "ensemble":
+                return self._get_ensemble_data()
+
+            else:
+                raise Exception("DESCRIBE '%s' predictor attribute is not supported yet" % attribute)
+

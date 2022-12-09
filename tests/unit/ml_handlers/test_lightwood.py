@@ -76,6 +76,16 @@ class TestLW(BaseExecutorTest):
         # value is around 1
         assert (avg_c > 0.9) and (avg_c < 1.1)
 
+        # test describe
+        ret = self.run_sql('describe proj.modelx')
+
+        ret = self.run_sql('describe proj.modelx.model')
+
+        ret = self.run_sql('describe proj.modelx.features')
+
+        ret = self.run_sql('describe proj.modelx.ensemble')
+
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_ts(self, mock_handler):
         # TS

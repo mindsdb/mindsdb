@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 import pandas as pd
-from lightwood.api import dtype
+from type_infer.infer import dtype
 
 from mindsdb_sql import parse_sql
 

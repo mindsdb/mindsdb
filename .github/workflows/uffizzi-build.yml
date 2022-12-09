@@ -1,0 +1,164 @@
+name: Build PR Image
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed, review_requested]
+
+jobs:
+  # Build and push MindsDb image from source - this ensures new changes can be tested
+  build-mindsdb:
+    name: Build and push `MindsDB`
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+    if: ${{ github.event.action != 'closed' }}
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          buildkitd-flags: --debug
+
+      - name: Generate UUID image name
+        id: uuid
+        run: echo "UUID_WORKER=$(uuidgen)" >> $GITHUB_ENV
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: registry.uffizzi.com/${{ env.UUID_WORKER }}
+          tags: type=raw,value=60d
+      - name: Build the tagged Docker image
+        run: docker build ./ --file ./docker/mindsdb.Dockerfile --tag "${{ steps.meta.outputs.tags }}" --label "${{ steps.meta.outputs.labels }}"
+      - name: Push the tagged Docker image
+        run: docker push "${{ steps.meta.outputs.tags }}"
+
+  # Build and push DB-handler from source
+  build-db-handler:
+    name: Build and push `DB Handler`
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+    if: ${{ github.event.action != 'closed' }}
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          buildkitd-flags: --debug
+
+      - name: Generate UUID image name
+        id: uuid
+        run: echo "UUID_WORKER=$(uuidgen)" >> $GITHUB_ENV
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: registry.uffizzi.com/${{ env.UUID_WORKER }}
+          tags: type=raw,value=60d
+      - name: Build the tagged Docker image
+        run: docker build ./ --file ./docker/db_handler.uffizzi.Dockerfile --tag "${{ steps.meta.outputs.tags }}" --label "${{ steps.meta.outputs.labels }}"
+      - name: Push the tagged Docker image
+        run: docker push "${{ steps.meta.outputs.tags }}"
+
+  # Build and push ml-handler from source
+  build-ml-handler:
+    name: Build and push `ML Handler`
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+    if: ${{ github.event.action != 'closed' }}
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          buildkitd-flags: --debug
+
+      - name: Generate UUID image name
+        id: uuid
+        run: echo "UUID_WORKER=$(uuidgen)" >> $GITHUB_ENV
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: registry.uffizzi.com/${{ env.UUID_WORKER }}
+          tags: type=raw,value=60d
+      - name: Build the tagged Docker image
+        run: docker build ./ --file ./docker/ml_handler.uffizzi.Dockerfile --tag "${{ steps.meta.outputs.tags }}" --label "${{ steps.meta.outputs.labels }}"
+      - name: Push the tagged Docker image
+        run: docker push "${{ steps.meta.outputs.tags }}"
+
+
+  render-compose-file:
+    name: Render Docker Compose File
+    # Pass output of this workflow to another triggered by `workflow_run` event.
+    runs-on: ubuntu-latest
+    needs:
+      - build-mindsdb
+      - build-ml-handler
+      - build-db-handler
+    outputs:
+      compose-file-cache-key: ${{ steps.hash.outputs.hash }}
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@v3
+      - name: Render Compose File
+        run: |
+          MINDSDB_IMAGE=${{ needs.build-mindsdb.outputs.tags }}
+          ML_HANDLER_IMAGE=${{needs.build-ml-handler.outputs.tags}}
+          DB_HANDLER_IMAGE=${{needs.build-db-handler.outputs.tags}}
+          export MINDSDB_IMAGE ML_HANDLER_IMAGE DB_HANDLER_IMAGE
+          export UFFIZZI_URL=\$UFFIZZI_URL
+          GHA_ACTOR=${{github.actor}}
+          GHA_REPO=${{github.event.repository.name}}
+          GHA_BRANCH=${{github.head_ref}}
+          GHA_REPOSITORY=${{github.event.repository.full_name}}
+          export GHA_ACTOR GHA_REPO GHA_BRANCH GHA_REPOSITORY
+          # Render simple template from environment variables.
+          envsubst < docker-compose.uffizzi.yml > docker-compose.rendered.yml
+          cat docker-compose.rendered.yml
+      - name: Upload Rendered Compose File as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: preview-spec
+          path: docker-compose.rendered.yml
+          retention-days: 2
+      - name: Serialize PR Event to File
+        run: |
+          cat << EOF > event.json
+          ${{ toJSON(github.event) }}
+
+          EOF
+      - name: Upload PR Event as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: preview-spec
+          path: event.json
+          retention-days: 2
+
+  delete-preview:
+    name: Call for Preview Deletion
+    runs-on: ubuntu-latest
+    if: ${{ github.event.action == 'closed' }}
+    steps:
+      # If this PR is closing, we will not render a compose file nor pass it to the next workflow.
+      - name: Serialize PR Event to File
+        run: |
+          cat << EOF > event.json
+          ${{ toJSON(github.event) }}
+
+          EOF
+      - name: Upload PR Event as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: preview-spec
+          path: event.json
+          retention-days: 2

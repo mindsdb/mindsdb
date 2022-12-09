@@ -1,0 +1,109 @@
+version: "3.8"
+
+# uffizzi integration
+x-uffizzi:
+  ingress:
+    service: nginx
+    port: 8081
+services:
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx-uffizzi:/etc/nginx
+
+  postgres:
+   image: postgres
+   environment:
+     - POSTGRES_USER=postgres
+     - POSTGRES_PASSWORD=postgres
+     - POSTGRES_DB=iris
+     - PGDATA=/tmp
+   volumes:
+      - postgres_data:/var/lib/postgresql/data/
+      - ./uffizzi-db-script/:/docker-entrypoint-initdb.d/
+   deploy:
+          resources:
+            limits:
+              memory: 500M
+
+  mindsdb:
+    image: "${MINDSDB_IMAGE}"
+    ports:
+      - "47334:47334"
+    environment:
+      MINDSDB_DOCKER_ENV: "True"
+      MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      FLASK_DEBUG: "1"
+      FLASK_ENV: "develop"
+      FLASK_APP: "mindsdb/mindsdb/__main__.py"
+    entrypoint: /bin/sh
+    # Rather than pushing the app as a volume, which is a limitation on the GCP ingress, the command below
+    # will download the code directly from GitHub on the container.
+    command:
+         - "-c"
+         - "apt update &&
+            apt install unzip -y &&
+            wget 'https://github.com/$GHA_REPOSITORY/archive/refs/heads/$GHA_BRANCH.zip' &&
+            unzip $GHA_BRANCH.zip && wait &&
+            rm -rf mindsdb &&
+            mv mindsdb-$GHA_BRANCH mindsdb &&
+            chmod +x mindsdb/ &&
+            cd mindsdb &&
+            python -m mindsdb
+            "
+    deploy:
+            resources:
+              limits:
+                memory: 4000M
+
+
+  huggingface_ml_handler:
+    image: "${ML_HANDLER_IMAGE}"
+    environment:
+      # have to share mindsdb database, because it doens't work without it
+      MINDSDB_STORAGE_DIR: "/mindsdb/var"
+    entrypoint: /bin/sh
+    command:
+          - "-c"
+          - "apt update &&
+            apt install unzip -y &&
+            wget 'https://github.com/$GHA_ACTOR/$GHA_REPO/archive/refs/heads/$GHA_BRANCH.zip' &&
+            unzip $GHA_BRANCH.zip && wait &&
+            rm -rf mindsdb &&
+            mv mindsdb-$GHA_BRANCH mindsdb &&
+            chmod +x mindsdb/ &&
+            chmod +x mindsdb/mindsdb/ &&
+            python /mindsdb/mindsdb/integrations/handlers_wrapper/ml_handler_service.py
+            "
+    deploy:
+            resources:
+              limits:
+                memory: 500M
+
+
+  db_handler:
+    image: "${DB_HANDLER_IMAGE}"
+    entrypoint: /bin/sh
+    command:
+          - "-c"
+          - "apt update &&
+            apt install unzip -y &&
+            wget 'https://github.com/$GHA_ACTOR/$GHA_REPO/archive/refs/heads/$GHA_BRANCH.zip' &&
+            unzip $GHA_BRANCH.zip && wait &&
+            rm -rf mindsdb &&
+            mv mindsdb-$GHA_BRANCH mindsdb &&
+            chmod +x mindsdb/ &&
+            chmod +x mindsdb/mindsdb &&
+            python mindsdb/mindsdb/integrations/handlers_wrapper/db_handler_service.py
+            "
+    deploy:
+            resources:
+              limits:
+                memory: 500M
+    environment:
+      - 'PARAMS={"connection_data": {"host": "localhost", "port": "5432", "user": "postgres", "password": "postgres", "database": "iris", "ssl": false}, "name": "postgres", "type": "postgres"}'
+
+volumes:
+  postgres_data:
+

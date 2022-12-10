@@ -109,6 +109,19 @@ class DBServiceClient(BaseClient):
 
         return False
 
+    def disconnect(self):
+        logger.info("%s.disconnect: called", self.__class__.__name__)
+        try:
+            r = self._do("/disconnect", json=self.context())
+            if r.status_code == 200 and r.json()["status"] is True:
+                return True
+        except Exception:
+            logger.error(
+                "%s.disconnect: call to db service has finished with an error - %s",
+                self.__class__.__name__,
+                traceback.format_exc(),
+            )
+
     def check_connection(self) -> StatusResponse:
         """
         Check a connection to the DBHandler.

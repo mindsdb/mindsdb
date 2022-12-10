@@ -86,7 +86,7 @@ class DBServiceClient(BaseClient):
         handler_class = get_handler(self.handler_type)
         self.handler = handler_class(**kwargs)
 
-    def context(self):
+    def _context(self):
         context = {
             "handler_type": self.handler_type,
             "handler_kwargs": self.handler_kwargs,
@@ -94,25 +94,29 @@ class DBServiceClient(BaseClient):
         print(f"CONTEXT - {context}")
         return context
 
-    def connect(self) -> bool:
+    def connect(self):
         """Establish a connection.
 
         Returns: True if the connection success, False otherwise
         """
+        logger.info("%s.connect: called", self.__class__.__name__)
         try:
-            r = self._do("/connect", json=self.context())
+            r = self._do("/connect", json=self._context())
             if r.status_code == 200 and r.json()["status"] is True:
                 return True
         except Exception:
-            # do some logging
-            pass
+            logger.error(
+                "%s.connect: call to db service has finished with an error - %s",
+                self.__class__.__name__,
+                traceback.format_exc(),
+            )
 
         return False
 
     def disconnect(self):
         logger.info("%s.disconnect: called", self.__class__.__name__)
         try:
-            r = self._do("/disconnect", json=self.context())
+            r = self._do("/disconnect", json=self._context())
             if r.status_code == 200 and r.json()["status"] is True:
                 return True
         except Exception:
@@ -132,7 +136,7 @@ class DBServiceClient(BaseClient):
         logger.info("%s: calling 'check_connection'", self.__class__.__name__)
         status = None
         try:
-            r = self._do("/check_connection", json=self.context())
+            r = self._do("/check_connection", json=self._context())
             r = self._convert_response(r.json())
             status = StatusResponse(
                 success=r.get("success", False),
@@ -166,7 +170,7 @@ class DBServiceClient(BaseClient):
             "%s: calling 'native_query' for query - %s", self.__class__.__name__, query
         )
         try:
-            _json = self.context()
+            _json = self._context()
             _json["query"] = query
             r = self._do("/native_query", _type="post", json=_json)
             r = self._convert_response(r.json())
@@ -213,7 +217,7 @@ class DBServiceClient(BaseClient):
         b64_s_query_str = b64_s_query.decode("utf-8")
         response = None
 
-        _json = self.context()
+        _json = self._context()
         _json["query"] = b64_s_query_str
         logger.info(
             "%s: calling 'query' for query - %s, json - %s",
@@ -261,7 +265,7 @@ class DBServiceClient(BaseClient):
         logger.info("%s: calling 'get_tables'", self.__class__.__name__)
 
         try:
-            r = self._do("/get_tables", json=self.context())
+            r = self._do("/get_tables", json=self._context())
             r = self._convert_response(r.json())
             response = Response(
                 data_frame=r.get("data_frame", None),
@@ -305,7 +309,7 @@ class DBServiceClient(BaseClient):
             table_name,
         )
         try:
-            _json = self.context()
+            _json = self._context()
             _json["table"] = table_name
             r = self._do("/get_columns", json=_json)
             r = self._convert_response(r.json())

@@ -90,6 +90,14 @@ class DBHandlerWrapper(BaseDBWrapper):
         )
         self.connect = connect_route(self.connect)
 
+        disconnect_route = self.app.route(
+            "/connect",
+            methods=[
+                "GET",
+            ],
+        )
+        self.disconnect = disconnect_route(self.disconnect)
+
         check_connection_route = self.app.route(
             "/check_connection",
             methods=[
@@ -133,6 +141,16 @@ class DBHandlerWrapper(BaseDBWrapper):
         try:
             handler = self.get_handler(request.json)
             handler.connect()
+            return {"status": "OK"}, 200
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error(msg)
+            return {"status": "FAIL", "error": msg}, 500
+
+    def disconnect(self):
+        try:
+            handler = self.get_handler(request.json)
+            handler.disconnect()
             return {"status": "OK"}, 200
         except Exception:
             msg = traceback.format_exc()

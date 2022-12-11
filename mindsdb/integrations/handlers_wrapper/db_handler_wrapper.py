@@ -31,7 +31,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.handler_helpers import get_handler
 from mindsdb.utilities.log import get_log
 
-logger = get_log()
+logger = get_log(logger_name="main")
 
 
 class BaseDBWrapper:

@@ -30,12 +30,9 @@ from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.integrations.libs.handler_helpers import get_handler
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.config import Config
-
-# from mindsdb.utilities.log import get_log
-
 from mindsdb.utilities.log import get_log
 
-logger = get_log()
+logger = get_log(logger_name="main")
 
 
 class BaseMLWrapper:
@@ -139,6 +136,11 @@ class MLHandlerWrapper(BaseMLWrapper):
 
         integration_id = params["integration_id"]
         _type = params["integration_engine"] or params.get("name", None)
+        logger.info(
+            "%s.get_handler: request handler of type - %s",
+            self.__class__.__name__,
+            _type,
+        )
 
         handler_class = get_handler(_type)
         params["handler_class"] = handler_class

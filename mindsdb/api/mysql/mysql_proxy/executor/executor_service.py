@@ -8,8 +8,8 @@ from mindsdb.utilities.log import initialize_log, get_log
 if __name__ == "__main__":
     config = Config()
     db.init()
-    initialize_log(config=config, logger_name="mindsdb")
-    logger = get_log()
+    initialize_log(config=config)
+    logger = get_log(logger_name="main")
     app = ExecutorService()
     port = int(os.environ.get("PORT", 5500))
     host = os.environ.get("HOST", "0.0.0.0")

@@ -12,7 +12,7 @@ from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import (
     SessionController,
 )
 
-logger = get_log()
+logger = get_log(logger_name="main")
 
 
 class SqlServerStub:

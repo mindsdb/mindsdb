@@ -835,6 +835,8 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
                 FROM mindsdb
                 (select * from vtasks)
                 PREDICT a
+                using
+                join_learn_process=true
             ''',
             dialect='mindsdb'))
         assert ret.error_code is None

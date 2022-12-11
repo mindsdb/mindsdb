@@ -4,10 +4,10 @@ title: Quickstart
 
 Follow the steps below to start making data forecasts with MindsDB using standard SQL.
 
-Check out our [Getting Started Guide](/getting-started/) to set up and work with
+Check out our [Getting Started guide](/getting-started/) to set up and work with
 MindsDB using your own data and models.
 
-## 1. Create a MindsDB Cloud Account
+## 1. Create a MindsDB Cloud Account or Install MindsDB Locally
 
 Create your [free MindsDB Cloud account](https://cloud.mindsdb.com/register) to
 start practicing right away using the MindsDB Cloud Editor.
@@ -19,25 +19,25 @@ MindsDB documentation. You can install MindsDB in
 
 ## 2. Connect to MindsDB from a SQL Client
 
-You can use the MindsDB Cloud SQL Editor or open your preferred SQL client, such
+You can use the MindsDB Cloud Editor or open your preferred SQL client, such
 as DBeaver or MySQL CLI, and connect to MindsDB.
 
 <Tabs>
 
-  <Tab title="Using the MindsDB Cloud SQL Editor">
+  <Tab title="Using the MindsDB Cloud Editor">
     Log in to your MindsDB Cloud account. The
     [Editor](https://cloud.mindsdb.com/editor) is the first thing you'll see!
   </Tab>
 
-  <Tab title="Using a third-party SQL Client">
+  <Tab title="Using a Third-Party SQL Client">
     To connect to MindsDB from a third-party SQL client, use the connection details
     below.
 
-    ```bash
-    "user": your_mindsdb_cloud_username,   # your Mindsdb Cloud email address is your username
-    "password": your_mindsdb_cloud_password,
-    "host": "cloud.mindsdb.com",
-    "port": "3306"
+    ```
+    User: your_mindsdb_cloud_username
+    Password: your_mindsdb_cloud_password
+    Host: `cloud.mindsdb.com`
+    Port: `3306`
     ```
 
     <Tip>
@@ -51,7 +51,7 @@ as DBeaver or MySQL CLI, and connect to MindsDB.
 
 </Tabs>
 
-## 3. Connecting a Database Using [`CREATE DATABASE`](/sql/create/databases/)
+## 3. Connect a Database Using [`CREATE DATABASE`](/sql/create/databases/)
 
 We have a sample database that you can use right away. To connect a database to your MindsDB Cloud account, use the [`CREATE DATABASE`](/sql/create/databases/) statement, as below.
 
@@ -73,7 +73,7 @@ On execution, we get:
 Query OK, 0 rows affected (3.22 sec)
 ```
 
-## 4. Previewing Available Data
+## 4. Preview the Available Data Using [`SELECT`](/sql/api/select/)
 
 You can now preview the available data with a standard `SELECT` statement.
 
@@ -124,7 +124,7 @@ On execution, we get:
 To learn more about MindsDB tables structure, check out
 [this guide](sql/table-structure/).
 
-## 5. Creating a Model Using [`CREATE MODEL`](/sql/create/predictor/)
+## 5. Create a Model Using [`CREATE MODEL`](/sql/create/predictor/)
 
 Now you are ready to create your first predictor. Use the
 [`CREATE MODEL`](/sql/create/predictor/) statement, as below.
@@ -142,7 +142,7 @@ On execution, we get:
 Query OK, 0 rows affected (9.79 sec)
 ```
 
-## 6. Checking the Status of a Predictor
+## 6. Check the Status of a Model
 
 It may take a couple of minutes until the predictor is trained. You can monitor
 the status of your predictor by executing the following command:
@@ -156,6 +156,16 @@ WHERE name = 'home_rentals_predictor';
 On execution, we get:
 
 ```sql
++------------+
+| status     |
++------------+
+| generating |
++------------+
+```
+
+After a short time, we get:
+
+```sql
 +----------+
 | status   |
 +----------+
@@ -163,7 +173,7 @@ On execution, we get:
 +----------+
 ```
 
-Or:
+And finally, we get:
 
 ```sql
 +----------+
@@ -177,9 +187,9 @@ Alternatively, you can use the `SHOW MODELS` command as below.
 
 ```sql
 SHOW MODELS
-[FROM database_project_name]
-[LIKE model_name]
-[WHERE filter];
+[FROM project_name]
+[LIKE 'model_name']
+[WHERE column_name = value];
 ```
 
 Here is an example:
@@ -188,14 +198,14 @@ Here is an example:
 SHOW MODELS
 FROM mindsdb
 LIKE 'home_rentals_predictor'
-WHERE status='complete';
+WHERE status = 'complete';
 ```
 
 <Warning>
   The status of the predictor must be `complete` before you can start making predictions.
 </Warning>
 
-## 7. Making a Prediction Using [`SELECT`](/sql/api/select/)
+## 7. Make Predictions Using [`SELECT`](/sql/api/select/)
 
 The [`SELECT`](/sql/api/select/) statement allows you to make predictions based
 on features, where features are the input variables, or input columns, that are
@@ -207,8 +217,8 @@ two bathrooms.
 ```sql
 SELECT rental_price
 FROM mindsdb.home_rentals_predictor
-WHERE number_of_bathrooms=2
-AND sqft=1000;
+WHERE number_of_bathrooms = 2
+AND sqft = 1000;
 ```
 
 On execution, we get:

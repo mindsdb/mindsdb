@@ -60,7 +60,7 @@ class Responce(Responder):
 
             # table_query
             collection = query['filter']['collection']
-            filter = query['filter']['query']
+            filter = query['filter'].get('query', {})
             table_select = mongoToAst.find(
                 collection=collection,
                 filter=filter,

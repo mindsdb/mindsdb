@@ -324,6 +324,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data = []
         packets = []
         for i, column in enumerate(columns):
+            logger.info("%s._get_column_defenition_packets: handling column - %s of %s type", self.__class__.__name__, column, type(column))
             table_name = column.get('table_name', 'table_name')
             column_name = column.get('name', 'column_name')
             column_alias = column.get('alias', column_name)
@@ -443,7 +444,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
-                columns=executor.columns,
+                # columns=executor.columns,
+                columns=executor.to_mysql_columns(executor.columns),
                 data=executor.data,
                 status=executor.server_status
             )
@@ -468,7 +470,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         ]
 
         if len(executor.params) > 0:
-            parameters_def = executor.params
+            # parameters_def = executor.params
+            parameters_def = executor.to_mysql_columns(executor.params)
             packages.extend(
                 self._get_column_defenition_packets(parameters_def)
             )
@@ -477,7 +480,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 packages.append(self.packet(EofPacket, status=status))
 
         if len(executor.columns) > 0:
-            columns_def = executor.columns
+            # columns_def = executor.columns
+            columns_def = executor.to_mysql_columns(executor.columns)
             packages.extend(
                 self._get_column_defenition_packets(columns_def)
             )
@@ -502,7 +506,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.send_query_answer(resp)
 
         # TODO prepared_stmt['type'] == 'lock' is not used but it works
-        columns_def = executor.columns
+        # columns_def = executor.columns
+        columns_def = executor.to_mysql_columns(executor.columns)
         packages = [self.packet(ColumnCountPacket, count=len(columns_def))]
 
         packages.extend(self._get_column_defenition_packets(columns_def))
@@ -535,7 +540,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.send_query_answer(resp)
 
         packages = []
-        columns = executor.columns
+        # columns = executor.columns
+        columns = executor.to_mysql_columns(executor.columns)
         for row in executor.data[fetched:limit]:
             packages.append(
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns)

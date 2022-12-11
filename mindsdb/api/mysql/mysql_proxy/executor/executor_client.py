@@ -120,6 +120,9 @@ class ExecutorClient:
                 )
                 setattr(self, attr, response_json[attr])
 
+    def to_mysql_columns(self, columns):
+        return columns
+
     def stmt_prepare(self, sql):
         json_data = self._default_json()
         json_data["sql"] = sql

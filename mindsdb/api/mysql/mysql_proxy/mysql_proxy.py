@@ -443,7 +443,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
-                columns=executor.to_mysql_columns(),
+                columns=executor.columns,
                 data=executor.data,
                 status=executor.server_status
             )
@@ -468,7 +468,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         ]
 
         if len(executor.params) > 0:
-            parameters_def = self.to_mysql_columns(executor.params)
+            parameters_def = executor.params
             packages.extend(
                 self._get_column_defenition_packets(parameters_def)
             )
@@ -477,7 +477,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 packages.append(self.packet(EofPacket, status=status))
 
         if len(executor.columns) > 0:
-            columns_def = executor.to_mysql_columns()
+            columns_def = executor.columns
             packages.extend(
                 self._get_column_defenition_packets(columns_def)
             )
@@ -502,7 +502,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.send_query_answer(resp)
 
         # TODO prepared_stmt['type'] == 'lock' is not used but it works
-        columns_def = executor.to_mysql_columns()
+        columns_def = executor.columns
         packages = [self.packet(ColumnCountPacket, count=len(columns_def))]
 
         packages.extend(self._get_column_defenition_packets(columns_def))

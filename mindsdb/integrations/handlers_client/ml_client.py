@@ -97,7 +97,7 @@ class MLClient(BaseClient):
             if arg in self.handler_kwargs:
                 del self.handler_kwargs[arg]
 
-    def default_json(self):
+    def _default_json(self):
         return {
             "context": ctx.dump(),
             "handler_args": self.handler_kwargs,
@@ -111,7 +111,7 @@ class MLClient(BaseClient):
         )
         response = None
         try:
-            params = self.default_json()
+            params = self._default_json()
             params["method_params"] = {"table_name": table_name}
             r = self._do("/get_columns", json=params)
             r = self._convert_response(r.json())
@@ -143,7 +143,7 @@ class MLClient(BaseClient):
         logger.info("%s.get_tables is calling", self.__class__.__name__)
         response = None
         try:
-            params = self.default_json()
+            params = self._default_json()
             params["method_params"] = {}
             r = self._do("/get_tables", json=params)
             r = self._convert_response(r.json())
@@ -204,7 +204,7 @@ class MLClient(BaseClient):
         )
         response = None
         try:
-            params = self.default_json()
+            params = self._default_json()
             params["method_params"] = calling_params
             r = self._do("/learn", _type="post", json=params)
             r = self._convert_response(r.json())
@@ -237,7 +237,7 @@ class MLClient(BaseClient):
         )
         response = None
         try:
-            params = self.default_json()
+            params = self._default_json()
             params["method_params"] = {"query": query}
             r = self._do("/native_query", json=params)
             r = self._convert_response(r.json())
@@ -289,7 +289,7 @@ class MLClient(BaseClient):
         )
         response = None
         try:
-            params = self.default_json()
+            params = self._default_json()
             params["method_params"] = calling_params
             r = self._do("/predict", json=params)
             r = self._convert_response(r.json())
@@ -337,7 +337,7 @@ class MLClient(BaseClient):
             query_b = pickle.dumps(query)
             query_b64 = base64.b64encode(query_b)
             s_query = query_b64.decode("utf-8")
-            params = self.default_json()
+            params = self._default_json()
             params["method_params"] = {"query": s_query}
             r = self._do("/query", json=params)
             r = self._convert_response(r.json())

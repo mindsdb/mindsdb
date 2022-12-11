@@ -45,7 +45,7 @@ class ExecutorService:
                 "GET",
             ],
         )
-        self.index = default_router(self.index)
+        self._index = default_router(self._index)
 
         delete_executer_router = self.app.route(
             "/executor",
@@ -54,10 +54,10 @@ class ExecutorService:
                 "DEL",
             ],
         )
-        self.del_executor = delete_executer_router(self.del_executor)
+        self._del_executor = delete_executer_router(self._del_executor)
 
         delete_session_router = self.app.route("/session", methods=["DELETE", "DEL"])
-        self.del_session = delete_session_router(self.del_session)
+        self._del_session = delete_session_router(self._del_session)
 
         stmt_prepare_router = self.app.route(
             "/stmt_prepare",
@@ -166,15 +166,15 @@ class ExecutorService:
         self.executors_cache[exec_id] = executor
         return executor
 
-    def run(self, **kwargs):
+    def _run(self, **kwargs):
         """Launch internal Flask application."""
         self.app.run(**kwargs)
 
-    def index(self):
+    def _index(self):
         """Default GET endpoint - '/'."""
         return "An Executor Wrapper", 200
 
-    def del_executor(self):
+    def _del_executor(self):
         # to delete executors
         exec_id = request.json.get("id")
         logger.info(
@@ -184,7 +184,7 @@ class ExecutorService:
             del self.executors_cache[exec_id]
         return "", 200
 
-    def del_session(self):
+    def _del_session(self):
         # to delete sessions
         session_id = request.json.get("id")
         logger.info(

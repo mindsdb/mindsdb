@@ -52,8 +52,8 @@ class ExecutorClient:
         self.sql = ""
         self.sql_lower = ""
 
-    def to_mysql_columns(self):
-        return self.columns
+    # def _to_mysql_columns(self):
+    #     return self.columns
 
     @sending_attempts()
     def _do(self, endpoint, _type="get", **params) -> requests.Response:

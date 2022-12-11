@@ -2,6 +2,8 @@ import pytest
 
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
 from mindsdb.api.mysql.mysql_proxy.executor.executor_client import ExecutorClient
+from mindsdb.api.mysql.mysql_proxy.executor.executor_service import ExecutorService
+
 from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 from mindsdb.integrations.handlers_client.ml_client import MLClient
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
@@ -20,9 +22,12 @@ def get_call_args(f_obj):
     [
         (Executor, ExecutorClient),
         (ExecutorClient, Executor),
+        (ExecutorClient, ExecutorService),
+        (ExecutorService, ExecutorClient),
         (PostgresHandler, DBServiceClient.client_class),
         (DBServiceClient.client_class, PostgresHandler),
         (BaseMLEngineExec, MLClient.client_class),
+        (MLClient.client_class, BaseMLEngineExec),
     ],
 )
 def test_equal_public_api(origin, compared):
@@ -42,6 +47,7 @@ def test_equal_public_api(origin, compared):
     [
         (Executor, ExecutorClient),
         (PostgresHandler, DBServiceClient.client_class),
+        (BaseMLEngineExec, MLClient.client_class),
     ],
 )
 def test_equal_annotation(origin, compared):

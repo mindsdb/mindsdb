@@ -212,8 +212,8 @@ class Executor:
 
     def _to_json(self):
         params = {
-            "columns": self.to_mysql_columns(),
-            "params": self.params,
+            "columns": self._to_mysql_columns(self.columns),
+            "params": self._to_mysql_columns(self.params),
             "data": self.data,
             "state_track": self.state_track,
             "server_status": self.server_status,
@@ -221,7 +221,7 @@ class Executor:
         }
         return params
 
-    def to_mysql_columns(self):
+    def _to_mysql_columns(self, columns):
         """Converts raw columns data into convinient format(list of lists) for the futher usage.
         Plus, it is also converts column types into internal ones."""
 
@@ -230,7 +230,7 @@ class Executor:
         database = (
             None if self.session.database == "" else self.session.database.lower()
         )
-        for column_record in self.columns:
+        for column_record in columns:
 
             field_type = column_record.type
 

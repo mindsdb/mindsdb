@@ -323,3 +323,6 @@ class ExecutorService:
             err_msg = traceback.format_exc()
             logger.error("%s.change_default_db: execution error - %s", err_msg)
             return {"error": err_msg}, 500
+
+    def to_mysql_columns(self, foo):
+        raise NotImplementedError

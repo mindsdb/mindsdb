@@ -381,4 +381,3 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.mock_predict.side_effect = predict_f
         self.mock_model_controller.get_models.side_effect = lambda: [predictor_record]
         self.mock_model_controller.get_model_data.side_effect = get_model_data_f
-        self.mock_model_controller.get_model_description.side_effect = get_model_data_f

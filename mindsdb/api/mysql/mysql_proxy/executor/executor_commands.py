@@ -1,4 +1,3 @@
-import json
 import datetime
 from typing import Optional
 from pathlib import Path
@@ -167,11 +166,7 @@ class ExecuteCommands:
             return self.answer_drop_database(statement)
         elif type(statement) == Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
-            predictor_attrs = ("model", "features", "ensemble")
-            if statement.value.parts[-1] in predictor_attrs:
-                return self.answer_describe_predictor(statement.value.parts[-2:])
-            else:
-                return self.answer_describe_predictor(statement.value.parts[-1])
+            return self.answer_describe_predictor(statement)
         elif type(statement) == RetrainPredictor:
             return self.answer_retrain_predictor(statement)
         elif type(statement) == Show:
@@ -552,93 +547,32 @@ class ExecuteCommands:
             log.logger.warning(f'Unknown SQL statement: {sql}')
             raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
 
-    def answer_describe_predictor(self, predictor_value):
-        predictor_attr = None
-        if isinstance(predictor_value, (list, tuple)):
-            predictor_name = predictor_value[0]
-            predictor_attr = predictor_value[1]
-        else:
-            predictor_name = predictor_value
-        model_controller = self.session.model_controller
-        models = model_controller.get_models()
-        if predictor_name not in [x['name'] for x in models]:
-            raise ErBadTableError(f"Can't describe predictor. There is no predictor with name '{predictor_name}'")
-        description = model_controller.get_model_description(predictor_name)
+    def answer_describe_predictor(self, statement):
+        # describe attr
+        predictor_attrs = ("model", "features", "ensemble")
+        attribute = None
+        if statement.value.parts[-1] in predictor_attrs:
+            attribute = statement.value.parts.pop(-1)
 
-        if predictor_attr is None:
-            columns = [
-                Column(name='accuracies', table_name='', type='str'),
-                Column(name='column_importances', table_name='', type='str'),
-                Column(name='outputs', table_name='', type='str'),
-                Column(name='inputs', table_name='', type='str'),
-                Column(name='model', table_name='', type='str'),
-            ]
-            description = [
-                description['accuracies'],
-                description['column_importances'],
-                description['outputs'],
-                description['inputs'],
-                description['model']
-            ]
-            data = [description]
+        if len(statement.value.parts) > 1:
+            project_name = statement.value.parts[0]
         else:
-            data = model_controller.get_model_data(name=predictor_name)
-            if predictor_attr == "features":
-                data = self._get_features_info(data)
-                columns = [{
-                    'table_name': '',
-                    'name': 'column',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'type',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': "encoder",
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'role',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }]
-                columns = [Column(**d) for d in columns]
-            elif predictor_attr == "model":
-                data = self._get_model_info(data)
-                columns = [{
-                    'table_name': '',
-                    'name': 'name',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'performance',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'training_time',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': "selected",
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': "accuracy_functions",
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }]
-                columns = [Column(**d) for d in columns]
-            elif predictor_attr == "ensemble":
-                data = self._get_ensemble_data(data)
-                columns = [
-                    Column(name='ensemble', table_name='', type='str')
-                ]
-            else:
-                raise ErNotSupportedYet("DESCRIBE '%s' predictor attribute is not supported yet" % predictor_attr)
+            project_name = self.session.database
 
+        model_name = statement.value.parts[-1]
+
+        df = self.session.model_controller.describe_model(self.session, project_name, model_name, attribute)
+
+        df_dict = df.to_dict('split')
+
+        columns = [
+            Column(name=col, table_name='', type='str')
+            for col in df_dict['columns']
+        ]
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=columns,
-            data=data
+            data=df_dict['data']
         )
 
     def answer_retrain_predictor(self, statement):
@@ -1415,48 +1349,3 @@ class ExecuteCommands:
                 self.session.database = db_name
             else:
                 raise ErBadDbError(f"Database {db_name} does not exists")
-
-    def _get_features_info(self, data):
-        ai_info = data.get('json_ai', {})
-        if ai_info == {}:
-            raise ErBadTableError("predictor doesn't contain enough data to generate 'feature' attribute.")
-        data = []
-        dtype_dict = ai_info["dtype_dict"]
-        for column in dtype_dict:
-            c_data = []
-            c_data.append(column)
-            c_data.append(dtype_dict[column])
-            c_data.append(ai_info["encoders"][column]["module"])
-            if ai_info["encoders"][column]["args"].get("is_target", "False") == "True":
-                c_data.append("target")
-            else:
-                c_data.append("feature")
-            data.append(c_data)
-        return data
-
-    def _get_model_info(self, data):
-        accuracy_functions = data.get('json_ai', {}).get('accuracy_functions')
-        if accuracy_functions:
-            accuracy_functions = str(accuracy_functions)
-
-        models_data = data.get("submodel_data", [])
-        if models_data == []:
-            raise ErBadTableError("predictor doesn't contain enough data to generate 'model' attribute")
-        data = []
-
-        for model in models_data:
-            m_data = []
-            m_data.append(model["name"])
-            m_data.append(model["accuracy"])
-            m_data.append(model.get("training_time", "unknown"))
-            m_data.append(1 if model["is_best"] else 0)
-            m_data.append(accuracy_functions)
-            data.append(m_data)
-        return data
-
-    def _get_ensemble_data(self, data):
-        ai_info = data.get('json_ai', {})
-        if ai_info == {}:
-            raise ErBadTableError("predictor doesn't contain enough data to generate 'ensamble' attribute. Please wait until predictor is complete.")
-        ai_info_str = json.dumps(ai_info, indent=2)
-        return [[ai_info_str]]

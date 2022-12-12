@@ -253,7 +253,7 @@
       ]
     },
     {
-      "group": "Natural Language Processing NLP",
+      "group": "Natural Language Processing (NLP)",
       "pages": [
         "nlp/what-is-nlp",
         "nlp/nlp-mindsdb-hf",

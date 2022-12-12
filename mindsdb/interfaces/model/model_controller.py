@@ -422,7 +422,6 @@ class ModelController():
         params = self.prepare_adjust_statement(statement, ml_handler.database_controller)
 
         params['set_active'] = set_active
-        params['overwrite'] = params['args'].get('overwrite', False)
         ml_handler.update(**params)
 
     def update_model_version(self, models, active=None):

@@ -10,6 +10,8 @@ This API provides a REST endpoint for executing the SQL queries. Note:
 * This endpoint is a HTTP POST method.
 * This endpoint accept data via `application/json` request body. 
 * The only required key is the `query` which has the SQL statement value.
+* By default, the open source version doesn't provide Authentication methods as MindsDB Cloud. 
+On MindsDB cloud you need to set the `cookie` field in the header of request e.g  `{session=273trgsehgrui3i2riurwehe}`. 
 
 ### Body
 
@@ -50,6 +52,7 @@ The type of the response table | error | ok
 curl --request POST \
      --url https://cloud.mindsdb.com/api/sql/query \
      --header 'Content-Type: application/json' \
+     --cookie '{session=273trgsehgrui3i2riurwehe}'\
      --data '
 {
      "query": "SELECT * FROM example_db.demo_data.home_rentals LIMIT 10;"
@@ -61,8 +64,9 @@ curl --request POST \
 ```python Python
 import requests
 url = 'https://cloud.mindsdb.com/api/sql/query'
+cookies = '{session=273trgsehgrui3i2riurwehe}'
 resp = requests.post(url, data={'query': 
-                    'SELECT * FROM example_db.demo_data.home_rentals LIMIT 10;'})
+                    'SELECT * FROM example_db.demo_data.home_rentals LIMIT 10;', cookies=cookies})
 ```
 
 </RequestExample>

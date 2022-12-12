@@ -118,9 +118,6 @@ def learn_process(class_path, context_dump, integration_id,
             model_storage=modelStorage,
         )
 
-        if hasattr(ml_handler, 'create_validation'):
-            ml_handler.create_validation(target, df=training_data_df, args=problem_definition)
-
         # create new model
         if base_predictor_id is None:
             ml_handler.create(target, df=training_data_df, args=problem_definition)
@@ -298,6 +295,10 @@ class BaseMLEngineExec:
 
         project = self.database_controller.get_project(name=project_name)
 
+        # handler-side validation
+        if hasattr(self.handler_class, 'create_validation'):
+            self.handler_class.create_validation(target, args=problem_definition)
+
         predictor_record = db.Predictor(
             company_id=ctx.company_id,
             name=model_name,
@@ -393,7 +394,6 @@ class BaseMLEngineExec:
             join_learn_process=False,
             label=None,
             set_active=True,
-            overwrite=False,  # TODO: pending, keep?
             args: Optional[dict] = None
     ):
         # generate new record from latest version as starting point

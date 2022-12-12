@@ -1,10 +1,10 @@
 from unittest.mock import patch
 
 import pandas as pd
-from type_infer.infer import dtype
 
 from mindsdb_sql import parse_sql
 
+from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 
 from .executor_test_base import BaseExecutorMockPredictor
 

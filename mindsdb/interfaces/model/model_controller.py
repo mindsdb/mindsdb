@@ -63,24 +63,21 @@ class ModelController():
                 data['accuracy'] = float(np.mean(list(data['accuracies'].values())))
         return data
 
-    def get_model_description(self, name: str):
-        """
-        Similar to `get_model_data` but meant to be seen directly by the user, rather than parsed by something like the Studio predictor view.
+    def describe_model(self, session,  project_name, model_name, attribute):
+        model_record = get_model_record(
+            name=model_name,
+            project_name=project_name,
+            except_absent=True
+        )
+        integration_record = db.Integration.query.get(model_record.integration_id)
 
-        Uses `get_model_data` to compose this, but in the future we might want to make this independent if we deprecated `get_model_data`
+        ml_handler_base = session.integration_controller.get_handler(integration_record.name)
 
-        :returns: Dictionary of the analysis (meant to be foramtted by the APIs and displayed as json/yml/whatever)
-        """ # noqa
-        model_description = {}
-        model_data = self.get_model_data(name=name)
+        ml_handler = ml_handler_base.get_ml_handler(model_record.id)
+        if not hasattr(ml_handler, 'describe'):
+            raise Exception("ML handler doesn't support description")
 
-        model_description['accuracies'] = model_data['accuracies']
-        model_description['column_importances'] = model_data['column_importances']
-        model_description['outputs'] = [model_data['predict']]
-        model_description['inputs'] = [col for col in model_data['dtype_dict'] if col not in model_description['outputs']]
-        model_description['model'] = ' --> '.join(str(k) for k in model_data['json_ai'])
-
-        return model_description
+        return ml_handler.describe(attribute)
 
     def get_models(self, with_versions=False, ml_handler_name='lightwood', integration_id=None):
         models = []

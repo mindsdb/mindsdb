@@ -4,7 +4,6 @@ import time
 import pytest
 
 import pandas as pd
-from lightwood.api import dtype
 
 from mindsdb_sql import parse_sql
 

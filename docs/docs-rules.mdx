@@ -38,11 +38,11 @@ Follow the syntax below when documenting an SQL command and its output.
     On execution, we get:
 
     ```sql
-    +---------------+---------------+
-    | [column_name] | [column_name] |
-    +---------------+---------------+
-    | [value]       | [value]       |
-    +---------------+---------------+
+    +-------------+-------------+
+    | column_name | column_name |
+    +-------------+-------------+
+    | value       | value       |
+    +-------------+-------------+
     ```
 
     Where:
@@ -68,11 +68,11 @@ Follow the syntax below when documenting an SQL command and its output.
     On execution, we get:
 
     ```sql
-    +---------------+---------------+
-    | [column_name] | [column_name] |
-    +---------------+---------------+
-    | [value]       | [value]       |
-    +---------------+---------------+
+    +-------------+-------------+
+    | column_name | column_name |
+    +-------------+-------------+
+    | value       | value       |
+    +-------------+-------------+
     ```
 
     Where:
@@ -93,11 +93,11 @@ WHERE column_name=value_name;
 On execution, we get:
 
 ```sql
-+---------------+---------------+
-| [column_name] | [column_name] |
-+---------------+---------------+
-| [value]       | [value]       |
-+---------------+---------------+
++-------------+-------------+
+| column_name | column_name |
++-------------+-------------+
+| value       | value       |
++-------------+-------------+
 ```
 
 Where:
@@ -109,7 +109,7 @@ Where:
 ### Example 2
 
     ```sql
-    CREATE PREDICTOR mindsdb.predictor_name
+    CREATE MODEL mindsdb.predictor_name
     FROM integration_name
         (SELECT column_name_1, column_name_2, target_column FROM table_name)
     PREDICT target_column;
@@ -124,7 +124,7 @@ Where:
 #### Output of Example 2
 
 ```sql
-CREATE PREDICTOR mindsdb.predictor_name
+CREATE MODEL mindsdb.predictor_name
 FROM integration_name
     (SELECT column_name_1, column_name_2, target_column FROM table_name)
 PREDICT target_column;

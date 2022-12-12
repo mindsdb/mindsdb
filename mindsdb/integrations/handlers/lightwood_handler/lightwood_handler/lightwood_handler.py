@@ -1,8 +1,8 @@
 import sys
 import json
 import copy
+from typing import Optional, Dict
 from datetime import datetime
-from typing import Optional
 
 import pandas as pd
 from type_infer.dtype import dtype
@@ -12,15 +12,12 @@ import numpy as np
 import mindsdb.interfaces.storage.db as db
 
 from mindsdb.utilities.functions import cast_row_types
-from mindsdb.utilities.hooks import after_predict as after_predict_hook
-from mindsdb.interfaces.model.functions import (
-    get_model_record,
-    get_model_records
-)
+# from mindsdb.utilities.hooks import after_predict as after_predict_hook
+from mindsdb.interfaces.model.functions import get_model_record
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.integrations.libs.base import BaseMLEngine
 
-from .functions import run_learn, run_update
+from .functions import run_learn, run_adjust
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -65,8 +62,7 @@ class LightwoodHandler(BaseMLEngine):
                     if column.lower() not in columns:
                         raise Exception(f"There is no column '{column}' in dataframe")
 
-
-    def create(self, target, df, args):
+    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         args['target'] = target
         run_learn(
             df,
@@ -74,10 +70,16 @@ class LightwoodHandler(BaseMLEngine):
             self.model_storage
         )
 
+    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        run_adjust(
+            df,
+            args,
+            self.model_storage
+        )
+
     def predict(self, df, args=None):
         pred_format = args['pred_format']
         predictor_code = args['code']
-        dtype_dict = args['dtype_dict']
         learn_args = args['learn_args']
         pred_args = args.get('predict_params', {})
         self.model_storage.fileStorage.pull()
@@ -86,6 +88,7 @@ class LightwoodHandler(BaseMLEngine):
             self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name,
             predictor_code
         )
+        dtype_dict = predictor.dtype_dict
 
         predictions = predictor.predict(df, args=pred_args)
         predictions = predictions.to_dict(orient='records')

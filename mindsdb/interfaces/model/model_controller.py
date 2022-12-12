@@ -237,19 +237,9 @@ class ModelController():
 
         self.fs_store.push()
 
-    def prepare_create_statement(self, statement, database_controller, handler_controller):
-        # extract data from Create model or Retrain statement and prepare it for using in crate and retrain functions
-
+    @staticmethod
+    def _get_data_integration_ref(statement, database_controller):
         # TODO use database_controller handler_controller internally
-
-        project_name = statement.name.parts[0].lower()
-        model_name = statement.name.parts[1].lower()
-
-        problem_definition = {}
-        if statement.targets is not None:
-            problem_definition['target'] = statement.targets[0].parts[-1]
-
-        # get data for learn
         data_integration_ref = None
         fetch_data_query = None
         if statement.integration_name is not None:
@@ -268,6 +258,18 @@ class ModelController():
                     'type': 'integration',
                     'id': data_integration_meta['id']
                 }
+        return data_integration_ref, fetch_data_query
+
+    def prepare_create_statement(self, statement, database_controller, handler_controller):
+        # extract data from Create model or Retrain statement and prepare it for using in crate and retrain functions
+        project_name = statement.name.parts[0].lower()
+        model_name = statement.name.parts[1].lower()
+
+        problem_definition = {}
+        if statement.targets is not None:
+            problem_definition['target'] = statement.targets[0].parts[-1]
+
+        data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement, database_controller)
 
         label = None
         if statement.using is not None:
@@ -338,20 +340,9 @@ class ModelController():
 
         model_name = params['model_name']
         if base_predictor_record is None:
-            raise Exception(f"Error: model '{model_name}' does not exists")
+            raise Exception(f"Error: model '{model_name}' does not exist")
 
-        # get max current version
-        models = get_model_records(
-            name=params['model_name'],
-            project_name=params['project_name'],
-            deleted_at=None,
-            active=None,
-        )
-        version0 = max([m.version for m in models])
-        if version0 is None:
-            version0 = 1
-
-        params['version'] = version0 + 1
+        params['version'] = self._get_retrain_adjust_version(model_name, params['project_name'], base_predictor_record)
 
         if params['data_integration_ref'] is None:
             params['data_integration_ref'] = base_predictor_record.data_integration_ref
@@ -365,6 +356,73 @@ class ModelController():
         params['is_retrain'] = True
         params['set_active'] = set_active
         ml_handler.learn(**params)
+
+    @staticmethod
+    def _get_retrain_adjust_version(model_name, project_name, base_predictor_record):
+        if base_predictor_record is None:
+            raise Exception(f"Error: model '{model_name}' does not exist")
+
+        # get max current version
+        models = get_model_records(
+            name=model_name,
+            project_name=project_name,
+            deleted_at=None,
+            active=None,
+        )
+        last_version = max([m.version for m in models])
+        if last_version is None:
+            last_version = 1
+
+        return last_version + 1
+
+    def prepare_adjust_statement(self, statement, database_controller):
+        project_name = statement.name.parts[0].lower()
+        model_name = statement.name.parts[1].lower()
+        data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement, database_controller)
+
+        label = None
+        args = {}
+        if statement.using is not None:
+            label = statement.using.pop('tag', None)
+            args = statement.using
+
+        join_learn_process = args.pop('join_learn_process', False)
+
+        base_predictor_record = get_model_record(
+            name=model_name,
+            project_name=project_name,
+            active=True
+        )
+        version = self._get_retrain_adjust_version(model_name, project_name, base_predictor_record)
+
+        if data_integration_ref is None:
+            data_integration_ref = base_predictor_record.data_integration_ref
+        if fetch_data_query is None:
+            fetch_data_query = base_predictor_record.fetch_data_query
+
+        return dict(
+            model_name=model_name,
+            project_name=project_name,
+            data_integration_ref=data_integration_ref,
+            fetch_data_query=fetch_data_query,
+            version=version,
+            args=args,
+            join_learn_process=join_learn_process,
+            label=label
+        )
+
+    def adjust_model(self, statement, ml_handler):
+        # active setting
+        set_active = True
+        if statement.using is not None:
+            set_active = statement.using.pop('active', True)
+            if set_active in ('0', 0, None):
+                set_active = False
+
+        params = self.prepare_adjust_statement(statement, ml_handler.database_controller)
+
+        params['set_active'] = set_active
+        ml_handler.update(**params)
 
     def update_model_version(self, models, active=None):
         if active is None:

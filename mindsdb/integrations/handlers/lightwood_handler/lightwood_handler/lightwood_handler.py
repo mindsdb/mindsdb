@@ -10,11 +10,7 @@ import lightwood
 import numpy as np
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
+
 from mindsdb.utilities.functions import cast_row_types
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 from mindsdb.interfaces.model.functions import (
@@ -24,7 +20,6 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.integrations.libs.base import BaseMLEngine
 
-from .utils import unpack_jsonai_old_args
 from .functions import run_learn, run_update
 
 IS_PY36 = sys.version_info[1] <= 6

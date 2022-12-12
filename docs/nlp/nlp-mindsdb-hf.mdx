@@ -6,20 +6,21 @@ title: NLP with MindsDB and Hugging Face
 
 There are four main NLP tasks currently supported by MindsDB:
 
-- Text-classification
-- Zero-shot-classification
+- Text Classification
+- Zero-Shot Classification
 - Translation
 - Summarization
+
 <Tip>
-The MindsDB's Hugging Face engine is extensible and we are actively working to add more tasks and models.
+The MindsDB's HuggingFace engine is extensible. We are actively working on adding more tasks and models.
 If you have a specific task or model in mind, please let us know in the [MindsDB Community](https://community.mindsdb.com/).
 </Tip>
 
 ## MindsDB NLP Tested Models
 
 <AccordionGroup>
-    <Accordion title="Text-classification" defaultOpen="true">
-        Task of assigning a label to a text. For example, you can use it to classify a movie review as positive or negative.
+    <Accordion title="Text Classification" defaultOpen="true">
+        Completes a task of assigning a label to a text. For example, you can use it to classify a movie review as positive or negative.
         ##### Supported Models
         - [Spam detection](https://huggingface.co/mariagrandury/roberta-base-finetuned-sms-spam-detection)
         - [Sentiment analysis](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment)
@@ -37,15 +38,15 @@ If you have a specific task or model in mind, please let us know in the [MindsDB
         - [Industry classifier](https://huggingface.co/sampathkethineedi/industry-classification)
 
     </Accordion>
-    <Accordion title="Zero-shot-classification" defaultOpen="true">
-        Task of assigning a label to a text without training on the labels.
+    <Accordion title="Zero-Shot Classification" defaultOpen="true">
+        Completes a task of assigning a label to a text without training on the labels.
         For example, you can use it to classify a movie review as positive or negative without training on positive or negative labels.
         ##### Supported Models
         -[BART](https://huggingface.co/facebook/bart-large-mnli)
     </Accordion>
 
     <Accordion title="Translation" defaultOpen="true">
-        Task of translating a text from one language to another. For example, you can use it to translate a text from English to French.
+        Completes a task of translating a text from one language to another. For example, you can use it to translate a text from English to French.
         ##### Supported Models
         - [English to French T5](https://huggingface.co/t5-base)
         - [French to English T5](https://huggingface.co/t5-base)
@@ -53,7 +54,7 @@ If you have a specific task or model in mind, please let us know in the [MindsDB
     </Accordion>
 
     <Accordion title="Summarization" defaultOpen="true">
-        Task of summarizing a text. For example, you can use it to summarize an abstract into a title.
+        Completes a task of summarizing a text. For example, you can use it to summarize an abstract into a title.
         ##### Supported Models
         - [BART](https://huggingface.co/sshleifer/distilbart-cnn-12-6)
         - [Google Pegasus](https://huggingface.co/google/pegasus-xsum)
@@ -67,9 +68,9 @@ so you can choose the one that suits you best.
 
 ## How to Bring the Hugging Face Model to MindsDB
 
-We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring Hugging Face's models to MindsDB.
+We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the Hugging Face's models to MindsDB.
 
-Generally it will look something like this:
+Generally, it looks like this:
 
 ```sql
 CREATE MODEL project_name.predictor_name        -- AI TABLE TO STORE THE MODEL
@@ -84,24 +85,25 @@ USING
 
 Where:
 
-| Expressions      | Description                                                                                      |
-| ---------------- | ------------------------------------------------------------------------------------------------ |
-| `project_name`   | Name of the project where the model is created. By default, the `mindsdb` project is used.       |
-| `predictor_name` | Name of the model to be created.                                                                 |
-| `target_column`  | Column to store the predicted values.                                                            |
-| `engine_name`    | You can optionally provide an ML engine, based on which the model is created.                    |
-| `task`           | Optional, relative to Hugging Face task tag.                                                     |
-| `model_name`     | Model name under the Hugging Face model hub                                                      |
-| `input_column`   | Name of the column that has the input data, specially important for batch predcitions using JOIN |
-| `labels`         | Dependending on the model, usually used for Zero-shot-classification models                      |
+| Expressions      | Description                                                                                        |
+| ---------------- | -------------------------------------------------------------------------------------------------- |
+| `project_name`   | Name of the project where the model is created. By default, the `mindsdb` project is used.         |
+| `predictor_name` | Name of the model to be created.                                                                   |
+| `target_column`  | Column to store the predicted values.                                                              |
+| `engine_name`    | Optional. You can provide an ML engine, based on which the model is created.                       |
+| `task`           | Optional. It is relative to the Hugging Face task tag.                                              |
+| `model_name`     | Model name from the Hugging Face model hub.                                                         |
+| `input_column`   | Name of the column that has the input data, especially important for batch predictions using JOIN. |
+| `labels`         | Dependends on the model. Usually, used for Zero-Shot Classification models.                        |
 
 ### Example
 
-Let's go through an Spam classification example to understand better how
+Let's go through a Spam Classification example to understand better how
 to link Hugging Face's models and bring them to MindsDB as AI tables.
 
 <Note>
     **Using Local Installation of MindsDB**
+
     Please note that if you use local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the Hugging Face's models.
 
 </Note>
@@ -175,4 +177,4 @@ On execution, we get:
 +----+---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
-For the a full library of supported examples please go [here](/nlp/nlp-extended-examples)
+For the a full library of supported examples please go [here](/nlp/nlp-extended-examples).

@@ -79,12 +79,15 @@ class HuggingFaceHandler(BaseMLEngine):
         ####
         # Otherwise download it
         except OSError:
-            log.logger.debug(f"Downloading {model_name}...")
-            pipeline = transformers.pipeline(task=args['task_proper'], model=model_name)
+            try:
+                log.logger.debug(f"Downloading {model_name}...")
+                pipeline = transformers.pipeline(task=args['task_proper'], model=model_name)
 
-            pipeline.save_pretrained(hf_model_storage_path)
+                pipeline.save_pretrained(hf_model_storage_path)
 
-            log.logger.debug(f"Saved to {hf_model_storage_path}")
+                log.logger.debug(f"Saved to {hf_model_storage_path}")
+            except Exception:
+                raise Exception("Error while downloading and setting up the model. Please try a different model. We're working on expanding the list of supported models, so we would appreciate it if you let us know about this in our community slack (https://mindsdb.com/joincommunity).")  # noqa
         ####
 
         if 'max_length' in args:

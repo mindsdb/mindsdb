@@ -54,7 +54,7 @@
         "what-is-mindsdb",
         {
           "group": "Deployment",
-          "pages": [  
+          "pages": [
             {
               "group": "Self-Hosted",
               "pages": [
@@ -136,7 +136,7 @@
             "rest/sql",
             {
               "group": "Databases",
-              "pages":[
+              "pages": [
                 "rest/databases/list-databases",
                 "rest/databases/list-database",
                 "rest/databases/create-databases",
@@ -146,7 +146,7 @@
             },
             {
               "group": "Models",
-              "pages":[
+              "pages": [
                 "rest/models/train-model",
                 "rest/models/list-model",
                 "rest/models/list-models",
@@ -158,7 +158,7 @@
             },
             {
               "group": "Views",
-              "pages":[
+              "pages": [
                 "rest/views/create-view",
                 "rest/views/list-view",
                 "rest/views/list-views",
@@ -167,7 +167,7 @@
             },
             {
               "group": "Tables",
-              "pages":[
+              "pages": [
                 "rest/tables/create-table",
                 "rest/tables/list-table",
                 "rest/tables/delete-table"
@@ -181,7 +181,10 @@
             "mongo/collection-structure",
             {
               "group": "Insert()",
-              "pages": ["mongo/database", "mongo/insert"]
+              "pages": [
+                "mongo/database",
+                "mongo/insert"
+              ]
             },
             "mongo/stats",
             "mongo/find",
@@ -202,11 +205,15 @@
           "pages": [
             {
               "group": "Regression",
-              "pages": ["sql/tutorials/home-rentals"]
+              "pages": [
+                "sql/tutorials/home-rentals"
+              ]
             },
             {
               "group": "Classification",
-              "pages": ["sql/tutorials/customer-churn"]
+              "pages": [
+                "sql/tutorials/customer-churn"
+              ]
             },
             {
               "group": "Time Series",
@@ -238,8 +245,19 @@
         },
         {
           "group": "Community",
-          "pages": ["contribute", "community"]
+          "pages": [
+            "contribute",
+            "community"
+          ]
         }
+      ]
+    },
+    {
+      "group": "Natural Language Processing NLP",
+      "pages": [
+        "nlp/what-is-nlp",
+        "nlp/nlp-mindsdb-hf",
+        "nlp/nlp-extended-examples"
       ]
     }
   ],

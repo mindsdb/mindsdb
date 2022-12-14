@@ -28,7 +28,6 @@ from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 
 # anyscale service deploy service.yaml
 
-serve.start(detached=True)
 
 app = FastAPI()
 

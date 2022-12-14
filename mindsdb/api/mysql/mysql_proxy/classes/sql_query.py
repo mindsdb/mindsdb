@@ -172,7 +172,7 @@ def replaceQueryVar(where, var_value, var_name):
 
 
 def join_query_data(target, source):
-    if len(target.get_columns()) == 0:
+    if len(target.columns) == 0:
         target = source
     else:
         target.add_records(source.get_records())
@@ -325,7 +325,8 @@ class ResultSet:
         for row in self._records:
             row.pop(idx)
 
-    def get_columns(self):
+    @property
+    def columns(self):
         return self._columns
 
     def get_column_names(self):
@@ -337,7 +338,7 @@ class ResultSet:
 
     def find_columns(self, alias=None, table_alias=None):
         col_list = []
-        for col in self.get_columns():
+        for col in self.columns:
             if alias is not None and col.alias.lower() != alias.lower():
                 continue
             if table_alias is not None and col.table_alias.lower() != table_alias.lower():
@@ -658,7 +659,7 @@ class SQLQuery():
 
                 result2 = ResultSet().from_df(df2, database='', table_name='')
 
-                self.columns_list = result2.get_columns()
+                self.columns_list = result2.columns
                 self.fetched_data = result2
 
             else:
@@ -670,10 +671,10 @@ class SQLQuery():
         try:
             if hasattr(self, 'columns_list') is False:
                 # how it becomes False?
-                self.columns_list = self.fetched_data.get_columns()
+                self.columns_list = self.fetched_data.columns
 
             if self.columns_list is None:
-                self.columns_list = self.fetched_data.get_columns()
+                self.columns_list = self.fetched_data.columns
 
             for col in self.fetched_data.find_columns('__mindsdb_row_id'):
                 self.fetched_data.del_column(col)
@@ -718,9 +719,9 @@ class SQLQuery():
             right_result = steps_data[step.right.step_num]
 
             # count of columns have to match
-            if len(left_result.get_columns()) != len(right_result.get_columns()):
+            if len(left_result.columns) != len(right_result.columns):
                 raise ErSqlWrongArguments(
-                    f'UNION columns count mismatch: {len(left_result.get_columns())} != {len(right_result.get_columns())} ')
+                    f'UNION columns count mismatch: {len(left_result.columns)} != {len(right_result.columns)} ')
 
             # types have to match
             # TODO: return checking type later
@@ -732,7 +733,7 @@ class SQLQuery():
             #             raise ErSqlWrongArguments(f'UNION types mismatch: {type1} != {type2}')
 
             result = ResultSet()
-            for col in left_result.get_columns():
+            for col in left_result.columns:
                 result.add_column(col)
 
             records_hashes = []
@@ -770,7 +771,7 @@ class SQLQuery():
                         for name, value in var_group.items():
                             replaceQueryVar(query.where, value, name)
                         sub_data = self._fetch_dataframe_step(substep)
-                        if len(data.get_columns()) == 0:
+                        if len(data.columns) == 0:
                             data = sub_data
                         else:
                             data.add_records(sub_data.get_records())
@@ -1033,7 +1034,7 @@ class SQLQuery():
                 step_data = steps_data[step.dataframe.step_num]
 
                 step_data2 = ResultSet()
-                for col in step_data.get_columns():
+                for col in step_data.columns:
                     step_data2.add_column(col)
 
                 records = step_data.get_records()
@@ -1057,7 +1058,7 @@ class SQLQuery():
 
                 for column_identifier in step.columns:
                     if type(column_identifier) == Star:
-                        for column in rs_in.get_columns():
+                        for column in rs_in.columns:
                             rs_in.copy_column_to(column, rs_out)
 
                     elif type(column_identifier) == Identifier:
@@ -1125,7 +1126,7 @@ class SQLQuery():
             data.from_df(res, appropriate_table['database'], appropriate_table['table_name'], appropriate_table['table_alias'])
 
             # columns are changed
-            self.columns_list = data.get_columns()
+            self.columns_list = data.columns
 
         elif type(step) == SubSelectStep:
             result = steps_data[step.dataframe.step_num]
@@ -1144,7 +1145,7 @@ class SQLQuery():
 
             result2 = ResultSet()
             # get database from first column
-            database = result.get_columns()[0].database
+            database = result.columns[0].database
             result2.from_df(res, database, table_name)
 
             data = result2
@@ -1177,7 +1178,7 @@ class SQLQuery():
             # region del columns filtered at projection step
             if self.columns_list is not None:
                 filtered_column_names = [x.name for x in self.columns_list]
-                for col in data.get_columns():
+                for col in data.columns:
                     if col.name.startswith('predictor.'):
                         continue
                     if col.name in filtered_column_names:
@@ -1187,7 +1188,7 @@ class SQLQuery():
 
             # drop double names
             col_names = set()
-            for col in data.get_columns():
+            for col in data.columns:
                 if col.alias in col_names:
                     data.del_column(col)
                 else:
@@ -1236,7 +1237,7 @@ class SQLQuery():
             query_traversal(update_query, prepare_map_index)
 
             # check all params is input data:
-            data_header = [col.alias for col in result.get_columns()]
+            data_header = [col.alias for col in result.columns]
 
             for param_name, _ in params_map_index:
                 if param_name not in data_header:

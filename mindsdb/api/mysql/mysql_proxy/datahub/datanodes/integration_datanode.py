@@ -48,7 +48,7 @@ class IntegrationDataNode(DataNode):
 
         table_columns_meta = {}
         table_columns = []
-        for col in result_set.get_columns():
+        for col in result_set.columns:
             # assume this is pandas type
             column_type = Text
             if isinstance(col.type, np_dtype):
@@ -87,12 +87,12 @@ class IntegrationDataNode(DataNode):
             if result.type == RESPONSE_TYPE.ERROR:
                 raise Exception(result.error_message)
 
-        insert_columns = [Identifier(parts=[x.alias]) for x in result_set.get_columns()]
+        insert_columns = [Identifier(parts=[x.alias]) for x in result_set.columns]
         formatted_data = []
 
         for rec in result_set.get_records():
             new_row = []
-            for col in result_set.get_columns():
+            for col in result_set.columns:
                 value = rec[col.alias]
                 column_type = table_columns_meta[col.alias]
 

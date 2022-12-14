@@ -158,9 +158,12 @@ class IntegrationController:
                 data['connection'] = None
 
         integration_type = None
-        integration_module = self.handler_modules.get(integration_record.engine)
-        if hasattr(integration_module, 'type'):
-            integration_type = integration_module.type
+        if integration_record.engine in ['kafka', 'redis']:
+            integration_type = integration_record.engine
+        else:
+            integration_module = self.handler_modules.get(integration_record.engine)
+            if hasattr(integration_module, 'type'):
+                integration_type = integration_module.type
 
         return {
             'id': integration_record.id,

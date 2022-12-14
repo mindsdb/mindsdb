@@ -3,10 +3,12 @@ from copy import deepcopy
 
 import kafka
 
+from mindsdb.utilities.log import get_log
 from mindsdb.interfaces.stream.base import StreamIntegration
 import mindsdb.interfaces.storage.db as db
 from mindsdb_streams import KafkaStream, StreamController, StreamLearningController
 
+logger = get_log("main")
 
 class KafkaConnectionChecker:
     def __init__(self, **params):
@@ -24,8 +26,10 @@ class KafkaConnectionChecker:
 
 class Kafka(StreamIntegration, KafkaConnectionChecker):
     def __init__(self, config, name, db_info):
-        self.connection_info = db_info['connection']
+        logger.info("%s.__init__: init kafka integration. name - %s config - %s, db_info - %s",
+            self.__class__.__name__, name, config, db_info)
 
+        self.connection_info = db_info['connection_data']['connection']
         # Back compatibility with initial API version
         self.control_stream = db_info.get('control_stream') or db_info.get('topic') or None
         if 'advanced' in db_info:
@@ -37,6 +41,11 @@ class Kafka(StreamIntegration, KafkaConnectionChecker):
         if 'advanced' in self.control_connection_info:
             if 'consumer' in self.control_connection_info['advanced']:
                 self.control_connection_info['advanced']['consumer']['auto_offset_reset'] = 'latest'
+
+        logger.info("%s.__init__: starting kafka integration. name - %s, connection info - %s",
+                self.__class__.__name__,
+                name,
+                self.connection_info)
 
         StreamIntegration.__init__(
             self,

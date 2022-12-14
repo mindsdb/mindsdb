@@ -20,7 +20,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
 from mindsdb.utilities import log
-from mindsdb.interfaces.stream.stream import StreamController
+from mindsdb.interfaces.stream.stream import StreamIntegrationController
 from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
 from mindsdb.interfaces.database.integrations import IntegrationController
 import mindsdb.interfaces.storage.db as db
@@ -224,11 +224,10 @@ if __name__ == '__main__':
             except Exception as e:
                 log.logger.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 
-        stream_controller = StreamController()
+        stream_controller = StreamIntegrationController()
         for integration_name, integration_meta in integration_controller.get_all(sensitive_info=True).items():
             if (
                 integration_meta.get('type') in stream_controller.known_dbs
-                and integration_meta.get('publish', False) is True
             ):
                 print(f"Setting up stream: {integration_name}")
                 stream_controller.setup(integration_name)

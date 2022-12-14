@@ -95,6 +95,7 @@
             "connect/tableau"
           ]
         },
+        "mindsdb-handlers",
         "sql/create/databases2",
         "sql/create/file",
         "sql/data-insights",

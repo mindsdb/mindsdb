@@ -19,6 +19,7 @@ In particular, three big components are included:
 import datetime as dt
 import traceback
 import importlib
+from typing import Optional
 
 import pandas as pd
 
@@ -58,7 +59,8 @@ mp.get_context('spawn')
 @mark_process(name='learn')
 def learn_process(class_path, context_dump, integration_id,
                   predictor_id, data_integration_ref, fetch_data_query,
-                  project_name, problem_definition, set_active):
+                  project_name, problem_definition, set_active,
+                  base_predictor_id=None):
     ctx.load(context_dump)
     db.init()
 
@@ -116,12 +118,17 @@ def learn_process(class_path, context_dump, integration_id,
             model_storage=modelStorage,
         )
 
-        if hasattr(ml_handler, 'create_validation'):
-            ml_handler.create_validation(target, df=training_data_df, args=problem_definition)
+        # create new model
+        if base_predictor_id is None:
+            ml_handler.create(target, df=training_data_df, args=problem_definition)
 
-        ml_handler.create(target, df=training_data_df, args=problem_definition)
+        # adjust (partially train) existing model
+        else:
+            # load model from previous version, use it as starting point
+            problem_definition['base_model_id'] = base_predictor_id
+            ml_handler.update(df=training_data_df, args=problem_definition)
+
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
-
         db.session.commit()
         # if retrain and set_active after success creation
         if set_active is True:
@@ -259,12 +266,6 @@ class BaseMLEngineExec:
                     error_message=f"Cant determine how to show '{statement.category}'"
                 )
             return response
-        # if type(statement) == CreatePredictor:
-        #     return self.learn(statement)
-        # elif type(statement) == RetrainPredictor:
-        #     return self.retrain(statement)
-        # elif type(statement) == DropPredictor:
-        #     return self.drop(statement)
         elif type(statement) == Select:
             model_name = statement.from_table.parts[-1]
             where_data = get_where_data(statement.where)
@@ -293,6 +294,10 @@ class BaseMLEngineExec:
         target = problem_definition['target']
 
         project = self.database_controller.get_project(name=project_name)
+
+        # handler-side validation
+        if hasattr(self.handler_class, 'create_validation'):
+            self.handler_class.create_validation(target, args=problem_definition)
 
         predictor_record = db.Predictor(
             company_id=ctx.company_id,
@@ -382,3 +387,68 @@ class BaseMLEngineExec:
             rows_out_count=len(predictions)
         )
         return predictions, columns_dtypes
+
+    def update(
+            self, model_name, project_name, version,
+            data_integration_ref=None,
+            fetch_data_query=None,
+            join_learn_process=False,
+            label=None,
+            set_active=True,
+            args: Optional[dict] = None
+    ):
+        # generate new record from latest version as starting point
+        project = self.database_controller.get_project(name=project_name)
+        predictor_records = get_model_records(
+            active=None,
+            name=model_name,
+        )
+        predictor_records = [
+            x for x in predictor_records
+            if x.training_stop_at is not None
+        ]
+        predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
+
+        base_predictor_record = predictor_records[0]
+
+        predictor_record = db.Predictor(
+            company_id=ctx.company_id,
+            name=model_name,
+            integration_id=self.integration_id,
+            data_integration_ref=data_integration_ref,
+            fetch_data_query=fetch_data_query,
+            mindsdb_version=mindsdb_version,
+            to_predict=base_predictor_record.to_predict,
+            learn_args=base_predictor_record.learn_args,
+            data={'name': model_name},
+            project_id=project.id,
+            training_data_columns_count=None,
+            training_data_rows_count=None,
+            training_start_at=dt.datetime.now(),
+            status=PREDICTOR_STATUS.GENERATING,
+            label=label,
+            version=version,
+            active=False
+        )
+
+        db.session.add(predictor_record)
+        db.session.commit()
+
+        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+
+        p = HandlerProcess(
+            learn_process,
+            class_path,
+            ctx.dump(),
+            self.integration_id,
+            predictor_record.id,
+            data_integration_ref,
+            fetch_data_query,
+            project_name,
+            predictor_record.learn_args,
+            set_active,
+            base_predictor_record.id,
+        )
+        p.start()
+        if join_learn_process is True:
+            p.join()

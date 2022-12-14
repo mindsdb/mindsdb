@@ -177,7 +177,7 @@ class BaseMLEngine:
         """
         raise NotImplementedError
 
-    def describe(self, key: Optional[str] = None) -> pd.DataFrame:
+    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         """
         Optional.
 

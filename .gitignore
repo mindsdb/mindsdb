@@ -38,3 +38,7 @@ lib
 lib64
 pyvenv.cfg
 .python-version
+
+
+# Docs
+node_modules

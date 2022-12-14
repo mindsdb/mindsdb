@@ -25,6 +25,8 @@
     <a href="https://github.com/mindsdb/mindsdb/projects">Contribute</a>
     <span> | </span>
     <a href="https://cloud.mindsdb.com">Demo</a>
+    <span> | </span>
+    <a href="https://mindsdb.com/in-database-nlp-tutorials-contest?utm_medium=community&utm_source=github&utm_campaign=22q4-huggingface-preview">NLP Contest</a>
   </h3>
   
 </div>

@@ -28,8 +28,8 @@ You can customize the behavior of this analysis module from the MindsDB SQL edit
 ```sql
 ...
 USING
-engine=lightwood,
-analysis_blocks=[
+engine = 'lightwood',
+analysis_blocks = [
   {"module": "PermutationFeatureImportance", 
    "args": {"row_limit": 0}} -- all validation data is used 
 ];
@@ -70,7 +70,7 @@ FROM example_db
 PREDICT rental_price
 USING
     engine = 'lightwood',
-    analysis_blocks=[
+    analysis_blocks = [
         {"module": "PermutationFeatureImportance", 
         "args": {"row_limit": 0}}
     ];

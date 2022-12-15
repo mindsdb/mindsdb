@@ -95,6 +95,7 @@
             "connect/tableau"
           ]
         },
+        "model-types",
         "sql/create/databases2",
         "sql/create/file",
         "sql/data-insights",

@@ -31,7 +31,8 @@ class TestProjectStructure(BaseExecutorDummyML):
         if not done:
             raise RuntimeError("predictor didn't created")
 
-    def run_sql(self, sql, throw_error=True):
+    def run_sql(self, sql, throw_error=True, database='mindsdb'):
+        self.command_executor.session.database = database
         ret = self.command_executor.execute_command(
             parse_sql(sql, dialect='mindsdb')
         )
@@ -188,6 +189,19 @@ class TestProjectStructure(BaseExecutorDummyML):
                 'SELECT * from proj.task_model.4 where a=1 and b=2',
             )
         assert 'does not exists' in str(exc_info.value)
+
+        # ===================== one-line with 'use database'=======================
+
+        # active
+        ret = self.run_sql('SELECT * from task_model where a=1 and b=2', database='proj')
+        model_id = ret.predictor_id[0]
+        assert models[model_id].label == 'second'
+
+
+        # inactive
+        ret = self.run_sql('SELECT * from task_model.3 where a=1 and b=2', database='proj')
+        model_id = ret.predictor_id[0]
+        assert models[model_id].label == 'third'
 
         # ================== managing versions =========================
 

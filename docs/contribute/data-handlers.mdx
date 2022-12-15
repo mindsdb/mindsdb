@@ -49,6 +49,8 @@ Authors can opt for adding private methods, new files and folders, or any combin
     **Other Common Methods**
 
     Under the `mindsdb.integrations.libs.utils` library, contributors can find various methods that may be useful while implementing new handlers.
+
+    Also, there are wrapper classes for the `DatabaseHandler` instances called [HandlerResponse](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/response.py#L7) and [HandlerStatusResponse](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/response.py#L32). You should use them to ensure proper output formatting.
 </Tip>
 
 ### Implementation

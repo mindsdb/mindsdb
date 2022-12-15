@@ -47,6 +47,8 @@ Authors can opt for adding private methods, new files and folders, or any combin
     **Other Common Methods**
     
     Under the `mindsdb.integrations.libs.utils` library, contributors can find various methods that may be useful while implementing new handlers.
+
+    Also, there is a wrapper class for the `BaseMLEngine` instances called [BaseMLEngineExec](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/ml_exec_base.py#L157). It is automatically deployed to take care of modifying the data responses into something that can be used alongside data handlers.
 </Tip>
 
 ### Implementation

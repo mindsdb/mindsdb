@@ -236,7 +236,7 @@
           "pages": [
             "contribute/install",
             "contribute/issues",
-            "contribute/integrations",
+            "contribute/data-handlers",
             "contribute/ml-handlers",
             "contribute/docs",
             "docs-rules",

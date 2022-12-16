@@ -4,35 +4,37 @@ import sys
 import requests
 import subprocess
 
+def build_container(reltype):
+    installer_version_url = f'https://public.api.mindsdb.com/installer/{reltype}/docker___success___None'
 
-if not sys.argv[1:]:
-    sys.exit("usage: build.py <beta|release>")
+    try:
+        api_response = requests.get(installer_version_url)
+        api_response.raise_for_status()
+    except requests.exceptions.HTTPError as err:
+        print(f'Error making API request: {err}')
+        return
 
-reltype = sys.argv[1]
+    installer_version = api_response.text
+    build_arg = f'--build-arg VERSION={installer_version}'
 
-installer_version_url = f'https://public.api.mindsdb.com/installer/{reltype}/docker___success___None'
+    if reltype == 'release':
+        container_name = 'mindsdb/mindsdb'
+        dockerfile = 'release'
 
-api_response = requests.get(installer_version_url)
+    elif reltype == 'beta':
+        container_name = 'mindsdb/mindsdb_beta'
+        dockerfile = 'beta'
 
-if api_response.status_code != 200:
-    exit(1)
+    command = f"docker build -f {dockerfile} {build_arg} -t {container_name}:latest -t {container_name}:{installer_version} ."
+    command += f" && docker push {container_name} --all-tags"
 
-installer_version = api_response.text
+    subprocess.run(command, shell=True, check=True)
 
-build_arg = f'--build-arg VERSION={installer_version}'
+if __name__ == '__main__':
+    if not sys.argv[1:]:
+        sys.exit("usage: build.py <beta|release>")
 
-if sys.argv[1] == 'release':
-    container_name = 'mindsdb/mindsdb'
-    dockerfile = 'release'
+    reltype = sys.argv[1]
+    build_container(reltype)
 
-elif sys.argv[1] == 'beta':
-    container_name = 'mindsdb/mindsdb_beta'
-    dockerfile = 'beta'
 
-print(installer_version)
-command = (f"""
-        docker build -f {dockerfile} {build_arg} -t {container_name}:latest -t {container_name}:{installer_version} . &&
-        docker push {container_name} --all-tags
-      """)
-
-subprocess.run(command, shell=True, check=True)

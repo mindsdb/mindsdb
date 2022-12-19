@@ -28,27 +28,19 @@ import struct
 import io
 import sys
 
-PY2 = sys.version_info[0] == 2
 PYPY = hasattr(sys, 'pypy_translation_info')
 JYTHON = sys.platform.startswith('java')
 IRONPYTHON = sys.platform == 'cli'
 CPYTHON = not PYPY and not JYTHON and not IRONPYTHON
 
-if PY2:
-    import __builtin__
-    range_type = xrange
-    text_type = unicode
-    long_type = long
-    str_type = basestring
-    unichr = __builtin__.unichr
-else:
-    range_type = range
-    text_type = str
-    long_type = int
-    str_type = str
-    unichr = chr
+range_type = range
+text_type = str
+long_type = int
+str_type = str
+unichr = chr
 
 sha_new = partial(hashlib.new, 'sha1')
+
 
 def scramble(password, message):
     SCRAMBLE_LENGTH = 20
@@ -60,12 +52,13 @@ def scramble(password, message):
     result = s.digest()
     return _my_crypt(result, stage1)
 
+
 def _my_crypt(message1, message2):
     length = len(message1)
     result = b''
     for i in range_type(length):
-        x = (struct.unpack('B', message1[i:i+1])[0] ^
-             struct.unpack('B', message2[i:i+1])[0])
+        x = (struct.unpack('B', message1[i:i + 1])[0]
+             ^ struct.unpack('B', message2[i:i + 1])[0])
         result += struct.pack('B', x)
     return result
 
@@ -120,6 +113,7 @@ def _hash_password_323(password):
     r2 = nr2 & ((1 << 31) - 1)
     return struct.pack(">LL", r1, r2)
 
+
 def byte2int(b):
     if isinstance(b, int):
         return b
@@ -139,6 +133,3 @@ def join_bytes(bs):
         for b in bs[1:]:
             rv += b
         return rv
-
-
-

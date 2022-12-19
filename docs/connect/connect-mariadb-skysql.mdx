@@ -1,5 +1,5 @@
 ---
-title: MariaDB SkySQL Setup Guide
+title: MariaDB SkySQL Setup Guide with MindsDB
 sidebarTitle: MariaDB SkySQL
 ---
 
@@ -100,12 +100,14 @@ query to complete the setup.
   allowfullscreen
 ></iframe>
 
-<Tabs>
-  <Tab title="Template">
-    ```sql
+Here are the codes:
+
+<CodeGroup>
+
+    ```sql Template
     CREATE DATABASE maria_datasource            --- display name for the database
-    WITH ENGINE='MariaDB',                      --- name of the MindsDB handler
-    PARAMETERS={
+    WITH ENGINE = 'MariaDB',                      --- name of the MindsDB handler
+    PARAMETERS = {
       "host": " ",                              --- host IP address or URL
       "port": ,                                 --- port used to make TCP/IP connection
       "database": " ",                          --- database name
@@ -123,9 +125,8 @@ query to complete the setup.
       }
     };
     ```
-  </Tab>
-  <Tab title="Example for MariaDB SkySQL Service">
-    ```sql
+
+    ```sql Example for MariaDB SkySQL Service
     CREATE DATABASE skysql_datasource
     WITH ENGINE = 'MariaDB',
     PARAMETERS = {
@@ -140,8 +141,8 @@ query to complete the setup.
       }
     };
     ```
-  </Tab>
-</Tabs>
+
+</CodeGroup>
 
 ## What's Next?
 

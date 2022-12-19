@@ -3,7 +3,6 @@ from mindsdb_sql.parser.ast import Identifier, OrderBy
 
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mongo.utilities import logger
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 
@@ -92,10 +91,6 @@ class Responce(Responder):
                 if 'predict' not in doc:
                     raise Exception("Please, specify 'predict' field")
 
-                select_data_query = doc.get('select_data_query')
-                if select_data_query is None:
-                    raise Exception("'select_data_query' must be in query")
-
                 predict = doc['predict']
                 if not isinstance(predict, list):
                     predict = [x.strip() for x in predict.split(',')]
@@ -132,9 +127,14 @@ class Responce(Responder):
 
                 using = dict(kwargs)
 
+                select_data_query = doc.get('select_data_query')
+                integration_name = None
+                if 'connection' in doc:
+                    integration_name = Identifier(doc['connection'])
+
                 create_predictor_ast = CreatePredictor(
                     name=Identifier(f"{request_env['database']}.{doc['name']}"),
-                    integration_name=Identifier(doc['connection']),
+                    integration_name=integration_name,
                     query_str=select_data_query,
                     targets=[Identifier(x) for x in predict],
                     order_by=order_by,

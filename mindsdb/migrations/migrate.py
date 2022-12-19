@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from alembic.command import upgrade, autogen
+from alembic.command import upgrade, autogen    # noqa
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from alembic.script.revision import ResolutionError

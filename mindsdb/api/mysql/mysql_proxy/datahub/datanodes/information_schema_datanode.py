@@ -12,6 +12,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.project_datanode import ProjectDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
+from mindsdb.interfaces.database.projects import ProjectController
 
 
 class InformationSchemaDataNode(DataNode):
@@ -31,8 +32,8 @@ class InformationSchemaDataNode(DataNode):
         'CHARACTER_SETS': ['CHARACTER_SET_NAME', 'DEFAULT_COLLATE_NAME', 'DESCRIPTION', 'MAXLEN'],
         'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
         # MindsDB specific:
-        'MODELS': ['NAME', 'PROJECT', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
-        'MODELS_VERSIONS': ['NAME', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
+        'MODELS': ['NAME', 'ENGINE', 'PROJECT', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
+        'MODELS_VERSIONS': ['NAME', 'ENGINE', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
         'DATABASES': ['NAME', 'TYPE', 'ENGINE'],
         'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
         'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR']
@@ -41,7 +42,7 @@ class InformationSchemaDataNode(DataNode):
     def __init__(self, session):
         self.session = session
         self.integration_controller = session.integration_controller
-        self.project_controller = session.project_controller
+        self.project_controller = ProjectController()
         self.database_controller = session.database_controller
 
         self.persis_datanodes = {}
@@ -258,7 +259,7 @@ class InformationSchemaDataNode(DataNode):
                 if table_meta['type'] != 'model':
                     continue
                 data.append([
-                    table_name, project_name, table_meta['version'], table_meta['status'], table_meta['accuracy'], table_meta['predict'],
+                    table_name, table_meta['engine'], project_name, table_meta['version'], table_meta['status'], table_meta['accuracy'], table_meta['predict'],
                     table_meta['update_status'], table_meta['mindsdb_version'], table_meta['error'],
                     table_meta['select_data_query'], table_meta['training_options'], table_meta['label']
                 ])
@@ -291,7 +292,7 @@ class InformationSchemaDataNode(DataNode):
                 table_name = row['name']
                 table_meta = row['metadata']
                 data.append([
-                    table_name, project_name, table_meta['active'], table_meta['version'], table_meta['status'],
+                    table_name, table_meta['engine'], project_name, table_meta['active'], table_meta['version'], table_meta['status'],
                     table_meta['accuracy'], table_meta['predict'], table_meta['update_status'],
                     table_meta['mindsdb_version'], table_meta['error'], table_meta['select_data_query'],
                     table_meta['training_options'], table_meta['label']

@@ -1,8 +1,9 @@
 ---
 title: Creating Predictors in Mongo
 sidebarTitle: Predictors
-description: Predictors are the machine learning models that enable us to forecast future data based on the available data. By using the `db.predictors.insert()` method, we create and train predictors in Mongo.
 ---
+
+Predictors are the machine learning models that enable us to forecast future data based on the available data. By using the `db.predictors.insert()` method, we create and train predictors in Mongo.
 
 ### The `db.predictors.insert()` Method
 
@@ -44,7 +45,7 @@ Where:
 Checking Predictor Status
 
 After running the `db.predictors.insert()`
-method, execute the `db.predictors.find()` method from the `mindsdb.predictors`
+method, execute the `db.predictors.find()` method from the `mindsdb.models`
 collection to check the status of the model.
 
 ```sql
@@ -81,7 +82,7 @@ WriteResult({
 ### Checking Predictor Status
 
 To check the predictor status, query the
-[`mindsdb.predictors`](/mongo/collection-structure/#the-predictors-collection)
+`mindsdb.models` table
 using the `db.predictors.find()` command.
 
 ```sql

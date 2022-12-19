@@ -26,7 +26,7 @@
     <span> | </span>
     <a href="https://cloud.mindsdb.com">Demo</a>
     <span> | </span>
-    <a href="https://mindsdb.com/hacktoberfest">Hacktoberfest</a>
+    <a href="https://mindsdb.com/in-database-nlp-tutorials-contest?utm_medium=community&utm_source=github&utm_campaign=22q4-huggingface-preview">NLP Contest</a>
   </h3>
   
 </div>
@@ -38,11 +38,7 @@
 * Data Scientists can streamline MLOps by deploying ML models as AI Tables.
 * Data Analysts can easily make forecasts on complex data (like multivariate time-series with high cardinality) and visualize them in BI tools like Tableau.
 
-**NEW!** Check-out the new Hacktoberfest [challenges](https://mindsdb.com/hacktoberfest) (and the cash:dollar: , laptop:computer: and many other prizes)!
-
-If you like our project then we would truly appreciate **a Star ⭐!**
-
-Also, check-out the [rewards and community programs.](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)
+**NEW!** Check-out the [rewards and community programs.](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)
 
 ----------------------------------------
 

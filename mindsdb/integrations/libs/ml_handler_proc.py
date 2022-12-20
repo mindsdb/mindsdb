@@ -85,9 +85,11 @@ class MLHandlerProcess:
 
         return obj
 
-    def init_handler(self, class_path, company_id, integration_id, predictor_id):
+    def init_handler(self, class_path, integration_id, predictor_id, context_dump):
         # mdb initialization
         import mindsdb.interfaces.storage.db as db
+        from mindsdb.utilities.context import context as ctx
+        ctx.load(context_dump)
         db.init()
 
         from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
@@ -96,8 +98,8 @@ class MLHandlerProcess:
         module = importlib.import_module(module_name)
         HandlerClass = getattr(module, class_name)
 
-        handlerStorage = HandlerStorage(company_id, integration_id)
-        modelStorage = ModelStorage(company_id, predictor_id)
+        handlerStorage = HandlerStorage(integration_id)
+        modelStorage = ModelStorage(predictor_id)
 
         ml_handler = HandlerClass(
             engine_storage=handlerStorage,
@@ -177,6 +179,7 @@ process_thread = None
 queue_in = queue.Queue()
 queue_out = queue.Queue()
 queue_lock = Lock()
+
 
 def process_keeper():
     wrapper = MLHandlerWrapper()

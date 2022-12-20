@@ -1,8 +1,9 @@
 ---
 title: MindsDB and Ray Serve
 sidebarTitle: Ray Serve
-description: Ray Serve is a simple high-throughput model serving library that can wrap around your ML model.
 ---
+
+Ray Serve is a simple high-throughput model serving library that can wrap around your ML model.
 
 ## Simple Example of Logistic Regression
 
@@ -89,7 +90,7 @@ Once you start the RayServe-wrapped model, you can create and train it in
 MindsDB.
 
 ```sql
-CREATE PREDICTOR mindsdb.byom_ray_serve
+CREATE MODEL mindsdb.byom_ray_serve
 FROM mydb (
     SELECT number_of_rooms, initial_price, rental_price
     FROM test_data.home_rentals
@@ -345,7 +346,7 @@ data vary depending on your database.
 Now, we can create and train this custom model in MindsDB.
 
 ```sql
-CREATE PREDICTOR mindsdb.byom_ray_serve_nlp
+CREATE MODEL mindsdb.byom_ray_serve_nlp
 FROM maria (
     SELECT text, target
     FROM test.nlp_kaggle_train
@@ -364,7 +365,7 @@ You can check the model status using this query:
 
 ```sql
 SELECT *
-FROM mindsdb.predictors
+FROM mindsdb.models
 WHERE name='byom_ray_serve_nlp';
 ```
 

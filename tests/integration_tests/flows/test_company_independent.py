@@ -64,7 +64,7 @@ class TestCompanyIndependent:
         a = set(a)
         b = set(b)
         assert len(a) == len(b)
-        assert a == b 
+        assert a == b
 
     def sql_via_http(self, request: str, expected_resp_type: str = None, context: dict = None,
                      headers: dict = None, company_id: int = None) -> dict:
@@ -372,7 +372,6 @@ class TestCompanyIndependent:
                 company_id=cid,
                 expected_resp_type=RESPONSE_TYPE.OK
             )
-
             response = self.sql_via_http(
                 predict_query.format(char),
                 company_id=cid,

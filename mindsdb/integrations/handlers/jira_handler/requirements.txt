@@ -1,0 +1,2 @@
+duckdb
+atlassian-python-api

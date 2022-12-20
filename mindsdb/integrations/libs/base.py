@@ -1,7 +1,6 @@
-from typing import Any, Union, Optional, Dict
+from typing import Any, Optional, Dict
 
 import pandas as pd
-from mindsdb_sql.parser.ast import Join
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
 
@@ -178,7 +177,7 @@ class BaseMLEngine:
         """
         raise NotImplementedError
 
-    def describe(self, key: Optional[str] = None) -> pd.DataFrame:
+    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         """
         Optional.
 

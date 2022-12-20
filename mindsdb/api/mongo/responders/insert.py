@@ -3,7 +3,6 @@ from mindsdb_sql.parser.ast import Identifier, OrderBy
 
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mongo.utilities import logger
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 

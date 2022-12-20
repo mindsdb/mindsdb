@@ -2,39 +2,34 @@ import re
 
 import mindsdb.interfaces.storage.db as db
 
-from mindsdb.interfaces.storage.db import PREDICTOR_STATUS
-
 from .fs import RESOURCE_GROUP, FileStorageFactory
-
 from .json import get_json_storage
+
 
 class ModelStorage:
     """
     This class deals with all model-related storage requirements, from setting status to storing artifacts.
     """
-    def __init__(self, company_id, predictor_id):
-
+    def __init__(self, predictor_id):
         storageFactory = FileStorageFactory(
             resource_group=RESOURCE_GROUP.PREDICTOR,
-            company_id=company_id,
             sync=True
         )
-
         self.fileStorage = storageFactory(predictor_id)
-
-        self.company_id = company_id
         self.predictor_id = predictor_id
 
     # -- fields --
 
     def get_info(self):
         rec = db.Predictor.query.get(self.predictor_id)
-        return dict(status=rec.status, to_predict=rec.to_predict)
+        return dict(status=rec.status,
+                    to_predict=rec.to_predict,
+                    data=rec.data)
 
     def status_set(self, status, status_info=None):
         rec = db.Predictor.query.get(self.predictor_id)
         rec.status = status
-        if status == PREDICTOR_STATUS.ERROR and status_info is not None:
+        if status_info is not None:
             rec.data = status_info
         db.session.commit()
 
@@ -68,16 +63,14 @@ class ModelStorage:
     def json_set(self, name, data):
         json_storage = get_json_storage(
             resource_id=self.predictor_id,
-            resource_group=RESOURCE_GROUP.PREDICTOR,
-            company_id=self.company_id
+            resource_group=RESOURCE_GROUP.PREDICTOR
         )
         return json_storage.set(name, data)
 
     def json_get(self, name):
         json_storage = get_json_storage(
             resource_id=self.predictor_id,
-            resource_group=RESOURCE_GROUP.PREDICTOR,
-            company_id=self.company_id
+            resource_group=RESOURCE_GROUP.PREDICTOR
         )
         return json_storage.get(name)
 
@@ -97,15 +90,12 @@ class HandlerStorage:
     This class deals with all handler-related storage requirements, from storing metadata to synchronizing folders
     across instances.
     """
-    def __init__(self, company_id, integration_id):
+    def __init__(self, integration_id):
         storageFactory = FileStorageFactory(
             resource_group=RESOURCE_GROUP.INTEGRATION,
-            company_id=company_id,
             sync=False
         )
         self.fileStorage = storageFactory(integration_id)
-
-        self.company_id = company_id
         self.integration_id = integration_id
 
     def get_connection_args(self):

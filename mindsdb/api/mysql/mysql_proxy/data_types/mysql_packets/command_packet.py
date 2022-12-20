@@ -12,9 +12,6 @@
 import struct
 import math
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Parameter
-
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import COMMANDS, getConstName, TYPES
@@ -139,8 +136,6 @@ class CommandPacket(Packet):
             #
             #     num_params = len(prepared_stmt['statement'].parameters)
             #     self.read_params(buffer, num_params)
-
-
         elif self.type.value == COMMANDS.COM_STMT_CLOSE:
             self.stmt_id = Datum('int<4>')
             buffer = self.stmt_id.setFromBuff(buffer)

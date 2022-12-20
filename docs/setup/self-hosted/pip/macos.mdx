@@ -1,6 +1,6 @@
 ---
-title: "Setup for MacOS via pip"
-sidebarTitle: "MacOS via pip"
+title: Setup for MacOS via pip
+sidebarTitle: MacOS via pip
 ---
 
 ## Before You Start
@@ -46,6 +46,14 @@ The
 `numpy.distutils.system_info.NotFoundError: No lapack/blas resources found. Note: Accelerate is no longer supported.`
 error might be caused by some dependencies not working with Python 3.9 version.
 For now, please use Python 3.7.x or Python 3.8.x, as mentioned before.
+
+Some users can get `OSError: dlopen Library not loaded 'libomp.dylib'`. Please make sure you have installed `libomp` and run the export commands.
+
+```
+brew install libomp
+export LDFLAGS="-L/usr/local/opt/libomp/lib"
+export CPPFLAGS="-I/usr/local/opt/libomp/include"
+```
 
 ## Using the Python [`venv`](https://docs.python.org/3/library/venv.html) Module
 

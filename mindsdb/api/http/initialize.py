@@ -277,9 +277,9 @@ def initialize_flask(config, init_static_thread, no_studio):
 
 
 def initialize_interfaces(app):
-    app.original_integration_controller = IntegrationController()
-    app.original_file_controller = FileController()
-    app.original_database_controller = DatabaseController()
+    app.integration_controller = IntegrationController()
+    app.database_controller = DatabaseController()
+    app.file_controller = FileController()
     config = Config()
     app.config_obj = config
 

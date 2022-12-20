@@ -28,6 +28,7 @@ from mindsdb.integrations.handlers_client.base_client import BaseClient
 from mindsdb.integrations.libs.handler_helpers import define_handler as define_db_handler
 from mindsdb.utilities import log
 
+
 class DBServiceClient(BaseClient):
     """The client to connect to DBHanlder service
 
@@ -42,7 +43,7 @@ class DBServiceClient(BaseClient):
         handler_type: type of DBHandler if as_service=False or DBHandler service type otherwise
         kwargs: connection args for db if as_service=False or to DBHandler service otherwise
     """
-    def __init__(self, handler_type: str, as_service: bool=False, **kwargs: dict):
+    def __init__(self, handler_type: str, as_service: bool = False, **kwargs: dict):
         """Init DBServiceClient
 
         Args:
@@ -66,7 +67,7 @@ class DBServiceClient(BaseClient):
             handler_class = define_db_handler(handler_type)
             self.handler = handler_class(handler_class.name, **kwargs)
 
-    def connect(self) -> bool: 
+    def connect(self) -> bool:
         """Establish a connection.
 
         Returns: True if the connection success, False otherwise

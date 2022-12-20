@@ -1,16 +1,15 @@
 ---
-title: SELECT * FROM files.[file_name] Statement
-sidebarTitle: SELECT from files
-description: "The SELECT FROM files statement is used to select data from a file."
+title: SELECT FROM files Statement
+sidebarTitle: SELECT FROM files
 ---
 
 ## Description
 
-The `SELECT * FROM files.[file_name]` statement is used to select data from a file.
+The `SELECT * FROM files.file_name` statement is used to select data from a file.
 
 First, you upload a file to the MindsDB Cloud Editor by following
 [this guide](/sql/create/file/). And then, you can
-[`CREATE PREDICTOR`](/sql/create/predictor/) from the uploaded file.
+[`CREATE MODEL`](/sql/create/predictor/) from the uploaded file.
 
 ## Syntax
 
@@ -18,7 +17,7 @@ Here is the syntax:
 
 ```sql
 SELECT *
-FROM files.[file_name];
+FROM files.file_name;
 ```
 
 On execution, we get:
@@ -35,7 +34,7 @@ Where:
 
 | Name          | Description                                                                                         |
 | ------------- | --------------------------------------------------------------------------------------------------- |
-| `[file_name]` | Name of the file uploaded to the MindsDB Cloud Editor by following [this guide](/sql/create/file/). |
+| `file_name`   | Name of the file uploaded to the MindsDB Cloud Editor by following [this guide](/sql/create/file/). |
 | `column`      | Name of the column from the file.                                                                   |
 
 ## Example
@@ -69,10 +68,10 @@ On execution, we get:
 ```
 
 Now let's create a predictor using the uploaded file. You can learn more about
-the [`CREATE PREDICTOR` command here](/sql/create/predictor/).
+the [`CREATE MODEL` command here](/sql/create/predictor/).
 
 ```sql
-CREATE PREDICTOR mindsdb.home_rentals_model
+CREATE MODEL mindsdb.home_rentals_model
 FROM files
     (SELECT * from home_rentals)
 PREDICT rental_price;

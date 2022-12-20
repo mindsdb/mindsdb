@@ -72,7 +72,7 @@ class TestProjectStructure(BaseExecutorDummyML):
                 CREATE PREDICTOR proj.task_model
                 from pg (select * from tasks)
                 PREDICT a
-                using engine='dummy_ml',  
+                using engine='dummy_ml',
                 tag = 'first',
                 join_learn_process=true
             '''

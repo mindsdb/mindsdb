@@ -1,6 +1,6 @@
 lightwood >= 22.11.2.0, < 22.11.3.0
 markupsafe == 2.0.1
-flask-restx >= 0.2.0
+flask-restx >= 1.0.1, < 2.0.0
 flask >= 1.0, < 2.0
 python-multipart >= 0.0.5
 pyparsing == 2.3.1
@@ -18,7 +18,7 @@ walrus==0.8.2
 flask-compress >= 1.0.0
 kafka-python >= 2.0.0
 appdirs >= 1.0.0
-mindsdb-sql >= 0.4.5, < 0.5.0
+mindsdb-sql >= 0.4.6, < 0.5.0
 checksumdir >= 1.2.0
 mindsdb-streams == 0.1.1
 duckdb == 0.4.0

@@ -12,6 +12,18 @@
     "ultraLight": "#CCEFE9",
     "ultraDark": "#0D5E4F"
   },
+  "openApi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
+  "api": {
+    "baseUrl": [
+      "https://alpha.mindsdb.com",
+      "https://cloud.mindsdb.com",
+      "https://127.0.0.1"
+    ],
+    "auth": {
+      "method": "api-key",
+      "name": "X-API-KEY"
+    }
+  },
   "topbarLinks": [
     {
       "name": "Login",
@@ -40,18 +52,22 @@
       "pages": [
         "quickstart",
         "what-is-mindsdb",
-        "getting-started",
         {
           "group": "Deployment",
           "pages": [
-            "setup/self-hosted/docker",
             {
-              "group": "Self Hosting",
+              "group": "Self-Hosted",
               "pages": [
-                "setup/self-hosted/pip/windows",
-                "setup/self-hosted/pip/linux",
-                "setup/self-hosted/pip/macos",
-                "setup/self-hosted/pip/source"
+                "setup/self-hosted/docker",
+                {
+                  "group": "pip",
+                  "pages": [
+                    "setup/self-hosted/pip/windows",
+                    "setup/self-hosted/pip/linux",
+                    "setup/self-hosted/pip/macos",
+                    "setup/self-hosted/pip/source"
+                  ]
+                }
               ]
             },
             "setup/custom-config",
@@ -79,30 +95,85 @@
             "connect/tableau"
           ]
         },
+        "mindsdb-handlers",
+        "sql/create/databases2",
         "sql/create/file",
         "sql/data-insights",
+        "sql/create/predictor2",
+        "sql/api/select2",
+        "sql/feature-importance",
         "sql/feature-eng",
         {
           "group": "SQL API",
           "pages": [
             "sql/table-structure",
+            "sql/native-queries",
+            "sql/project",
             {
               "group": "CREATE",
               "pages": [
                 "sql/create/databases",
                 "sql/create/predictor",
                 "sql/create/table",
-                "sql/create/view"
+                "sql/create/view",
+                "sql/create/ml-engine"
               ]
             },
             "sql/api/update",
             "sql/api/insert",
             "sql/api/describe",
             "sql/api/retrain",
+            "sql/api/manage-models-versions",
             "sql/api/drop",
             "sql/api/select",
             "sql/api/select-files",
-            "sql/api/join"
+            "sql/api/join",
+            "sql/api/use"
+          ]
+        },
+        {
+          "group": "REST API",
+          "pages": [
+            "rest/sql",
+            {
+              "group": "Databases",
+              "pages": [
+                "rest/databases/list-databases",
+                "rest/databases/list-database",
+                "rest/databases/create-databases",
+                "rest/databases/update-databases",
+                "rest/databases/delete-databases"
+              ]
+            },
+            {
+              "group": "Models",
+              "pages": [
+                "rest/models/train-model",
+                "rest/models/list-model",
+                "rest/models/list-models",
+                "rest/models/describe-model",
+                "rest/models/query-model",
+                "rest/models/delete-model",
+                "rest/models/retrain-model"
+              ]
+            },
+            {
+              "group": "Views",
+              "pages": [
+                "rest/views/create-view",
+                "rest/views/list-view",
+                "rest/views/list-views",
+                "rest/views/delete-views"
+              ]
+            },
+            {
+              "group": "Tables",
+              "pages": [
+                "rest/tables/create-table",
+                "rest/tables/list-table",
+                "rest/tables/delete-table"
+              ]
+            }
           ]
         },
         {
@@ -111,7 +182,10 @@
             "mongo/collection-structure",
             {
               "group": "Insert()",
-              "pages": ["mongo/database", "mongo/insert"]
+              "pages": [
+                "mongo/database",
+                "mongo/insert"
+              ]
             },
             "mongo/stats",
             "mongo/find",
@@ -132,11 +206,15 @@
           "pages": [
             {
               "group": "Regression",
-              "pages": ["sql/tutorials/home-rentals"]
+              "pages": [
+                "sql/tutorials/home-rentals"
+              ]
             },
             {
               "group": "Classification",
-              "pages": ["sql/tutorials/customer-churn"]
+              "pages": [
+                "sql/tutorials/customer-churn"
+              ]
             },
             {
               "group": "Time Series",
@@ -150,24 +228,6 @@
         {
           "group": "Community Tutorials",
           "pages": [
-            {
-              "group": "Regression",
-              "pages": [
-                "sql/tutorials/insurance-cost-prediction",
-                "sql/tutorials/bodyfat",
-                "sql/tutorials/process-quality"
-              ]
-            },
-            {
-              "group": "Classification",
-              "pages": [
-                "sql/tutorials/crop-prediction",
-                "sql/tutorials/diabetes",
-                "sql/tutorials/spam-emails-tutorial",
-                "sql/tutorials/mushrooms",
-                "sql/tutorials/heart-disease"
-              ]
-            },
             "tutorials"
           ]
         },
@@ -176,7 +236,8 @@
           "pages": [
             "contribute/install",
             "contribute/issues",
-            "contribute/integrations",
+            "contribute/data-handlers",
+            "contribute/ml-handlers",
             "contribute/docs",
             "docs-rules",
             "contribute/tests",
@@ -185,8 +246,19 @@
         },
         {
           "group": "Community",
-          "pages": ["contribute", "community"]
+          "pages": [
+            "contribute",
+            "community"
+          ]
         }
+      ]
+    },
+    {
+      "group": "Natural Language Processing (NLP)",
+      "pages": [
+        "nlp/what-is-nlp",
+        "nlp/nlp-mindsdb-hf",
+        "nlp/nlp-extended-examples"
       ]
     }
   ],

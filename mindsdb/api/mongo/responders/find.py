@@ -1,6 +1,6 @@
 from bson.int64 import Int64
 
-from mindsdb_sql.parser.ast import *
+from mindsdb_sql.parser.ast import Join
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.api.mongo.utilities.mongodb_ast import MongoToAst

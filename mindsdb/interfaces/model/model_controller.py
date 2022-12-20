@@ -369,9 +369,10 @@ class ModelController():
             deleted_at=None,
             active=None,
         )
-        last_version = max([m.version for m in models])
-        if last_version is None:
-            last_version = 1
+        last_version = 1
+        for m in models:
+            if m.version is not None:
+                last_version = max(last_version, m.version)
 
         return last_version + 1
 

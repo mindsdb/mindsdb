@@ -203,11 +203,14 @@ class FileStorage:
     def pull_path(self, path, update=True):
         if update is False:
             # not pull from source if object is exists
-            if os.path.exists(self.resource_group_path / self.folder_name / path):
+            fullpath = self.resource_group_path / self.folder_name / path
+            if os.path.exists(fullpath) and len(os.listdir(fullpath)) > 0:
                 return
         try:
             # TODO not sync if not changed?
-            self.fs_store.get(os.path.join(self.folder_name, path), str(self.resource_group_path))
+            subpath = os.path.join(self.folder_name, path)
+            subpath = subpath.rstrip('/')
+            self.fs_store.get(subpath, str(self.resource_group_path))
         except Exception:
             pass
 

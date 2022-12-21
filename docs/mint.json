@@ -44,6 +44,11 @@
       "name": "GitHub",
       "icon": "github",
       "url": "https://github.com/mindsdb/mindsdb"
+    },
+    {
+      "name": "Natural Language Processing",
+      "icon": "font-case",
+      "url": "https://docs.mindsdb.com/nlp/what-is-nlp/"
     }
   ],
   "navigation": [

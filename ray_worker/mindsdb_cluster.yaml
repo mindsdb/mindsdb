@@ -1,0 +1,10 @@
+base_image: anyscale/ray-ml:2.1.0-py38-gpu
+env_vars:
+  MY_VAR: '123'
+debian_packages:
+- vim
+post_build_cmds:
+- pip install git+https://github.com/mindsdb/mindsdb@ray-test
+- pip install psycopg2-binary
+
+

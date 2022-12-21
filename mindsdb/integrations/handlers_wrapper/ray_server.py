@@ -92,10 +92,3 @@ class MLHandlerRay:
     @app.get("/check_connection")
     def healthcheck(self):
         return
-
-
-entrypoint = MLHandlerRay.options(
-    autoscaling_config={"min_replicas": 1, "max_replicas": 4},
-    ray_actor_options={'num_gpus': 1, 'num_cpus': 4},
-    route_prefix="/",
-).bind()

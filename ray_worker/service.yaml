@@ -1,0 +1,8 @@
+compute_config: mindsdb-cl-config
+entrypoint: serve run --non-blocking ray_server:entrypoint
+cluster_env: mindsdb-ray-env
+runtime_env:
+  working_dir: https://alpha2.mindsdb.com/worker.zip
+healthcheck_url: "/-/healthz"
+
+

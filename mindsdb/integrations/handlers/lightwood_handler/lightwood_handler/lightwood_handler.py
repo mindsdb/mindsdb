@@ -91,7 +91,7 @@ class LightwoodHandler(BaseMLEngine):
         dtype_dict = args['dtype_dict']
         learn_args = args['learn_args']
         pred_args = args.get('predict_params', {})
-        self.model_storage.fileStorage.pull_path('/', update=False)
+        self.model_storage.fileStorage.pull_path('.', update=False)
 
         predictor = lightwood.predictor_from_state(
             self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name,

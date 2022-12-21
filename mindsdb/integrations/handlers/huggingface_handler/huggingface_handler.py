@@ -76,7 +76,7 @@ class HuggingFaceHandler(BaseMLEngine):
                 input_keys.remove(key)
 
         if len(input_keys) > 0:
-            raise Exception(f'Not expected parameter: {key}')
+            raise Exception(f'Not expected parameters: {", ".join(input_keys)}')
 
     def create(self, target, args=None, **kwargs):
         # TODO change BaseMLEngine api?

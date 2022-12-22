@@ -1,0 +1,25 @@
+---
+title: Environment Variables
+---
+
+Most of the MindsDB functionality can be modified by extending the default configuration, but some of the configuration options 
+can be added as environment variables on the server where MindsDB is deployed.
+
+## MindsDB Storage 
+
+By default, MindsDB stores the configuration files by determining appropriate platform-specific dirs, e.g. a "user data dir": 
+
+* On Linux `~/.local/share/mindsdb/var`
+* On MacOS `~/Library/Application Support/mindsdb/var`
+* On Windows `C:\Documents and Settings\<User>\Application Data\Local Settings\<AppAuthor>\mindsdb\var`
+
+In the `MINDSDB_STORAGE_DIR` location, MindsDB stores users' data, models and uploaded data files, the static assets for the frontend application and the 
+`sqlite.db` file. 
+You can change the default storage location using `MINDSDB_STORAGE_DIR` variable.
+
+#### Example
+
+```
+MINDSDB_STORAGE_DIR='~/home/mindsdb/var'
+```
+

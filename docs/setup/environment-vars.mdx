@@ -35,3 +35,31 @@ default storage option and use different database by adding the new connection s
 ```
 MINDSDB_DB_CON='postgresql://user:secret@localhost'
 ```
+
+
+## MindsDB Telemetry 
+
+MindsDB collects some users informations as executed SQL Statements. You can disable this using `CHECK_FOR_UPDATES` variable.
+
+#### Example
+
+```
+CHECK_FOR_UPDATES=0
+```
+
+## MindsDB server
+
+By default for the HTTP API, MindsDB uses [Waitress](https://pypi.org/project/waitress/) which is a pure-Python WSGI server. There is an option to change that 
+and use [Flask](https://flask.palletsprojects.com/en/2.2.x/) or [Gunircorn](https://gunicorn.org/)
+
+<Warning>
+
+If you want to use Gunicorn as a default server, make sure you run `pip install gunicorn`
+
+</Warning>
+
+#### Example
+
+```
+MINDSDB_DEFAULT_SERVER=flask
+```

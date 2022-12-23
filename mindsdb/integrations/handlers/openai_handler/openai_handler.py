@@ -1,4 +1,5 @@
 import os
+import re
 import pandas as pd
 from typing import Optional
 
@@ -45,20 +46,61 @@ class OpenAIHandler(BaseMLEngine):
         def _tidy(comp):
             return [c['text'].strip('\n').strip('') for c in comp['choices']]
 
+        pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
+
+        if args.get('question_column', False) and args['question_column'] not in df.columns:
+            raise Exception(f"This model expects a question to answer in the '{args['question_column']}' column.")
+
+        if args.get('context_column', False) and args['context_column'] not in df.columns:
+            raise Exception(f"This model expects context in the '{args['context_column']}' column.")
 
         model_name = args.get('model_name', 'text-davinci-002')
         temperature = min(1.0, max(0.0, args.get('temperature', 0.0)))
-        max_tokens = args.get('max_tokens', 20)
-
-        if args.get('prompt_template', False):
-            pass  # TODO: do regex check, replace brackets + col_name with fn that actually gets the context list
+        max_tokens = pred_args.get('max_tokens', args.get('max_tokens', 20))
 
         openai.api_key = args['api_key']
         if args.get('api_organization', False):
             openai.organization = args['api_organization']
 
-        prompts = list(df[args['question_column']].apply(lambda x: str(x)))
+        if args.get('prompt_template', False):
+            if pred_args.get('prompt_template', False):
+                base_template = pred_args['prompt_template']  # override with predict-time template if available
+            else:
+                base_template = args['prompt_template']
+            columns = []
+            spans = []
+            matches = list(re.finditer("{{(.*?)}}", base_template))
+
+            first_span = matches[0].start()
+            last_span = matches[-1].end()
+
+            for m in matches:
+                columns.append(m[0].replace('{', '').replace('}', ''))
+                spans.extend((m.start(), m.end()))
+
+            spans = spans[1:-1]
+            template = [base_template[s:e] for s, e in zip(spans, spans[1:])]
+            template.insert(0, base_template[0:first_span])
+            template.append(base_template[last_span:])
+
+            df['__mdb_prompt'] = ''
+            for i in range(len(template)):
+                atom = template[i]
+                if i < len(columns):
+                    col = df[columns[i]]
+                    df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom + col)
+                else:
+                    df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
+            prompts = list(df['__mdb_prompt'])
+
+        elif args.get('context_column', False):
+            contexts = list(df[args['context_column']].apply(lambda x: str(x)))
+            questions = list(df[args['question_column']].apply(lambda x: str(x)))
+            prompts = [f'Context: {c}\nQuestion: {q}\nAnswer: ' for c, q in zip(contexts, questions)]
+
+        else:
+            prompts = list(df[args['question_column']].apply(lambda x: str(x)))
 
         completion = openai.Completion.create(
             model=model_name,

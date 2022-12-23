@@ -1,3 +1,5 @@
+from typing import Optional
+
 import pandas as pd
 import transformers
 from huggingface_hub import HfApi
@@ -77,12 +79,15 @@ class HuggingFaceHandler(BaseMLEngine):
         ####
         # Otherwise download it
         except OSError:
-            log.logger.debug(f"Downloading {model_name}...")
-            pipeline = transformers.pipeline(task=args['task_proper'], model=model_name)
+            try:
+                log.logger.debug(f"Downloading {model_name}...")
+                pipeline = transformers.pipeline(task=args['task_proper'], model=model_name)
 
-            pipeline.save_pretrained(hf_model_storage_path)
+                pipeline.save_pretrained(hf_model_storage_path)
 
-            log.logger.debug(f"Saved to {hf_model_storage_path}")
+                log.logger.debug(f"Saved to {hf_model_storage_path}")
+            except Exception:
+                raise Exception("Error while downloading and setting up the model. Please try a different model. We're working on expanding the list of supported models, so we would appreciate it if you let us know about this in our community slack (https://mindsdb.com/joincommunity).")  # noqa
         ####
 
         if 'max_length' in args:
@@ -186,3 +191,12 @@ class HuggingFaceHandler(BaseMLEngine):
         pred_df = pd.DataFrame(output_list_tidy)
 
         return pred_df
+
+    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+
+        args = self.model_storage.json_get('args')
+
+        hf_api = HfApi()
+        metadata = hf_api.model_info(args['model_name'])
+
+        return pd.DataFrame([[args, metadata.__dict__]], columns=['model_args', 'metadata'])

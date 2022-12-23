@@ -108,7 +108,7 @@ class TrinoHandler(DatabaseHandler):
         try:
             connection = self.connect()
             cur = connection.cursor()
-            cur.execute("SELECT 1;")
+            cur.execute("SELECT 1")
             response.success = True
         except Exception as e:
             log.logger.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
@@ -171,6 +171,8 @@ class TrinoHandler(DatabaseHandler):
         """
         query = "SHOW TABLES"
         response = self.native_query(query)
+        df = response.data_frame
+        response.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
         return response
 
     def get_columns(self, table_name: str) -> Dict:

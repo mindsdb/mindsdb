@@ -1,6 +1,7 @@
 import sys
 import json
 import copy
+from typing import Optional, Dict
 from datetime import datetime
 
 import pandas as pd
@@ -9,22 +10,14 @@ import lightwood
 import numpy as np
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
+
 from mindsdb.utilities.functions import cast_row_types
-from mindsdb.utilities.hooks import after_predict as after_predict_hook
-from mindsdb.interfaces.model.functions import (
-    get_model_record,
-    get_model_records
-)
+# from mindsdb.utilities.hooks import after_predict as after_predict_hook
+from mindsdb.interfaces.model.functions import get_model_record
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.integrations.libs.base import BaseMLEngine
 
-from .utils import unpack_jsonai_old_args
-from .functions import run_learn, run_update
+from .functions import run_learn, run_adjust
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -69,8 +62,7 @@ class LightwoodHandler(BaseMLEngine):
                     if column.lower() not in columns:
                         raise Exception(f"There is no column '{column}' in dataframe")
 
-
-    def create(self, target, df, args):
+    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         args['target'] = target
         run_learn(
             df,
@@ -78,10 +70,16 @@ class LightwoodHandler(BaseMLEngine):
             self.model_storage
         )
 
+    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        run_adjust(
+            df,
+            args,
+            self.model_storage
+        )
+
     def predict(self, df, args=None):
         pred_format = args['pred_format']
         predictor_code = args['code']
-        dtype_dict = args['dtype_dict']
         learn_args = args['learn_args']
         pred_args = args.get('predict_params', {})
         self.model_storage.fileStorage.pull()
@@ -90,6 +88,7 @@ class LightwoodHandler(BaseMLEngine):
             self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name,
             predictor_code
         )
+        dtype_dict = predictor.dtype_dict
 
         predictions = predictor.predict(df, args=pred_args)
         predictions = predictions.to_dict(orient='records')
@@ -357,3 +356,93 @@ class LightwoodHandler(BaseMLEngine):
             resource_id=predictor_record.id
         )
         json_storage.delete('json_ai')
+
+    def _get_features_info(self):
+        ai_info = self.model_storage.json_get('json_ai')
+        if ai_info == {}:
+            raise Exception("predictor doesn't contain enough data to generate 'feature' attribute.")
+        data = []
+        dtype_dict = ai_info["dtype_dict"]
+        for column in dtype_dict:
+            c_data = []
+            c_data.append(column)
+            c_data.append(dtype_dict[column])
+            c_data.append(ai_info["encoders"][column]["module"])
+            if ai_info["encoders"][column]["args"].get("is_target", "False") == "True":
+                c_data.append("target")
+            else:
+                c_data.append("feature")
+            data.append(c_data)
+
+        return pd.DataFrame(data, columns=['column', 'type', 'encoder', 'role'])
+
+    def _get_model_info(self):
+        json_ai = self.model_storage.json_get('json_ai')
+        model_info = self.model_storage.get_info()
+        model_data = model_info['data']
+
+        accuracy_functions = json_ai.get('accuracy_functions')
+        if accuracy_functions:
+            accuracy_functions = str(accuracy_functions)
+
+        models_data = model_data.get("submodel_data", [])
+        if models_data == []:
+            raise Exception("predictor doesn't contain enough data to generate 'model' attribute")
+        data = []
+
+        for model in models_data:
+            m_data = []
+            m_data.append(model["name"])
+            m_data.append(model["accuracy"])
+            m_data.append(model.get("training_time", "unknown"))
+            m_data.append(1 if model["is_best"] else 0)
+            m_data.append(accuracy_functions)
+            data.append(m_data)
+
+        return pd.DataFrame(data, columns=['name', 'performance', 'training_time', 'selected', 'accuracy_functions'])
+
+    def _get_ensemble_data(self):
+        ai_info = self.model_storage.json_get('json_ai')
+        if ai_info == {}:
+            raise Exception("predictor doesn't contain enough data to generate 'ensamble' attribute. Please wait until predictor is complete.")
+        ai_info_str = json.dumps(ai_info, indent=2)
+
+        return pd.DataFrame([[ai_info_str]], columns=['ensemble'])
+
+    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+        if attribute is None:
+
+            model_description = {}
+
+            model_info = self.model_storage.get_info()
+            model_data = model_info['data']
+            to_predict = model_info['to_predict'][0]
+            json_ai = self.model_storage.json_get('json_ai')
+
+            if model_data.get('accuracies', None) is not None:
+                if len(model_data['accuracies']) > 0:
+                    model_data['accuracy'] = float(np.mean(list(model_data['accuracies'].values())))
+
+            model_columns = self.model_storage.columns_get()
+
+            model_description['accuracies'] = model_data['accuracies']
+            model_description['column_importances'] = model_data['column_importances']
+            model_description['outputs'] = [to_predict]
+            model_description['inputs'] = [col for col in model_columns if col not in model_description['outputs']]
+            model_description['model'] = ' --> '.join(str(k) for k in json_ai)
+
+            return pd.DataFrame([model_description])
+
+        else:
+            if attribute == "features":
+                return self._get_features_info()
+
+            elif attribute == "model":
+                return self._get_model_info()
+
+            elif attribute == "ensemble":
+                return self._get_ensemble_data()
+
+            else:
+                raise Exception("DESCRIBE '%s' predictor attribute is not supported yet" % attribute)
+

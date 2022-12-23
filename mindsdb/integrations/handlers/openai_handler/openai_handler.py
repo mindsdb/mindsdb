@@ -89,7 +89,7 @@ class OpenAIHandler(BaseMLEngine):
                 atom = template[i]
                 if i < len(columns):
                     col = df[columns[i]]
-                    df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom + col)
+                    df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col
                 else:
                     df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
             prompts = list(df['__mdb_prompt'])

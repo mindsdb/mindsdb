@@ -27,9 +27,7 @@ from mindsdb.integrations.handlers_client.base_client import BaseClient, Switche
 from mindsdb.integrations.libs.handler_helpers import get_handler
 from mindsdb.utilities.log import get_log
 
-# import logging
-# logger = logging.getLogger("mindsdb.main")
-logger = get_log()
+logger = get_log(logger_name="main")
 
 
 @Switcher

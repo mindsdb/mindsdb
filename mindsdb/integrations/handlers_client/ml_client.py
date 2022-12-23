@@ -28,7 +28,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
 
 
-logger = get_log()
+logger = get_log(logger_name="main")
 
 
 @Switcher
@@ -312,14 +312,20 @@ class MLClient(BaseClient):
                 self.__class__.__name__,
                 response.error_code,
             )
-            r = response.data_frame.to_dict(orient="records")
+            r = response.data_frame
+            columns_dtypes, predictions = r.iloc[-1:], r.iloc[:-1]
+            predictions = predictions.to_dict(orient="records")
+            columns_dtypes = columns_dtypes.to_dict(orient="records")
+            columns_dtypes = columns_dtypes[0] if len(columns_dtypes) else {}
             logger.info(
-                "%s.predict: ml service has replied. predictions - %s(type - %s)",
+                "%s.predict: ml service has replied. predictions - %s(type - %s), columns_dtypes - %s(type - %s)",
                 self.__class__.__name__,
-                r,
-                type(r),
+                predictions,
+                type(predictions),
+                columns_dtypes,
+                type(columns_dtypes),
             )
-            return r
+            return predictions, columns_dtypes
         except Exception as e:
             logger.error(
                 "%s.predict: call to ml service has finished with an error - %s",

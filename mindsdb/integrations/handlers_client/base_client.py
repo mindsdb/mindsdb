@@ -1,12 +1,10 @@
 """Parent class for all clients - DB and ML."""
-# import logging
 import requests
 from pandas import read_json
 from mindsdb.integrations.libs.net_helpers import sending_attempts
 from mindsdb.utilities.log import get_log
 
-# logger = logging.getLogger("mindsdb.main")
-logger = get_log()
+logger = get_log("main")
 
 
 class Switcher:

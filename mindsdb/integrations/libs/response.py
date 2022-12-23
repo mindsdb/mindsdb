@@ -1,7 +1,12 @@
+import json
 from pandas import DataFrame
 
+from mindsdb.utilities.log import get_log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb_sql.parser.ast import ASTNode
+
+
+logger = get_log("main")
 
 
 class HandlerResponse:
@@ -9,7 +14,6 @@ class HandlerResponse:
                  query: ASTNode = 0, error_code: int = 0, error_message: str = None) -> None:
         self.resp_type = resp_type
         self.query = query
-
         self.data_frame = data_frame
         self.error_code = error_code
         self.error_message = error_message
@@ -20,8 +24,11 @@ class HandlerResponse:
 
     def to_json(self):
         try:
-            data = self.data_frame.to_json(orient="split", index=False)
-        except Exception:
+            data = None
+            if self.data_frame is not None:
+                data = self.data_frame.to_json(orient="split", index=False, date_format="iso")
+        except Exception as e:
+            logger.error("%s.to_json: error - %s", self.__class__.__name__, e)
             data = None
         return  {"type": self.resp_type,
                  "query": self.query,

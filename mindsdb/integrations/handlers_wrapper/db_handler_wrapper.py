@@ -22,6 +22,7 @@ import json
 import pickle
 import traceback
 import base64
+
 from flask import Flask, request
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

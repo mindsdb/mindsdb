@@ -1,0 +1,26 @@
+---
+title: USE Statement
+sidebarTitle: USE
+---
+
+# USE statement
+
+The `USE integration_name` statement provides an option to use the connected
+datasources and `SELECT` from the database tables. Even if you are
+connecting to MindsDB as MySQL database, you will still be able to `SELECT` from your database.
+
+## Preview the data
+
+To connect to your database `USE` the created datasource:
+
+```sql
+USE integration_name
+```
+
+Then, simply `SELECT` from the tables:
+
+```sql
+SELECT * FROM table_name;
+```
+
+![Use datasource](/assets/sql/use.png)

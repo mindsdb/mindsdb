@@ -17,24 +17,17 @@ In particular, three big components are included:
 """
 
 import datetime as dt
-from dateutil.parser import parse as parse_datetime
 import traceback
 import importlib
+from typing import Optional
 
 import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import Identifier, Select, Show, Star, NativeQuery
-from mindsdb_sql.parser.dialects.mindsdb import (
-    RetrainPredictor,
-    CreatePredictor,
-    DropPredictor
-)
-
 
 from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
-
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.response import (
@@ -43,47 +36,112 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb import __version__ as mindsdb_version
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.model.functions import (
-    get_model_record,
-    get_model_records
+    get_model_record
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
-
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.functions import mark_process
 from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.interfaces.database.database import DatabaseController
-from mindsdb.interfaces.storage.fs import ModelStorage, HandlerStorage
+from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
+from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.model.functions import get_model_records
+
+from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
 import torch.multiprocessing as mp
-ctx = mp.get_context('spawn')
+mp.get_context('spawn')
 
 
 @mark_process(name='learn')
-def learn_process(class_path, company_id, integration_id, predictor_id, training_data_df, target, problem_definition):
+def learn_process(class_path, context_dump, integration_id,
+                  predictor_id, data_integration_ref, fetch_data_query,
+                  project_name, problem_definition, set_active,
+                  base_predictor_id=None):
+    ctx.load(context_dump)
+    db.init()
 
     predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
 
-    predictor_record.training_start_at = dt.datetime.now()
-    db.session.commit()
-
     try:
+        target = problem_definition['target']
+        training_data_df = None
+
+        database_controller = DatabaseController()
+
+        sql_session = make_sql_session()
+        if data_integration_ref is not None:
+            if data_integration_ref['type'] == 'integration':
+                integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
+                query = Select(
+                    targets=[Star()],
+                    from_table=NativeQuery(
+                        integration=Identifier(integration_name),
+                        query=fetch_data_query
+                    )
+                )
+                sqlquery = SQLQuery(query, session=sql_session)
+            elif data_integration_ref['type'] == 'view':
+                project = database_controller.get_project(project_name)
+                query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+                view_query_ast = project.query_view(query_ast)
+                sqlquery = SQLQuery(view_query_ast, session=sql_session)
+
+            result = sqlquery.fetch(view='dataframe')
+            training_data_df = result['result']
+
+        training_data_columns_count, training_data_rows_count = 0, 0
+        if training_data_df is not None:
+            training_data_columns_count = len(training_data_df.columns)
+            training_data_rows_count = len(training_data_df)
+
+            if target not in training_data_df.columns:
+                raise Exception(
+                    f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
+
+        predictor_record.training_data_columns_count = training_data_columns_count
+        predictor_record.training_data_rows_count = training_data_rows_count
+        db.session.commit()
+
         module_name, class_name = class_path
         module = importlib.import_module(module_name)
         HandlerClass = getattr(module, class_name)
 
-        handlerStorage = HandlerStorage(company_id, integration_id)
-        modelStorage = ModelStorage(company_id, predictor_id)
+        handlerStorage = HandlerStorage(integration_id)
+        modelStorage = ModelStorage(predictor_id)
 
         ml_handler = HandlerClass(
             engine_storage=handlerStorage,
             model_storage=modelStorage,
         )
-        ml_handler.create(target, df=training_data_df, args=problem_definition)
 
+        # create new model
+        if base_predictor_id is None:
+            ml_handler.create(target, df=training_data_df, args=problem_definition)
+
+        # adjust (partially train) existing model
+        else:
+            # load model from previous version, use it as starting point
+            problem_definition['base_model_id'] = base_predictor_id
+            ml_handler.update(df=training_data_df, args=problem_definition)
+
+        predictor_record.status = PREDICTOR_STATUS.COMPLETE
+        db.session.commit()
+        # if retrain and set_active after success creation
+        if set_active is True:
+            models = get_model_records(
+                name=predictor_record.name,
+                project_id=predictor_record.project_id,
+                active=None
+            )
+            for model in models:
+                model.active = False
+            models = [x for x in models if x.status == PREDICTOR_STATUS.COMPLETE]
+            models.sort(key=lambda x: x.created_at)
+            models[-1].active = True
     except Exception as e:
         print(traceback.format_exc())
         error_message = format_exception_error(e)
@@ -93,70 +151,11 @@ def learn_process(class_path, company_id, integration_id, predictor_id, training
         db.session.commit()
 
     predictor_record.training_stop_at = dt.datetime.now()
-    predictor_record.status = PREDICTOR_STATUS.COMPLETE
     db.session.commit()
-
-    # region If the process is 'retrain', then need to mark last trained predictor as 'active'
-    predictors_records = (
-        db.Predictor.query.filter_by(
-            name=predictor_record.name,
-            project_id=predictor_record.project_id
-        )
-        .order_by(db.Predictor.created_at)
-        .with_for_update()
-        .populate_existing()
-        .all()
-    )
-    for predictor_record in predictors_records:
-        predictor_record.active = False
-    predictor_record = next((x for x in reversed(predictors_records) if x.status == PREDICTOR_STATUS.COMPLETE), None)
-    if predictor_record is not None:
-        predictor_record.active = True
-    else:
-        predictors_records[-1].active = True
-    db.session.commit()
-    # endregion
-
-
-@mark_process(name='predict')
-def predict_process(class_path, company_id, integration_id, predictor_id, df, res_queue=None, args: dict = {}):
-
-    module_name, class_name = class_path
-    module = importlib.import_module(module_name)
-    HandlerClass = getattr(module, class_name)
-
-    handlerStorage = HandlerStorage(company_id, integration_id)
-    modelStorage = ModelStorage(company_id, predictor_id)
-
-    ml_handler = HandlerClass(
-        engine_storage=handlerStorage,
-        model_storage=modelStorage,
-    )
-
-    # FIXME
-    if class_name == 'LightwoodHandler':
-        predictor_record = db.Predictor.query.get(predictor_id)
-        args['code'] = predictor_record.code
-        args['target'] = predictor_record.to_predict[0]
-        args['dtype_dict'] = predictor_record.dtype_dict
-        args['learn_args'] = predictor_record.learn_args
-
-    predictions = ml_handler.predict(df, args)
-
-    # mdb indexes
-    if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
-        predictions['__mindsdb_row_id'] = df['__mindsdb_row_id']
-
-    predictions = predictions.to_dict(orient='records')
-
-    if res_queue is not None:
-        # subprocess mode
-        res_queue.put(predictions)
-    else:
-        return predictions
 
 
 class BaseMLEngineExec:
+
     def __init__(self, name, **kwargs):
         """
         ML handler interface converter
@@ -169,16 +168,11 @@ class BaseMLEngineExec:
         self.fs_store = kwargs.get('file_storage')
         self.storage_factory = kwargs.get('storage_factory')
         self.integration_id = kwargs.get('integration_id')
+        self.execution_method = kwargs.get('execution_method')
 
-        self.model_controller = WithKWArgsWrapper(
-            ModelController(),
-            company_id=self.company_id
-        )
+        self.model_controller = ModelController()
 
-        self.database_controller = WithKWArgsWrapper(
-            DatabaseController(),
-            company_id=self.company_id
-        )
+        self.database_controller = DatabaseController()
 
         self.parser = parse_sql
         self.dialect = 'mindsdb'
@@ -186,6 +180,38 @@ class BaseMLEngineExec:
         self.is_connected = True
 
         self.handler_class = kwargs['handler_class']
+
+    def get_ml_handler(self, predictor_id=None):
+        # returns instance or wrapper over it
+
+        integration_id = self.integration_id
+
+        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+
+        if self.execution_method == 'subprocess':
+            handler = MLHandlerWrapper()
+
+            handler.init_handler(class_path, integration_id, predictor_id, ctx.dump())
+            return handler
+
+        elif self.execution_method == 'subprocess_keep':
+            handler = MLHandlerPersistWrapper()
+
+            handler.init_handler(class_path, integration_id, predictor_id, ctx.dump())
+            return handler
+
+        elif self.execution_method == 'remote':
+            raise NotImplementedError()
+
+        else:
+            handlerStorage = HandlerStorage(integration_id)
+            modelStorage = ModelStorage(predictor_id)
+
+            ml_handler = self.handler_class(
+                engine_storage=handlerStorage,
+                model_storage=modelStorage,
+            )
+            return ml_handler
 
     def get_tables(self) -> Response:
         """ Returns all models currently registered that belong to the ML engine."""
@@ -202,7 +228,7 @@ class BaseMLEngineExec:
 
     def get_columns(self, table_name: str) -> Response:
         """ Retrieves standard info about a model, e.g. data types. """  # noqa
-        predictor_record = get_model_record(company_id=self.company_id, name=table_name, ml_handler_name=self.name)
+        predictor_record = get_model_record(name=table_name, ml_handler_name=self.name)
         if predictor_record is None:
             return Response(
                 RESPONSE_TYPE.ERROR,
@@ -240,12 +266,6 @@ class BaseMLEngineExec:
                     error_message=f"Cant determine how to show '{statement.category}'"
                 )
             return response
-        if type(statement) == CreatePredictor:
-            return self.learn(statement)
-        elif type(statement) == RetrainPredictor:
-            return self.retrain(statement)
-        elif type(statement) == DropPredictor:
-            return self.drop(statement)
         elif type(statement) == Select:
             model_name = statement.from_table.parts[-1]
             where_data = get_where_data(statement.where)
@@ -257,86 +277,46 @@ class BaseMLEngineExec:
         else:
             raise Exception(f"Query type {type(statement)} not supported")
 
-    def learn(self, statement):
+    def learn(
+        self, model_name, project_name,
+        data_integration_ref=None,
+        fetch_data_query=None,
+        problem_definition=None,
+        join_learn_process=False,
+        label=None,
+        version=1,
+        is_retrain=False,
+        set_active=True,
+    ):
+        # TODO move to model_controller
         """ Trains a model given some data-gathering SQL statement. """
-        project_name = statement.name.parts[0]
-        model_name = statement.name.parts[1]
 
-        existing_projects_meta = self.database_controller.get_dict(filter_type='project')
-        if project_name not in existing_projects_meta:
-            raise Exception(f"Project '{project_name}' does not exist.")
+        target = problem_definition['target']
 
         project = self.database_controller.get_project(name=project_name)
-        project_tables = project.get_tables()
-        if model_name in project_tables:
-            return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=f"Error: model '{model_name}' already exists in project {project_name}!"
-            )
 
-        target = statement.targets[0].parts[-1]
-        training_data_df = pd.DataFrame()
-
-        fetch_data_query = None
-        data_integration_id = None
-        # get data for learn
-        if statement.integration_name is not None:
-            fetch_data_query = statement.query_str
-            integration_name = statement.integration_name.parts[0]
-
-            # get data from integration
-            query = Select(
-                targets=[Star()],
-                from_table=NativeQuery(
-                    integration=Identifier(integration_name),
-                    query=statement.query_str
-                )
-            )
-            sql_session = make_sql_session(self.company_id)
-
-            # execute as query
-            sqlquery = SQLQuery(query, session=sql_session)
-            result = sqlquery.fetch(view='dataframe')
-
-            training_data_df = result['result']
-
-            databases_meta = self.database_controller.get_dict()
-            data_integration_meta = databases_meta[integration_name]
-            # TODO improve here. Suppose that it is view
-            if data_integration_meta['type'] == 'project':
-                data_integration_id = self.handler_controller.get(name='views')['id']
-            else:
-                data_integration_id = data_integration_meta['id']
-
-        if target not in training_data_df.columns:
-            raise Exception(f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
-
-        problem_definition = statement.using
-        if problem_definition is None:
-            problem_definition = {}
-
-        problem_definition['target'] = target
-
-        join_learn_process = False
-        if 'join_learn_process' in problem_definition:
-            join_learn_process = problem_definition['join_learn_process']
-            del problem_definition['join_learn_process']
+        # handler-side validation
+        if hasattr(self.handler_class, 'create_validation'):
+            self.handler_class.create_validation(target, args=problem_definition)
 
         predictor_record = db.Predictor(
-            company_id=self.company_id,
+            company_id=ctx.company_id,
             name=model_name,
             integration_id=self.integration_id,
-            data_integration_id=data_integration_id,
+            data_integration_ref=data_integration_ref,
             fetch_data_query=fetch_data_query,
             mindsdb_version=mindsdb_version,
             to_predict=target,
             learn_args=problem_definition,
             data={'name': model_name},
             project_id=project.id,
-            training_data_columns_count=len(training_data_df.columns),
-            training_data_rows_count=len(training_data_df),
+            training_data_columns_count=None,
+            training_data_rows_count=None,
             training_start_at=dt.datetime.now(),
-            status=PREDICTOR_STATUS.GENERATING
+            status=PREDICTOR_STATUS.GENERATING,
+            label=label,
+            version=version,
+            active=(not is_retrain),  # if create then active
         )
 
         db.session.add(predictor_record)
@@ -347,136 +327,57 @@ class BaseMLEngineExec:
         p = HandlerProcess(
             learn_process,
             class_path,
-            self.company_id,
+            ctx.dump(),
             self.integration_id,
             predictor_record.id,
-            training_data_df,
-            target,
+            data_integration_ref,
+            fetch_data_query,
+            project_name,
             problem_definition,
+            set_active
         )
         p.start()
         if join_learn_process is True:
             p.join()
 
-        return Response(RESPONSE_TYPE.OK)
-
-    def retrain(self, statement):
-        if len(statement.name.parts) != 2:
-            raise Exception("Retrain command should contain name of database and name of model")
-        database_name, model_name = statement.name.parts
-
-        base_predictor_record = get_model_record(
-            name=model_name,
-            project_name=database_name,
-            company_id=self.company_id,
-            active=True
-        )
-
-        if base_predictor_record is None:
-            return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=f"Error: model '{model_name}' does not exists"
-            )
-
-        new_predictor_record = db.Predictor(
-            company_id=self.company_id,
-            name=base_predictor_record.name,
-            integration_id=base_predictor_record.integration_id,
-            data_integration_id=base_predictor_record.data_integration_id,
-            fetch_data_query=base_predictor_record.fetch_data_query,
-            mindsdb_version=mindsdb_version,
-            to_predict=base_predictor_record.to_predict,
-            learn_args=base_predictor_record.learn_args,
-            data={'name': base_predictor_record.name},
-            active=False,
-            status=PREDICTOR_STATUS.GENERATING,
-            project_id=base_predictor_record.project_id
-        )
-        db.session.add(new_predictor_record)
-        db.session.commit()
-
-        data_handler_meta = self.handler_controller.get_by_id(base_predictor_record.data_integration_id)
-        data_handler = self.handler_controller.get_handler(data_handler_meta['name'])
-        ast = self.parser(base_predictor_record.fetch_data_query, dialect=self.dialect)
-        response = data_handler.query(ast)
-        if response.type == RESPONSE_TYPE.ERROR:
-            return response
-        if response.type == RESPONSE_TYPE.QUERY:
-            sql_session = make_sql_session(self.company_id)
-            sqlquery = SQLQuery(response.query.to_string(), session=sql_session)
-            result = sqlquery.fetch(view='dataframe')
-            training_data_df = result['result']
-        else:
-            training_data_df = response.data_frame
-
-        new_predictor_record.training_data_columns_count = len(training_data_df.columns)
-        new_predictor_record.training_data_rows_count = len(training_data_df)
-        db.session.commit()
-
-        class_path = [self.handler_class.__module__, self.handler_class.__name__]
-
-        p = HandlerProcess(
-            learn_process,
-            class_path,
-            self.company_id,
-            self.integration_id,
-            new_predictor_record.id,
-            training_data_df,
-            new_predictor_record.to_predict,
-            new_predictor_record.learn_args
-        )
-        p.start()
-
-        return Response(RESPONSE_TYPE.OK)
-
-    def predict(self, model_name: str, data: list, pred_format: str = 'dict', project_name: str = None):
+    def predict(self, model_name: str, data: list, pred_format: str = 'dict',
+                project_name: str = None, version=None, params: dict = None):
         """ Generates predictions with some model and input data. """
         if isinstance(data, dict):
             data = [data]
         df = pd.DataFrame(data)
         predictor_record = get_model_record(
-            company_id=self.company_id, name=model_name,
-            ml_handler_name=self.name, project_name=project_name
+            name=model_name, ml_handler_name=self.name, project_name=project_name,
+            version=version
         )
         if predictor_record is None:
-            return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=f"Error: model '{model_name}' does not exists!"
-            )
+            if version is not None:
+                model_name = f'{model_name}.{version}'
+            raise Exception(f"Error: model '{model_name}' does not exists!")
 
-        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+        ml_handler = self.get_ml_handler(predictor_record.id)
 
         args = {
-            'pred_format': pred_format
+            'pred_format': pred_format,
+            'predict_params': {} if params is None else params
         }
+        # FIXME
+        if self.handler_class.__name__ == 'LightwoodHandler':
+            args['code'] = predictor_record.code
+            args['target'] = predictor_record.to_predict[0]
+            args['dtype_dict'] = predictor_record.dtype_dict
+            args['learn_args'] = predictor_record.learn_args
 
-        is_subprocess = False
-        if is_subprocess:
-            res_queue = ctx.SimpleQueue()
-            p = HandlerProcess(
-                predict_process,
-                class_path,
-                self.company_id,
-                self.integration_id,
-                predictor_record.id,
-                df,
-                res_queue,
-                args
-            )
-            p.start()
-            p.join()
-            predictions = res_queue.get()
+        predictions = ml_handler.predict(df, args)
 
-        else:
-            predictions = predict_process(
-                class_path,
-                self.company_id,
-                self.integration_id,
-                predictor_record.id,
-                df,
-                None,
-                args
-            )
+        ml_handler.close()
+
+        columns_dtypes = dict(predictions.dtypes)
+        # mdb indexes
+        if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
+            predictions['__mindsdb_row_id'] = df['__mindsdb_row_id']
+
+        predictions = predictions.to_dict(orient='records')
 
         after_predict_hook(
             company_id=self.company_id,
@@ -485,48 +386,69 @@ class BaseMLEngineExec:
             columns_in_count=df.shape[1],
             rows_out_count=len(predictions)
         )
-        return predictions
+        return predictions, columns_dtypes
 
-    def drop(self, statement):
-        """ Deletes a model from the MindsDB registry. """
-        if len(statement.name.parts) != 2:
-            raise Exception("Command should contain project name and model name: 'DROP project_name.model_name'")
-        project_name = statement.name.parts[0]
-        model_name = statement.name.parts[1]
-
-        project = self.database_controller.get_project(project_name)
-
-        predictors_records = get_model_records(
-            company_id=self.company_id,
+    def update(
+            self, model_name, project_name, version,
+            data_integration_ref=None,
+            fetch_data_query=None,
+            join_learn_process=False,
+            label=None,
+            set_active=True,
+            args: Optional[dict] = None
+    ):
+        # generate new record from latest version as starting point
+        project = self.database_controller.get_project(name=project_name)
+        predictor_records = get_model_records(
+            active=None,
             name=model_name,
-            ml_handler_name=self.name,
-            project_id=project.id,
-            active=None
         )
-        if len(predictors_records) == 0:
-            return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=f"Model '{model_name}' does not exist"
-            )
+        predictor_records = [
+            x for x in predictor_records
+            if x.training_stop_at is not None
+        ]
+        predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
 
-        is_cloud = self.config.get('cloud', False)
-        if is_cloud:
-            for predictor_record in predictors_records:
-                model_data = self.model_controller.get_model_data(predictor_record=predictor_record)
-                if (
-                    is_cloud is True
-                    and model_data.get('status') in ['generating', 'training']
-                    and isinstance(model_data.get('created_at'), str) is True
-                    and (dt.datetime.now() - parse_datetime(model_data.get('created_at'))) < dt.timedelta(hours=1)
-                ):
-                    raise Exception('You are unable to delete models currently in progress, please wait before trying again')
+        base_predictor_record = predictor_records[0]
 
-        for predictor_record in predictors_records:
-            if is_cloud:
-                predictor_record.deleted_at = dt.datetime.now()
-            else:
-                db.session.delete(predictor_record)
-            fs_storage = self.storage_factory(predictor_record.id)
-            fs_storage.complete_removal()
+        predictor_record = db.Predictor(
+            company_id=ctx.company_id,
+            name=model_name,
+            integration_id=self.integration_id,
+            data_integration_ref=data_integration_ref,
+            fetch_data_query=fetch_data_query,
+            mindsdb_version=mindsdb_version,
+            to_predict=base_predictor_record.to_predict,
+            learn_args=base_predictor_record.learn_args,
+            data={'name': model_name},
+            project_id=project.id,
+            training_data_columns_count=None,
+            training_data_rows_count=None,
+            training_start_at=dt.datetime.now(),
+            status=PREDICTOR_STATUS.GENERATING,
+            label=label,
+            version=version,
+            active=False
+        )
+
+        db.session.add(predictor_record)
         db.session.commit()
-        return Response(RESPONSE_TYPE.OK)
+
+        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+
+        p = HandlerProcess(
+            learn_process,
+            class_path,
+            ctx.dump(),
+            self.integration_id,
+            predictor_record.id,
+            data_integration_ref,
+            fetch_data_query,
+            project_name,
+            predictor_record.learn_args,
+            set_active,
+            base_predictor_record.id,
+        )
+        p.start()
+        if join_learn_process is True:
+            p.join()

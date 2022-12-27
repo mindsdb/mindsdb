@@ -25,11 +25,14 @@ services:
       - '47335:47335'
     command: bash -c "cd /mindsdb && python -m mindsdb"
     environment:
+      MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       FLASK_DEBUG: "1"
       FLASK_ENV: "development"
       FLASK_APP: "/mindsdb/mindsdb/__main__.py"
       SEPARATE_MIGRATIONS: "1"
+    depends_on:
+      - migrations
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
       interval: 30s

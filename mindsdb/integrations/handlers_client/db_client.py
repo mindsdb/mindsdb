@@ -26,7 +26,8 @@ from mindsdb.integrations.libs.response import (
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.handlers_client.base_client import BaseClient
 from mindsdb.integrations.libs.handler_helpers import define_handler as define_db_handler
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
+
 
 class DBServiceClient(BaseClient):
     """The client to connect to DBHanlder service
@@ -42,7 +43,7 @@ class DBServiceClient(BaseClient):
         handler_type: type of DBHandler if as_service=False or DBHandler service type otherwise
         kwargs: connection args for db if as_service=False or to DBHandler service otherwise
     """
-    def __init__(self, handler_type: str, as_service: bool=False, **kwargs: dict):
+    def __init__(self, handler_type: str, as_service: bool = False, **kwargs: dict):
         """Init DBServiceClient
 
         Args:
@@ -66,7 +67,7 @@ class DBServiceClient(BaseClient):
             handler_class = define_db_handler(handler_type)
             self.handler = handler_class(handler_class.name, **kwargs)
 
-    def connect(self) -> bool: 
+    def connect(self) -> bool:
         """Establish a connection.
 
         Returns: True if the connection success, False otherwise
@@ -88,18 +89,18 @@ class DBServiceClient(BaseClient):
         Returns:
             success status and error message if error occurs
         """
-        log.info("%s: calling 'check_connection'", self.__class__.__name__)
+        log.logger.info("%s: calling 'check_connection'", self.__class__.__name__)
         status = None
         try:
             r = self._do("/check_connection")
             r = self._convert_response(r.json())
             status = StatusResponse(success=r.get("success", False), error_message=r.get("error_message", ""))
-            log.info("%s: db service has replied", self.__class__.__name__)
+            log.logger.info("%s: db service has replied", self.__class__.__name__)
 
         except Exception as e:
             # do some logging
             status = StatusResponse(success=False, error_message=str(e))
-            log.error("call to db service has finished with an error: %s", traceback.format_exc())
+            log.logger.error("call to db service has finished with an error: %s", traceback.format_exc())
 
         return status
 
@@ -115,7 +116,7 @@ class DBServiceClient(BaseClient):
         """
 
         response = None
-        log.info("%s: calling 'native_query' for query - %s", self.__class__.__name__, query)
+        log.logger.info("%s: calling 'native_query' for query - %s", self.__class__.__name__, query)
         try:
             r = self._do("/native_query", _type="post", json={"query": query})
             r = self._convert_response(r.json())
@@ -124,14 +125,14 @@ class DBServiceClient(BaseClient):
                                 error_code=r.get("error_code", 0),
                                 error_message=r.get("error_message", None),
                                 query=r.get("query"))
-            log.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            log.logger.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
 
         except Exception as e:
             response = Response(error_message=str(e),
                                 error_code=1,
                                 resp_type=RESPONSE_TYPE.ERROR)
 
-            log.error("call to db service has finished with an error: %s", traceback.format_exc())
+            log.logger.error("call to db service has finished with an error: %s", traceback.format_exc())
         return response
 
     def query(self, query: ASTNode) -> Response:
@@ -147,7 +148,7 @@ class DBServiceClient(BaseClient):
         s_query = pickle.dumps(query)
         response = None
 
-        log.info("%s: calling 'query' for query - %s", self.__class__.__name__, query)
+        log.logger.info("%s: calling 'query' for query - %s", self.__class__.__name__, query)
         try:
             r = self._do("/query", data=s_query)
             r = self._convert_response(r.json())
@@ -156,14 +157,14 @@ class DBServiceClient(BaseClient):
                                 error_code=r.get("error_code", 0),
                                 error_message=r.get("error_message", None),
                                 query=r.get("query"))
-            log.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            log.logger.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
 
         except Exception as e:
             # do some logging
             response = Response(error_message=str(e),
                                 error_code=1,
                                 resp_type=RESPONSE_TYPE.ERROR)
-            log.error("call to db service has finished with an error: %s", traceback.format_exc())
+            log.logger.error("call to db service has finished with an error: %s", traceback.format_exc())
 
         return response
 
@@ -176,7 +177,7 @@ class DBServiceClient(BaseClient):
         """
 
         response = None
-        log.info("%s: calling 'get_tables'", self.__class__.__name__)
+        log.logger.info("%s: calling 'get_tables'", self.__class__.__name__)
 
         try:
             r = self._do("/get_tables")
@@ -186,13 +187,13 @@ class DBServiceClient(BaseClient):
                                 error_code=r.get("error_code", 0),
                                 error_message=r.get("error_message", None),
                                 query=r.get("query"))
-            log.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            log.logger.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
 
         except Exception as e:
             response = Response(error_message=str(e),
                                 error_code=1,
                                 resp_type=RESPONSE_TYPE.ERROR)
-            log.error("call to db service has finished with an error: %s", traceback.format_exc())
+            log.logger.error("call to db service has finished with an error: %s", traceback.format_exc())
 
         return response
 
@@ -207,7 +208,7 @@ class DBServiceClient(BaseClient):
         """
         response = None
 
-        log.info("%s: calling 'get_columns' for table - %s", self.__class__.__name__, table_name)
+        log.logger.info("%s: calling 'get_columns' for table - %s", self.__class__.__name__, table_name)
         try:
             r = self._do("/get_columns", json={"table": table_name})
             r = self._convert_response(r.json())
@@ -217,11 +218,11 @@ class DBServiceClient(BaseClient):
                                 error_message=r.get("error_message", None),
                                 query=r.get("query"))
 
-            log.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
+            log.logger.info("%s: db service has replied. error_code - %s", self.__class__.__name__, response.error_code)
         except Exception as e:
             response = Response(error_message=str(e),
                                 error_code=1,
                                 resp_type=RESPONSE_TYPE.ERROR)
-            log.error("call to db service has finished with an error: %s", traceback.format_exc())
+            log.logger.error("call to db service has finished with an error: %s", traceback.format_exc())
 
         return response

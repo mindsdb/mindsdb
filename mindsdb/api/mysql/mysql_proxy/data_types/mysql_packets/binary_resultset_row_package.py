@@ -15,7 +15,7 @@ import pandas as pd
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (NULL_VALUE, TYPES)
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
 
 
 class BinaryResultsetRowPacket(Packet):
@@ -84,12 +84,9 @@ class BinaryResultsetRowPacket(Packet):
             if enc == 'string':
                 self.value.append(Datum('string<lenenc>', str(val)).toStringPacket())
             else:
-
-
                 if env_val is None:
                     env_val = struct.pack(enc, val)
                 self.value.append(env_val)
-
 
     def encode_date(self, val):
         # date_type = None
@@ -110,7 +107,6 @@ class BinaryResultsetRowPacket(Packet):
             date_value = val
             date_type = 'datetime'
 
-
         out = struct.pack('<H', date_value.year)
         out += struct.pack('<B', date_value.month)
         out += struct.pack('<B', date_value.day)
@@ -123,8 +119,6 @@ class BinaryResultsetRowPacket(Packet):
 
         len_bit = struct.pack('<B', len(out))
         return len_bit + out
-
-
 
     @property
     def body(self):

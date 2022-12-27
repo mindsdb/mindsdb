@@ -19,19 +19,16 @@ including calling params and returning types.
 """
 from typing import Optional, Dict
 import traceback
+
 import pandas as pd
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
 
-
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.integrations.handlers_client.base_client import BaseClient
-from mindsdb.integrations.libs.handler_helpers import define_ml_handler
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.utilities.log import log
+from mindsdb.utilities.log import get_log
+
+
+log = get_log()
 
 
 class MLClient(BaseClient):
@@ -52,7 +49,7 @@ class MLClient(BaseClient):
             company_id - id of the company.
             Last two args needed to instantiante engine and model storages
     """
-    def __init__(self, handler_class: BaseMLEngine, as_service: bool=False, **kwargs: dict):
+    def __init__(self, handler_class: BaseMLEngine, as_service: bool = False, **kwargs: dict):
         """ Init MLClient
 
         Args:
@@ -127,19 +124,19 @@ class MLClient(BaseClient):
         else:
             df_str = df
         log.info("%s calling 'create': df(size) - %s, target - %s, args - %s",
-                    self.__class__.__name__,
-                    len(df) if df is not None else 0,
-                    target,
-                    args)
+                 self.__class__.__name__,
+                 len(df) if df is not None else 0,
+                 target,
+                 args)
         params = {"target": target, "args": args, "df": df_str}
         params.update(self.model_info)
         r = self._do("/create", _type="post", json=params)
         r = self._convert_response(r.json())
         err = r.get("error_message", None)
         log.info("%s 'predict': db service has replied. error_code - %s, err_msg - %s",
-                    self.__class__.__name__,
-                    r.get("error_code", 0),
-                    err)
+                 self.__class__.__name__,
+                 r.get("error_code", 0),
+                 err)
         if err:
             log.error("%s 'create' call to ml service has finished with an error - %s", self.__class__.__name__, err)
 
@@ -170,7 +167,7 @@ class MLClient(BaseClient):
         r = self._do("/predict", json=params)
         r = self._convert_response(r.json())
         log.info("%s 'predict': db service has replied. error_code - %s, err_msg - %s",
-                    self.__class__.__name__,
-                    r.get("error_code", 0),
-                    r.get("error_message", None))
+                 self.__class__.__name__,
+                 r.get("error_code", 0),
+                 r.get("error_message", None))
         return r.get("data_frame", None)

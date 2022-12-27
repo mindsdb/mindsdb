@@ -7,7 +7,7 @@ from trino.auth import KerberosAuthentication, BasicAuthentication
 from trino.dbapi import connect
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -108,10 +108,10 @@ class TrinoHandler(DatabaseHandler):
         try:
             connection = self.connect()
             cur = connection.cursor()
-            cur.execute("SELECT 1;")
+            cur.execute("SELECT 1")
             response.success = True
         except Exception as e:
-            log.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
+            log.logger.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
             response.error_message = str(e)
 
         if response.success is False and self.is_connected is True:
@@ -141,7 +141,7 @@ class TrinoHandler(DatabaseHandler):
                 response = Response(RESPONSE_TYPE.OK)
             connection.commit()
         except Exception as e:
-            log.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
+            log.logger.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
@@ -171,6 +171,8 @@ class TrinoHandler(DatabaseHandler):
         """
         query = "SHOW TABLES"
         response = self.native_query(query)
+        df = response.data_frame
+        response.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
         return response
 
     def get_columns(self, table_name: str) -> Dict:

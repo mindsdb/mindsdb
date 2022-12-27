@@ -27,7 +27,8 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.handler_helpers import define_handler
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
+
 
 class BaseDBWrapper:
     """Base abstract class contains some general methods."""
@@ -42,7 +43,7 @@ class BaseDBWrapper:
         # self.index becomes a flask API endpoint
         default_router = self.app.route("/")
         self.index = default_router(self.index)
-        log.info("%s: base params and route have been initialized", self.__class__.__name__)
+        log.logger.info("%s: base params and route have been initialized", self.__class__.__name__)
 
     def index(self):
         """ Default GET endpoint - '/'."""
@@ -58,7 +59,7 @@ class DBHandlerWrapper(BaseDBWrapper):
     General meaning: DBHandlerWrapper(DBHandler) = DBHandler + REST API
     DBHandler which capable communicate with the caller via REST
     """
-    def __init__(self,  **kwargs):
+    def __init__(self, **kwargs):
         """ Wrapper Init.
         Args:
             connection_data: dict contains all required connection info to a specific database
@@ -68,43 +69,43 @@ class DBHandlerWrapper(BaseDBWrapper):
         super().__init__(**kwargs)
 
         # CONVERT METHODS TO FLASK API ENDPOINTS
-        connect_route = self.app.route("/connect", methods = ["GET", ])
+        connect_route = self.app.route("/connect", methods=["GET", ])
         self.connect = connect_route(self.connect)
 
-        check_connection_route = self.app.route("/check_connection", methods = ["GET", ])
+        check_connection_route = self.app.route("/check_connection", methods=["GET", ])
         self.check_connection = check_connection_route(self.check_connection)
 
-        get_tables_route = self.app.route("/get_tables", methods = ["GET", ])
+        get_tables_route = self.app.route("/get_tables", methods=["GET", ])
         self.get_tables = get_tables_route(self.get_tables)
 
-        get_columns_route = self.app.route("/get_columns", methods = ["GET", ])
+        get_columns_route = self.app.route("/get_columns", methods=["GET", ])
         self.get_columns = get_columns_route(self.get_columns)
 
-        native_query_route = self.app.route("/native_query", methods = ["POST", "PUT"])
+        native_query_route = self.app.route("/native_query", methods=["POST", "PUT"])
         self.native_query = native_query_route(self.native_query)
 
-        query_route = self.app.route("/query", methods = ["GET", ])
+        query_route = self.app.route("/query", methods=["GET", ])
         self.query = query_route(self.query)
-        log.info("%s: additional params and routes have been initialized", self.__class__.__name__)
+        log.logger.info("%s: additional params and routes have been initialized", self.__class__.__name__)
 
     def connect(self):
         try:
             self.handler.connect()
             return {"status": "OK"}, 200
-        except Exception as e:
+        except Exception:
             msg = traceback.format_exc()
-            log.error(msg)
-            return {"status": "FAIL" ,"error": msg}, 500
+            log.logger.error(msg)
+            return {"status": "FAIL", "error": msg}, 500
 
     def check_connection(self):
         """Check connection to the database server."""
-        log.info("%s: calling 'check_connection'", self.__class__.__name__)
+        log.logger.info("%s: calling 'check_connection'", self.__class__.__name__)
         try:
-            result =  self.handler.check_connection()
+            result = self.handler.check_connection()
             return result.to_json(), 200
-        except Exception as e:
+        except Exception:
             msg = traceback.format_exc()
-            log.error(msg)
+            log.logger.error(msg)
             result = StatusResponse(success=False,
                                     error_message=msg)
             return result.to_json(), 500
@@ -112,13 +113,13 @@ class DBHandlerWrapper(BaseDBWrapper):
     def native_query(self):
         """Execute received string query."""
         query = request.json.get("query")
-        log.info("%s: calling 'native_query' with query - %s", self.__class__.__name__, query)
+        log.logger.info("%s: calling 'native_query' with query - %s", self.__class__.__name__, query)
         try:
             result = self.handler.native_query(query)
             return result.to_json(), 200
-        except Exception as e:
+        except Exception:
             msg = traceback.format_exc()
-            log.error(msg)
+            log.logger.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)
@@ -128,26 +129,26 @@ class DBHandlerWrapper(BaseDBWrapper):
         """Execute received query object"""
         s_query = request.get_data()
         query = pickle.loads(s_query)
-        log.info("%s: calling 'query' with query - %s", self.__class__.__name__, query)
+        log.logger.info("%s: calling 'query' with query - %s", self.__class__.__name__, query)
         try:
             result = self.handler.query(query)
             return result.to_json(), 200
-        except Exception as e:
+        except Exception:
             msg = traceback.format_exc()
-            log.error(msg)
+            log.logger.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)
             return result.to_json(), 500
 
     def get_tables(self):
-        log.info("%s: calling 'get_tables'", self.__class__.__name__)
+        log.logger.info("%s: calling 'get_tables'", self.__class__.__name__)
         try:
             result = self.handler.get_tables()
             return result.to_json(), 200
-        except Exception as e:
+        except Exception:
             msg = traceback.format_exc()
-            log.error(msg)
+            log.logger.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)
@@ -156,12 +157,12 @@ class DBHandlerWrapper(BaseDBWrapper):
     def get_columns(self):
         table = request.json.get("table")
         try:
-            log.info("%s: calling 'get_columns' for table - %s", self.__class__.__name__, table)
+            log.logger.info("%s: calling 'get_columns' for table - %s", self.__class__.__name__, table)
             result = self.handler.get_columns(table)
             return result.to_json(), 200
-        except Exception as e:
+        except Exception:
             msg = traceback.format_exc()
-            log.error(msg)
+            log.logger.error(msg)
             result = Response(resp_type=RESPONSE_TYPE.ERROR,
                               error_code=1,
                               error_message=msg)

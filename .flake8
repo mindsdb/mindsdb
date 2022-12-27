@@ -1,14 +1,20 @@
 [flake8]
-max-line-length = 88
-select = C,E,F,W,B,B9
-ignore = E203, E402, E501, E713, W503, C901, F401, F403, F405, F541, F821,
+max-line-length = 120
+ignore =
+  # E402
+  # Line too long
+  E501,
+  # Line break occurred before a binary operator
+  W503,
+  # Function is too complex
+  C901
+per-file-ignores =
+  mindsdb/__main__.py: E402
+  mindsdb/api/mysql/mysql_proxy/libs/constants/mysql.py: E241
 exclude =
   __init__.py,
+  build/*
   # TODO: clean up this code
-
-  mindsdb/api/mongo/*
-  mindsdb/api/mysql/mysql_proxy/*
-  mindsdb/api/mysql/mysql_proxy/external_libs/mysql_scramble.py
   mindsdb/integrations/handlers/access_handler/access_handler.py
   mindsdb/integrations/handlers/airtable_handler/airtable_handler.py
   mindsdb/integrations/handlers/bigquery_handler/tests/test_bigquery_handler.py
@@ -53,16 +59,12 @@ exclude =
   mindsdb/integrations/handlers/vertica_handler/*
   mindsdb/integrations/handlers/view_handler/view_handler.py
   mindsdb/integrations/handlers/yugabyte_handler/*
+  mindsdb/integrations/handlers/opengauss_handler/*
   mindsdb/integrations/libs/response.py
   mindsdb/integrations/utilities/utils.py
   mindsdb/interfaces/model/model_controller.py
   mindsdb/migrations/env.py
-  mindsdb/migrations/versions/2021-11-30_17c3d2384711_init.py
-  mindsdb/migrations/versions/2022-01-26_47f97b83cee4_views.py
-  mindsdb/migrations/versions/2022-08-25_6a54ba55872e_view_integration.py
-  mindsdb/utilities/cache.py
   mindsdb/utilities/log.py
-  mindsdb/utilities/loop.py
   tests/handler_tests/test_storage_handler.py
   tests/integration_tests/flows/test_mysql_bin_api.py
   tests/prediction_latency_test/*
@@ -71,5 +73,21 @@ exclude =
   tests/unit/test_executor.py
   tests/unit/test_mongodb_handler.py
   tests/unit/test_mongodb_server.py
+  tests/integration_tests/flows/conftest.py
+  tests/unit/ml_handlers/test_huggingface.py
+  tests/integration_tests/flows/test_http.py
+  tests/unit/ml_handlers/test_mlflow.py
+  tests/unit/ml_handlers/test_huggingface.py
+  tests/unit/ml_handlers/test_ludwig.py
+  tests/unit/ml_handlers/test_lightwood.py
+  tests/unit/test_predictor_params.py
+  tests/unit/test_project_structure.py
+  tests/unit/test_merlion_handler.py
+  tests/handler_tests/test_mysql_handler.py
+  tests/handler_tests/test_mariadb_handler.py
+  tests/handler_tests/test_postgres_handler.py
+  mindsdb/integrations/handlers/byom_handler/byom_handler.py
+  mindsdb/integrations/handlers/byom_handler/proc_wrapper.py
+  mindsdb/integrations/handlers/*
 
 max-complexity = 18

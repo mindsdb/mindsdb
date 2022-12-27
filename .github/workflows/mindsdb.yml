@@ -43,6 +43,7 @@ jobs:
         pip install boto3
         pip install --no-cache-dir .
         pip install -r requirements_test.txt
+        pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
       shell: bash
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
@@ -59,15 +60,24 @@ jobs:
       if: ${{ github.ref != 'refs/heads/stable' }}
       run: |
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+          pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
     - name: Run integration api and flow tests
       run: |
+        python3 -m flake8
+
         if [ "$RUNNER_OS" == "Linux" ]; then
           # Unit tests
           # echo -e "\n===============\nUnit tests\n===============\n"
           cat mindsdb/interfaces/storage/db.py | grep integration
 
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
+        
+          # need fix in LW. not working yet 
+          # env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
+          # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_lightwood.py
 
+          env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
+        
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
 
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
@@ -91,23 +101,24 @@ jobs:
           echo -e "\n===============test MySQL binary API===============\n"
           pytest -vx -k 'not TestMySqlApi' tests/integration_tests/flows/test_mysql_bin_api.py
 
-          mkdir -p ~/.ssh/
-          echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
-          sudo chmod 600 ~/.ssh/db_machine
-          echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
-          sudo chmod 600 ~/.ssh/db_machine_ms
-          echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
-          sudo chmod 644 ~/.mindsdb_credentials.json
-
-          export USE_EXTERNAL_DB_SERVER="1"
-
-          # Company independent
-          echo -e "\n===============\ntest company independent\n===============\n"
-          python tests/integration_tests/flows/test_company_independent.py
-
           # HTTP
-          echo -e "\n===============\ntest HTTP\n===============\n"
-          python tests/integration_tests/flows/test_http.py
+          echo -e "\n===============test HTTP===============\n"
+          pytest -vx tests/integration_tests/flows/test_http.py
+          #
+          # Company independent
+          echo -e "\n===============test company independent===============\n"
+          pytest -vx tests/integration_tests/flows/test_company_independent.py
+
+          # mkdir -p ~/.ssh/
+          # echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
+          # sudo chmod 600 ~/.ssh/db_machine
+          # echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
+          # sudo chmod 600 ~/.ssh/db_machine_ms
+          # echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
+          # sudo chmod 644 ~/.mindsdb_credentials.json
+
+          # export USE_EXTERNAL_DB_SERVER="1"
+
 
           # # Kafka Stream
           # echo -e "\n===============\ntest Kafka Stream\n===============\n"
@@ -121,9 +132,9 @@ jobs:
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-        DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
-        DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
-        DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
+          # DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
+          # DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
+          # DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
 

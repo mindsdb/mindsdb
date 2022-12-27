@@ -1,11 +1,14 @@
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import MysqlProxy
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.log import initialize_log
+import mindsdb.interfaces.storage.db as db
+from mindsdb.utilities import log
 
 
 def start(verbose=False):
+    db.init()
+
     config = Config()
 
-    initialize_log(config, 'mysql', wrap_print=True)
+    log.initialize_log(config, 'mysql', wrap_print=True)
 
     MysqlProxy.startProxy()

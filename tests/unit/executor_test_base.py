@@ -1,9 +1,11 @@
+import sys
 import copy
 import tempfile
 import os
 from unittest import mock
-
+import json
 import datetime as dt
+import importlib
 
 import pandas as pd
 import numpy as np
@@ -25,20 +27,42 @@ def unload_module(path):
 
 
 class BaseUnitTest:
+    """
+        mindsdb instance with temporal database and config
+    """
+
     @staticmethod
     def setup_class(cls):
 
         # remove imports of mindsdb in previous tests
         unload_module('mindsdb')
 
-        # create tmp db file
+        # database temp file
         cls.db_file = tempfile.mkstemp(prefix='mindsdb_db_')[1]
 
-        # save to environ before import db module
-        os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + cls.db_file
+        # config
+        config = {
+            'storage_db': 'sqlite:///' + cls.db_file
+        }
+        # config temp file
+        fdi, cfg_file = tempfile.mkstemp(prefix='mindsdb_conf_')
+
+        with os.fdopen(fdi, 'w') as fd:
+            json.dump(config, fd)
+
+        os.environ['MINDSDB_CONFIG_PATH'] = cfg_file
+
+        # initialize config
+        from mindsdb.utilities.config import Config
+        Config()
 
         from mindsdb.interfaces.storage import db
+        db.init()
         cls.db = db
+
+        from multiprocessing import dummy
+        mp_patcher = mock.patch('torch.multiprocessing.get_context').__enter__()
+        mp_patcher.side_effect = lambda x: dummy
 
     @staticmethod
     def teardown_class(cls):
@@ -71,10 +95,19 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='huggingface', data={}, engine='huggingface')
         db.session.add(r)
+        r = db.Integration(name='merlion', data={}, engine='merlion')
+        db.session.add(r)
+        r = db.Integration(name='dummy_ml', data={}, engine='dummy_ml')
+        db.session.add(r)
         r = db.Integration(name='lightwood', data={}, engine='lightwood')
         db.session.add(r)
         db.session.flush()
         self.lw_integration_id = r.id
+
+        # default project
+        r = db.Project(name='mindsdb')
+        db.session.add(r)
+
         db.session.commit()
         return db
 
@@ -89,29 +122,31 @@ class BaseUnitTest:
 
 
 class BaseExecutorTest(BaseUnitTest):
+    """
+        Set up executor: mock data handler
+    """
 
     def setup_method(self):
         super().setup_method()
         self.set_executor()
 
-    def set_executor(self, to_mock_model_controller=False):
+    def set_executor(self,
+                     mock_lightwood=False,
+                     mock_model_controller=False,
+                     import_dummy_ml=False):
         # creates executor instance with mocked model_interface
         from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 
         from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
         from mindsdb.interfaces.database.integrations import IntegrationController
-        from mindsdb.interfaces.database.views import ViewController
         from mindsdb.interfaces.file.file_controller import FileController
         from mindsdb.interfaces.model.model_controller import ModelController
-        from mindsdb.interfaces.database.projects import ProjectController
-        from mindsdb.interfaces.database.database import DatabaseController
-
-        server_obj = type('', (), {})()
+        from mindsdb.utilities.context import context as ctx
 
         integration_controller = IntegrationController()
         self.file_controller = FileController()
 
-        if to_mock_model_controller:
+        if mock_model_controller:
             model_controller = mock.Mock()
             self.mock_model_controller = model_controller
         else:
@@ -120,23 +155,27 @@ class BaseExecutorTest(BaseUnitTest):
         # no predictors yet
         # self.mock_model_controller.get_models.side_effect = lambda: []
 
-        server_obj.original_integration_controller = integration_controller
-        server_obj.original_model_controller = model_controller
-        server_obj.original_view_controller = ViewController()
-        server_obj.original_project_controller = ProjectController()
-        server_obj.original_database_controller = DatabaseController()
+        if import_dummy_ml:
+            spec = importlib.util.spec_from_file_location('dummy_ml_handler', './tests/unit/dummy_ml_handler/__init__.py')
+            foo = importlib.util.module_from_spec(spec)
+            sys.modules["dummy_ml_handler"] = foo
+            spec.loader.exec_module(foo)
 
-        predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
-        self.mock_predict = predict_patcher.__enter__()
+            handler_module = sys.modules["dummy_ml_handler"]
+            handler_meta =  integration_controller._get_handler_meta(handler_module)
+            integration_controller.handlers_import_status[handler_meta['name']] = handler_meta
 
-        create_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.create')
-        self.mock_create = create_patcher.__enter__()
+        if mock_lightwood:
+            predict_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.predict')
+            self.mock_predict = predict_patcher.__enter__()
 
-        sql_session = SessionController(
-            server=server_obj,
-            company_id=None
-        )
+            create_patcher = mock.patch('mindsdb.integrations.handlers.lightwood_handler.Handler.create')
+            self.mock_create = create_patcher.__enter__()
+
+        ctx.set_default()
+        sql_session = SessionController()
         sql_session.database = 'mindsdb'
+        sql_session.integration_controller = integration_controller
 
         self.command_executor = ExecuteCommands(sql_session, executor=None)
 
@@ -221,12 +260,6 @@ class BaseExecutorTest(BaseUnitTest):
 
         mock_handler().query.side_effect = query_f
 
-class BaseExecutorTestMockModel(BaseExecutorTest):
-
-    def setup_method(self):
-        super().setup_method()
-        self.set_executor(to_mock_model_controller=True)
-
     def set_project(self, project):
         r = self.db.Project.query.filter_by(name=project['name']).first()
         if r is not None:
@@ -238,6 +271,25 @@ class BaseExecutorTestMockModel(BaseExecutorTest):
         )
         self.db.session.add(r)
         self.db.session.commit()
+
+class BaseExecutorDummyML(BaseExecutorTest):
+    """
+        Set up executor: mock data handler
+    """
+
+    def setup_method(self):
+        super().setup_method()
+        self.set_executor(import_dummy_ml=True)
+
+
+class BaseExecutorMockPredictor(BaseExecutorTest):
+    """
+        Set up executor: mock data handler and LW handler
+    """
+
+    def setup_method(self):
+        super().setup_method()
+        self.set_executor(mock_lightwood=True, mock_model_controller=True)
 
     def set_predictor(self, predictor):
         # fill model_interface mock with predictor data for test case
@@ -329,4 +381,3 @@ class BaseExecutorTestMockModel(BaseExecutorTest):
         self.mock_predict.side_effect = predict_f
         self.mock_model_controller.get_models.side_effect = lambda: [predictor_record]
         self.mock_model_controller.get_model_data.side_effect = get_model_data_f
-        self.mock_model_controller.get_model_description.side_effect = get_model_data_f

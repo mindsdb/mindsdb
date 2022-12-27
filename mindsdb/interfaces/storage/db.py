@@ -10,14 +10,18 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy import JSON
 
-
-if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
-    engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
-else:
-    engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
 Base = declarative_base()
-session = scoped_session(sessionmaker(bind=engine, autoflush=True))
-Base.query = session.query_property()
+session, engine = None, None
+
+
+def init():
+    global Base, session, engine
+    if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
+        engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
+    else:
+        engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
+    session = scoped_session(sessionmaker(bind=engine, autoflush=True))
+    Base.query = session.query_property()
 
 
 # Source: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
@@ -57,6 +61,8 @@ class Json(types.TypeDecorator):
         return json.dumps(value, cls=NumpyEncoder) if value is not None else None
 
     def process_result_value(self, value, dialect):  # select
+        if isinstance(value, dict):
+            return value
         return json.loads(value) if value is not None else None
 
 
@@ -75,6 +81,20 @@ class Semaphor(Base):
     )
 
 
+class PREDICTOR_STATUS:
+    __slots__ = ()
+    COMPLETE = 'complete'
+    TRAINING = 'training'
+    ADJUSTING = 'adjusting'
+    GENERATING = 'generating'
+    ERROR = 'error'
+    VALIDATION = 'validation'
+    DELETED = 'deleted'  # TODO remove it?
+
+
+PREDICTOR_STATUS = PREDICTOR_STATUS()
+
+
 class Predictor(Base):
     __tablename__ = 'predictor'
 
@@ -89,7 +109,7 @@ class Predictor(Base):
     mindsdb_version = Column(String)
     native_version = Column(String)
     integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'), nullable=False)
-    data_integration_id = Column(ForeignKey('integration.id', name='fk_data_integration_id'), nullable=True)
+    data_integration_ref = Column(Json)
     fetch_data_query = Column(String)
     is_custom = Column(Boolean)
     learn_args = Column(Json)
@@ -100,6 +120,8 @@ class Predictor(Base):
     training_data_rows_count = Column(Integer)
     training_start_at = Column(DateTime)
     training_stop_at = Column(DateTime)
+    label = Column(String, nullable=True)
+    version = Column(Integer, default=1)
 
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
@@ -117,7 +139,7 @@ class Project(Base):
     name = Column(String, nullable=False)
     company_id = Column(Integer)
     __table_args__ = (
-        UniqueConstraint('name', 'company_id', name='unique_integration_name_company_id'),
+        UniqueConstraint('name', 'company_id', name='unique_project_name_company_id'),
     )
 
 

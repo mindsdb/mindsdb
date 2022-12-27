@@ -2,16 +2,17 @@ import os
 import zipfile
 import tarfile
 
-from flask import request
+from flask import request, current_app as ca
 from flask_restx import Resource
 import tempfile
 import multipart
 import requests
 
-from mindsdb.utilities.log import log
+from mindsdb.utilities import log
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.files import ns_conf
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.context import context as ctx
 
 
 @ns_conf.route('/')
@@ -19,7 +20,7 @@ class FilesList(Resource):
     @ns_conf.doc('get_files_list')
     def get(self):
         '''List all files'''
-        return request.file_controller.get_files()
+        return ca.file_controller.get_files()
 
 
 @ns_conf.route('/<name>')
@@ -35,6 +36,8 @@ class File(Resource):
 
         data = {}
         mindsdb_file_name = name
+
+        existing_file_names = ca.file_controller.get_files_names()
 
         def on_field(field):
             name = field.field_name.decode()
@@ -76,13 +79,20 @@ class File(Resource):
         else:
             data = request.json
 
+        if mindsdb_file_name in existing_file_names:
+            return http_error(
+                400,
+                "File already exists",
+                f"File with name '{data['file']}' already exists"
+            )
+
         if data.get('source_type') == 'url':
             url = data['source']
             data['file'] = data['name']
 
             config = Config()
             is_cloud = config.get('cloud', False)
-            if is_cloud is True and request.user_class != 1:
+            if is_cloud is True and ctx.user_class != 1:
                 info = requests.head(url)
                 file_size = info.headers.get('Content-Length')
                 try:
@@ -136,7 +146,7 @@ class File(Resource):
                 os.rmdir(temp_dir_path)
                 return http_error(400, 'Wrong content.', 'Archive must contain data file in root.')
 
-        request.file_controller.save_file(mindsdb_file_name, file_path, file_name=original_file_name)
+        ca.file_controller.save_file(mindsdb_file_name, file_path, file_name=original_file_name)
 
         os.rmdir(temp_dir_path)
 
@@ -147,9 +157,9 @@ class File(Resource):
         '''delete file'''
 
         try:
-            request.file_controller.delete_file(name)
+            ca.file_controller.delete_file(name)
         except Exception as e:
-            log.error(e)
+            log.logger.error(e)
             return http_error(
                 400,
                 "Error deleting file",

@@ -1,0 +1,4 @@
+mindsdb>=22.12.4.3
+mindsdb_sql >= 0.4.6, < 0.5.0
+pandas
+openai

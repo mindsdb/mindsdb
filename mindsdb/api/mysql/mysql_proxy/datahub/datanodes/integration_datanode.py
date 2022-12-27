@@ -1,4 +1,6 @@
 import numpy as np
+from numpy import dtype as np_dtype
+from pandas.api import types as pd_types
 
 from sqlalchemy.types import (
     Integer, Float, Text
@@ -7,7 +9,7 @@ from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn,
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 
 
 class IntegrationDataNode(DataNode):
@@ -39,41 +41,34 @@ class IntegrationDataNode(DataNode):
     def get_table_columns(self, tableName):
         return []
 
-    def create_table(self, table_name_parts, columns, data, is_replace=False, is_create=False):
+    def create_table(self, table_name: Identifier, result_set, is_replace=False, is_create=False):
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
 
-        table_columns_meta = []
+        table_columns_meta = {}
         table_columns = []
-        for table in columns.tables():
-            for column in columns.table_columns(table):
-                column_type = None
-                for row in data:
-                    column_value = row[table][column]
-                    if isinstance(column_value, int):
-                        column_type = Integer
-                    elif isinstance(column_value, float):
-                        column_type = Float
-                    elif isinstance(column_value, str):
-                        column_type = Text
-                column_type = column_type or Text
-                table_columns.append(
-                    TableColumn(
-                        name=column[-1],
-                        type=column_type
-                    )
+        for col in result_set.columns:
+            # assume this is pandas type
+            column_type = Text
+            if isinstance(col.type, np_dtype):
+                if pd_types.is_integer_dtype(col.type):
+                    column_type = Integer
+                elif pd_types.is_numeric_dtype(col.type):
+                    column_type = Float
+
+            table_columns.append(
+                TableColumn(
+                    name=col.alias,
+                    type=column_type
                 )
-                table_columns_meta.append({
-                    'table': table,
-                    'name': column,
-                    'type': column_type
-                })
+            )
+            table_columns_meta[col.alias] = column_type
 
         if is_replace:
             # drop
             drop_ast = DropTables(
-                tables=[Identifier(parts=table_name_parts)],
+                tables=[table_name],
                 if_exists=True
             )
             result = self.integration_handler.query(drop_ast)
@@ -83,7 +78,7 @@ class IntegrationDataNode(DataNode):
 
         if is_create:
             create_table_ast = CreateTable(
-                name=Identifier(parts=table_name_parts),
+                name=table_name,
                 columns=table_columns,
                 is_replace=True
             )
@@ -92,16 +87,19 @@ class IntegrationDataNode(DataNode):
             if result.type == RESPONSE_TYPE.ERROR:
                 raise Exception(result.error_message)
 
-        insert_columns = [Identifier(parts=[x['name'][-1]]) for x in table_columns_meta]
+        insert_columns = [Identifier(parts=[x.alias]) for x in result_set.columns]
         formatted_data = []
-        for row in data:
+
+        for rec in result_set.get_records():
             new_row = []
-            for column_meta in table_columns_meta:
-                value = row[column_meta['table']][column_meta['name']]
+            for col in result_set.columns:
+                value = rec[col.alias]
+                column_type = table_columns_meta[col.alias]
+
                 python_type = str
-                if column_meta['type'] == Integer:
+                if column_type == Integer:
                     python_type = int
-                elif column_meta['type'] == Float:
+                elif column_type == Float:
                     python_type = float
 
                 try:
@@ -112,7 +110,7 @@ class IntegrationDataNode(DataNode):
             formatted_data.append(new_row)
 
         insert_ast = Insert(
-            table=Identifier(parts=table_name_parts),
+            table=table_name,
             columns=insert_columns,
             values=formatted_data
         )
@@ -130,9 +128,7 @@ class IntegrationDataNode(DataNode):
             result = self.integration_handler.native_query(native_query)
 
         if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
-        if result.type == RESPONSE_TYPE.QUERY:
-            return result.query, None
+            raise Exception(f'Error in {self.integration_name}: {result.error_message}')
         if result.type == RESPONSE_TYPE.OK:
             return
 

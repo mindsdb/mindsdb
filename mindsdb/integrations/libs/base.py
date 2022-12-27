@@ -1,7 +1,6 @@
-from typing import Any, Union, Optional, Dict
+from typing import Any, Optional, Dict
 
 import pandas as pd
-from mindsdb_sql.parser.ast import Join
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
 
@@ -104,6 +103,7 @@ class DatabaseHandler(BaseHandler):
     """
     Base class for handlers associated to data storage systems (e.g. databases, data warehouses, streaming services, etc.)
     """
+
     def __init__(self, name: str):
         super().__init__(name)
 
@@ -114,6 +114,7 @@ class PredictiveHandler(BaseHandler):
 
     Base class for handlers associated to predictive systems.
     """
+
     def __init__(self, name: str):
         super().__init__(name)
 
@@ -176,7 +177,7 @@ class BaseMLEngine:
         """
         raise NotImplementedError
 
-    def describe(self, key: Optional[str] = None) -> pd.DataFrame:
+    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         """
         Optional.
 
@@ -191,3 +192,6 @@ class BaseMLEngine:
         Used to connect with external sources (e.g. a REST API) that the engine will require to use any other methods.
         """
         raise NotImplementedError
+
+    def close(self):
+        pass

@@ -57,8 +57,8 @@ import time
 from abc import ABC
 from pathlib import Path
 import hashlib
-import json
-import dill
+import typing as t
+
 import pandas as pd
 import walrus
 
@@ -71,7 +71,7 @@ def dataframe_checksum(df: pd.DataFrame):
     return checksum
 
 
-def json_checksum(obj: [dict, list]):
+def json_checksum(obj: t.Union[dict, list]):
     checksum = str_checksum(CustomJSONEncoder().encode(obj))
     return checksum
 
@@ -137,7 +137,7 @@ class FileCache(BaseCache):
         if cur_count > self.max_size + buffer_size:
 
             files = sorted(Path(self.path).iterdir(), key=os.path.getmtime)
-            for file in files[:cur_count-self.max_size]:
+            for file in files[:cur_count - self.max_size]:
                 self.delete_file(file)
 
     def file_path(self, name):
@@ -224,7 +224,7 @@ class RedisCache(BaseCache):
 
         self.client.set(key, value)
         # using key with category name to store all keys with modify time
-        self.client.hset(self.category, key, int(time.time()*1000))
+        self.client.hset(self.category, key, int(time.time() * 1000))
 
         self.clear_old_cache(key)
 

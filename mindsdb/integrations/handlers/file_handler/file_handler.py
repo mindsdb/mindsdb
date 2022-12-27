@@ -109,9 +109,9 @@ class FileHandler(DatabaseHandler):
             file_data = df.values.tolist()
 
         elif fmt == 'csv':
-            csv_reader = list(csv.reader(data, dialect))
-            header = csv_reader[0]
-            file_data = csv_reader[1:]
+            df = pd.read_csv(data, sep=dialect.delimiter)
+            header = df.columns.values.tolist()
+            file_data = df.values.tolist()
 
         elif fmt in ['xlsx', 'xls']:
             data.seek(0)
@@ -274,11 +274,14 @@ class FileHandler(DatabaseHandler):
 
     @staticmethod
     def _get_csv_dialect(buffer) -> csv.Dialect:
-        sample = buffer.read(256 * 1024)
+        sample = buffer.readline()  # trying to get dialect from header
         buffer.seek(0)
         try:
+            if isinstance(sample, bytes):
+                sample = sample.decode()
             accepted_csv_delimiters = [',', '\t', ';']
             dialect = csv.Sniffer().sniff(sample, delimiters=accepted_csv_delimiters)
+            dialect.doublequote = True  # assume that all csvs have " as string escape
         except csv.Error:
             dialect = None
         return dialect
@@ -307,7 +310,8 @@ class FileHandler(DatabaseHandler):
         files_meta = self.file_controller.get_files()
         data = [{
             'TABLE_NAME': x['name'],
-            'TABLE_ROWS': x['row_count']
+            'TABLE_ROWS': x['row_count'],
+            'TABLE_TYPE': 'BASE TABLE'
         } for x in files_meta]
         return Response(
             RESPONSE_TYPE.TABLE,

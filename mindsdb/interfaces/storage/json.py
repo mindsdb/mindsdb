@@ -1,14 +1,12 @@
-from typing import Optional
-
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.fs import RESOURCE_GROUP
+from mindsdb.utilities.context import context as ctx
 
 
 class JsonStorage:
-    def __init__(self, resource_group: str, resource_id: int, company_id: Optional[int] = None):
+    def __init__(self, resource_group: str, resource_id: int):
         self.resource_group = resource_group
         self.resource_id = resource_id
-        self.company_id = company_id
 
     def __setitem__(self, key, value):
         if isinstance(value, dict) is False:
@@ -19,7 +17,7 @@ class JsonStorage:
                 name=key,
                 resource_group=self.resource_group,
                 resource_id=self.resource_id,
-                company_id=self.company_id,
+                company_id=ctx.company_id,
                 content=value
             )
             db.session.add(record)
@@ -44,7 +42,7 @@ class JsonStorage:
             name=key,
             resource_group=self.resource_group,
             resource_id=self.resource_id,
-            company_id=self.company_id
+            company_id=ctx.company_id
         ).first()
         return record
 
@@ -52,7 +50,7 @@ class JsonStorage:
         records = db.session.query(db.JsonStorage).filter_by(
             resource_group=self.resource_group,
             resource_id=self.resource_id,
-            company_id=self.company_id
+            company_id=ctx.company_id
         ).all()
         return records
 
@@ -74,10 +72,8 @@ class JsonStorage:
         self.delete(key)
 
 
-def get_json_storage(resource_id: int, resource_group: str = RESOURCE_GROUP.PREDICTOR,
-                     company_id: int = None):
+def get_json_storage(resource_id: int, resource_group: str = RESOURCE_GROUP.PREDICTOR):
     return JsonStorage(
         resource_group=resource_group,
         resource_id=resource_id,
-        company_id=company_id
     )

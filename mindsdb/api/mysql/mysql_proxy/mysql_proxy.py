@@ -73,12 +73,8 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     BinaryResultsetRowPacket
 )
 
-from mindsdb.interfaces.model.model_controller import ModelController
-from mindsdb.interfaces.database.integrations import IntegrationController
-from mindsdb.interfaces.database.views import ViewController
-from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
+from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.hooks as hooks
 
 
@@ -155,7 +151,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.client_capabilities = None
         super().__init__(request, client_address, server)
 
-    def init_session(self, company_id=None):
+    def init_session(self):
         logger.debug('New connection [{ip}:{port}]'.format(
             ip=self.client_address[0], port=self.client_address[1]))
         logger.debug(self.__dict__)
@@ -164,10 +160,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.server.connection_id = 0
         self.server.connection_id += 1
         self.connection_id = self.server.connection_id
-        self.session = SessionController(
-            server=self.server,
-            company_id=company_id
-        )
+        self.session = SessionController()
 
         if hasattr(self.server, 'salt') and isinstance(self.server.salt, str):
             self.salt = self.server.salt
@@ -249,12 +242,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
                 if new_method == 'caching_sha2_password' and self.session.is_ssl is False:
                     logger.warning(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                                'error: cant switch to caching_sha2_password without SSL')
+                                   'error: cant switch to caching_sha2_password without SSL')
                     self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg='caching_sha2_password without SSL not supported').send()
                     return False
 
                 logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                          f'switch auth method to {new_method}')
+                             f'switch auth method to {new_method}')
                 password = switch_auth(new_method)
 
                 if new_method == 'caching_sha2_password':
@@ -278,11 +271,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 password = switch_auth()
         elif 'mysql_native_password' in client_auth_plugin:
             logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                      'check auth using mysql_native_password')
+                         'check auth using mysql_native_password')
             password = handshake_resp.enc_password.value
         else:
             logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                      'unknown method, possible ERROR. Try to switch to mysql_native_password')
+                         'unknown method, possible ERROR. Try to switch to mysql_native_password')
             password = switch_auth('mysql_native_password')
 
         try:
@@ -290,9 +283,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         except Exception:
             self.session.database = None
         logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
-                  f'connecting to database {self.session.database}')
+                     f'connecting to database {self.session.database}')
 
-        auth_data = self.server.check_auth(username, password, scramble_func, self.salt, self.session.company_id)
+        auth_data = self.server.check_auth(username, password, scramble_func, self.salt, ctx.company_id)
         if auth_data['success']:
             self.session.username = auth_data['username']
             self.session.auth = True
@@ -619,19 +612,24 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         Handle new incoming connections
         :return:
         """
+        ctx.set_default()
+
         self.server.hook_before_handle()
 
         logger.debug('handle new incoming connection')
         cloud_connection = self.is_cloud_connection()
-        self.init_session(company_id=cloud_connection.get('company_id'))
+
+        ctx.company_id = cloud_connection.get('company_id')
+
+        self.init_session()
         if cloud_connection['is_cloud'] is False:
             if self.handshake() is False:
                 return
         else:
+            ctx.user_class = cloud_connection['user_class']
             self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
             self.session.database = cloud_connection['database']
             self.session.username = 'cloud'
-            self.session.user_class = cloud_connection['user_class']
             self.session.auth = True
 
         while True:
@@ -754,7 +752,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     error_type = error_type or 'expected'
 
             hooks.after_api_query(
-                company_id=self.session.company_id,
+                company_id=ctx.company_id,
                 api='mysql',
                 command=command_name,
                 payload=sql,
@@ -829,12 +827,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         server.cert_path = cert_path
         server.connection_id = 0
         server.hook_before_handle = empty_fn
-
-        server.original_model_controller = ModelController()
-        server.original_integration_controller = IntegrationController()
-        server.original_view_controller = ViewController()
-        server.original_project_controller = ProjectController()
-        server.original_database_controller = DatabaseController()
 
         atexit.register(MysqlProxy.server_close, srv=server)
 

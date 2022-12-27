@@ -1,7 +1,7 @@
 import uuid
 
 from bson.int64 import Int64
-from mindsdb_sql.parser.ast import *
+from mindsdb_sql.parser.ast import Show, Identifier
 
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers

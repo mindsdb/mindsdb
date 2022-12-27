@@ -6,6 +6,7 @@ from mindsdb.utilities.fs import create_directory
 
 from mindsdb.utilities.fs import get_or_create_data_dir
 
+
 def _merge_key_recursive(target_dict, source_dict, key):
     if key not in target_dict:
         target_dict[key] = source_dict[key]

@@ -25,7 +25,7 @@ class TestLW(BaseExecutorTest):
                     break
             time.sleep(0.5)
         if not done:
-            raise RuntimeError("predictor didn't created")
+            raise RuntimeError("predictor wasn't created")
 
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(
@@ -38,7 +38,6 @@ class TestLW(BaseExecutorTest):
                 for col in ret.columns
             ]
             return pd.DataFrame(ret.data, columns=columns)
-
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_simple(self, mock_handler):
@@ -76,6 +75,23 @@ class TestLW(BaseExecutorTest):
         avg_c = pd.to_numeric(ret.c).mean()
         # value is around 1
         assert (avg_c > 0.9) and (avg_c < 1.1)
+
+        # test describe
+        ret = self.run_sql('describe proj.modelx')
+        assert len(ret) == 1
+        for col in ('accuracies', 'column_importances', 'outputs', 'inputs', 'model'):
+            assert col in ret.columns
+
+        ret = self.run_sql('describe proj.modelx.model')
+        for col in ['name', 'performance', 'training_time', 'selected', 'accuracy_functions']:
+            assert col in ret.columns
+
+        ret = self.run_sql('describe proj.modelx.features')
+        for col in ['column', 'type', 'encoder', 'role']:
+            assert col in ret.columns
+
+        ret = self.run_sql('describe proj.modelx.ensemble')
+        assert 'ensemble' in ret.columns
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_ts(self, mock_handler):
@@ -116,4 +132,4 @@ class TestLW(BaseExecutorTest):
            where t.a='b' and t.t > latest
         ''')
         # LW can predict
-        assert list(ret.x) == [42, 43, 44]
+        assert list(round(ret.x)) == [42, 43, 44]

@@ -1,0 +1,292 @@
+---
+title: Building a Database Handler
+sidebarTitle: Building a Database Handler
+---
+
+In this section, you'll find how to add new integrations/databases to MindsDB.
+
+<Note>
+    **Prerequisite**
+
+    You should have the latest staging version of the MindsDB repository installed locally. Follow [this guide](/contribute/install/) to learn how to install MindsDB for development.
+</Note>
+
+## What are Database Handlers?
+
+Database handlers act as a bridge to any database. You use database handlers to create databases using [the CREATE DATABASE command](/sql/create/databases/). So you can reach data from any database that has its handler implemented within MindsDB.
+
+<Note>
+    **ML Handlers**
+
+    To learn more about handlers and how to implement a machine learning (ML) handler, visit our [doc page here](/contribute/ml-handlers/).
+</Note>
+
+## Creating a Database Handler
+
+You can create your own database handler within MindsDB by inheriting from the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L102) class.
+
+By providing the implementation for some or all of the methods contained in the `DatabaseHandler` class, you can connect with the database of your choice.
+
+### Core Methods
+
+Apart from the `__init__()` method, there are seven core methods that must be implemented. We recommend checking actual examples in the codebase to get an idea of what goes into each of these methods, as they can change a bit depending on the nature of the system being integrated.
+
+Let's review the purpose of each method.
+
+| Method                 | Purpose                                                                                                                                                                                                |
+|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `connect()`            | It performs the necessary steps to connect to the underlying system.                                                                                                                                   |
+| `disconnect()`         | It gracefully closes connections established in the `connect()` method.                                                                                                                                |
+| `check_connection()`   | It evaluates if the connection is alive and healthy. This method is called frequently.                                                                                                                 |
+| `native_query()`       | It parses any *native* statement string and acts upon it (for example, raw SQL commands).                                                                                                              |
+| `query()`              | It takes a parsed SQL command in the form of an abstract syntax tree and executes it.                                                                                                                  |
+| `get_tables()`         | It lists and returns all the available tables. Each handler decides what a *table* means for the underlying system when interacting with it from the data layer. Typically, these are actual tables.   |
+| `get_columns()`        | It returns columns of a table registered in the handler with the respective data type.                                                                                                                 |
+
+Authors can opt for adding private methods, new files and folders, or any combination of these to structure all the necessary work that will enable the core methods to work as intended.
+
+<Tip>
+    **Other Common Methods**
+
+    Under the `mindsdb.integrations.libs.utils` library, contributors can find various methods that may be useful while implementing new handlers.
+
+    Also, there are wrapper classes for the `DatabaseHandler` instances called [HandlerResponse](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/response.py#L7) and [HandlerStatusResponse](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/response.py#L32). You should use them to ensure proper output formatting.
+</Tip>
+
+### Implementation
+
+Each database handler should inherit from the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L102) class.
+
+Here is a step-by-step guide:
+
+* Setting the `name` class property:
+
+    MindsDB uses it internally as the name of the handler.
+
+    For example, the `CREATE DATABASE` statement uses the handler's name.
+
+    ```sql
+    CREATE DATABASE integration_name
+    WITH ENGINE = 'postgres',         --- here, the handler's name is `postgres`
+    PARAMETERS = {
+    'host': '127.0.0.1',
+    'user': 'root',
+    'password': 'password'
+    };
+    ```
+
+* Implementing the `__init__()` method:
+
+    This method initializes the handler. The `connection_data` argument contains the `PARAMETERS` from the `CREATE DATABASE` statement, such as `user`, `password`, etc.
+
+    ```py
+    def __init__(self, name: str, connection_data: Optional[dict]):
+        """ constructor
+        Args:
+            name (str): the handler name
+        """
+    ```
+
+* Implementing the `connect()` method:
+
+    The `connect()` method sets up the connection.
+
+    ```py
+    def connect(self) -> HandlerStatusResponse:
+        """ Set up any connections required by the handler
+        Should return output of check_connection() method after attempting
+        connection. Should switch self.is_connected.
+        Returns:
+            HandlerStatusResponse
+        """
+    ```
+
+* Implementing the `disconnect()` method:
+
+    The `disconnect()` method closes the existing connection.
+
+    ```py
+    def disconnect(self):
+        """ Close any existing connections
+        Should switch self.is_connected.
+        """
+    ```
+
+* Implementing the `check_connection()` method:
+
+    The `check_connection()` method performs the health check for the connection.
+
+    ```py
+    def check_connection(self) -> HandlerStatusResponse:
+        """ Check connection to the handler
+        Returns:
+            HandlerStatusResponse
+        """
+    ```
+
+* Implementing the `native_query()` method:
+
+    The `native_query()` method runs commands of the native database language.
+
+    ```py
+    def native_query(self, query: Any) -> HandlerResponse:
+        """Receive raw query and act upon it somehow.
+        Args:
+            query (Any): query in native format (str for sql databases,
+                dict for mongo, etc)
+        Returns:
+            HandlerResponse
+        """
+    ```
+
+* Implementing the `query()` method:
+
+    The query method runs parsed SQL commands.
+
+    ```py
+    def query(self, query: ASTNode) -> HandlerResponse:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+        Args:
+            query (ASTNode): sql query represented as AST. May be any kind
+                of query: SELECT, INSERT, DELETE, etc
+        Returns:
+            HandlerResponse
+        """
+    ```
+
+* Implementing the `get_tables()` method:
+
+    The `get_tables()` method lists all the available tables.
+
+    ```py
+    def get_tables(self) -> HandlerResponse:
+        """ Return list of entities
+        Return list of entities that will be accesible as tables.
+        Returns:
+            HandlerResponse: shoud have same columns as information_schema.tables
+                (https://dev.mysql.com/doc/refman/8.0/en/information-schema-tables-table.html)
+                Column 'TABLE_NAME' is mandatory, other is optional.
+        """
+    ```
+
+* Implementing the `get_columns()` method:
+
+    The `get_columns()` method lists all columns of a specified table.
+
+    ```py
+    def get_columns(self, table_name: str) -> HandlerResponse:
+        """ Returns a list of entity columns
+        Args:
+            table_name (str): name of one of tables returned by self.get_tables()
+        Returns:
+            HandlerResponse: shoud have same columns as information_schema.columns
+                (https://dev.mysql.com/doc/refman/8.0/en/information-schema-columns-table.html)
+                Column 'COLUMN_NAME' is mandatory, other is optional. Hightly
+                recomended to define also 'DATA_TYPE': it should be one of
+                python data types (by default it str).
+        """
+    ```
+
+### The `connection_args` Dictionary
+
+The `connection_arg` dictionary contains all required arguments to establish the connection.
+
+Here is an example of the `connection_arg` dictionary from the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler).
+
+```py
+connection_args = OrderedDict(
+    user = {
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the MySQL server.'
+    },
+    password = {
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the MySQL server.'
+    },
+    database = {
+        'type': ARG_TYPE.STR,
+        'description': 'The database name to use when connecting with the MySQL server.'
+    },
+    host = {
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the MySQL server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.'
+    },
+    port = {
+        'type': ARG_TYPE.INT,
+        'description': 'The TCP/IP port of the MySQL server. Must be an integer.'
+    },
+    ssl = {
+        'type': ARG_TYPE.BOOL,
+        'description': 'Set it to False to disable ssl.'
+    },
+    ssl_ca = {
+        'type': ARG_TYPE.PATH,
+        'description': 'Path or URL of the Certificate Authority (CA) certificate file'
+    },
+    ssl_cert = {
+        'type': ARG_TYPE.PATH,
+        'description': 'Path name or URL of the server public key certificate file'
+    },
+    ssl_key = {
+        'type': ARG_TYPE.PATH,
+        'description': 'The path name or URL of the server private key file'
+    }
+)
+```
+
+### The `connection_args_example` Dictionary
+
+The `connection_args_example` dictionary contains an example of all required arguments to establish the connection.
+
+Here is an example of the `connection_args_example` dictionary from the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler).
+
+```py
+connection_args_example = OrderedDict(
+    host = '127.0.0.1',
+    port = 3306,
+    user = 'root',
+    password = 'password',
+    database = 'database'
+)
+```
+
+### Exporting All Required Variables
+
+This is what should be exported in the `__init__.py` file:
+
+- The `Handler` class.
+- The `version` of the handler.
+- The `name` of the handler.
+- The `type` of the handler, either `DATA` handler or `ML` handler.
+- The `icon_path` to the file with the database icon.
+- The `title` of the handler or a short description.
+- The `description` of the handler.
+- The `connection_args` dictionary with the connection arguments.
+- The `connection_args_example` dictionary with an example of the connection arguments.
+- The `import_error` message that is used if the import of the `Handler` class fails.
+
+Let's look at an example of the `__init__.py` file.
+
+```py
+...
+title = 'Trino'
+version = 0.1
+description = 'Integration for connection to TrinoDB'
+name = 'trino'
+type = HANDLER_TYPE.DATA
+icon_path = 'icon.png'
+
+__all__ = [
+    'Handler', 'version', 'name', 'type', 'title',
+    'description', 'connection_args_example', 'icon_path'
+]
+```
+
+## Check out our Database Handlers!
+
+To see some integration handlers that are currently in use, we encourage you to check out the following handlers inside the MindsDB repository:
+
+* [MySQL](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler)
+* [Postgres](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/postgres_handler)
+
+And here are [all the handlers available in the MindsDB repository](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).

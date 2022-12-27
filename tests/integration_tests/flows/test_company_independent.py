@@ -64,7 +64,7 @@ class TestCompanyIndependent:
         a = set(a)
         b = set(b)
         assert len(a) == len(b)
-        assert a == b 
+        assert a == b
 
     def sql_via_http(self, request: str, expected_resp_type: str = None, context: dict = None,
                      headers: dict = None, company_id: int = None) -> dict:
@@ -102,7 +102,6 @@ class TestCompanyIndependent:
         return response
 
     def test_initial_state_http(self):
-
         # add permanent integrations
         for cid in [CID_A, CID_B]:
             databases_names = self.get_db_names(cid)
@@ -312,16 +311,6 @@ class TestCompanyIndependent:
 
         for cid, char in [(CID_A, 'a'), (CID_B, 'b')]:
             self.sql_via_http(
-                """
-                    CREATE DATABASE views
-                    ENGINE 'views'
-                    PARAMETERS {}
-                """,
-                company_id=cid,
-                expected_resp_type=RESPONSE_TYPE.OK
-            )
-
-            self.sql_via_http(
                 query.format(f'test_view_{char}', char),
                 company_id=cid,
                 expected_resp_type=RESPONSE_TYPE.OK
@@ -383,7 +372,6 @@ class TestCompanyIndependent:
                 company_id=cid,
                 expected_resp_type=RESPONSE_TYPE.OK
             )
-
             response = self.sql_via_http(
                 predict_query.format(char),
                 company_id=cid,

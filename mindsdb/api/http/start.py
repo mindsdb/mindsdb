@@ -6,7 +6,7 @@ from pathlib import Path
 
 from werkzeug.exceptions import HTTPException
 from waitress import serve
-from flask import send_from_directory, request, current_app
+from flask import send_from_directory, request
 from flask_compress import Compress
 
 from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
@@ -19,10 +19,10 @@ from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
-from mindsdb.utilities.with_kwargs_wrapper import WithKWArgsWrapper
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities.context import context as ctx
 
 
 def start(verbose, no_studio, with_nlp):
@@ -83,6 +83,7 @@ def start(verbose, no_studio, with_nlp):
 
     @app.before_request
     def before_request():
+        ctx.set_default()
         company_id = request.headers.get('company-id')
         user_class = request.headers.get('user-class')
 
@@ -102,23 +103,8 @@ def start(verbose, no_studio, with_nlp):
         else:
             user_class = 0
 
-        request.company_id = company_id
-        request.user_class = user_class
-
-        request.integration_controller = WithKWArgsWrapper(
-            current_app.original_integration_controller,
-            company_id=company_id
-        )
-
-        request.file_controller = WithKWArgsWrapper(
-            current_app.original_file_controller,
-            company_id=company_id
-        )
-
-        request.database_controller = WithKWArgsWrapper(
-            current_app.original_database_controller,
-            company_id=company_id
-        )
+        ctx.company_id = company_id
+        ctx.user_class = user_class
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

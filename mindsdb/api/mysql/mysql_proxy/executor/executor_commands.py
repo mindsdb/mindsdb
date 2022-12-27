@@ -1,4 +1,3 @@
-import json
 import datetime
 from typing import Optional
 from pathlib import Path
@@ -9,6 +8,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatasource,
     RetrainPredictor,
     CreatePredictor,
+    AdjustPredictor,
     CreateMLEngine,
     DropMLEngine,
     DropDatasource,
@@ -39,7 +39,6 @@ from mindsdb_sql.parser.ast import (
     Alter,
     Update,
     CreateTable,
-    TableColumn,
     Identifier,
     DropTables,
     Operation,
@@ -47,10 +46,7 @@ from mindsdb_sql.parser.ast import (
     DropView,
     Union,
 )
-from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast import Identifier
-from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities import log
@@ -58,23 +54,16 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErBadDbError,
     ErBadTableError,
-    ErKeyColumnDoesNotExist,
     ErTableExistError,
-    ErDubFieldName,
-    ErDbDropDelete,
-    ErNonInsertableTable,
     ErNotSupportedYet,
-    ErSqlSyntaxError,
-    ErSqlWrongArguments,
+    ErSqlWrongArguments
 )
-from mindsdb.api.mysql.mysql_proxy.utilities.functions import get_column_in_case, download_file
+from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import (
     SQLQuery, Column
 )
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
-    ERR,
     TYPES,
     SERVER_VARIABLES,
 )
@@ -87,6 +76,8 @@ from mindsdb.interfaces.model.functions import (
     get_predictor_integration
 )
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
+from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.utilities.context import context as ctx
 
 
 def _get_show_where(statement: ASTNode, from_name: Optional[str] = None,
@@ -164,7 +155,8 @@ class ExecuteCommands:
             model_name = statement.name.parts[-1]
 
             try:
-                self.session.model_controller.delete_model(model_name, project_name=database_name)
+                project = self.session.database_controller.get_project(database_name)
+                project.drop_table(model_name)
             except Exception as e:
                 if not statement.if_exists:
                     raise e
@@ -175,13 +167,11 @@ class ExecuteCommands:
             return self.answer_drop_database(statement)
         elif type(statement) == Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
-            predictor_attrs = ("model", "features", "ensemble")
-            if statement.value.parts[-1] in predictor_attrs:
-                return self.answer_describe_predictor(statement.value.parts[-2:])
-            else:
-                return self.answer_describe_predictor(statement.value.parts[-1])
+            return self.answer_describe_predictor(statement)
         elif type(statement) == RetrainPredictor:
             return self.answer_retrain_predictor(statement)
+        elif type(statement) == AdjustPredictor:
+            return self.answer_adjust_predictor(statement)
         elif type(statement) == Show:
             sql_category = statement.category.lower()
             if hasattr(statement, 'modes'):
@@ -503,10 +493,12 @@ class ExecuteCommands:
         elif type(statement) == DropView:
             return self.answer_drop_view(statement)
         elif type(statement) == Delete:
+            if statement.table.parts[-1].lower() == 'models_versions':
+                return self.answer_delete_model_version(statement)
             if self.session.database != 'mindsdb' and statement.table.parts[0] != 'mindsdb':
                 raise ErBadTableError("Only 'DELETE' from database 'mindsdb' is possible at this moment")
             if statement.table.parts[-1] != 'predictors':
-                raise ErBadTableError("Only 'DELETE' from table 'mindsdb.predictors' is possible at this moment")
+                raise ErBadTableError("Only 'DELETE' from table 'mindsdb.models' is possible at this moment")
             self.delete_predictor_query(statement)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Insert:
@@ -521,6 +513,9 @@ class ExecuteCommands:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
             if statement.from_select is None:
+                if statement.table.parts[-1].lower() == 'models_versions':
+                    return self.answer_update_model_version(statement)
+
                 raise ErNotSupportedYet('Update is not implemented')
             else:
                 SQLQuery(
@@ -555,96 +550,35 @@ class ExecuteCommands:
             log.logger.warning(f'Unknown SQL statement: {sql}')
             raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
 
-    def answer_describe_predictor(self, predictor_value):
-        predictor_attr = None
-        if isinstance(predictor_value, (list, tuple)):
-            predictor_name = predictor_value[0]
-            predictor_attr = predictor_value[1]
-        else:
-            predictor_name = predictor_value
-        model_controller = self.session.model_controller
-        models = model_controller.get_models()
-        if predictor_name not in [x['name'] for x in models]:
-            raise ErBadTableError(f"Can't describe predictor. There is no predictor with name '{predictor_name}'")
-        description = model_controller.get_model_description(predictor_name)
+    def answer_describe_predictor(self, statement):
+        # describe attr
+        predictor_attrs = ("model", "features", "ensemble")
+        attribute = None
+        if statement.value.parts[-1] in predictor_attrs:
+            attribute = statement.value.parts.pop(-1)
 
-        if predictor_attr is None:
-            columns = [
-                Column(name='accuracies', table_name='', type='str'),
-                Column(name='column_importances', table_name='', type='str'),
-                Column(name='outputs', table_name='', type='str'),
-                Column(name='inputs', table_name='', type='str'),
-                Column(name='model', table_name='', type='str'),
-            ]
-            description = [
-                description['accuracies'],
-                description['column_importances'],
-                description['outputs'],
-                description['inputs'],
-                description['model']
-            ]
-            data = [description]
+        if len(statement.value.parts) > 1:
+            project_name = statement.value.parts[0]
         else:
-            data = model_controller.get_model_data(name=predictor_name)
-            if predictor_attr == "features":
-                data = self._get_features_info(data)
-                columns = [{
-                    'table_name': '',
-                    'name': 'column',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'type',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': "encoder",
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'role',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }]
-                columns = [Column(**d) for d in columns]
-            elif predictor_attr == "model":
-                data = self._get_model_info(data)
-                columns = [{
-                    'table_name': '',
-                    'name': 'name',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'performance',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': 'training_time',
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': "selected",
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }, {
-                    'table_name': '',
-                    'name': "accuracy_functions",
-                    'type': TYPES.MYSQL_TYPE_VAR_STRING
-                }]
-                columns = [Column(**d) for d in columns]
-            elif predictor_attr == "ensemble":
-                data = self._get_ensemble_data(data)
-                columns = [
-                    Column(name='ensemble', table_name='', type='str')
-                ]
-            else:
-                raise ErNotSupportedYet("DESCRIBE '%s' predictor attribute is not supported yet" % predictor_attr)
+            project_name = self.session.database
 
+        model_name = statement.value.parts[-1]
+
+        df = self.session.model_controller.describe_model(self.session, project_name, model_name, attribute)
+
+        df_dict = df.to_dict('split')
+
+        columns = [
+            Column(name=col, table_name='', type='str')
+            for col in df_dict['columns']
+        ]
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=columns,
-            data=data
+            data=df_dict['data']
         )
 
-    def answer_retrain_predictor(self, statement):
+    def _get_model_record(self, statement):
         if len(statement.name.parts) == 1:
             statement.name.parts = [
                 self.session.database,
@@ -653,42 +587,78 @@ class ExecuteCommands:
         database_name, model_name = statement.name.parts
 
         model_record = get_model_record(
-            company_id=self.session.company_id,
             name=model_name,
             project_name=database_name,
             except_absent=True
         )
-        integration_record = get_predictor_integration(model_record)
-        if integration_record is None:
-            raise Exception(f"Model '{model_name}' does not have linked integration")
+        return model_record
 
-        ml_handler = self.session.integration_controller.get_handler(integration_record.name)
-
-        # region check if there is already predictor retraing
+    def _sync_predictor_check(self, phase_name):
+        """ Checks if there is already a predictor retraining or adjusting """
         is_cloud = self.session.config.get('cloud', False)
-        if is_cloud and self.session.user_class == 0:
-            models = get_model_records(
-                company_id=self.session.company_id,
-                active=None
-            )
+        if is_cloud and ctx.user_class == 0:
+            models = get_model_records(active=None)
             longest_training = None
             for p in models:
                 if (
-                    p.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
-                    and p.training_start_at is not None and p.training_stop_at is None
+                        p.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
+                        and p.training_start_at is not None and p.training_stop_at is None
                 ):
                     training_time = datetime.datetime.now() - p.training_start_at
                     if longest_training is None or training_time > longest_training:
                         longest_training = training_time
             if longest_training is not None and longest_training > datetime.timedelta(hours=1):
                 raise SqlApiException(
-                    "Can't start retrain while exists predictor in status 'training' or 'generating'"
+                    f"Can't start {phase_name} process while predictor is in status 'training' or 'generating'"
                 )
-        # endregion
 
-        result = ml_handler.query(statement)
-        if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
+    def answer_retrain_predictor(self, statement):
+        model_record = self._get_model_record(statement)
+
+        if statement.integration_name is None:
+            if model_record.data_integration_ref is None:
+                raise Exception('The model does not have an associated dataset')
+            if model_record.data_integration_ref['type'] == 'integration':
+                integration = self.session.integration_controller.get_by_id(model_record.data_integration_ref['id'])
+                if integration is None:
+                    raise Exception('The database from which the model was trained no longer exists')
+
+        ml_handler = None
+        if statement.using is not None:
+            # repack using with lower names
+            statement.using = {k.lower(): v for k, v in statement.using.items()}
+
+            if 'engine' in statement.using:
+                ml_integration_name = statement.using.pop('engine')
+                ml_handler = self.session.integration_controller.get_handler(ml_integration_name)
+
+        # use current ml handler
+        if ml_handler is None:
+            integration_record = get_predictor_integration(model_record)
+            if integration_record is None:
+                raise Exception('ML engine model was trained with does not esxists')
+            ml_handler = self.session.integration_controller.get_handler(integration_record.name)
+
+        self._sync_predictor_check(phase_name='retrain')
+        self.session.model_controller.retrain_model(statement, ml_handler)
+
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_adjust_predictor(self, statement):
+        model_record = self._get_model_record(statement)
+
+        if statement.using is not None:
+            # repack using with lower names
+            statement.using = {k.lower(): v for k, v in statement.using.items()}
+
+        # use current ml handler
+        integration_record = get_predictor_integration(model_record)
+        if integration_record is None:
+            raise Exception('The ML engine that the model was trained with does not exist.')
+        ml_handler = self.session.integration_controller.get_handler(integration_record.name)
+
+        self._sync_predictor_check(phase_name='adjust')
+        self.session.model_controller.adjust_model(statement, ml_handler)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -792,7 +762,7 @@ class ExecuteCommands:
         connection_args = statement.parameters
 
         if engine == 'mindsdb':
-            self.session.project_controller.add(database_name)
+            ProjectController().add(database_name)
         else:
             self._create_integration(database_name, engine, connection_args)
 
@@ -882,13 +852,13 @@ class ExecuteCommands:
             query.limit = Constant(1)
 
             sqlquery = SQLQuery(query, session=self.session)
-            if sqlquery.fetch()['success'] != True:
+            if sqlquery.fetch()['success'] is not True:
                 raise SqlApiException('Wrong view query')
 
-        self.session.view_controller.add(
+        project = self.session.database_controller.get_project(project_name)
+        project.create_view(
             view_name,
-            query=query_str,
-            project_name=project_name
+            query=query_str
         )
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -901,7 +871,8 @@ class ExecuteCommands:
                 db_name = name.parts[0]
             else:
                 db_name = self.session.database
-            self.session.view_controller.delete(view_name, project_name=db_name)
+            project = self.session.database_controller.get_project(db_name)
+            project.drop_table(view_name)
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -914,15 +885,15 @@ class ExecuteCommands:
         integration_name = integration_name.lower()
 
         ml_integration_name = 'lightwood'
-        if statement.using is not None and statement.using.get('engine') is not None:
-            using = {k.lower(): v for k, v in statement.using.items()}
-            ml_integration_name = using.get('engine', ml_integration_name)
+        if statement.using is not None:
+            # repack using with lower names
+            statement.using = {k.lower(): v for k, v in statement.using.items()}
+
+            ml_integration_name = statement.using.pop('engine', ml_integration_name)
 
         ml_handler = self.session.integration_controller.get_handler(ml_integration_name)
 
-        result = ml_handler.query(statement)
-        if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(result.error_message)
+        self.session.model_controller.create_model(statement, ml_handler)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1338,6 +1309,65 @@ class ExecuteCommands:
             data=data['result'],
         )
 
+    def answer_update_model_version(self, statement):
+
+        # get project name
+        if len(statement.table.parts) > 1:
+            project_name = statement.table.parts[0]
+        else:
+            project_name = self.session.database
+
+        project_datanode = self.datahub.get(project_name)
+        if project_datanode is None:
+            raise Exception(f'Project not found: {project_name}')
+
+        # get list of model versions using filter
+        query = Select(
+            targets=[Identifier('version'), Identifier('name'), Identifier('project')],
+            from_table=Identifier('models_versions'),
+            where=statement.where,
+        )
+
+        models, _ = project_datanode.query(
+            query=query,
+            session=self.session
+        )
+
+        # get columns for update
+        kwargs = {}
+        for k, v in statement.update_columns.items():
+            if isinstance(v, Constant):
+                v = v.value
+            kwargs[k.lower()] = v
+        self.session.model_controller.update_model_version(models, **kwargs)
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_delete_model_version(self, statement):
+        # get project name
+        if len(statement.table.parts) > 1:
+            project_name = statement.table.parts[0]
+        else:
+            project_name = self.session.database
+
+        project_datanode = self.datahub.get(project_name)
+        if project_datanode is None:
+            raise Exception(f'Project not found: {project_name}')
+
+        # get list of model versions using filter
+        query = Select(
+            targets=[Identifier('version'), Identifier('name'), Identifier('project')],
+            from_table=Identifier('models_versions'),
+            where=statement.where,
+        )
+
+        models, _ = project_datanode.query(
+            query=query,
+            session=self.session
+        )
+
+        self.session.model_controller.delete_model_version(models)
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
     def change_default_db(self, db_name):
         # That fix for bug in mssql: it keeps connection for a long time, but after some time mssql can
         # send packet with COM_INIT_DB=null. In this case keep old database name as default.
@@ -1346,48 +1376,3 @@ class ExecuteCommands:
                 self.session.database = db_name
             else:
                 raise ErBadDbError(f"Database {db_name} does not exists")
-
-    def _get_features_info(self, data):
-        ai_info = data.get('json_ai', {})
-        if ai_info == {}:
-            raise ErBadTableError("predictor doesn't contain enough data to generate 'feature' attribute.")
-        data = []
-        dtype_dict = ai_info["dtype_dict"]
-        for column in dtype_dict:
-            c_data = []
-            c_data.append(column)
-            c_data.append(dtype_dict[column])
-            c_data.append(ai_info["encoders"][column]["module"])
-            if ai_info["encoders"][column]["args"].get("is_target", "False") == "True":
-                c_data.append("target")
-            else:
-                c_data.append("feature")
-            data.append(c_data)
-        return data
-
-    def _get_model_info(self, data):
-        accuracy_functions = data.get('json_ai', {}).get('accuracy_functions')
-        if accuracy_functions:
-            accuracy_functions = str(accuracy_functions)
-
-        models_data = data.get("submodel_data", [])
-        if models_data == []:
-            raise ErBadTableError("predictor doesn't contain enough data to generate 'model' attribute")
-        data = []
-
-        for model in models_data:
-            m_data = []
-            m_data.append(model["name"])
-            m_data.append(model["accuracy"])
-            m_data.append(model.get("training_time", "unknown"))
-            m_data.append(1 if model["is_best"] else 0)
-            m_data.append(accuracy_functions)
-            data.append(m_data)
-        return data
-
-    def _get_ensemble_data(self, data):
-        ai_info = data.get('json_ai', {})
-        if ai_info == {}:
-            raise ErBadTableError("predictor doesn't contain enough data to generate 'ensamble' attribute. Please wait until predictor is complete.")
-        ai_info_str = json.dumps(ai_info, indent=2)
-        return [[ai_info_str]]

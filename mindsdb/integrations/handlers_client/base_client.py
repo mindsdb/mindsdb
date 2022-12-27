@@ -38,7 +38,6 @@ class BaseClient:
             resp["data_frame"] = df
         return resp
 
-
     @sending_attempts()
     def _do(self, endpoint, _type="get", **params) -> requests.Response:
         """Performs several attempts to send a request to the service.
@@ -50,7 +49,6 @@ class BaseClient:
 
         Raises:
             Exception if all attempts were failed.
-    
         """
         call = None
         _type = _type.lower()

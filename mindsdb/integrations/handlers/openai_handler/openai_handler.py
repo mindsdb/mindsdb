@@ -27,8 +27,8 @@ class OpenAIHandler(BaseMLEngine):
     def create(self, target, args=None, **kwargs):
         args = args['using']
 
-        if not args.get('api_key', False) or args['api_key'].lower() == 'env':
-            args['api_key'] = os.getenv('OPENAI_API_KEY')
+        # if not args.get('api_key', False) or args['api_key'].lower() == 'env':
+        #     args['api_key'] = os.getenv('OPENAI_API_KEY')
 
         # TODO: find a way to pass a prompt template from here (to avoid repeated definition at prediction time)
         #  and inject in predict()... maybe just regex-match the pattern and replace?
@@ -59,7 +59,10 @@ class OpenAIHandler(BaseMLEngine):
         temperature = min(1.0, max(0.0, args.get('temperature', 0.0)))
         max_tokens = pred_args.get('max_tokens', args.get('max_tokens', 20))
 
-        openai.api_key = args['api_key']
+        connection_args = self.engine_storage.get_connection_args()
+        if 'api_key' not in connection_args:
+            raise Exception('api_key is not found. You need to create ML_ENGINE with api_key parameter')
+        openai.api_key = connection_args['api_key']
         if args.get('api_organization', False):
             openai.organization = args['api_organization']
 

@@ -11,8 +11,7 @@ except Exception as e:
 title = 'OpenAI'
 name = 'openai'
 type = HANDLER_TYPE.ML
-permanent = True
-execution_method = 'subprocess_keep'
+permanent = False
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error'

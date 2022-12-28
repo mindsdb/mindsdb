@@ -2,10 +2,10 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from collections import OrderedDict
 
 
-from ..yugabyte_handler import Handler as YugaByteHandler
+from ..postgres_handler import Handler as PostgresHandler
 
 
-class MaterializeHandler(YugaByteHandler):
+class MaterializeHandler(PostgresHandler):
     """
     This handler handles connection and execution of the Materialize statements.
     """

@@ -8,7 +8,7 @@ Materialize is a new storage engine for PostgreSQL, bringing a modern approach t
 Materialize consists of an extension, building on the innovative table access method framework and other standard Postgres extension interfaces. By extending and enhancing the current table access methods, Materialize opens the door to a future of more powerful storage models that are optimized for cloud and modern hardware architectures.
 ## Implementation
 
-This handler was implemented by extending postres connector.
+This handler was implemented by extending Postgres connector.
 
 The required arguments to establish a connection are:
 

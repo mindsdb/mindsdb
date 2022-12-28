@@ -40,18 +40,43 @@ class HuggingFaceHandler(BaseMLEngine):
         elif args['task'] != metadata.pipeline_tag:
             raise Exception(f'Task mismatch for model: {args["task"]}!={metadata.pipeline_tag}')
 
+        input_keys = list(args.keys())
+
         # task, model_name, input_column is essential
         for key in ['task', 'model_name', 'input_column']:
             if key not in args:
                 raise Exception(f'Parameter "{key}" is required')
+            input_keys.remove(key)
 
-        if args['task'] == 'zero-shot-classification' and not 'candidate_labels' in args:
-            raise Exception('"candidate_labels" is required for zero-shot-classification')
+        # check tasks input
+
+        if args['task'] == 'zero-shot-classification':
+            key = 'candidate_labels'
+            if key not in args:
+                raise Exception('"candidate_labels" is required for zero-shot-classification')
+            input_keys.remove(key)
 
         if args['task'] == 'translation':
-            if 'lang_input' not in args or 'lang_output' not in args:
-                raise Exception('"lang_input" and "lang_output" is required for translation')
+            keys = ['lang_input', 'lang_output']
+            for key in keys:
+                if key not in args:
+                    raise Exception(f'{key} is required for translation')
+            input_keys.remove(key)
 
+        if args['task'] == 'summarization':
+            keys = ['min_output_length', 'max_output_length']
+            for key in keys:
+                if key not in args:
+                    raise Exception(f'{key} is required for translation')
+            input_keys.remove(key)
+
+        # optional keys
+        for key in ['labels', 'max_length']:
+            if key in input_keys:
+                input_keys.remove(key)
+
+        if len(input_keys) > 0:
+            raise Exception(f'Not expected parameters: {", ".join(input_keys)}')
 
     def create(self, target, args=None, **kwargs):
         # TODO change BaseMLEngine api?

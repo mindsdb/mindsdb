@@ -70,7 +70,13 @@
                 }
               ]
             },
-            "setup/custom-config",
+            {
+              "group": "Configuration Options",
+              "pages": [                
+                "setup/custom-config",
+                "setup/environment-vars"
+              ]
+            },
             "setup/cloud",
             "setup/digital-ocean",
             "setup/gcp",

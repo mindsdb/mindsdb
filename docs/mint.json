@@ -70,7 +70,13 @@
                 }
               ]
             },
-            "setup/custom-config",
+            {
+              "group": "Configuration Options",
+              "pages": [                
+                "setup/custom-config",
+                "setup/environment-vars"
+              ]
+            },
             "setup/cloud",
             "setup/digital-ocean",
             "setup/gcp",
@@ -95,6 +101,7 @@
             "connect/tableau"
           ]
         },
+        "mindsdb-handlers",
         "sql/create/databases2",
         "sql/create/file",
         "sql/data-insights",
@@ -235,7 +242,7 @@
           "pages": [
             "contribute/install",
             "contribute/issues",
-            "contribute/integrations",
+            "contribute/data-handlers",
             "contribute/ml-handlers",
             "contribute/docs",
             "docs-rules",

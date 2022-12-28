@@ -23,7 +23,6 @@ class CustomJSONEncoder(JSONEncoder):
         return str(obj)
 
 
-
 def json_serialiser(byte_obj):
     """
     Used to export/import predictors inside the model controller.

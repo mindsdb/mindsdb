@@ -353,5 +353,113 @@ class TestProjectStructure(BaseExecutorDummyML):
         )
         self.wait_predictor('mindsdb', 'task_model')
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_complex_joins(self, data_handler):
+        df1 = pd.DataFrame([
+            {'a': 1, 'c': 1, 'b': dt.datetime(2020, 1, 1)},
+            {'a': 2, 'c': 1, 'b': dt.datetime(2020, 1, 2)},
+            {'a': 1, 'c': 3, 'b': dt.datetime(2020, 1, 3)},
+            {'a': 3, 'c': 2, 'b': dt.datetime(2020, 1, 2)},
+        ])
+        df2 = pd.DataFrame([
+            {'a': 6, 'c': 1},
+            {'a': 4, 'c': 2},
+            {'a': 2, 'c': 3},
+        ])
+        self.set_handler(data_handler, name='pg', tables={'tbl1': df1, 'tbl2': df2})
+
+        self.run_sql(
+            '''
+                CREATE PREDICTOR mindsdb.pred
+                PREDICT p
+                using engine='dummy_ml',
+                join_learn_process=true
+            '''
+        )
+
+        self.run_sql('''
+            create view mindsdb.view2 (
+                select * from pg.tbl2 where a!=4
+            )
+        ''')
+
+        # --- test join table-table-table ---
+        ret = self.run_sql('''
+            SELECT t1.a as t1a,  t3.a t3a
+              FROM pg.tbl1 as t1
+              JOIN pg.tbl2 as t2 on t1.c=t2.c
+              LEFT JOIN pg.tbl1 as t3 on t2.a=t3.a
+              where t1.a=1
+        ''')
+
+        # must be 2 rows
+        assert len(ret) == 2
+
+        # all t1.a values are 1
+        assert list(ret.t1a) == [1, 1]
+
+        # t3.a has 2 and None
+        assert len(ret[ret.t3a == 2]) == 1
+        assert len(ret[ret.t3a.isna()]) == 1
+
+        # --- test join table-predictor-view ---
+
+        ret = self.run_sql('''
+            SELECT t1.a t1a, t3.a t3a, m.*
+              FROM pg.tbl1 as t1
+              JOIN mindsdb.pred m
+              LEFT JOIN mindsdb.view2 as t3 on t1.c=t3.c
+              where t1.a>1
+        ''')
+
+        # must be 2 rows
+        assert len(ret) == 2
+
+        # t1.a > 1
+        assert ret[ret.t1a <= 1].empty
+
+        # view: a!=4
+        assert ret[ret.t3a == 4].empty
+
+        # t3.a has 6 and None
+        assert len(ret[ret.t3a == 6]) == 1
+        assert len(ret[ret.t3a.isna()]) == 1
+
+        # contents predicted values
+        assert list(ret.predicted.unique()) == [42]
+
+        # --- tests table-subselect-view ---
+
+        ret = self.run_sql('''
+            SELECT t1.a t1a,
+                   t2.t1a t2t1a, t2.t3a t2t3a,
+                   t3.c t3c, t3.a t3a
+              FROM pg.tbl1 as t1
+              JOIN ( 
+                  SELECT t1.a as t1a,  t3.a t3a
+                  FROM pg.tbl1 as t1
+                  JOIN pg.tbl2 as t2 on t1.c=t2.c
+                  LEFT JOIN pg.tbl1 as t3 on t2.a=t3.a
+                  where t1.a=1
+              ) t2 on t2.t3a = t1.a
+              LEFT JOIN mindsdb.view2 as t3 on t1.c=t3.c
+              where t1.a>1
+        ''')
+
+        # 1 row
+        assert len(ret) == 1
+
+        # check row values
+        row = ret.iloc[0].to_dict()
+        assert row['t1a'] == 2
+        assert row['t2t3a'] == 2
+
+        assert row['t2t1a'] == 1
+        assert row['t3c'] == 1
+
+        assert row['t3a'] == 6
+
+
+
 
 

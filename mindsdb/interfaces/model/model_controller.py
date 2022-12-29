@@ -52,6 +52,7 @@ class ModelController():
         data['fetch_data_query'] = predictor_record.fetch_data_query
         data['active'] = predictor_record.active
         data['status'] = predictor_record.status
+        data['id'] = predictor_record.id
 
         json_storage = get_json_storage(
             resource_id=predictor_record.id
@@ -79,14 +80,16 @@ class ModelController():
 
         return ml_handler.describe(attribute)
 
-    def get_models(self, with_versions=False, ml_handler_name='lightwood', integration_id=None):
+    def get_models(self, with_versions=False, ml_handler_name='lightwood', integration_id=None,
+                   project_name=None):
         models = []
         show_active = True if with_versions is False else None
-        for predictor_record in get_model_records(active=show_active, ml_handler_name=ml_handler_name, integration_id=integration_id):
+        for predictor_record in get_model_records(active=show_active, ml_handler_name=ml_handler_name,
+                                                  integration_id=integration_id, project_name=project_name):
             model_data = self.get_model_data(predictor_record=predictor_record)
             reduced_model_data = {}
 
-            for k in ['name', 'version', 'is_active', 'predict', 'status',
+            for k in ['id', 'name', 'version', 'is_active', 'predict', 'status',
                       'current_phase', 'accuracy', 'data_source', 'update', 'active',
                       'mindsdb_version', 'error', 'created_at', 'fetch_data_query']:
                 reduced_model_data[k] = model_data.get(k, None)

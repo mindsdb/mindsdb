@@ -61,14 +61,14 @@ class HuggingFaceHandler(BaseMLEngine):
             for key in keys:
                 if key not in args:
                     raise Exception(f'{key} is required for translation')
-            input_keys.remove(key)
+                input_keys.remove(key)
 
         if args['task'] == 'summarization':
             keys = ['min_output_length', 'max_output_length']
             for key in keys:
                 if key not in args:
                     raise Exception(f'{key} is required for translation')
-            input_keys.remove(key)
+                input_keys.remove(key)
 
         # optional keys
         for key in ['labels', 'max_length']:

@@ -11,6 +11,10 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 class OpenAIHandler(BaseMLEngine):
     name = 'openai'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.default_model = 'text-davinci-002'
+
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         if 'using' not in args:
@@ -55,16 +59,14 @@ class OpenAIHandler(BaseMLEngine):
         if args.get('context_column', False) and args['context_column'] not in df.columns:
             raise Exception(f"This model expects context in the '{args['context_column']}' column.")
 
-        model_name = args.get('model_name', 'text-davinci-002')
+        model_name = args.get('model_name', self.default_model)
         temperature = min(1.0, max(0.0, args.get('temperature', 0.0)))
         max_tokens = pred_args.get('max_tokens', args.get('max_tokens', 20))
 
         connection_args = self.engine_storage.get_connection_args()
         if 'api_key' not in connection_args:
             raise Exception('api_key is not found. You need to create ML_ENGINE with api_key parameter')
-        openai.api_key = connection_args['api_key']
-        if args.get('api_organization', False):
-            openai.organization = args['api_organization']
+        api_key = connection_args['api_key']
 
         if args.get('prompt_template', False):
             if pred_args.get('prompt_template', False):
@@ -109,7 +111,9 @@ class OpenAIHandler(BaseMLEngine):
             model=model_name,
             prompt=prompts,
             max_tokens=max_tokens,
-            temperature=temperature
+            temperature=temperature,
+            api_key=api_key,
+            organization=args.get('api_organization')
         )
 
         output = _tidy(completion)
@@ -117,9 +121,12 @@ class OpenAIHandler(BaseMLEngine):
         return pred_df
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-
+        connection_args = self.engine_storage.get_connection_args()
+        api_key = connection_args['api_key']
         args = self.model_storage.json_get('args')
-        meta = openai.Model.retrieve(args['model_name'])
+
+        model_name = args.get('model_name', self.default_model)
+        meta = openai.Model.retrieve(model_name, api_key=api_key)
 
         return pd.DataFrame([[meta['id'], meta['object'], meta['owned_by'], meta['permission'], args]],
                             columns=['id', 'object', 'owned_by', 'permission', 'model_args'])

@@ -3,12 +3,11 @@ title: MindsDB and SQL Alchemy
 sidebarTitle: SQL Alchemy
 ---
 
-SQL Alchemy is a Python package, or a Python SQL toolkit, that provides
+SQL Alchemy is a Python SQL toolkit, that provides
 object-relational mapping features for the Python programming language.
 
 SQL Alchemy facilitates working with databases and Python. You can download it
-[here](https://www.sqlalchemy.org/) or run a `pip install sqlalchemy` command if
-you use a Linux system.
+[here](https://www.sqlalchemy.org/) or run a `pip install sqlalchemy`.
 
 ## How to Connect
 
@@ -30,17 +29,17 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
         database = ''
 
         def get_connection():
-                return create_engine(
-                        url="mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(user, password, host, port, database)
-                )
+            return create_engine(
+                url="mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(user, password, host, port, database)
+            )
 
         if __name__ == '__main__':
-                try:
-                        engine = get_connection()
-                        engine.connect()
-                        print(f"Connection to the {host} for user {user} created successfully.")
-                except Exception as ex:
-                        print("Connection could not be made due to the following error: \n", ex)
+            try:
+                engine = get_connection()
+                engine.connect()
+                print(f"Connection to the {host} for user {user} created successfully.")
+            except Exception as ex:
+                print("Connection could not be made due to the following error: \n", ex)
         ```
 
         Please note that we use the following connection details:
@@ -73,17 +72,17 @@ Please follow the instructions below to connect your MindsDB to SQL Alchemy.
         database = ''
 
         def get_connection():
-                return create_engine(
-                        url="mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(user, password, host, port, database)
-                )
+            return create_engine(
+                url="mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(user, password, host, port, database)
+            )
 
         if __name__ == '__main__':
-                try:
-                        engine = get_connection()
-                        engine.connect()
-                        print(f"Connection to the {host} for user {user} created successfully.")
-                except Exception as ex:
-                        print("Connection could not be made due to the following error: \n", ex)
+            try:
+                engine = get_connection()
+                engine.connect()
+                print(f"Connection to the {host} for user {user} created successfully.")
+            except Exception as ex:
+                print("Connection could not be made due to the following error: \n", ex)
         ```
 
         Please note that we use the following connection details:

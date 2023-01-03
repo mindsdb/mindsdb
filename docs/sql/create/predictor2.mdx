@@ -193,7 +193,7 @@ FROM files
   (SELECT * FROM house_sales)
 PREDICT MA
 ORDER BY saledate
-GROUP BY bedrooms, type
+GROUP BY bedrooms
 -- the target column to be predicted stores one row per quarter
 WINDOW 8      -- using data from the last two years to make forecasts (last 8 rows)
 HORIZON 4;    -- making forecasts for the next year (next 4 rows)
@@ -294,19 +294,22 @@ It allows you to specify the type of machine learning algorithm to learn from th
 USING model.args = {"key": value};
 ```
 
-Here are the module options:
+Here are the model options:
 
-| Module                                                               | Description                                                                                                                                                                                                                                                                         |
+| Model                                                               | Description                                                                                                                                                                                                                                                                         |
 | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [BaseMixer](https://lightwood.io/mixer.html#mixer.BaseMixer)         | It is a base class for all mixers.                                                                                                                                                                                                                                                  |
 | [LightGBM](https://lightwood.io/mixer.html#mixer.LightGBM)           | This mixer configures and uses LightGBM for regression or classification tasks depending on the problem definition.                                                                                                                                                                 |
 | [LightGBMArray](https://lightwood.io/mixer.html#mixer.LightGBMArray) | This mixer consists of several LightGBM mixers in regression mode aimed at time series forecasting tasks.                                                                                                                                                                           |
 | [NHitsMixer](https://lightwood.io/mixer.html#mixer.NHitsMixer)       | This mixer is a wrapper around an MQN-HITS deep learning model.                                                                                                                                                                                                                     |
 | [Neural](https://lightwood.io/mixer.html#mixer.Neural)               | This mixer trains a fully connected dense network from concatenated encoded outputs of each feature in the dataset to predict the encoded output.                                                                                                                                   |
-| [ProphetMixer](https://lightwood.io/mixer.html#mixer.ProphetMixer)   | This mixer is a wrapper around the popular time series library sktime.                                                                                                                                                                                                              |
+| [NeuralTs](https://lightwood.io/mixer.html#mixer.NeuralTs)           | This mixer inherits from Neural mixer and should be used for time series forecasts.                                                                                                                                   |
+| [ProphetMixer](https://lightwood.io/mixer.html#mixer.ProphetMixer)   | This mixer is a wrapper around the popular time series library [Prophet](https://facebook.github.io/prophet/).                                                                                                                                                                      |                                        |
+| [RandomForest](https://lightwood.io/mixer.html#mixer.RandomForest)   | This mixer supports both regression and classification tasks. It inherits from sklearn.ensemble.RandomForestRegressor and sklearn.ensemble.RandomForestClassifier.                                                                                                                                            |
 | [Regression](https://lightwood.io/mixer.html#mixer.Regression)       | This mixer inherits from [scikit-learn’s Ridge class](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Ridge.html).                                                                                                                                           |
 | [SkTime](https://lightwood.io/mixer.html#mixer.SkTime)               | This mixer is a wrapper around the popular time series library sktime.                                                                                                                                                                                                              |
 | [Unit](https://lightwood.io/mixer.html#mixer.Unit)                   | This is a special mixer that passes along whatever prediction is made by the target encoder without modifications. It is used for single-column predictive scenarios that may involve complex and/or expensive encoders (e.g. free-form text classification with transformers).     |
+| [XGBoostMixer](https://lightwood.io/mixer.html#mixer.XGBoostMixer)   | This mixer is a good all-rounder, due to the generally great performance of tree-based ML algorithms for supervised learning tasks with tabular data.     |
 
 To learn more about all the `model` options, visit the [Lightwood documentation page on mixers](https://lightwood.io/mixer.html).
 

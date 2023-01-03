@@ -134,6 +134,7 @@
             "sql/api/select",
             "sql/api/select-files",
             "sql/api/join",
+            "sql/api/join-on",
             "sql/api/use"
           ]
         },

@@ -68,11 +68,10 @@ class InfluxDBHandler(DatabaseHandler):
             "Accept": "application/csv",
         }
         response = requests.request("GET",url,params=params,headers=headers)
-        df = pd.read_csv(io.StringIO(response.text))
-        globals()[self.connection_data['influxdb_table_name']] = df
-
-        self.connection = duckdb.connect()
         
+        if response.status_code == 200:
+            self.connection = response
+
         self.is_connected = True
 
         return self.connection
@@ -125,18 +124,13 @@ class InfluxDBHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         connection = self.connect()
-        cursor = connection.cursor()
-        try:
-            cursor.execute(query)
-            result = cursor.fetchall()
+        df = pd.read_csv(io.StringIO(connection.text))
+        locals()[self.connection_data['influxdb_table_name']] = df
+        
+        try:            
+            result = duckdb.query(query)
             if result:
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cursor.description]
-                    )
-                )               
+                response = Response(RESPONSE_TYPE.TABLE,data_frame=result)                   
             else:
                 response = Response(RESPONSE_TYPE.OK)
 
@@ -146,7 +140,7 @@ class InfluxDBHandler(DatabaseHandler):
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
             )
-        
+
         if need_to_close is True:
             self.disconnect()
 

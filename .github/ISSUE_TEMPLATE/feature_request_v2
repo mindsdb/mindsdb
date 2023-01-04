@@ -32,6 +32,6 @@ body:
   attributes:
     label: Anything else?
     description: |
-      Links? References? Ideas? Anything that will give us more context about the issue you are encountering!
+      Links? References? Ideas? Anything else that will give us more context!
   validations:
     required: false

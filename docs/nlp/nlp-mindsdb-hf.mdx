@@ -94,7 +94,7 @@ Where:
 | `project_name`   | Name of the project where the model is created. By default, the `mindsdb` project is used.          |
 | `predictor_name` | Name of the model to be created.                                                                    |
 | `target_column`  | Column to store the predicted values.                                                               |
-| `engine_name`    | Optional. You can provide an ML engine, based on which the model is created.                        |
+| `engine`         | Optional. You can provide an ML engine, based on which the model is created.                        |
 | `task`           | Optional. It is relative to the Hugging Face task tag.                                              |
 | `model_name`     | Model name from the Hugging Face model hub.                                                         |
 | `input_column`   | Name of the column that has the input data, especially important for batch predictions using JOIN.  |
@@ -125,12 +125,12 @@ USING
 
 Where:
 
-| Expressions      | Description                                                                                                             |
+| Expressions      | Values                                                                                                                  |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `project_name`   | mindsdb                                                                                                                 |
 | `predictor_name` | spam_classifier                                                                                                         |
 | `target_column`  | PRED                                                                                                                    |
-| `engine_name`    | huggingface                                                                                                             |
+| `engine`         | huggingface                                                                                                             |
 | `task`           | text-classification                                                                                                     |
 | `model_name`     | [mrm8488/bert-tiny-finetuned-sms-spam-detection](https://huggingface.co/mrm8488/bert-tiny-finetuned-sms-spam-detection) |
 | `input_column`   | text_spammy                                                                                                             |

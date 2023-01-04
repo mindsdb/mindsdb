@@ -264,6 +264,7 @@
       "pages": [
         "nlp/what-is-nlp",
         "nlp/nlp-mindsdb-hf",
+        "nlp/nlp-mindsdb-openai",
         "nlp/nlp-extended-examples"
       ]
     }

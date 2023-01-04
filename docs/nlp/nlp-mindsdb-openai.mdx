@@ -1,0 +1,103 @@
+---
+title: NLP with MindsDB and OpenAI
+---
+
+## MindsDB NLP Supported Tasks
+
+
+
+## MindsDB NLP Tested Models
+
+
+
+## How to Bring the OpenAI Model to MindsDB
+
+We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the OpenAI models to MindsDB.
+
+Generally, it looks like this:
+
+```sql
+CREATE MODEL project_name.predictor_name        -- AI TABLE TO STORE THE MODEL
+PREDICT target_column                           -- NAME OF THE COLUMN TO STORE PREDICTED VALUES
+USING
+  engine = 'openai',                            -- USING THE OPENAI ENGINE
+  prompt_template = 'task description';         -- DEFINES THE TASK
+```
+
+Where:
+
+| Expressions      | Description                                                                                         |
+| ---------------- | --------------------------------------------------------------------------------------------------- |
+| `project_name`   | Name of the project where the model is created. By default, the `mindsdb` project is used.          |
+| `predictor_name` | Name of the model to be created.                                                                    |
+| `target_column`  | Column to store the predicted values.                                                               |
+| `engine_name`    | An ML engine based on which the model is created.                                                   |
+| `prompt_template`| It defines the task to be performed on data.                                                        |
+
+### Example
+
+Let's go through a sentiment classification example to understand better how to bring OpenAI models to MindsDB as AI tables.
+
+```sql
+CREATE MODEL mindsdb.sentiment_classifier                           
+PREDICT sentiment
+USING
+  engine = 'openai',              
+  prompt_template = 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral';
+```
+
+Where:
+
+| Expressions      | Values                                                                                                                  |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `project_name`   | mindsdb                                                                                                                 |
+| `predictor_name` | sentiment_classifier                                                                                                    |
+| `target_column`  | sentiment                                                                                                               |
+| `engine`         | openai                                                                                                                  |
+| `prompt_template`| predict the sentiment of the text:{{reviews}} exactly as either positive or negative or neutral                         |
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'sentiment_classifier';
+```
+
+On execution, we get:
+
+```sql
++--------------------+------+-------+-------+--------+--------+---------+-------------+---------------+------+-----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+-------+
+|NAME                |ENGINE|PROJECT|VERSION|STATUS  |ACCURACY|PREDICT  |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                       |TAG    |
++--------------------+------+-------+-------+--------+--------+---------+-------------+---------------+------+-----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+-------+
+|sentiment_classifier|openai|mindsdb|1      |complete|[NULL]  |sentiment|up_to_date   |22.12.4.3      |[NULL]|[NULL]           |{'target': 'sentiment', 'using': {'prompt_template': 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral'}}|[NULL] |
++--------------------+------+-------+-------+--------+--------+---------+-------------+---------------+------+-----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+-------+
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT model.sentiment, input.review
+FROM files.reviews AS input
+JOIN mindsdb.sentiment_classifier AS model
+LIMIT 3;
+```
+
+On execution, we get:
+
+```sql
++----------------------------------------+--------------------------------------------------------------------------+
+| sentiment                              | review                                                                   |
++----------------------------------------+--------------------------------------------------------------------------+
+| positive                               | Late gift for my grandson. He is very happy with it. Easy for him (9yo ).|
+| The sentiment of the text is positive. | I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer.|
+| positive                               | I purchased this Kindle Fire HD 8 was purchased for use by 5 and 8 yer old grandchildren. They basically use it to play Amazon games that you download.|
+```
+
+For the full library of supported examples please go [here](/nlp/nlp-extended-examples).

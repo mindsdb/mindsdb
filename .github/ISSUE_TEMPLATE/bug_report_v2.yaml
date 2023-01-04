@@ -7,10 +7,11 @@ body:
   attributes:
     value: Thanks for taking the time to fill out this bug report! Please fill out the form in English!
       
-- type: markdown
+- type: textarea
   attributes:
     label: Current behavior
     description: A short description of what you're experiencing
+    render: markdown
   validations:
     required: true
     

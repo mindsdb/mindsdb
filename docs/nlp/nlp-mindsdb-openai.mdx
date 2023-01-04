@@ -4,11 +4,11 @@ title: NLP with MindsDB and OpenAI
 
 ## MindsDB NLP Supported Tasks
 
-
+TODO
 
 ## MindsDB NLP Tested Models
 
-
+TODO
 
 ## How to Bring the OpenAI Model to MindsDB
 
@@ -54,7 +54,7 @@ Where:
 | `predictor_name` | sentiment_classifier                                                                                                    |
 | `target_column`  | sentiment                                                                                                               |
 | `engine`         | openai                                                                                                                  |
-| `prompt_template`| predict the sentiment of the text:{{reviews}} exactly as either positive or negative or neutral                         |
+| `prompt_template`| `predict the sentiment of the text:{{reviews}} exactly as either positive or negative or neutral`                       |
 
 On execution, we get:
 
@@ -92,12 +92,13 @@ LIMIT 3;
 On execution, we get:
 
 ```sql
-+----------------------------------------+--------------------------------------------------------------------------+
-| sentiment                              | review                                                                   |
-+----------------------------------------+--------------------------------------------------------------------------+
-| positive                               | Late gift for my grandson. He is very happy with it. Easy for him (9yo ).|
++----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| sentiment                              | review                                                                                                                                                                                                                                                                                                                                                                            |
++----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| positive                               | Late gift for my grandson. He is very happy with it. Easy for him (9yo ).                                                                                                                                                                                                                                                                                                         |
 | The sentiment of the text is positive. | I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer.|
-| positive                               | I purchased this Kindle Fire HD 8 was purchased for use by 5 and 8 yer old grandchildren. They basically use it to play Amazon games that you download.|
+| positive                               | I purchased this Kindle Fire HD 8 was purchased for use by 5 and 8 yer old grandchildren. They basically use it to play Amazon games that you download.                                                                                                                                                                                                                           |
++----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
 For the full library of supported examples please go [here](/nlp/nlp-extended-examples).

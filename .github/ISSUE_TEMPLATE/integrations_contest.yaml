@@ -1,7 +1,7 @@
-name: Integrations Contest
+name: 🧑‍🔧 Propose an integration
 description: Propose a new integration idea
-title: "[New Integration]: "
-labels: [integration, enhancement]
+title: "[Integration]: "
+labels: [roadmap, integration]
 assignees: 
 - 
 body:

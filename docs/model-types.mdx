@@ -4,31 +4,37 @@ title: ML Models in MindsDB
 
 In this section, we go through the ML model types available in MindsDB. These are regression models, classification models, and time series models.
 
+<Note>
+**Disclaimer**
+
+In this section, we describe the default behavior using the Lightwood ML engine. Other ML handlers may behave differently. For example, some may not perform validation automatically when creating a model, as numerous behaviors are handler-specific.
+</Note>
+
 ## What is an ML Model?
 
-A machine learning (ML) model is a program trained using the available data in order to learn how to recognize patterns and behaviors and make decisions that lead to predicting future data.
+A machine learning (ML) model is a program trained using the available data in order to learn how to recognize patterns and behaviors to predict future data. There are various types of ML models that use different learning paradigms, but MindsDB models are all *supervised* because they learn from pairs of input data and expected output.
 
 You input data into an ML model. It processes this input data, searching for patterns and correlations. After that, the ML model returns output data defined based on the input data.
 
 ### Features
 
-Features define the columns or variables that an ML model uses as input data to search for patterns and predict the target variable.
+Features are variables that an ML model uses as input data to search for patterns and predict the target variable. In tabular datasets, features usually correspond to single columns.
 
 ### Target
 
-A target is a column or variable that an ML model predicts based on the information fetched out of the features.
+The target is a variable of interest that an ML model predicts based on the information fetched out of the features.
 
 ### Training Dataset
 
 The training dataset is used during the training phase of an ML model. It contains both feature variables and a target variable. As its name indicates, it is used to train an ML model.
 
-The ML model takes the entire training dataset as input. It learns the patterns and relationships between feature variables and correlates them with the target variable values.
+The ML model takes the entire training dataset as input. It learns the patterns and relationships between feature variables and target values.
 
 Once the training process is complete, one can move on to the validation phase.
 
 ### Validation Dataset
 
-The validation dataset is used during the validation phase of an ML model. It contains both feature variables and a target variable, like the training dataset. But as its name indicates, it is used to validate the predictions made by an ML model.
+The validation dataset is used during the validation phase of an ML model. It contains both feature variables and a target variable, like the training dataset. But as its name indicates, it is used to validate the predictions made by an ML model. It has no overlap with the training dataset, as it is a *held-out* set to simulate a real scenario where the model generates predictions for novel input data.
 
 The ML model takes only the feature variables from the validation dataset as input. Based on what the model learns during the training process, it makes predictions for the values of a target variable.
 
@@ -38,7 +44,7 @@ Now comes the validation step. To assess the accuracy of the ML model, one compa
 
 After completing the training and validation phases, one can provide the input dataset consisting of only the feature variables to predict the target variable values.
 
-## How an ML Model is Created?
+## How is an ML Model Created?
 
 In MindsDB, we use the [CREATE MODEL](/sql/create/predictor/) statement to create, train, and validate a model.
 
@@ -99,7 +105,7 @@ Once the status is `complete`, the training phase is completed.
 
 ### Validation Phase
 
-The `CREATE MODEL` statement performs validation of the model.
+By default, the `CREATE MODEL` statement performs validation of the model.
 
 Additionally, we can validate the model manually by querying it and providing the feature values in the `WHERE` clause like this:
 
@@ -128,9 +134,9 @@ On execution, we get:
 By comparing the real salary values for the defined individuals and the predicted salary values, one can figure out the accuracy of the ML model.
 
 <Note>
-Please note that MindsDB calculates the model's accuracy while running the `CREATE MODEL` statement.
+Please note that MindsDB calculates the model's accuracy by default while running the `CREATE MODEL` statement. However, it is not guaranteed that all ML engines do this.
 
-The `CREATE MODEL` statement does the following:
+By default, the `CREATE MODEL` statement does the following:
 
 - it creates a model,
 - it divides the input data into training and validation datasets,
@@ -292,7 +298,7 @@ For details, check out [this tutorial](/sql/tutorials/customer-churn/).
 
 ### Time Series Models
 
-Time series models fall under the regression or classification category. But what's distinct about them is that we order data by date, time, or any value defining sequential order of events.
+Time series models fall under the regression or classification category. But what's distinct about them is that we order data by date, time, or any value defining sequential order of events. Usually, predictions made by time series models are referred to as *forecasts*.
 
 A time series model predicts a target that comes from a continuous set (regression) or a discrete set (classification).
 
@@ -381,7 +387,11 @@ For details, check out [this tutorial](/sql/tutorials/house-sales-forecasting/).
 
 ## How it Works in the Background
 
-MindsDB uses the Lightwood ML engine by default. The so-called mixers are used to create models by detecting patterns and behaviors of data. Here are [the mixers used by Lightwood](https://lightwood.io/mixer.html).
+MindsDB uses the Lightwood ML engine by default. This section takes a closer look at how this package automatically chooses what type of model to use.
+
+Models in Lightwood follow an encoder-mixer-decoder pattern, where refined, or encoded, representations of all features are mixed to produce target predictions. Here are [the mixers used by Lightwood](https://lightwood.io/mixer.html).
+
+Please note that there is an ensembling step after training all mixers in case multiple mixers are used. Read on to learn more.
 
 To give you some details on how MindsDB creates a model using different mixers, here is [the full code](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py).
 
@@ -442,14 +452,14 @@ A good example is the [Home Rentals model](/sql/tutorials/home-rentals#training-
 <br></br>
 
 <Note>
-MindsDB may use one or multiple mixers while preparing a model. Depending on the model type and the data type of the target variable, one mixer or a set of mixers is chosen to create, train, and validate an ML model.
+MindsDB may use one or multiple mixers while preparing a model. Depending on the model type and the data type of the target variable, one mixer is chosen or a set of mixers are ensembled to create, train, and validate an ML model.
 </Note>
 
 The three cases above describe how MindsDB chooses the mixer candidates and stores them in the `submodels` array.
 
-By default, after collecting all relevant mixers in the `submodels` array, MindsDB uses the [BestOf](https://lightwood.io/ensemble.html#ensemble.BestOf) ensemble to [choose one of these mixers to fit the model](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L353,L358).
+By default, after training all relevant mixers in the `submodels` array, MindsDB uses the [BestOf](https://lightwood.io/ensemble.html#ensemble.BestOf) ensemble to [single out the best mixer as the final model](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L353,L358).
 
-But you can always use a different ensemble that allows using multiple mixers per model, such as the [MeanEnsemble](https://lightwood.io/ensemble.html#ensemble.MeanEnsemble), [ModeEnsemble](https://lightwood.io/ensemble.html#ensemble.ModeEnsemble), [StackedEnsemble](https://lightwood.io/ensemble.html#ensemble.StackedEnsemble), [TsStackedEnsemble](https://lightwood.io/ensemble.html#ensemble.TsStackedEnsemble), or [WeightedMeanEnsemble](https://lightwood.io/ensemble.html#ensemble.WeightedMeanEnsemble) ensemble type.
+But you can always use a different ensemble that may aggregate multiple mixers per model, such as the [MeanEnsemble](https://lightwood.io/ensemble.html#ensemble.MeanEnsemble), [ModeEnsemble](https://lightwood.io/ensemble.html#ensemble.ModeEnsemble), [StackedEnsemble](https://lightwood.io/ensemble.html#ensemble.StackedEnsemble), [TsStackedEnsemble](https://lightwood.io/ensemble.html#ensemble.TsStackedEnsemble), or [WeightedMeanEnsemble](https://lightwood.io/ensemble.html#ensemble.WeightedMeanEnsemble) ensemble type.
 [Here](https://github.com/mindsdb/lightwood/tree/staging/lightwood/ensemble), you'll find implementations of all ensemble types.
 
 ## What's Next?

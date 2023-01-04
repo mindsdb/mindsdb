@@ -1,6 +1,5 @@
 name: 🚀 Request a feature
 description: Create a feature request to help us improve MindsDB
-title: ""
 labels: [roadmap]
 body:
 - type: markdown

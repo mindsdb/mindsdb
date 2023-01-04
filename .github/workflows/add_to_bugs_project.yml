@@ -15,5 +15,5 @@ jobs:
           # You can target a repository in a different organization
           # to the issue
           project-url: https://github.com/orgs/mindsdb/projects/53
-          github-token: ${{ secrets.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 }}
+          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
           labeled: bug

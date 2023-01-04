@@ -1,7 +1,7 @@
 name: ✍️ Improve our docs
 title: "[Docs]: "
 description: Let us know how we can make our documentation more helpful
-labels: [docs]
+labels: [documentation]
 body:
 - type: markdown
   attributes:

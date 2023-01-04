@@ -3,10 +3,13 @@ description: Create a bug report to help us improve MindsDB
 title: "[Bug]: "
 labels: [bug]
 body:
-
-- type: textarea
+- type: markdown
   attributes:
-    label: Current Behavior
+    value: Thanks for taking the time to fill out this bug report! Please fill out the form in English!
+      
+- type: markdown
+  attributes:
+    label: Current behavior
     description: A short description of what you're experiencing
   validations:
     required: true
@@ -21,14 +24,14 @@ body:
     
 - type: textarea
   attributes:
-    label: Expected Behavior
-    description: A short description of what you expected to happen.
+    label: Expected behavior
+    description: A short description of what you expected to happen
   validations:
     required: false
    
 - type: textarea
   attributes:
-    label: Steps To Reproduce
+    label: How to reproduce the error
     description: The better the evidence you can provide, the faster we can fix it!
     placeholder: |
       I uses these queries...

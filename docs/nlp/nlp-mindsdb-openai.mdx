@@ -4,37 +4,21 @@ title: NLP with MindsDB and OpenAI
 
 ## MindsDB NLP Supported Tasks
 
-TODO
+MindsDB lets you create models that utilize features provided by OpenAI GPT-3. Currently, there are three operation modes:
 
-## MindsDB NLP Tested Models
+- Answering Questions without Context
+- Answering Questions with Context
+- Prompt Templating
 
-TODO
+<Tip>
+Currently, MindsDB's NLP engine is powered by [Hugging Face](https://huggingface.co/) and [OpenAI](https://openai.com/). But we plan to expand to other NLP options in the future, so stay tuned!
+</Tip>
 
 ## How to Bring the OpenAI Model to MindsDB
 
 We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the OpenAI models to MindsDB.
 
-Generally, it looks like this:
-
-```sql
-CREATE MODEL project_name.predictor_name        -- AI TABLE TO STORE THE MODEL
-PREDICT target_column                           -- NAME OF THE COLUMN TO STORE PREDICTED VALUES
-USING
-  engine = 'openai',                            -- USING THE OPENAI ENGINE
-  prompt_template = 'task description';         -- DEFINES THE TASK
-```
-
-Where:
-
-| Expressions      | Description                                                                                         |
-| ---------------- | --------------------------------------------------------------------------------------------------- |
-| `project_name`   | Name of the project where the model is created. By default, the `mindsdb` project is used.          |
-| `predictor_name` | Name of the model to be created.                                                                    |
-| `target_column`  | Column to store the predicted values.                                                               |
-| `engine_name`    | An ML engine based on which the model is created.                                                   |
-| `prompt_template`| It defines the task to be performed on data.                                                        |
-
-### Example
+## Example
 
 Let's go through a sentiment classification example to understand better how to bring OpenAI models to MindsDB as AI tables.
 
@@ -46,21 +30,25 @@ USING
   prompt_template = 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral';
 ```
 
-Where:
-
-| Expressions      | Values                                                                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `project_name`   | mindsdb                                                                                                                 |
-| `predictor_name` | sentiment_classifier                                                                                                    |
-| `target_column`  | sentiment                                                                                                               |
-| `engine`         | openai                                                                                                                  |
-| `prompt_template`| `predict the sentiment of the text:{{reviews}} exactly as either positive or negative or neutral`                       |
-
 On execution, we get:
 
 ```sql
 Query successfully completed
 ```
+
+Where:
+
+| Expressions      | Values                                                                                               |
+| ---------------- | ---------------------------------------------------------------------------------------------------- |
+| `project_name`   | `mindsdb`                                                                                            |
+| `predictor_name` | `sentiment_classifier`                                                                               |
+| `target_column`  | `sentiment`                                                                                          |
+| `engine`         | `openai`                                                                                             |
+| `prompt_template`| `predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral`     |
+
+<Note>
+In the `prompt_template` parameter, we use a placeholder for a text value that comes from the `review` column, that is, `text:{{review}}`.
+</Note>
 
 Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
 

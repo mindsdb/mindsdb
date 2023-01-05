@@ -19,7 +19,7 @@ class TwitterHandlerTest(unittest.TestCase):
         assert self.handler.check_connection()
 
     def test_1_native_query_select(self):
-        query = "SELECT * FROM user_tweets LIMIT 10 "
+        query = "SELECT * FROM tweets LIMIT 10 "
         result = self.handler.native_query(query)
         assert result.type is RESPONSE_TYPE.TABLE
 

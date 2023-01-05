@@ -203,7 +203,7 @@ class TwitterHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        query = 'SELECT * FROM user_tweets LIMIT 10'
+        query = 'SELECT * FROM tweets LIMIT 10'
         result = self.native_query(query)
 
         response = Response(

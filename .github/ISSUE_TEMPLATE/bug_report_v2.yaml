@@ -1,0 +1,48 @@
+name: 🐞 Report a bug
+description: Create a bug report to help us improve MindsDB
+title: "[Bug]: "
+labels: [bug]
+body:
+- type: markdown
+  attributes:
+    value: Thanks for taking the time to fill out this bug report! Please fill out the form in English!
+      
+- type: textarea
+  attributes:
+    label: Short description of current behavior
+  validations:
+    required: true
+    
+- type: textarea
+  attributes:
+    label: Video or screenshots
+    description: The better the evidence you can provide, the faster we can fix it!
+    placeholder: https://www.loom.com/share/abcdefghijklmnopqrrstuvwxyz
+  validations:
+    required: false
+    
+- type: textarea
+  attributes:
+    label: Expected behavior
+    description: A short description of what you expected to happen
+  validations:
+    required: false
+   
+- type: textarea
+  attributes:
+    label: How to reproduce the error
+    description: The better the evidence you can provide, the faster we can fix it!
+    placeholder: |
+      I uses these queries...
+      I was running MindsDB on...
+      I get this error...
+  validations:
+    required: false
+   
+- type: textarea
+  attributes:
+    label: Anything else?
+    description: |
+      Links? References? Ideas? Anything that will give us more context about the issue you are encountering!
+  validations:
+    required: false

@@ -72,10 +72,26 @@ Once the status is `complete`, we can query for predictions.
 
 ```sql
 SELECT model.sentiment, input.review
-FROM files.reviews AS input
+FROM example_db.demo_data.amazon_reviews AS input
 JOIN mindsdb.sentiment_classifier AS model
 LIMIT 3;
 ```
+
+<Note>
+    Don't forget to create the `example_db` database before using one of its tables, like in the query above.
+
+    ```sql
+    CREATE DATABASE example_db
+    WITH ENGINE = "postgres",
+    PARAMETERS = {
+        "user": "demo_user",
+        "password": "demo_password",
+        "host": "3.220.66.106",
+        "port": "5432",
+        "database": "demo"
+        };
+    ```
+</Note>
 
 On execution, we get:
 

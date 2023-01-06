@@ -866,7 +866,7 @@ Let's go through the examples.
 
         ```sql
         SELECT model.sentiment, input.review
-        FROM files.reviews AS input
+        FROM example_db.demo_data.amazon_reviews AS input
         JOIN mindsdb.sentiment_classifier AS model
         LIMIT 3;
         ```

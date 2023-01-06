@@ -1,0 +1,30 @@
+name: ✍️ Improve our docs
+title: "[Docs]: "
+description: Let us know how we can make our documentation more helpful
+labels: [documentation]
+body:
+- type: markdown
+  attributes:
+    value: Thanks for taking the time to fill out this docs request! Please fill out the form in English!
+      
+- type: textarea
+  attributes:
+    label: Short description of what should be added or improved
+  validations:
+    required: true
+    
+- type: textarea
+  attributes:
+    label: Video or screenshots
+    description: The better the information you can provide, the faster we can improve it!
+    placeholder: https://www.loom.com/share/abcdefghijklmnopqrrstuvwxyz
+  validations:
+    required: false
+   
+- type: textarea
+  attributes:
+    label: Anything else?
+    description: |
+      Links? References? Ideas? Anything else that will give us more context!
+  validations:
+    required: false

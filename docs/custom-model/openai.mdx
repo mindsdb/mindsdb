@@ -133,6 +133,10 @@ On execution, we get:
 
 Here is how to create a model that offers the most flexible mode of operation. It answers any query provided in the `prompt_template` parameter.
 
+<Tip>
+Good prompts are the key to getting great completions out of large language models like the ones that OpenAI offers. For best performance, we recommend you read their [prompting guide](https://beta.openai.com/docs/guides/completion/prompt-design) before trying your hand at prompt templating.
+</Tip>
+
 ```sql
 CREATE MODEL project_a.openai_test_c
 PREDICT answer
@@ -279,7 +283,3 @@ On execution, we get:
 | positive                               | I purchased this Kindle Fire HD 8 was purchased for use by 5 and 8 yer old grandchildren. They basically use it to play Amazon games that you download.                                                                                                                                                                                                                           |
 +----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
-
-<Note>
-Please note that when querying for predictions, the maximum number of rows that can be fetched at once is 20 (`LIMIT 20`) as it is a constraint of OpenAI.
-</Note>

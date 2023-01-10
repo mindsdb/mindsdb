@@ -50,95 +50,179 @@
     {
       "group": "Guides",
       "pages": [
-        "quickstart",
-        "what-is-mindsdb",
         {
-          "group": "Deployment",
+          "group": "Quickstart",
           "pages": [
+            "what-is-mindsdb",
+            "why-mindsdb",
+            "quickstart"
+          ]
+        },
+        {
+          "group": "Running MindsDB",
+          "pages": [
+            "setup/cloud",
             {
               "group": "Self-Hosted",
               "pages": [
                 "setup/self-hosted/docker",
                 {
-                  "group": "pip",
+                  "group": "Via pip",
                   "pages": [
                     "setup/self-hosted/pip/windows",
                     "setup/self-hosted/pip/linux",
                     "setup/self-hosted/pip/macos",
                     "setup/self-hosted/pip/source"
                   ]
-                }
+                },
+                "setup/digital-ocean",
+                "setup/gcp",
+                "setup/vultr",
+                "setup/civo"
               ]
             },
             {
               "group": "Configuration Options",
-              "pages": [                
+              "pages": [
                 "setup/custom-config",
                 "setup/environment-vars"
               ]
-            },
-            "setup/cloud",
-            "setup/digital-ocean",
-            "setup/gcp",
-            "setup/vultr",
-            "setup/civo"
+            }
           ]
         },
         {
-          "group": "Connect to MindsDB",
+          "group": "Using MindsDB with SQL API",
           "pages": [
-            "connect/dbeaver",
-            "connect/dbt",
-            "connect/deepnote",
-            "connect/kafka",
-            "connect/connect-mariadb-skysql",
-            "connect/metabase",
-            "connect/mindsdb_editor",
-            "connect/mongo-compass",
-            "connect/mongo-shell",
-            "connect/mysql-client",
-            "connect/sql-alchemy",
-            "connect/tableau"
-          ]
-        },
-        "mindsdb-handlers",
-        "sql/create/databases2",
-        "sql/create/file",
-        "sql/data-insights",
-        "sql/create/predictor2",
-        "sql/api/select2",
-        "sql/feature-importance",
-        "sql/feature-eng",
-        {
-          "group": "SQL API",
-          "pages": [
-            "sql/table-structure",
-            "sql/native-queries",
-            "sql/project",
             {
-              "group": "CREATE",
+              "group": "Connect to MindsDB",
               "pages": [
-                "sql/create/databases",
-                "sql/create/predictor",
-                "sql/create/table",
-                "sql/create/view",
-                "sql/create/ml-engine"
+                "connect/mindsdb_editor",
+                {
+                  "group": "Other SQL Clients",
+                  "pages": [
+                    "connect/dbeaver",
+                    "connect/connect-mariadb-skysql",
+                    "connect/mysql-client",
+                    "connect/sql-alchemy"
+                  ]
+                },
+                {
+                  "group": "BI Tools and Notebooks",
+                  "pages": [
+                    "connect/deepnote",
+                    "connect/metabase",
+                    "connect/tableau"
+                  ]
+                }
               ]
             },
-            "sql/api/update",
-            "sql/api/insert",
-            "sql/api/describe",
-            "sql/api/retrain",
-            "sql/api/manage-models-versions",
-            "sql/api/drop",
-            "sql/api/select",
-            "sql/api/select-files",
-            "sql/api/join",
-            "sql/api/use"
+            {
+              "group": "Do Machine Learning",
+              "pages": [
+                "using-sql-api/nlp",
+                "using-sql-api/timeseries",
+                "using-sql-api/classification",
+                "using-sql-api/regression"
+              ]
+            },
+            {
+              "group": "SQL Commands",
+              "pages": [
+                {
+                  "group": "CREATE",
+                  "pages": [
+                    "sql/create/databases",
+                    "sql/create/predictor",
+                    "sql/create/table",
+                    "sql/create/view",
+                    "sql/create/ml-engine"
+                  ]
+                },
+                "sql/api/update",
+                "sql/api/insert",
+                "sql/api/describe",
+                "sql/api/retrain",
+                "sql/api/manage-models-versions",
+                "sql/api/drop",
+                "sql/api/select",
+                "sql/api/select-files",
+                "sql/api/join",
+
+                "sql/api/use"
+              ]
+            }
           ]
         },
         {
-          "group": "REST API",
+          "group": "Using MindsDB with Mongo API",
+          "pages": [
+            {
+              "group": "Connect to MindsDB",
+              "pages": [
+                "connect/mongo-compass",
+                "connect/mongo-shell"
+              ]
+            },
+            {
+              "group": "Do Machine Learning",
+              "pages": [
+                "using-mongo-api/nlp",
+                "using-mongo-api/timeseries",
+                "using-mongo-api/classification",
+                "using-mongo-api/regression"
+              ]
+            },
+            {
+              "group": "Mongo Commands",
+              "pages": [
+                "mongo/collection-structure",
+                {
+                  "group": "Insert()",
+                  "pages": [
+                    "mongo/database",
+                    "mongo/insert"
+                  ]
+                },
+                "mongo/stats",
+                "mongo/find",
+                "mongo/delete"
+              ]
+            }
+          ]
+        },
+        {
+          "group": "Using MindsDB with DBT",
+          "pages": [
+            "connect/dbt",
+            {
+              "group": "Do Machine Learning",
+              "pages": [
+                "using-dbt/nlp",
+                "using-dbt/timeseries",
+                "using-dbt/classification",
+                "using-dbt/regression"
+              ]
+            }
+          ]
+        },
+        {
+          "group": "Using MindsDB with Kafka",
+          "pages": [
+            "connect/kafka",
+            {
+              "group": "Do Machine Learning",
+              "pages": [
+                "using-kafka/anomaly-detection",
+                "using-kafka/nlp",
+                "using-kafka/timeseries",
+                "using-kafka/classification",
+                "using-kafka/regression"
+              ]
+            }
+          ]
+        },
+        {
+          "group": "Using MindsDB with REST API",
           "pages": [
             "rest/sql",
             {
@@ -183,28 +267,50 @@
           ]
         },
         {
-          "group": "Mongo API",
+          "group": "More from MindsDB",
           "pages": [
-            "mongo/collection-structure",
-            {
-              "group": "Insert()",
-              "pages": [
-                "mongo/database",
-                "mongo/insert"
-              ]
-            },
-            "mongo/stats",
-            "mongo/find",
-            "mongo/delete"
+            "mindsdb-handlers",
+            "sql/data-insights",
+            "sql/feature-importance",
+            "sql/feature-eng",
+            "sql/create/file",
+
+            "sql/table-structure",
+            "sql/native-queries",
+            "sql/project"
           ]
         },
         {
-          "group": "Using Custom Models",
+          "group": "Data Integrations",
           "pages": [
-            "custom-model/mlflow",
-            "custom-model/ray-serve",
-            "custom-model/huggingface",
-            "custom-model/openai"
+            
+          ]
+        },
+        {
+          "group": "ML Engines",
+          "pages": [
+            {
+              "group": "AutoML",
+              "pages": [
+                "ml-engines/automl/lightwood",
+                "ml-engines/automl/ludwig",
+                "ml-engines/automl/xgboost"
+              ]
+            },
+            {
+              "group": "NLP",
+              "pages": [
+                "custom-model/huggingface",
+                "custom-model/openai"
+              ]
+            },
+            {
+              "group": "Bring Your Own Models",
+              "pages": [
+                "custom-model/ray-serve",
+                "custom-model/mlflow"
+              ]
+            }
           ]
         },
         {
@@ -228,18 +334,14 @@
                 "sql/tutorials/house-sales-forecasting",
                 "sql/tutorials/eeg-forecasting"
               ]
-            }
-          ]
-        },
-        {
-          "group": "Community Tutorials",
-          "pages": [
+            },
             "tutorials"
           ]
         },
         {
           "group": "Contributing Guide",
           "pages": [
+            "contribute",
             "contribute/install",
             "contribute/issues",
             "contribute/data-handlers",
@@ -247,13 +349,7 @@
             "contribute/docs",
             "docs-rules",
             "contribute/tests",
-            "contribute/tutorials"
-          ]
-        },
-        {
-          "group": "Community",
-          "pages": [
-            "contribute",
+            "contribute/tutorials",
             "community"
           ]
         }
@@ -263,7 +359,8 @@
       "group": "Natural Language Processing (NLP)",
       "pages": [
         "nlp/what-is-nlp",
-        "nlp/nlp-mindsdb-hf",
+        "nlp/nlp-mindsdb-hf", 
+
         "nlp/nlp-extended-examples"
       ]
     }

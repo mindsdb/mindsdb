@@ -129,7 +129,7 @@ On execution, we get:
 +-------------------+------------------+---------------------------------------------------------+
 ```
 
-### Operation Mode 3: Prompt Templating
+### Operation Mode 3: Prompt Completion
 
 Here is how to create a model that offers the most flexible mode of operation. It answers any query provided in the `prompt_template` parameter.
 
@@ -266,9 +266,9 @@ On execution, we get:
 Once the status is `complete`, we can query for predictions.
 
 ```sql
-SELECT model.sentiment, input.review
+SELECT output.sentiment, input.review
 FROM example_db.demo_data.amazon_reviews AS input
-JOIN mindsdb.sentiment_classifier AS model
+JOIN mindsdb.sentiment_classifier AS output
 LIMIT 3;
 ```
 

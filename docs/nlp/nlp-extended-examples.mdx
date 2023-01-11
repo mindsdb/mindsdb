@@ -693,7 +693,7 @@ Here are the tasks supported by MindsDB and Hugging Face:
 
 - Answering Questions without Context
 - Answering Questions with Context
-- Prompt Templating
+- Prompt Completion
 
 Let's go through the examples.
 
@@ -779,10 +779,10 @@ Let's go through the examples.
     </Accordion>
 </AccordionGroup>
 
-### Prompt Templating
+### Prompt Completion
 
 <AccordionGroup>
-    <Accordion title="Prompt Templating with Parameters Provided at Creation Time">
+    <Accordion title="Prompt Completion with Parameters Provided at Creation Time">
         Let's create a model.
 
         ```sql
@@ -815,7 +815,7 @@ Let's go through the examples.
         ```
     </Accordion>
 
-    <Accordion title="Prompt Templating with Parameters Provided at Prediction Time">
+    <Accordion title="Prompt Completion with Parameters Provided at Prediction Time">
         Let's create a model.
 
         ```sql
@@ -865,9 +865,9 @@ Let's go through the examples.
         Now we can query for predictions.
 
         ```sql
-        SELECT model.sentiment, input.review
+        SELECT output.sentiment, input.review
         FROM example_db.demo_data.amazon_reviews AS input
-        JOIN mindsdb.sentiment_classifier AS model
+        JOIN mindsdb.sentiment_classifier AS output
         LIMIT 3;
         ```
 

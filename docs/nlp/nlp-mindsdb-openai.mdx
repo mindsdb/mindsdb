@@ -8,7 +8,7 @@ MindsDB lets you create models that utilize features provided by OpenAI GPT-3. C
 
 - Answering Questions without Context
 - Answering Questions with Context
-- Prompt Templating
+- Prompt Completion
 
 <Tip>
 Currently, MindsDB's NLP engine is powered by [Hugging Face](https://huggingface.co/) and [OpenAI](https://openai.com/). But we plan to expand to other NLP options in the future, so stay tuned!
@@ -71,9 +71,9 @@ On execution, we get:
 Once the status is `complete`, we can query for predictions.
 
 ```sql
-SELECT model.sentiment, input.review
+SELECT output.sentiment, input.review
 FROM example_db.demo_data.amazon_reviews AS input
-JOIN mindsdb.sentiment_classifier AS model
+JOIN mindsdb.sentiment_classifier AS output
 LIMIT 3;
 ```
 

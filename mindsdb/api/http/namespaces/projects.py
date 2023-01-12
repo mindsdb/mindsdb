@@ -45,7 +45,7 @@ class PredictorPredict(Resource):
         # predictor version
         version = None
         parts = model_name.split('.')
-        if len(parts) > 1 and parts[-1].isdigits():
+        if len(parts) > 1 and parts[-1].isdigit():
             version = int(parts[-1])
             model_name = '.'.join(parts[:-1])
 

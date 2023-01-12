@@ -53,8 +53,7 @@ class ProjectDataNode(DataNode):
         project_tables = self.project.get_tables()
         predictor_table_meta = project_tables[model_name]
         handler = self.integration_controller.get_handler(predictor_table_meta['engine_name'])
-        predictions, columns_dtypes = handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
-        return predictions, columns_dtypes
+        return handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
 
     def query(self, query=None, native_query=None, session=None):
         if query is None and native_query is not None:

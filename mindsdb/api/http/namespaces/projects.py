@@ -1,17 +1,13 @@
-import json
-from dateutil.parser import parse as parse_datetime
-
 from flask import request
 from flask_restx import Resource, abort
 
-from mindsdb.api.http.utils import http_error
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 
 
 @ns_conf.route('/')
-class PredictorList(Resource):
+class ProjectsList(Resource):
     @ns_conf.doc('list_projects')
     def get(self):
         ''' List all projects '''
@@ -23,8 +19,9 @@ class PredictorList(Resource):
         ]
         return projects
 
+
 @ns_conf.route('/<project_name>/models')
-class PredictorList(Resource):
+class ModelsList(Resource):
     @ns_conf.doc('list_models')
     def get(self, project_name):
         ''' List all models '''
@@ -37,7 +34,7 @@ class PredictorList(Resource):
 @ns_conf.route('/<project_name>/models/<model_name>/predict')
 @ns_conf.param('project_name', 'Name of the project')
 @ns_conf.param('predictor_name', 'Name of the model')
-class PredictorPredict(Resource):
+class ModelPredict(Resource):
     @ns_conf.doc('post_model_predict')
     def post(self, project_name, model_name):
         '''Call prediction'''
@@ -66,4 +63,3 @@ class PredictorPredict(Resource):
         )
 
         return predictions.to_dict('records')
-

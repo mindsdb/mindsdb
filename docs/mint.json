@@ -101,6 +101,7 @@
             "connect/tableau"
           ]
         },
+        "model-types",
         "mindsdb-handlers",
         "sql/create/databases2",
         "sql/create/file",
@@ -134,6 +135,7 @@
             "sql/api/select",
             "sql/api/select-files",
             "sql/api/join",
+            "sql/api/join-on",
             "sql/api/use"
           ]
         },

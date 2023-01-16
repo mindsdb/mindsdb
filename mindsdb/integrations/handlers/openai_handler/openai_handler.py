@@ -1,11 +1,13 @@
 import os
 import re
+import math
 import pandas as pd
 from typing import Optional
 
 import openai
 
 from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.utilities.config import Config
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -31,15 +33,35 @@ class OpenAIHandler(BaseMLEngine):
     def create(self, target, args=None, **kwargs):
         args = args['using']
 
-        # if not args.get('api_key', False) or args['api_key'].lower() == 'env':
-        #     args['api_key'] = os.getenv('OPENAI_API_KEY')
-
-        # TODO: find a way to pass a prompt template from here (to avoid repeated definition at prediction time)
-        #  and inject in predict()... maybe just regex-match the pattern and replace?
-        # if not args.get('prompt_template', False): args['prompt_template'] = 'Q: {input_col}\nA: {output_col}'
-
         args['target'] = target
         self.model_storage.json_set('args', args)
+
+    def _get_api_key(self, args):
+        # API_KEY preference order:
+        #   1. provided at model creation
+        #   2. provided at engine creation
+        #   3. OPENAI_API_KEY env variable
+        #   4. openai.api_key setting in config.json
+
+        # 1
+        if 'api_key' in args:
+            return args['api_key']
+        # 2
+        connection_args = self.engine_storage.get_connection_args()
+        if 'api_key' in connection_args:
+            return connection_args['api_key']
+        # 3
+        api_key = os.getenv('OPENAI_API_KEY')
+        if api_key is not None:
+            return api_key
+        # 4
+        config = Config()
+        openai_cfg = config.get('openai', {})
+        if 'api_key' in openai_cfg:
+            return openai_cfg['api_key']
+
+        raise Exception('Missing API key. Either re-create this ML_ENGINE with your key in the `api_key` parameter,\
+             or re-create this model and pass the API key it with `USING` syntax.')  # noqa
 
     def predict(self, df, args=None):
         """
@@ -62,11 +84,6 @@ class OpenAIHandler(BaseMLEngine):
         model_name = args.get('model_name', self.default_model)
         temperature = min(1.0, max(0.0, args.get('temperature', 0.0)))
         max_tokens = pred_args.get('max_tokens', args.get('max_tokens', 20))
-
-        connection_args = self.engine_storage.get_connection_args()
-        if 'api_key' not in connection_args:
-            raise Exception('api_key is not found. You need to create ML_ENGINE with api_key parameter')
-        api_key = connection_args['api_key']
 
         if args.get('prompt_template', False):
             if pred_args.get('prompt_template', False):
@@ -107,6 +124,38 @@ class OpenAIHandler(BaseMLEngine):
         else:
             prompts = list(df[args['question_column']].apply(lambda x: str(x)))
 
+        api_key = self._get_api_key(args)
+        try:
+            completion = self._completion(model_name, prompts, max_tokens, temperature, api_key, args)
+        except Exception as e:
+            try:
+                assert 'you can currently request up to at most a total of' in e
+                pattern = 'a total of'
+                max_acct_tokens = int(e[e.find(pattern) + len(pattern):].split(').')[0])
+            except Exception:
+                max_acct_tokens = 20  # guard against changes in the API message
+
+            completion = None
+            for i in range(math.ceil(len(prompts)/max_acct_tokens)):
+                partial = self._completion(model_name,
+                                           prompts[i*max_acct_tokens:(i+1)*max_acct_tokens],
+                                           max_tokens,
+                                           temperature,
+                                           api_key,
+                                           args)
+                if not completion:
+                    completion = partial
+                else:
+                    completion['choices'].extend(partial['choices'])
+                    for field in ('prompt_tokens', 'completion_tokens', 'total_tokens'):
+                        completion['usage'][field] += partial['usage'][field]
+
+        output = _tidy(completion)
+        pred_df = pd.DataFrame(output, columns=[args['target']])
+        return pred_df
+
+    @staticmethod
+    def _completion(model_name, prompts, max_tokens, temperature, api_key, args):
         completion = openai.Completion.create(
             model=model_name,
             prompt=prompts,
@@ -115,15 +164,11 @@ class OpenAIHandler(BaseMLEngine):
             api_key=api_key,
             organization=args.get('api_organization')
         )
-
-        output = _tidy(completion)
-        pred_df = pd.DataFrame(output, columns=[args['target']])
-        return pred_df
+        return completion
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        connection_args = self.engine_storage.get_connection_args()
-        api_key = connection_args['api_key']
         args = self.model_storage.json_get('args')
+        api_key = self._get_api_key(args)
 
         model_name = args.get('model_name', self.default_model)
         meta = openai.Model.retrieve(model_name, api_key=api_key)

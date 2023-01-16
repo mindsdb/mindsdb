@@ -17,7 +17,7 @@ This motivates the concept of *handlers*, which is an abstraction for the two ty
 Database handlers act as a bridge to any database. You use database handlers to create databases using [the CREATE DATABASE command](/sql/create/databases/). So you can reach data from any database that has its handler implemented within MindsDB.
 
 <Tip>
-Go ahead and implement a handler for the database of your choice! [Here](/contribute/integrations/) you'll find instructions on how to implement a database handler.
+Go ahead and implement a handler for the database of your choice! [Here](/contribute/data-handlers/) you'll find instructions on how to implement a database handler.
 </Tip>
 
 ### Machine Learning (ML) Handlers
@@ -65,7 +65,7 @@ Here are a few points to keep in mind while implementing a handler.
 
 ### Handlers Inherit from Base Classes
 
-Inherit from the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L102) class when adding a new database handler. For more info, visit our [doc page here](/contribute/integrations/).
+Inherit from the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L102) class when adding a new database handler. For more info, visit our [doc page here](/contribute/data-handlers/).
 
 Inherit from the [`BaseMLEngine`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L122) class when adding a new ML handler. For more info, visit our [doc page here](/contribute/ml-handlers/).
 

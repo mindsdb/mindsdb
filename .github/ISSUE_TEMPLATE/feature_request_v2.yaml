@@ -1,6 +1,6 @@
 name: 🚀 Request a feature
-description: Create a feature request to help us improve MindsDB
-labels: [roadmap]
+description: Create a feature request for us to add to our roadmap
+labels: [enhancement]
 body:
 - type: markdown
   attributes:

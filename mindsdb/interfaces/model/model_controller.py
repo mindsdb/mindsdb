@@ -126,25 +126,12 @@ class ModelController():
         if project_record is None:
             raise Exception(f"Project '{project_name}' does not exists")
 
-        model_record = db.Predictor.query.filter(
-            func.lower(db.Predictor.name) == func.lower(model_name),
-            db.Predictor.project_id == project_record.id,
-            db.Predictor.company_id == ctx.company_id
-        ).first()
-        if model_record is None:
-            raise Exception(f"Model '{model_name}' does not exists")
-
-        integration_record = db.Integration.query.get(model_record.integration_id)
-        if integration_record is None:
-            raise Exception(f"Can't determine integration of '{model_name}'")
-
         database_controller = DatabaseController()
 
         project = database_controller.get_project(project_name)
 
         predictors_records = get_model_records(
             name=model_name,
-            ml_handler_name=integration_record.name,
             project_id=project.id,
             active=None,
         )

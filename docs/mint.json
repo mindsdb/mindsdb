@@ -147,7 +147,7 @@
                 "sql/api/select",
                 "sql/api/select-files",
                 "sql/api/join",
-
+                "sql/api/join-on",
                 "sql/api/use"
               ]
             }
@@ -206,6 +206,7 @@
           ]
         },
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         "model-types",
         "mindsdb-handlers",
@@ -217,6 +218,8 @@
         "sql/feature-importance",
         "sql/feature-eng",
 >>>>>>> staging
+=======
+>>>>>>> 49ff0c5b4240d787ea5cf60edfb7eaa9e22adb58
         {
           "group": "Using MindsDB with Kafka",
           "pages": [
@@ -230,6 +233,7 @@
                 "using-kafka/classification",
                 "using-kafka/regression"
               ]
+<<<<<<< HEAD
 <<<<<<< HEAD
             }
 =======
@@ -246,6 +250,9 @@
             "sql/api/join-on",
             "sql/api/use"
 >>>>>>> staging
+=======
+            }
+>>>>>>> 49ff0c5b4240d787ea5cf60edfb7eaa9e22adb58
           ]
         },
         {
@@ -301,7 +308,7 @@
             "sql/feature-importance",
             "sql/feature-eng",
             "sql/create/file",
-
+            "model-types",
             "sql/table-structure",
             "sql/native-queries",
             "sql/project"
@@ -387,12 +394,17 @@
       "pages": [
         "nlp/what-is-nlp",
 <<<<<<< HEAD
+<<<<<<< HEAD
         "nlp/nlp-mindsdb-hf", 
 
 =======
         "nlp/nlp-mindsdb-hf",
         "nlp/nlp-mindsdb-openai",
 >>>>>>> staging
+=======
+        "nlp/nlp-mindsdb-hf",
+        "nlp/nlp-mindsdb-openai",
+>>>>>>> 49ff0c5b4240d787ea5cf60edfb7eaa9e22adb58
         "nlp/nlp-extended-examples"
       ]
     }

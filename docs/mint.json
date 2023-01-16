@@ -205,6 +205,18 @@
             }
           ]
         },
+<<<<<<< HEAD
+=======
+        "model-types",
+        "mindsdb-handlers",
+        "sql/create/databases2",
+        "sql/create/file",
+        "sql/data-insights",
+        "sql/create/predictor2",
+        "sql/api/select2",
+        "sql/feature-importance",
+        "sql/feature-eng",
+>>>>>>> staging
         {
           "group": "Using MindsDB with Kafka",
           "pages": [
@@ -218,7 +230,22 @@
                 "using-kafka/classification",
                 "using-kafka/regression"
               ]
+<<<<<<< HEAD
             }
+=======
+            },
+            "sql/api/update",
+            "sql/api/insert",
+            "sql/api/describe",
+            "sql/api/retrain",
+            "sql/api/manage-models-versions",
+            "sql/api/drop",
+            "sql/api/select",
+            "sql/api/select-files",
+            "sql/api/join",
+            "sql/api/join-on",
+            "sql/api/use"
+>>>>>>> staging
           ]
         },
         {
@@ -359,8 +386,13 @@
       "group": "Natural Language Processing (NLP)",
       "pages": [
         "nlp/what-is-nlp",
+<<<<<<< HEAD
         "nlp/nlp-mindsdb-hf", 
 
+=======
+        "nlp/nlp-mindsdb-hf",
+        "nlp/nlp-mindsdb-openai",
+>>>>>>> staging
         "nlp/nlp-extended-examples"
       ]
     }

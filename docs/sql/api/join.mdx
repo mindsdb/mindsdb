@@ -13,8 +13,8 @@ Here is the syntax:
 
 ```sql
 SELECT t.column_name, p.column_name, ...
-FROM integration_name.table_name AS t
-JOIN mindsdb.predictor_name AS p;
+FROM integration_name.table_name [AS] t
+JOIN project_name.model_name [AS] p;
 ```
 
 On execution, we get:
@@ -32,7 +32,7 @@ Where:
 | Name                                | Description                                                         |
 | ----------------------------------- | ------------------------------------------------------------------- |
 | `integration_name.table_name`       | Name of the data source table used as input for making predictions. |
-| `mindsdb.predictor_name`            | Name of the model table used to make predictions.                   |
+| `project_name.model_name`           | Name of the model table used to make predictions.                   |
 | `p.value`                           | Predicted value stored in the output table.                         |
 
 ## Example 1
@@ -42,10 +42,11 @@ Let's join the `home_rentals` table with the `home_rentals_model` model using th
 ```sql
 SELECT t.rental_price AS real_price, 
        m.rental_price AS predicted_price,
-       t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market 
+       t.number_of_rooms,  t.number_of_bathrooms,
+       t.sqft, t.location, t.days_on_market 
 FROM example_db.demo_data.home_rentals AS t 
 JOIN mindsdb.home_rentals_model AS m 
-LIMIT 100;
+LIMIT 20;
 ```
 
 On execution, we get:
@@ -79,27 +80,7 @@ On execution, we get:
 
 ## Example 2
 
-Let's create and train a time series predictor using this statement:
-
-```sql
-CREATE MODEL mindsdb.house_sales_model
-FROM example_db
-  (SELECT * FROM demo_data.house_sales)
-PREDICT MA
-ORDER BY saledate
-GROUP BY bedrooms, type
--- the target column to be predicted stores one row per quarter
-WINDOW 8      -- using data from the last two years to make forecasts (last 8 rows)
-HORIZON 4;    -- making forecasts for the next year (next 4 rows)
-```
-
-On execution, we get:
-
-```sql
-Query OK, 0 rows affected (x.xxx sec)
-```
-
-Now, you can query it to get the predictions like this:
+Let's query a time series model using this statement:
 
 ```sql
 SELECT m.saledate as date,

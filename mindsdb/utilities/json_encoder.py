@@ -20,7 +20,7 @@ class CustomJSONEncoder(JSONEncoder):
         if isinstance(obj, np.float16) or isinstance(obj, np.float32) or isinstance(obj, np.float64) or isinstance(obj, Decimal):
             return float(obj)
 
-        return JSONEncoder.default(self, obj)
+        return str(obj)
 
 
 def json_serialiser(byte_obj):

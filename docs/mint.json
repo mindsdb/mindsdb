@@ -70,7 +70,13 @@
                 }
               ]
             },
-            "setup/custom-config",
+            {
+              "group": "Configuration Options",
+              "pages": [                
+                "setup/custom-config",
+                "setup/environment-vars"
+              ]
+            },
             "setup/cloud",
             "setup/digital-ocean",
             "setup/gcp",
@@ -96,6 +102,7 @@
           ]
         },
         "model-types",
+        "mindsdb-handlers",
         "sql/create/databases2",
         "sql/create/file",
         "sql/data-insights",
@@ -128,6 +135,7 @@
             "sql/api/select",
             "sql/api/select-files",
             "sql/api/join",
+            "sql/api/join-on",
             "sql/api/use"
           ]
         },
@@ -236,7 +244,7 @@
           "pages": [
             "contribute/install",
             "contribute/issues",
-            "contribute/integrations",
+            "contribute/data-handlers",
             "contribute/ml-handlers",
             "contribute/docs",
             "docs-rules",

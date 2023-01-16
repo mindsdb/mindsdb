@@ -139,7 +139,7 @@ class Project(Base):
     name = Column(String, nullable=False)
     company_id = Column(Integer)
     __table_args__ = (
-        UniqueConstraint('name', 'company_id', name='unique_integration_name_company_id'),
+        UniqueConstraint('name', 'company_id', name='unique_project_name_company_id'),
     )
 
 

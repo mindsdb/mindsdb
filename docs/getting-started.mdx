@@ -28,13 +28,16 @@ To try out MindsDB right away without bringing in your own data or models, follo
 <Tip>
   If you do not have a preferred SQL client yet, we recommend using the [MindsDB
   SQL Editor](https://cloud.mindsdb.com/editor) or [DBeaver Community
-  Edition](https://dbeaver.io/download/). Follow [this guide](setup/cloud/) to
+  Edition](https://dbeaver.io/download/). Follow [this guide](/setup/cloud/) to
   set up your MindsDB SQL Editor. And [here](/connect/dbeaver/), you'll find how
   to connect to MindsDB from DBeaver.
 </Tip>
 
 <Tabs>
     <Tab title="MindsDB Cloud">
+        By default, on MindsDB Cloud the SQL Editor is already connected. Skip to step 3
+    </Tab>
+    <Tab title="MindsDB Cloud to Dbeaver">
         a. Create a new MySQL connection.
 
             ![DBeaver Create Connection](/assets/dbeaver-create-connection.png)
@@ -42,14 +45,14 @@ To try out MindsDB right away without bringing in your own data or models, follo
         b. Configure it using the parameters below, as well as your username and password.
 
             ```
-            Host: `mysql.mindsdb.com`
+            Host: `cloud.mindsdb.com`
             Port: `3306`
             Database: `mindsdb`
             ```
 
             ![DBeaver Configure Connection](/assets/dbeaver-configure-cloud-connection.png)
     </Tab>
-    <Tab title="Docker">
+    <Tab title="Local to Dbeaver">
         a. Create a new MySQL connection.
 
             ![DBeaver Create Connection](/assets/dbeaver-create-connection.png)
@@ -69,7 +72,7 @@ To try out MindsDB right away without bringing in your own data or models, follo
 
 </Tabs>
 
-### 3. Connect your Data to MindsDB Using [`CREATE DATABASE`](https://docs.mindsdb.com/sql/create/databases/)
+### 3. Connect your Data to MindsDB Using [`CREATE DATABASE`](/sql/create/databases/)
 
 ```sql
 CREATE DATABASE example_data
@@ -105,21 +108,14 @@ If you already have a model in MLFlow, you can connect to your model.
         ```
     </Tab>
     <Tab title="My model is in MLflow">
-        ```html
-        <div id="create-predictor">
-        <style>
-            #create-predictor code { background-color: #353535; color: #f5f5f5 }
-        </style>
-
-        mysql> CREATE MODEL mindsdb.home_rentals_predictor
-            -> FROM example_data (select * from demo_data.home_rentals)
-            -> PREDICT rental_price
-            -> USING url.predict='http://host.docker.internal:1234/invocations',
-            -> format='mlflow',
-            -> dtype_dict={"alcohol": "integer", "chlorides": "integer", "citric acid": "integer", "density": "integer", "fixed acidity": "integer", "free sulfur dioxide": "integer", "pH": "integer", "residual sugar": "integer", "sulphates": "integer", "total sulfur dioxide": "integer", "volatile acidity": "integer"};
-        Query OK, 0 rows affected (0.21 sec)
-
-        </div>
+        ```sql
+        CREATE MODEL mindsdb.home_rentals_predictor
+            FROM example_data (select * from demo_data.home_rentals)
+            PREDICT rental_price
+            USING url.predict='http://host.docker.internal:1234/invocations',
+            format='mlflow',
+            dtype_dict={"number_of_rooms": "categorical", "number_of_bathrooms": "categorical", "sqft": "integer", "days_on_market": "integer",
+                        "initial_price": "integer", "location": "categorical", "neighborhood":"categorical" };
         ```
     </Tab>
 

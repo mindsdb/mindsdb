@@ -6,58 +6,56 @@ sidebarTitle: Building an ML Engine
 In this section, you'll find how to create new machine learning (ML) handlers within MindsDB.
 
 <Note>
-    "Prerequisite"
+    **Prerequisite**
+
     You should have the latest staging version of the MindsDB repository installed locally. Follow [this guide](/contribute/install/) to learn how to install MindsDB for development.
 </Note>
 
 ## What are Machine Learning Handlers?
 
-ML handlers act as a bridge to any ML framework. You use ML handlers to create ML engines using [the `CREATE ML_ENGINE` command](/sql/create/ml_engine/). So you can expose ML models from any supported ML engine as an AI table.
-
-### ML Handlers in the MindsDB Repository
-
-The source code for ML handlers is located in the main MindsDB repository under the [/integrations](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations) directory.
-
-```
-integrations                      # Contains ML handlers source codes
-├─ handlers/                           # Each ML engine has its own handler directory
-│  ├─ huggingface_handler/                 # HuggingFace code
-│  ├─ lightwood_handler/                   # Lightwood code
-│  ├─  .../                                # Other handlers
-├─ libs/                               # Handler libraries directory
-│  ├─ base.py                              # Each ML handler class inherits from the BaseMLEngine base class
-└─ utilities                           # Handler utility directory
-│  ├─ install.py                           # Script that installs all handler dependencies
-```
+ML handlers act as a bridge to any ML framework. You use ML handlers to create ML engines using [the CREATE ML_ENGINE command](/sql/create/ml-engine/). So you can expose ML models from any supported ML engine as an AI table.
 
 <Note>
-    "Database Handlers"
-    To learn more about handlers and how to implement a database handler, visit our [doc page here](/contribute/integrations/).
+    **Database Handlers**
+
+    To learn more about handlers and how to implement a database handler, visit our [doc page here](/contribute/data-handlers/).
 </Note>
 
 ## Creating a Machine Learning Handler
 
-You can create your own ML handler within MindsDB by inheriting from [the `BaseMLEngine` class](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L123).
+You can create your own ML handler within MindsDB by inheriting from the [BaseMLEngine](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L123) class.
 
-By providing implementation for some or all of the methods contained in the `BaseMLEngine` class, you can connect with the machine learning library or framework of your choice.
+By providing the implementation for some or all of the methods contained in the `BaseMLEngine` class, you can connect with the machine learning library or framework of your choice.
 
 ### Core Methods
 
-Apart from the `__init__()` method, there are five methods, of which two must be implemented. Let's review the purpose of each method.
+Apart from the `__init__()` method, there are five methods, of which two must be implemented. We recommend checking actual examples in the codebase to get an idea of what goes into each of these methods, as they can change a bit depending on the nature of the system being integrated.
+
+Let's review the purpose of each method.
 
 | Method            | Purpose                                                                              |
 |-------------------|--------------------------------------------------------------------------------------|
 | `create()`        | It creates a model inside the engine registry.                                       |
 | `predict()`       | It calls a model and returns prediction data.                                        |
 | `update()`        | Optional. It updates an existing model without resetting its internal structure.     |
-| `describe()`      | Optional. It provides global models insights.                                        |
+| `describe()`      | Optional. It provides global model insights.                                         |
 | `create_engine()` | Optional. It connects with external sources, such as REST API.                       |
 
-### Implementing Mandatory Methods
+Authors can opt for adding private methods, new files and folders, or any combination of these to structure all the necessary work that will enable the core methods to work as intended.
 
-Here are the methods that must be implemented while inheriting from the `BaseMLEngine` class:
+<Tip>
+    **Other Common Methods**
+    
+    Under the `mindsdb.integrations.libs.utils` library, contributors can find various methods that may be useful while implementing new handlers.
 
-* [The `create()` method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L151) saves a model inside the engine registry for later usage.
+    Also, there is a wrapper class for the `BaseMLEngine` instances called [BaseMLEngineExec](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/ml_exec_base.py#L157). It is automatically deployed to take care of modifying the data responses into something that can be used alongside data handlers.
+</Tip>
+
+### Implementation
+
+Here are the methods that must be implemented while inheriting from the [BaseMLEngine](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L123) class:
+
+* [The create() method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L151) saves a model inside the engine registry for later usage.
 
 ```py
 def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
@@ -69,7 +67,7 @@ def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[
         """
 ```
 
-* [The `predict()` method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L162) calls a model with an input dataframe and optionally, arguments to modify model's behaviour. This method returns a dataframe with the predicted values.
+* [The predict() method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L162) calls a model with an input dataframe and optionally, arguments to modify model's behaviour. This method returns a dataframe with the predicted values.
 
 ```py
 def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
@@ -80,11 +78,9 @@ def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame
         """
 ```
 
-### Implementing Optional Methods
+And here are the optional methods that you can implement alongside the mandatory ones if your ML framework allows it:
 
-Here are the optional methods that you can implement alongside the mandatory ones if your ML framework allows it:
-
-* [The `update()` method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L171) is used to update, fine-tune, or adjust an existing model without resetting its internal state.
+* [The update() method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L171) is used to update, fine-tune, or adjust an existing model without resetting its internal state.
 
 ```py
 def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
@@ -95,7 +91,7 @@ def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None)
         """
 ```
 
-* [The `describe()` method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L181) provides global models insights, such as framework-level parameters used in training.
+* [The describe() method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L181) provides global model insights, such as framework-level parameters used in training.
 
 ```py
 def describe(self, key: Optional[str] = None) -> pd.DataFrame:
@@ -105,7 +101,7 @@ def describe(self, key: Optional[str] = None) -> pd.DataFrame:
         """
 ```
 
-* [The `create_engine()` method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L189) is used to connect with the external sources, such as REST API.
+* [The create_engine() method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L189) is used to connect with the external sources, such as REST API.
 
 ```py
 def create_engine(self, connection_args: dict):

@@ -191,41 +191,37 @@ Let's go through a Sentiment Classification example, but this time we'll use a M
     Please note that if you use a local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the Hugging Face models.
 </Note>
 
-We have a sample Mongo database that you can connect to your MindsDB Cloud account by running this command:
+We have a sample Mongo database that you can connect to your MindsDB Cloud account by running this command in Mongo Shell:
 
-```sql
-CREATE DATABASE mongo_test_db
-WITH ENGINE = 'mongodb',
-PARAMETERS = {'host': 'mongodb+srv://admin:201287aA@cluster0.myfdu.mongodb.net/admin?authSource=admin&replicaSet=atlas-5koz1i-shard-0&readPreference=primary&appname=MongoDB%20Compass&ssl=true',
-              'database': 'test_data'};
+```bash
+use mindsdb
+```
+
+Followed by:
+
+```bash
+db.databases.insertOne({
+    'name': 'mongo_test_db', 
+    'engine': 'mongodb',
+    'connection_args': {
+        "host": "mongodb+srv://admin:201287aA@cluster0.myfdu.mongodb.net/admin?authSource=admin&replicaSet=atlas-5koz1i-shard-0&readPreference=primary&appname=MongoDB%20Compass&ssl=true",
+        "database": "test_data"
+        }   
+})
 ```
 
 We use this sample database throughout the example.
 
 The next step is to create a connection between Mongo and MindsDB. Follow the instructions to connect MindsDB via [Mongo Compass](/connect/mongo-compass) or [Mongo Shell](/connect/mongo-shell).
 
-Now, we are ready to create a model. The following commands should be executed from Mongo database.
-
-First, we switch to the `mindsdb` project:
-
-```bash
-use mindsdb
-```
-
-On execution, we get:
-
-```bash
-'switched to db mindsdb'
-```
-
-Let's create a Hugging Face model.
+Now, we are ready to create a Hugging Face model.
 
 ```bash
 db.models.insertOne({
     name: 'sentiment_classifier',
     predict: 'sentiment',
     training_options: {
-            engine:'huggingface',
+            engine: 'huggingface',
             task: 'text-classification',
             model_name: 'cardiffnlp/twitter-roberta-base-sentiment',
             input_column: 'comment',

@@ -146,8 +146,13 @@
                 "sql/api/drop",
                 "sql/api/select",
                 "sql/api/select-files",
-                "sql/api/join",
-                "sql/api/join-on",
+                {
+                  "group": "JOIN",
+                  "pages": [
+                    "sql/api/join",
+                    "sql/api/join-on"
+                  ]
+                },
                 "sql/api/use"
               ]
             }

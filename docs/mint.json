@@ -147,7 +147,7 @@
                 "sql/api/select",
                 "sql/api/select-files",
                 "sql/api/join",
-
+                "sql/api/join-on",
                 "sql/api/use"
               ]
             }
@@ -274,7 +274,7 @@
             "sql/feature-importance",
             "sql/feature-eng",
             "sql/create/file",
-
+            "model-types",
             "sql/table-structure",
             "sql/native-queries",
             "sql/project"
@@ -359,8 +359,8 @@
       "group": "Natural Language Processing (NLP)",
       "pages": [
         "nlp/what-is-nlp",
-        "nlp/nlp-mindsdb-hf", 
-
+        "nlp/nlp-mindsdb-hf",
+        "nlp/nlp-mindsdb-openai",
         "nlp/nlp-extended-examples"
       ]
     }

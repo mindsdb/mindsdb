@@ -1,4 +1,3 @@
-lightwood >= 22.12.2.0, < 22.12.3.0
 markupsafe == 2.0.1
 flask-restx >= 1.0.1, < 2.0.0
 flask >= 1.0, < 2.0
@@ -31,4 +30,3 @@ dill >= 0.3.4
 pyOpenSSL >= 22.0.0
 pydateinfer==0.3.0
 pyarrow >= 9.0.0, < 10.0.0
-dataprep_ml

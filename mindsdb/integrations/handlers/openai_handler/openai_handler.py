@@ -1,7 +1,9 @@
 import os
 import re
 import math
+import concurrent.futures
 import pandas as pd
+from time import time
 from typing import Optional
 
 import openai
@@ -16,6 +18,9 @@ class OpenAIHandler(BaseMLEngine):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.default_model = 'text-davinci-002'
+        self.rate_limit = 60  # requests per minute
+        self.row_limit = 20
+        self.default_max_tokens = 20
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -83,7 +88,7 @@ class OpenAIHandler(BaseMLEngine):
 
         model_name = args.get('model_name', self.default_model)
         temperature = min(1.0, max(0.0, args.get('temperature', 0.0)))
-        max_tokens = pred_args.get('max_tokens', args.get('max_tokens', 20))
+        max_tokens = pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens))
 
         if args.get('prompt_template', False):
             if pred_args.get('prompt_template', False):
@@ -128,12 +133,13 @@ class OpenAIHandler(BaseMLEngine):
         try:
             completion = self._completion(model_name, prompts, max_tokens, temperature, api_key, args)
         except Exception as e:
+            print(f'Error first try: \n{e}')
             try:
                 assert 'you can currently request up to at most a total of' in e
                 pattern = 'a total of'
                 max_acct_tokens = int(e[e.find(pattern) + len(pattern):].split(').')[0])
             except Exception:
-                max_acct_tokens = 20  # guard against changes in the API message
+                max_acct_tokens = self.row_limit  # guard against changes in the API message
 
             completion = None
             for i in range(math.ceil(len(prompts)/max_acct_tokens)):
@@ -155,15 +161,34 @@ class OpenAIHandler(BaseMLEngine):
         return pred_df
 
     @staticmethod
-    def _completion(model_name, prompts, max_tokens, temperature, api_key, args):
-        completion = openai.Completion.create(
-            model=model_name,
-            prompt=prompts,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            api_key=api_key,
-            organization=args.get('api_organization')
-        )
+    def _completion(model_name, prompts, max_tokens, temperature, api_key, args, parallel=True):
+        def _submit_completion(model_name, prompts, max_tokens, temperature, api_key, args):
+            completion = openai.Completion.create(
+                model=model_name,
+                prompt=prompts,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                api_key=api_key,
+                organization=args.get('api_organization')
+            )
+            return completion
+
+        start = time()
+        if not parallel:
+            completion = _submit_completion(model_name, prompts, max_tokens, temperature, api_key, args)
+        else:
+            results = []
+            step_size = len(prompts) / self.rate_limit
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                for i in range(0, len(prompts), batch_size):
+                    print(f'{i}:{i+batch_size}/{len(prompts)}')
+                    future = executor.submit(_submit_completion, model_name, prompts[i:i+batch_size], max_tokens, temperature, api_key, args)
+                    results.append({"choices": future})
+
+            completion = pd.DataFrame([r.result() for r in results])
+        end = time()
+        print(f"OpenAI pred call: {end - start}")
+
         return completion
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:

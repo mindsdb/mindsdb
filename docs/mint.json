@@ -91,7 +91,7 @@
           ]
         },
         {
-          "group": "Using MindsDB with SQL API",
+          "group": "Using MindsDB via SQL API",
           "pages": [
             {
               "group": "Connect to MindsDB",
@@ -159,7 +159,7 @@
           ]
         },
         {
-          "group": "Using MindsDB with Mongo API",
+          "group": "Using MindsDB via Mongo API",
           "pages": [
             {
               "group": "Connect to MindsDB",
@@ -227,7 +227,7 @@
           ]
         },
         {
-          "group": "Using MindsDB with REST API",
+          "group": "Using MindsDB via REST API",
           "pages": [
             "rest/sql",
             {
@@ -288,7 +288,7 @@
         {
           "group": "Data Integrations",
           "pages": [
-            
+            "data-integrations/all-data-integrations"
           ]
         },
         {

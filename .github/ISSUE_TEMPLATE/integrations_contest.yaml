@@ -1,7 +1,7 @@
-name: Integrations Contest
-description: Propose a new integration idea
-title: "[New Integration]: "
-labels: [integration, enhancement]
+name: 🧑‍🔧 Propose a new integration
+description: Share an idea for a new datasource or machine learning integration
+title: "[Integration]: "
+labels: [roadmap, integration]
 assignees: 
 - 
 body:

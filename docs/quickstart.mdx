@@ -13,7 +13,7 @@ Create your [free MindsDB Cloud account](https://cloud.mindsdb.com/register) to
 start practicing right away using the MindsDB Cloud Editor.
 
 If you prefer a local MindsDB installation, follow the **Deployment** guides of
-MindsDB documentation. You can install MindsDB in
+MindsDB documentation. You can install MindsDB using
 [Docker](setup/self-hosted/docker/) or follow the standard installation using
 [pip](setup/self-hosted/pip/source/).
 
@@ -43,8 +43,8 @@ as DBeaver or MySQL CLI, and connect to MindsDB.
     <Tip>
       If you do not have a preferred SQL client yet, we recommend using the [MindsDB
       SQL Editor](https://cloud.mindsdb.com/editor) or [DBeaver Community
-      Edition](https://dbeaver.io/download/). Follow [this guide](setup/cloud/) to
-      set up your MindsDB SQL Editor. And [here](connect/dbeaver/), you'll find how
+      Edition](https://dbeaver.io/download/). Follow [this guide](/setup/cloud/) to
+      set up your MindsDB SQL Editor. And [here](/connect/dbeaver/), you'll find how
       to connect to MindsDB from DBeaver.
     </Tip>
   </Tab>
@@ -122,15 +122,15 @@ On execution, we get:
 ```
 
 To learn more about MindsDB tables structure, check out
-[this guide](sql/table-structure/).
+[this guide](/sql/table-structure/).
 
 ## 5. Create a Model Using [`CREATE MODEL`](/sql/create/predictor/)
 
-Now you are ready to create your first predictor. Use the
+Now you are ready to create your first model. Use the
 [`CREATE MODEL`](/sql/create/predictor/) statement, as below.
 
 ```sql
-CREATE MODEL mindsdb.home_rentals_predictor
+CREATE MODEL mindsdb.home_rentals_model
 FROM example_data
   (SELECT * FROM demo_data.home_rentals)
 PREDICT rental_price;
@@ -144,13 +144,13 @@ Query OK, 0 rows affected (9.79 sec)
 
 ## 6. Check the Status of a Model
 
-It may take a couple of minutes until the predictor is trained. You can monitor
-the status of your predictor by executing the following command:
+It may take a couple of minutes until the model is trained. You can monitor
+the status of your model by executing the following command:
 
 ```sql
 SELECT status
 FROM mindsdb.models
-WHERE name = 'home_rentals_predictor';
+WHERE name = 'home_rentals_model';
 ```
 
 On execution, we get:
@@ -197,12 +197,12 @@ Here is an example:
 ```sql
 SHOW MODELS
 FROM mindsdb
-LIKE 'home_rentals_predictor'
+LIKE 'home_rentals_model'
 WHERE status = 'complete';
 ```
 
 <Warning>
-  The status of the predictor must be `complete` before you can start making predictions.
+  The status of the model must be `complete` before you can start making predictions.
 </Warning>
 
 ## 7. Make Predictions Using [`SELECT`](/sql/api/select/)
@@ -216,7 +216,7 @@ two bathrooms.
 
 ```sql
 SELECT rental_price
-FROM mindsdb.home_rentals_predictor
+FROM mindsdb.home_rentals_model
 WHERE number_of_bathrooms = 2
 AND sqft = 1000;
 ```

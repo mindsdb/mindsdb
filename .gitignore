@@ -38,6 +38,7 @@ lib
 lib64
 pyvenv.cfg
 .python-version
+.DS_Store
 
 
 # Docs

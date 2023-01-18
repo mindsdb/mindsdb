@@ -1,3 +1,4 @@
+import os
 import datetime
 from typing import Optional
 from pathlib import Path
@@ -68,6 +69,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     SERVER_VARIABLES,
 )
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
+from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE
 from mindsdb.interfaces.model.functions import (
@@ -125,22 +127,28 @@ def _get_show_where(statement: ASTNode, from_name: Optional[str] = None,
 
 
 class ExecuteCommands:
-    def __init__(self, session, executor):
+    def __init__(self, session=None):
+        if session is None:
+            session = SessionController()
         self.session = session
-        self.executor = executor
 
         self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
         self.datahub = session.datahub
 
-    def execute_command(self, statement):
+    def execute_command(self, statement, server_context=None):
+        if server_context is None:
+            server_context = {}
+        self.context = server_context
+        self.session.database = server_context['database']
+
         sql = None
-        if self.executor is None:
+        if 'sql' not in self.context:
             if isinstance(statement, ASTNode):
                 sql = statement.to_string()
             sql_lower = sql.lower()
         else:
-            sql = self.executor.sql
-            sql_lower = self.executor.sql_lower
+            sql = self.context.get('sql', '')
+            sql_lower = self.context.get('sql_lower', '') or sql.lower()
 
         if type(statement) == CreateDatasource:
             return self.answer_create_database(statement)
@@ -484,8 +492,7 @@ class ExecuteCommands:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Use:
             db_name = statement.value.parts[-1]
-            self.change_default_db(db_name)
-            return ExecuteAnswer(ANSWER_TYPE.OK)
+            return ExecuteAnswer(ANSWER_TYPE.OK, database=db_name)
         elif type(statement) == CreatePredictor:
             return self.answer_create_predictor(statement)
         elif type(statement) == CreateView:
@@ -595,7 +602,7 @@ class ExecuteCommands:
 
     def _sync_predictor_check(self, phase_name):
         """ Checks if there is already a predictor retraining or adjusting """
-        is_cloud = self.session.config.get('cloud', False)
+        is_cloud = self.context['config'].get('cloud', False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)
             longest_training = None
@@ -987,10 +994,9 @@ class ExecuteCommands:
                     return self.answer_connection_id()
 
                 functions_results = {
-                    # 'connection_id': self.executor.sqlserver.connection_id,
                     'database': self.session.database,
-                    'current_user': self.session.username,
-                    'user': self.session.username,
+                    'current_user': self.context['username'],
+                    'user': self.context['username'],
                     'version': '8.0.17'
                 }
 
@@ -1285,7 +1291,7 @@ class ExecuteCommands:
             'charset': CHARSET_NUMBERS['binary']
         }]
         columns = [Column(**d) for d in columns]
-        data = [[self.executor.sqlserver.connection_id]]
+        data = [[self.context.get('connection_id')]]
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=columns,
@@ -1368,11 +1374,11 @@ class ExecuteCommands:
         self.session.model_controller.delete_model_version(models)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def change_default_db(self, db_name):
-        # That fix for bug in mssql: it keeps connection for a long time, but after some time mssql can
-        # send packet with COM_INIT_DB=null. In this case keep old database name as default.
-        if db_name != 'null':
-            if self.session.database_controller.exists(db_name):
-                self.session.database = db_name
-            else:
-                raise ErBadDbError(f"Database {db_name} does not exists")
+
+executor_service_url = os.environ.get("MINDSDB_EXECUTOR_URL", None)
+
+if executor_service_url is not None:
+    from mindsdb.integrations.handlers_client.executor_client import ExecuteCommandsClient
+
+    ExecuteCommands = ExecuteCommandsClient
+

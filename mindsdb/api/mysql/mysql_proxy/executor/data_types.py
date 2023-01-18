@@ -22,6 +22,7 @@ class ExecuteAnswer:
                  state_track: List[List] = None,
                  error_code: int = None,
                  error_message: str = None,
+                 database: str = None
                  ):
         self.columns = columns
         self.data = data
@@ -29,3 +30,4 @@ class ExecuteAnswer:
         self.state_track = state_track
         self.error_code = error_code
         self.error_message = error_message
+        self.switch_database = database

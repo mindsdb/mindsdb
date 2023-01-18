@@ -35,10 +35,8 @@ class Executor:
 
         # self.predictor_metadata = {}
 
-        self.sql = ''
-        self.sql_lower = ''
-
-        self.command_executor = ExecuteCommands(self.session, self)
+        self.server_context = {}
+        self.command_executor = ExecuteCommands(self.session)
 
     def stmt_prepare(self, sql):
 
@@ -157,9 +155,9 @@ class Executor:
             return True
 
     def parse(self, sql):
-        self.sql = sql
+        self.server_context['sql'] = sql
         sql_lower = sql.lower()
-        self.sql_lower = sql_lower.replace('`', '')
+        self.server_context['sql_lower ']= sql_lower.replace('`', '')
 
         try:
             self.query = parse_sql(sql, dialect='mindsdb')
@@ -179,8 +177,12 @@ class Executor:
         # it can be already run at prepare state
         if self.is_executed:
             return
+        self.server_context['connection_id'] = self.sqlserver.server.connection_id
+        self.server_context['database'] = self.session.database
+        self.server_context['config'] = self.session.config
+        self.server_context['username'] = self.session.username
 
-        ret = self.command_executor.execute_command(self.query)
+        ret = self.command_executor.execute_command(self.query, self.server_context)
 
         self.is_executed = True
 
@@ -189,4 +191,16 @@ class Executor:
         if ret.columns is not None:
             self.columns = ret.columns
 
+        if ret.switch_database is not None:
+            self.change_default_db(ret.switch_database)
+
         self.state_track = ret.state_track
+
+    def change_default_db(self, db_name):
+        # That fix for bug in mssql: it keeps connection for a long time, but after some time mssql can
+        # send packet with COM_INIT_DB=null. In this case keep old database name as default.
+        if db_name != 'null':
+            if self.session.database_controller.exists(db_name):
+                self.session.database = db_name
+            else:
+                raise ErBadDbError(f"Database {db_name} does not exists")

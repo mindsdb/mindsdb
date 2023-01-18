@@ -496,14 +496,12 @@ class SQLQuery():
 
                 self.model_types.update(predictor_record.data.get('dtypes', {}))
 
-        database = None if self.session.database == '' else self.session.database.lower()
-
         self.predictor_metadata = predictor_metadata
         self.planner = query_planner.QueryPlanner(
             self.query,
             integrations=databases_names,
             predictor_metadata=predictor_metadata,
-            default_namespace=database
+            default_namespace=self.database
         )
 
     def fetch(self, view='list'):

@@ -14,6 +14,8 @@ including calling params and returning types.
 import os
 import base64
 import traceback
+from typing import Optional
+
 import pickle
 
 
@@ -368,3 +370,15 @@ class MLClient(BaseClient):
                 traceback.format_exc(),
             )
         return response
+
+    def update(
+            self, model_name, project_name, version,
+            data_integration_ref=None,
+            fetch_data_query=None,
+            join_learn_process=False,
+            label=None,
+            set_active=True,
+            args: Optional[dict] = None
+    ):
+        # TODO: add implementation
+        raise NotImplementedError

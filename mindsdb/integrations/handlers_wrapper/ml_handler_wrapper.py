@@ -115,6 +115,14 @@ class MLHandlerWrapper(BaseMLWrapper):
         )
         self.query = query_route(self.query)
 
+        update_route = self.app.route(
+            "/update",
+            methods=[
+                "PUT",
+            ],
+        )
+        self.update = update_route(self.update)
+
     def _get_handler_controller(self):
         return IntegrationController()
 
@@ -302,3 +310,12 @@ class MLHandlerWrapper(BaseMLWrapper):
                 resp_type=RESPONSE_TYPE.ERROR, error_code=1, error_message=msg
             )
             return result.to_json(), 500
+
+    def update(self):
+        logger.error("%s.update - NOT IMPLEMENTED")
+        result = Response(
+            resp_type=RESPONSE_TYPE.ERROR,
+            error_code=1,
+            error_message="'update' not implemented on serverside"
+        )
+        return result.to_json(), 500

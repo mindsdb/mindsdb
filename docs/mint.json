@@ -229,6 +229,7 @@
         {
           "group": "Using MindsDB via REST API",
           "pages": [
+            "rest/disclaimer",
             "rest/sql",
             {
               "group": "Databases",
@@ -322,9 +323,16 @@
           "group": "Tutorials",
           "pages": [
             {
-              "group": "Regression",
+              "group": "NLP",
               "pages": [
-                "sql/tutorials/home-rentals"
+                "nlp/nlp-extended-examples"
+              ]
+            },
+            {
+              "group": "Time Series",
+              "pages": [
+                "sql/tutorials/house-sales-forecasting",
+                "sql/tutorials/eeg-forecasting"
               ]
             },
             {
@@ -334,10 +342,9 @@
               ]
             },
             {
-              "group": "Time Series",
+              "group": "Regression",
               "pages": [
-                "sql/tutorials/house-sales-forecasting",
-                "sql/tutorials/eeg-forecasting"
+                "sql/tutorials/home-rentals"
               ]
             },
             "tutorials"

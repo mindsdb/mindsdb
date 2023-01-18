@@ -90,6 +90,7 @@
             "connect/dbeaver",
             "connect/dbt",
             "connect/deepnote",
+            "connect/jupysql",
             "connect/kafka",
             "connect/connect-mariadb-skysql",
             "connect/metabase",
@@ -101,6 +102,7 @@
             "connect/tableau"
           ]
         },
+        "model-types",
         "mindsdb-handlers",
         "sql/create/databases2",
         "sql/create/file",
@@ -134,6 +136,7 @@
             "sql/api/select",
             "sql/api/select-files",
             "sql/api/join",
+            "sql/api/join-on",
             "sql/api/use"
           ]
         },
@@ -264,6 +267,7 @@
       "pages": [
         "nlp/what-is-nlp",
         "nlp/nlp-mindsdb-hf",
+        "nlp/nlp-mindsdb-openai",
         "nlp/nlp-extended-examples"
       ]
     }

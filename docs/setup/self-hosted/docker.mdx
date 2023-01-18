@@ -102,6 +102,11 @@ To override the default configuration, you can provide values via the
 ```bash
 docker run -e MDB_CONFIG_CONTENT='{"api":{"http": {"host": "0.0.0.0","port": "8080"}}}' mindsdb/mindsdb
 ```
+<Warning>
+Note that changing only one API value will not override the default values for other API keys. For e.g if you want to change the values for `mysql api` include the 
+values for `http api` too since it will not be started. This should be resolved soon, 
+check the progress [here](https://github.com/mindsdb/mindsdb/issues/4058).
+</Warning>
 
 ## Known Issues
 

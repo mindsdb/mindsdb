@@ -47,7 +47,7 @@ class TestHuggingface(BaseExecutorTest):
         done = False
         for attempt in range(900):
             ret = self.run_sql(
-                f"select status from huggingface.predictors where name='{model_name}'"
+                f"select status from mindsdb.models where name='{model_name}'"
             )
             if len(ret.data) > 0:
                 if ret.data[0][0] == 'complete':
@@ -69,9 +69,10 @@ class TestHuggingface(BaseExecutorTest):
 
         # create predictor
         create_sql = '''
-            CREATE PREDICTOR huggingface.spam_classifier
+            CREATE PREDICTOR mindsdb.spam_classifier
             predict PRED
             USING
+                engine='huggingface',
                 task='text-classification',
                 model_name= "mrm8488/bert-tiny-finetuned-sms-spam-detection",
                 input_column = 'text_spammy',
@@ -83,13 +84,13 @@ class TestHuggingface(BaseExecutorTest):
         predict_sql = '''
             SELECT h.*
             FROM pg.df as t 
-            JOIN huggingface.spam_classifier as h
+            JOIN mindsdb.spam_classifier as h
         '''
         self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
 
         # one line prediction
         predict_sql = '''
-            SELECT * from huggingface.spam_classifier
+            SELECT * from mindsdb.spam_classifier
             where text_spammy= 'It is the best time to launch the Robot to get more money. https:\\/\\/Gof.bode-roesch.de\\/Gof'
         '''
         # use predictor
@@ -101,9 +102,10 @@ class TestHuggingface(BaseExecutorTest):
 
         # create predictor
         create_sql = '''                
-           CREATE PREDICTOR huggingface.sentiment_classifier
+           CREATE PREDICTOR mindsdb.sentiment_classifier
            predict PRED
            USING
+                engine='huggingface',
                 task='text-classification',
                 model_name= "cardiffnlp/twitter-roberta-base-sentiment",
                 input_column = 'text_short',
@@ -115,7 +117,7 @@ class TestHuggingface(BaseExecutorTest):
         predict_sql = '''
             SELECT h.*
             FROM pg.df as t 
-            JOIN huggingface.sentiment_classifier as h
+            JOIN mindsdb.sentiment_classifier as h
         '''
         self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
 
@@ -124,9 +126,10 @@ class TestHuggingface(BaseExecutorTest):
 
         # create predictor
         create_sql = '''                
-         CREATE PREDICTOR huggingface.zero_shot_tcd
+         CREATE PREDICTOR mindsdb.zero_shot_tcd
             predict PREDZS
          USING
+            engine='huggingface',
             task="zero-shot-classification",
             model_name= "facebook/bart-large-mnli",
             input_column = "text_short",
@@ -138,7 +141,7 @@ class TestHuggingface(BaseExecutorTest):
         predict_sql = '''
             SELECT h.*
             FROM pg.df as t 
-            JOIN huggingface.zero_shot_tcd as h
+            JOIN mindsdb.zero_shot_tcd as h
         '''
         self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
 
@@ -147,9 +150,10 @@ class TestHuggingface(BaseExecutorTest):
 
         # create predictor
         create_sql = '''                
-         CREATE PREDICTOR huggingface.translator_en_fr
+         CREATE PREDICTOR mindsdb.translator_en_fr
             predict TRANSLATION
         USING
+            engine='huggingface',
             task = "translation",
             model_name = "t5-base",
             input_column = "text_short",
@@ -162,7 +166,7 @@ class TestHuggingface(BaseExecutorTest):
         predict_sql = '''
             SELECT h.*
             FROM pg.df as t 
-            JOIN huggingface.translator_en_fr as h
+            JOIN mindsdb.translator_en_fr as h
         '''
         self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
 

@@ -3,14 +3,13 @@ import re
 import math
 import concurrent.futures
 import pandas as pd
-from time import time
 from typing import Optional
 
 import openai
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities.config import Config
-from mindsdb.integrations.handlers.openai_handler.exp_backoff import retry_with_exponential_backoff
+from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -157,7 +156,6 @@ class OpenAIHandler(BaseMLEngine):
         def _tidy(comp):
             return [c['text'].strip('\n').strip('') for c in comp['choices']]
 
-        start = time()  # todo: for benchmarking purposes, remove later
         try:
             # check if simple completion works
             completion = _submit_completion(
@@ -194,10 +192,9 @@ class OpenAIHandler(BaseMLEngine):
                     for field in ('prompt_tokens', 'completion_tokens', 'total_tokens'):
                         completion['usage'][field] += partial['usage'][field]
         else:
-            # TODO: benchmark whether this is faster or not than just maximizing batch size and requesting all-in-one
             promises = []
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                for i in range(math.ceil(len(prompts) / max_batch_size)):  #  range(0, len(prompts), max_batch_size):
+                for i in range(math.ceil(len(prompts) / max_batch_size)):
                     print(f'{i * max_batch_size}:{(i+1) * max_batch_size}/{len(prompts)}')
                     future = executor.submit(_submit_completion,
                                              model_name,
@@ -214,13 +211,7 @@ class OpenAIHandler(BaseMLEngine):
                 else:
                     completion['choices'].extend(p['choices'].result()['choices'])
 
-        completion = _tidy(completion)
-
-        # todo: for benchmarking purposes, remove later
-        end = time()
-        print(f"OpenAI pred call: {end - start}")
-
-        return completion
+        return _tidy(completion)
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')

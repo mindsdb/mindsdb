@@ -90,6 +90,7 @@
             "connect/dbeaver",
             "connect/dbt",
             "connect/deepnote",
+            "connect/jupysql",
             "connect/kafka",
             "connect/connect-mariadb-skysql",
             "connect/metabase",

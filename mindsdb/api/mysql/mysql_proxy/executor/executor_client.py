@@ -27,7 +27,7 @@ class ExecutorClient:
         self.headers = {"Content-Type": "application/json"}
         self.base_url = os.environ.get("MINDSDB_EXECUTOR_URL", None)
         if self.base_url is None:
-            raise Exception(f"""{self.__class__.__name__} can be used only in modular mode of MindsDB. 
+            raise Exception(f"""{self.__class__.__name__} can be used only in modular mode of MindsDB.
                             Use Executor as a service and specify MINDSDB_EXECUTOR_URL env variable""")
 
         logger.debug(

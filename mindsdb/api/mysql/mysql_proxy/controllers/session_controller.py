@@ -85,7 +85,7 @@ class ServerSessionContorller(SessionController):
         self.id = f"session_{uuid4()}"
         self.executor_url = os.environ.get("MINDSDB_EXECUTOR_URL", None)
         if self.executor_url is None:
-            raise Exception(f"""{self.__class__.__name__} can be used only in modular mode of MindsDB. 
+            raise Exception(f"""{self.__class__.__name__} can be used only in modular mode of MindsDB.
                             Use Executor as a service and specify MINDSDB_EXECUTOR_URL env variable""")
         logger.info(
             "%s.__init__: executor url - %s", self.__class__.__name__, self.executor_url

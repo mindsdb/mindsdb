@@ -10,6 +10,7 @@ import openai
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities.config import Config
+from mindsdb.integrations.handlers.openai_handler.exp_backoff import retry_with_exponential_backoff
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -19,7 +20,7 @@ class OpenAIHandler(BaseMLEngine):
         super().__init__(*args, **kwargs)
         self.default_model = 'text-davinci-002'
         self.rate_limit = 60  # requests per minute
-        self.row_limit = 20
+        self.max_batch_size = 20
         self.default_max_tokens = 20
 
     @staticmethod
@@ -74,9 +75,6 @@ class OpenAIHandler(BaseMLEngine):
         """ # noqa
         # TODO: support for edits, embeddings and moderation
 
-        def _tidy(comp):
-            return [c['text'].strip('\n').strip('') for c in comp['choices']]
-
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
 
@@ -130,40 +128,24 @@ class OpenAIHandler(BaseMLEngine):
             prompts = list(df[args['question_column']].apply(lambda x: str(x)))
 
         api_key = self._get_api_key(args)
-        try:
-            completion = self._completion(model_name, prompts, max_tokens, temperature, api_key, args)
-        except Exception as e:
-            print(f'Error first try: \n{e}')
-            try:
-                assert 'you can currently request up to at most a total of' in e
-                pattern = 'a total of'
-                max_acct_tokens = int(e[e.find(pattern) + len(pattern):].split(').')[0])
-            except Exception:
-                max_acct_tokens = self.row_limit  # guard against changes in the API message
-
-            completion = None
-            for i in range(math.ceil(len(prompts)/max_acct_tokens)):
-                partial = self._completion(model_name,
-                                           prompts[i*max_acct_tokens:(i+1)*max_acct_tokens],
-                                           max_tokens,
-                                           temperature,
-                                           api_key,
-                                           args)
-                if not completion:
-                    completion = partial
-                else:
-                    completion['choices'].extend(partial['choices'])
-                    for field in ('prompt_tokens', 'completion_tokens', 'total_tokens'):
-                        completion['usage'][field] += partial['usage'][field]
-
-        output = _tidy(completion)
-        pred_df = pd.DataFrame(output, columns=[args['target']])
+        completion = self._completion(model_name, prompts, max_tokens, temperature, api_key, args)
+        pred_df = pd.DataFrame(completion, columns=[args['target']])
         return pred_df
 
-    @staticmethod
-    def _completion(model_name, prompts, max_tokens, temperature, api_key, args, parallel=True):
+    def _completion(self, model_name, prompts, max_tokens, temperature, api_key, args, parallel=True):
+        """
+        Handles completion for an arbitrary amount of rows.
+
+        There are a couple checks that should be done when calling OpenAI's API:
+          - account max batch size, to maximize batch size first
+          - account rate limit, to maximize parallel calls second
+
+        Additionally, single completion calls are done with exponential backoff to guarantee all prompts are processed,
+        because even with previous checks the tokens-per-minute limit may apply.
+        """
+        @retry_with_exponential_backoff
         def _submit_completion(model_name, prompts, max_tokens, temperature, api_key, args):
-            completion = openai.Completion.create(
+            return openai.Completion.create(
                 model=model_name,
                 prompt=prompts,
                 max_tokens=max_tokens,
@@ -171,21 +153,70 @@ class OpenAIHandler(BaseMLEngine):
                 api_key=api_key,
                 organization=args.get('api_organization')
             )
-            return completion
 
-        start = time()
+        def _tidy(comp):
+            return [c['text'].strip('\n').strip('') for c in comp['choices']]
+
+        start = time()  # todo: for benchmarking purposes, remove later
+        try:
+            # check if simple completion works
+            completion = _submit_completion(
+                model_name,
+                prompts,
+                max_tokens,
+                temperature,
+                api_key,
+                args
+            )
+            return _tidy(completion)  
+        except openai.error.InvalidRequestError as e:
+            # else, we get the max batch size
+            e = e.user_message
+            if 'you can currently request up to at most a total of' in e:
+                pattern = 'a total of'
+                max_batch_size = int(e[e.find(pattern) + len(pattern):].split(').')[0])
+            else:
+                max_batch_size = self.max_batch_size  # guards against changes in the API message
+
         if not parallel:
-            completion = _submit_completion(model_name, prompts, max_tokens, temperature, api_key, args)
+            completion = None
+            for i in range(math.ceil(len(prompts) / max_batch_size)):
+                partial = _submit_completion(model_name,
+                                             prompts[i * max_batch_size:(i + 1) * max_batch_size],
+                                             max_tokens,
+                                             temperature,
+                                             api_key,
+                                             args)
+                if not completion:
+                    completion = partial
+                else:
+                    completion['choices'].extend(partial['choices'])
+                    for field in ('prompt_tokens', 'completion_tokens', 'total_tokens'):
+                        completion['usage'][field] += partial['usage'][field]
         else:
-            results = []
-            step_size = len(prompts) / self.rate_limit
+            # TODO: benchmark whether this is faster or not than just maximizing batch size and requesting all-in-one
+            promises = []
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                for i in range(0, len(prompts), batch_size):
-                    print(f'{i}:{i+batch_size}/{len(prompts)}')
-                    future = executor.submit(_submit_completion, model_name, prompts[i:i+batch_size], max_tokens, temperature, api_key, args)
-                    results.append({"choices": future})
+                for i in range(math.ceil(len(prompts) / max_batch_size)):  #  range(0, len(prompts), max_batch_size):
+                    print(f'{i * max_batch_size}:{(i+1) * max_batch_size}/{len(prompts)}')
+                    future = executor.submit(_submit_completion,
+                                             model_name,
+                                             prompts[i * max_batch_size:(i + 1) * max_batch_size],
+                                             max_tokens,
+                                             temperature,
+                                             api_key,
+                                             args)
+                    promises.append({"choices": future})
+            completion = None
+            for p in promises:
+                if not completion:
+                    completion = p['choices'].result()
+                else:
+                    completion['choices'].extend(p['choices'].result()['choices'])
 
-            completion = pd.DataFrame([r.result() for r in results])
+        completion = _tidy(completion)
+
+        # todo: for benchmarking purposes, remove later
         end = time()
         print(f"OpenAI pred call: {end - start}")
 

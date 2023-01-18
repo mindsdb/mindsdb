@@ -66,15 +66,14 @@ class MLClient(BaseClient):
             company_id - id of the company.
             Last two args needed to instantiante engine and model storages
         """
-        host = os.environ.get("MINDSDB_ML_SERVICE_HOST", None)
-        port = os.environ.get("MINDSDB_ML_SERVICE_PORT", None)
+        base_url = os.environ.get("MINDSDB_ML_SERVICE_URL", None)
         as_service = True
-        if host is None or port is None:
+        if base_url is None:
             as_service = False
-            msg = "No host/port provided to MLHandler service connect to. Working in monolithic mode."
+            msg = "No url provided to MLHandler service connect to. Working in monolithic mode."
             logger.info("%s __init__: %s", self.__class__.__name__, msg)
         else:
-            self.base_url = f"http://{host}:{port}"
+            self.base_url = base_url
             logger.info(
                 "%s.__init__: ML Service base url - %s",
                 self.__class__.__name__,

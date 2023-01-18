@@ -7,5 +7,5 @@ from .executor_client import ExecutorClient
 
 # In case of Executor Service need to use ExecutorClient instead of Executor
 # so here we hide the difference between two objects
-if os.environ.get("MINDSDB_EXECUTOR_SERVICE"):
+if os.environ.get("MINDSDB_EXECUTOR_URL"):
     Executor = ExecutorClient

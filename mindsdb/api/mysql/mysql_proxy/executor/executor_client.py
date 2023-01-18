@@ -25,13 +25,10 @@ class ExecutorClient:
     def __init__(self, session, sqlserver):
         self.id = f"executor_{uuid4()}"
         self.headers = {"Content-Type": "application/json"}
-        executor_host = os.environ.get("MINDSDB_EXECUTOR_HOSTNAME")
-        executor_port = os.environ.get("MINDSDB_EXECUTOR_PORT")
-        if executor_host and executor_port:
-            self.base_url = f"http://{executor_host}:{executor_port}"
-        else:
-            self.base_url = "http://localhost:5500"
-            logger.debug("%s.__init__: %s", self.__class__.__name__, os.environ)
+        self.base_url = os.environ.get("MINDSDB_EXECUTOR_URL", None)
+        if self.base_url is None:
+            raise Exception(f"""{self.__class__.__name__} can be used only in modular mode of MindsDB. 
+                            Use Executor as a service and specify MINDSDB_EXECUTOR_URL env variable""")
 
         logger.debug(
             "%s.__init__: executor url - %s", self.__class__.__name__, self.base_url

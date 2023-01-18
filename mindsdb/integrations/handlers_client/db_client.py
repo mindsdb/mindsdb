@@ -56,17 +56,16 @@ class DBServiceClient(BaseClient):
         connection_data = kwargs.get("connection_data", None)
         if connection_data is None:
             raise Exception("No connection data provided.")
-        host = os.environ.get("MINDSDB_DB_SERVICE_HOST", None)
-        port = os.environ.get("MINDSDB_DB_SERVICE_PORT", None)
+        base_url = os.environ.get("MINDSDB_DB_SERVICE_URL", None)
         as_service = True
-        if host is None or port is None:
+        if base_url is None:
             as_service = False
             logger.info(
-                "%s.__init__: no host and/or port of DBService have provided. Handler all db request locally",
+                "%s.__init__: no url to DBService have provided. Handler all db request locally",
                 self.__class__.__name__,
             )
         else:
-            self.base_url = f"http://{host}:{port}"
+            self.base_url = base_url
             self.handler_kwargs = kwargs
             # no clue why it has provided!!!!!
             for a in ("fs_store", "file_storage"):

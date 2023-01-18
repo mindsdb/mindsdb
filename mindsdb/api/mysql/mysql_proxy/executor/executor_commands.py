@@ -1,4 +1,3 @@
-import os
 import datetime
 from typing import Optional
 from pathlib import Path
@@ -53,7 +52,6 @@ from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
-    ErBadDbError,
     ErBadTableError,
     ErTableExistError,
     ErNotSupportedYet,
@@ -1373,12 +1371,3 @@ class ExecuteCommands:
 
         self.session.model_controller.delete_model_version(models)
         return ExecuteAnswer(ANSWER_TYPE.OK)
-
-
-executor_service_url = os.environ.get("MINDSDB_EXECUTOR_URL", None)
-
-if executor_service_url is not None:
-    from mindsdb.integrations.handlers_client.executor_client import ExecuteCommandsClient
-
-    ExecuteCommands = ExecuteCommandsClient
-

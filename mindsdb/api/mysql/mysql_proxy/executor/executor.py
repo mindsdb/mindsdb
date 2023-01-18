@@ -12,8 +12,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     logger
 )
 
-
-from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+from mindsdb.api.mysql.mysql_proxy.executor import ExecuteCommands
 
 
 class Executor:
@@ -157,7 +156,7 @@ class Executor:
     def parse(self, sql):
         self.server_context['sql'] = sql
         sql_lower = sql.lower()
-        self.server_context['sql_lower ']= sql_lower.replace('`', '')
+        self.server_context['sql_lower'] = sql_lower.replace('`', '')
 
         try:
             self.query = parse_sql(sql, dialect='mindsdb')

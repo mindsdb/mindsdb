@@ -13,7 +13,7 @@ from mindsdb.api.mongo.utilities import logger
 
 def decode(enc):
     if isinstance(enc, str):
-       enc = enc.encode()
+        enc = enc.encode()
     return pickle.loads(enc)
 
 
@@ -27,7 +27,7 @@ def create_server_app(wrapp_class):
     app = web.Application()
     sio.attach(app)
 
-    config = Config()
+    Config()
     db.init()
 
     @sio.event

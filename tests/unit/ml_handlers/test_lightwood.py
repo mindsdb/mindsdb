@@ -27,11 +27,13 @@ class TestLW(BaseExecutorTest):
         if not done:
             raise RuntimeError("predictor wasn't created")
 
-    def run_sql(self, sql):
+    def run_sql(self, sql, throw_error=True, database='mindsdb'):
         ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
+            parse_sql(sql, dialect='mindsdb'),
+            server_context={'database': database, 'config': {}}
         )
-        assert ret.error_code is None
+        if throw_error:
+            assert ret.error_code is None
         if ret.data is not None:
             columns = [
                 col.alias if col.alias is not None else col.name

@@ -177,9 +177,9 @@ class BaseExecutorTest(BaseUnitTest):
         sql_session.database = 'mindsdb'
         sql_session.integration_controller = integration_controller
 
-        self.command_executor = ExecuteCommands(sql_session, executor=None)
+        self.command_executor = ExecuteCommands(sql_session)
 
-        # disable cache. it is need to check predictor input
+        # disable cache. it is needed to check predictor input
         config_patch = mock.patch('mindsdb.utilities.cache.FileCache.get')
         self.mock_config = config_patch.__enter__()
         self.mock_config.side_effect = lambda x: None

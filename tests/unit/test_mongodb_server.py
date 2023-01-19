@@ -63,7 +63,7 @@ class TestMongoDBServer(BaseUnitTest):
                 for test_name, test_method in inspect.getmembers(self, predicate=inspect.ismethod):
                     if test_name.startswith('t_'):
                         mock_executor.reset_mock()
-                        mock_executor.side_effect = lambda x: ExecuteAnswer(ANSWER_TYPE.OK)
+                        mock_executor.side_effect = lambda *args: ExecuteAnswer(ANSWER_TYPE.OK)
 
                         test_method(client_con, mock_executor)
 
@@ -79,7 +79,7 @@ class TestMongoDBServer(BaseUnitTest):
 
     def t_single_row(self, client_con, mock_executor):
         # ==== test single row ===
-        mock_executor.side_effect = lambda x: ExecuteAnswer(
+        mock_executor.side_effect = lambda *args: ExecuteAnswer(
             ANSWER_TYPE.TABLE,
             columns=[Column('a')],
             data=[['test']]

@@ -38,13 +38,19 @@ class Test(BaseExecutorMockPredictor):
 
         # --- join table ---
 
-        ret = self.command_executor.execute_command(parse_sql('''
-           select m.p, v.a
-           from pg.tasks v
-           join mindsdb.task_model m
-           where v.a = 2
-           using p1='a', p2={'x':1, 'y':2}
-        ''', dialect='mindsdb'))
+        ret = self.command_executor.execute_command(
+            parse_sql(
+                '''
+                   select m.p, v.a
+                   from pg.tasks v
+                   join mindsdb.task_model m
+                   where v.a = 2
+                   using p1='a', p2={'x':1, 'y':2}
+                ''',
+                dialect='mindsdb'
+            ),
+            server_context={'database': 'mindsdb', 'config': {}}
+        )
         assert ret.error_code is None
 
         # check predictor input
@@ -54,10 +60,12 @@ class Test(BaseExecutorMockPredictor):
         # --- inline prediction ---
         self.mock_predict.reset_mock()
 
-        ret = self.command_executor.execute_command(parse_sql(f'''
-            select * from mindsdb.task_model where a = 2
-            using p1=1, p2=[1,2] 
-        ''', dialect='mindsdb'))
+        ret = self.command_executor.execute_command(
+            parse_sql(f'''
+                select * from mindsdb.task_model where a = 2
+                using p1=1, p2=[1,2] 
+            ''', dialect='mindsdb'),
+            server_context={'database': 'mindsdb', 'config': {}})
 
         predict_args = self.mock_predict.call_args[0][1]
         assert predict_args['predict_params'] == {'p1': 1, 'p2': [1,2]}

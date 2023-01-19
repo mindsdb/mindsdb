@@ -32,9 +32,9 @@ class TestProjectStructure(BaseExecutorDummyML):
             raise RuntimeError("predictor didn't created")
 
     def run_sql(self, sql, throw_error=True, database='mindsdb'):
-        self.command_executor.session.database = database
         ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
+            parse_sql(sql, dialect='mindsdb'),
+            server_context={'database': database, 'config': {}}
         )
         if throw_error:
             assert ret.error_code is None

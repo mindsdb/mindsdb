@@ -1,7 +1,6 @@
 import os
 
 from mindsdb.integrations.handlers_wrapper.socketio_server import create_server_app, web
-from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
 from mindsdb.integrations.libs.handler_helpers import get_handler
 
 

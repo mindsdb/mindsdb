@@ -22,4 +22,3 @@ class DBServiceClient:
 
     def __del__(self):
         self.instance.close()
-

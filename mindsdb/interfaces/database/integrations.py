@@ -1,4 +1,3 @@
-import copy
 import os
 import base64
 import shutil
@@ -17,7 +16,6 @@ from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFacto
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
 from mindsdb.utilities import log
-from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 

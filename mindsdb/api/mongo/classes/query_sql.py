@@ -6,7 +6,7 @@ def run_sql_command(mindsdb_env, ast_query):
     sql_session = SessionController()
     sql_session.database = 'mindsdb'
 
-    server_context = {'database': sql_session.database}
+    server_context = {'database': sql_session.database, 'config': sql_session.config}
     command_executor = ExecuteCommands(sql_session)
     ret = command_executor.execute_command(ast_query, server_context)
     if ret.error_code is not None:

@@ -10,12 +10,12 @@ In particular, three big components are included:
       output and format it into the HandlerResponse instance that MindsDB core expects.
 
     - `learn_process` method: handles async dispatch of the `learn` method in an engine, as well as registering all
-      models inside of the internal MindsDB registry.
+      models inside the internal MindsDB registry.
 
     - `predict_process` method: handles async dispatch of the `predict` method in an engine.
 
 """
-
+import os
 import datetime as dt
 import traceback
 import importlib
@@ -51,6 +51,8 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.model.functions import get_model_records
 
 from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
+
+from mindsdb.integrations.handlers_client.ml_client import MLServiceClient
 
 import torch.multiprocessing as mp
 mp.get_context('spawn')
@@ -106,17 +108,23 @@ def learn_process(class_path, context_dump, integration_id,
         predictor_record.training_data_rows_count = training_data_rows_count
         db.session.commit()
 
-        module_name, class_name = class_path
-        module = importlib.import_module(module_name)
-        HandlerClass = getattr(module, class_name)
+        # TODO use dedicated service for training
+        ml_service_url = os.environ.get("MINDSDB_ML_SERVICE_URL", None)
+        if ml_service_url is not None:
+            ml_handler = MLServiceClient(class_path, integration_id, predictor_id)
 
-        handlerStorage = HandlerStorage(integration_id)
-        modelStorage = ModelStorage(predictor_id)
+        else:
+            module_name, class_name = class_path
+            module = importlib.import_module(module_name)
+            HandlerClass = getattr(module, class_name)
 
-        ml_handler = HandlerClass(
-            engine_storage=handlerStorage,
-            model_storage=modelStorage,
-        )
+            handlerStorage = HandlerStorage(integration_id)
+            modelStorage = ModelStorage(predictor_id)
+
+            ml_handler = HandlerClass(
+                engine_storage=handlerStorage,
+                model_storage=modelStorage,
+            )
 
         # create new model
         if base_predictor_id is None:
@@ -187,6 +195,11 @@ class BaseMLEngineExec:
         integration_id = self.integration_id
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
+
+        ml_service_url = os.environ.get("MINDSDB_ML_SERVICE_URL", None)
+        if ml_service_url is not None:
+
+            return MLServiceClient(class_path, integration_id, predictor_id)
 
         if self.execution_method == 'subprocess':
             handler = MLHandlerWrapper()

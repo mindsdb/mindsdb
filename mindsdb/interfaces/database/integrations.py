@@ -19,6 +19,8 @@ from mindsdb.utilities import log
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 
+from mindsdb.integrations.handlers_client.db_client import DBServiceClient
+
 
 class IntegrationController:
     @staticmethod
@@ -250,7 +252,6 @@ class IntegrationController:
         if db_service_url is not None and not handler_type == 'files':
             log.logger.debug("%s create_tmp_handler: create a client to db of %s type",
                              self.__class__.__name__, handler_type)
-            from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 
             handler = DBServiceClient(handler_type, **handler_ars)
         else:
@@ -325,7 +326,6 @@ class IntegrationController:
             if db_service_url is not None and not integration_engine == 'files':
                 log.logger.debug("%s get_handler: create a client to db service of %s type", self.__class__.__name__,
                                  handler_type)
-                from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 
                 handler = DBServiceClient(integration_engine, **handler_ars)
             else:

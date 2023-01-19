@@ -26,7 +26,7 @@ class IntegrationDataNode(DataNode):
 
     def get_tables(self):
         response = self.integration_handler.get_tables()
-        if response.type is RESPONSE_TYPE.TABLE:
+        if response.type == RESPONSE_TYPE.TABLE:
             result_dict = response.data_frame.to_dict(orient='records')
             result = []
             for row in result_dict:

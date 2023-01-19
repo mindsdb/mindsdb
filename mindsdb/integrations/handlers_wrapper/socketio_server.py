@@ -21,7 +21,7 @@ def encode(ret):
     return pickle.dumps(ret, protocol=5)
 
 
-def create_server_app(wrapp_class):
+def create_server_app(create_instance_fnc):
     sio = socketio.AsyncServer(async_mode='aiohttp')
 
     app = web.Application()
@@ -53,7 +53,7 @@ def create_server_app(wrapp_class):
 
         ctx.load(params['context'])
 
-        instance = wrapp_class(*params['args'], **params['kwargs'])
+        instance = create_instance_fnc(*params['args'], **params['kwargs'])
 
         await sio.save_session(sid, {'instance': instance, 'context': params['context']})
 

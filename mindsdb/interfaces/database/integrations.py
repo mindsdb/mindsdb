@@ -1,4 +1,5 @@
 import copy
+import os
 import base64
 import shutil
 import tempfile
@@ -231,12 +232,6 @@ class IntegrationController:
             Returns:
                 Handler object
         """
-        as_service = False
-        if 'as_service' in connection_data:
-            as_service = connection_data["as_service"]
-            connection_data = copy.deepcopy(connection_data)
-            del connection_data['as_service']
-            log.logger.debug("%s create_tmp_handler: delete 'as_service' key from connection args - %s", self.__class__.__name__, connection_data)
         resource_id = int(time() * 10000)
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
@@ -252,10 +247,18 @@ class IntegrationController:
             connection_data=connection_data
         )
 
-        if as_service:
-            log.logger.debug("%s create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-            return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
-        return self.handler_modules[handler_type].Handler(**handler_ars)
+        db_service_url = os.environ.get("MINDSDB_DB_SERVICE_URL", None)
+        # skip files
+        if db_service_url is not None and not handler_type == 'files':
+            log.logger.debug("%s create_tmp_handler: create a client to db of %s type",
+                             self.__class__.__name__, handler_type)
+            from mindsdb.integrations.handlers_client.db_client import DBServiceClient
+
+            handler = DBServiceClient(handler_type, **handler_ars)
+        else:
+            handler = self.handler_modules[handler_type].Handler(**handler_ars)
+
+        return handler
 
     def get_handler(self, name, case_sensitive=False):
         if case_sensitive:
@@ -279,10 +282,6 @@ class IntegrationController:
 
         integration_meta = self.handlers_import_status[integration_engine]
         connection_args = integration_meta.get('connection_args')
-        as_service = False
-        if 'as_service' in connection_data:
-            as_service = connection_data['as_service']
-            del connection_data['as_service']
         log.logger.debug("%s get_handler: connection args - %s", self.__class__.__name__, connection_args)
 
         fs_store = FileStorage(
@@ -322,11 +321,17 @@ class IntegrationController:
             handler_ars['execution_method'] = getattr(self.handler_modules[integration_engine], 'execution_method', None)
             handler = BaseMLEngineExec(**handler_ars)
         else:
-            handler = HandlerClass(**handler_ars)
+            db_service_url = os.environ.get("MINDSDB_DB_SERVICE_URL", None)
 
-        if as_service:
-            log.logger.debug("%s get_handler: create a client to db service of %s type", self.__class__.__name__, handler_type)
-            return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
+            # skip files integration
+            if db_service_url is not None and not integration_engine == 'files':
+                log.logger.debug("%s get_handler: create a client to db service of %s type", self.__class__.__name__,
+                                 handler_type)
+                from mindsdb.integrations.handlers_client.db_client import DBServiceClient
+
+                handler = DBServiceClient(integration_engine, **handler_ars)
+            else:
+                handler = HandlerClass(**handler_ars)
 
         return handler
 

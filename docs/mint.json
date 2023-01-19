@@ -208,6 +208,17 @@
                 "using-dbt/regression"
               ]
             }
+            "connect/deepnote",
+            "connect/jupysql",
+            "connect/kafka",
+            "connect/connect-mariadb-skysql",
+            "connect/metabase",
+            "connect/mindsdb_editor",
+            "connect/mongo-compass",
+            "connect/mongo-shell",
+            "connect/mysql-client",
+            "connect/sql-alchemy",
+            "connect/tableau"
           ]
         },
         {

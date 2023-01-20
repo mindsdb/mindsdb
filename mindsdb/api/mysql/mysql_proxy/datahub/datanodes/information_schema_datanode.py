@@ -14,6 +14,9 @@ from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, 
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 from mindsdb.interfaces.database.projects import ProjectController
 
+from mindsdb.interfaces.controllers.classes.collection.database_collection import DatabaseCollection
+from mindsdb.interfaces.controllers.classes.const import DatabaseType
+
 
 class InformationSchemaDataNode(DataNode):
     type = 'INFORMATION_SCHEMA'
@@ -45,15 +48,25 @@ class InformationSchemaDataNode(DataNode):
         self.project_controller = ProjectController()
         self.database_controller = session.database_controller
 
+        self.db_root = DatabaseCollection()
+
         self.persis_datanodes = {}
 
-        databases = self.database_controller.get_dict()
-        if 'files' in databases:
+        files_db = self.db_root.get('files')
+        if files_db is not None:
             self.persis_datanodes['files'] = IntegrationDataNode(
                 'files',
                 ds_type='file',
                 integration_controller=self.session.integration_controller
             )
+
+        # databases = self.database_controller.get_dict()
+        # if 'files' in databases:
+            # self.persis_datanodes['files'] = IntegrationDataNode(
+            #     'files',
+            #     ds_type='file',
+            #     integration_controller=self.session.integration_controller
+            # )
 
         self.get_dataframe_funcs = {
             'TABLES': self._get_tables,
@@ -84,41 +97,59 @@ class InformationSchemaDataNode(DataNode):
         if name_lower in self.persis_datanodes:
             return self.persis_datanodes[name_lower]
 
-        existing_databases_meta = self.database_controller.get_dict()  # filter_type='project'
         database_name = None
-        for key in existing_databases_meta:
-            if key.lower() == name_lower:
-                database_name = key
-                break
+        db = self.db_root.get(name)
+        if db is not None:
+            database_name = db.name
+
+        # existing_databases_meta = self.database_controller.get_dict()  # filter_type='project'
+        # database_name = None
+        # for key in existing_databases_meta:
+        #     if key.lower() == name_lower:
+        #         database_name = key
+        #         break
 
         if database_name is None:
             return None
 
-        database_meta = existing_databases_meta[database_name]
-        if database_meta['type'] == 'integration':
-            integration = self.integration_controller.get(name=database_name)
+        if db.type == DatabaseType.data:
             return IntegrationDataNode(
                 database_name,
-                ds_type=integration['engine'],
+                ds_type=db.engine,  # integration['engine'],
                 integration_controller=self.session.integration_controller
             )
-        if database_meta['type'] == 'project':
-            project = self.database_controller.get_project(name=database_name)
+        if db.type == DatabaseType.project:
             return ProjectDataNode(
-                project=project,
+                project=db, # !!!
                 integration_controller=self.session.integration_controller,
                 information_schema=self
             )
 
-        integration_names = self.integration_controller.get_all().keys()
-        for integration_name in integration_names:
-            if integration_name.lower() == name_lower:
-                datasource = self.integration_controller.get(name=integration_name)
-                return IntegrationDataNode(
-                    integration_name,
-                    ds_type=datasource['engine'],
-                    integration_controller=self.session.integration_controller
-                )
+        # database_meta = existing_databases_meta[database_name]
+        # if database_meta['type'] == 'integration':
+        #     integration = self.integration_controller.get(name=database_name)
+        #     return IntegrationDataNode(
+        #         database_name,
+        #         ds_type=integration['engine'],
+        #         integration_controller=self.session.integration_controller
+        #     )
+        # if database_meta['type'] == 'project':
+        #     project = self.database_controller.get_project(name=database_name)
+        #     return ProjectDataNode(
+        #         project=project,
+        #         integration_controller=self.session.integration_controller,
+        #         information_schema=self
+        #     )
+
+        # integration_names = self.integration_controller.get_all().keys()
+        # for integration_name in integration_names:
+        #     if integration_name.lower() == name_lower:
+        #         datasource = self.integration_controller.get(name=integration_name)
+        #         return IntegrationDataNode(
+        #             integration_name,
+        #             ds_type=datasource['engine'],
+        #             integration_controller=self.session.integration_controller
+        #         )
 
         return None
 

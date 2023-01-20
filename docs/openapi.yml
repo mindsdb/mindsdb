@@ -241,6 +241,38 @@ paths:
                 type: object
                 items:
                   type: string
+  /projects:
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: Returns a list of projects names.
+      description: This endpoint retrieves all projects created by the user.
+      responses:
+        '200':
+          description: A JSON array of projects names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: 'projects name'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
   '/projects/{projectName}/models':
     post:
       security:

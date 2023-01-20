@@ -10,9 +10,10 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir boto3
 
 WORKDIR /
-COPY requirements.txt /requirements.txt
-RUN pip install -r requirements.txt --no-cache-dir
-RUN pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+COPY docker/docker_files/common_requirements.txt /requirements.txt
+# RUN pip install setuptools wheel twine
+RUN pip install -r requirements.txt --no-cache-dir --force-reinstall
+COPY ./mindsdb /mindsdb/mindsdb
 
 ENV PYTHONPATH "/mindsdb"
 ENV FLASK_DEBUG "1"

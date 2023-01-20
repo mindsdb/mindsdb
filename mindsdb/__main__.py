@@ -8,8 +8,12 @@ import signal
 import psutil
 import json
 
-import torch.multiprocessing as mp
+try:
+    import torch.multiprocessing as mp
+except ImportError:
+    import multiprocessing as mp
 mp.set_start_method('spawn')
+
 from packaging import version
 
 from mindsdb.__about__ import __version__ as mindsdb_version

@@ -1,7 +1,9 @@
-import torch.multiprocessing as mp
+try:
+    import torch.multiprocessing as mp
+except ImportError:
+    import multiprocessing as mp
 
 ctx = mp.get_context('spawn')
-
 
 class HandlerProcess(ctx.Process):
     daemon = True

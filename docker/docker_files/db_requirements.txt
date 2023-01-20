@@ -1,0 +1,5 @@
+# db handler
+mysql-connector-python
+clickhouse-driver
+clickhouse-sqlalchemy
+psycopg[binary] >= 1.15.3

@@ -1,6 +1,5 @@
 import os
 import logging
-import torch.multiprocessing as mp
 import threading
 from pathlib import Path
 
@@ -135,7 +134,7 @@ def start(verbose, no_studio, with_nlp):
 
         options = {
             'bind': f'{host}:{port}',
-            'workers': mp.cpu_count(),
+            'workers': os.cpu_count(),
             'timeout': 600,
             'reuse_port': True,
             'preload_app': True,

@@ -1,5 +1,4 @@
 from flask_restx import Namespace, Resource
-import mysql.connector
 
 
 ns_conf = Namespace('nlp', description='The NLP API of mindsdb')
@@ -15,6 +14,7 @@ class PredictorList(Resource):
         # For more info on ITG see https://github.com/mindsdb/ITG/tree/staging/itg
         try:
             from itg import itg
+            import mysql.connector
             # @TODO here and/or when this ns is started register all the user db schemas + mindsdb's db schema
             # itg.register((dataframe, 'db_name'))
 

@@ -54,9 +54,11 @@ from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
 from mindsdb.integrations.handlers_client.ml_client import MLServiceClient
 
-import torch.multiprocessing as mp
+try:
+    import torch.multiprocessing as mp
+except ImportError:
+    import multiprocessing as mp
 mp.get_context('spawn')
-
 
 @mark_process(name='learn')
 def learn_process(class_path, context_dump, integration_id,
@@ -187,14 +189,14 @@ class BaseMLEngineExec:
 
         self.is_connected = True
 
-        self.handler_class = kwargs['handler_class']
+        self.handler_module = kwargs['handler_module']
 
     def get_ml_handler(self, predictor_id=None):
         # returns instance or wrapper over it
 
         integration_id = self.integration_id
 
-        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+        class_path = [self.handler_module.__name__, 'Handler']
 
         ml_service_url = os.environ.get("MINDSDB_ML_SERVICE_URL", None)
         if ml_service_url is not None:
@@ -220,7 +222,7 @@ class BaseMLEngineExec:
             handlerStorage = HandlerStorage(integration_id)
             modelStorage = ModelStorage(predictor_id)
 
-            ml_handler = self.handler_class(
+            ml_handler = self.handler_module.Handler(
                 engine_storage=handlerStorage,
                 model_storage=modelStorage,
             )
@@ -335,7 +337,7 @@ class BaseMLEngineExec:
         db.session.add(predictor_record)
         db.session.commit()
 
-        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+        class_path = [self.handler_module.__name__, 'Handler']
 
         p = HandlerProcess(
             learn_process,
@@ -375,7 +377,7 @@ class BaseMLEngineExec:
             'predict_params': {} if params is None else params
         }
         # FIXME
-        if self.handler_class.__name__ == 'LightwoodHandler':
+        if self.handler_module.name == 'lightwood':
             args['code'] = predictor_record.code
             args['target'] = predictor_record.to_predict[0]
             args['dtype_dict'] = predictor_record.dtype_dict
@@ -447,7 +449,7 @@ class BaseMLEngineExec:
         db.session.add(predictor_record)
         db.session.commit()
 
-        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+        class_path = [self.handler_module.__name__, 'Handler']
 
         p = HandlerProcess(
             learn_process,

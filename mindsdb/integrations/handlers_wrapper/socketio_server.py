@@ -5,10 +5,13 @@ import traceback
 import socketio
 from aiohttp import web
 
+from mindsdb.utilities.config import Config
+from mindsdb.utilities.log import initialize_log, get_log
 from mindsdb.utilities.context import context as ctx
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.config import Config
-from mindsdb.api.mongo.utilities import logger
+
+
+logger = get_log(logger_name="main")
 
 
 def decode(enc):
@@ -27,12 +30,13 @@ def create_server_app(create_instance_fnc):
     app = web.Application()
     sio.attach(app)
 
-    Config()
+    config = Config()
     db.init()
+    initialize_log(config=config)
 
     @sio.event
     def connect(sid, environ):
-        print('connect ', sid)
+        logger.info(f'connect: {sid}')
 
     def error_handler(fnc):
         @functools.wraps(fnc)
@@ -71,6 +75,8 @@ def create_server_app(create_instance_fnc):
 
         method = params['method']
 
+        logger.info(f'request: {sid}, {method}')
+
         fnc = getattr(instance, method)
 
         resp = fnc(*params['args'], **params['kwargs'])
@@ -80,9 +86,8 @@ def create_server_app(create_instance_fnc):
 
     @sio.event
     def disconnect(sid):
+        logger.info(f'disconnect: {sid}')
         # TODO delete instance?
-
-        print('disconnect ', sid)
 
     return app
 

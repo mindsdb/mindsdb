@@ -313,10 +313,10 @@ class IntegrationController:
         from mindsdb.integrations.libs.base import BaseMLEngine
         from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
-        HandlerClass = self.handler_modules[integration_engine].Handler
+        handler_module = self.handler_modules[integration_engine]
 
-        if isinstance(HandlerClass, type) and issubclass(HandlerClass, BaseMLEngine):
-            handler_ars['handler_class'] = HandlerClass
+        if handler_type == 'ml':
+            handler_ars['handler_module'] = handler_module
             handler_ars['execution_method'] = getattr(self.handler_modules[integration_engine], 'execution_method', None)
             handler = BaseMLEngineExec(**handler_ars)
         else:
@@ -329,7 +329,7 @@ class IntegrationController:
 
                 handler = DBServiceClient(integration_engine, **handler_ars)
             else:
-                handler = HandlerClass(**handler_ars)
+                handler = handler_module.Handler(**handler_ars)
 
         return handler
 

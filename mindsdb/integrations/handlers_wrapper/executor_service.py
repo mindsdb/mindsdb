@@ -2,6 +2,7 @@ import os
 
 from mindsdb.integrations.handlers_wrapper.socketio_server import create_server_app, web
 from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+from mindsdb.utilities.log import get_log
 
 
 def get_executor_instance(*args, **kwargs):
@@ -10,5 +11,8 @@ def get_executor_instance(*args, **kwargs):
 
 if __name__ == '__main__':
     app = create_server_app(ExecuteCommands)
-
-    web.run_app(app, port=os.environ.get("PORT", 5500))
+    logger = get_log(logger_name="main")
+    port = os.environ.get("PORT", 5500)
+    host = os.environ.get("HOST", "0.0.0.0")
+    logger.info("Running service: host=%s, port=%s", host, port)
+    web.run_app(app, host=host, port=port)

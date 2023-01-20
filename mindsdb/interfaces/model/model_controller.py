@@ -53,6 +53,7 @@ class ModelController():
         data['active'] = predictor_record.active
         data['status'] = predictor_record.status
         data['id'] = predictor_record.id
+        data['version'] = predictor_record.version
 
         json_storage = get_json_storage(
             resource_id=predictor_record.id

@@ -243,6 +243,12 @@
               ]
             },
             {
+              "group": "Projects",
+              "pages": [
+                "rest/projects/get-projects"
+              ]
+            },
+            {
               "group": "Models",
               "pages": [
                 "rest/models/train-model",

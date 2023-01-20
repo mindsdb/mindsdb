@@ -55,8 +55,7 @@ class ProjectDataNode(DataNode):
         if predictor_table_meta['update_status'] == 'available':
             raise Exception(f"model '{model_name}' is obsolete and needs to be updated. Run 'RETRAIN {model_name};'")
         handler = self.integration_controller.get_handler(predictor_table_meta['engine_name'])
-        predictions, columns_dtypes = handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
-        return predictions, columns_dtypes
+        return handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
 
     def query(self, query=None, native_query=None, session=None):
         if query is None and native_query is not None:

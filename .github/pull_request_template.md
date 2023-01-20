@@ -23,4 +23,5 @@ Please include a summary of the change and the issue it solves.
 - [ ] I have commented my code, particularly in hard-to-understand areas.
 - [ ] I have updated the documentation, or created issues to update them.
 - [ ] I fixed|updated|added unit tests and integration tests for each feature (if applicable).
+- [ ] I have checked that my code additions will fail neither code linting checks nor unit test.
 - [ ] I have shared a short loom video or screenshots demonstrating any new functionality.

@@ -3,7 +3,7 @@ import re
 import math
 import concurrent.futures
 import pandas as pd
-from typing import Optional
+from typing import Optional, Dict
 
 import openai
 
@@ -222,3 +222,13 @@ class OpenAIHandler(BaseMLEngine):
 
         return pd.DataFrame([[meta['id'], meta['object'], meta['owned_by'], meta['permission'], args]],
                             columns=['id', 'object', 'owned_by', 'permission', 'model_args'])
+
+    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        """
+        1. take DF, write to JSONL (where? ask andrey)
+        2. use CLI to generate improved splits (again, where? also do we need to install CLI or is pypi enough)
+        3. take files, upload using API
+        4. send request in
+        5. Add to describe (or somehow) the state of each fine-tune... maybe we need to mark as complete only once (with polling) we know it's done?
+        """
+        pass

@@ -1,0 +1,49 @@
+---
+title: Get All Projects
+openapi: "GET /projects"
+sidebarTitle: Get All Projects
+---
+
+## Description
+
+This API provides a REST endpoint for listing projects. 
+<Note>
+By default, the open source version doesn't provide Authentication methods as MindsDB Cloud. 
+On MindsDB cloud you need to set the `cookie` field in the header of request e.g  `{session=273trgsehgrui3i2riurwehe}`. 
+</Note>
+
+### Response
+
+<ResponseField name="" type="array">  
+</ResponseField>
+
+
+<RequestExample>
+
+```shell Shell
+curl --request GET \
+     --url https://cloud.mindsdb.com/api/api/projects/mindsdb/models \
+     --cookie '{session=273trgsehgrui3i2riurwehe}'
+```
+
+
+```python Python
+import requests
+url = 'https://cloud.mindsdb.com/api/projects/mindsdb/models'
+cookies = '{session=273trgsehgrui3i2riurwehe}'
+resp = requests.get(url, cookies=cookies})
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+ [
+    {
+        "name": "mindsdb"
+    }
+]
+```
+
+</ResponseExample>

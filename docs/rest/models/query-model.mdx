@@ -1,11 +1,71 @@
 ---
 title: Query a Model
-openapi: "POST /models/{modelName}"
+openapi: "POST /projects/{projectName}/models/{modelName}/predict"
 sidebarTitle: Query a Model
 ---
 
-<Warning>
 
-The REST API is still under development. Note that the Request Body and Response parameters could be changed.
+## Description
 
-</Warning>
+This API provides a REST endpoint for making predictions. 
+<Note>
+By default, the open source version doesn't provide Authentication methods as MindsDB Cloud. 
+On MindsDB cloud you need to set the `cookie` field in the header of request e.g  `{session=273trgsehgrui3i2riurwehe}`. 
+</Note>
+
+<RequestExample>
+
+```shell Shell
+curl --request POST \
+     --url https://cloud.mindsdb.com/api/projects/{projectName}/models/{modelName}/predict \
+     --header 'Content-Type: application/json' \
+     --cookie '{session=273trgsehgrui3i2riurwehe}'\
+     --data '
+{
+   'data': [
+       {'sqft': '1000'},
+       {'sqft': '500'},
+    ],
+   'params': {
+
+   }
+}
+```
+
+
+```python Python
+import requests
+url = 'https://cloud.mindsdb.com/projects/{projectName}/models/{modelName}/predict'
+cookies = '{session=273trgsehgrui3i2riurwehe}'
+data = { 'data': [{'sqft': '1000'}, {'sqft': '500'}],'params': {}}
+resp = requests.post(url, data=data, cookies=cookies})
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+[
+    {
+        "__mindsdb_row_id": null,
+        "days_on_market": null,
+        "location": null,
+        "neighborhood": null,
+        "number_of_bathrooms": null,
+        "number_of_rooms": null,
+        "rental_price": 2847,
+        "rental_price_anomaly": null,
+        "rental_price_confidence": 0.99,
+        "rental_price_explain": "{\"predicted_value\": 2847, \"confidence\": 0.99, \"anomaly\": null, \"truth\": null, \"confidence_lower_bound\": 2730, \"confidence_upper_bound\": 2964}",
+        "rental_price_max": 2964,
+        "rental_price_min": 2730,
+        "rental_price_original": null,
+        "select_data_query": null,
+        "sqft": 823,
+        "when_data": null
+    }
+]
+```
+
+</ResponseExample>

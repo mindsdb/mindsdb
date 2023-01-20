@@ -964,7 +964,7 @@ class SQLQuery():
                 df_a, names_a = left_data.to_df_cols(prefix='A')
                 df_b, names_b = right_data.to_df_cols(prefix='B')
 
-                if right_data.is_prediction:
+                if right_data.is_prediction or left_data.is_prediction:
                     # ignore join condition, use row_id
                     a_row_id = left_data.find_columns('__mindsdb_row_id')[0].get_hash_name(prefix='A')
                     b_row_id = right_data.find_columns('__mindsdb_row_id')[0].get_hash_name(prefix='B')

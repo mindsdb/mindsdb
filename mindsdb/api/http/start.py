@@ -17,6 +17,7 @@ from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
 from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
+from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
@@ -58,6 +59,7 @@ def start(verbose, no_studio, with_nlp):
         else:
             return send_from_directory(static_root, 'index.html')
 
+    api.add_namespace(tab_ns)
     api.add_namespace(stream_ns)
     api.add_namespace(utils_ns)
     api.add_namespace(conf_ns)

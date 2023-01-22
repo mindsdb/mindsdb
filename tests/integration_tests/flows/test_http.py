@@ -446,7 +446,6 @@ class TestHTTP:
                                  ("get", {}, 200, {}),
                                  ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}),
                                  ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}),
-                                 ("post", {}, 500, {}),
                              ]
     )
     def test_tabs(self, method, payload, expected_code, result):

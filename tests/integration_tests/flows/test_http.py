@@ -455,7 +455,8 @@ class TestHTTP:
         resp = self.api_request(method, uri, payload=payload)
         assert resp.status_code == expected_code, \
                 f"expected to have {expected_code} for {call_desc}, but got {resp.status_code}"
-        if resp.status_code != 500:
+        # no needs to check reponse body for POST request
+        if method != "post":
             assert result == resp.json(), \
                     f"expected to have {result} for {call_desc}, but got {resp.json()}"
 

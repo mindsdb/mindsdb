@@ -441,3 +441,21 @@ class TestHTTP:
 
         assert len(response.json()) == 2
 
+    @pytest.mark.parametrize("method,payload,expected_code,result",
+                             [
+                                 ("get", {}, 200, {}),
+                                 ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}),
+                                 ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}),
+                                 ("post", {}, 500, {}),
+                             ]
+    )
+    def test_tabs(self, method, payload, expected_code, result):
+        uri = '/tabs/'
+        call_desc = f"{method.upper()} - {uri} payload={payload}"
+        resp = self.api_request(method, uri, payload=payload)
+        assert resp.status_code == expected_code, \
+                f"expected to have {expected_code} for {call_desc}, but got {resp.status_code}"
+        if resp.status_code != 500:
+            assert result == resp.json(), \
+                    f"expected to have {result} for {call_desc}, but got {resp.json()}"
+

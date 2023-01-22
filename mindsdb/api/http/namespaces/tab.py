@@ -26,7 +26,8 @@ def get_storage():
 
 @ns_conf.route('/')
 class Tab(Resource):
-    @ns_conf.doc('get_tabs')
+    @ns_conf.doc('''Loads tabs data from the storage.
+                 Returns empty dict if no data.''')
     def get(self):
         storage = get_storage()
         tabs = None
@@ -38,7 +39,7 @@ class Tab(Resource):
             return {}, 200
         return tabs, 200
 
-    @ns_conf.doc('save_tabs')
+    @ns_conf.doc('''Saves tabs to the storage.''')
     def post(self):
         storage = get_storage()
         try:

@@ -162,6 +162,7 @@ class BaseMLEngineExec:
         """
         ML handler interface converter
         """  # noqa
+        # TODO move this class to model controller
 
         self.name = name
         self.config = Config()
@@ -255,7 +256,9 @@ class BaseMLEngineExec:
         query_ast = self.parser(query, dialect=self.dialect)
         return self.query(query_ast)
 
-    def query(self, query: ASTNode) -> Response:
+    def query_(self, query: ASTNode) -> Response:
+        raise Exception('Should not be used')
+
         """ Intakes a pre-parsed SQL query (via `mindsdb_sql`) and returns the answer given by the ML engine. """
         statement = query
 
@@ -374,12 +377,9 @@ class BaseMLEngineExec:
 
         ml_handler.close()
 
-        columns_dtypes = dict(predictions.dtypes)
         # mdb indexes
         if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
             predictions['__mindsdb_row_id'] = df['__mindsdb_row_id']
-
-        predictions = predictions.to_dict(orient='records')
 
         after_predict_hook(
             company_id=self.company_id,
@@ -388,7 +388,7 @@ class BaseMLEngineExec:
             columns_in_count=df.shape[1],
             rows_out_count=len(predictions)
         )
-        return predictions, columns_dtypes
+        return predictions
 
     def update(
             self, model_name, project_name, version,

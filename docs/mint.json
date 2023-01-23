@@ -120,10 +120,31 @@
             {
               "group": "Do Machine Learning",
               "pages": [
-                "using-sql-api/nlp",
-                "using-sql-api/timeseries",
-                "using-sql-api/classification",
-                "using-sql-api/regression"
+                {
+                  "group": "NLP",
+                  "pages": [
+                    "nlp/nlp-mindsdb-hf",
+                    "nlp/nlp-mindsdb-openai"
+                  ]
+                },
+                {
+                  "group": "Time Series",
+                  "pages": [
+                    "sql/tutorials/eeg-forecasting"
+                  ]
+                },
+                {
+                  "group": "Classification",
+                  "pages": [
+                    "sql/tutorials/customer-churn"
+                  ]
+                },
+                {
+                  "group": "Regression",
+                  "pages": [
+                    "sql/tutorials/home-rentals"
+                  ]
+                }
               ]
             },
             {

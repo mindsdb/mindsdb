@@ -18,7 +18,7 @@ class ProjectDataNode(DataNode):
     type = 'project'
 
     def __init__(self, project, integration_controller, information_schema):
-        self.project = project
+        self.project_db = project
         self.integration_controller = integration_controller
         self.information_schema = information_schema
 
@@ -26,34 +26,50 @@ class ProjectDataNode(DataNode):
         return self.type
 
     def get_tables(self):
-        tables = self.project.get_tables()
-        table_types = {
-            'table': 'BASE TABLE',
-            'model': 'MODEL',
-            'view': 'VIEW'
-        }
+        tables = self.project_db.all()
+        tables = self.project_db.get_tables()
+        # table_types = {
+        #     'table': 'BASE TABLE',
+        #     'model': 'MODEL',
+        #     'view': 'VIEW'
+        # }
         tables = [
             {
-                'TABLE_NAME': key,
-                'TABLE_TYPE': table_types.get(val['type'])
-            }
-            for key, val in tables.items()
+                'TABLE_NAME': t.name,
+                'TABLE_TYPE': t.mindsdb_type
+            } for t in tables
         ]
+        # tables = [
+        #     {
+        #         'TABLE_NAME': key,
+        #         'TABLE_TYPE': table_types.get(val['type'])
+        #     }
+        #     for key, val in tables.items()
+        # ]
         result = [TablesRow.from_dict(row) for row in tables]
         return result
 
     def has_table(self, table_name):
-        tables = self.project.get_tables()
-        return table_name in tables
+        table = self.project_db.get(table_name)
+        return table is not None
 
     def get_table_columns(self, table_name):
-        return self.project.get_columns(table_name)
+        table = self.project_db.get(table_name)
+        return table.get_columns()
+        # return self.project.get_columns(table_name) # !!!
 
     def predict(self, model_name: str, data, version=None, params=None):
-        project_tables = self.project.get_tables()
-        predictor_table_meta = project_tables[model_name]
-        handler = self.integration_controller.get_handler(predictor_table_meta['engine_name'])
-        predictions, columns_dtypes = handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
+        # project_tables = self.project.get_tables()
+        # predictor_table_meta = project_tables[model_name]
+        model_table = self.project_db.get(model_name)
+        handler = self.integration_controller.get_handler(model_table.engine)
+        predictions, columns_dtypes = handler.predict(
+            model_name,
+            data,
+            project_name=self.project_db.name,
+            version=version,
+            params=params
+        )
         return predictions, columns_dtypes
 
     def query(self, query=None, native_query=None, session=None):
@@ -71,7 +87,7 @@ class ProjectDataNode(DataNode):
             new_query = deepcopy(query)
             project_filter = BinaryOperation('=', args=[
                 Identifier('project'),
-                Constant(self.project.name)
+                Constant(self.project_db.name)
             ])
             if new_query.where is None:
                 new_query.where = project_filter
@@ -85,7 +101,19 @@ class ProjectDataNode(DataNode):
         # endregion
 
         # region query to views
-        view_query_ast = self.project.query_view(query)
+        # view_name = query.from_table.parts[-1]
+        # view_meta = ViewController().get(
+        #     name=view_name,
+        #     project_name=self.name
+        # )
+        # subquery_ast = parse_sql(view_meta['query'], dialect='mindsdb')
+
+        # not reliable, need to improve
+        view_name = query.from_table.parts[-1]
+        view_table = self.project_db.get(view_name)
+        view_query_ast = view_table.get_query_ast()
+
+        # view_query_ast = self.project_db.query_view(view_query)
 
         renderer = SqlalchemyRender('mysql')
         query_str = renderer.get_string(view_query_ast, with_failback=True)

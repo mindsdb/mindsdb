@@ -2,12 +2,20 @@ from copy import deepcopy
 
 import numpy as np
 
+from mindsdb.interfaces.controllers.abc.table import Table
 
-class ProjectModelTable:
+
+class ProjectModelTable(Table):
+    type = 'model'
+    mysql_type = 'BASE TABLE'
+    mindsdb_type = 'MODEL'
+
     @staticmethod
     def from_record(model_record, integration_record):
         model = ProjectModelTable()
         model.name = model_record.name
+        model.id = model_record.id
+        model.engine = integration_record.name
 
         predictor_data = deepcopy(model_record.data) or {}
         predictor_meta = {
@@ -34,3 +42,7 @@ class ProjectModelTable:
 
         model.metadata = predictor_meta
         return model
+
+    def get_columns(self):
+        # TODO
+        return []

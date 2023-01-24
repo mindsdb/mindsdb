@@ -46,6 +46,7 @@ from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.functions import mark_process
 from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.interfaces.database.database import DatabaseController
+from mindsdb.interfaces.controllers.classes.collection.database_collection import DatabaseCollection
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.model.functions import get_model_records
@@ -70,7 +71,8 @@ def learn_process(class_path, context_dump, integration_id,
         target = problem_definition['target']
         training_data_df = None
 
-        database_controller = DatabaseController()
+        db_root = DatabaseCollection()
+        database_controller = DatabaseController()   # todo del!
 
         sql_session = make_sql_session()
         if data_integration_ref is not None:
@@ -85,9 +87,11 @@ def learn_process(class_path, context_dump, integration_id,
                 )
                 sqlquery = SQLQuery(query, session=sql_session)
             elif data_integration_ref['type'] == 'view':
-                project = database_controller.get_project(project_name)
+                project = db_root.get(project_name)
                 query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
-                view_query_ast = project.query_view(query_ast)
+                view_name = query_ast.from_table.parts[-1]
+                view_table = project.get(view_name)
+                view_query_ast = view_table.get_query_ast()
                 sqlquery = SQLQuery(view_query_ast, session=sql_session)
 
             result = sqlquery.fetch(view='dataframe')

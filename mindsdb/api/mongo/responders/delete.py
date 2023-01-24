@@ -44,7 +44,7 @@ class Responce(Responder):
         if obj_name is None and obj_id is None:
             raise Exception("Can't find object to delete, use filter by name or _id")
 
-        if table == 'models' or table == 'models_versions':
+        if obj_name is None and (table == 'models' or table == 'models_versions'):
             model_id = obj_id >> 20
             if obj_name is None:
                 models = mindsdb_env['model_controller'].get_models(
@@ -56,7 +56,7 @@ class Responce(Responder):
                         obj_name = model['name']
                         break
                 if obj_name is None:
-                    raise Exception("Can't find model with by _id")
+                    raise Exception("Can't find model by _id")
 
         # delete model
         if table == 'models':
@@ -64,6 +64,9 @@ class Responce(Responder):
 
         # delete model version
         elif table == 'models_versions':
+            if obj_id is None:
+                raise Exception("Can't find object version")
+
             version = obj_id & (2**20 - 1)
             models = [
                 {'NAME': obj_name, 'PROJECT': project_name, 'VERSION': version}

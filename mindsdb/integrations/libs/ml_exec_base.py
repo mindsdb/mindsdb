@@ -42,7 +42,6 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
-from mindsdb.integrations.libs.handler_helpers import _clean_pdef
 from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.functions import mark_process
 from mindsdb.integrations.utilities.utils import format_exception_error
@@ -66,7 +65,6 @@ def learn_process(class_path, context_dump, integration_id,
     db.init()
 
     predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-    problem_definition = _clean_pdef(problem_definition)
 
     try:
         target = problem_definition['target']

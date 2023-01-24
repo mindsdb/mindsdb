@@ -28,6 +28,7 @@ USING
   engine = 'openai',                            -- USING THE OPENAI ENGINE
   prompt_template = 'promt/task                 
                     {{input_column}}',          -- PROMPT TEMPLATE WITH PLACEHOLDERS FOR INPUT COLUMNS
+  model_name = 'model_name',                    -- DEFAULT IS THE text-davinci-002 MODEL
   api_key = 'YOUR_OPENAI_API_KEY';              -- OPTIONAL, IF NOT PASSED MINDSDB FETCHES THE
                                                 -- `OPENAI_API_KEY` ENVIRONMENT VARIABLE VALUE  
 ```

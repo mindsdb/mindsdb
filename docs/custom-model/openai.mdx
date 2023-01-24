@@ -25,18 +25,20 @@ PREDICT answer
 USING
     engine = 'openai',
     question_column = 'question',
+    model_name = 'model_name'
     api_key = 'YOUR_OPENAI_API_KEY';
 ```
 
 Where:
 
-| Expression                   | Description                                                                                                                          |
-|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| `project_a.openai_test_a`    | The model name is `openai_test_a` and it resides inside the `project_a` project. Learn more about [MindsDB projects here](/sql/project/).|
-| `answer`                     | It is the value to be predicted.                                                                                                     |
-| `engine`                     | The `openai` engine is used.                                                                                                         |
-| `question_column`            | It is the column that stores input data.                                                                                             |
-| `api_key`                    | Optional. If it is left blank, or the `env` value is passed, then MindsDB fetches the `OPENAI_API_KEY` environment variable value.   |
+| Expression                   | Description                                                                                                                                                  |
+|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `project_a.openai_test_a`    | The model name is `openai_test_a` and it resides inside the `project_a` project. Learn more about [MindsDB projects here](/sql/project/).                    |
+| `answer`                     | It is the value to be predicted.                                                                                                                             |
+| `engine`                     | The `openai` engine is used.                                                                                                                                 |
+| `question_column`            | It is the column that stores input data.                                                                                                                     |
+| `model_name`                 | By default, the `text-davinci-002` model is used. If you prefer to use a cheaper model or a model that was fine-tuned outside of MindsDB, use this parameter.|
+| `api_key`                    | Optional. If it is left blank, or the `env` value is passed, then MindsDB fetches the `OPENAI_API_KEY` environment variable value.                           |
 
 Let's look at an example.
 

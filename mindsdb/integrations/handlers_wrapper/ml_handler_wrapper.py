@@ -256,21 +256,16 @@ class MLHandlerWrapper(BaseMLWrapper):
                 "%s.predict: called with params - %s", self.__class__.__name__, params
             )
             handler = self._get_handler()
-            predictions, columns_dtypes = handler.predict(**params)
+            predictions = handler.predict(**params)
             logger.info(
-                "%s.predict: got predictions - %s(type - %s), columns_dtypes - %s(type - %s)",
+                "%s.predict: got predictions - %s(type - %s)",
                 self.__class__.__name__,
                 predictions,
                 type(predictions),
-                columns_dtypes,
-                type(columns_dtypes),
             )
-            if predictions is not None:
-                predictions.append(columns_dtypes)
-                predictions = DataFrame(predictions)
             result = Response(
                 resp_type=RESPONSE_TYPE.OK,
-                data_frame=predictions,
+                data_frame=DataFrame(predictions),
                 error_code=0,
                 error_message=None,
             )

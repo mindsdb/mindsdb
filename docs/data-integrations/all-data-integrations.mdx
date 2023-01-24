@@ -29,9 +29,9 @@ integrations.
     CREATE DATABASE airtable_datasource          --- display name for the database
     WITH ENGINE = 'airtable',                    --- name of the MindsDB handler
     PARAMETERS = {
-      "base_id": " ",                            --- the Airtable base ID
-      "table_name": " ",                         --- the Airtable table name
-      "api_key": " "                             --- the API key for the Airtable API
+      "base_id": "",                            --- the Airtable base ID
+      "table_name": "",                         --- the Airtable table name
+      "api_key": ""                             --- the API key for the Airtable API
     };
     ```
     </Tab>
@@ -54,13 +54,13 @@ integrations.
     <Tab title="Template">
     ```sql
     CREATE DATABASE amazonredshift_datasource         --- display name for the database
-    WITH ENGINE = 'amazonredshift',                   --- name of the MindsDB handler
+    WITH ENGINE = 'redshift',                   --- name of the MindsDB handler
     PARAMETERS = {
-      "host": " ",                                    --- host name or IP address of the Redshift cluster
-      "port": ,                                       --- port used when connecting to the Redshift cluster
-      "database": " ",                                --- database name used when connecting to the Redshift cluster
-      "user": " ",                                    --- user to authenticate with the Redshift cluster
-      "password": " "                                 --- password used to authenticate with the Redshift cluster
+      "host": "",                                    --- host name or IP address of the Redshift cluster
+      "port": ,                                    --- port used when connecting to the Redshift cluster
+      "database": "",                                --- database name used when connecting to the Redshift cluster
+      "user": "",                                    --- user to authenticate with the Redshift cluster
+      "password": ""                                 --- password used to authenticate with the Redshift cluster
     };
     ```
     </Tab>
@@ -87,9 +87,9 @@ integrations.
     CREATE DATABASE dynamodb_datasource       --- display name for the database
     WITH ENGINE = 'dynamodb',                 --- name of the MindsDB handler
     PARAMETERS = {
-      "aws_access_key_id": " ",               --- the AWS access key
-      "aws_secret_access_key": " ",           --- the AWS secret access key
-      "region_name": " "                      --- the AWS region
+      "aws_access_key_id": "",               --- the AWS access key
+      "aws_secret_access_key": "",           --- the AWS secret access key
+      "region_name": ""                      --- the AWS region
     };
     ```
     </Tab>
@@ -114,15 +114,11 @@ integrations.
     CREATE DATABASE cassandra_datasource        --- display name for the database
     WITH ENGINE = 'cassandra',                  --- name of the MindsDB handler
     PARAMETERS = {
-      "host": " ",                              --- host name or IP address
-      "port": ,                                 --- port used to make TCP/IP connection
-      "user": " ",                              --- database user
-      "password": " ",                          --- database password
-      "keyspace": " ",                          --- database name
-      "protocol_version": ,                     --- optional, protocol version (defaults to 4 if left blank)
-      "secure_connect_bundle": {                --- optional, secure connect bundle file
-        "path": " "                                 --- either "path" or "url"
-      }
+      "host": "",                               --- host, it can be an ip or an url
+      "port": 9043,                           --- port used to make TCP/IP connection
+      "user": "",                               --- Your Keyspace user
+      "password": "",                           --- Your Keyspace password
+      "keyspace": ""                           --- The name of your database *optional
     };
     ```
     </Tab>
@@ -135,8 +131,7 @@ integrations.
       "port": 9043,
       "user": "user",
       "password": "password",
-      "keyspace": "test_data",
-      "protocol_version": 4
+      "keyspace": "test_data"
     };
     ```
     </Tab>
@@ -150,8 +145,8 @@ integrations.
     CREATE DATABASE ckan_datasource          --- display name for the database
     WITH ENGINE = 'ckan',                    --- name of the MindsDB handler
     PARAMETERS = {
-      "url": " ",                            --- host name, IP address, or a URL
-      "apikey": " "                          --- the API key used for authentication
+      "url": "",                            --- host, it can be an ip or an url
+      "apikey": ""                          --- the API key used for authentication
     };
     ```
     </Tab>
@@ -172,15 +167,15 @@ integrations.
 <Tabs>
     <Tab title="Template">
     ```sql
-    CREATE DATABASE clickhouse_datasource       --- display name for the database
-    WITH ENGINE = 'clickhouse',                 --- name of the MindsDB handler
+    CREATE DATABASE clickhouse_datasource      --- display name for the database
+    WITH ENGINE = 'clickhouse',                --- name of the MindsDB handler
     PARAMETERS = {
-      "host": " ",                              --- host name or IP address
-      "port": ,                                 --- port used to make TCP/IP connection
-      "database": " ",                          --- database name
-      "user": " ",                              --- database user
-      "password": " ",                          --- database password
-      "protocol": " "                           --- optional, http or https (defaults to `native`)
+      "host": "",                              --- host name or IP address
+      "port": ,                                --- port used to make TCP/IP connection
+      "database": "",                          --- database name
+      "user": "",                              --- database user
+      "password": "",                          --- database password
+      "protocol": ""                           --- optional, http or https (defaults to `native`)
     };
     ```
     </Tab>
@@ -207,12 +202,12 @@ integrations.
     CREATE DATABASE cockroach_datasource        --- display name for the database
     WITH ENGINE = 'cockroachdb',                --- name of the MindsDB handler
     PARAMETERS = {
-      "host": " ",                              --- host name or IP address
-      "port": ,                                 --- port used to make TCP/IP connection
-      "database": " ",                          --- database name
+      "host": "",                               --- host name or IP address
+      "port": 26257,                            --- port used to make TCP/IP connection
       "user": " ",                              --- database user
-      "password": " ",                          --- database password
-      "publish": " "                            --- optional, publish
+      "password": "",                           --- database password
+      "database": "",                           --- The name of your database *optiona
+      "publish": ""                             --- optional, publish
     };
     ```
     </Tab>
@@ -236,15 +231,15 @@ integrations.
 <Tabs>
     <Tab title="Template">
     ```sql
-    CREATE DATABASE couchbase_datasource        --- display name for the database
-    WITH ENGINE = 'couchbase',                  --- name of the MindsDB handler
+    CREATE DATABASE couchbase_datasource       --- display name for the database
+    WITH ENGINE = 'couchbase',                 --- name of the MindsDB handler
     PARAMETERS = {
-      "host": " ",                              --- host name or IP address of the Couchbase server
-      "user": " ",                              --- user to authenticate with the Couchbase server
-      "password": " ",                          --- password used to authenticate with the Couchbase server
-      "bucket": " ",                            --- bucket name
-      "scope": " "                              --- scope used to query (defaults to `_default` if left blank)
-    };                                              --- a scope in Couchbase is equivalent to a schema in MySQL
+      "host": "",                              --- host name or IP address of the Couchbase server
+      "user": "",                              --- user to authenticate with the Couchbase server
+      "password": "",                          --- password used to authenticate with the Couchbase server
+      "bucket": "",                            --- bucket name
+      "scope": ""                              --- the scope to use for making queries based on a scoped context because, couchbase uses scope just like schema in mysql, but scopes are mandatory. N.B the scope is optional, if omitted, will default to "_default"
+    };
     ```
     </Tab>
     <Tab title="Example">
@@ -266,14 +261,14 @@ integrations.
 <Tabs>
     <Tab title="Template">
     ```sql
-    CREATE DATABASE cratedb_datasource        --- display name for the database
-    WITH ENGINE = 'crate',                    --- name of the MindsDB handler
+    CREATE DATABASE cratedb_datasource       --- display name for the database
+    WITH ENGINE = 'crate',                   --- name of the MindsDB handler
     PARAMETERS = {
-      "host": " ",                            --- host name or IP address
-      "port": ,                               --- port used to make TCP/IP connection
-      "user": " ",                            --- database user
-      "password": " ",                        --- database password
-      "schema_name": " "                      --- database schema name (defaults to `doc` if left blank)
+      "host": "",                            --- host to server IP Address or hostname
+      "port": 4200,                          --- port through which connection is to be made
+      "user": "",                            --- username associated with database
+      "password": "",                        --- password to authenticate your access
+      "schema_name": ""                      --- schema name to get tables (defaults to `doc` if left blank)
     };
     ```
     </Tab>

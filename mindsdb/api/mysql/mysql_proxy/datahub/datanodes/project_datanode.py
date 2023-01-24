@@ -62,6 +62,8 @@ class ProjectDataNode(DataNode):
         # project_tables = self.project.get_tables()
         # predictor_table_meta = project_tables[model_name]
         model_table = self.project_db.get(model_name)
+        if model_table.metadata['update_status'] == 'available':
+            raise Exception(f"model '{model_name}' is obsolete and needs to be updated. Run 'RETRAIN {model_name};'")
         handler = self.integration_controller.get_handler(model_table.engine)
         predictions, columns_dtypes = handler.predict(
             model_name,

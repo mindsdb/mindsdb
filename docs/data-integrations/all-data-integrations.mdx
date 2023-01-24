@@ -1,185 +1,7 @@
 ---
-title: CREATE DATABASE Statement
-sidebarTitle: Data Setup in MindsDB
+title: Supported Integrations
+sidebarTitle: Supported Integrations
 ---
-
-## Description
-
-MindsDB lets you connect to your favorite databases, data warehouses, data lakes, etc., via the `CREATE DATABASE` command.
-
-The MindsDB SQL API supports creating connections to integrations by passing the
-connection parameters specific per integration. You can find more in the
-[Supported Integrations](#supported-integrations) chapter.
-
-## Syntax
-
-Let's review the syntax for the `CREATE DATABASE` command.
-
-```sql
-CREATE DATABASE datasource_name
-[WITH] [ENGINE [=] engine_name] [,]
-[PARAMETERS [=] {
-  "key": "value",
-  ...
-}];
-```
-
-On execution, we get:
-
-```sql
-Query OK, 0 rows affected (x.xxx sec)
-```
-
-Where:
-
-| Name                | Description                                                                       |
-| ------------------- | --------------------------------------------------------------------------------- |
-| `datasource_name`   | Identifier for the data source to be created.                                     |
-| `engine_name`       | Engine to be selected depending on the database connection.                       |
-| `PARAMETERS`        | `{"key": "value"}` object with the connection parameters specific for each engine. |
-
-<Note>
-**SQL Commands Resulting in the Same Output** Please note that the
-keywords/statements enclosed within square brackets are optional. Also, by
-default, the engine is `mindsdb` if not provided otherwise. That yields the
-following SQL commands to result in the same output.
-
-```sql
-CREATE DATABASE db;
-CREATE DATABASE db ENGINE 'mindsdb';
-CREATE DATABASE db ENGINE = 'mindsdb';
-CREATE DATABASE db WITH ENGINE 'mindsdb';
-CREATE DATABASE db WITH ENGINE = 'mindsdb';
-```
-
-</Note>
-
-## Example
-
-### Connecting a Data Source
-
-Here is an example of how to connect to a MySQL database.
-
-```sql
-CREATE DATABASE mysql_datasource
-WITH ENGINE = 'mariadb',
-PARAMETERS = {
-  "user": "root",
-  "port": 3307,
-  "password": "password",
-  "host": "127.0.0.1",
-  "database": "my_database"
-};
-```
-
-On execution, we get:
-
-```sql
-Query OK, 0 rows affected (8.878 sec)
-```
-
-### Listing Linked Databases
-
-You can list all the linked databases using the command below.
-
-```sql
-SHOW DATABASES;
-```
-
-On execution, we get:
-
-```sql
-+--------------------+
-| Database           |
-+--------------------+
-| information_schema |
-| mindsdb            |
-| files              |
-| mysql_datasource   |
-+--------------------+
-```
-
-## Making your Local Database Available to MindsDB
-
-When connecting your local database to MindsDB Cloud, you should expose the
-local database server to be publicly accessible. It is easy to accomplish using
-[Ngrok Tunnel](https://ngrok.com). The free tier offers all you need to get
-started.
-
-The installation instructions are easy to follow. Head over to the
-[downloads page](https://ngrok.com/download) and choose your operating system.
-Follow the instructions for installation.
-
-Then [create a free account at Ngrok](https://dashboard.ngrok.com/signup) to get
-an auth token that you can use to configure your Ngrok instance.
-
-Once installed and configured, run the following command to obtain the host and
-port for your localhost at `port-number`.
-
-```bash
-ngrok tcp port-number
-```
-
-Here is an example. Assuming that you run a PostgreSQL database at
-`localhost:5432`, use the following command:
-
-```bash
-ngrok tcp 5432
-```
-
-On execution, we get:
-
-```bash
-Session Status                online
-Account                       myaccount (Plan: Free)
-Version                       2.3.40
-Region                        United States (us)
-Web Interface                 http://127.0.0.1:4040
-Forwarding                    tcp://4.tcp.ngrok.io:15093 -> localhost 5432
-```
-
-Now you can access your local database at `4.tcp.ngrok.io:15093` instead of
-`localhost:5432`.
-
-So to connect your local database to the MindsDB GUI, use the `Forwarding`
-information. The host is `4.tcp.ngrok.io`, and the port is `15093`.
-
-Proceed to create a database connection in the MindsDB GUI by executing the
-`CREATE DATABASE` statement with the host and port number obtained from
-Ngrok.
-
-```sql
-CREATE DATABASE psql_datasource
-WITH ENGINE = 'postgres',
-PARAMETERS = {
-  "user": "postgres",
-  "port": 15093,
-  "password": "password",
-  "host": "4.tcp.ngrok.io",
-  "database": "postgres"
-};
-```
-
-Please note that the Ngrok tunnel loses connection when stopped or canceled. To
-reconnect your local database to MindsDB, you should create an Ngrok tunnel
-again. In the free tier, Ngrok changes the host and port values each time you
-launch the program, so you need to reconnect your database in the MindsDB Cloud
-by passing the new host and port values obtained from Ngrok.
-
-Before resetting the database connection, drop the previously connected data
-source using the `DROP DATABASE` statement.
-
-```sql
-DROP DATABASE psql_datasource;
-```
-
-After dropping the data source and reconnecting your local database, you can use
-the predictors that you trained using the previously connected data source.
-However, if you have to `RETRAIN` your predictors, please ensure the database
-connection has the same name you used when creating the predictor to avoid
-failing to retrain.
-
-## Supported Integrations
 
 The list of databases supported by MindsDB keeps growing. Here are the currently
 supported integrations:
@@ -197,7 +19,7 @@ Oracle handler, check
 Let's look at sample codes showing how to connect to each of the supported
 integrations.
 
-### Airtable
+## Airtable
 
 <Tabs>
     <Tab title="Template">
@@ -224,7 +46,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Amazon Redshift
+## Amazon Redshift
 
 <Tabs>
     <Tab title="Template">
@@ -255,7 +77,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### AWS DynamoDB
+## AWS DynamoDB
 
 <Tabs>
     <Tab title="Template">
@@ -282,7 +104,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Cassandra
+## Cassandra
 
 <Tabs>
     <Tab title="Template">
@@ -318,7 +140,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Ckan
+## Ckan
 
 <Tabs>
     <Tab title="Template">
@@ -343,7 +165,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### ClickHouse
+## ClickHouse
 
 <Tabs>
     <Tab title="Template">
@@ -375,7 +197,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Cockroach Labs
+## Cockroach Labs
 
 <Tabs>
     <Tab title="Template">
@@ -407,7 +229,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Couchbase
+## Couchbase
 
 <Tabs>
     <Tab title="Template">
@@ -437,7 +259,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Crate.io
+## Crate.io
 
 <Tabs>
     <Tab title="Template">
@@ -468,7 +290,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### D0lt
+## D0lt
 
 <Tabs>
     <Tab title="Template">
@@ -509,7 +331,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Databend
+## Databend
 
 <Tabs>
     <Tab title="Template">
@@ -542,7 +364,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Databricks
+## Databricks
 
 <Tabs>
     <Tab title="Template">
@@ -574,7 +396,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Datastax
+## Datastax
 
 <Tabs>
     <Tab title="Template">
@@ -611,7 +433,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### DB2
+## DB2
 
 <Tabs>
     <Tab title="Template">
@@ -644,7 +466,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Druid
+## Druid
 
 <Tabs>
     <Tab title="Template">
@@ -675,7 +497,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Elastic Search
+## Elastic Search
 
 <Tabs>
     <Tab title="Template">
@@ -701,7 +523,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Firebird
+## Firebird
 
 <Tabs>
     <Tab title="Template">
@@ -730,7 +552,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Google BigQuery
+## Google BigQuery
 
 <Tabs>
     <Tab title="Template">
@@ -771,7 +593,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Google Sheets
+## Google Sheets
 
 <Tabs>
     <Tab title="Template">
@@ -796,7 +618,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Hive
+## Hive
 
 <Tabs>
     <Tab title="Template">
@@ -829,7 +651,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Impala
+## Impala
 
 <Tabs>
     <Tab title="Template">
@@ -860,7 +682,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### Informix
+## Informix
 
 <Tabs>
     <Tab title="Template">
@@ -897,7 +719,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### MariaDB
+## MariaDB
 
 <Tabs>
     <Tab title="Template">
@@ -938,7 +760,7 @@ integrations.
     </Tab>
 </Tabs>
 
-### MariaDB SkySQL
+## MariaDB SkySQL
 
 <Tabs>
     <Tab title="Template">
@@ -978,7 +800,7 @@ integrations.
 
 For more information on how to connect MariaDB SkySQL and MindsDB, visit our [doc page here](/connect/connect-mariadb-skysql/).
 
-### Matrix One
+## Matrix One
 
 <Tabs>
     <Tab title="Template">
@@ -1019,7 +841,7 @@ For more information on how to connect MariaDB SkySQL and MindsDB, visit our [do
     </Tab>
 </Tabs>
 
-### Microsoft Access
+## Microsoft Access
 
 <Tabs>
     <Tab title="Template">
@@ -1042,7 +864,7 @@ For more information on how to connect MariaDB SkySQL and MindsDB, visit our [do
     </Tab>
 </Tabs>
 
-### Microsoft SQL Server
+## Microsoft SQL Server
 
 <Tabs>
     <Tab title="Template">
@@ -1073,7 +895,7 @@ For more information on how to connect MariaDB SkySQL and MindsDB, visit our [do
     </Tab>
 </Tabs>
 
-### MonetDB
+## MonetDB
 
 <Tabs>
     <Tab title="Template">
@@ -1106,7 +928,7 @@ For more information on how to connect MariaDB SkySQL and MindsDB, visit our [do
     </Tab>
 </Tabs>
 
-### MongoDB
+## MongoDB
 
 <Warning>
 
@@ -1147,7 +969,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### MySQL
+## MySQL
 
 <Tabs>
     <Tab title="Template">
@@ -1188,7 +1010,38 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### OpenGauss
+## OceanBase
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE oceanbase_datasource      --- display name for the database
+    WITH ENGINE = 'oceanbase',                --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                            --- host name or IP address
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "port": ,                               --- port used to make TCP/IP connection
+      "database": " "                         --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE oceanbase_datasource
+    WITH ENGINE = 'oceanbase',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "user": "oceanbase_user",
+      "password": "password",
+      "port": 2881,
+      "database": "oceanbase_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+## OpenGauss
 
 <Tabs>
     <Tab title="Template">
@@ -1219,7 +1072,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### Oracle
+## Oracle
 
 <Tabs>
     <Tab title="Template">
@@ -1251,7 +1104,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### OrioleDB
+## OrioleDB
 
 <Tabs>
     <Tab title="Template">
@@ -1284,7 +1137,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### Pinot
+## Pinot
 
 <Tabs>
     <Tab title="Template">
@@ -1318,7 +1171,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### PlanetScale
+## PlanetScale
 
 <Tabs>
     <Tab title="Template">
@@ -1349,7 +1202,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### PostgreSQL
+## PostgreSQL
 
 <Tabs>
     <Tab title="Template">
@@ -1380,7 +1233,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### QuestDB
+## QuestDB
 
 <Tabs>
     <Tab title="Template">
@@ -1412,7 +1265,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### S3
+## S3
 
 <Tabs>
     <Tab title="Template">
@@ -1445,7 +1298,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### SAP HANA
+## SAP HANA
 
 <Tabs>
     <Tab title="Template">
@@ -1478,7 +1331,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### Scylla
+## Scylla
 
 <Tabs>
     <Tab title="Template">
@@ -1517,7 +1370,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### SingleStore
+## SingleStore
 
 <Tabs>
     <Tab title="Template">
@@ -1558,7 +1411,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### Snowflake
+## Snowflake
 
 <Tabs>
     <Tab title="Template">
@@ -1597,7 +1450,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### Solr
+## Solr
 
 <Tabs>
     <Tab title="Template">
@@ -1632,7 +1485,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### SQL Anywhere
+## SQL Anywhere
 
 <Tabs>
     <Tab title="Template">
@@ -1665,7 +1518,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### SQLite
+## SQLite
 
 <Tabs>
     <Tab title="Template">
@@ -1688,7 +1541,38 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### Supabase
+## StarRocks
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE starrocks_datasource      --- display name for the database
+    WITH ENGINE = 'starrocks',                --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                            --- host name or IP address
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "port": ,                               --- port used to make TCP/IP connection
+      "database": " "                         --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE starrocks_datasource
+    WITH ENGINE = 'starrocks',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "user": "starrocks_user",
+      "password": "password",
+      "port": 8030,
+      "database": "starrocks_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+## Supabase
 
 <Tabs>
     <Tab title="Template">
@@ -1719,7 +1603,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### TDEngine
+## TDEngine
 
 <Tabs>
     <Tab title="Template">
@@ -1750,7 +1634,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### Teradata
+## Teradata
 
 <Tabs>
     <Tab title="Template">
@@ -1781,7 +1665,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### TiDB
+## TiDB
 
 <Tabs>
     <Tab title="Template">
@@ -1812,7 +1696,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### Timescaledb
+## Timescaledb
 
 <Tabs>
     <Tab title="Template">
@@ -1843,7 +1727,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### Trino
+## Trino
 
 <Tabs>
     <Tab title="Template">
@@ -1897,7 +1781,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### Vertica
+## Vertica
 
 <Tabs>
     <Tab title="Template">
@@ -1930,7 +1814,38 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-### Yugabyte
+## Vitess
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE vitess_datasource       --- display name for the database
+    WITH ENGINE = 'vitess',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address
+      "user": " ",                          --- database user
+      "password": " ",                      --- database password
+      "port": ,                             --- port used to make TCP/IP connection
+      "database": " "                       --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE vitess_datasource
+    WITH ENGINE = 'vitess',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "user": "vitess_user",
+      "password": "password",
+      "port": 33577,
+      "database": "vitess_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+## Yugabyte
 
 <Tabs>
     <Tab title="Template">

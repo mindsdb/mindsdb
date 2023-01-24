@@ -195,37 +195,8 @@
             }
           ]
         },
-        {
-          "group": "Using MindsDB with DBT",
-          "pages": [
-            "connect/dbt",
-            {
-              "group": "Do Machine Learning",
-              "pages": [
-                "using-dbt/nlp",
-                "using-dbt/timeseries",
-                "using-dbt/classification",
-                "using-dbt/regression"
-              ]
-            }
-          ]
-        },
-        {
-          "group": "Using MindsDB with Kafka",
-          "pages": [
-            "connect/kafka",
-            {
-              "group": "Do Machine Learning",
-              "pages": [
-                "using-kafka/anomaly-detection",
-                "using-kafka/nlp",
-                "using-kafka/timeseries",
-                "using-kafka/classification",
-                "using-kafka/regression"
-              ]
-            }
-          ]
-        },
+        "connect/dbt",
+        "connect/kafka",
         {
           "group": "Using MindsDB via REST API",
           "pages": [

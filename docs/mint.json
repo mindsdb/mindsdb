@@ -1,4 +1,5 @@
 {
+  "$schema": "https://mintlify.com/schema.json",
   "name": "MindsDB",
   "logo": {
     "light": "/logo/light.svg",
@@ -8,9 +9,7 @@
   "colors": {
     "primary": "#2AB673",
     "light": "#55D799",
-    "dark": "#117866",
-    "ultraLight": "#CCEFE9",
-    "ultraDark": "#0D5E4F"
+    "dark": "#117866"
   },
   "openApi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
@@ -20,7 +19,7 @@
       "https://127.0.0.1"
     ],
     "auth": {
-      "method": "api-key",
+      "method": "key",
       "name": "X-API-KEY"
     }
   },

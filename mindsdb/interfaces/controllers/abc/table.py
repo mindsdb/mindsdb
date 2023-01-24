@@ -1,3 +1,7 @@
+class Table:
+    pass
+
+
 class ModelTable:
     pass
 

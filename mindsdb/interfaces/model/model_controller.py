@@ -80,7 +80,7 @@ class ModelController():
 
         return ml_handler.describe(attribute)
 
-    def get_models(self, with_versions=False, ml_handler_name='lightwood', integration_id=None,
+    def get_models(self, with_versions=False, ml_handler_name=None, integration_id=None,
                    project_name=None):
         models = []
         show_active = True if with_versions is False else None

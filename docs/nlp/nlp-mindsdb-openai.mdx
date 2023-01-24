@@ -18,6 +18,21 @@ Currently, MindsDB's NLP engine is powered by [Hugging Face](https://huggingface
 
 We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the OpenAI models to MindsDB.
 
+
+Generally, it looks like this:
+
+```sql
+CREATE MODEL project_name.predictor_name        -- AI TABLE TO STORE THE MODEL
+PREDICT target_column                           -- NAME OF THE COLUMN TO STORE PREDICTED VALUES
+USING
+  engine = 'openai',                            -- USING THE OPENAI ENGINE
+  prompt_template = 'promt/task                 
+                    {{input_column}}',          -- PROMPT TEMPLATE WITH PLACEHOLDERS FOR INPUT COLUMNS
+  api_key = 'YOUR_OPENAI_API_KEY';              -- OPTIONAL, IF NOT PASSED MINDSDB FETCHES THE
+                                                -- `OPENAI_API_KEY` ENVIRONMENT VARIABLE VALUE  
+```
+
+## Example
 <Tip>
 For more examples and explanations, visit our [doc page on OpenAI](/custom-model/openai/).
 </Tip>

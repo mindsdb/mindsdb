@@ -149,7 +149,7 @@ class PostgresHandler(DatabaseHandler):
         """
         return self.native_query(query)
 
-    def get_columns(self, table_name):
+    def get_columns(self, table_name: str) -> Response:
         query = f"""
             SELECT
                 column_name as "Field",

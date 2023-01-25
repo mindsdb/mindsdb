@@ -34,3 +34,11 @@ class DatabaseCollection():
             db = None
 
         return db
+
+    @property
+    def integrations(self):
+        return IntegrationCollection()
+
+    @property
+    def projects(self):
+        return ProjectCollection()

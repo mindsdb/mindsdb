@@ -45,7 +45,6 @@ from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.functions import mark_process
 from mindsdb.integrations.utilities.utils import format_exception_error
-from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.controllers.classes.collection.database_collection import DatabaseCollection
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.utilities.context import context as ctx
@@ -72,12 +71,11 @@ def learn_process(class_path, context_dump, integration_id,
         training_data_df = None
 
         db_root = DatabaseCollection()
-        database_controller = DatabaseController()   # todo del!
 
         sql_session = make_sql_session()
         if data_integration_ref is not None:
             if data_integration_ref['type'] == 'integration':
-                integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
+                integration_name = db_root.integrations.get_by_id(data_integration_ref['id']).name
                 query = Select(
                     targets=[Star()],
                     from_table=NativeQuery(
@@ -176,8 +174,7 @@ class BaseMLEngineExec:
         self.execution_method = kwargs.get('execution_method')
 
         self.model_controller = ModelController()
-
-        self.database_controller = DatabaseController()
+        self.db_root = DatabaseCollection()
 
         self.parser = parse_sql
         self.dialect = 'mindsdb'
@@ -300,7 +297,7 @@ class BaseMLEngineExec:
 
         target = problem_definition['target']
 
-        project = self.database_controller.get_project(name=project_name)
+        project = self.db_root.projects.get(project_name)
 
         # handler-side validation
         if hasattr(self.handler_class, 'create_validation'):
@@ -402,7 +399,7 @@ class BaseMLEngineExec:
             args: Optional[dict] = None
     ):
         # generate new record from latest version as starting point
-        project = self.database_controller.get_project(name=project_name)
+        project = self.db_root.projects.get(project_name)
         predictor_records = get_model_records(
             active=None,
             name=model_name,

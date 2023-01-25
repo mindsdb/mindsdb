@@ -29,3 +29,15 @@ class ProjectCollection(Collection):
 
     def __setitem__(self, key, value):
         raise NotImplementedError()
+
+    def get(self, name):
+        record = db.Project.query.filter(
+            (db.Project.company_id == ctx.company_id)
+            & (db.Project.deleted_at == sa.null())
+            & (sa.func.lower(db.Project.name) == name.lower())
+        ).order_by(db.Project.name).first()
+
+        if record is None:
+            return None
+
+        return ProjectDB.from_record(record)

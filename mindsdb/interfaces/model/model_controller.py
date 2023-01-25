@@ -21,6 +21,8 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.interfaces.storage.model_fs import ModelStorage
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.controllers.classes.collection.database_collection import DatabaseCollection
+from mindsdb.interfaces.controllers.classes.const import DatabaseType
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -117,8 +119,6 @@ class ModelController():
         return models
 
     def delete_model(self, model_name: str, project_name: str = 'mindsdb'):
-        from mindsdb.interfaces.database.database import DatabaseController
-
         project_record = db.Project.query.filter(
             (func.lower(db.Project.name) == func.lower(project_name))
             & (db.Project.company_id == ctx.company_id)
@@ -127,9 +127,9 @@ class ModelController():
         if project_record is None:
             raise Exception(f"Project '{project_name}' does not exists")
 
-        database_controller = DatabaseController()
+        db_root = DatabaseCollection()
 
-        project = database_controller.get_project(project_name)
+        project = db_root.projects.get(project_name)
 
         predictors_records = get_model_records(
             name=model_name,
@@ -229,29 +229,29 @@ class ModelController():
         self.fs_store.push()
 
     @staticmethod
-    def _get_data_integration_ref(statement, database_controller):
-        # TODO use database_controller handler_controller internally
+    def _get_data_integration_ref(statement):
         data_integration_ref = None
         fetch_data_query = None
         if statement.integration_name is not None:
             fetch_data_query = statement.query_str
             integration_name = statement.integration_name.parts[0]
 
-            databases_meta = database_controller.get_dict()
-            data_integration_meta = databases_meta[integration_name]
+            db_root = DatabaseCollection()
+            integration_db = db_root.integrations.get(integration_name)
+
             # TODO improve here. Suppose that it is view
-            if data_integration_meta['type'] == 'project':
+            if integration_db.type == DatabaseType.project:
                 data_integration_ref = {
                     'type': 'view'
                 }
             else:
                 data_integration_ref = {
                     'type': 'integration',
-                    'id': data_integration_meta['id']
+                    'id': integration_db.id
                 }
         return data_integration_ref, fetch_data_query
 
-    def prepare_create_statement(self, statement, database_controller, handler_controller):
+    def prepare_create_statement(self, statement):
         # extract data from Create model or Retrain statement and prepare it for using in crate and retrain functions
         project_name = statement.name.parts[0].lower()
         model_name = statement.name.parts[1].lower()
@@ -260,7 +260,7 @@ class ModelController():
         if statement.targets is not None:
             problem_definition['target'] = statement.targets[0].parts[-1]
 
-        data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement, database_controller)
+        data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement)
 
         label = None
         if statement.using is not None:
@@ -296,17 +296,16 @@ class ModelController():
         )
 
     def create_model(self, statement, ml_handler):
-        params = self.prepare_create_statement(statement,
-                                               ml_handler.database_controller,
-                                               ml_handler.handler_controller)
+        params = self.prepare_create_statement(statement)
 
-        existing_projects_meta = ml_handler.database_controller.get_dict(filter_type='project')
-        if params['project_name'] not in existing_projects_meta:
+        db_root = DatabaseCollection()
+
+        project = db_root.projects.get(params['project_name'])
+        if project is None:
             raise Exception(f"Project '{params['project_name']}' does not exist.")
 
-        project = ml_handler.database_controller.get_project(name=params['project_name'])
-        project_tables = project.get_tables()
-        if params['model_name'] in project_tables:
+        model_table = project.get(params['model_name'])
+        if model_table is not None:
             raise Exception(f"Error: model '{params['model_name']}' already exists in project {params['project_name']}!")
 
         ml_handler.learn(**params)
@@ -319,9 +318,7 @@ class ModelController():
             if set_active in ('0', 0, None):
                 set_active = False
 
-        params = self.prepare_create_statement(statement,
-                                               ml_handler.database_controller,
-                                               ml_handler.handler_controller)
+        params = self.prepare_create_statement(statement)
 
         base_predictor_record = get_model_record(
             name=params['model_name'],
@@ -367,10 +364,10 @@ class ModelController():
 
         return last_version + 1
 
-    def prepare_adjust_statement(self, statement, database_controller):
+    def prepare_adjust_statement(self, statement):
         project_name = statement.name.parts[0].lower()
         model_name = statement.name.parts[1].lower()
-        data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement, database_controller)
+        data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement)
 
         label = None
         args = {}
@@ -411,7 +408,7 @@ class ModelController():
             if set_active in ('0', 0, None):
                 set_active = False
 
-        params = self.prepare_adjust_statement(statement, ml_handler.database_controller)
+        params = self.prepare_adjust_statement(statement)
 
         params['set_active'] = set_active
         ml_handler.update(**params)

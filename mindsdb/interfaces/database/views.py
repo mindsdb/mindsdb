@@ -1,24 +1,22 @@
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.controllers.classes.collection.database_collection import DatabaseCollection
 
 
 class ViewController:
     def add(self, name, query, project_name):
-        from mindsdb.interfaces.database.database import DatabaseController
+        db_root = DatabaseCollection()
+        project_db = db_root.projects.get(project_name)
 
-        database_controller = DatabaseController()
-        project_databases_dict = database_controller.get_dict(filter_type='project')
-
-        if project_name not in project_databases_dict:
+        if project_db is None:
             raise Exception(f"Can not find project: '{project_name}'")
 
-        project_id = project_databases_dict[project_name]['id']
         view_record = (
             db.session.query(db.View.id)
             .filter_by(
                 name=name,
                 company_id=ctx.company_id,
-                project_id=project_id
+                project_id=project_db.id
             ).first()
         )
         if view_record is not None:
@@ -28,7 +26,7 @@ class ViewController:
             name=name,
             company_id=ctx.company_id,
             query=query,
-            project_id=project_id
+            project_id=project_db.id
         )
         db.session.add(view_record)
         db.session.commit()

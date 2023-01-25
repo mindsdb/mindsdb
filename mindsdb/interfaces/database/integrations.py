@@ -1,4 +1,3 @@
-import copy
 import base64
 import shutil
 import tempfile
@@ -15,10 +14,13 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
-from mindsdb.utilities import log
 from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.log import get_log
+
+
+logger = get_log()
 
 
 class IntegrationController:
@@ -45,14 +47,14 @@ class IntegrationController:
             self._add_integration_record(name, engine, connection_args)
             return
 
-        log.logger.debug(
+        logger.debug(
             "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
             self.__class__.__name__, name, engine, connection_args, ctx.company_id
         )
         handlers_meta = self.get_handlers_import_status()
         handler_meta = handlers_meta[engine]
         accept_connection_args = handler_meta.get('connection_args')
-        log.logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
+        logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
 
         files_dir = None
         if accept_connection_args is not None:
@@ -231,12 +233,8 @@ class IntegrationController:
             Returns:
                 Handler object
         """
-        as_service = False
-        if 'as_service' in connection_data:
-            as_service = connection_data["as_service"]
-            connection_data = copy.deepcopy(connection_data)
-            del connection_data['as_service']
-            log.logger.debug("%s create_tmp_handler: delete 'as_service' key from connection args - %s", self.__class__.__name__, connection_data)
+
+        logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
         resource_id = int(time() * 10000)
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
@@ -252,10 +250,8 @@ class IntegrationController:
             connection_data=connection_data
         )
 
-        if as_service:
-            log.logger.debug("%s create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-            return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
-        return self.handler_modules[handler_type].Handler(**handler_ars)
+        logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
+        return DBServiceClient(handler_type, **handler_ars)
 
     def get_handler(self, name, case_sensitive=False):
         if case_sensitive:
@@ -272,18 +268,14 @@ class IntegrationController:
         connection_data = integration_data.get('connection_data', {})
         integration_engine = integration_data['engine']
         integration_name = integration_data['name']
-        log.logger.debug("%s get_handler: connection_data=%s, engine=%s", self.__class__.__name__, connection_data, integration_engine)
+        logger.debug("%s.get_handler: connection_data=%s, engine=%s", self.__class__.__name__, connection_data, integration_engine)
 
         if integration_engine not in self.handler_modules:
             raise Exception(f"Can't find handler for '{integration_name}' ({integration_engine})")
 
         integration_meta = self.handlers_import_status[integration_engine]
         connection_args = integration_meta.get('connection_args')
-        as_service = False
-        if 'as_service' in connection_data:
-            as_service = connection_data['as_service']
-            del connection_data['as_service']
-        log.logger.debug("%s get_handler: connection args - %s", self.__class__.__name__, connection_args)
+        logger.debug("%s.get_handler: connection args - %s", self.__class__.__name__, connection_args)
 
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
@@ -313,20 +305,21 @@ class IntegrationController:
                 sync=True
             )
         from mindsdb.integrations.libs.base import BaseMLEngine
-        from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
+        # from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
+        from mindsdb.integrations.handlers_client.ml_client import MLClient
 
         HandlerClass = self.handler_modules[integration_engine].Handler
 
         if isinstance(HandlerClass, type) and issubclass(HandlerClass, BaseMLEngine):
             handler_ars['handler_class'] = HandlerClass
             handler_ars['execution_method'] = getattr(self.handler_modules[integration_engine], 'execution_method', None)
-            handler = BaseMLEngineExec(**handler_ars)
+            handler_ars['integration_engine'] = integration_engine
+            logger.info("%s.get_handler: create a ML client, params - %s", self.__class__.__name__, handler_ars)
+            handler = MLClient(**handler_ars)
         else:
-            handler = HandlerClass(**handler_ars)
 
-        if as_service:
-            log.logger.debug("%s get_handler: create a client to db service of %s type", self.__class__.__name__, handler_type)
-            return DBServiceClient(handler_type, as_service=as_service, **handler_ars)
+            logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
+            handler = DBServiceClient(integration_engine, **handler_ars)
 
         return handler
 

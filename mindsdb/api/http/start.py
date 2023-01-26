@@ -67,18 +67,23 @@ def start(verbose, no_studio, with_nlp):
     def status():
         return '', 200
 
-    api.add_namespace(tab_ns)
-    api.add_namespace(stream_ns)
-    api.add_namespace(utils_ns)
-    api.add_namespace(conf_ns)
-    api.add_namespace(file_ns)
-    api.add_namespace(sql_ns)
-    api.add_namespace(analysis_ns)
-    api.add_namespace(handlers_ns)
-    api.add_namespace(tree_ns)
-    api.add_namespace(projects_ns)
+    namespaces = [
+        tab_ns,
+        stream_ns,
+        utils_ns,
+        conf_ns,
+        file_ns,
+        sql_ns,
+        analysis_ns,
+        handlers_ns,
+        tree_ns,
+        projects_ns
+    ]
     if with_nlp:
-        api.add_namespace(nlp_ns)
+        namespaces.append(nlp_ns)
+
+    for ns in namespaces:
+        api.add_namespace(ns)
 
     @api.errorhandler(Exception)
     def handle_exception(e):
@@ -96,6 +101,8 @@ def start(verbose, no_studio, with_nlp):
     @app.before_request
     def before_request():
         ctx.set_default()
+        # Check here whitelisted routes
+
         company_id = request.headers.get('company-id')
         user_class = request.headers.get('user-class')
 

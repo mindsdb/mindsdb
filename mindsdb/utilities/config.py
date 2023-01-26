@@ -89,6 +89,11 @@ class Config():
             },
             'storage_dir': os.environ['MINDSDB_STORAGE_DIR'],
             'paths': paths,
+            'auth': {
+                'disabled': True,
+                'username': '',
+                'password': ''
+            },
             "log": {
                 "level": {
                     "console": "INFO",

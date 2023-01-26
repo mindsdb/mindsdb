@@ -354,6 +354,7 @@
             "contribute",
             "contribute/install",
             "contribute/issues",
+            "contribute/data-integration-page",
             "contribute/data-handlers",
             "contribute/ml-handlers",
             "contribute/docs",

@@ -117,8 +117,9 @@
               ]
             },
             {
-              "group": "Do Machine Learning",
+              "group": "Machine Learning Examples",
               "pages": [
+                "ml-types",
                 {
                   "group": "NLP",
                   "pages": [
@@ -190,8 +191,9 @@
               ]
             },
             {
-              "group": "Do Machine Learning",
+              "group": "Machine Learning Examples",
               "pages": [
+                "ml-types",
                 "using-mongo-api/nlp",
                 "using-mongo-api/timeseries",
                 "using-mongo-api/classification",

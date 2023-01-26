@@ -112,6 +112,9 @@ if __name__ == '__main__':
     else:
         print('\n ✓ telemetry enabled \n')
 
+    if os.environ.get('FLASK_SECRET_KEY') is None:
+        os.environ.get['FLASK_SECRET_KEY'] = os.urandom(16)
+
     # -------------------------------------------------------
 
     # initialization

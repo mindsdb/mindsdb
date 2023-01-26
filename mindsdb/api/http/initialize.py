@@ -1,5 +1,4 @@
 from distutils.version import LooseVersion
-import requests
 import os
 import shutil
 import threading
@@ -9,8 +8,10 @@ from pathlib import Path
 import traceback
 import tempfile
 import mimetypes
+import datetime
 
 # import concurrent.futures
+import requests
 from flask import Flask, url_for, make_response
 from flask.json import dumps
 from flask_restx import Api
@@ -234,6 +235,9 @@ def initialize_flask(config, init_static_thread, no_studio):
         **kwargs
     )
 
+    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(16))
+    app.config['SESSION_COOKIE_NAME'] = 'session'
+    app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=31)
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     app.json_encoder = CustomJSONEncoder

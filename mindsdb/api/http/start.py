@@ -100,6 +100,23 @@ def start(verbose, no_studio, with_nlp):
 
     @app.route('/status', methods=['GET'])
     def status():
+        environment = 'local'
+        config = Config()
+
+        if config.get('cloud', False):
+            environment = 'cloud'
+        elif config.get('aws_marketplace', False):
+            environment = 'aws_marketplace'
+
+        auth_provider = 'local' if config['auth']['required'] else 'disabled'
+
+        return {
+            'environment': environment,
+            'auth': {
+                'active': check_auth(),
+                'provider': auth_provider
+            }
+        }
         return '', 200
 
     namespaces = [

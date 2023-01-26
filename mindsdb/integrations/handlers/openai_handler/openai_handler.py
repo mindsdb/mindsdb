@@ -1,6 +1,7 @@
 import os
 import re
 import math
+import subprocess
 import concurrent.futures
 import pandas as pd
 from typing import Optional, Dict
@@ -231,4 +232,72 @@ class OpenAIHandler(BaseMLEngine):
         4. send request in
         5. Add to describe (or somehow) the state of each fine-tune... maybe we need to mark as complete only once (with polling) we know it's done?
         """
-        pass
+        if {'prompt', 'completion'} not in set(df.columns):
+            raise Exception("To fine-tune an OpenAI model, please format your select data query to have a `prompt` column and a `completion` column first.")  # noqa
+
+        args = self.model_storage.json_get('args')
+        openai.api_key = self._get_api_key(args)
+        folder_name = 'openai_temp_finetune'
+
+        temp_storage_path = self.engine_storage.folder_get(folder_name)
+        temp_file_name = "temp"
+        temp_model_storage_path = f"{temp_storage_path}/{temp_file_name}.jsonl"
+        df.to_json(temp_model_storage_path, orient='records', lines=True)
+
+        # apply automated OpenAI recommendations to the JSON-lines file
+        prepare_result = subprocess.run(
+            [
+                "openai", "tools", "fine_tunes.prepare_data",
+                "-f", temp_model_storage_path,                  # from file
+                '-q'                                            # quiet mode (accepts all suggestions)
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+        )
+
+        returns = []
+        for file_name in [f'{temp_file_name}_train.jsonl', f'{temp_file_name}_valid.jsonl']:
+            returns.append(openai.File.create(
+                file=open(f"{temp_storage_path}/{file_name}", "rb"),
+                purpose='fine-tune')
+            )
+
+        # all `None` values are left unspecified and internally imputed by OpenAI to `null` or default values
+        ft_params = {
+            'training_file': returns[0].id,
+            'validation_file': returns[1].id,
+            'model': 'ada',                         # one of 'ada', 'curie', 'davinci', 'babbage'
+            'suffix': 'mindsdb',
+            'n_epochs': None,
+            'batch_size': None,
+            'learning_rate_multiplier': None,
+            'prompt_loss_weight': None,
+            'compute_classification_metrics': None,
+            'classification_n_classes': None,
+            'classification_positive_class': None,
+            'classification_betas': None,
+        }
+
+        # TODO: move this into a detached learn process
+        ft_result = openai.FineTune.create(**{k: v for k, v in ft_params.items() if v is not None})
+        ft_retrieved = openai.FineTune.retrieve(id=ft_result.id)  # TODO check 'pending' initial status until 'succeeded'  # noqa
+
+        ft_model_name = ft_retrieved['fine_tuned_model']
+        result_file_id = openai.FineTune.retrieve(id=ft_result.id)['result_files'][0].id
+
+        name_extension = openai.File.retrieve(id=result_file_id).filename
+        result_path = f'{temp_storage_path}/ft_result_{name_extension}'
+        with open(result_path, 'wb') as f:
+            f.write(openai.File.download(id=result_file_id))
+
+        # TODO: check this only if classification framing detected
+        ft_stats = pd.read_csv(result_path)
+        val_loss = ft_stats[ft_stats['validation_token_accuracy'].notnull()]
+
+        self.engine_storage.folder_sync(folder_name)
+
+        # To use the fine-tuned model:
+        # res = openai.Completion.create(model=ft_model_name, prompt='this is a prompt' + '\n\n###\n\n', max_tokens=1,
+        #                                temperature=0)
+        # res['choices'][0]['text']

@@ -28,17 +28,25 @@ from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
 
 
+is_first_launch = False
+
+
 def check_auth():
     config = Config()
     return session.get('username') == config['auth']['username']
 
 
 def start(verbose, no_studio, with_nlp):
+    global is_first_launch
     config = Config()
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
     db.init()
     log.initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
+
+    # Here is 'detection' of first launch. Assume that GUI is not downloaded.
+    # Solution won't work in multiprocess mode. In future will be need to add that info to the db
+    is_first_launch = Path(config['paths']['static']).joinpath('version.txt').is_file() is False
 
     # start static initialization in a separate thread
     init_static_thread = None
@@ -74,8 +82,7 @@ def start(verbose, no_studio, with_nlp):
             or isinstance(password, str) is False or len(password) == 0
         ):
             return http_error(
-                400,
-                'Error in username orpassword',
+                400, 'Error in username or password',
                 'Username and password should be string'
             )
 
@@ -88,8 +95,7 @@ def start(verbose, no_studio, with_nlp):
             or password != inline_password
         ):
             return http_error(
-                401,
-                'Forbidden',
+                401, 'Forbidden',
                 'Invalid username or password'
             )
 
@@ -100,6 +106,7 @@ def start(verbose, no_studio, with_nlp):
 
     @app.route('/status', methods=['GET'])
     def status():
+        global is_first_launch
         environment = 'local'
         config = Config()
 
@@ -110,14 +117,19 @@ def start(verbose, no_studio, with_nlp):
 
         auth_provider = 'local' if config['auth']['required'] else 'disabled'
 
-        return {
+        resp = {
             'environment': environment,
             'auth': {
                 'active': check_auth(),
                 'provider': auth_provider
             }
         }
-        return '', 200
+
+        if is_first_launch is True:
+            resp['is_first_launch'] = True
+            is_first_launch = False
+
+        return resp
 
     namespaces = [
         tab_ns,
@@ -161,8 +173,7 @@ def start(verbose, no_studio, with_nlp):
             and check_auth() is False
         ):
             return http_error(
-                403,
-                'Forbidden',
+                403, 'Forbidden',
                 'Authorization is required to complete the request'
             )
         # endregion

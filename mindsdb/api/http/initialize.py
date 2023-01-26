@@ -156,7 +156,7 @@ def download_gui(destignation, version):
 
     os.remove(dist_zip_path)
 
-    version_txt_path = destignation.joinpath('version.txt')  # os.path.join(destignation, 'version.txt')
+    version_txt_path = destignation.joinpath('version.txt')
     with open(version_txt_path, 'wt') as f:
         f.write(version)
 

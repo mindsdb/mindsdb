@@ -1,4 +1,4 @@
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CHARSET_NUMBERS
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import MysqlProxy
 

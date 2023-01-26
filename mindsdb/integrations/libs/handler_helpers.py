@@ -1,31 +1,23 @@
-from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
-from mindsdb.integrations.handlers.mariadb_handler.mariadb_handler import MariaDBHandler
-from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
+import importlib
+from mindsdb.utilities.log import get_log
+logger = get_log(logger_name="main")
 
 
-def define_ml_handler(_type):
+def get_handler(_type):
     _type = _type.lower()
-    if _type == 'lightwood':
-        try:
-            from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import LightwoodHandler
-            return LightwoodHandler
-        except ImportError:
-            pass
-    elif _type == 'huggingface':
-        try:
-            from mindsdb.integrations.handlers.huggingface_handler.huggingface_handler import HuggingFaceHandler
-            return HuggingFaceHandler
-        except ImportError:
-            pass
-    return None
+    # a crutch to fix bug in handler naming convention
+    if _type == "files":
+        _type = "file"
+    handler_folder_name = _type + "_handler"
+    logger.debug("get_handler: handler_folder - %s", handler_folder_name)
 
-
-def define_handler(_type):
-    _type = _type.lower()
-    if _type == 'mysql':
-        return MySQLHandler
-    if _type == 'postgres':
-        return PostgresHandler
-    if _type == 'mariadb':
-        return MariaDBHandler
-    return None
+    try:
+        handler_module = importlib.import_module(f'mindsdb.integrations.handlers.{handler_folder_name}')
+        logger.debug("get_handler: handler module - %s", handler_module)
+        handler = handler_module.Handler
+        if handler is None:
+            logger.error("get_handler: import error - %s", handler_module.import_error)
+        logger.debug("get_handler: found handler - %s", handler)
+        return handler
+    except Exception as e:
+        raise e

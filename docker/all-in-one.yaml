@@ -1,0 +1,91 @@
+---
+version: "3.2"
+services:
+  migrations:
+    image: "mindsdb/mindsdb_trial"
+    command: bash -c "cd /mindsdb && python ./mindsdb/migrations/migrate.py"
+    environment:
+      MINDSDB_STORAGE_DIR: "/storage/var"
+
+    <<: &globalSettings
+      volumes:
+        - type: bind
+          source: .
+          target: /storage
+
+  mindsdb:
+    image: "mindsdb/mindsdb_trial"
+    # Copy global settings from migration above
+    <<: *globalSettings
+    restart: always
+    ports:
+      - '47334:47334'
+      - '47335:47335'
+    command: bash -c "cd /mindsdb && python -m mindsdb"
+    environment:
+      MINDSDB_EXECUTOR_SERVICE: "True"
+      MINDSDB_EXECUTOR_HOSTNAME: "executor"
+      MINDSDB_EXECUTOR_PORT: 5002
+      MINDSDB_ML_SERVICE_HOST: "ml_service"
+      MINDSDB_ML_SERVICE_PORT: 5001
+      MINDSDB_DB_SERVICE_HOST: "db_service"
+      MINDSDB_DB_SERVICE_PORT: 5000
+      MINDSDB_DOCKER_ENV: "True"
+      MINDSDB_STORAGE_DIR: "/storage/var"
+      FLASK_DEBUG: "1"
+      FLASK_ENV: "development"
+      FLASK_APP: "/mindsdb/mindsdb/__main__.py"
+      SEPARATE_MIGRATIONS: "1"
+    depends_on:
+      - migrations
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
+      interval: 30s
+      timeout: 4s
+      retries: 100
+
+  ml_service:
+    image: "mindsdb/ml_service"
+    <<: *globalSettings
+    depends_on:
+      - mindsdb
+    environment:
+      # have to share mindsdb database, because it doens't work without it
+      PORT: 5001
+      MINDSDB_STORAGE_DIR: "/storage/var"
+      MINDSDB_DB_SERVICE_HOST: "db_service"
+      MINDSDB_DB_SERVICE_PORT: 5000
+
+  db_service:
+    image: "mindsdb/db_service"
+    <<: *globalSettings
+    depends_on:
+      - mindsdb
+    environment:
+      PORT: 5000
+      MINDSDB_STORAGE_DIR: "/storage/var"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 120s
+      timeout: 4s
+      retries: 100
+
+  executor:
+    image: "mindsdb/executor"
+    <<: *globalSettings
+    depends_on:
+      - mindsdb
+    environment:
+      # have to share mindsdb database, because it doens't work without it
+      PORT: 5002
+      MINDSDB_STORAGE_DIR: "/storage/var"
+      MINDSDB_ML_SERVICE_HOST: "ml_service"
+      MINDSDB_ML_SERVICE_PORT: 5001
+      MINDSDB_DB_SERVICE_HOST: "db_service"
+      MINDSDB_DB_SERVICE_PORT: 5000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002"]
+      interval: 120s
+      timeout: 4s
+      retries: 100

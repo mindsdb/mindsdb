@@ -21,6 +21,7 @@ from mindsdb.utilities.context import context as ctx
 class RESOURCE_GROUP:
     PREDICTOR = 'predictor'
     INTEGRATION = 'integration'
+    TAB = 'tab'
 
 
 RESOURCE_GROUP = RESOURCE_GROUP()

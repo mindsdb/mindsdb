@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM python:3.7
 
 
 RUN apt update && apt-get upgrade -y && apt install -y build-essential
@@ -11,8 +11,10 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip && \
 
 WORKDIR /
 COPY requirements.txt /requirements.txt
-RUN pip install -r requirements.txt --no-cache-dir
+# RUN pip install setuptools wheel twine
+RUN pip install -r requirements.txt --no-cache-dir --force-reinstall
 RUN pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+COPY ./mindsdb /mindsdb/mindsdb
 
 ENV PYTHONPATH "/mindsdb"
 ENV FLASK_DEBUG "1"

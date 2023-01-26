@@ -53,6 +53,7 @@ class ModelController():
         data['active'] = predictor_record.active
         data['status'] = predictor_record.status
         data['id'] = predictor_record.id
+        data['version'] = predictor_record.version
 
         json_storage = get_json_storage(
             resource_id=predictor_record.id
@@ -74,13 +75,13 @@ class ModelController():
 
         ml_handler_base = session.integration_controller.get_handler(integration_record.name)
 
-        ml_handler = ml_handler_base.get_ml_handler(model_record.id)
+        ml_handler = ml_handler_base._get_ml_handler(model_record.id)
         if not hasattr(ml_handler, 'describe'):
             raise Exception("ML handler doesn't support description")
 
         return ml_handler.describe(attribute)
 
-    def get_models(self, with_versions=False, ml_handler_name='lightwood', integration_id=None,
+    def get_models(self, with_versions=False, ml_handler_name=None, integration_id=None,
                    project_name=None):
         models = []
         show_active = True if with_versions is False else None
@@ -270,14 +271,14 @@ class ModelController():
         if statement.order_by is not None:
             problem_definition['timeseries_settings'] = {
                 'is_timeseries': True,
-                'order_by': str(getattr(statement, 'order_by')[0])
+                'order_by': getattr(statement, 'order_by')[0].field.parts[-1]
             }
             for attr in ['horizon', 'window']:
                 if getattr(statement, attr) is not None:
                     problem_definition['timeseries_settings'][attr] = getattr(statement, attr)
 
             if statement.group_by is not None:
-                problem_definition['timeseries_settings']['group_by'] = [str(col) for col in statement.group_by]
+                problem_definition['timeseries_settings']['group_by'] = [col.parts[-1] for col in statement.group_by]
 
         join_learn_process = False
         if 'join_learn_process' in problem_definition.get('using', {}):

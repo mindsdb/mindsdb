@@ -33,6 +33,8 @@ is_first_launch = False
 
 def check_auth():
     config = Config()
+    if config['auth']['required'] is False:
+        return True
     return session.get('username') == config['auth']['username']
 
 
@@ -120,7 +122,7 @@ def start(verbose, no_studio, with_nlp):
         resp = {
             'environment': environment,
             'auth': {
-                'active': check_auth(),
+                'confirmation': check_auth(),
                 'provider': auth_provider
             }
         }

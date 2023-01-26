@@ -6,9 +6,10 @@ from pathlib import Path
 
 from werkzeug.exceptions import HTTPException
 from waitress import serve
-from flask import send_from_directory, request
+from flask import send_from_directory, request, session
 from flask_compress import Compress
 
+from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
@@ -25,6 +26,11 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
+
+
+def check_auth():
+    config = Config()
+    return session.get('username') == config['auth']['username']
 
 
 def start(verbose, no_studio, with_nlp):
@@ -61,6 +67,35 @@ def start(verbose, no_studio, with_nlp):
 
     @app.route('/login', methods=['POST'])
     def login():
+        username = request.json.get('username')
+        password = request.json.get('password')
+        if (
+            isinstance(username, str) is False or len(username) == 0
+            or isinstance(password, str) is False or len(password) == 0
+        ):
+            return http_error(
+                400,
+                'Error in username orpassword',
+                'Username and password should be string'
+            )
+
+        config = Config()
+        inline_username = config['auth']['username']
+        inline_password = config['auth']['password']
+
+        if (
+            username != inline_username
+            or password != inline_password
+        ):
+            return http_error(
+                401,
+                'Forbidden',
+                'Invalid username or password'
+            )
+
+        session['username'] = username
+        session.permanent = True
+
         return '', 200
 
     @app.route('/status', methods=['GET'])
@@ -101,7 +136,19 @@ def start(verbose, no_studio, with_nlp):
     @app.before_request
     def before_request():
         ctx.set_default()
-        # Check here whitelisted routes
+
+        # region routes where auth is required
+        if (
+            config['auth']['required'] is True
+            and any(request.path.startswith(f'/api{ns.path}') for ns in namespaces)
+            and check_auth() is False
+        ):
+            return http_error(
+                403,
+                'Forbidden',
+                'Authorization is required to complete the request'
+            )
+        # endregion
 
         company_id = request.headers.get('company-id')
         user_class = request.headers.get('user-class')

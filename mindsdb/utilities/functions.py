@@ -97,9 +97,3 @@ def get_versions_where_predictors_become_obsolete():
 
     versions_for_updating_predictors = [x for x in versions_for_updating_predictors if len(x) > 0]
     return True, versions_for_updating_predictors
-
-
-def get_random_string(length):
-    letters = string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
-    result_str = ''.join(random.choice(letters) for i in range(length))
-    return result_str

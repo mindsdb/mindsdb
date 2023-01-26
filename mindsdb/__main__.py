@@ -1,12 +1,13 @@
-import atexit
-import traceback
-import sys
 import os
+import sys
 import time
-import asyncio
+import json
+import atexit
 import signal
 import psutil
-import json
+import asyncio
+import secrets
+import traceback
 
 import torch.multiprocessing as mp
 mp.set_start_method('spawn')
@@ -18,7 +19,7 @@ from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
-from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete, get_random_string
+from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
 from mindsdb.utilities import log
 from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
@@ -113,7 +114,7 @@ if __name__ == '__main__':
         print('\n ✓ telemetry enabled \n')
 
     if os.environ.get('FLASK_SECRET_KEY') is None:
-        os.environ['FLASK_SECRET_KEY'] = get_random_string(16)
+        os.environ['FLASK_SECRET_KEY'] = secrets.token_hex(32)
 
     # -------------------------------------------------------
 

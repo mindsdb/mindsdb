@@ -1,14 +1,15 @@
-from distutils.version import LooseVersion
 import os
 import shutil
 import threading
 import webbrowser
-from zipfile import ZipFile
-from pathlib import Path
 import traceback
 import tempfile
 import mimetypes
 import datetime
+import secrets
+from pathlib import Path
+from zipfile import ZipFile
+from distutils.version import LooseVersion
 
 # import concurrent.futures
 import requests
@@ -22,7 +23,6 @@ from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
-from mindsdb.utilities.functions import get_random_string
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import get_log
 from mindsdb.interfaces.storage import db
@@ -236,7 +236,7 @@ def initialize_flask(config, init_static_thread, no_studio):
         **kwargs
     )
 
-    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', get_random_string(16))
+    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
     app.config['SESSION_COOKIE_NAME'] = 'session'
     app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=31)
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60

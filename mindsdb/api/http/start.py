@@ -59,6 +59,14 @@ def start(verbose, no_studio, with_nlp):
         else:
             return send_from_directory(static_root, 'index.html')
 
+    @app.route('/login', methods=['POST'])
+    def login():
+        return '', 200
+
+    @app.route('/status', methods=['GET'])
+    def status():
+        return '', 200
+
     api.add_namespace(tab_ns)
     api.add_namespace(stream_ns)
     api.add_namespace(utils_ns)

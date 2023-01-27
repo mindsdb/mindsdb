@@ -6,7 +6,7 @@ from pathlib import Path
 
 from werkzeug.exceptions import HTTPException
 from waitress import serve
-from flask import send_from_directory, request, session
+from flask import send_from_directory, request
 from flask_compress import Compress
 
 from mindsdb.api.http.utils import http_error
@@ -20,6 +20,7 @@ from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
 from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
+from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities import log
@@ -29,13 +30,6 @@ from mindsdb.utilities.context import context as ctx
 
 
 is_first_launch = False
-
-
-def check_auth():
-    config = Config()
-    if config['auth']['required'] is False:
-        return True
-    return session.get('username') == config['auth']['username']
 
 
 def start(verbose, no_studio, with_nlp):
@@ -75,66 +69,7 @@ def start(verbose, no_studio, with_nlp):
         else:
             return send_from_directory(static_root, 'index.html')
 
-    @app.route('/api/login', methods=['POST'])
-    def login():
-        username = request.json.get('username')
-        password = request.json.get('password')
-        if (
-            isinstance(username, str) is False or len(username) == 0
-            or isinstance(password, str) is False or len(password) == 0
-        ):
-            return http_error(
-                400, 'Error in username or password',
-                'Username and password should be string'
-            )
-
-        config = Config()
-        inline_username = config['auth']['username']
-        inline_password = config['auth']['password']
-
-        if (
-            username != inline_username
-            or password != inline_password
-        ):
-            return http_error(
-                401, 'Forbidden',
-                'Invalid username or password'
-            )
-
-        session['username'] = username
-        session.permanent = True
-
-        return '', 200
-
-    @app.route('/api/status', methods=['GET'])
-    def status():
-        global is_first_launch
-        environment = 'local'
-        config = Config()
-
-        if config.get('cloud', False):
-            environment = 'cloud'
-        elif config.get('aws_marketplace', False):
-            environment = 'aws_marketplace'
-
-        auth_provider = 'local' if config['auth']['required'] else 'disabled'
-
-        resp = {
-            'environment': environment,
-            'auth': {
-                'approved': check_auth(),
-                'required': config['auth']['required'],
-                'provider': auth_provider
-            }
-        }
-
-        if is_first_launch is True:
-            resp['is_first_launch'] = True
-            is_first_launch = False
-
-        return resp
-
-    namespaces = [
+    protected_namespaces = [
         tab_ns,
         stream_ns,
         utils_ns,
@@ -147,10 +82,11 @@ def start(verbose, no_studio, with_nlp):
         projects_ns
     ]
     if with_nlp:
-        namespaces.append(nlp_ns)
+        protected_namespaces.append(nlp_ns)
 
-    for ns in namespaces:
+    for ns in protected_namespaces:
         api.add_namespace(ns)
+    api.add_namespace(default_ns)
 
     @api.errorhandler(Exception)
     def handle_exception(e):
@@ -173,7 +109,7 @@ def start(verbose, no_studio, with_nlp):
         # region routes where auth is required
         if (
             config['auth']['required'] is True
-            and any(request.path.startswith(f'/api{ns.path}') for ns in namespaces)
+            and any(request.path.startswith(f'/api{ns.path}') for ns in protected_namespaces)
             and check_auth() is False
         ):
             return http_error(

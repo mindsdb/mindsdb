@@ -1,5 +1,3 @@
-import string
-import random
 import argparse
 import datetime
 from functools import wraps

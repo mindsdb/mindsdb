@@ -95,7 +95,7 @@ class Config():
             'paths': paths,
             'auth': {
                 'required': False,
-                'username': '',
+                'username': 'mindsdb',
                 'password': ''
             },
             "log": {
@@ -116,7 +116,6 @@ class Config():
                     "host": "127.0.0.1" if not self.use_docker_env else "0.0.0.0",
                     "password": "",
                     "port": "47335",
-                    "user": "mindsdb",
                     "database": "mindsdb",
                     "ssl": True
                 },

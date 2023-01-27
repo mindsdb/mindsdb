@@ -75,7 +75,7 @@ def start(verbose, no_studio, with_nlp):
         else:
             return send_from_directory(static_root, 'index.html')
 
-    @app.route('/login', methods=['POST'])
+    @app.route('/api/login', methods=['POST'])
     def login():
         username = request.json.get('username')
         password = request.json.get('password')
@@ -106,7 +106,7 @@ def start(verbose, no_studio, with_nlp):
 
         return '', 200
 
-    @app.route('/status', methods=['GET'])
+    @app.route('/api/status', methods=['GET'])
     def status():
         global is_first_launch
         environment = 'local'
@@ -122,7 +122,8 @@ def start(verbose, no_studio, with_nlp):
         resp = {
             'environment': environment,
             'auth': {
-                'confirmation': check_auth(),
+                'approved': check_auth(),
+                'required': config['auth']['required'],
                 'provider': auth_provider
             }
         }
@@ -167,6 +168,7 @@ def start(verbose, no_studio, with_nlp):
     @app.before_request
     def before_request():
         ctx.set_default()
+        config = Config()
 
         # region routes where auth is required
         if (

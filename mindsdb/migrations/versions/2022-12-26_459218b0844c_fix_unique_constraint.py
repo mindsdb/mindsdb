@@ -14,15 +14,22 @@ depends_on = None
 
 
 def upgrade():
+
+    # try - for sqlite database
+    try:
+        op.execute("ALTER TABLE project DROP CONSTRAINT IF EXISTS unique_integration_name_company_id")
+        op.execute("ALTER TABLE project DROP CONSTRAINT IF EXISTS unique_project_name_company_id")
+    except Exception:
+        pass
+
     try:
         with op.batch_alter_table('project', schema=None) as batch_op:
-            batch_op.drop_constraint('unique_integration_name_company_id', type_='unique')
             batch_op.create_unique_constraint('unique_project_name_company_id', ['name', 'company_id'])
     except Exception:
         pass
 
 
 def downgrade():
-    with op.batch_alter_table('project', schema=None) as batch_op:
-        batch_op.drop_constraint('unique_project_name_company_id', type_='unique')
-        batch_op.create_unique_constraint('unique_integration_name_company_id', ['name', 'company_id'])
+    # do nothing
+    ...
+

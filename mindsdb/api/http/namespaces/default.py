@@ -20,7 +20,7 @@ def check_auth() -> bool:
     return session.get('username') == config['auth']['username']
 
 
-@ns_conf.route('/api/login', methods=['POST'])
+@ns_conf.route('/login', methods=['POST'])
 class LoginRoute(Resource):
     @ns_conf.doc(
         responses={
@@ -66,7 +66,7 @@ class LoginRoute(Resource):
         return '', 200
 
 
-@ns_conf.route('/api/status')
+@ns_conf.route('/status')
 class StatusRoute(Resource):
     @ns_conf.doc(
         responses={

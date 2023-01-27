@@ -1,11 +1,30 @@
 version: "3.2"
 
 services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=mindsdb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - type: bind
+        source: ../var_db
+        target: /var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 1s
+      timeout: 1s
+      retries: 15
 
   migrations:
     command: bash -c "cd /mindsdb && python ./mindsdb/migrations/migrate.py"
 
     <<: &globalSettings
+      depends_on:
+        db:
+          condition: service_healthy
       build:
         context: ../
         dockerfile: ./docker/mindsdb.Dockerfile
@@ -15,6 +34,7 @@ services:
           target: /mindsdb
       environment:
         MINDSDB_STORAGE_DIR: "/mindsdb/var"
+        MINDSDB_DB_CON: postgresql://postgres:postgres@db:5432/mindsdb
 
   mindsdb:
     # Copy global settings from migration above
@@ -30,6 +50,7 @@ services:
       MINDSDB_DB_SERVICE_URL: "http://db_service:5000"
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      MINDSDB_DB_CON: postgresql://postgres:postgres@db:5432/mindsdb
       FLASK_DEBUG: "1"
       FLASK_ENV: "development"
       FLASK_APP: "/mindsdb/mindsdb/__main__.py"
@@ -73,6 +94,7 @@ services:
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_DB_SERVICE_HOST: "db_service"
       MINDSDB_DB_SERVICE_PORT: 5000
+      MINDSDB_DB_CON: postgresql://postgres:postgres@db:5432/mindsdb
 
   db_service:
     build:
@@ -87,6 +109,7 @@ services:
         target: /mindsdb
     environment:
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      MINDSDB_DB_CON: postgresql://postgres:postgres@db:5432/mindsdb
 
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:5000"]
@@ -106,6 +129,7 @@ services:
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_ML_SERVICE_URL: "http://ml_service:5001"
       MINDSDB_DB_SERVICE_URL: "http://db_service:5000"
+      MINDSDB_DB_CON: postgresql://postgres:postgres@db:5432/mindsdb
     volumes:
       - type: bind
         source: ../

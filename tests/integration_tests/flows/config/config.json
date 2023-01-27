@@ -2,7 +2,7 @@
     "auth": {
         "required": false,
         "username": "mindsdb",
-        "password": ""
+        "password": null
     },
     "api": {
         "http": {

@@ -29,20 +29,12 @@ from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
 
 
-is_first_launch = False
-
-
 def start(verbose, no_studio, with_nlp):
-    global is_first_launch
     config = Config()
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
     db.init()
     log.initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
-
-    # Here is 'detection' of first launch. Assume that GUI is not downloaded.
-    # Solution won't work in multiprocess mode. In future will be need to add that info to the db
-    is_first_launch = Path(config['paths']['static']).joinpath('version.txt').is_file() is False
 
     # start static initialization in a separate thread
     init_static_thread = None

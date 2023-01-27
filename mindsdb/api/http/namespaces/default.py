@@ -1,4 +1,5 @@
 from flask import request, session
+from pathlib import Path
 
 from flask_restx import Resource
 from flask_restx import fields
@@ -86,7 +87,6 @@ class StatusRoute(Resource):
     def get(self):
         ''' returns auth and environment data
         '''
-        global is_first_launch
         environment = 'local'
         config = Config()
 
@@ -106,8 +106,10 @@ class StatusRoute(Resource):
             }
         }
 
-        if is_first_launch is True and environment != 'cloud':
-            resp['is_first_launch'] = True
-            is_first_launch = False
+        if environment != 'cloud':
+            marker_file = Path(Config().paths['root']).joinpath('gui_first_launch.txt')
+            if marker_file.is_file() is False:
+                resp['is_first_launch'] = True
+                marker_file.write_text('')
 
         return resp

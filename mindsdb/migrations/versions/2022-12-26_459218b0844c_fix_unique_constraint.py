@@ -32,4 +32,3 @@ def upgrade():
 def downgrade():
     # do nothing
     ...
-

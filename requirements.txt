@@ -5,7 +5,7 @@ flask >= 1.0, < 2.0
 python-multipart >= 0.0.5
 pyparsing == 2.3.1
 cryptography>=35.0
-#psycopg[binary] >= 1.15.3
+psycopg[binary] >= 1.15.3
 psycopg2-binary
 python-tds >= 1.10.0
 waitress >= 1.4.4

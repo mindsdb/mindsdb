@@ -1,6 +1,7 @@
 import os
 import re
 import math
+import datetime
 import subprocess
 import concurrent.futures
 import pandas as pd
@@ -40,7 +41,7 @@ class OpenAIHandler(BaseMLEngine):
         args = args['using']
 
         args['target'] = target
-        self.model_storage.json_set('args', args)
+        self.model_storage.json_set('args', args) # TODO: add model name here
 
     def _get_api_key(self, args):
         # API_KEY preference order:
@@ -143,7 +144,7 @@ class OpenAIHandler(BaseMLEngine):
         Additionally, single completion calls are done with exponential backoff to guarantee all prompts are processed,
         because even with previous checks the tokens-per-minute limit may apply.
         """
-        @retry_with_exponential_backoff
+        @retry_with_exponential_backoff()
         def _submit_completion(model_name, prompts, max_tokens, temperature, api_key, args):
             return openai.Completion.create(
                 model=model_name,
@@ -215,6 +216,7 @@ class OpenAIHandler(BaseMLEngine):
         return _tidy(completion)
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+        # TODO: Update to use update() artifacts
         args = self.model_storage.json_get('args')
         api_key = self._get_api_key(args)
 
@@ -225,27 +227,24 @@ class OpenAIHandler(BaseMLEngine):
                             columns=['id', 'object', 'owned_by', 'permission', 'model_args'])
 
     def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        """
-        1. take DF, write to JSONL (where? ask andrey)
-        2. use CLI to generate improved splits (again, where? also do we need to install CLI or is pypi enough)
-        3. take files, upload using API
-        4. send request in
-        5. Add to describe (or somehow) the state of each fine-tune... maybe we need to mark as complete only once (with polling) we know it's done?
-        """
-        if {'prompt', 'completion'} not in set(df.columns):
-            raise Exception("To fine-tune an OpenAI model, please format your select data query to have a `prompt` column and a `completion` column first.")  # noqa
+        for col in ['prompt', 'completion']:
+            if col not in set(df.columns):
+                raise Exception("To fine-tune an OpenAI model, please format your select data query to have a `prompt` column and a `completion` column first.")  # noqa
 
         args = self.model_storage.json_get('args')
+        args = args if args else {}  # TODO using support?
         openai.api_key = self._get_api_key(args)
         folder_name = 'openai_temp_finetune'
+        adjust_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = self.engine_storage.folder_get(folder_name)
-        temp_file_name = "temp"
+        temp_file_name = f"ft_{adjust_time}"
         temp_model_storage_path = f"{temp_storage_path}/{temp_file_name}.jsonl"
         df.to_json(temp_model_storage_path, orient='records', lines=True)
 
         # apply automated OpenAI recommendations to the JSON-lines file
-        prepare_result = subprocess.run(
+        # TODO avoid subprocess usage once OpenAI enables non-CLI access
+        subprocess.run(
             [
                 "openai", "tools", "fine_tunes.prepare_data",
                 "-f", temp_model_storage_path,                  # from file
@@ -256,18 +255,33 @@ class OpenAIHandler(BaseMLEngine):
             encoding="utf-8",
         )
 
+        file_names = [f'{temp_file_name}.jsonl',
+                      f'{temp_file_name}_prepared_train.jsonl',
+                      f'{temp_file_name}_prepared_valid.jsonl']
         returns = []
-        for file_name in [f'{temp_file_name}_train.jsonl', f'{temp_file_name}_valid.jsonl']:
-            returns.append(openai.File.create(
-                file=open(f"{temp_storage_path}/{file_name}", "rb"),
-                purpose='fine-tune')
-            )
+        for file_name in file_names:
+            if os.path.isfile(os.path.join(temp_storage_path, file_name)):
+                returns.append(openai.File.create(
+                    file=open(f"{temp_storage_path}/{file_name}", "rb"),
+                    purpose='fine-tune')
+                )
+            else:
+                returns.append(None)
 
-        # all `None` values are left unspecified and internally imputed by OpenAI to `null` or default values
+        train_file_id = returns[1].id if isinstance(returns[1], openai.File) else returns[0].id
+        val_file_id = returns[2].id if isinstance(returns[2], openai.File) else None
+
+        def _get_model_type(model_name: str):
+            for model_type in ['ada', 'curie', 'babbage', 'davinci']:
+                if model_type in model_name.lower():
+                    return model_type
+            return 'ada'
+
+        # `None` values are internally imputed by OpenAI to `null` or default values
         ft_params = {
-            'training_file': returns[0].id,
-            'validation_file': returns[1].id,
-            'model': 'ada',                         # one of 'ada', 'curie', 'davinci', 'babbage'
+            'training_file': train_file_id,
+            'validation_file': val_file_id,
+            'model': _get_model_type(args.get('model_name', '')),
             'suffix': 'mindsdb',
             'n_epochs': None,
             'batch_size': None,
@@ -279,25 +293,44 @@ class OpenAIHandler(BaseMLEngine):
             'classification_betas': None,
         }
 
-        # TODO: move this into a detached learn process
+        # ask for fine-tuning and check 'pending' initial status until 'succeeded'
+        start_time = datetime.datetime.now()
         ft_result = openai.FineTune.create(**{k: v for k, v in ft_params.items() if v is not None})
-        ft_retrieved = openai.FineTune.retrieve(id=ft_result.id)  # TODO check 'pending' initial status until 'succeeded'  # noqa
 
-        ft_model_name = ft_retrieved['fine_tuned_model']
+        @retry_with_exponential_backoff(hour_budget=args.get('hour_budget', 8))
+        def _check_ft_status(model_id):
+            ft_retrieved = openai.FineTune.retrieve(id=model_id)
+            if ft_retrieved['status'] != 'pending':
+                return ft_retrieved
+            else:
+                raise openai.error.RateLimitError('Fine-tuning still pending!')
+
+        ft_stats = _check_ft_status(ft_result.id)
+        ft_model_name = ft_stats['fine_tuned_model']
+
+        if ft_stats['status'] != 'succeeded':
+            raise Exception(f"Fine-tuning did not complete successfully (status: {ft_stats['status']})")
+
+        end_time = datetime.datetime.now()
+        runtime = end_time - start_time
+
         result_file_id = openai.FineTune.retrieve(id=ft_result.id)['result_files'][0].id
-
         name_extension = openai.File.retrieve(id=result_file_id).filename
-        result_path = f'{temp_storage_path}/ft_result_{name_extension}'
+        result_path = f'{temp_storage_path}/ft_{adjust_time}_result_{name_extension}'
         with open(result_path, 'wb') as f:
             f.write(openai.File.download(id=result_file_id))
 
-        # TODO: check this only if classification framing detected
-        ft_stats = pd.read_csv(result_path)
-        val_loss = ft_stats[ft_stats['validation_token_accuracy'].notnull()]
+        # store stats and details for describe
+        train_stats = pd.read_csv(result_path)
+        if 'validation_token_accuracy' in train_stats.columns:
+            train_stats = train_stats[train_stats['validation_token_accuracy'].notnull()]
 
+        ft_info = {
+            'model_name': ft_model_name,
+            'ft_api_info': ft_stats.to_dict_recursive(),
+            'ft_result_stats': train_stats.to_dict(),
+            'runtime': runtime.total_seconds()
+        }
+
+        self.model_storage.json_set('ft_info', ft_info)
         self.engine_storage.folder_sync(folder_name)
-
-        # To use the fine-tuned model:
-        # res = openai.Completion.create(model=ft_model_name, prompt='this is a prompt' + '\n\n###\n\n', max_tokens=1,
-        #                                temperature=0)
-        # res['choices'][0]['text']

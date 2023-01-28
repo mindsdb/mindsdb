@@ -1,6 +1,8 @@
 from mindsdb.integrations.libs.base import BaseHandler
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities import log
+
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -8,14 +10,48 @@ from mindsdb.integrations.libs.response import (
 )
 from pandas import DataFrame
 
-from typing import List
+from typing import List, Any
 from typing import Tuple
-from typing import Callable
+from typing import Callable, ClassVar
+from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
 
+
+class APITable():
+
+    def __init__(self, handler):
+        self.handler = handler
+
+    def select(self, query: ASTNode) -> HandlerResponse:
+        raise NotImplementedError()
+
+    def insert(self, query: ASTNode) -> HandlerResponse:
+        raise NotImplementedError()
+
+    def drop(self, query: ASTNode) -> HandlerResponse:
+        raise NotImplementedError()
+
+    def delete(self, query: ASTNode) -> HandlerResponse:
+        raise NotImplementedError()
+
+    def get_columns(self, query: ASTNode) -> HandlerResponse:
+        raise NotImplementedError()
+        
+          
 class APIHandler(BaseHandler):
 
-    def _register_table(self, table_name: str, table_columns: List[str], query_method: Callable[..., DataFrame]) -> bool:
-        """self._tables[table_name] = {'query_method': query_method, 'columns': table_columns}"""
+    def __init__(self, name: str):
+        """ constructor
+        Args:
+            name (str): the handler name
+        """
+        self.is_connected: bool = False
+        
+        self._tables = {}
+
+    def _register_table(self, table_name: str, table_class: Any) -> bool:
+        
+        self._tables[table_name] = table_class
 
         return None
    
@@ -32,7 +68,7 @@ class APIHandler(BaseHandler):
                 python data types (by default it str).
         """
         
-        
+        result = self._tables[table_name].get_columns()
         try:
             if result:
                 response = Response(
@@ -66,7 +102,7 @@ class APIHandler(BaseHandler):
                 Column 'TABLE_NAME' is mandatory, other is optional.
         """
         
-
+        result = self._tables.keys()
 
         try:
             if result:
@@ -92,13 +128,4 @@ class APIHandler(BaseHandler):
 
         return response
 
-    def _left_join(self, 
-        table_left: str, 
-        table_right: str, 
-        on: Tuple[str, str], 
-        table_left_where: dict, 
-        table_left_select_columns: List[str], 
-        table_right_where: dict,
-        table_right_select_columns: List[str]) -> DataFrame:
-
-        pass
+    

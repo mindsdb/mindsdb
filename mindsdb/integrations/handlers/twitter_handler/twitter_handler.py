@@ -15,11 +15,6 @@ import datetime
 from datetime import datetime
 import pandas as pd
 
-##api_key secret = Pt9Xmm0CgxRbUCVqac3SZMYXvsIxArF1q5NqzvC
-##api key = JQldSGOLxozplwCjqKongdYtr
-##access token = 1268636021811535874-7Qsrt99HspRUolTrOrsNyFg2jBiI48
-##access token secret = 823mvY0fyv4eS3dby55BcHAOU3M3hswQMRF5cTXMJfh0A
-
 class TweetsTable(APITable):
 
     
@@ -47,7 +42,7 @@ class TweetsTable(APITable):
         return results
 
 
-    def get_columns():
+    def get_columns(self):
         return [
             'id', 
             'author_id'
@@ -72,8 +67,29 @@ class TweetsTable(APITable):
         ]
         
 
-    def insert(handler, dataframe):
+    def insert(self, dataframe):
+
+        
+        # check https://docs.tweepy.org/en/stable/client.html#tweepy.Client.create_tweet
+
+        insert_template = '''
+        create_tweet(
+            text="{{text}}",
+            in_reply_to_tweet_id = "{{in_reply_to_tweet_id}}"   
+        )
+        '''
+        
+        # iterate over dataframe and send th
+        for index, row in dataframe.iterrows():
+            row_as_dict = row.to_dict()
+            self.handler.native_query(insert_template.format(**row_as_dict))
+
+        return Response(RESPONSE_TYPE.OK)
+
+    def delete(self, conditions):
+        # query to delete a tweet
         pass
+
 
 class TwitterHandler(APIHandler):
     """A class for handling connections and interactions with the Twitter API.
@@ -205,7 +221,7 @@ class TwitterHandler(APIHandler):
 
 # Replace these with your own API keys and secrets
 connection_data = OrderedDict(
-    bearer_token = 'blah'
+    bearer_token = 'br'
 )
 
 # Create a TwitterHandler object
@@ -214,6 +230,8 @@ twitter = TwitterHandler(connection_data)
 # Connect to the Twitter API
 twitter.connect()
 
+# basically you can call any of the function on Client for tweepy
+# https://docs.tweepy.org/en/stable/client.html
 tweets = twitter.native_query('''
 search_recent_tweets(
     query="elonmusk -is:retweet",

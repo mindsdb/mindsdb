@@ -10,22 +10,13 @@ server {
 
     location / {
 
-        # proxy_redirect off;
-        # proxy_set_header Host $host;
-        # proxy_set_header X-Real-IP $remote_addr;
-        # proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
         if ($http_x_handler_type = "lightwood") {
-            # proxy_pass http://${MINDSDB_ML_SERVICE_HOST}:${MINDSDB_ML_SERVICE_PORT}$request_uri;
-            proxy_pass http://${MINDSDB_ML_SERVICE_HOST}:${MINDSDB_ML_SERVICE_PORT};
+            proxy_pass http://${MINDSDB_LIGHTWOOD_HOST}:${MINDSDB_LIGHTWOOD_PORT};
         }
         
-        if ($http_x_handler_type = "db") {
-            # proxy_pass http://${MINDSDB_DB_SERVICE_HOST}:${MINDSDB_DB_SERVICE_PORT}$request_uri;
-            proxy_pass http://${MINDSDB_DB_SERVICE_HOST}:${MINDSDB_DB_SERVICE_PORT};
-        
+        if ($http_x_handler_type = "huggingface") {
+            proxy_pass http://${MINDSDB_HUGGINGFACE_HOST}:${MINDSDB_HUGGINGFACE_PORT};
         }
-        # return 500;
     }
 
     location /test {

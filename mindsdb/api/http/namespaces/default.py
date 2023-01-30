@@ -77,7 +77,7 @@ class StatusRoute(Resource):
             'environment': fields.String(description='The name of current environment: cloud, local or other'),
             'auth': fields.Nested(
                 ns_conf.model('response_status_auth', {
-                    'approved': fields.Boolean(description='is current user autentificated'),
+                    'confirmed': fields.Boolean(description='is current user autentificated'),
                     'required': fields.Boolean(description='is autentificated required'),
                     'provider': fields.Boolean(description='current autentification provider: local of 3d-party')
                 })
@@ -100,7 +100,7 @@ class StatusRoute(Resource):
         resp = {
             'environment': environment,
             'auth': {
-                'approved': check_auth(),
+                'confirmed': check_auth(),
                 'required': config['auth']['required'],
                 'provider': auth_provider
             }

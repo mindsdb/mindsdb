@@ -83,6 +83,8 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
     try:
         hardcoded_user = config['auth'].get('username')
         hardcoded_password = config['auth'].get('password')
+        if hardcoded_password is None:
+            hardcoded_password = ''
         hardcoded_password_hash = scramble_func(hardcoded_password, salt)
         hardcoded_password = hardcoded_password.encode()
 

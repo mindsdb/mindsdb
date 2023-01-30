@@ -10,11 +10,11 @@ server {
 
     location / {
 
-        if ($http_x_handler_type = "lightwood") {
+        if ($http_x_mindsdb_handler_type = "lightwood") {
             proxy_pass http://${MINDSDB_LIGHTWOOD_HOST}:${MINDSDB_LIGHTWOOD_PORT};
         }
         
-        if ($http_x_handler_type = "huggingface") {
+        if ($http_x_mindsdb_handler_type = "huggingface") {
             proxy_pass http://${MINDSDB_HUGGINGFACE_HOST}:${MINDSDB_HUGGINGFACE_PORT};
         }
     }

@@ -89,7 +89,7 @@ class MLClient(BaseClient):
         self.handler_kwargs = handler_kwargs
 
         # get self.headers from parent class
-        self.headers["X-Handler-Type"] = self.handler_kwargs.get("integration_engine")
+        self.headers["X-MindsDB-Handler-Type"] = self.handler_kwargs.get("integration_engine")
 
         # remove all 'object' params from dict before sending it to the serverside.
         # all of them will be created there

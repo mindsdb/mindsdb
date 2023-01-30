@@ -83,7 +83,7 @@ class BaseStuff:
                 command=cmd,
                 remove=True,
                 volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
-                environment={"MYSQL_PWD": self.config["auht"]["password"]})
+                environment={"MYSQL_PWD": self.config["auth"]["password"]})
         return self.to_dicts(res.decode(encoding))
 
     def create_database(self, db_data):

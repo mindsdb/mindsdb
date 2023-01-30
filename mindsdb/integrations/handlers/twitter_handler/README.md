@@ -1,4 +1,4 @@
-# Build your own twiter AI agent
+# Build your own twitter AI agent
 
 Imagine that you want to engage with your followers on twitter and you want to answer all thier questions promptly.
 Thanks to MindsDB. You can trian an AI system that help you manage automation on twitter responses.

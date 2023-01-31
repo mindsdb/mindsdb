@@ -112,7 +112,8 @@ class OpenAIHandler(BaseMLEngine):
             for i in range(len(template)):
                 atom = template[i]
                 if i < len(columns):
-                    col = df[columns[i]]
+                    # if data is missing, we add an empty quote
+                    col = df[columns[i]].replace(to_replace=[None], value='')
                     df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col
                 else:
                     df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)

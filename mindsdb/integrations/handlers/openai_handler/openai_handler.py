@@ -2,6 +2,7 @@ import os
 import re
 import math
 import concurrent.futures
+import numpy as np
 import pandas as pd
 from typing import Optional
 
@@ -76,6 +77,7 @@ class OpenAIHandler(BaseMLEngine):
 
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
+        df = df.reset_index(drop=True)
 
         if args.get('question_column', False) and args['question_column'] not in df.columns:
             raise Exception(f"This model expects a question to answer in the '{args['question_column']}' column.")
@@ -108,27 +110,39 @@ class OpenAIHandler(BaseMLEngine):
             template.insert(0, base_template[0:first_span])
             template.append(base_template[last_span:])
 
+            empty_prompt_ids = np.where(df[columns].isna().all(axis=1).values)[0]
+
             df['__mdb_prompt'] = ''
             for i in range(len(template)):
                 atom = template[i]
                 if i < len(columns):
-                    # if data is missing, we add an empty quote
-                    col = df[columns[i]].replace(to_replace=[None], value='')
+                    col = df[columns[i]].replace(to_replace=[None], value='')  # add empty quote if data is missing
                     df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col
                 else:
                     df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
             prompts = list(df['__mdb_prompt'])
 
         elif args.get('context_column', False):
+            empty_prompt_ids = np.where(df[args['context_column'],
+                                           args['question_column']].isna().all(axis=1).values)[0]
             contexts = list(df[args['context_column']].apply(lambda x: str(x)))
             questions = list(df[args['question_column']].apply(lambda x: str(x)))
             prompts = [f'Context: {c}\nQuestion: {q}\nAnswer: ' for c, q in zip(contexts, questions)]
 
         else:
+            empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
             prompts = list(df[args['question_column']].apply(lambda x: str(x)))
+
+        # remove prompts without signal from completion queue
+        prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
         api_key = self._get_api_key(args)
         completion = self._completion(model_name, prompts, max_tokens, temperature, api_key, args)
+
+        # add null completion for empty prompts
+        for i in sorted(empty_prompt_ids):
+            completion.insert(i, None)
+
         pred_df = pd.DataFrame(completion, columns=[args['target']])
         return pred_df
 

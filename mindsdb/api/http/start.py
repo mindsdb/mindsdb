@@ -9,6 +9,7 @@ from waitress import serve
 from flask import send_from_directory, request
 from flask_compress import Compress
 
+from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
@@ -19,6 +20,7 @@ from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
 from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
+from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities import log
@@ -59,18 +61,24 @@ def start(verbose, no_studio, with_nlp):
         else:
             return send_from_directory(static_root, 'index.html')
 
-    api.add_namespace(tab_ns)
-    api.add_namespace(stream_ns)
-    api.add_namespace(utils_ns)
-    api.add_namespace(conf_ns)
-    api.add_namespace(file_ns)
-    api.add_namespace(sql_ns)
-    api.add_namespace(analysis_ns)
-    api.add_namespace(handlers_ns)
-    api.add_namespace(tree_ns)
-    api.add_namespace(projects_ns)
+    protected_namespaces = [
+        tab_ns,
+        stream_ns,
+        utils_ns,
+        conf_ns,
+        file_ns,
+        sql_ns,
+        analysis_ns,
+        handlers_ns,
+        tree_ns,
+        projects_ns
+    ]
     if with_nlp:
-        api.add_namespace(nlp_ns)
+        protected_namespaces.append(nlp_ns)
+
+    for ns in protected_namespaces:
+        api.add_namespace(ns)
+    api.add_namespace(default_ns)
 
     @api.errorhandler(Exception)
     def handle_exception(e):
@@ -88,6 +96,20 @@ def start(verbose, no_studio, with_nlp):
     @app.before_request
     def before_request():
         ctx.set_default()
+        config = Config()
+
+        # region routes where auth is required
+        if (
+            config['auth']['required'] is True
+            and any(request.path.startswith(f'/api{ns.path}') for ns in protected_namespaces)
+            and check_auth() is False
+        ):
+            return http_error(
+                403, 'Forbidden',
+                'Authorization is required to complete the request'
+            )
+        # endregion
+
         company_id = request.headers.get('company-id')
         user_class = request.headers.get('user-class')
 

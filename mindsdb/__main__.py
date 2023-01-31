@@ -1,12 +1,13 @@
-import atexit
-import traceback
-import sys
 import os
+import sys
 import time
-import asyncio
+import json
+import atexit
 import signal
 import psutil
-import json
+import asyncio
+import secrets
+import traceback
 
 import torch.multiprocessing as mp
 mp.set_start_method('spawn')
@@ -111,6 +112,9 @@ if __name__ == '__main__':
         print('\n x telemetry disabled \n')
     else:
         print('\n ✓ telemetry enabled \n')
+
+    if os.environ.get('FLASK_SECRET_KEY') is None:
+        os.environ['FLASK_SECRET_KEY'] = secrets.token_hex(32)
 
     # -------------------------------------------------------
 

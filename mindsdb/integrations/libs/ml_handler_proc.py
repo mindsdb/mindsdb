@@ -15,7 +15,7 @@ Protocol over stdin/out:
 
 if 'error' in response dict, parent process trows exception
 
-"""
+""" # noqa
 
 import pickle
 import subprocess

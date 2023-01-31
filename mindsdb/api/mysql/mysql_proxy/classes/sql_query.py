@@ -844,7 +844,7 @@ class SQLQuery():
                 result.add_records(predictions)
 
                 data = result
-            except ZeroDivisionError as e:
+            except Exception as e:
                 if isinstance(e, SqlApiException):
                     raise e
                 else:

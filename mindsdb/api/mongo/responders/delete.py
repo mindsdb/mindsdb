@@ -1,5 +1,9 @@
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
+from mindsdb_sql.parser.ast import Delete, Identifier, BinaryOperation, Constant
+from mindsdb_sql.parser.dialects.mindsdb import DropPredictor
+
+from mindsdb.api.mongo.classes.query_sql import run_sql_command
 
 
 class Responce(Responder):
@@ -41,6 +45,10 @@ class Responce(Responder):
         if 'name' in delete_filter:
             obj_name = delete_filter['name']
 
+        version = None
+        if 'version' in delete_filter:
+            version = delete_filter['version']
+
         if obj_name is None and obj_id is None:
             raise Exception("Can't find object to delete, use filter by name or _id")
 
@@ -60,18 +68,23 @@ class Responce(Responder):
 
         # delete model
         if table == 'models':
-            mindsdb_env['model_controller'].delete_model(obj_name, project_name=project_name)
+            ast_query = DropPredictor(Identifier(parts=[project_name, obj_name]))
+            run_sql_command(mindsdb_env, ast_query)
 
         # delete model version
         elif table == 'models_versions':
-            if obj_id is None:
-                raise Exception("Can't find object version")
+            if version is None:
+                if obj_id is None:
+                    raise Exception("Can't find object version")
 
-            version = obj_id & (2**20 - 1)
-            models = [
-                {'NAME': obj_name, 'PROJECT': project_name, 'VERSION': version}
-            ]
-            mindsdb_env['model_controller'].delete_model_version(models)
+                version = obj_id & (2**20 - 1)
+
+            ast_query = Delete(table=Identifier(parts=[project_name, 'models_versions']),
+                               where=BinaryOperation(op='and', args=[
+                                   BinaryOperation(op='=', args=[Identifier('name'), Constant(obj_name)]),
+                                   BinaryOperation(op='=', args=[Identifier('version'), Constant(version)])
+                               ]))
+            run_sql_command(mindsdb_env, ast_query)
 
         return {
             'n': 1,

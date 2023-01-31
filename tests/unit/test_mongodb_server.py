@@ -10,6 +10,7 @@ import os
 from pymongo import MongoClient
 from mindsdb_sql import parse_sql
 
+import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column
 
@@ -165,7 +166,7 @@ class TestMongoDBServer(BaseUnitTest):
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
 
     def t_create_predictor(self, client_con, mock_executor):
-        res = client_con.mongo.predictors.insert_one(
+        res = client_con.myproj.predictors.insert_one(
             {
                 "name": "house_sales_model5",
                 "predict": "ma",
@@ -185,7 +186,7 @@ class TestMongoDBServer(BaseUnitTest):
         ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
-           CREATE PREDICTOR mongo.house_sales_model5 
+           CREATE PREDICTOR myproj.house_sales_model5 
            FROM mongo (
                 db.house_sales.find({})
            ) 
@@ -198,3 +199,34 @@ class TestMongoDBServer(BaseUnitTest):
         '''
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
 
+    def t_delete_model(self, client_con, mock_executor):
+
+        expected_sql = "DROP PREDICTOR myproj.house_sales_model5"
+
+        client_con.myproj.models.delete_one({'name': 'house_sales_model5'})
+        ast = mock_executor.call_args[0][0]
+
+        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+
+        # the same with 'predictors' table
+        mock_executor.reset_mock()
+
+        client_con.myproj.predictors.delete_one({'name': 'house_sales_model5'})
+        ast = mock_executor.call_args[0][0]
+
+        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+
+    def t_delete_model_version(self, client_con, mock_executor):
+
+        client_con.myproj.models_versions.delete_one({'name': 'house_sales_model5', 'version': 112})
+
+        ast = mock_executor.call_args[0][0]
+
+        expected_sql = "DELETE FROM myproj.models_versions WHERE name = 'house_sales_model5' and version=112"
+        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+
+    def t_delete_model_version_by_id(self, client_con, mock_executor):
+        # TODO
+        #   delete model and version by _id
+        #   need to mock model_controller
+        pass

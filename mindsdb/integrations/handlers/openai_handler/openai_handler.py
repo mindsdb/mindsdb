@@ -41,7 +41,7 @@ class OpenAIHandler(BaseMLEngine):
         args = args['using']
 
         args['target'] = target
-        self.model_storage.json_set('args', args) # TODO: add model name here
+        self.model_storage.json_set('args', args)  # TODO: add model name here
 
     def _get_api_key(self, args):
         # API_KEY preference order:
@@ -234,7 +234,7 @@ class OpenAIHandler(BaseMLEngine):
         args = self.model_storage.json_get('args')
         args = args if args else {}  # TODO using support?
         openai.api_key = self._get_api_key(args)
-        folder_name = 'openai_temp_finetune'
+        folder_name = 'finetune_artifacts'
         adjust_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = self.engine_storage.folder_get(folder_name)

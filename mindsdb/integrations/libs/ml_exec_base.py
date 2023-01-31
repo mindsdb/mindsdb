@@ -182,7 +182,7 @@ class BaseMLEngineExec:
 
         self.handler_class = kwargs['handler_class']
 
-    def get_ml_handler(self, predictor_id=None):
+    def _get_ml_handler(self, predictor_id=None):
         # returns instance or wrapper over it
 
         integration_id = self.integration_id
@@ -358,7 +358,7 @@ class BaseMLEngineExec:
                 model_name = f'{model_name}.{version}'
             raise Exception(f"Error: model '{model_name}' does not exists!")
 
-        ml_handler = self.get_ml_handler(predictor_record.id)
+        ml_handler = self._get_ml_handler(predictor_record.id)
 
         args = {
             'pred_format': pred_format,

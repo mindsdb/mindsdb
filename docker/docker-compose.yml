@@ -25,6 +25,9 @@ services:
       - '47335:47335'
     command: bash -c "cd /mindsdb && python -m mindsdb"
     environment:
+      MINDSDB_EXECUTOR_URL: "http://executor:5002"
+      MINDSDB_ML_SERVICE_URL: "http://ml_service:5001"
+      MINDSDB_DB_SERVICE_URL: "http://db_service:5000"
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       FLASK_DEBUG: "1"
@@ -39,32 +42,51 @@ services:
       timeout: 4s
       retries: 100
 
-  mysql_db:
-    image: "mindsdb/mysql-handler-test"
-    ports:
-      - 3307:3306
-    command: --secure-file-priv=/
+        #   mysql_db:
+        #     image: "mindsdb/mysql-handler-test"
+        #     ports:
+        #       - 3307:3306
+        #     command: --secure-file-priv=/
+        #     environment:
+        #       MYSQL_ROOT_PASSWORD: "supersecret"
+        #       MYSQL_DATABASE: "test"
+        #     healthcheck:
+        #       test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD' ]
+        #       interval: 120s
+        #       timeout: 4s
+        #       retries: 100
+
+
+  ml_service:
+    build:
+      context: ../
+      dockerfile: ./docker/ml_handler.Dockerfile
+    depends_on:
+      - mindsdb
+    volumes:
+      - type: bind
+        source: ../
+        target: /mindsdb
     environment:
-      MYSQL_ROOT_PASSWORD: "supersecret"
-      MYSQL_DATABASE: "test"
-    healthcheck:
-      test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD' ]
-      interval: 120s
-      timeout: 4s
-      retries: 100
+      # have to share mindsdb database, because it doens't work without it
+      PORT: 5001
+      MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      MINDSDB_DB_SERVICE_HOST: "db_service"
+      MINDSDB_DB_SERVICE_PORT: 5000
 
-
-  mysql_db_handler:
+  db_service:
     build:
       context: ../
       dockerfile: ./docker/db_handler.Dockerfile
-    environment:
-      - 'PARAMS={"connection_data": {"host": "mysql_db", "port": "3306", "user": "root", "password": "supersecret", "database": "test", "ssl": false}, "name": "foo", "type": "mysql"}'
-    ports:
-      - 5000:5000
     depends_on:
       - mindsdb
-      - mysql_db
+        # - mysql_db
+    volumes:
+      - type: bind
+        source: ../
+        target: /mindsdb
+    environment:
+      MINDSDB_STORAGE_DIR: "/mindsdb/var"
 
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:5000"]
@@ -72,18 +94,18 @@ services:
       timeout: 4s
       retries: 100
 
-
-  hugginggace_ml_handler:
+  executor:
     build:
       context: ../
-      dockerfile: ./docker/ml_handler.Dockerfile
-    ports:
-      - 5001:5000
+      dockerfile: ./docker/executor.Dockerfile
     depends_on:
       - mindsdb
     environment:
       # have to share mindsdb database, because it doens't work without it
+      PORT: 5002
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      MINDSDB_ML_SERVICE_URL: "http://ml_service:5001"
+      MINDSDB_DB_SERVICE_URL: "http://db_service:5000"
     volumes:
       - type: bind
         source: ../

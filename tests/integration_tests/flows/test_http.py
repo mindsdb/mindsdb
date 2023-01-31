@@ -102,6 +102,65 @@ class TestHTTP:
         response = requests.get(path)
         assert response.status_code == 200
 
+    def test_auth(self):
+        session = requests.Session()
+
+        response = session.get(f'{HTTP_API_ROOT}/status')
+        assert response.status_code == 200
+        assert response.json()['auth']['required'] is False
+
+        response = session.get(f'{HTTP_API_ROOT}/config/')
+        assert response.status_code == 200
+        assert response.json()['auth']['required'] is False
+
+        response = session.get(f'{HTTP_API_ROOT}/tree/')
+        assert response.status_code == 200
+
+        response = session.put(f'{HTTP_API_ROOT}/config/', json={
+            'required': True,
+            'username': '',
+            'password': ''
+        })
+        assert response.status_code == 400
+
+        response = session.put(f'{HTTP_API_ROOT}/config/', json={
+            'auth': {
+                'required': True,
+                'username': 'mindsdb',
+                'password': 'mindsdb'
+            }
+        })
+        assert response.status_code == 200
+
+        response = session.get(f'{HTTP_API_ROOT}/status')
+        assert response.status_code == 200
+        assert response.json()['auth']['required'] is True
+
+        response = session.get(f'{HTTP_API_ROOT}/tree/')
+        assert response.status_code == 403
+
+        response = session.post(f'{HTTP_API_ROOT}/login', json={
+                'username': 'mindsdb',
+                'password': 'mindsdb'
+            }
+        )
+        assert response.status_code == 200
+
+        response = session.get(f'{HTTP_API_ROOT}/tree/')
+        assert response.status_code == 200
+
+        response = session.put(f'{HTTP_API_ROOT}/config/', json={
+            'auth': {
+                'required': False,
+                'username': 'mindsdb',
+                'password': 'mindsdb'
+            }
+        })
+
+        response = session.get(f'{HTTP_API_ROOT}/status')
+        assert response.status_code == 200
+        assert response.json()['auth']['required'] is False
+
     def test_gui_is_served(self):
         """
         GUI downloaded and available
@@ -441,3 +500,20 @@ class TestHTTP:
 
         assert len(response.json()) == 2
 
+    @pytest.mark.parametrize("method,payload,expected_code,result",
+                             [
+                                 ("get", {}, 200, {}),
+                                 ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}),
+                                 ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}),
+                             ]
+    )
+    def test_tabs(self, method, payload, expected_code, result):
+        uri = '/tabs/'
+        call_desc = f"{method.upper()} - {uri} payload={payload}"
+        resp = self.api_request(method, uri, payload=payload)
+        assert resp.status_code == expected_code, \
+                f"expected to have {expected_code} for {call_desc}, but got {resp.status_code}"
+        # no needs to check reponse body for POST request
+        if method != "post":
+            assert result == resp.json(), \
+                    f"expected to have {result} for {call_desc}, but got {resp.json()}"

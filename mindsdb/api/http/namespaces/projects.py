@@ -27,7 +27,7 @@ class ModelsList(Resource):
         ''' List all models '''
         session = SessionController()
 
-        models = session.model_controller.get_models(project_name=project_name)
+        models = session.model_controller.get_models(with_versions=True, project_name=project_name)
         return models
 
 

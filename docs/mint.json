@@ -1,4 +1,5 @@
 {
+  "$schema": "https://mintlify.com/schema.json",
   "name": "MindsDB",
   "logo": {
     "light": "/logo/light.svg",
@@ -8,9 +9,7 @@
   "colors": {
     "primary": "#2AB673",
     "light": "#55D799",
-    "dark": "#117866",
-    "ultraLight": "#CCEFE9",
-    "ultraDark": "#0D5E4F"
+    "dark": "#117866"
   },
   "openApi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
@@ -20,7 +19,7 @@
       "https://127.0.0.1"
     ],
     "auth": {
-      "method": "api-key",
+      "method": "key",
       "name": "X-API-KEY"
     }
   },
@@ -54,7 +53,6 @@
           "group": "Quickstart",
           "pages": [
             "what-is-mindsdb",
-            "why-mindsdb",
             "quickstart"
           ]
         },
@@ -118,12 +116,34 @@
               ]
             },
             {
-              "group": "Do Machine Learning",
+              "group": "Machine Learning Examples",
               "pages": [
-                "using-sql-api/nlp",
-                "using-sql-api/timeseries",
-                "using-sql-api/classification",
-                "using-sql-api/regression"
+                "ml-types",
+                {
+                  "group": "NLP",
+                  "pages": [
+                    "nlp/nlp-mindsdb-hf",
+                    "nlp/nlp-mindsdb-openai"
+                  ]
+                },
+                {
+                  "group": "Time Series",
+                  "pages": [
+                    "sql/tutorials/eeg-forecasting"
+                  ]
+                },
+                {
+                  "group": "Classification",
+                  "pages": [
+                    "sql/tutorials/customer-churn"
+                  ]
+                },
+                {
+                  "group": "Regression",
+                  "pages": [
+                    "sql/tutorials/home-rentals"
+                  ]
+                }
               ]
             },
             {
@@ -170,8 +190,9 @@
               ]
             },
             {
-              "group": "Do Machine Learning",
+              "group": "Machine Learning Examples",
               "pages": [
+                "ml-types",
                 "using-mongo-api/nlp",
                 "using-mongo-api/timeseries",
                 "using-mongo-api/classification",
@@ -196,37 +217,8 @@
             }
           ]
         },
-        {
-          "group": "Using MindsDB with DBT",
-          "pages": [
-            "connect/dbt",
-            {
-              "group": "Do Machine Learning",
-              "pages": [
-                "using-dbt/nlp",
-                "using-dbt/timeseries",
-                "using-dbt/classification",
-                "using-dbt/regression"
-              ]
-            }
-          ]
-        },
-        {
-          "group": "Using MindsDB with Kafka",
-          "pages": [
-            "connect/kafka",
-            {
-              "group": "Do Machine Learning",
-              "pages": [
-                "using-kafka/anomaly-detection",
-                "using-kafka/nlp",
-                "using-kafka/timeseries",
-                "using-kafka/classification",
-                "using-kafka/regression"
-              ]
-            }
-          ]
-        },
+        "connect/dbt",
+        "connect/kafka",
         {
           "group": "Using MindsDB via REST API",
           "pages": [
@@ -240,6 +232,12 @@
                 "rest/databases/create-databases",
                 "rest/databases/update-databases",
                 "rest/databases/delete-databases"
+              ]
+            },
+            {
+              "group": "Projects",
+              "pages": [
+                "rest/projects/get-projects"
               ]
             },
             {
@@ -357,6 +355,7 @@
             "contribute",
             "contribute/install",
             "contribute/issues",
+            "contribute/data-integration-page",
             "contribute/data-handlers",
             "contribute/ml-handlers",
             "contribute/docs",

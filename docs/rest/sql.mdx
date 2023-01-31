@@ -11,8 +11,10 @@ This API provides a REST endpoint for executing the SQL queries. Note:
 * This endpoint is a HTTP POST method.
 * This endpoint accept data via `application/json` request body. 
 * The only required key is the `query` which has the SQL statement value.
-* By default, the open source version doesn't provide Authentication methods as MindsDB Cloud. 
+<Note>
+By default, the open source version doesn't provide Authentication methods as MindsDB Cloud. 
 On MindsDB cloud you need to set the `cookie` field in the header of request e.g  `{session=273trgsehgrui3i2riurwehe}`. 
+</Note>
 
 ### Body
 

@@ -29,9 +29,9 @@ class TestMySqlBinApi(TestMySqlApi):
         cnx = mysql.connector.connect(
             host=self.config["api"]["mysql"]["host"],
             port=self.config["api"]["mysql"]["port"],
-            user=self.config["api"]["mysql"]["user"],
             database='mindsdb',
-            password=self.config["api"]["mysql"]["password"]
+            user=self.config["auth"]["username"],
+            password=self.config["auth"]["password"]
         )
         cursor = cnx.cursor(prepared=True)
 

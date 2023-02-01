@@ -1,5 +1,6 @@
 ---
-title: MindsDB Default Structure
+title: MindsDB Information Schema
+sidebarTitle: MindsDB Information Schema
 ---
 
 On start-up, MindsDB consists of one system database (`information_schema`), one default project (`mindsdb`), and two base tables (`models` and `models_versions`) that belong to the default project.
@@ -173,7 +174,7 @@ On execution, we get:
 
 The `mindsdb` project and every project that you create contain these two tables by default:
 
-* The `models` table stores information about the modes within the project, such as `name`, `status`, `accuracy`, and more.
+* The `models` table stores information about the models within the project, such as `name`, `status`, `accuracy`, and more.
 
 * The `models_versions` table stores information about all present and past versions of each model.
 

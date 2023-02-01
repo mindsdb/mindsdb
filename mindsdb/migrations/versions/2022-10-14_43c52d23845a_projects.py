@@ -29,7 +29,7 @@ def upgrade():
         sa.Column('name', sa.String(), nullable=False),
         sa.Column('company_id', sa.Integer(), nullable=True),
         sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('name', 'company_id', name='unique_integration_name_company_id')
+        sa.UniqueConstraint('name', 'company_id', name='unique_project_name_company_id')
     )
 
     conn = op.get_bind()

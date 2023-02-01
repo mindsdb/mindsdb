@@ -9,26 +9,35 @@ Basic usage:
 
 """
 import traceback
-import json
+import base64
+import pickle
 
-from pandas import read_json
+from pandas import DataFrame
+
 from flask import Flask, request
 
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
-from mindsdb.interfaces.storage.fs import ModelStorage, HandlerStorage
-from mindsdb.integrations.libs.handler_helpers import define_ml_handler
+from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
+from mindsdb.interfaces.storage.fs import (
+    FileStorage,
+    FileStorageFactory,
+    RESOURCE_GROUP,
+)
+from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.integrations.libs.handler_helpers import get_handler
+from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import get_log
 
-log = get_log()
+logger = get_log(logger_name="main")
 
 
 class BaseMLWrapper:
     """Base abstract class contains some general methods."""
+
     def __init__(self, name):
         self.app = Flask(name)
         self.__mdb_config = Config()
@@ -37,134 +46,271 @@ class BaseMLWrapper:
         default_router = self.app.route("/")
         self.index = default_router(self.index)
 
-    def _get_context(self):
-        try:
-            context = request.json.get("context")
-        except Exception as e:
-            log.error("error getting request context: %s", e)
-            context = {}
-        ctx_str = json.dumps(context, sort_keys=True)
-        return {"hash": hash(ctx_str), "context": context}
-
     def index(self):
-        """ Default GET endpoint - '/'."""
+        """Default GET endpoint - '/'."""
         return "A ML Service Wrapper", 200
 
     def run(self, **kwargs):
-        """ Launch internal Flask application."""
+        """Launch internal Flask application."""
         return self.app.run(**kwargs)
 
 
 class MLHandlerWrapper(BaseMLWrapper):
     def __init__(self, name):
-        """ Wrapper Init.
+        """Wrapper Init.
         Args:
             name: name of the service
         """
         super().__init__(name)
 
         # CONVERT METHODS TO FLASK API ENDPOINTS
-        check_connect_route = self.app.route("/check_connection", methods=["GET", ])
-        self.check_connection = check_connect_route(self.check_connection)
+        # check_connect_route = self.app.route("/check_connection", methods=["GET", ])
+        # self.check_connection = check_connect_route(self.check_connection)
 
-        predict_route = self.app.route("/predict", methods=["GET", ])
+        predict_route = self.app.route(
+            "/predict",
+            methods=[
+                "GET",
+            ],
+        )
         self.predict = predict_route(self.predict)
 
-        query_create = self.app.route("/create", methods=["POST", ])
-        self.create = query_create(self.create)
+        learn_route = self.app.route(
+            "/learn",
+            methods=[
+                "POST",
+            ],
+        )
+        self.learn = learn_route(self.learn)
 
-    def _get_handler_general_data(self) -> dict:
-        """ Get common data for creating MLHandler instance from the request. """
-        return {"company_id": request.json.get("company_id", None),
-                "predictor_id": request.json.get("predictor_id", None),
-                "type": request.json.get("type")}
+        get_columns_route = self.app.route(
+            "/get_columns",
+            methods=[
+                "GET",
+            ],
+        )
+        self.get_columns = get_columns_route(self.get_columns)
 
-    def _get_handler_class(self):
-        """ Specify handler class base on common handler data.
-        The method gets the data from the request json.
-        """
-        common_data = self._get_handler_general_data()
-        log.info("%s: got common handler args from request - %s", self.__class__.__name__, common_data)
-        handler_class = define_ml_handler(common_data["type"])
-        log.info("%s: handler class for '%s' type has defined - %s", self.__class__.__name__, common_data["type"], handler_class)
-        return handler_class
+        get_tables_route = self.app.route(
+            "/get_tables",
+            methods=[
+                "GET",
+            ],
+        )
+        self.get_tables = get_tables_route(self.get_tables)
 
-    def _get_create_data(self) -> dict:
-        """ Get 'create' model params from json in the request."""
-        log.info("%s: getting training data from request", self.__class__.__name__)
-        data = {"target": request.json.get("target"),
-                "args": request.json.get("args", None)}
-        df = None
-        try:
-            df = request.json.get("df", None)
-            if df is not None:
-                df = read_json(df, orient="split")
-        except Exception:
-            log.error("%s: error getting training dataframe from request", self.__class__.__name__)
-        data["df"] = df
+        native_query_route = self.app.route(
+            "/native_query",
+            methods=[
+                "GET",
+            ],
+        )
+        self.native_query = native_query_route(self.native_query)
 
-        return data
+        query_route = self.app.route(
+            "/query",
+            methods=[
+                "GET",
+            ],
+        )
+        self.query = query_route(self.query)
 
-    def _get_predict_data(self):
-        """Get model 'predict' params from json in the request."""
-        log.info("%s: getting predict data from request", self.__class__.__name__)
-        df = None
-        try:
-            df = request.json.get("df", None)
-            if df is not None:
-                df = read_json(df, orient="split")
-        except Exception:
-            log.error("%s: error getting predict dataframe from request", self.__class__.__name__)
-        return {"df": df}
+        update_route = self.app.route(
+            "/update",
+            methods=[
+                "PUT",
+            ],
+        )
+        self.update = update_route(self.update)
+
+    def _get_handler_controller(self):
+        return IntegrationController()
+
+    def _get_file_storage(self, integration_id):
+        fs_store = FileStorage(
+            resource_group=RESOURCE_GROUP.INTEGRATION,
+            resource_id=integration_id,
+            sync=True,
+        )
+        return fs_store
+
+    def _get_storage_factory(self):
+        return FileStorageFactory(resource_group=RESOURCE_GROUP.PREDICTOR, sync=True)
 
     def _get_handler(self):
         """Create handler instance."""
-        # seems that integration_id is senseless for models
-        integration_id = 0
-        handler_class = self._get_handler_class()
-        common_args = self._get_handler_general_data()
-        predictor_id = common_args["predictor_id"]
-        engineStorage = HandlerStorage(integration_id)
-        modelStorage = ModelStorage(predictor_id)
-        handler = handler_class(engine_storage=engineStorage,
-                                model_storage=modelStorage)
-        return handler
+        ctx.load(request.json.get("context"))
+        params = request.json.get("handler_args")
 
-    def check_connection(self):
-        log.info("%s: calling 'check_connection'", self.__class__.__name__)
-        result = StatusResponse(success=True,
-                                error_message=None)
-        return result.to_json(), 200
+        integration_id = params["integration_id"]
+        _type = params["integration_engine"] or params.get("name", None)
+        logger.info(
+            "%s.get_handler: request handler of type - %s",
+            self.__class__.__name__,
+            _type,
+        )
 
-    def create(self):
-        """See 'create' method in MLHandler"""
+        handler_class = get_handler(_type)
+        params["handler_class"] = handler_class
+        params["handler_controller"] = self._get_handler_controller()
+        params["file_storage"] = self._get_file_storage(integration_id)
+        params["storage_factory"] = self._get_storage_factory()
+        logger.info(
+            "%s._get_handler: create handler. params - %s",
+            self.__class__.__name__,
+            params,
+        )
+
+        return BaseMLEngineExec(**params)
+
+    def get_columns(self):
+        logger.info("%s.get_columns has called.", self.__class__.__name__)
         try:
+            params = request.json.get("method_params")
+            table_name = params.get("table_name")
+            logger.info(
+                "%s.get_columns - called for table - %s",
+                self.__class__.__name__,
+                table_name,
+            )
             handler = self._get_handler()
-            create_kwargs = self._get_create_data()
-            handler.create(**create_kwargs)
-            status = StatusResponse(success=True)
-            return status.to_json(), 200
-        except Exception:
-            msg = traceback.format_exc()
-            log.error("%s error in calling 'create': %s", self.__class__.__name__, msg)
-            status = StatusResponse(success=False, error_message=msg)
-            return status.to_json(), 500
-
-    def predict(self):
-        """See 'predict' method in MLHandler"""
-        try:
-            handler = self._get_handler()
-            predict_kwargs = self._get_predict_data()
-            predictions = handler.predict(**predict_kwargs)
-            result = Response(resp_type=RESPONSE_TYPE.OK,
-                              data_frame=predictions,
-                              error_code=0,
-                              error_message=None)
+            result = handler.get_columns(table_name)
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()
-            log.error("%s error in calling 'predict': %s", self.__class__.__name__, msg)
-            result = Response(resp_type=RESPONSE_TYPE.ERROR,
-                              error_code=1,
-                              error_message=msg)
+            logger.error(
+                "%s error in calling 'get_columns': %s", self.__class__.__name__, msg
+            )
+            result = Response(
+                resp_type=RESPONSE_TYPE.ERROR, error_code=1, error_message=msg
+            )
             return result.to_json(), 500
+
+    def get_tables(self):
+        logger.info("%s.get_tables has called.", self.__class__.__name__)
+        try:
+            handler = self._get_handler()
+            result = handler.get_tables()
+            return result.to_json(), 200
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error(
+                "%s error in calling 'get_tables': %s", self.__class__.__name__, msg
+            )
+            result = Response(
+                resp_type=RESPONSE_TYPE.ERROR, error_code=1, error_message=msg
+            )
+            return result.to_json(), 500
+
+    def native_query(self):
+        logger.info("%s.native_query has called.", self.__class__.__name__)
+        try:
+            params = request.json.get("method_params")
+            query = params.get("query")
+            logger.info(
+                "%s.native_query: called for query - %s", self.__class__.__name__, query
+            )
+            handler = self._get_handler()
+            result = handler.native_query(query)
+            return result.to_json(), 200
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error(
+                "%s error in calling 'native_query': %s", self.__class__.__name__, msg
+            )
+            result = Response(
+                resp_type=RESPONSE_TYPE.ERROR, error_code=1, error_message=msg
+            )
+            return result.to_json(), 500
+
+    def query(self):
+        logger.info("%s.query has called.", self.__class__.__name__)
+        try:
+            params = request.json.get("method_params")
+            query_s64 = params.get("query")
+            query_b64 = query_s64.encode("utf-8")
+            query_s = base64.b64decode(query_b64)
+            query = pickle.loads(query_s)
+            logger.info(
+                "%s.query: called for query - %s", self.__class__.__name__, query
+            )
+            handler = self._get_handler()
+            result = handler.query(query)
+            return result.to_json(), 200
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error(
+                "%s error in calling 'query': %s", self.__class__.__name__, msg
+            )
+            result = Response(
+                resp_type=RESPONSE_TYPE.ERROR, error_code=1, error_message=msg
+            )
+            return result.to_json(), 500
+
+    def predict(self):
+        """See 'predict' method in MLHandler"""
+        logger.info("%s.predict has called.", self.__class__.__name__)
+        try:
+            params = request.json.get("method_params")
+            logger.info(
+                "%s.predict: called with params - %s", self.__class__.__name__, params
+            )
+            handler = self._get_handler()
+            predictions = handler.predict(**params)
+            logger.info(
+                "%s.predict: got predictions - %s(type - %s)",
+                self.__class__.__name__,
+                predictions,
+                type(predictions),
+            )
+            result = Response(
+                resp_type=RESPONSE_TYPE.OK,
+                data_frame=DataFrame(predictions),
+                error_code=0,
+                error_message=None,
+            )
+            return result.to_json(), 200
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error(
+                "%s error in calling 'predict': %s", self.__class__.__name__, msg
+            )
+            result = Response(
+                resp_type=RESPONSE_TYPE.ERROR, error_code=1, error_message=msg
+            )
+            return result.to_json(), 500
+
+    def learn(self):
+        logger.info("%s.learn has called.", self.__class__.__name__)
+        try:
+            params = request.json.get("method_params")
+            logger.info(
+                "%s.learn: called with params - %s", self.__class__.__name__, params
+            )
+            handler = self._get_handler()
+            handler.learn(**params)
+            result = Response(
+                resp_type=RESPONSE_TYPE.OK,
+                data_frame=None,
+                error_code=0,
+                error_message=None,
+            )
+            return result.to_json(), 200
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error(
+                "%s error in calling 'query': %s", self.__class__.__name__, msg
+            )
+            result = Response(
+                resp_type=RESPONSE_TYPE.ERROR, error_code=1, error_message=msg
+            )
+            return result.to_json(), 500
+
+    def update(self):
+        logger.error("%s.update - NOT IMPLEMENTED")
+        result = Response(
+            resp_type=RESPONSE_TYPE.ERROR,
+            error_code=1,
+            error_message="'update' not implemented on serverside"
+        )
+        return result.to_json(), 500

@@ -3,19 +3,23 @@ title: MindsDB and HuggingFace
 sidebarTitle: HuggingFace
 ---
 
-HuggingFace facilitates building, training, and deploying ML models.
-
-## How to Bring the HuggingFace Model to MindsDB
-
-We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the HuggingFace models to MindsDB.
+Hugging Face facilitates building, training, and deploying ML models. Now you can create Hugging Face models within MindsDB.
 
 <Note>
     **Using Local Installation of MindsDB**
 
-    Please note that if you use local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the HuggingFace models.
+    Please note that if you use local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the Hugging Face models.
 </Note>
 
+## How to Bring the Hugging Face Model to MindsDB
+
+We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the Hugging Face models to MindsDB.
+
 Let's go through some sample models.
+
+<Tip>
+Please note that the examples presented here use SQL. To see how to create Hugging Face models in Mongo database using MQL, check out [this example on sentiment classification](/nlp/nlp-mindsdb-hf#example-using-mql).
+</Tip>
 
 ### Model 1: Spam Classifier
 

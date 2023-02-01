@@ -1,0 +1,36 @@
+name: 🚀 Request a feature
+description: Create a feature request for us to add to our roadmap
+labels: [enhancement]
+body:
+- type: markdown
+  attributes:
+    value: Thanks for taking the time to fill out this feature request! Please fill out the form in English!
+      
+- type: textarea
+  attributes:
+    label: Short description and motivation for the proposed feature
+  validations:
+    required: true
+    
+- type: textarea
+  attributes:
+    label: Video or screenshots
+    description: The better the information you can provide, the faster we can make it!
+    placeholder: https://www.loom.com/share/abcdefghijklmnopqrrstuvwxyz
+  validations:
+    required: false
+    
+- type: textarea
+  attributes:
+    label: Describe some possible solutions
+    description: How could this feature be implemented?
+  validations:
+    required: false
+   
+- type: textarea
+  attributes:
+    label: Anything else?
+    description: |
+      Links? References? Ideas? Anything else that will give us more context!
+  validations:
+    required: false

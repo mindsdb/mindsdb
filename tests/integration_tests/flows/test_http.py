@@ -42,13 +42,12 @@ class TestHTTP:
     def sql_via_http(self, request: str, expected_resp_type: str = None, context: dict = None) -> dict:
         if context is None:
             context = self._sql_via_http_context
-        response = requests.post(
-            f'{HTTP_API_ROOT}/sql/query',
-            json={
-                'query': request,
-                'context': context
-            }
-        )
+        payload = {
+            'query': request,
+            'context': context
+        }
+        response = self.api_request('post', f'/sql/query', payload)
+
         assert response.status_code == 200, f"sql/query is not accessible - {response.text}"
         response = response.json()
         assert response.get('type') == (expected_resp_type or [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR])
@@ -60,6 +59,16 @@ class TestHTTP:
             assert isinstance(response.get('error_code'), int)
             assert isinstance(response.get('error_message'), str)
         self._sql_via_http_context = response['context']
+        return response
+
+    def api_request(self, method, url, payload=None):
+        method = method.lower()
+
+        fnc = getattr(requests, method)
+
+        url = f'{HTTP_API_ROOT}/{url.lstrip("/")}'
+        response = fnc(url, json=payload)
+
         return response
 
     def await_predictor(self, predictor_name, timeout=60):
@@ -93,6 +102,65 @@ class TestHTTP:
         response = requests.get(path)
         assert response.status_code == 200
 
+    def test_auth(self):
+        session = requests.Session()
+
+        response = session.get(f'{HTTP_API_ROOT}/status')
+        assert response.status_code == 200
+        assert response.json()['auth']['http_auth_enabled'] is False
+
+        response = session.get(f'{HTTP_API_ROOT}/config/')
+        assert response.status_code == 200
+        assert response.json()['auth']['http_auth_enabled'] is False
+
+        response = session.get(f'{HTTP_API_ROOT}/tree/')
+        assert response.status_code == 200
+
+        response = session.put(f'{HTTP_API_ROOT}/config/', json={
+            'http_auth_enabled': True,
+            'username': '',
+            'password': ''
+        })
+        assert response.status_code == 400
+
+        response = session.put(f'{HTTP_API_ROOT}/config/', json={
+            'auth': {
+                'http_auth_enabled': True,
+                'username': 'mindsdb',
+                'password': 'mindsdb'
+            }
+        })
+        assert response.status_code == 200
+
+        response = session.get(f'{HTTP_API_ROOT}/status')
+        assert response.status_code == 200
+        assert response.json()['auth']['http_auth_enabled'] is True
+
+        response = session.get(f'{HTTP_API_ROOT}/tree/')
+        assert response.status_code == 403
+
+        response = session.post(f'{HTTP_API_ROOT}/login', json={
+                'username': 'mindsdb',
+                'password': 'mindsdb'
+            }
+        )
+        assert response.status_code == 200
+
+        response = session.get(f'{HTTP_API_ROOT}/tree/')
+        assert response.status_code == 200
+
+        response = session.put(f'{HTTP_API_ROOT}/config/', json={
+            'auth': {
+                'http_auth_enabled': False,
+                'username': 'mindsdb',
+                'password': 'mindsdb'
+            }
+        })
+
+        response = session.get(f'{HTTP_API_ROOT}/status')
+        assert response.status_code == 200
+        assert response.json()['auth']['http_auth_enabled'] is False
+
     def test_gui_is_served(self):
         """
         GUI downloaded and available
@@ -100,7 +168,6 @@ class TestHTTP:
         response = requests.get('http://localhost:47334/')
         assert response.status_code == 200
         assert response.content.decode().find('<head>') > 0
-
 
     def test_files(self):
         ''' sql-via-http:
@@ -398,3 +465,55 @@ class TestHTTP:
         # FIXME rental price is str instead of float
         # for row in resp['data']:
         #     self.assertTrue(row[rental_price_index] > 0)
+
+        # test http api
+        project_name = 'mindsdb'
+        model_name = 'p_test_1'
+
+        # list projects
+        response = self.api_request('get', '/projects')
+        assert response.status_code == 200, 'Error to get list of projects'
+
+        projects = [i['name'] for i in response.json()]
+        assert project_name in projects
+
+        # list models
+        response = self.api_request('get', f'/projects/{project_name}/models')
+        assert response.status_code == 200, 'Error to get list of models'
+        models = [i['name'] for i in response.json()]
+        assert model_name in models
+
+        # prediction
+        payload = {
+           'data': [{'sqft': '1000'},
+                    {'sqft': '500'}]
+        }
+        response = self.api_request('post', f'/projects/{project_name}/models/{model_name}/predict', payload=payload)
+        assert response.status_code == 200, 'Error to make prediction'
+
+        # 2 prediction result
+        assert len(response.json()) == 2
+
+        # 1st version of model
+        response = self.api_request('post', f'/projects/{project_name}/models/{model_name}.1/predict', payload=payload)
+        assert response.status_code == 200, 'Error to make prediction'
+
+        assert len(response.json()) == 2
+
+    @pytest.mark.parametrize("method,payload,expected_code,result",
+                             [
+                                 ("get", {}, 200, {}),
+                                 ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}),
+                                 ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}),
+                             ]
+    )
+    def test_tabs(self, method, payload, expected_code, result):
+        uri = '/tabs/'
+        call_desc = f"{method.upper()} - {uri} payload={payload}"
+        resp = self.api_request(method, uri, payload=payload)
+        assert resp.status_code == expected_code, \
+                f"expected to have {expected_code} for {call_desc}, but got {resp.status_code}"
+        # no needs to check reponse body for POST request
+        if method != "post":
+            assert result == resp.json(), \
+                    f"expected to have {result} for {call_desc}, but got {resp.json()}"

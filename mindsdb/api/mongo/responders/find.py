@@ -1,6 +1,6 @@
 from bson.int64 import Int64
 
-from mindsdb_sql.parser.ast import Join
+from mindsdb_sql.parser.ast import Join, Select, Identifier, Describe
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.api.mongo.utilities.mongodb_ast import MongoToAst
@@ -97,7 +97,44 @@ class Responce(Responder):
                 for modifier in modifiers:
                     ast_query.modifiers.append(modifier)
 
+        # add _id for objects
+        table_name = None
+        models_idx = {}
+        if isinstance(ast_query, Select) and ast_query.from_table is not None:
+            if isinstance(ast_query.from_table, Identifier):
+                table_name = ast_query.from_table.parts[-1].lower()
+
+                project_name = request_env['database']
+
+                models = mindsdb_env['model_controller'].get_models(
+                    ml_handler_name=None,
+                    project_name=project_name
+                )
+
+                for model in models:
+                    models_idx[model['name']] = model['id']
+
+                # is select from model without
+                if table_name in models_idx and ast_query.where is None:
+                    # replace query to describe model
+                    ast_query = Describe(ast_query.from_table)
+
         data = run_sql_command(mindsdb_env, ast_query)
+
+        if table_name == 'models' or table_name == 'models_versions':
+            # for models and models_versions _id is:
+            #   - first 20 bytes is version
+            #   - next bytes is model id
+
+            for row in data:
+                model_id = models_idx.get(row.get('NAME'))
+                if model_id is not None:
+                    obj_id = model_id << 20
+
+                    if table_name == 'models_versions':
+                        obj_id += row.get('VERSION', 0)
+
+                    row['_id'] = helpers.int_to_objectid(obj_id)
 
         db = mindsdb_env['config']['api']['mongodb']['database']
 

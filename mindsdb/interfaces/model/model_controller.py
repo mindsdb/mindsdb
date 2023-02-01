@@ -52,6 +52,8 @@ class ModelController():
         data['fetch_data_query'] = predictor_record.fetch_data_query
         data['active'] = predictor_record.active
         data['status'] = predictor_record.status
+        data['id'] = predictor_record.id
+        data['version'] = predictor_record.version
 
         json_storage = get_json_storage(
             resource_id=predictor_record.id
@@ -73,20 +75,22 @@ class ModelController():
 
         ml_handler_base = session.integration_controller.get_handler(integration_record.name)
 
-        ml_handler = ml_handler_base.get_ml_handler(model_record.id)
+        ml_handler = ml_handler_base._get_ml_handler(model_record.id)
         if not hasattr(ml_handler, 'describe'):
             raise Exception("ML handler doesn't support description")
 
         return ml_handler.describe(attribute)
 
-    def get_models(self, with_versions=False, ml_handler_name='lightwood', integration_id=None):
+    def get_models(self, with_versions=False, ml_handler_name=None, integration_id=None,
+                   project_name=None):
         models = []
         show_active = True if with_versions is False else None
-        for predictor_record in get_model_records(active=show_active, ml_handler_name=ml_handler_name, integration_id=integration_id):
+        for predictor_record in get_model_records(active=show_active, ml_handler_name=ml_handler_name,
+                                                  integration_id=integration_id, project_name=project_name):
             model_data = self.get_model_data(predictor_record=predictor_record)
             reduced_model_data = {}
 
-            for k in ['name', 'version', 'is_active', 'predict', 'status',
+            for k in ['id', 'name', 'version', 'is_active', 'predict', 'status',
                       'current_phase', 'accuracy', 'data_source', 'update', 'active',
                       'mindsdb_version', 'error', 'created_at', 'fetch_data_query']:
                 reduced_model_data[k] = model_data.get(k, None)
@@ -123,25 +127,12 @@ class ModelController():
         if project_record is None:
             raise Exception(f"Project '{project_name}' does not exists")
 
-        model_record = db.Predictor.query.filter(
-            func.lower(db.Predictor.name) == func.lower(model_name),
-            db.Predictor.project_id == project_record.id,
-            db.Predictor.company_id == ctx.company_id
-        ).first()
-        if model_record is None:
-            raise Exception(f"Model '{model_name}' does not exists")
-
-        integration_record = db.Integration.query.get(model_record.integration_id)
-        if integration_record is None:
-            raise Exception(f"Can't determine integration of '{model_name}'")
-
         database_controller = DatabaseController()
 
         project = database_controller.get_project(project_name)
 
         predictors_records = get_model_records(
             name=model_name,
-            ml_handler_name=integration_record.name,
             project_id=project.id,
             active=None,
         )
@@ -280,14 +271,14 @@ class ModelController():
         if statement.order_by is not None:
             problem_definition['timeseries_settings'] = {
                 'is_timeseries': True,
-                'order_by': str(getattr(statement, 'order_by')[0])
+                'order_by': getattr(statement, 'order_by')[0].field.parts[-1]
             }
             for attr in ['horizon', 'window']:
                 if getattr(statement, attr) is not None:
                     problem_definition['timeseries_settings'][attr] = getattr(statement, attr)
 
             if statement.group_by is not None:
-                problem_definition['timeseries_settings']['group_by'] = [str(col) for col in statement.group_by]
+                problem_definition['timeseries_settings']['group_by'] = [col.parts[-1] for col in statement.group_by]
 
         join_learn_process = False
         if 'join_learn_process' in problem_definition.get('using', {}):

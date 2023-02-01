@@ -59,7 +59,11 @@ class DateCodec(TypeCodec):
         return dt.datetime(value.year, value.month, value.day)
 
 
-type_registry = TypeRegistry([NPIntCodec(), DateCodec()])
+def fallback_encoder(value):
+    return str(value)
+
+
+type_registry = TypeRegistry([NPIntCodec(), DateCodec()], fallback_encoder=fallback_encoder)
 
 
 def unpack(format, buffer, start=0):

@@ -73,7 +73,8 @@ jobs:
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
         
           # need fix in LW. not working yet 
-          # env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
+          env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
+          
           # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_lightwood.py
 
           env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
@@ -83,6 +84,9 @@ jobs:
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
 
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
+
+          # it is too early for such tests
+          # env PYTHONPATH=./ pytest tests/unit/test_interfaces_consistency.py
 
           echo -e "\n===============MySQL Handler===============\n"
           pytest -svx tests/handler_tests/test_mysql_handler.py

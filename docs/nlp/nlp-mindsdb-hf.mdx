@@ -1,5 +1,6 @@
 ---
 title: NLP with MindsDB and Hugging Face
+sidebarTitle: NLP with MindsDB and Hugging Face
 ---
 
 ## MindsDB NLP Supported Tasks
@@ -12,7 +13,7 @@ There are four main NLP tasks currently supported by MindsDB:
 - Summarization
 
 <Tip>
-Currently, MindsDB's NLP engine is powered by [Hugging Face](https://huggingface.co/). But we plan to expand to other NLP options in the future, so stay tuned!
+Currently, MindsDB's NLP engine is powered by [Hugging Face](https://huggingface.co/) and [OpenAI](https://openai.com/). But we plan to expand to other NLP options in the future, so stay tuned!
 </Tip>
 
 <Tip>
@@ -94,22 +95,24 @@ Where:
 | `project_name`   | Name of the project where the model is created. By default, the `mindsdb` project is used.          |
 | `predictor_name` | Name of the model to be created.                                                                    |
 | `target_column`  | Column to store the predicted values.                                                               |
-| `engine_name`    | Optional. You can provide an ML engine, based on which the model is created.                        |
+| `engine`         | Optional. You can provide an ML engine, based on which the model is created.                        |
 | `task`           | Optional. It is relative to the Hugging Face task tag.                                              |
 | `model_name`     | Model name from the Hugging Face model hub.                                                         |
 | `input_column`   | Name of the column that has the input data, especially important for batch predictions using JOIN.  |
 | `labels`         | Depending on the model. Usually used for Zero-Shot Classification models.                           |
 
-### Example
+<Tip>
+For more examples and explanations, visit our [doc page on Hugging Face](/custom-model/huggingface/).
+</Tip>
 
-Let's go through a Spam Classification example to understand better how
-to link Hugging Face models and bring them to MindsDB as AI tables.
+### Example using SQL
+
+Let's go through a Spam Classification example to understand better how to link Hugging Face models and bring them to MindsDB as AI tables.
 
 <Note>
     **Using Local Installation of MindsDB**
 
     Please note that if you use a local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the Hugging Face models.
-
 </Note>
 
 ```sql
@@ -125,12 +128,12 @@ USING
 
 Where:
 
-| Expressions      | Description                                                                                                             |
+| Expressions      | Values                                                                                                                  |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `project_name`   | mindsdb                                                                                                                 |
 | `predictor_name` | spam_classifier                                                                                                         |
 | `target_column`  | PRED                                                                                                                    |
-| `engine_name`    | huggingface                                                                                                             |
+| `engine`         | huggingface                                                                                                             |
 | `task`           | text-classification                                                                                                     |
 | `model_name`     | [mrm8488/bert-tiny-finetuned-sms-spam-detection](https://huggingface.co/mrm8488/bert-tiny-finetuned-sms-spam-detection) |
 | `input_column`   | text_spammy                                                                                                             |
@@ -179,6 +182,125 @@ On execution, we get:
 |ham |{'ham': 0.9380123615264893, 'spam': 0.061987683176994324}|Nah I don't think he goes to usf, he lives around here though                                                                                                    |
 |spam|{'spam': 0.9064534902572632, 'ham': 0.09354648739099503} |WINNER!! As a valued network customer you have been selected to receivea £900 prize reward! To claim call 09061701461. Claim code KL341. Valid 12 hours only.    |
 +----+---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+For the full library of supported examples please go [here](/nlp/nlp-extended-examples).
+
+### Example using MQL
+
+Let's go through a Sentiment Classification example, but this time we'll use a Mongo database.
+
+<Note>
+    **Using Local Installation of MindsDB**
+
+    Please note that if you use a local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the Hugging Face models.
+</Note>
+
+We have a sample Mongo database that you can connect to your MindsDB Cloud account by running this command in Mongo Shell:
+
+```bash
+use mindsdb
+```
+
+Followed by:
+
+```bash
+db.databases.insertOne({
+    'name': 'mongo_test_db', 
+    'engine': 'mongodb',
+    'connection_args': {
+        "host": "mongodb+srv://admin:201287aA@cluster0.myfdu.mongodb.net/admin?authSource=admin&replicaSet=atlas-5koz1i-shard-0&readPreference=primary&appname=MongoDB%20Compass&ssl=true",
+        "database": "test_data"
+        }   
+})
+```
+
+We use this sample database throughout the example.
+
+The next step is to create a connection between Mongo and MindsDB. Follow the instructions to connect MindsDB via [Mongo Compass](/connect/mongo-compass) or [Mongo Shell](/connect/mongo-shell).
+
+Now, we are ready to create a Hugging Face model.
+
+```bash
+db.models.insertOne({
+    name: 'sentiment_classifier',
+    predict: 'sentiment',
+    training_options: {
+            engine: 'huggingface',
+            task: 'text-classification',
+            model_name: 'cardiffnlp/twitter-roberta-base-sentiment',
+            input_column: 'comment',
+            labels: ['negative','neutral','positive']
+           }
+})
+```
+
+On execution, we get:
+
+```bash
+{ acknowledged: true,
+  insertedId: ObjectId("63c00c704d444a0b83808420") }
+```
+
+We can check its status using this command:
+
+```bash
+db.getCollection('models').find({'name': 'sentiment_classifier'})
+```
+
+On execution, we get:
+
+```bash
+{ NAME: 'sentiment_classifier_hf',
+  PROJECT: 'mindsdb',
+  VERSION: 1,
+  STATUS: 'complete',
+  ACCURACY: null,
+  PREDICT: 'sentiment',
+  UPDATE_STATUS: 'up_to_date',
+  MINDSDB_VERSION: '22.11.4.3',
+  ERROR: null,
+  SELECT_DATA_QUERY: null,
+  TRAINING_OPTIONS: '{\'target\': \'sentiment\', \'using\': {\'task\': \'text-classification\', \'model_name\': \'cardiffnlp/twitter-roberta-base-sentiment\', \'input_column\': \'comment\', \'labels\': [\'negative\', \'neutral\', \'positive\']}}',
+  TAG: null }
+```
+
+Once the status is `complete`, we can query for predictions.
+
+Here is how to query for a single prediction:
+
+```bash
+db.sentiment_classifier.find({comment: 'It is really easy to do NLP with MindsDB'})
+```
+
+On execution, we get:
+
+```bash
+{ sentiment: 'positive',
+  sentiment_explain: 
+   { positive: 0.9350261688232422,
+     neutral: 0.06265384703874588,
+     negative: 0.0023200225550681353 },
+  comment: 'It is really easy to do NLP with MindsDB' }
+```
+
+You can also query for batch predictions. Here we use the `mongo_test_db` database connected earlier in this example.
+
+```bash
+db.sentiment_classifier.find(
+    {'collection': 'mongo_test_db.user_comments'},
+    {'sentiment_classifier.sentiment': 'sentiment',
+     'user_comments.comment': 'comment'
+    }
+)
+```
+
+On execution, we get:
+
+```bash
+{ sentiment: 'positive', comment: 'I love pizza' }
+{ sentiment: 'negative', comment: 'I hate dancing' }
+{ sentiment: 'neutral', comment: 'Baking is not a big deal' }
 ```
 
 For the full library of supported examples please go [here](/nlp/nlp-extended-examples).

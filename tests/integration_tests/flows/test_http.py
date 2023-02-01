@@ -117,7 +117,7 @@ class TestHTTP:
         assert response.status_code == 200
 
         response = session.put(f'{HTTP_API_ROOT}/config/', json={
-            'required': True,
+            'http_auth_enabled': True,
             'username': '',
             'password': ''
         })
@@ -125,7 +125,7 @@ class TestHTTP:
 
         response = session.put(f'{HTTP_API_ROOT}/config/', json={
             'auth': {
-                'required': True,
+                'http_auth_enabled': True,
                 'username': 'mindsdb',
                 'password': 'mindsdb'
             }
@@ -151,7 +151,7 @@ class TestHTTP:
 
         response = session.put(f'{HTTP_API_ROOT}/config/', json={
             'auth': {
-                'required': False,
+                'http_auth_enabled': False,
                 'username': 'mindsdb',
                 'password': 'mindsdb'
             }

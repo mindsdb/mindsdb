@@ -105,7 +105,7 @@ class StatusRoute(Resource):
             'environment': environment,
             'auth': {
                 'confirmed': check_auth(),
-                'required': config['auth']['required'],
+                'http_auth_enabled': config['auth']['http_auth_enabled'],
                 'provider': auth_provider
             }
         }

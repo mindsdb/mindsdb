@@ -97,7 +97,7 @@ class Config():
             'storage_dir': os.environ['MINDSDB_STORAGE_DIR'],
             'paths': paths,
             'auth': {
-                'required': False,
+                'http_auth_enabled': False,
                 'username': 'mindsdb',
                 'password': ''
             },

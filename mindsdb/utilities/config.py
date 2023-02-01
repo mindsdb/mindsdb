@@ -1,6 +1,7 @@
 import os
 import json
 from copy import deepcopy
+from pathlib import Path
 
 from mindsdb.utilities.fs import create_directory, get_or_create_data_dir
 
@@ -35,13 +36,15 @@ class Config():
         if self.use_docker_env:
             self.use_docker_env = True
 
-        current_config_mtime = os.path.getmtime(self.config_path)
-        if (
-            config is None
-            or config_mtime != current_config_mtime
-        ):
+        if Path(self.config_path).is_file():
+            current_config_mtime = os.path.getmtime(self.config_path)
+            if config_mtime != current_config_mtime:
+                config = self.init_config()
+                config_mtime = current_config_mtime
+
+        if config is None:
             config = self.init_config()
-            config_mtime = current_config_mtime
+
         self._config = config
 
     def init_config(self):
@@ -94,7 +97,7 @@ class Config():
             'storage_dir': os.environ['MINDSDB_STORAGE_DIR'],
             'paths': paths,
             'auth': {
-                'required': False,
+                'http_auth_enabled': False,
                 'username': 'mindsdb',
                 'password': ''
             },

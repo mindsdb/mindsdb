@@ -16,7 +16,7 @@ def check_auth() -> bool:
             bool: True if user authentication is approved
     '''
     config = Config()
-    if config['auth']['required'] is False:
+    if config['auth']['http_auth_enabled'] is False:
         return True
     return session.get('username') == config['auth']['username']
 
@@ -96,14 +96,16 @@ class StatusRoute(Resource):
                 environment = 'cloud'
             elif config.get('aws_marketplace', False):
                 environment = 'aws_marketplace'
+            else:
+                environment = 'local'
 
-        auth_provider = 'local' if config['auth']['required'] else 'disabled'
+        auth_provider = 'local' if config['auth']['http_auth_enabled'] else 'disabled'
 
         resp = {
             'environment': environment,
             'auth': {
                 'confirmed': check_auth(),
-                'required': config['auth']['required'],
+                'http_auth_enabled': config['auth']['http_auth_enabled'],
                 'provider': auth_provider
             }
         }

@@ -96,6 +96,8 @@ class StatusRoute(Resource):
                 environment = 'cloud'
             elif config.get('aws_marketplace', False):
                 environment = 'aws_marketplace'
+            else:
+                environment = 'local'
 
         auth_provider = 'local' if config['auth']['required'] else 'disabled'
 

@@ -68,7 +68,7 @@ class ProjectDataNode(DataNode):
             query.from_table.parts[0] = 'models'
             query_table = 'models'
         # endregion
-        if query_table in ('models', 'models_versions'):
+        if query_table in ('models', 'models_versions', 'jobs', 'jobs_history'):
             new_query = deepcopy(query)
             project_filter = BinaryOperation('=', args=[
                 Identifier('project'),

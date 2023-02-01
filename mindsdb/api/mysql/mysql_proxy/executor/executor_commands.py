@@ -13,7 +13,9 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropMLEngine,
     DropDatasource,
     DropPredictor,
-    CreateView
+    CreateView,
+    CreateJob,
+    DropJob,
 )
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.dialects.mysql import Variable
@@ -78,6 +80,7 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.jobs.jobs_controller import JobsController
 
 
 def _get_show_where(statement: ASTNode, from_name: Optional[str] = None,
@@ -546,9 +549,36 @@ class ExecuteCommands:
         elif type(statement) == CreateTable:
             # TODO
             return self.answer_apply_predictor(statement)
+        # -- jobs --
+        elif type(statement) == CreateJob:
+            return self.answer_create_job(statement)
+        elif type(statement) == DropJob:
+            return self.answer_drop_job(statement)
         else:
             log.logger.warning(f'Unknown SQL statement: {sql}')
             raise ErNotSupportedYet(f'Unknown SQL statement: {sql}')
+
+    def answer_create_job(self, statement):
+        jobs_controller = JobsController()
+
+        name = statement.name
+        job_name = name.parts[-1]
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+
+        jobs_controller.add(job_name, project_name, statement.query_str,
+                            statement.start_str, statement.end_str, statement.repeat_str)
+
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_drop_job(self, statement):
+        jobs_controller = JobsController()
+
+        name = statement.name
+        job_name = name.parts[-1]
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+        jobs_controller.delete(job_name, project_name)
+
+        return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_describe_predictor(self, statement):
         # describe attr

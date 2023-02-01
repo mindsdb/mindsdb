@@ -224,6 +224,34 @@ class JsonStorage(Base):
     content = Column(JSON)
     company_id = Column(Integer)
 
-# DDL is changing through migrations
-# Base.metadata.create_all(engine)
-# orm.configure_mappers()
+
+class Jobs(Base):
+    __tablename__ = 'jobs'
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer)
+
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, ForeignKey('project.id', name='fk_jobs_project_id'), nullable=False)
+    query_str = Column(String, nullable=False)
+    start_at = Column(DateTime, default=datetime.datetime.now)
+    end_at = Column(DateTime)
+    next_run_at = Column(DateTime)
+    schedule_str = Column(String)
+
+    deleted_at = Column(DateTime)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
+
+class JobsHistory(Base):
+    __tablename__ = 'jobs_history'
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer)
+
+    job_id = Column(Integer)
+
+    start_at = Column(DateTime)
+    end_at = Column(DateTime)
+
+    error = Column(String)
+    created_at = Column(DateTime, default=datetime.datetime.now)

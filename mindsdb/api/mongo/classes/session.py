@@ -13,8 +13,8 @@ class Session():
         self.scram = Scram(method=method, get_salted_password=self.get_salted_password)
 
     def get_salted_password(self, username, method=None):
-        real_user = self.config['api']['mongodb'].get('user', '')
-        password = self.config['api']['mongodb'].get('password', '')
+        real_user = self.config['auth'].get('username', '')
+        password = self.config['auth'].get('password', '')
         if username != real_user:
             raise Exception(f'Wrong username {username}')
 

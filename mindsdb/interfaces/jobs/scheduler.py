@@ -26,6 +26,7 @@ def scheduler_monitor(config):
         except Exception as e:
             logger.error(e)
 
+        # different instances should start in not the same time
         time.sleep(20 + random.randint(1, 10))
 
 

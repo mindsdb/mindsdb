@@ -1,0 +1,42 @@
+import psycopg2
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+
+def connect_to_db(host, database, user, password):
+    conn = psycopg2.connect(
+        host=host,
+        database=database,
+        user=user,
+        password=password
+    )
+    return conn
+
+def read_data(conn, table_name):
+    df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
+    return df
+
+def split_data(df, label_column, test_size=0.2):
+    train_data, test_data, train_labels, test_labels = train_test_split(df.drop(label_column, axis=1), df[label_column], test_size=test_size)
+    return train_data, test_data, train_labels, test_labels
+
+def train_model(train_data, train_labels):
+    model = LogisticRegression()
+    model.fit(train_data, train_labels)
+    return model
+
+def evaluate_model(model, test_data, test_labels):
+    accuracy = model.score(test_data, test_labels)
+    return accuracy
+
+def close_conn(conn):
+    conn.close()
+
+if __name__ == '__main__':
+    conn = connect_to_db(host="hostname", database="database_name", user="username", password="password")
+    df = read_data(conn, "table_name")
+    train_data, test_data, train_labels, test_labels = split_data(df, 'label')
+    model = train_model(train_data, train_labels)
+    accuracy = evaluate_model(model, test_data, test_labels)
+    print("Accuracy:", accuracy)
+    close_conn(conn)

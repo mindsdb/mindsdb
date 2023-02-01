@@ -261,10 +261,10 @@ class ExecutorService:
         except Exception:
             err_msg = traceback.format_exc()
             logger.error(
-                    "%s.query_execute: execution error - %s",
-                    self.__class__.__name__,
-                    err_msg,
-                    )
+                "%s.query_execute: execution error - %s",
+                self.__class__.__name__,
+                err_msg,
+            )
             return {"error": err_msg}, 500
 
     def execute_external(self):

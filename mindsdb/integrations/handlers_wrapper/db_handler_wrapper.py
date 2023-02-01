@@ -68,7 +68,7 @@ class BaseDBWrapper:
             handler_class,
         )
         handler_kwargs = _json["handler_kwargs"]
-        # Create an instance of FileController for 
+        # Create an instance of FileController for
         # 'files' type of handler
         if _json["handler_type"] == "files":
             handler_kwargs["file_controller"] = FileController()

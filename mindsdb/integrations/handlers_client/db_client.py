@@ -276,11 +276,6 @@ class DBServiceClient(BaseClient):
 
         try:
             r = self._do("/get_tables", json=self._default_json())
-            logger.info(
-                "%s.get_tables: raw json in response - %s",
-                self.__class__.__name__,
-                r.json(),
-            )
             r = self._convert_response(r.json())
             response = Response(
                 data_frame=r.get("data_frame", None),

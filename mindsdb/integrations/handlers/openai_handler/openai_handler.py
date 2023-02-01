@@ -123,8 +123,8 @@ class OpenAIHandler(BaseMLEngine):
             prompts = list(df['__mdb_prompt'])
 
         elif args.get('context_column', False):
-            empty_prompt_ids = np.where(df[args['context_column'],
-                                           args['question_column']].isna().all(axis=1).values)[0]
+            empty_prompt_ids = np.where(df[[args['context_column'],
+                                           args['question_column']]].isna().all(axis=1).values)[0]
             contexts = list(df[args['context_column']].apply(lambda x: str(x)))
             questions = list(df[args['question_column']].apply(lambda x: str(x)))
             prompts = [f'Context: {c}\nQuestion: {q}\nAnswer: ' for c, q in zip(contexts, questions)]

@@ -87,7 +87,7 @@ class DBServiceClient(BaseClient):
         # FileController is not json serializable
         # so need to remove it from json params for
         # sending to DB Service
-        if self.handler_type == "files":
+        if self.handler_type == "files" and as_service:
             del self.handler_kwargs["file_controller"]
 
     def _default_json(self):
@@ -276,18 +276,24 @@ class DBServiceClient(BaseClient):
 
         try:
             r = self._do("/get_tables", json=self._default_json())
+            logger.info(
+                "%s.get_tables: raw json in response - %s",
+                self.__class__.__name__,
+                r.json(),
+            )
             r = self._convert_response(r.json())
             response = Response(
                 data_frame=r.get("data_frame", None),
-                resp_type=r.get("resp_type"),
+                resp_type=r.get("type"),
                 error_code=r.get("error_code", 0),
                 error_message=r.get("error_message", None),
                 query=r.get("query"),
             )
             logger.info(
-                "%s.get_tables: db service has replied. error_code - %s",
+                "%s.get_tables: db service has replied. error_code - %s. data - %s",
                 self.__class__.__name__,
                 response.error_code,
+                response.data_frame,
             )
 
         except Exception as e:

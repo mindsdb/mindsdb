@@ -8,7 +8,7 @@ Create Date: 2023-01-30 15:29:55.299262
 from alembic import op
 import sqlalchemy as sa
 
-import mindsdb.interfaces.storage.db
+import mindsdb.interfaces.storage.db # noqa
 
 # revision identifiers, used by Alembic.
 revision = '4f9336e7a5f5'

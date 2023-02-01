@@ -16,7 +16,7 @@ def check_auth() -> bool:
             bool: True if user authentication is approved
     '''
     config = Config()
-    if config['auth']['required'] is False:
+    if config['auth']['http_auth_enabled'] is False:
         return True
     return session.get('username') == config['auth']['username']
 
@@ -99,7 +99,7 @@ class StatusRoute(Resource):
             else:
                 environment = 'local'
 
-        auth_provider = 'local' if config['auth']['required'] else 'disabled'
+        auth_provider = 'local' if config['auth']['http_auth_enabled'] else 'disabled'
 
         resp = {
             'environment': environment,

@@ -64,7 +64,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql('''
            create model proj.modelx
            from pg (select * from df)
-           predict c
+           predict ds
            using 
              engine='statsforecast'
         ''')

@@ -45,16 +45,16 @@ class TestStatsForecast(BaseExecutorTest):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_simple(self, mock_handler):
 
-        # mock a dataset
+        # mock a time series dataset
         n_periods = 50
         date_series = pd.date_range(start=pd.to_datetime("today"), periods=n_periods)
         df = pd.DataFrame({"unique_id": "A", "ds":date_series, "target_series": range(0, n_periods)})
 
-        # 
+        # generate ground truth predictions from the package
         sf = StatsForecast(models=[AutoARIMA()], freq="D")
         sf.fit(df)
         forecast_df = sf.predict(h=12)
-        ground_truth = forecast_df.reset_index().AutoARIMA.mean()
+        ground_truth = forecast_df.reset_index().iloc[:, -1]
 
         self.set_handler(mock_handler, name='pg', tables={'df': df})
 
@@ -72,7 +72,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.wait_predictor('proj', 'modelx')
 
         # run predict
-        ret = self.run_sql('''
+        result_df = self.run_sql('''
            SELECT p.*
            FROM pg.df as t 
            JOIN proj.modelx as p
@@ -80,5 +80,5 @@ class TestStatsForecast(BaseExecutorTest):
         ''')
 
         # check against ground truth
-        mindsdb_result = pd.to_numeric(ret.AutoARIMA).mean()
-        assert mindsdb_result == ground_truth
+        mindsdb_result = result_df.iloc[:, -1]
+        assert np.allclose(mindsdb_result, ground_truth)

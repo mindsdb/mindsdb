@@ -23,7 +23,6 @@ class StatsForecastHandler(BaseMLEngine):
         self.model_storage.file_set('model', dill.dumps(model_args))
     
     def predict(self, df, args):
-        print("**************************************")
         model_args = dill.loads(self.model_storage.file_get('model'))
         fitted_model = AutoARIMA()
         fitted_model.model_ = model_args

@@ -1,5 +1,6 @@
 import random
 import time
+import math
 
 import openai
 
@@ -8,8 +9,8 @@ def retry_with_exponential_backoff(
         initial_delay: float = 1,
         hour_budget: float = 0.3,
         jitter: bool = False,
-        max_retries: int = 10,
-        errors: tuple = (openai.error.RateLimitError,),
+        exponential_base: int = 2,
+        errors: tuple = (openai.error.RateLimitError, openai.error.OpenAIError),
 ):
     """
     Wrapper to enable optional arguments. It means this decorator always needs to be called with parenthesis:
@@ -18,7 +19,6 @@ def retry_with_exponential_backoff(
     > def f(): [...]
     
     """  # noqa
-    max_retries = max(1, max_retries)
 
     def _retry_with_exponential_backoff(func):
         """
@@ -34,9 +34,15 @@ def retry_with_exponential_backoff(
             delay = initial_delay
 
             if isinstance(hour_budget, float) or isinstance(hour_budget, int):
-                exponential_base = ((hour_budget * 3600) / initial_delay) ** (1 / max_retries)
+                try:
+                    max_retries = round(
+                        (math.log((hour_budget * 3600) / initial_delay)) /
+                        math.log(exponential_base))
+                except ValueError:
+                    max_retries = 10
             else:
-                exponential_base = 2
+                max_retries = 10
+            max_retries = max(1, max_retries)
 
             while True:
                 try:
@@ -57,12 +63,3 @@ def retry_with_exponential_backoff(
         return wrapper
 
     return _retry_with_exponential_backoff
-
-
-# @retry_with_exponential_backoff(errors=(Exception,))
-# def f():
-#     p = random.random()
-#     if p > 0.5:
-#         return
-#     else:
-#         raise Exception

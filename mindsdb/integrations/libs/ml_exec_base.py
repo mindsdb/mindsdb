@@ -113,9 +113,14 @@ def learn_process(class_path, context_dump, integration_id,
         handlerStorage = HandlerStorage(integration_id)
         modelStorage = ModelStorage(predictor_id)
 
+        kwargs = {}
+        if base_predictor_id is not None:
+            kwargs['base_model_storage'] = ModelStorage(base_predictor_id)
+
         ml_handler = HandlerClass(
             engine_storage=handlerStorage,
             model_storage=modelStorage,
+            **kwargs
         )
 
         # create new model

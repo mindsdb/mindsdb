@@ -10,8 +10,8 @@ from typing import Optional, Dict
 
 import openai
 
-from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities.config import Config
+from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
 
 
@@ -42,7 +42,10 @@ class OpenAIHandler(BaseMLEngine):
         args = args['using']
 
         args['target'] = target
-        self.model_storage.json_set('args', args)  # TODO: add model name here
+        if not args.get('model_name'):
+            args['model_name'] = self.default_model
+
+        self.model_storage.json_set('args', args)
 
     def _get_api_key(self, args):
         # API_KEY preference order:
@@ -242,12 +245,22 @@ class OpenAIHandler(BaseMLEngine):
                             columns=['id', 'object', 'owned_by', 'permission', 'model_args'])
 
     def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        for col in ['prompt', 'completion']:
-            if col not in set(df.columns):
-                raise Exception("To fine-tune an OpenAI model, please format your select data query to have a `prompt` column and a `completion` column first.")  # noqa
+        """
+        Caveats: 
+          - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you adjust successively more than once, any fine-tuning other than the most recent one is lost.
+        """  # noqa
+        args = args if args else {}
+        using_args = args.pop('using') if 'using' in args else {}
+        prompt_col = using_args.get('prompt_column', 'prompt')
+        completion_col = using_args.get('completion_column', 'completion')
 
-        args = self.model_storage.json_get('args')
-        args = args if args else {}  # TODO using support?
+        for col in [prompt_col, completion_col]:  # TODO: enable renaming through USING
+            if col not in set(df.columns):
+                raise Exception(f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first.")  # noqa
+
+        args = {**using_args, **args}
+        prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
+
         openai.api_key = self._get_api_key(args)
         folder_name = 'finetune_artifacts'
         adjust_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -296,7 +309,7 @@ class OpenAIHandler(BaseMLEngine):
         ft_params = {
             'training_file': train_file_id,
             'validation_file': val_file_id,
-            'model': _get_model_type(args.get('model_name', '')),
+            'model': _get_model_type(prev_model_name),
             'suffix': 'mindsdb',
             'n_epochs': None,
             'batch_size': None,
@@ -315,16 +328,16 @@ class OpenAIHandler(BaseMLEngine):
         @retry_with_exponential_backoff(hour_budget=args.get('hour_budget', 8))
         def _check_ft_status(model_id):
             ft_retrieved = openai.FineTune.retrieve(id=model_id)
-            if ft_retrieved['status'] != 'pending':
+            if ft_retrieved['status'] in ('succeeded', 'failed'):
                 return ft_retrieved
             else:
-                raise openai.error.RateLimitError('Fine-tuning still pending!')
+                raise openai.error.OpenAIError('Fine-tuning still pending!')
 
         ft_stats = _check_ft_status(ft_result.id)
         ft_model_name = ft_stats['fine_tuned_model']
 
         if ft_stats['status'] != 'succeeded':
-            raise Exception(f"Fine-tuning did not complete successfully (status: {ft_stats['status']})")
+            raise Exception(f"Fine-tuning did not complete successfully (status: {ft_stats['status']}). Error message: {ft_stats['events'][-1]['message']}")  # noqa
 
         end_time = datetime.datetime.now()
         runtime = end_time - start_time
@@ -340,12 +353,10 @@ class OpenAIHandler(BaseMLEngine):
         if 'validation_token_accuracy' in train_stats.columns:
             train_stats = train_stats[train_stats['validation_token_accuracy'].notnull()]
 
-        ft_info = {
-            'model_name': ft_model_name,
-            'ft_api_info': ft_stats.to_dict_recursive(),
-            'ft_result_stats': train_stats.to_dict(),
-            'runtime': runtime.total_seconds()
-        }
+        args['model_name'] = ft_model_name
+        args['ft_api_info'] = ft_stats.to_dict_recursive()
+        args['ft_result_stats'] = train_stats.to_dict()
+        args['runtime'] = runtime.total_seconds()
 
-        self.model_storage.json_set('ft_info', ft_info)
+        self.model_storage.json_set('args', args)
         self.engine_storage.folder_sync(folder_name)

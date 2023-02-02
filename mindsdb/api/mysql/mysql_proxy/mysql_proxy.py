@@ -23,18 +23,14 @@ import select
 import base64
 from typing import List, Dict
 
-from numpy import dtype as np_dtype
-from pandas.api import types as pd_types
-
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.mysql.mysql_proxy.utilities import logger
-from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErWrongCharset,
@@ -49,7 +45,6 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
     ERR,
     COMMANDS,
-    TYPES,
     DEFAULT_AUTH_METHOD,
     SERVER_STATUS,
     CAPABILITIES
@@ -73,7 +68,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     BinaryResultsetRowPacket
 )
 
-from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
+from mindsdb.api.mysql.mysql_proxy.executor import Executor
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.hooks as hooks
 
@@ -86,8 +81,10 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
     '''
     '''
     try:
-        hardcoded_user = config['api']['mysql']['user']
-        hardcoded_password = config['api']['mysql']['password']
+        hardcoded_user = config['auth'].get('username')
+        hardcoded_password = config['auth'].get('password')
+        if hardcoded_password is None:
+            hardcoded_password = ''
         hardcoded_password_hash = scramble_func(hardcoded_password, salt)
         hardcoded_password = hardcoded_password.encode()
 
@@ -329,6 +326,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data = []
         packets = []
         for i, column in enumerate(columns):
+            logger.info("%s._get_column_defenition_packets: handling column - %s of %s type", self.__class__.__name__, column, type(column))
             table_name = column.get('table_name', 'table_name')
             column_name = column.get('name', 'column_name')
             column_alias = column.get('alias', column_name)
@@ -431,51 +429,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'is_cloud': False
         }
 
-    # --------------
-
-    def to_mysql_columns(self, columns_list):
-
-        result = []
-
-        database = None if self.session.database == '' else self.session.database.lower()
-        for column_record in columns_list:
-
-            field_type = column_record.type
-
-            column_type = TYPES.MYSQL_TYPE_VAR_STRING
-            # is already in mysql protocol type?
-            if isinstance(field_type, int):
-                column_type = field_type
-            # pandas checks
-            elif isinstance(field_type, np_dtype):
-                if pd_types.is_integer_dtype(field_type):
-                    column_type = TYPES.MYSQL_TYPE_LONG
-                elif pd_types.is_numeric_dtype(field_type):
-                    column_type = TYPES.MYSQL_TYPE_DOUBLE
-                elif pd_types.is_datetime64_any_dtype(field_type):
-                    column_type = TYPES.MYSQL_TYPE_DATETIME
-            # lightwood checks
-            elif field_type == dtype.date:
-                column_type = TYPES.MYSQL_TYPE_DATE
-            elif field_type == dtype.datetime:
-                column_type = TYPES.MYSQL_TYPE_DATETIME
-            elif field_type == dtype.float:
-                column_type = TYPES.MYSQL_TYPE_DOUBLE
-            elif field_type == dtype.integer:
-                column_type = TYPES.MYSQL_TYPE_LONG
-
-            result.append({
-                'database': column_record.database or database,
-                #  TODO add 'original_table'
-                'table_name': column_record.table_name,
-                'name': column_record.name,
-                'alias': column_record.alias or column_record.name,
-                # NOTE all work with text-type, but if/when wanted change types to real,
-                # it will need to check all types casts in BinaryResultsetRowPacket
-                'type': column_type
-            })
-        return result
-
     def process_query(self, sql):
         executor = Executor(
             session=self.session,
@@ -493,7 +446,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
-                columns=self.to_mysql_columns(executor.columns),
+                # columns=executor.columns,
+                columns=executor.to_mysql_columns(executor.columns),
                 data=executor.data,
                 status=executor.server_status
             )
@@ -518,7 +472,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         ]
 
         if len(executor.params) > 0:
-            parameters_def = self.to_mysql_columns(executor.params)
+            # parameters_def = executor.params
+            parameters_def = executor.to_mysql_columns(executor.params)
             packages.extend(
                 self._get_column_defenition_packets(parameters_def)
             )
@@ -527,7 +482,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 packages.append(self.packet(EofPacket, status=status))
 
         if len(executor.columns) > 0:
-            columns_def = self.to_mysql_columns(executor.columns)
+            # columns_def = executor.columns
+            columns_def = executor.to_mysql_columns(executor.columns)
             packages.extend(
                 self._get_column_defenition_packets(columns_def)
             )
@@ -552,7 +508,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.send_query_answer(resp)
 
         # TODO prepared_stmt['type'] == 'lock' is not used but it works
-        columns_def = self.to_mysql_columns(executor.columns)
+        # columns_def = executor.columns
+        columns_def = executor.to_mysql_columns(executor.columns)
         packages = [self.packet(ColumnCountPacket, count=len(columns_def))]
 
         packages.extend(self._get_column_defenition_packets(columns_def))
@@ -585,7 +542,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return self.send_query_answer(resp)
 
         packages = []
-        columns = self.to_mysql_columns(executor.columns)
+        # columns = executor.columns
+        columns = executor.to_mysql_columns(executor.columns)
         for row in executor.data[fetched:limit]:
             packages.append(
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
@@ -695,7 +653,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                         session=self.session,
                         sqlserver=self
                     )
-                    executor.command_executor.change_default_db(new_database)
+                    executor.change_default_db(new_database)
 
                     response = SQLAnswer(RESPONSE_TYPE.OK)
                 elif p.type.value == COMMANDS.COM_FIELD_LIST:

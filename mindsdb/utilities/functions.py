@@ -1,7 +1,8 @@
 import argparse
 import datetime
-import requests
 from functools import wraps
+
+import requests
 
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 

@@ -22,6 +22,7 @@ class StatsForecastHandler(BaseMLEngine):
 
         ###### store model args and time series settings in the model folder
         model_args = sf.fitted_[0][0].model_
+        model_args["target"] = target
         model_args["frequency"] = frequency
         model_args["predict_horizon"] = time_settings["horizon"]
 
@@ -29,10 +30,14 @@ class StatsForecastHandler(BaseMLEngine):
         self.model_storage.file_set('model', dill.dumps(model_args))
     
     def predict(self, df, args):
+        # Load fitted model
         model_args = dill.loads(self.model_storage.file_get('model'))
         fitted_model = AutoARIMA()
         fitted_model.model_ = model_args
-        sf = StatsForecast(models=[], freq=model_args["frequency"], df=df)
+
+        # StatsForecast can't handle extra columns - it assumes they're external regressors
+        prediction_df = df[["unique_id", "ds", model_args["target"]]]
+        sf = StatsForecast(models=[AutoARIMA()], freq="D", df=prediction_df)
         sf.fitted_ = np.array([[fitted_model]])
-        forecast_df = sf.predict(model_args["predict_horizon"])
+        forecast_df = sf.forecast(model_args["predict_horizon"])
         return forecast_df.reset_index(drop=True)

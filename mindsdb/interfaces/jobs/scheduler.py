@@ -34,10 +34,21 @@ def check_timetable(config):
     scheduler = JobsExecutor()
 
     for record in scheduler.get_next_tasks():
-        execute_async(record, config)
+        execute_sync(record, config)
+
+
+def execute_sync(record, config):
+    logger.info(f'Job execute: {record.name}({record.id})')
+
+    exec_method = config.get('jobs', {}).get('executor', 'local')
+
+    task_process(record.id, exec_method)
 
 
 def execute_async(record, config):
+    # if async is used with training in background then training is not happening
+    #  maybe because 2 level of subprocess
+
     logger.info(f'Job execute: {record.name}({record.id})')
 
     exec_method = config.get('jobs', {}).get('executor', 'local')
@@ -54,7 +65,7 @@ def execute_async(record, config):
 
 
 def task_process(record_id, exec_method):
-    # config = Config()
+    Config()
     db.init()
     # initialize_log(config, 'jobs', wrap_print=True)
 

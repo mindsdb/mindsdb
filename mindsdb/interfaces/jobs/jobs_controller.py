@@ -251,7 +251,9 @@ class JobsExecutor:
         elif record.end_at is not None and next_run_at > record.end_at:
             self._delete_record(record)
         else:
-            # plan next run
+            # plan next run, but not in the past
+            if next_run_at < dt.datetime.now():
+                next_run_at = dt.datetime.now()
             record.next_run_at = next_run_at
 
     def _delete_record(self, record):
@@ -265,7 +267,7 @@ class JobsExecutor:
 
         history_record = db.JobsHistory(
             job_id=record.id,
-            start_at=record.start_at
+            start_at=record.next_run_at
         )
 
         db.session.add(history_record)
@@ -284,7 +286,7 @@ class JobsExecutor:
         if history_id is None:
             history_record = db.JobsHistory(
                 job_id=record.id,
-                start_at=record.start_at
+                start_at=record.next_run_at
             )
         else:
             history_record = db.JobsHistory.query.get(history_id)

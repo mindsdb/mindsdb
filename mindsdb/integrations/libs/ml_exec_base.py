@@ -14,7 +14,7 @@ In particular, three big components are included:
 
     - `predict_process` method: handles async dispatch of the `predict` method in an engine.
 
-"""
+""" # noqa
 
 import datetime as dt
 import traceback

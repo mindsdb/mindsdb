@@ -107,17 +107,17 @@ class TestHTTP:
 
         response = session.get(f'{HTTP_API_ROOT}/status')
         assert response.status_code == 200
-        assert response.json()['auth']['required'] is False
+        assert response.json()['auth']['http_auth_enabled'] is False
 
         response = session.get(f'{HTTP_API_ROOT}/config/')
         assert response.status_code == 200
-        assert response.json()['auth']['required'] is False
+        assert response.json()['auth']['http_auth_enabled'] is False
 
         response = session.get(f'{HTTP_API_ROOT}/tree/')
         assert response.status_code == 200
 
         response = session.put(f'{HTTP_API_ROOT}/config/', json={
-            'required': True,
+            'http_auth_enabled': True,
             'username': '',
             'password': ''
         })
@@ -125,7 +125,7 @@ class TestHTTP:
 
         response = session.put(f'{HTTP_API_ROOT}/config/', json={
             'auth': {
-                'required': True,
+                'http_auth_enabled': True,
                 'username': 'mindsdb',
                 'password': 'mindsdb'
             }
@@ -134,7 +134,7 @@ class TestHTTP:
 
         response = session.get(f'{HTTP_API_ROOT}/status')
         assert response.status_code == 200
-        assert response.json()['auth']['required'] is True
+        assert response.json()['auth']['http_auth_enabled'] is True
 
         response = session.get(f'{HTTP_API_ROOT}/tree/')
         assert response.status_code == 403
@@ -151,7 +151,7 @@ class TestHTTP:
 
         response = session.put(f'{HTTP_API_ROOT}/config/', json={
             'auth': {
-                'required': False,
+                'http_auth_enabled': False,
                 'username': 'mindsdb',
                 'password': 'mindsdb'
             }
@@ -159,7 +159,7 @@ class TestHTTP:
 
         response = session.get(f'{HTTP_API_ROOT}/status')
         assert response.status_code == 200
-        assert response.json()['auth']['required'] is False
+        assert response.json()['auth']['http_auth_enabled'] is False
 
     def test_gui_is_served(self):
         """

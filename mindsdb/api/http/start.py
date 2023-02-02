@@ -100,7 +100,7 @@ def start(verbose, no_studio, with_nlp):
 
         # region routes where auth is required
         if (
-            config['auth']['required'] is True
+            config['auth']['http_auth_enabled'] is True
             and any(request.path.startswith(f'/api{ns.path}') for ns in protected_namespaces)
             and check_auth() is False
         ):

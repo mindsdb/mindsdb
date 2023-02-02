@@ -259,7 +259,9 @@ class ExecutorClient:
         if response.status_code != requests.codes.ok and "error" in resp:
             err_msg = resp["error"]
             logger.error(
-                "%s.query_execute: executor service returned an error - %s", err_msg
+                "%s.query_execute: executor service returned an error - %s",
+                self.__class__.__name__,
+                err_msg
             )
             raise Exception(err_msg)
 
@@ -400,6 +402,12 @@ class ExecutorClient:
             logger.debug(
                 "%s.change_default_db result:body=%s", self.__class__.__name__, response.text
             )
+            if response.status_code == 200:
+                logger.debug(
+                    "%s.change_default_db change default db to %s", self.__class__.__name__, new_db
+                )
+                self.session.database = new_db
+
         except Exception:
             msg = traceback.format_exc()
             logger.debug(

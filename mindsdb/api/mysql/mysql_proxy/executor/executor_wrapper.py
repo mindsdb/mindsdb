@@ -18,7 +18,7 @@ logger = get_log(logger_name="main")
 class SqlServerStub:
     """This class is just an emulation of Server object,
     used by Executor.
-    In 'monilithic' mode of MindsDB work the Executor takes
+    In 'monolithic' mode of MindsDB work the Executor takes
     some information from the sql server which. Here we emulate
     this object."""
 
@@ -113,9 +113,19 @@ class ExecutorService:
             ],
         )
         self.change_default_db = change_default_db_router(self.change_default_db)
+
+        self.after_request = self.app.after_request(self.after_request)
+        self.before_request = self.app.before_request(self.before_request)
         logger.info(
             "%s: base params and route have been initialized", self.__class__.__name__
         )
+
+    def before_request(self):
+        logger.info("%s [%s %s]: params - %s", self.__class__.__name__, request.method, request.full_path, request.json)
+
+    def after_request(self, response):
+        logger.info("%s [%s %s] - %s: result - %s", self.__class__.__name__, request.method, request.full_path, response.status, response.json)
+        return response
 
     def _get_executor(self, params):
         # We have to send context between client and server
@@ -199,9 +209,6 @@ class ExecutorService:
     def stmt_prepare(self):
         try:
             params = request.json
-            logger.info(
-                "%s.stmt_prepare: json received - %s", self.__class__.__name__, params
-            )
             executor = self._get_executor(params)
             sql = params.get("sql")
             executor.stmt_prepare(sql)
@@ -209,15 +216,12 @@ class ExecutorService:
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
-            logger.error("%s.stmt_prepare: execution error - %s", err_msg)
+            # logger.error("%s.stmt_prepare: execution error - %s", err_msg)
             return {"error": err_msg}, 500
 
     def stmt_execute(self):
         try:
             params = request.json
-            logger.info(
-                "%s.stmt_execute: json received - %s", self.__class__.__name__, params
-            )
             executor = self._get_executor(params)
             param_values = params.get("param_values")
             executor.stmt_execute(param_values)
@@ -225,56 +229,48 @@ class ExecutorService:
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
-            logger.error("%s.stmt_execute: execution error - %s", err_msg)
+            # logger.error("%s.stmt_execute: execution error - %s", err_msg)
             return {"error": err_msg}, 500
 
     def query_execute(self):
         try:
             params = request.json
-            logger.info(
-                "%s.query_execute: json received - %s", self.__class__.__name__, params
-            )
             executor = self._get_executor(params)
             sql = params.get("sql")
             executor.query_execute(sql)
-            logger.debug(
-                "%s.query_execute: executor.data(type of %s) - %s",
-                self.__class__.__name__,
-                type(executor.data),
-                executor.data,
-            )
-            logger.debug(
-                "%s.query_execute: executor.columns(type of %s) - %s",
-                self.__class__.__name__,
-                type(executor.columns),
-                executor.columns,
-            )
-            logger.debug(
-                "%s.query_execute: executor.params(type of %s) - %s",
-                self.__class__.__name__,
-                type(executor.params),
-                executor.params,
-            )
+            # logger.debug(
+            #     "%s.query_execute: executor.data(type of %s) - %s",
+            #     self.__class__.__name__,
+            #     type(executor.data),
+            #     executor.data,
+            # )
+            # logger.debug(
+            #     "%s.query_execute: executor.columns(type of %s) - %s",
+            #     self.__class__.__name__,
+            #     type(executor.columns),
+            #     executor.columns,
+            # )
+            # logger.debug(
+            #     "%s.query_execute: executor.params(type of %s) - %s",
+            #     self.__class__.__name__,
+            #     type(executor.params),
+            #     executor.params,
+            # )
 
             resp = executor._to_json()
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
-            logger.error(
-                "%s.query_execute: execution error - %s",
-                self.__class__.__name__,
-                err_msg,
-            )
+            # logger.error(
+            #     "%s.query_execute: execution error - %s",
+            #     self.__class__.__name__,
+            #     err_msg,
+            # )
             return {"error": err_msg}, 500
 
     def execute_external(self):
         try:
             params = request.json
-            logger.info(
-                "%s.execute_external: json received - %s",
-                self.__class__.__name__,
-                params,
-            )
             executor = self._get_executor(params)
             sql = params.get("sql")
             executor.execute_external(sql)
@@ -282,13 +278,12 @@ class ExecutorService:
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
-            logger.error("%s.execute_external: execution error - %s", err_msg)
+            # logger.error("%s.execute_external: execution error - %s", err_msg)
             return {"error": err_msg}, 500
 
     def parse(self):
         try:
             params = request.json
-            logger.info("%s.parse: json received - %s", self.__class__.__name__, params)
             executor = self._get_executor(params)
             sql = params.get("sql")
             executor.parse(sql)
@@ -296,28 +291,24 @@ class ExecutorService:
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
-            logger.error("%s.parse: execution error - %s", err_msg)
+            # logger.error("%s.parse: execution error - %s", err_msg)
             return {"error": err_msg}, 500
 
     def do_execute(self):
         try:
             params = request.json
-            logger.info(
-                "%s.do_execute: json received - %s", self.__class__.__name__, params
-            )
             executor = self._get_executor(params)
             executor.do_execute()
             resp = executor._to_json()
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
-            logger.error("%s.do_execute: execution error - %s", err_msg)
+            # logger.error("%s.do_execute: execution error - %s", err_msg)
             return {"error": err_msg}, 500
 
     def change_default_db(self):
         try:
             params = request.json
-            logger.info("%s.change_default_db: json received - %s", self.__class__.__name__, params)
             executor = self._get_executor(params)
             new_db = params.get("new_db")
             executor.change_default_db(new_db)
@@ -325,7 +316,7 @@ class ExecutorService:
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
-            logger.error("%s.change_default_db: execution error - %s", err_msg)
+            # logger.error("%s.change_default_db: execution error - %s", err_msg)
             return {"error": err_msg}, 500
 
     def to_mysql_columns(self, foo):

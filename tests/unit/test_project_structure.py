@@ -559,7 +559,7 @@ class TestJobs(BaseExecutorDummyML):
 
         # shift 'next run' and run once again
         job = self.db.Jobs.query.filter(self.db.Jobs.name == 'j2').first()
-        job.next_run_at = job.start_at
+        job.next_run_at = job.start_at - dt.timedelta(seconds=1)  # different time because there is unique key
         self.db.session.commit()
 
         data_handler.reset_mock()

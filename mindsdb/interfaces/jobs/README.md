@@ -133,3 +133,13 @@ Result columns: NAME, PROJECT, START_AT, END_AT, ERROR, QUERY
 - START_AT - when current execution starts
 - END_AT - when current execution ends
 - ERROR - information about error if execution was failed  
+
+## config
+
+By default, scheduled is always starting with start of mindsdb. 
+To disable scheduler need to add to config:
+```
+    "jobs": {
+        "disable": false
+    }
+```

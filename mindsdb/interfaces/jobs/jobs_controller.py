@@ -95,7 +95,7 @@ class JobsController:
         for sql in split_sql(query_str):
             try:
                 # replace template variables with null
-                sql = re.sub(r'\{\{[\w\d]+}}', "''", sql)
+                sql = re.sub(r'\{\{[\w\d]+}}', "", sql)
 
                 parse_sql(sql, dialect='mindsdb')
             except ParsingException as e:

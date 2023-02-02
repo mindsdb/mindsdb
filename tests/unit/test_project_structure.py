@@ -505,7 +505,7 @@ class TestJobs(BaseExecutorDummyML):
         # create job with start time and schedule
         self.run_sql('''
             create job proj2.j2 ( 
-                select * from pg.tbl1 where b>{{PREVIOUS_START_DATE}}
+                select * from pg.tbl1 where b>'{{PREVIOUS_START_DATETIME}}'
             )
             start now
             every hour
@@ -535,7 +535,7 @@ class TestJobs(BaseExecutorDummyML):
         check_timetable(config={})
 
         # check query to integration
-        assert data_handler().query.call_args[0][0].to_string() == 'SELECT * FROM tbl1 WHERE tbl1.b > NULL'
+        assert data_handler().query.call_args[0][0].to_string() == "SELECT * FROM tbl1 WHERE tbl1.b > 'null'"
 
         # check jobs table
         ret = self.run_sql('select * from jobs', database='proj2')

@@ -246,15 +246,25 @@ class OpenAIHandler(BaseMLEngine):
 
     def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
+        Fine-tune OpenAI GPT models. Steps are roughly:
+          - Analyze input data and modify it according to suggestions made by the OpenAI utility tool
+          - Get a training and validation file
+          - Determine base model to use
+          - Submit a fine-tuning job via the OpenAI API
+          - Monitor progress with exponential backoff (which has been modified for greater control given a time budget in hours), 
+          - Gather stats once fine-tuning finishes
+          - Modify model metadata so that the new version triggers the fine-tuned version of the model (stored in the user's OpenAI account)
+
         Caveats: 
           - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you adjust successively more than once, any fine-tuning other than the most recent one is lost.
         """  # noqa
+
         args = args if args else {}
         using_args = args.pop('using') if 'using' in args else {}
         prompt_col = using_args.get('prompt_column', 'prompt')
         completion_col = using_args.get('completion_column', 'completion')
 
-        for col in [prompt_col, completion_col]:  # TODO: enable renaming through USING
+        for col in [prompt_col, completion_col]:
             if col not in set(df.columns):
                 raise Exception(f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first.")  # noqa
 
@@ -270,7 +280,6 @@ class OpenAIHandler(BaseMLEngine):
         temp_model_storage_path = f"{temp_storage_path}/{temp_file_name}.jsonl"
         df.to_json(temp_model_storage_path, orient='records', lines=True)
 
-        # apply automated OpenAI recommendations to the JSON-lines file
         # TODO avoid subprocess usage once OpenAI enables non-CLI access
         subprocess.run(
             [
@@ -321,7 +330,6 @@ class OpenAIHandler(BaseMLEngine):
             'classification_betas': None,
         }
 
-        # ask for fine-tuning and check 'pending' initial status until 'succeeded'
         start_time = datetime.datetime.now()
         ft_result = openai.FineTune.create(**{k: v for k, v in ft_params.items() if v is not None})
 
@@ -348,7 +356,6 @@ class OpenAIHandler(BaseMLEngine):
         with open(result_path, 'wb') as f:
             f.write(openai.File.download(id=result_file_id))
 
-        # store stats and details for describe
         train_stats = pd.read_csv(result_path)
         if 'validation_token_accuracy' in train_stats.columns:
             train_stats = train_stats[train_stats['validation_token_accuracy'].notnull()]

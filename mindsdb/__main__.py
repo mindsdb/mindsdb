@@ -10,7 +10,7 @@ import secrets
 import traceback
 
 import torch.multiprocessing as mp
-# mp.set_start_method('spawn')
+mp.set_start_method('spawn')
 from packaging import version
 
 from mindsdb.__about__ import __version__ as mindsdb_version

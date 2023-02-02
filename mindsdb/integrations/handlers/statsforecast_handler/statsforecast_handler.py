@@ -34,5 +34,5 @@ class StatsForecastHandler(BaseMLEngine):
         fitted_model.model_ = model_args
         sf = StatsForecast(models=[], freq=model_args["frequency"], df=df)
         sf.fitted_ = np.array([[fitted_model]])
-        forecast_df = sf.predict(h=model_args["predict_horizon"])
+        forecast_df = sf.predict(model_args["predict_horizon"])
         return forecast_df.reset_index(drop=True)

@@ -46,18 +46,16 @@ class TestStatsForecast(BaseExecutorTest):
     def test_simple(self, mock_handler):
 
         # mock a time series dataset
-        n_periods = 50
-        prediction_horizon = 4
-        date_series = pd.date_range(start=pd.to_datetime("today"), periods=n_periods)
-        df = pd.DataFrame({"unique_id": "A", "ds":date_series, "target_series": range(0, n_periods)})
+        df = pd.read_parquet("tests/unit/ml_handlers/data/time_series_df.parquet")
+        df = df[df["unique_id"]=="H1"]
         self.set_handler(mock_handler, name='pg', tables={'df': df})
 
         # generate ground truth predictions from the package
+        prediction_horizon = 4
         sf = StatsForecast(models=[AutoARIMA()], freq="D")
         sf.fit(df)
-        forecast_df = sf.predict(h=prediction_horizon)
+        forecast_df = sf.predict(prediction_horizon)
         package_predictions = forecast_df.reset_index(drop=True).iloc[:, -1]
-
 
         # create project
         self.run_sql('create database proj')
@@ -66,7 +64,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql(f'''
            create model proj.modelx
            from pg (select * from df)
-           predict target_series
+           predict y
            order by ds
            horizon {prediction_horizon}
            using 

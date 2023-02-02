@@ -12,7 +12,16 @@ class PyCaretHandler(BaseMLEngine):
     name = 'pycaret'
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
-        pass
+        grid = setup(data=df, target=target)
+
+        best_model = compare_models()
+
+        final_model = finalize_model(best_model)
+
+        self.model_storage.file_set('model', dill.dumps(final_model))
+        self.model_storage.json_set('args', args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
-        pass
+        model = dill.loads(self.model_storage.file_get('model'))
+
+        return predict_model(model, df)

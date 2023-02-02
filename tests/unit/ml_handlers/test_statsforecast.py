@@ -47,25 +47,28 @@ class TestStatsForecast(BaseExecutorTest):
 
         # mock a time series dataset
         n_periods = 50
+        prediction_horizon = 4
         date_series = pd.date_range(start=pd.to_datetime("today"), periods=n_periods)
         df = pd.DataFrame({"unique_id": "A", "ds":date_series, "target_series": range(0, n_periods)})
+        self.set_handler(mock_handler, name='pg', tables={'df': df})
 
         # generate ground truth predictions from the package
         sf = StatsForecast(models=[AutoARIMA()], freq="D")
         sf.fit(df)
-        forecast_df = sf.predict(h=12)
-        ground_truth = forecast_df.reset_index().iloc[:, -1]
+        forecast_df = sf.predict(h=prediction_horizon)
+        package_predictions = forecast_df.reset_index(drop=True).iloc[:, -1]
 
-        self.set_handler(mock_handler, name='pg', tables={'df': df})
 
         # create project
         self.run_sql('create database proj')
 
         # create predictor
-        self.run_sql('''
+        self.run_sql(f'''
            create model proj.modelx
            from pg (select * from df)
            predict target_series
+           order by ds
+           horizon {prediction_horizon}
            using 
              engine='statsforecast'
         ''')
@@ -76,9 +79,9 @@ class TestStatsForecast(BaseExecutorTest):
            SELECT p.*
            FROM pg.df as t 
            JOIN proj.modelx as p
-           where t.target_series>0
         ''')
 
         # check against ground truth
         mindsdb_result = result_df.iloc[:, -1]
-        assert np.allclose(mindsdb_result, ground_truth)
+        assert len(mindsdb_result) == prediction_horizon
+        assert np.allclose(mindsdb_result, package_predictions)

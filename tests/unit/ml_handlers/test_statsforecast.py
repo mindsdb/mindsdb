@@ -3,7 +3,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from statsforecast.models import HistoricAverage
+from statsforecast.models import AutoARIMA
 from statsforecast import StatsForecast
 from mindsdb_sql import parse_sql
 
@@ -45,15 +45,16 @@ class TestStatsForecast(BaseExecutorTest):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_simple(self, mock_handler):
 
-        # dataset, string values
+        # mock a dataset
         n_periods = 50
         date_series = pd.date_range(start=pd.to_datetime("today"), periods=n_periods)
-        df = pd.DataFrame({"unique_id": "A", "ds":date_series, "data": range(0, n_periods)})
+        df = pd.DataFrame({"unique_id": "A", "ds":date_series, "target_series": range(0, n_periods)})
 
-        sf = StatsForecast(models=[HistoricAverage()], freq="A")
+        # 
+        sf = StatsForecast(models=[AutoARIMA()], freq="D")
         sf.fit(df)
-        forecast_df = sf.predict(h=1)
-        assert forecast_df.reset_index().iloc[0, -1] == np.mean(range(0, n_periods))
+        forecast_df = sf.predict(h=12)
+        ground_truth = forecast_df.reset_index().AutoARIMA.mean()
 
         self.set_handler(mock_handler, name='pg', tables={'df': df})
 
@@ -64,7 +65,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql('''
            create model proj.modelx
            from pg (select * from df)
-           predict ds
+           predict target_series
            using 
              engine='statsforecast'
         ''')
@@ -75,8 +76,9 @@ class TestStatsForecast(BaseExecutorTest):
            SELECT p.*
            FROM pg.df as t 
            JOIN proj.modelx as p
-           where t.c=1
+           where t.target_series>0
         ''')
-        avg_c = pd.to_numeric(ret.c).mean()
-        # value is around 1
-        assert (avg_c > 0.9) and (avg_c < 1.1)
+
+        # check against ground truth
+        mindsdb_result = pd.to_numeric(ret.AutoARIMA).mean()
+        assert mindsdb_result == ground_truth

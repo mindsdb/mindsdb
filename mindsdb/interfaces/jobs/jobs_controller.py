@@ -95,7 +95,7 @@ class JobsController:
         for sql in split_sql(query_str):
             try:
                 # replace template variables with null
-                sql = re.sub(r'\{\{[\w\d]+}}', 'null', sql)
+                sql = re.sub(r'\{\{[\w\d]+}}', "''", sql)
 
                 parse_sql(sql, dialect='mindsdb')
             except ParsingException as e:
@@ -215,6 +215,7 @@ class JobsController:
                 'project': project_names[record.Jobs.project_id],
                 'start_at': record.JobsHistory.start_at,
                 'end_at': record.JobsHistory.end_at,
+                'error': record.JobsHistory.error,
                 'query': record.Jobs.query_str,
             })
         return data
@@ -286,45 +287,49 @@ class JobsExecutor:
         if history_id is None:
             history_record = db.JobsHistory(
                 job_id=record.id,
-                start_at=record.next_run_at
+                start_at=dt.datetime.now()
             )
         else:
             history_record = db.JobsHistory.query.get(history_id)
 
         error = ''
+
         for sql in split_sql(record.query_str):
-            #  fill template variables
-            if '{{PREVIOUS_START_DATE}}' in sql:
-                # get previous run date
-                history_prev = db.session.query(db.JobsHistory.start_at)\
-                    .filter(db.JobsHistory.job_id == record.id,
-                            db.JobsHistory.id != history_record.id)\
-                    .order_by(db.JobsHistory.id.desc())\
-                    .first()
-                if history_prev is None:
-                    value = 'null'
-                else:
-                    value = history_prev.start_at.strftime("'%Y-%m-%d %H:%M:%S'")
-                sql = sql.replace('{{PREVIOUS_START_DATE}}', value)
-
-            query = parse_sql(sql, dialect='mindsdb')
-
-            from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-            from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
-
-            sql_session = SessionController()
-            sql_session.database = 'mindsdb'
-
-            command_executor = ExecuteCommands(sql_session, executor=None)
-
             try:
+                #  fill template variables
+                if '{{PREVIOUS_START_DATETIME}}' in sql:
+                    # get previous run date
+                    history_prev = db.session.query(db.JobsHistory.start_at)\
+                        .filter(db.JobsHistory.job_id == record.id,
+                                db.JobsHistory.id != history_record.id)\
+                        .order_by(db.JobsHistory.id.desc())\
+                        .first()
+                    if history_prev is None:
+                        value = 'null'
+                    else:
+                        value = history_prev.start_at.strftime("%Y-%m-%d %H:%M:%S")
+                    sql = sql.replace('{{PREVIOUS_START_DATETIME}}', value)
+
+                if '{{START_DATE}}' in sql:
+                    value = history_record.start_at.strftime("%Y-%m-%d")
+                    sql = sql.replace('{{START_DATE}}', value)
+
+                query = parse_sql(sql, dialect='mindsdb')
+
+                from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+                from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+
+                sql_session = SessionController()
+                sql_session.database = 'mindsdb'
+
+                command_executor = ExecuteCommands(sql_session, executor=None)
+
                 ret = command_executor.execute_command(query)
+                if ret.error_code is not None:
+                    error = ret.error_message
+                    break
             except Exception as e:
                 error = str(e)
-                break
-
-            if ret.error_code is not None:
-                error = ret.error_message
                 break
 
         try:

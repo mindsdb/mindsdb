@@ -39,7 +39,7 @@ class InformationSchemaDataNode(DataNode):
         'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
         'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR'],
         'JOBS': ['NAME', 'PROJECT', 'START_AT', 'END_AT', 'NEXT_RUN_AT', 'SCHEDULE_STR', 'QUERY'],
-        'JOBS_HISTORY': ['NAME', 'PROJECT', 'START_AT', 'END_AT', 'QUERY']
+        'JOBS_HISTORY': ['NAME', 'PROJECT', 'START_AT', 'END_AT', 'ERROR', 'QUERY']
     }
 
     def __init__(self, session):

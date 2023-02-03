@@ -69,7 +69,8 @@ class MLClient(BaseClient):
             company_id - id of the company.
             Last two args needed to instantiante engine and model storages
         """
-        base_url = os.environ.get("MINDSDB_ML_SERVICE_URL", None)
+        logger.info("%s __init__: calling with handler_kwargs - %s", self.__class__.__name__, handler_kwargs)
+        base_url = os.environ.get("BALANCER_URL", None) or os.environ.get("MINDSDB_ML_SERVICE_URL", None)
         as_service = True
         if base_url is None:
             as_service = False
@@ -87,6 +88,9 @@ class MLClient(BaseClient):
         # need always instantiate handler instance
         self.handler = BaseMLEngineExec(**handler_kwargs)
         self.handler_kwargs = handler_kwargs
+
+        # get self.headers from parent class
+        self.headers["X-MindsDB-Handler-Type"] = self.handler_kwargs.get("integration_engine")
 
         # remove all 'object' params from dict before sending it to the serverside.
         # all of them will be created there

@@ -77,6 +77,7 @@ class PhoenixHandler(DatabaseHandler):
 
         Should switch self.is_connected.
         """
+
         if self.is_connected is False:
             return
 
@@ -98,7 +99,7 @@ class PhoenixHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Phoenix Query Server, {e}!')
+            log.logger.error(f'Error connecting to the Phoenix Query Server, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -117,7 +118,37 @@ class PhoenixHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+        cursor = connection.cursor()
+
+        try:
+            cursor.execute(query)
+            result = cursor.fetchall()
+            if result:
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.DataFrame(
+                        result,
+                        columns=[x[0] for x in cursor.description]
+                    )
+                )
+            else:
+                connection.commit()
+                response = Response(RESPONSE_TYPE.OK)
+        except Exception as e:
+            log.logger.error(f'Error running query: {query} on the Phoenix Query Server!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+
+        cursor.close()
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
 
     def query(self, query: ASTNode) -> StatusResponse:
         """
@@ -128,7 +159,10 @@ class PhoenixHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        pass
+
+        renderer = SqlalchemyRender(PhoenixDialect)
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
 
     def get_tables(self) -> StatusResponse:
         """

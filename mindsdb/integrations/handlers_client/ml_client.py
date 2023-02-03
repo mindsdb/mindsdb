@@ -26,6 +26,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.handlers_client.base_client import BaseClient, Switcher
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
+from mindsdb.integrations.libs.handler_helpers import action_logger
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
 
@@ -104,12 +105,8 @@ class MLClient(BaseClient):
             "handler_args": self.handler_kwargs,
         }
 
+    @action_logger(logger)
     def get_columns(self, table_name: str) -> Response:
-        logger.info(
-            "%s.get_columns is calling with table_name - %s",
-            self.__class__.__name__,
-            table_name,
-        )
         response = None
         try:
             params = self._default_json()
@@ -140,8 +137,8 @@ class MLClient(BaseClient):
 
         return response
 
+    @action_logger(logger)
     def get_tables(self) -> Response:
-        logger.info("%s.get_tables is calling", self.__class__.__name__)
         response = None
         try:
             params = self._default_json()
@@ -172,6 +169,7 @@ class MLClient(BaseClient):
 
         return response
 
+    @action_logger(logger)
     def learn(
         self,
         model_name,
@@ -198,11 +196,6 @@ class MLClient(BaseClient):
             "is_retrain": is_retrain,
             "set_active": set_active,
         }
-        logger.info(
-            "%s.learn is calling with params - %s",
-            self.__class__.__name__,
-            calling_params,
-        )
         response = None
         try:
             params = self._default_json()
@@ -232,10 +225,8 @@ class MLClient(BaseClient):
             )
         return response
 
+    @action_logger(logger)
     def native_query(self, query: str) -> Response:
-        logger.info(
-            "%s.native_query is calling with query - %s", self.__class__.__name__, query
-        )
         response = None
         try:
             params = self._default_json()
@@ -265,6 +256,7 @@ class MLClient(BaseClient):
             )
         return response
 
+    @action_logger(logger)
     def predict(
         self,
         model_name: str,
@@ -283,11 +275,6 @@ class MLClient(BaseClient):
             "version": version,
             "params": params,
         }
-        logger.info(
-            "%s.predict is calling with params - %s",
-            self.__class__.__name__,
-            calling_params,
-        )
         response = None
         try:
             params = self._default_json()
@@ -296,7 +283,7 @@ class MLClient(BaseClient):
             r = self._convert_response(r.json())
             response = Response(
                 data_frame=r.get("data_frame", None),
-                resp_type=r.get("resp_type"),
+                resp_type=r.get("type"),
                 error_code=r.get("error_code", 0),
                 error_message=r.get("error_message", None),
                 query=r.get("query"),
@@ -329,10 +316,8 @@ class MLClient(BaseClient):
             )
             raise e
 
+    @action_logger(logger)
     def query(self, query: ASTNode) -> Response:
-        logger.info(
-            "%s.query is calling with query - %s", self.__class__.__name__, query
-        )
         response = None
         try:
             query_b = pickle.dumps(query)
@@ -365,6 +350,7 @@ class MLClient(BaseClient):
             )
         return response
 
+    @action_logger(logger)
     def update(
             self, model_name, project_name, version,
             data_integration_ref=None,

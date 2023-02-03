@@ -33,6 +33,7 @@ class ExecutorClient:
         logger.debug(
             "%s.__init__: executor url - %s", self.__class__.__name__, self.base_url
         )
+
         self.sqlserver = sqlserver
         self.session = session
         self.query = None
@@ -115,7 +116,10 @@ class ExecutorClient:
                     attr,
                     response_json[attr],
                 )
-                setattr(self, attr, response_json[attr])
+                if attr == 'session':
+                    self.session.from_json(response_json[attr])
+                else:
+                    setattr(self, attr, response_json[attr])
 
     def to_mysql_columns(self, columns):
         return columns

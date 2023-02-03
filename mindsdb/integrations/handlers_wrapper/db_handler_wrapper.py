@@ -29,7 +29,9 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
+from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.handler_helpers import get_handler
+from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
 
 logger = get_log(logger_name="main")
@@ -58,13 +60,19 @@ class BaseDBWrapper:
         self.app.run(**kwargs)
 
     def get_handler(self, _json):
+        ctx.load(request.json.get("context"))
         handler_class = get_handler(_json["handler_type"])
         logger.info(
             "%s.get_handler: requested instance of %s handler",
             self.__class__.__name__,
             handler_class,
         )
-        return handler_class(**_json["handler_kwargs"])
+        handler_kwargs = _json["handler_kwargs"]
+        # Create an instance of FileController for
+        # 'files' type of handler
+        if _json["handler_type"] == "files":
+            handler_kwargs["file_controller"] = FileController()
+        return handler_class(**handler_kwargs)
 
 
 class DBHandlerWrapper(BaseDBWrapper):
@@ -242,6 +250,7 @@ class DBHandlerWrapper(BaseDBWrapper):
         try:
             handler = self.get_handler(request.json)
             result = handler.get_tables()
+            logger.error("%s.get_tables: result - %s", self.__class__.__name__, result.to_json())
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()

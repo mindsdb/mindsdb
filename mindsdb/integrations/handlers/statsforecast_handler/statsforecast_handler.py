@@ -12,29 +12,11 @@ class StatsForecastHandler(BaseMLEngine):
     name = "statsforecast"
 
 
-    def create(self, target, df, args, frequency="D"):
+    def create(self, target, df, args, frequency="Q"):
         time_settings = args["timeseries_settings"]
-        print(time_settings)
-        print(df.head())
         assert time_settings["is_timeseries"], "Specify time series settings in your query"
-        training_df = df.copy()
-        
-        if len(time_settings["group_by"]) > 1:
-            for col in time_settings["group_by"]:
-                training_df[col] = training_df[col].astype(str)
-            training_df["unique_id"] = training_df[time_settings["group_by"]].agg('|'.join, axis=1)
-            group_col = "ignore this"
-        else:
-            group_col = time_settings["group_by"][0]
-        
-        # set up df
-        training_df = training_df.rename(
-            {target: "y", time_settings["order_by"]: "ds", group_col: "unique_id"},
-            axis=1
-            )
-
-        training_df = training_df[["unique_id", "ds", "y"]]
         # Train model
+        training_df = self._transform_to_sf_df(df, target, time_settings)
         sf = StatsForecast(models=[AutoARIMA()], freq=frequency)
         sf.fit(training_df)
 
@@ -55,13 +37,28 @@ class StatsForecastHandler(BaseMLEngine):
         fitted_model = AutoARIMA()
         fitted_model.model_ = model_args
 
-        prediction_df = df.rename(
-            {model_args["target"]: "y", model_args["order_by"]: "ds", model_args["group_by"][0]: "unique_id"},
-            axis=1
-            )
+        prediction_df = self._transform_to_sf_df(df, model_args["target"], model_args)
         # StatsForecast won't handle extra columns - it assumes they're external regressors
-        prediction_df = prediction_df[["unique_id", "ds", "y"]]
-        sf = StatsForecast(models=[AutoARIMA()], freq="D", df=prediction_df)
+        sf = StatsForecast(models=[AutoARIMA()], freq=model_args["frequency"], df=prediction_df)
         sf.fitted_ = np.array([[fitted_model]])
         forecast_df = sf.forecast(model_args["horizon"])
         return forecast_df.rename({"AutoARIMA": model_args["target"]}, axis=1).reset_index(drop=True)
+    
+    def _transform_to_sf_df(self, df, target, settings_dict):
+        statsforecast_df = df.copy()
+        
+        if len(settings_dict["group_by"]) > 1:
+            for col in settings_dict["group_by"]:
+                statsforecast_df[col] = statsforecast_df[col].astype(str)
+            statsforecast_df["unique_id"] = statsforecast_df[settings_dict["group_by"]].agg('|'.join, axis=1)
+            group_col = "ignore this"
+        else:
+            group_col = settings_dict["group_by"][0]
+        
+        # set up df
+        statsforecast_df = statsforecast_df.rename(
+            {target: "y", settings_dict["order_by"]: "ds", group_col: "unique_id"},
+            axis=1
+            )
+
+        return statsforecast_df[["unique_id", "ds", "y"]]

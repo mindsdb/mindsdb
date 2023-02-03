@@ -42,6 +42,11 @@ class PhoenixHandler(DatabaseHandler):
         self.parser = parse_sql
         self.dialect = 'phoenix'
 
+        optional_parameters = ['max_retries', 'autocommit', 'readonly']
+        for parameter in optional_parameters:
+            if parameter not in connection_data:
+                connection_data[parameter] = None
+
         self.connection_data = connection_data
         self.kwargs = kwargs
 
@@ -189,6 +194,8 @@ class PhoenixHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
+
+        need_to_close = self.is_connected is False
 
         connection = self.connect()
         cursor = connection.cursor()

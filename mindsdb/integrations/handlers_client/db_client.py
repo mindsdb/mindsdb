@@ -24,7 +24,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.handlers_client.base_client import BaseClient, Switcher
-from mindsdb.integrations.libs.handler_helpers import get_handler
+from mindsdb.integrations.libs.handler_helpers import get_handler, action_logger
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
 
@@ -104,12 +104,12 @@ class DBServiceClient(BaseClient):
     #     }
     #     return context
 
+    @action_logger(logger)
     def connect(self):
         """Establish a connection.
 
         Returns: True if the connection success, False otherwise
         """
-        logger.info("%s.connect: called", self.__class__.__name__)
         try:
             r = self._do("/connect", json=self._default_json())
             if r.status_code == 200 and r.json()["status"] is True:
@@ -123,8 +123,8 @@ class DBServiceClient(BaseClient):
 
         return False
 
+    @action_logger(logger)
     def disconnect(self):
-        logger.info("%s.disconnect: called", self.__class__.__name__)
         try:
             r = self._do("/disconnect", json=self._default_json())
             if r.status_code == 200 and r.json()["status"] is True:
@@ -136,6 +136,7 @@ class DBServiceClient(BaseClient):
                 traceback.format_exc(),
             )
 
+    @action_logger(logger)
     def check_connection(self) -> StatusResponse:
         """
         Check a connection to the DBHandler.
@@ -143,7 +144,6 @@ class DBServiceClient(BaseClient):
         Returns:
             success status and error message if error occurs
         """
-        logger.info("%s: calling 'check_connection'", self.__class__.__name__)
         status = None
         try:
             r = self._do("/check_connection", json=self._default_json())
@@ -164,6 +164,7 @@ class DBServiceClient(BaseClient):
 
         return status
 
+    @action_logger(logger)
     def native_query(self, query: str) -> Response:
         """Send SQL query to DBHandler service and wait a response
 
@@ -176,9 +177,6 @@ class DBServiceClient(BaseClient):
         """
 
         response = None
-        logger.info(
-            "%s: calling 'native_query' for query - %s", self.__class__.__name__, query
-        )
         try:
             _json = self._default_json()
             _json["query"] = query
@@ -208,6 +206,7 @@ class DBServiceClient(BaseClient):
             )
         return response
 
+    @action_logger(logger)
     def query(self, query: ASTNode) -> Response:
         """Serializes query object, send it to DBHandler service and waits a response.
 
@@ -229,12 +228,6 @@ class DBServiceClient(BaseClient):
 
         _json = self._default_json()
         _json["query"] = b64_s_query_str
-        logger.info(
-            "%s: calling 'query' for query - %s, json - %s",
-            self.__class__.__name__,
-            query,
-            _json,
-        )
         try:
             r = self._do("/query", data=json.dumps(_json))
             r = self._convert_response(r.json())
@@ -263,6 +256,7 @@ class DBServiceClient(BaseClient):
 
         return response
 
+    @action_logger(logger)
     def get_tables(self) -> Response:
         """List all tabels in the database without the system data.
 
@@ -272,7 +266,6 @@ class DBServiceClient(BaseClient):
         """
 
         response = None
-        logger.info("%s: calling 'get_tables'", self.__class__.__name__)
 
         try:
             r = self._do("/get_tables", json=self._default_json())
@@ -303,6 +296,7 @@ class DBServiceClient(BaseClient):
 
         return response
 
+    @action_logger(logger)
     def get_columns(self, table_name: str) -> Response:
         """List all columns of the specific tables
 
@@ -314,11 +308,6 @@ class DBServiceClient(BaseClient):
         """
         response = None
 
-        logger.info(
-            "%s: calling 'get_columns' for table - %s",
-            self.__class__.__name__,
-            table_name,
-        )
         try:
             _json = self._default_json()
             _json["table"] = table_name

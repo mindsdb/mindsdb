@@ -221,9 +221,25 @@ class PhoenixHandler(DatabaseHandler):
 
 
 connection_args = OrderedDict(
-
+    url={
+        'type': ARG_TYPE.STR,
+        'description': 'The URL to the Phoenix Query Server.'
+    },
+    max_retries={
+        'type': ARG_TYPE.INT,
+        'description': 'The maximum number of retries in case there is a connection error.'
+    },
+    autocommit={
+        'type': ARG_TYPE.BOOL,
+        'description': 'The flag for switching the connection to autocommit mode.'
+    },
+    readonly={
+        'type': ARG_TYPE.BOOL,
+        'description': 'The flag for switching the connection to readonly mode.'
+    }
 )
 
 connection_args_example = OrderedDict(
-
+    url='http://127.0.0.1:8765',
+    autocommit=True
 )

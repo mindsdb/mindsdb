@@ -343,6 +343,8 @@ class BaseMLEngineExec:
         if join_learn_process is True:
             p.join()
 
+        return predictor_record
+
     def predict(self, model_name: str, data: list, pred_format: str = 'dict',
                 project_name: str = None, version=None, params: dict = None):
         """ Generates predictions with some model and input data. """
@@ -452,3 +454,5 @@ class BaseMLEngineExec:
         p.start()
         if join_learn_process is True:
             p.join()
+
+        return base_predictor_record

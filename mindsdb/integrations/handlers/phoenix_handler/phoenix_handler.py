@@ -171,7 +171,15 @@ class PhoenixHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        query = """
+            SELECT DISTINCT TABLE_NAME, TABLE_SCHEM FROM SYSTEM.CATALOG
+        """
+        result = self.native_query(query)
+        df = result.data_frame
+        df = df[df['TABLE_SCHEM'] != 'SYSTEM']
+        df = df.drop('TABLE_SCHEM', axis=1)
+        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        return result
 
     def get_columns(self, table_name: str) -> StatusResponse:
         """
@@ -182,7 +190,34 @@ class PhoenixHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        connection = self.connect()
+        cursor = connection.cursor()
+
+        try:
+            query = f"SELECT * from {table_name} LIMIT 5"
+            cursor.execute(query)
+            cursor.fetchall()
+
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=pd.DataFrame(
+                    [(x[0], x[1]) for x in cursor.description],
+                    columns=['column_name', 'data_type']
+                )
+            )
+
+        except Exception as e:
+            log.logger.error(f'Error running query: {query} on the Phoenix Query Server!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+
+        cursor.close()
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
 
 
 connection_args = OrderedDict(

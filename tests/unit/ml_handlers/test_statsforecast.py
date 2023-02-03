@@ -49,7 +49,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql('create database proj')
 
 
-        df2 = pd.DataFrame(pd.date_range(start='1/1/2018', end='1/31/2018'), columns=['time_col'])
+        df2 = pd.DataFrame(pd.date_range(start='1/1/2010', periods=31, freq="Q"), columns=['time_col'])
         df3 = df2.copy()
 
         df2['group_col'] = 'a'
@@ -99,7 +99,7 @@ class TestStatsForecast(BaseExecutorTest):
 
         # generate ground truth predictions from the package
         prediction_horizon = 4
-        sf = StatsForecast(models=[AutoARIMA()], freq="D")
+        sf = StatsForecast(models=[AutoARIMA()], freq="Q")
         sf.fit(df)
         forecast_df = sf.forecast(prediction_horizon)
         package_predictions = forecast_df.reset_index(drop=True).iloc[:, -1]

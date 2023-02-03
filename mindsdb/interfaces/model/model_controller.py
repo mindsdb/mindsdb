@@ -440,7 +440,7 @@ class ModelController():
             table_name, table_meta['engine'], project_name, table_meta['active'], table_meta['version'], table_meta['status'],
             table_meta['accuracy'], table_meta['predict'], table_meta['update_status'],
             table_meta['mindsdb_version'], table_meta['error'], table_meta['select_data_query'],
-            table_meta['training_options'], table_meta['label']
+            str(table_meta['training_options']), table_meta['label']
         ]
 
         return pd.DataFrame([record], columns=columns)

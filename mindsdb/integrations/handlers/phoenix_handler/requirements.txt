@@ -1,1 +1,2 @@
-phoenixdb
+pyphoenix
+protobuf==3.20.*

@@ -7,7 +7,8 @@ class PhoenixHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-
+            "url": 'http://127.0.0.1:8765',
+            "autocommit": True
         }
         cls.handler = PhoenixHandler('test_phoenix_handler', cls.kwargs)
 
@@ -15,7 +16,7 @@ class PhoenixHandlerTest(unittest.TestCase):
         assert self.handler.check_connection()
 
     def test_1_native_query_select(self):
-        query = ""
+        query = "SELECT * FROM USERS"
         result = self.handler.native_query(query)
         assert result.type is RESPONSE_TYPE.TABLE
 
@@ -24,7 +25,7 @@ class PhoenixHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('')
+        columns = self.handler.get_columns('USERS')
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 

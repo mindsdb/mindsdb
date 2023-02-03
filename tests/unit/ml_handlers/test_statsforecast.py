@@ -43,11 +43,57 @@ class TestStatsForecast(BaseExecutorTest):
             return pd.DataFrame(ret.data, columns=columns)
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_simple(self, mock_handler):
+    def test_grouped(self, mock_handler):
+
+        # create project
+        self.run_sql('create database proj')
+
+
+        df2 = pd.DataFrame(pd.date_range(start='1/1/2018', end='1/31/2018'), columns=['time_col'])
+        df3 = df2.copy()
+
+        df2['group_col'] = 'a'
+        df2['target_col'] = range(1, 32)
+
+        df3['group_col'] = 'b'
+        df3['target_col'] = range(11, 42)
+
+        df = pd.concat([df2, df3])
+        self.set_handler(mock_handler, name='pg', tables={'df': df})
+
+
+        self.run_sql('''
+           create model proj.modelx
+           from pg (select * from df)
+           predict target_col
+           order by time_col
+           group by group_col
+           horizon 3
+           using 
+             engine='statsforecast'
+        ''')
+        self.wait_predictor('proj', 'modelx')
+
+        # run predict
+        ret = self.run_sql('''
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.modelx as p
+           where t.group_col='b'
+        ''')
+        assert list(round(ret["target_col"])) == [42, 43, 44]
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_ts_series(self, mock_handler):
+        """This sends a dataframe where the data is already in time series format i.e.
+        doesn't need grouped
+        """
+
+        # create project
+        self.run_sql('create database proj')
 
         # mock a time series dataset
         df = pd.read_parquet("tests/unit/ml_handlers/data/time_series_df.parquet")
-        df = df.iloc[:100, :]  # subset for speed
         n_groups = df["unique_id"].nunique()
         self.set_handler(mock_handler, name='pg', tables={'df': df})
 
@@ -58,8 +104,6 @@ class TestStatsForecast(BaseExecutorTest):
         forecast_df = sf.forecast(prediction_horizon)
         package_predictions = forecast_df.reset_index(drop=True).iloc[:, -1]
 
-        # create project
-        self.run_sql('create database proj')
 
         # create predictor
         self.run_sql(f'''
@@ -67,6 +111,7 @@ class TestStatsForecast(BaseExecutorTest):
            from pg (select * from df)
            predict y
            order by ds
+           group by unique_id
            horizon {prediction_horizon}
            using 
              engine='statsforecast'

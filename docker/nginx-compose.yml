@@ -1,0 +1,17 @@
+version: "3.2"
+
+services:
+
+  balancer:
+    image: nginx
+    volumes:
+      - type: bind
+        source: ./nginx/templates
+        target: /etc/nginx/templates
+    ports:
+     - "8080:80"
+    environment:
+      MINDSDB_ML_SERVICE_HOST: "ml_service"
+      MINDSDB_ML_SERVICE_PORT: 5001
+      MINDSDB_DB_SERVICE_HOST: "db_service"
+      MINDSDB_DB_SERVICE_PORT: 5000

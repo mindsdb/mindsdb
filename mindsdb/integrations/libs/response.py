@@ -36,6 +36,16 @@ class HandlerResponse:
                  "error_code": self.error_code,
                  "error": self.error_message}
 
+    def __repr__(self):
+        return "%s: resp_type=%s, query=%s, data_frame=%s, err_code=%s, error=%s" % (
+                self.__class__.__name__,
+                self.resp_type,
+                self.query,
+                self.data_frame,
+                self.error_code,
+                self.error_message
+            )
+
 class HandlerStatusResponse:
     def __init__(self, success: bool = True, error_message: str = None) -> None:
         self.success = success
@@ -44,6 +54,10 @@ class HandlerStatusResponse:
     def to_json(self):
         return {"success": self.success,
                 "error": self.error_message}
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}: success={self.success}, error={self.error_message}"
+
 
 class ExecutorResponse:
     def __init__(self, resp_type: RESPONSE_TYPE, query: object, error_code: int = 0, error_message: str = None):
@@ -58,12 +72,16 @@ class ExecutorResponse:
         return self.resp_type
 
     def to_json(self):
-        try:
-            data = self.data_frame.to_json(orient="split", index=False)
-        except Exception:
-            data = None
         return  {"type": self.resp_type,
                  "query": self.query,
-                 "data_frame": data,
                  "error_code": self.error_code,
                  "error": self.error_message}
+
+    def __repr__(self):
+        return "%s: resp_type=%s, query=%s, err_code=%s, error=%s" % (
+                self.__class__.__name__,
+                self.resp_type,
+                self.query,
+                self.error_code,
+                self.error_message,
+            )

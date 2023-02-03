@@ -69,7 +69,7 @@ class MLClient(BaseClient):
             Last two args needed to instantiante engine and model storages
         """
         logger.info("%s __init__: calling with handler_kwargs - %s", self.__class__.__name__, handler_kwargs)
-        base_url = os.environ.get("BALANCER_URL", None)
+        base_url = os.environ.get("BALANCER_URL", None) or os.environ.get("MINDSDB_ML_SERVICE_URL", None)
         as_service = True
         if base_url is None:
             as_service = False

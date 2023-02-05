@@ -1,0 +1,101 @@
+import json
+import pickle
+import traceback
+from concurrent import futures
+
+import grpc
+from mindsdb.grpc.db import db_pb2_grpc
+from mindsdb.grpc.db import db_pb2
+
+from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.integrations.libs.handler_helpers import get_handler
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.log import get_log
+
+
+logger = get_log(logger_name="main")
+
+
+class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
+
+    def __init__(self):
+        logger.error(
+            "%s.__init__: ", self.__class__.__name__
+        )
+
+    def get_handler(self, handler_ctx: db_pb2.HandlerContext):
+        ctx.load(handler_ctx.context)
+        handler_class = get_handler(handler_ctx.handler_type)
+        logger.error(
+            "%s.get_handler: requested instance of %s handler",
+            self.__class__.__name__,
+            handler_class,
+        )
+        handler_kwargs = json.loads(handler_ctx.handler_params)
+        # Create an instance of FileController for
+        # 'files' type of handler
+        if handler_ctx == "files":
+            handler_kwargs["file_controller"] = FileController()
+        return handler_class(**handler_kwargs)
+
+    def CheckConnection(self, request, context):
+
+        result = None
+        logger.error(
+            "%s.check_connection calling", self.__class__.__name__
+        )
+        try:
+            handler = self.get_handler(request)
+            res = handler.check_connection()
+            result = db_pb2.StatusResponse(success=res.success, error_message=res.error_message)
+        except Exception:
+            msg = traceback.format_exc()
+            result = db_pb2.StatusResponse(success=False, error_message=msg)
+        return result
+
+    def NativeQuery(self, request, context):
+
+        result = None
+        query = request.query
+
+        logger.error(
+            "%s.native_query: calling 'native_query' with query - %s",
+            self.__class__.__name__,
+            query,
+        )
+        try:
+            handler = self.get_handler(request.context)
+            res = handler.native_query(query)
+            data = pickle.dumps(res.data_frame)
+            result = db_pb2.Response(type=res.resp_type,
+                                     data_frame=data,
+                                     query=res.query,
+                                     error_code=res.error_code,
+                                     error_message=res.error_message)
+
+            # return result.to_json(), 200
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error("%s.native_query: error - %s", self.__class__.__name__, msg)
+            result = db_pb2.Response(type=RESPONSE_TYPE.ERROR,
+                                     data_frame=None,
+                                     query=0,
+                                     error_code=1,
+                                     error_message=msg)
+        return result
+
+
+
+def serve():
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    db_pb2_grpc.add_DBServiceServicer_to_server(
+        DBServiceServicer(), server)
+    server.add_insecure_port('[::]:50051')
+    logger.error("staring rpc server on [::]:50051")
+    server.start()
+    server.wait_for_termination()
+
+
+if __name__ == '__main__':
+    serve()

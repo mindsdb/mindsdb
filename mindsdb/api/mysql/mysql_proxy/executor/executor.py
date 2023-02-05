@@ -218,6 +218,8 @@ class Executor:
             "state_track": self.state_track,
             "server_status": self.server_status,
             "is_executed": self.is_executed,
+            "session": self.session.to_json()
+
         }
         return params
 

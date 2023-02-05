@@ -4,6 +4,22 @@ from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Opti
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class BinaryQueryContext(_message.Message):
+    __slots__ = ["context", "query"]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    QUERY_FIELD_NUMBER: _ClassVar[int]
+    context: HandlerContext
+    query: bytes
+    def __init__(self, context: _Optional[_Union[HandlerContext, _Mapping]] = ..., query: _Optional[bytes] = ...) -> None: ...
+
+class ColumnsContext(_message.Message):
+    __slots__ = ["context", "table"]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    TABLE_FIELD_NUMBER: _ClassVar[int]
+    context: HandlerContext
+    table: str
+    def __init__(self, context: _Optional[_Union[HandlerContext, _Mapping]] = ..., table: _Optional[str] = ...) -> None: ...
+
 class HandlerContext(_message.Message):
     __slots__ = ["context", "handler_params", "handler_type"]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]

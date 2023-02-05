@@ -10,10 +10,22 @@ message HandlerContext {
     string handler_params = 3;
 }
 
-// Data for 'native_query' call
+// Data of 'native_query' request
 message NativeQueryContext {
     HandlerContext context = 1;
     string query = 2;
+}
+
+// Data of 'query' request
+message BinaryQueryContext {
+    HandlerContext context = 1;
+    bytes query = 2;
+}
+
+// Data of 'get_columns' request
+message ColumnsContext {
+    HandlerContext context = 1;
+    string table = 2;
 }
 
 // Represents server ouput without
@@ -37,6 +49,13 @@ message Response {
 service DBService {
   // A simple RPC.
   //
+  // Establish connection to the specified database
+  //
+  // by creating an appropriate type of Handler instance
+  rpc Connect(HandlerContext) returns (StatusResponse) {}
+
+  // A simple RPC.
+  //
   // Check connection to the specified database
   //
   // by creating an appropriate type of Handler instance
@@ -44,8 +63,36 @@ service DBService {
 
   // A simple RPC.
   //
+  // Drop the connection to the specified database
+  //
+  // by creating an appropriate type of Handler instance
+  rpc Disconnect(HandlerContext) returns (StatusResponse) {}
+
+  // A simple RPC.
+  //
   // Execute native query (string) and returns the result
   //
   // wrapped into Response object
   rpc NativeQuery(NativeQueryContext) returns (Response) {}
+
+  // A simple RPC.
+  //
+  // Execute query (object) and returns the result
+  //
+  // wrapped into Response object
+  rpc BinaryQuery(BinaryQueryContext) returns (Response) {}
+
+  // A simple RPC.
+  //
+  // Performs 'get_tables' request and returns the result
+  //
+  // wrapped into Response object
+  rpc GetTables(HandlerContext) returns (Response) {}
+
+  // A simple RPC.
+  //
+  // Performs 'get_columns' request and returns the result
+  //
+  // wrapped into Response object
+  rpc GetColumns(ColumnsContext) returns (Response) {}
 }

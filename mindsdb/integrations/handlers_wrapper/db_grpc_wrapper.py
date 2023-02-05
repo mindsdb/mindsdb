@@ -54,6 +54,35 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
             result = db_pb2.StatusResponse(success=False, error_message=msg)
         return result
 
+    def Connect(self, request, context):
+
+        result = None
+        logger.error(
+            "%s.connect calling", self.__class__.__name__
+        )
+        try:
+            handler = self.get_handler(request)
+            handler.connect()
+            result = db_pb2.StatusResponse(success=True, error_message="")
+        except Exception:
+            msg = traceback.format_exc()
+            result = db_pb2.StatusResponse(success=False, error_message=msg)
+        return result
+
+    def Disconnect(self, request, context):
+        result = None
+        logger.error(
+            "%s.disconnect calling", self.__class__.__name__
+        )
+        try:
+            handler = self.get_handler(request)
+            handler.disconnect()
+            result = db_pb2.StatusResponse(success=True, error_message="")
+        except Exception:
+            msg = traceback.format_exc()
+            result = db_pb2.StatusResponse(success=False, error_message=msg)
+        return result
+
     def NativeQuery(self, request, context):
 
         result = None
@@ -74,10 +103,95 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
                                      error_code=res.error_code,
                                      error_message=res.error_message)
 
-            # return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()
             logger.error("%s.native_query: error - %s", self.__class__.__name__, msg)
+            result = db_pb2.Response(type=RESPONSE_TYPE.ERROR,
+                                     data_frame=None,
+                                     query=0,
+                                     error_code=1,
+                                     error_message=msg)
+        return result
+
+    def BinaryQuery(self, request, context):
+
+        result = None
+        try:
+            query = pickle.loads(request.query)
+
+            logger.error(
+                "%s.query: calling 'query' with query - %s",
+                self.__class__.__name__,
+                query,
+            )
+            handler = self.get_handler(request.context)
+            res = handler.query(query)
+            data = pickle.dumps(res.data_frame)
+            result = db_pb2.Response(type=res.resp_type,
+                                     data_frame=data,
+                                     query=res.query,
+                                     error_code=res.error_code,
+                                     error_message=res.error_message)
+
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error("%s.query: error - %s", self.__class__.__name__, msg)
+            result = db_pb2.Response(type=RESPONSE_TYPE.ERROR,
+                                     data_frame=None,
+                                     query=0,
+                                     error_code=1,
+                                     error_message=msg)
+        return result
+
+    def GetTables(self, request, context):
+
+        logger.error(
+            "%s.get_tables: calling",
+            self.__class__.__name__,
+        )
+        result = None
+        try:
+            handler = self.get_handler(request)
+            res = handler.get_tables()
+            data = pickle.dumps(res.data_frame)
+            result = db_pb2.Response(type=res.resp_type,
+                                     data_frame=data,
+                                     query=res.query,
+                                     error_code=res.error_code,
+                                     error_message=res.error_message)
+
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error("%s.get_tables: error - %s", self.__class__.__name__, msg)
+            result = db_pb2.Response(type=RESPONSE_TYPE.ERROR,
+                                     data_frame=None,
+                                     query=0,
+                                     error_code=1,
+                                     error_message=msg)
+        return result
+
+    def GetColumns(self, request, context):
+
+
+        logger.error(
+            "%s.get_columns: calling for table - %s",
+            self.__class__.__name__,
+            request.table,
+        )
+        result = None
+        try:
+            handler = self.get_handler(request.context)
+            res = handler.get_columns(request.table)
+            data = pickle.dumps(res.data_frame)
+            result = db_pb2.Response(type=res.resp_type,
+                                     data_frame=data,
+                                     query=res.query,
+                                     error_code=res.error_code,
+                                     error_message=res.error_message)
+
+        except Exception:
+            msg = traceback.format_exc()
+            logger.error("%s.get_tables: error - %s", self.__class__.__name__, msg)
             result = db_pb2.Response(type=RESPONSE_TYPE.ERROR,
                                      data_frame=None,
                                      query=0,

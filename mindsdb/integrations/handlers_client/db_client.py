@@ -97,13 +97,6 @@ class DBServiceClient(BaseClient):
             "handler_type": self.handler_type,
         }
 
-    # def _context(self):
-    #     context = {
-    #         "handler_type": self.handler_type,
-    #         "handler_kwargs": self.handler_kwargs,
-    #     }
-    #     return context
-
     @action_logger(logger)
     def connect(self):
         """Establish a connection.

@@ -11,7 +11,6 @@ from mindsdb.grpc.db import db_pb2
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE,
 )
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.handlers_client.base_client import BaseClient, Switcher
@@ -42,6 +41,32 @@ class grpcDBClient:
                                      handler_params=json.dumps(self.handler_params),
                                      context='{}')
 
+    @staticmethod
+    def _to_status_response(response: db_pb2.StatusResponse):
+        return StatusResponse(success=response.success,
+                              error_message=response.error_message)
+
+
+    @staticmethod
+    def _to_response(response: db_pb2.Response):
+        data = pickle.loads(response.data_frame)
+        return Response(
+                resp_type=response.type,
+                data_frame=data,
+                query=response.query,
+                error_code=response.error_code,
+                error_message=response.error_message,
+        )
+
+
+    def connect(self):
+        resp = self.stub.Connect(self.context)
+        logger.error("%s.connect: returns success - %s, error - %s",
+                     self.__class__.__name__,
+                     resp.success,
+                     resp.error_message)
+
+        return self._to_status_response(resp)
 
     def check_connection(self):
         resp = self.stub.CheckConnection(self.context)
@@ -49,7 +74,17 @@ class grpcDBClient:
                      self.__class__.__name__,
                      resp.success,
                      resp.error_message)
-        return resp
+
+        return self._to_status_response(resp)
+
+    def disconnect(self):
+        resp = self.stub.Disconnect(self.context)
+        logger.error("%s.disconnect: returns success - %s, error - %s",
+                     self.__class__.__name__,
+                     resp.success,
+                     resp.error_message)
+
+        return self._to_status_response(resp)
 
     def native_query(self, query):
         logger.error("%s.native_query: calling for query - %s",
@@ -61,8 +96,43 @@ class grpcDBClient:
         data = pickle.loads(resp.data_frame)
         logger.error("%s.native_query: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
 
+        return self._to_response(resp)
+
+    def query(self, query):
+        logger.error("%s.query: calling for query - %s",
+                     self.__class__.__name__,
+                     query)
+        query = pickle.dumps(query)
+        request = db_pb2.BinaryQueryContext(context=self.context, query=query)
+        resp = self.stub.BinaryQuery(request)
+        logger.error("%s.query: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
+        data = pickle.loads(resp.data_frame)
+        logger.error("%s.query: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
+
+        return self._to_response(resp)
 
 
+    def get_tables(self):
+        logger.error("%s.get_tables: calling",
+                     self.__class__.__name__)
+        resp = self.stub.GetTables(self.context)
+        logger.error("%s.get_tables: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
+        data = pickle.loads(resp.data_frame)
+        logger.error("%s.get_tables: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
+
+        return self._to_response(resp)
+
+    def get_columns(self, table):
+        logger.error("%s.get_columns: calling for table - %s",
+                     self.__class__.__name__,
+                     table)
+        request = db_pb2.ColumnsContext(context=self.context, table=table)
+        resp = self.stub.GetColumns(request)
+        logger.error("%s.get_columns: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
+        data = pickle.loads(resp.data_frame)
+        logger.error("%s.get_columns: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
+
+        return self._to_response(resp)
 
 def test(fail=False):
     if fail:

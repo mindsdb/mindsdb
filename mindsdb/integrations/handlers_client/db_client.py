@@ -57,7 +57,13 @@ class DBServiceClient(BaseClient):
         connection_data = kwargs.get("connection_data", None)
         if connection_data is None:
             raise Exception("No connection data provided.")
-        base_url = os.environ.get("MINDSDB_DB_SERVICE_URL", None)
+        host = os.environ.get("MINDSDB_DB_SERVICE_HOST", None)
+        port = os.environ.get("MINDSDB_DB_SERVICE_PORT", None)
+        if host is None or port is None:
+            base_url = None
+        else:
+            # base_url = os.environ.get("MINDSDB_DB_SERVICE_URL", None)
+            base_url = f"http://{host}:{port}"
         as_service = True
         if base_url is None:
             as_service = False

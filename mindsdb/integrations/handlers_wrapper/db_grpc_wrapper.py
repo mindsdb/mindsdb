@@ -200,6 +200,19 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         return result
 
 
+    def run(self, **kwargs):
+        host = kwargs.get("host", "127.0.0.1")
+        port = kwargs.get("port", 50051)
+        addr = f"{host}:{port}"
+        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        db_pb2_grpc.add_DBServiceServicer_to_server(
+            DBServiceServicer(), server)
+        server.add_insecure_port(addr)
+        # logger.error("staring rpc server on [::]:50051")
+        server.start()
+        server.wait_for_termination()
+
+
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

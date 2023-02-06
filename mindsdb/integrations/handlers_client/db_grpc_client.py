@@ -18,18 +18,21 @@ from mindsdb.integrations.libs.handler_helpers import get_handler
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
 
+
 logger = get_log(logger_name="main")
 
 
-class grpcDBClient:
+class DBClientGRPC:
 
     def __init__(self, handler_type: str, **kwargs: dict):
         self.handler_type = handler_type
         self.handler_params = kwargs
+        host = os.environ.get("MINDSDB_DB_SERVICE_HOST", None)
+        port = os.environ.get("MINDSDB_DB_SERVICE_PORT", None)
         for a in ("fs_store", "file_storage"):
             if a in self.handler_params:
                 del self.handler_params[a]
-        self.channel = grpc.insecure_channel('localhost:50051')
+        self.channel = grpc.insecure_channel(f"{host}:{port}")
         self.stub = db_pb2_grpc.DBServiceStub(self.channel)
 
     def __del__(self):
@@ -37,9 +40,10 @@ class grpcDBClient:
 
     @property
     def context(self):
+        ctx_str = json.dumps(ctx.dump())
         return db_pb2.HandlerContext(handler_type=self.handler_type,
                                      handler_params=json.dumps(self.handler_params),
-                                     context='{}')
+                                     context=ctx_str)
 
     @staticmethod
     def _to_status_response(response: db_pb2.StatusResponse):
@@ -134,6 +138,7 @@ class grpcDBClient:
 
         return self._to_response(resp)
 
+
 def test(fail=False):
     if fail:
         handler_type = 'mysql'
@@ -151,7 +156,7 @@ def test(fail=False):
               'name': 'example_db',
               }
 
-    client = grpcDBClient(handler_type, **params)
+    client = DBClientGRPC(handler_type, **params)
     res = client.check_connection()
     logger.error("response returned - %s", res)
     query = "SELECT * FROM demo_data.home_rentals LIMIT 10;"

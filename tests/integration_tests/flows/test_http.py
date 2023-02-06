@@ -444,7 +444,7 @@ class TestHTTP:
             create predictor p_test_1
             from files (select sqft, location, rental_price from test_file limit 30)
             predict rental_price
-        ''', RESPONSE_TYPE.OK)
+        ''', RESPONSE_TYPE.TABLE)
         status = self.await_predictor('p_test_1', timeout=120)
         assert status == 'complete'
 

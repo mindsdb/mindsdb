@@ -324,7 +324,18 @@
             {
               "group": "NLP",
               "pages": [
-                "nlp/nlp-extended-examples"
+                "nlp/nlp-extended-examples",
+                {
+                  "group": "NLP Examples OpenAI",
+                  "pages": [
+                    "nlp/nlp-openai-mysql-sentiment",
+                    "nlp/nlp-openai-mysql-q&a",
+                    "nlp/nlp-openai-mysql-summarization",
+                    "nlp/nlp-openai-mongodb-sentiment",
+                    "nlp/nlp-openai-mongodb-q&a",
+                    "nlp/nlp-openai-mongodb-summarization"
+                  ]
+                }
               ]
             },
             {

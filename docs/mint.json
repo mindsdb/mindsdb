@@ -328,12 +328,12 @@
                 {
                   "group": "NLP Examples with OpenAI",
                   "pages": [
-                    "nlp/nlp-openai-mysql-sentiment",
-                    "nlp/nlp-openai-mysql-q&a",
-                    "nlp/nlp-openai-mysql-summarization",
-                    "nlp/nlp-openai-mongodb-sentiment",
-                    "nlp/nlp-openai-mongodb-q&a",
-                    "nlp/nlp-openai-mongodb-summarization"
+                    "nlp/sentiment-analysis-inside-mysql-with-openai",
+                    "nlp/question-answering-inside-mysql-with-openai",
+                    "nlp/text-summarization-inside-mysql-with-openai",
+                    "nlp/sentiment-analysis-inside-mongodb-with-openai",
+                    "nlp/question-answering-inside-mongodb-with-openai",
+                    "nlp/text-summarization-inside-mongodb-with-openai"
                   ]
                 }
               ]
@@ -387,12 +387,12 @@
         {
           "group": "NLP Examples with OpenAI",
           "pages": [
-            "nlp/nlp-openai-mysql-sentiment",
-            "nlp/nlp-openai-mysql-q&a",
-            "nlp/nlp-openai-mysql-summarization",
-            "nlp/nlp-openai-mongodb-sentiment",
-            "nlp/nlp-openai-mongodb-q&a",
-            "nlp/nlp-openai-mongodb-summarization"
+            "nlp/sentiment-analysis-inside-mysql-with-openai",
+            "nlp/question-answering-inside-mysql-with-openai",
+            "nlp/text-summarization-inside-mysql-with-openai",
+            "nlp/sentiment-analysis-inside-mongodb-with-openai",
+            "nlp/question-answering-inside-mongodb-with-openai",
+            "nlp/text-summarization-inside-mongodb-with-openai"
           ]
         },
         "nlp/nlp-extended-examples"

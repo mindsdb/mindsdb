@@ -4,12 +4,14 @@ import pickle
 import subprocess
 from collections import OrderedDict
 
+from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.base import BaseMLEngine
 from pandas.api import types as pd_types
 import numpy as np
 
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
+
 
 class BYOMHandler(BaseMLEngine):
 
@@ -40,17 +42,15 @@ class BYOMHandler(BaseMLEngine):
             raise RuntimeError(p.stderr.read())
         return ret
 
-    def create_engine(self, connection_args):
-        model_code = connection_args['model_code']
-        self.engine_storage.file_set('model_code', model_code)
-
     def _get_model_code(self):
         # TODO :
         file_name = self.engine_storage.get_connection_args()['model_code']
         return self.engine_storage.file_get(file_name)
 
-    def create(self, target, df, **kwargs):
-        raise RuntimeError('BYOM disabled yet')
+    def create(self, target, df=None, args=None, **kwargs):
+        is_cloud = Config().get('cloud', False)
+        if is_cloud is True:
+            raise RuntimeError('BYOM is disabled on cloud')
 
         params = {
             'method': 'train',
@@ -87,7 +87,7 @@ class BYOMHandler(BaseMLEngine):
             status_info = {"error": str(e)}
             self.model_storage.status_set(PREDICTOR_STATUS.ERROR, status_info=status_info)
 
-    def predict(self, df):
+    def predict(self, df, args=None):
         encoded = self.model_storage.file_get('model')
         model_params = pickle.loads(encoded)
         params = {
@@ -103,10 +103,6 @@ class BYOMHandler(BaseMLEngine):
         # pred_df = pred_df.rename(columns={target: 'prediction'})
         return pred_df
 
-
-    def describe(self):
-        # TODO should it be ml-handler depended?
-        pass
 
 connection_args = OrderedDict(
     model_code={

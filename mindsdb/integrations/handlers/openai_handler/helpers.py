@@ -28,7 +28,7 @@ def retry_with_exponential_backoff(
             try:
                 return func(*args, **kwargs)
             except errors as e:
-                if 'You exceeded your current quota' in e.user_message:
+                if e.error['type'] == 'insufficient_quota':
                     raise Exception('API key has exceeded its quota, please try 1) increasing it or 2) using another key.')  # noqa
 
                 num_retries += 1

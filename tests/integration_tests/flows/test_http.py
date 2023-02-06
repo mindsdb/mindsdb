@@ -102,6 +102,65 @@ class TestHTTP:
         response = requests.get(path)
         assert response.status_code == 200
 
+    def test_auth(self):
+        session = requests.Session()
+
+        response = session.get(f'{HTTP_API_ROOT}/status')
+        assert response.status_code == 200
+        assert response.json()['auth']['http_auth_enabled'] is False
+
+        response = session.get(f'{HTTP_API_ROOT}/config/')
+        assert response.status_code == 200
+        assert response.json()['auth']['http_auth_enabled'] is False
+
+        response = session.get(f'{HTTP_API_ROOT}/tree/')
+        assert response.status_code == 200
+
+        response = session.put(f'{HTTP_API_ROOT}/config/', json={
+            'http_auth_enabled': True,
+            'username': '',
+            'password': ''
+        })
+        assert response.status_code == 400
+
+        response = session.put(f'{HTTP_API_ROOT}/config/', json={
+            'auth': {
+                'http_auth_enabled': True,
+                'username': 'mindsdb',
+                'password': 'mindsdb'
+            }
+        })
+        assert response.status_code == 200
+
+        response = session.get(f'{HTTP_API_ROOT}/status')
+        assert response.status_code == 200
+        assert response.json()['auth']['http_auth_enabled'] is True
+
+        response = session.get(f'{HTTP_API_ROOT}/tree/')
+        assert response.status_code == 403
+
+        response = session.post(f'{HTTP_API_ROOT}/login', json={
+                'username': 'mindsdb',
+                'password': 'mindsdb'
+            }
+        )
+        assert response.status_code == 200
+
+        response = session.get(f'{HTTP_API_ROOT}/tree/')
+        assert response.status_code == 200
+
+        response = session.put(f'{HTTP_API_ROOT}/config/', json={
+            'auth': {
+                'http_auth_enabled': False,
+                'username': 'mindsdb',
+                'password': 'mindsdb'
+            }
+        })
+
+        response = session.get(f'{HTTP_API_ROOT}/status')
+        assert response.status_code == 200
+        assert response.json()['auth']['http_auth_enabled'] is False
+
     def test_gui_is_served(self):
         """
         GUI downloaded and available
@@ -385,7 +444,7 @@ class TestHTTP:
             create predictor p_test_1
             from files (select sqft, location, rental_price from test_file limit 30)
             predict rental_price
-        ''', RESPONSE_TYPE.OK)
+        ''', RESPONSE_TYPE.TABLE)
         status = self.await_predictor('p_test_1', timeout=120)
         assert status == 'complete'
 
@@ -458,4 +517,3 @@ class TestHTTP:
         if method != "post":
             assert result == resp.json(), \
                     f"expected to have {result} for {call_desc}, but got {resp.json()}"
-

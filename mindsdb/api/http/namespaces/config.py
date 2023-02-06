@@ -1,3 +1,4 @@
+import json
 import copy
 import datetime
 from dateutil.parser import parse as parse_datetime
@@ -15,6 +16,8 @@ from mindsdb.utilities import log
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.log_controller import get_logs
 from mindsdb.interfaces.stream.stream import StreamController
+from mindsdb.utilities.config import Config
+from mindsdb.api.http.utils import http_error
 
 
 @ns_conf.route('/logs')
@@ -31,6 +34,52 @@ class GetLogs(Resource):
 
         logs = get_logs(min_timestamp, max_timestamp, context, level, log_from, limit)
         return {'data': logs}
+
+
+@ns_conf.route('/')
+@ns_conf.param('name', 'Get config')
+class GetConfig(Resource):
+    @ns_conf.doc('get_config')
+    def get(self):
+        config = Config()
+        return {
+            'auth': {
+                'http_auth_enabled': config['auth']['http_auth_enabled'],
+                'username': config['auth']['username'],
+                'password': config['auth']['password']
+            }
+        }
+
+    @ns_conf.doc('put_config')
+    def put(self):
+        data = request.json
+
+        unknown_argumens = list(set(data.keys()) - {'auth'})
+        if len(unknown_argumens) > 0:
+            return http_error(
+                400, 'Wrong arguments',
+                f'Unknown argumens: {unknown_argumens}'
+            )
+
+        for key in data.keys():
+            unknown_argumens = list(
+                set(data[key].keys()) - set(Config()[key].keys())
+            )
+            if len(unknown_argumens) > 0:
+                return http_error(
+                    400, 'Wrong arguments',
+                    f'Unknown argumens: {unknown_argumens}'
+                )
+
+        with open(Config().config_path, 'r') as fp:
+            config_data = json.load(fp)
+
+        config_data.update(data)
+
+        with open(Config().config_path, 'wt') as fp:
+            fp.write(json.dumps(config_data))
+
+        return '', 200
 
 
 @ns_conf.route('/integrations')

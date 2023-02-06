@@ -326,7 +326,7 @@
               "pages": [
                 "nlp/nlp-extended-examples",
                 {
-                  "group": "NLP Examples OpenAI",
+                  "group": "NLP Examples with OpenAI",
                   "pages": [
                     "nlp/nlp-openai-mysql-sentiment",
                     "nlp/nlp-openai-mysql-q&a",
@@ -384,6 +384,17 @@
         "nlp/what-is-nlp",
         "nlp/nlp-mindsdb-hf",
         "nlp/nlp-mindsdb-openai",
+        {
+          "group": "NLP Examples with OpenAI",
+          "pages": [
+            "nlp/nlp-openai-mysql-sentiment",
+            "nlp/nlp-openai-mysql-q&a",
+            "nlp/nlp-openai-mysql-summarization",
+            "nlp/nlp-openai-mongodb-sentiment",
+            "nlp/nlp-openai-mongodb-q&a",
+            "nlp/nlp-openai-mongodb-summarization"
+          ]
+        },
         "nlp/nlp-extended-examples"
       ]
     }

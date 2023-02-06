@@ -147,13 +147,19 @@ class OpenAIHandler(BaseMLEngine):
             empty_prompt_ids = np.where(df[[args['input_text']]].isna().all(axis=1).values)[0]
             prompts = []
             for i in df.index:
+                if 'json_struct' in df.columns:
+                    json_struct = ', '.join(df['json_struct'][i].values())
+                else:
+                    json_struct = ', '.join(args['json_struct'].values())
                 p = textwrap.dedent(f'''\
                     From sentence below generate a one-dimensional array with data in it:
-                    {', '.join(args['json_struct'].values())}.
+                    {json_struct}.
                     The sentence is:
                     {{{{{args['input_text']}}}}}
                 ''')
                 for column in df.columns:
+                    if column == 'json_struct':
+                        continue
                     p = p.replace(f'{{{{{column}}}}}', df[column][i])
                 prompts.append(p)
 
@@ -177,9 +183,13 @@ class OpenAIHandler(BaseMLEngine):
         if args.get('json_struct', False):
             for i in pred_df.index:
                 try:
+                    if 'json_struct' in df.columns:
+                        json_keys = df['json_struct'][i].keys()
+                    else:
+                        json_keys = args['json_struct'].keys()
                     pred_df[args['target']][i] = {
                         key: val for key, val in zip(
-                            args['json_struct'].keys(),
+                            json_keys,
                             json.loads(pred_df[args['target']][i])
                         )
                     }

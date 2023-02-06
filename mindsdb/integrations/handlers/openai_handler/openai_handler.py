@@ -148,6 +148,8 @@ class OpenAIHandler(BaseMLEngine):
             prompts = []
             for i in df.index:
                 if 'json_struct' in df.columns:
+                    if isinstance(df['json_struct'][i], str):
+                        df['json_struct'][i] = json.loads(df['json_struct'][i])
                     json_struct = ', '.join(df['json_struct'][i].values())
                 else:
                     json_struct = ', '.join(args['json_struct'].values())

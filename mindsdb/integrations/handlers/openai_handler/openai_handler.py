@@ -1,6 +1,8 @@
 import os
 import re
 import math
+import json
+import textwrap
 import concurrent.futures
 import numpy as np
 import pandas as pd
@@ -30,11 +32,23 @@ class OpenAIHandler(BaseMLEngine):
         else:
             args = args['using']
 
-        if 'question_column' not in args and 'prompt_template' not in args:
-            raise Exception(f'Either of `question_column` or `prompt_template` are required.')
+        if len(set(args.keys()) & {'question_column', 'prompt_template', 'json_struct'}) == 0:
+            raise Exception(f'Either of `question_column` or `prompt_template` or `json_struct` are required.')
 
-        if 'prompt_template' in args and 'question_column' in args:
-            raise Exception('Please provide either 1) a `prompt_template` or 2) a `question_column` and an optional `context_column`, but not both.')  # noqa
+        keys_collection = [
+            ['prompt_template'],
+            ['question_column', 'context_column'],
+            ['json_struct']
+        ]
+        for keys in keys_collection:
+            if keys[0] in args and any(x[0] in args for x in keys_collection if x != keys):
+                raise Exception(textwrap.dedent('''\
+                    Please provide one of
+                        1) a `prompt_template`
+                        2) a `question_column` and an optional `context_column`
+                        3) a `json_struct`
+                    but do not mix the keys.
+                '''))
 
     def create(self, target, args=None, **kwargs):
         args = args['using']
@@ -129,6 +143,20 @@ class OpenAIHandler(BaseMLEngine):
             questions = list(df[args['question_column']].apply(lambda x: str(x)))
             prompts = [f'Context: {c}\nQuestion: {q}\nAnswer: ' for c, q in zip(contexts, questions)]
 
+        elif args.get('json_struct', False):
+            empty_prompt_ids = np.where(df[[args['input_text']]].isna().all(axis=1).values)[0]
+            prompts = []
+            for i in df.index:
+                p = textwrap.dedent(f'''\
+                    From sentence below generate a one-dimensional array with data in it:
+                    {', '.join(args['json_struct'].values())}.
+                    The sentence is:
+                    {{{{{args['input_text']}}}}}
+                ''')
+                for column in df.columns:
+                    p = p.replace(f'{{{{{column}}}}}', df[column][i])
+                prompts.append(p)
+
         else:
             empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
             prompts = list(df[args['question_column']].apply(lambda x: str(x)))
@@ -144,6 +172,20 @@ class OpenAIHandler(BaseMLEngine):
             completion.insert(i, None)
 
         pred_df = pd.DataFrame(completion, columns=[args['target']])
+
+        # restore json struct
+        if args.get('json_struct', False):
+            for i in pred_df.index:
+                try:
+                    pred_df[args['target']][i] = {
+                        key: val for key, val in zip(
+                            args['json_struct'].keys(),
+                            json.loads(pred_df[args['target']][i])
+                        )
+                    }
+                except Exception:
+                    pred_df[args['target']][i] = None
+
         return pred_df
 
     def _completion(self, model_name, prompts, max_tokens, temperature, api_key, args, parallel=True):

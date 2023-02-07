@@ -60,6 +60,7 @@ jobs:
       if: ${{ github.ref != 'refs/heads/stable' }}
       run: |
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+          pip install statsforecast>=1.0 --no-cache-dir
           pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
     - name: Run integration api and flow tests
       run: |

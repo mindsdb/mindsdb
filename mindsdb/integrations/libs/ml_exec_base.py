@@ -360,7 +360,7 @@ class BaseMLEngineExec:
                 model_name = f'{model_name}.{version}'
             raise Exception(f"Error: model '{model_name}' does not exists!")
         if predictor_record.status != PREDICTOR_STATUS.COMPLETE:
-            raise Exception(f"Error: model creation not completed")
+            raise Exception("Error: model creation not completed")
 
         ml_handler = self._get_ml_handler(predictor_record.id)
 

@@ -10,8 +10,6 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from pandas.api import types as pd_types
 import numpy as np
 
-from mindsdb.integrations.libs.const import PREDICTOR_STATUS
-
 
 class BYOMHandler(BaseMLEngine):
 
@@ -58,34 +56,28 @@ class BYOMHandler(BaseMLEngine):
             'code': self._get_model_code(),
             'to_predict': target
         }
-        try:
-            model_params = self._run_command(params)
-            encoded = pickle.dumps(model_params)
-            self.model_storage.file_set('model', encoded)
 
-            # TODO return columns?
+        model_params = self._run_command(params)
+        encoded = pickle.dumps(model_params)
+        self.model_storage.file_set('model', encoded)
 
-            def convert_type(field_type):
-                if pd_types.is_integer_dtype(field_type):
-                    return 'integer'
-                elif pd_types.is_numeric_dtype(field_type):
-                    return 'float'
-                elif pd_types.is_datetime64_any_dtype(field_type):
-                    return 'datetime'
-                else:
-                    return 'categorical'
+        # TODO return columns?
 
-            columns = {
-                target: convert_type(np.object)
-            }
+        def convert_type(field_type):
+            if pd_types.is_integer_dtype(field_type):
+                return 'integer'
+            elif pd_types.is_numeric_dtype(field_type):
+                return 'float'
+            elif pd_types.is_datetime64_any_dtype(field_type):
+                return 'datetime'
+            else:
+                return 'categorical'
 
-            self.model_storage.columns_set(columns)
+        columns = {
+            target: convert_type(np.object)
+        }
 
-            self.model_storage.status_set(PREDICTOR_STATUS.COMPLETE)
-
-        except Exception as e:
-            status_info = {"error": str(e)}
-            self.model_storage.status_set(PREDICTOR_STATUS.ERROR, status_info=status_info)
+        self.model_storage.columns_set(columns)
 
     def predict(self, df, args=None):
         encoded = self.model_storage.file_get('model')

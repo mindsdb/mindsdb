@@ -21,7 +21,11 @@ class StatsForecastHandler(BaseMLEngine):
         ###### store model args and time series settings in the model folder
         model_args = {}
         model_args["target"] = target
-        model_args["frequency"] = DEFAULT_FREQUENCY
+        try:
+            inferred_freq = pd.infer_freq(df[time_settings["order_by"]])
+            model_args["frequency"] = inferred_freq if inferred_freq is not None else DEFAULT_FREQUENCY
+        except TypeError:
+            model_args["frequency"] = DEFAULT_FREQUENCY
         model_args["horizon"] = time_settings["horizon"]
         model_args["order_by"] = time_settings["order_by"]
         model_args["group_by"] = time_settings["group_by"]
@@ -33,8 +37,8 @@ class StatsForecastHandler(BaseMLEngine):
         # Load fitted model
         model_args = dill.loads(self.model_storage.file_get('model_args'))
         # StatsForecast won't handle extra columns - it assumes they're external regressors
-        sf = StatsForecast(models=[AutoARIMA()], freq=model_args["frequency"])
         prediction_df = self._transform_to_statsforecast_df(df, model_args["target"], model_args)
+        sf = StatsForecast(models=[AutoARIMA()], freq=model_args["frequency"])
         forecast_df = sf.forecast(model_args["horizon"], prediction_df)  # TO-DO: change to sf.predict()
 
         results_df = self._get_results_from_statsforecast_df(forecast_df, model_args)

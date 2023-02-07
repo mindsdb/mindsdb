@@ -29,7 +29,9 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
+from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.handler_helpers import get_handler
+from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
 
 logger = get_log(logger_name="main")
@@ -45,6 +47,8 @@ class BaseDBWrapper:
         # self.index becomes a flask API endpoint
         default_router = self.app.route("/")
         self.index = default_router(self.index)
+        self.after_request = self.app.after_request(self.after_request)
+        self.before_request = self.app.before_request(self.before_request)
         logger.info(
             "%s: base params and route have been initialized", self.__class__.__name__
         )
@@ -58,13 +62,26 @@ class BaseDBWrapper:
         self.app.run(**kwargs)
 
     def get_handler(self, _json):
+        ctx.load(request.json.get("context"))
         handler_class = get_handler(_json["handler_type"])
         logger.info(
             "%s.get_handler: requested instance of %s handler",
             self.__class__.__name__,
             handler_class,
         )
-        return handler_class(**_json["handler_kwargs"])
+        handler_kwargs = _json["handler_kwargs"]
+        # Create an instance of FileController for
+        # 'files' type of handler
+        if _json["handler_type"] == "files":
+            handler_kwargs["file_controller"] = FileController()
+        return handler_class(**handler_kwargs)
+
+    def before_request(self):
+        logger.info("%s [%s %s]: params - %s", self.__class__.__name__, request.method, request.full_path, request.json)
+
+    def after_request(self, response):
+        logger.info("%s [%s %s] - %s: result - %s", self.__class__.__name__, request.method, request.full_path, response.status, response.json)
+        return response
 
 
 class DBHandlerWrapper(BaseDBWrapper):
@@ -160,9 +177,6 @@ class DBHandlerWrapper(BaseDBWrapper):
 
     def check_connection(self):
         """Check connection to the database server."""
-        logger.info(
-            "%s.check_connection: calling 'check_connection'", self.__class__.__name__
-        )
         try:
             handler = self.get_handler(request.json)
             result = handler.check_connection()
@@ -178,11 +192,6 @@ class DBHandlerWrapper(BaseDBWrapper):
     def native_query(self):
         """Execute received string query."""
         query = request.json.get("query")
-        logger.info(
-            "%s.native_query: calling 'native_query' with query - %s",
-            self.__class__.__name__,
-            query,
-        )
         try:
             handler = self.get_handler(request.json)
             result = handler.native_query(query)
@@ -197,12 +206,6 @@ class DBHandlerWrapper(BaseDBWrapper):
 
     def query(self):
         """Execute received query object"""
-        logger.info("%s.query: calling", self.__class__.__name__)
-        logger.debug(
-            "%s.query: calling with raw data - %s",
-            self.__class__.__name__,
-            request.get_data(),
-        )
         try:
             # Have received json with context and
             # serialized query object
@@ -238,10 +241,10 @@ class DBHandlerWrapper(BaseDBWrapper):
             return result.to_json(), 500
 
     def get_tables(self):
-        logger.info("%s.get_tables: calling.", self.__class__.__name__)
         try:
             handler = self.get_handler(request.json)
             result = handler.get_tables()
+            logger.error("%s.get_tables: result - %s", self.__class__.__name__, result.to_json())
             return result.to_json(), 200
         except Exception:
             msg = traceback.format_exc()
@@ -252,7 +255,6 @@ class DBHandlerWrapper(BaseDBWrapper):
             return result.to_json(), 500
 
     def get_columns(self):
-        logger.info("%s.get_columns: calling", self.__class__.__name__)
         try:
             table = request.json.get("table")
             logger.info(

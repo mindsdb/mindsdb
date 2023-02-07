@@ -320,7 +320,8 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
             learn_args=predictor['problem_definition'],
             to_predict=predictor['predict'],
             integration_id=self.lw_integration_id,
-            project_id=1
+            project_id=1,
+            status='complete'
         )
         self.db.session.add(r)
         self.db.session.commit()

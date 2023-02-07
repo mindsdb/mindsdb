@@ -26,7 +26,7 @@ services:
     command: bash -c "cd /mindsdb && python -m mindsdb"
     environment:
       MINDSDB_EXECUTOR_URL: "http://executor:5002"
-      MINDSDB_ML_SERVICE_URL: "http://ml_service:5001"
+      BALANCER_URL: "http://balancer:80"
       MINDSDB_DB_SERVICE_URL: "http://db_service:5000"
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
@@ -57,7 +57,7 @@ services:
         #       retries: 100
 
 
-  ml_service:
+  lightwood:
     build:
       context: ../
       dockerfile: ./docker/ml_handler.Dockerfile
@@ -73,6 +73,24 @@ services:
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_DB_SERVICE_HOST: "db_service"
       MINDSDB_DB_SERVICE_PORT: 5000
+
+  huggingface:
+    build:
+      context: ../
+      dockerfile: ./docker/ml_handler.Dockerfile
+    depends_on:
+      - mindsdb
+    volumes:
+      - type: bind
+        source: ../
+        target: /mindsdb
+    environment:
+      # have to share mindsdb database, because it doens't work without it
+      PORT: 5003
+      MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      MINDSDB_DB_SERVICE_HOST: "db_service"
+      MINDSDB_DB_SERVICE_PORT: 5000
+
 
   db_service:
     build:
@@ -104,7 +122,7 @@ services:
       # have to share mindsdb database, because it doens't work without it
       PORT: 5002
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
-      MINDSDB_ML_SERVICE_URL: "http://ml_service:5001"
+      BALANCER_URL: "http://balancer:80"
       MINDSDB_DB_SERVICE_URL: "http://db_service:5000"
     volumes:
       - type: bind
@@ -115,3 +133,20 @@ services:
       interval: 120s
       timeout: 4s
       retries: 100
+
+  balancer:
+    image: nginx
+    volumes:
+      - type: bind
+        source: ./nginx/templates
+        target: /etc/nginx/templates
+    ports:
+     - "8080:80"
+    environment:
+      MINDSDB_LIGHTWOOD_HOST: "lightwood"
+      MINDSDB_LIGHTWOOD_PORT: 5001
+      MINDSDB_HUGGINGFACE_HOST: "huggingface"
+      MINDSDB_HUGGINGFACE_PORT: 5003
+    depends_on:
+      - lightwood
+      - huggingface

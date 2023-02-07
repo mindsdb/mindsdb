@@ -5,6 +5,8 @@ import requests
 from mindsdb.utilities.log import get_log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.libs.net_helpers import sending_attempts
+from mindsdb.integrations.libs.handler_helpers import action_logger
+
 
 logger = get_log("main")
 
@@ -33,6 +35,7 @@ class ExecutorClient:
         logger.debug(
             "%s.__init__: executor url - %s", self.__class__.__name__, self.base_url
         )
+
         self.sqlserver = sqlserver
         self.session = session
         self.query = None
@@ -115,11 +118,15 @@ class ExecutorClient:
                     attr,
                     response_json[attr],
                 )
-                setattr(self, attr, response_json[attr])
+                if attr == 'session':
+                    self.session.from_json(response_json[attr])
+                else:
+                    setattr(self, attr, response_json[attr])
 
     def to_mysql_columns(self, columns):
         return columns
 
+    @action_logger(logger)
     def stmt_prepare(self, sql):
         json_data = self._default_json()
         json_data["sql"] = sql
@@ -168,6 +175,7 @@ class ExecutorClient:
             )
             raise e
 
+    @action_logger(logger)
     def stmt_execute(self, param_values):
         if self.is_executed:
             return
@@ -221,6 +229,7 @@ class ExecutorClient:
             )
             raise e
 
+    @action_logger(logger)
     def query_execute(self, sql):
         json_data = self._default_json()
         json_data["sql"] = sql
@@ -259,7 +268,9 @@ class ExecutorClient:
         if response.status_code != requests.codes.ok and "error" in resp:
             err_msg = resp["error"]
             logger.error(
-                "%s.query_execute: executor service returned an error - %s", err_msg
+                "%s.query_execute: executor service returned an error - %s",
+                self.__class__.__name__,
+                err_msg
             )
             raise Exception(err_msg)
 
@@ -274,6 +285,7 @@ class ExecutorClient:
             )
             raise e
 
+    @action_logger(logger)
     def execute_external(self, sql):
         json_data = self._default_json()
         json_data["sql"] = sql
@@ -284,6 +296,7 @@ class ExecutorClient:
         )
         return
 
+    @action_logger(logger)
     def parse(self, sql):
         self.sql = sql
         sql_lower = sql.lower()
@@ -334,6 +347,7 @@ class ExecutorClient:
             )
             raise e
 
+    @action_logger(logger)
     def do_execute(self):
         if self.is_executed:
             return
@@ -384,6 +398,7 @@ class ExecutorClient:
             )
             raise e
 
+    @action_logger(logger)
     def change_default_db(self, new_db):
 
         json_data = self._default_json()
@@ -400,6 +415,12 @@ class ExecutorClient:
             logger.debug(
                 "%s.change_default_db result:body=%s", self.__class__.__name__, response.text
             )
+            if response.status_code == 200:
+                logger.debug(
+                    "%s.change_default_db change default db to %s", self.__class__.__name__, new_db
+                )
+                self.session.database = new_db
+
         except Exception:
             msg = traceback.format_exc()
             logger.debug(

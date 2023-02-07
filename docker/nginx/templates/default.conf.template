@@ -1,0 +1,25 @@
+server {
+    listen 80;
+
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
+    gzip on;
+    gzip_types  text/css text/javascript text/xml text/plain text/x-component application/javascript application/json;
+
+
+    location / {
+
+        if ($http_x_mindsdb_handler_type = "lightwood") {
+            proxy_pass http://${MINDSDB_LIGHTWOOD_HOST}:${MINDSDB_LIGHTWOOD_PORT};
+        }
+        
+        if ($http_x_mindsdb_handler_type = "huggingface") {
+            proxy_pass http://${MINDSDB_HUGGINGFACE_HOST}:${MINDSDB_HUGGINGFACE_PORT};
+        }
+    }
+
+    location /test {
+        return 200;
+    }
+}

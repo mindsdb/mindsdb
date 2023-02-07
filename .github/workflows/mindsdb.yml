@@ -63,6 +63,7 @@ jobs:
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
           pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
           pip install statsforecast>=1.4.0
+          pip install gluonts==0.11.4  # temp fix until next lightwood release (>23.1.2.1)
     - name: Run integration api and flow tests
       run: |
         python3 -m flake8

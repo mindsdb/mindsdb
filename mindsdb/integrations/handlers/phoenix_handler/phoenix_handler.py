@@ -2,7 +2,7 @@ from typing import Optional
 from collections import OrderedDict
 
 import pandas as pd
-import pyphoenix
+import phoenixdb
 import requests
 from requests.exceptions import InvalidSchema
 import json
@@ -42,7 +42,7 @@ class PhoenixHandler(DatabaseHandler):
         self.parser = parse_sql
         self.dialect = 'phoenix'
 
-        optional_parameters = ['max_retries', 'autocommit', 'readonly']
+        optional_parameters = ['max_retries', 'autocommit', 'auth', 'authentication', 'avatica_user', 'avatica_password', 'user', 'password']
         for parameter in optional_parameters:
             if parameter not in connection_data:
                 connection_data[parameter] = None
@@ -67,11 +67,16 @@ class PhoenixHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.connection = pyphoenix.connect(
+        self.connection = phoenixdb.connect(
             url=self.connection_data['url'],
             max_retries=self.connection_data['max_retries'],
             autocommit=self.connection_data['autocommit'],
-            readonly=self.connection_data['readonly']
+            auth=self.connection_data['auth'],
+            authentication=self.connection_data['authentication'],
+            avatica_user=self.connection_data['avatica_user'],
+            avatica_password=self.connection_data['avatica_password'],
+            user=self.connection_data['user'],
+            password=self.connection_data['password']
         )
         self.is_connected = True
 
@@ -240,9 +245,29 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.BOOL,
         'description': 'The flag for switching the connection to autocommit mode.'
     },
-    readonly={
-        'type': ARG_TYPE.BOOL,
-        'description': 'The flag for switching the connection to readonly mode.'
+    auth={
+        'type': ARG_TYPE.STR,
+        'description': 'An authentication configuration object as expected by the underlying python_requests and python_requests_gssapi library.'
+    },
+    authentication={
+        'type': ARG_TYPE.STR,
+        'description': 'An alternative way to specify the authentication mechanism that mimics the semantics of the JDBC drirver.'
+    },
+    avatica_user={
+        'type': ARG_TYPE.STR,
+        'description': 'The username for BASIC or DIGEST authentication. Use in conjunction with the authentication option.'
+    },
+    avatica_password={
+        'type': ARG_TYPE.STR,
+        'description': 'The password for BASIC or DIGEST authentication. Use in conjunction with the authentication option.'
+    },
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'If authentication is BASIC or DIGEST then alias for avatica_user. If authentication is NONE or SPNEGO then alias for do_as'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'If authentication is BASIC or DIGEST then alias for avatica_password.'
     }
 )
 

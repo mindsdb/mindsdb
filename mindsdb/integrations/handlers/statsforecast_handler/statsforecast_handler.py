@@ -4,19 +4,27 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from statsforecast import StatsForecast
 from statsforecast.models import AutoARIMA
 
-# TO-DO: generalise these
 DEFAULT_FREQUENCY = "D"
 DEFAULT_MODEL = AutoARIMA()
 DEFAULT_MODEL_NAME = "AutoARIMA"
 
+
 class StatsForecastHandler(BaseMLEngine):
-    """
-    Integration with the Nixtla StatsForecast library for
+    """Integration with the Nixtla StatsForecast library for
     time series forecasting with classical methods.
     """
+
     name = "statsforecast"
 
-    def create(self, target, df, args):
+    def create(self, target, df=None, args={}):
+        """Create the StatsForecast Handler.
+
+        Requires specifying the target column to predict and time series arguments for
+        prediction horizon, time column (order by) and grouping column(s).
+
+        Does not require a dataframe, because model fitting takes place jointly with
+        forecasting in the "predict step".
+        """
         time_settings = args["timeseries_settings"]
         assert time_settings["is_timeseries"], "Specify time series settings in your query"
         ###### store model args and time series settings in the model folder
@@ -27,45 +35,62 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["group_by"] = time_settings["group_by"]
 
         ###### persist changes to handler folder
-        self.model_storage.file_set('model_args', dill.dumps(model_args))
-    
-    def predict(self, df, args):
-        # Load fitted model
-        model_args = dill.loads(self.model_storage.file_get('model_args'))
+        self.model_storage.file_set("model_args", dill.dumps(model_args))
+
+    def predict(self, df, args={}):
+        """Makes forecasts with the StatsForecast Handler.
+
+        This method takes care of both model fitting and forecasting in one step.
+        Model fitting is extremely fast, so model parameters do not need to be
+        stored separately. Instead, we re-fit each time this method is called.
+        """
+        # Load model arguments
+        model_args = dill.loads(self.model_storage.file_get("model_args"))
         try:  # infer frequency from time column
             inferred_freq = pd.infer_freq(df[model_args["order_by"]])
             model_args["frequency"] = DEFAULT_FREQUENCY if inferred_freq is None else inferred_freq
         except TypeError:
             model_args["frequency"] = DEFAULT_FREQUENCY
 
-        # StatsForecast won't handle extra columns - it assumes they're external regressors
-        prediction_df = self._transform_to_statsforecast_df(df, model_args["target"], model_args)
+        prediction_df = self._transform_to_statsforecast_df(df, model_args)
         sf = StatsForecast(models=[DEFAULT_MODEL], freq=model_args["frequency"])
-        forecast_df = sf.forecast(model_args["horizon"], prediction_df)  
+        forecast_df = sf.forecast(model_args["horizon"], prediction_df)
         return self._get_results_from_statsforecast_df(forecast_df, model_args)
-    
-    def _transform_to_statsforecast_df(self, df, target, settings_dict):
-        """Transform dataframes into the specific format required by SF."""
+
+    def _transform_to_statsforecast_df(self, df, settings_dict):
+        """Transform dataframes into the specific format required by StatsForecast.
+
+        StatsForecast requires dataframes to have the following columns:
+            unique_id -> the grouping column. If multiple groups are specified then
+            we join them into one name using a | char.
+            ds -> the date series
+            y -> the target variable for prediction
+
+        You can optionally include exogenous regressors after these three columns, but
+        they must be numeric.
+        """
         statsforecast_df = df.copy()
-        # Transform group columns into single unique_id column 
+        # Transform group columns into single unique_id column
         if len(settings_dict["group_by"]) > 1:
             for col in settings_dict["group_by"]:
                 statsforecast_df[col] = statsforecast_df[col].astype(str)
-            statsforecast_df["unique_id"] = statsforecast_df[settings_dict["group_by"]].agg('|'.join, axis=1)
+            statsforecast_df["unique_id"] = statsforecast_df[settings_dict["group_by"]].agg("|".join, axis=1)
             group_col = "ignore this"
         else:
             group_col = settings_dict["group_by"][0]
-        
+
         # Rename columns to statsforecast names
         statsforecast_df = statsforecast_df.rename(
-            {target: "y", settings_dict["order_by"]: "ds", group_col: "unique_id"},
-            axis=1
-            )
+            {settings_dict["target"]: "y", settings_dict["order_by"]: "ds", group_col: "unique_id"}, axis=1
+        )
 
         return statsforecast_df[["unique_id", "ds", "y"]]
-    
+
     def _get_results_from_statsforecast_df(self, statsforecast_df, model_args):
-        """Transform dataframes generated by SF back to the original format."""
+        """Transform dataframes generated by StatsForecast back to their original format.
+
+        This will return the dataframe to the original format supplied by the MindsDB query.
+        """
         renaming_dict = {"ds": model_args["order_by"], DEFAULT_MODEL_NAME: model_args["target"]}
         return_df = statsforecast_df.reset_index().rename(renaming_dict, axis=1)
         if len(model_args["group_by"]) > 1:

@@ -35,7 +35,7 @@ def test_statsforecast_df_transformations():
     settings_dict = {"order_by": "time_col", "group_by": ["group_col"], "target": "target_col"}
 
     # Test transform for single groupby
-    sf_df = sf_handler._transform_to_statsforecast_df(df, "target_col", settings_dict)
+    sf_df = sf_handler._transform_to_statsforecast_df(df, settings_dict)
     assert [sf_df["unique_id"].iloc[i] == df["group_col"].iloc[i] for i in range(len(sf_df))]
     assert [sf_df["y"].iloc[i] == df["target_col"].iloc[i] for i in range(len(sf_df))]
     assert [sf_df["ds"].iloc[i] == df["time_col"].iloc[i] for i in range(len(sf_df))]
@@ -46,7 +46,7 @@ def test_statsforecast_df_transformations():
 
     # Test for multiple groups
     settings_dict["group_by"] = ["group_col", "group_col_2", "group_col_3"]
-    sf_df = sf_handler._transform_to_statsforecast_df(df, "target_col", settings_dict)
+    sf_df = sf_handler._transform_to_statsforecast_df(df, settings_dict)
     assert sf_df["unique_id"][0] == "a|a2|a3"
     # Test reversing the transform
     sf_results_df = sf_df.rename({"y": "AutoARIMA"}, axis=1).set_index("unique_id")

@@ -1,7 +1,15 @@
 from setuptools import setup, find_packages
-from mindsdb.integrations.handlers.statsforecast_handler.__about__ import __title__, __version__, __github__, __pypi__, __license__, __author__, __description__
+from mindsdb.integrations.handlers.statsforecast_handler.__about__ import (
+    __title__,
+    __version__,
+    __github__,
+    __pypi__,
+    __license__,
+    __author__,
+    __description__,
+)
 
-with open('requirements.txt') as req_file:
+with open("requirements.txt") as req_file:
     requirements = [req.strip() for req in req_file.read().splitlines()]
 
 setup(
@@ -19,5 +27,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.8"
+    python_requires=">=3.8",
 )

@@ -5,7 +5,7 @@ from concurrent import futures
 
 import grpc
 from mindsdb.grpc.db import db_pb2_grpc
-from mindsdb.grpc.db import db_pb2
+from mindsdb.grpc.db import db_pb2, common_pb2
 
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.handler_helpers import get_handler
@@ -48,10 +48,10 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         try:
             handler = self.get_handler(request)
             res = handler.check_connection()
-            result = db_pb2.StatusResponse(success=res.success, error_message=res.error_message)
+            result = common_pb2.StatusResponse(success=res.success, error_message=res.error_message)
         except Exception:
             msg = traceback.format_exc()
-            result = db_pb2.StatusResponse(success=False, error_message=msg)
+            result = common_pb2.StatusResponse(success=False, error_message=msg)
         return result
 
     def Connect(self, request, context):
@@ -63,10 +63,10 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         try:
             handler = self.get_handler(request)
             handler.connect()
-            result = db_pb2.StatusResponse(success=True, error_message="")
+            result = common_pb2.StatusResponse(success=True, error_message="")
         except Exception:
             msg = traceback.format_exc()
-            result = db_pb2.StatusResponse(success=False, error_message=msg)
+            result = common_pb2.StatusResponse(success=False, error_message=msg)
         return result
 
     def Disconnect(self, request, context):
@@ -77,10 +77,10 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         try:
             handler = self.get_handler(request)
             handler.disconnect()
-            result = db_pb2.StatusResponse(success=True, error_message="")
+            result = common_pb2.StatusResponse(success=True, error_message="")
         except Exception:
             msg = traceback.format_exc()
-            result = db_pb2.StatusResponse(success=False, error_message=msg)
+            result = common_pb2.StatusResponse(success=False, error_message=msg)
         return result
 
     def NativeQuery(self, request, context):
@@ -97,7 +97,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
             handler = self.get_handler(request.context)
             res = handler.native_query(query)
             data = pickle.dumps(res.data_frame)
-            result = db_pb2.Response(type=res.resp_type,
+            result = common_pb2.Response(type=res.resp_type,
                                      data_frame=data,
                                      query=res.query,
                                      error_code=res.error_code,
@@ -106,7 +106,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         except Exception:
             msg = traceback.format_exc()
             logger.error("%s.native_query: error - %s", self.__class__.__name__, msg)
-            result = db_pb2.Response(type=RESPONSE_TYPE.ERROR,
+            result = common_pb2.Response(type=RESPONSE_TYPE.ERROR,
                                      data_frame=None,
                                      query=0,
                                      error_code=1,
@@ -127,7 +127,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
             handler = self.get_handler(request.context)
             res = handler.query(query)
             data = pickle.dumps(res.data_frame)
-            result = db_pb2.Response(type=res.resp_type,
+            result = common_pb2.Response(type=res.resp_type,
                                      data_frame=data,
                                      query=res.query,
                                      error_code=res.error_code,
@@ -136,7 +136,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         except Exception:
             msg = traceback.format_exc()
             logger.error("%s.query: error - %s", self.__class__.__name__, msg)
-            result = db_pb2.Response(type=RESPONSE_TYPE.ERROR,
+            result = common_pb2.Response(type=RESPONSE_TYPE.ERROR,
                                      data_frame=None,
                                      query=0,
                                      error_code=1,
@@ -154,7 +154,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
             handler = self.get_handler(request)
             res = handler.get_tables()
             data = pickle.dumps(res.data_frame)
-            result = db_pb2.Response(type=res.resp_type,
+            result = common_pb2.Response(type=res.resp_type,
                                      data_frame=data,
                                      query=res.query,
                                      error_code=res.error_code,
@@ -163,7 +163,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         except Exception:
             msg = traceback.format_exc()
             logger.error("%s.get_tables: error - %s", self.__class__.__name__, msg)
-            result = db_pb2.Response(type=RESPONSE_TYPE.ERROR,
+            result = common_pb2.Response(type=RESPONSE_TYPE.ERROR,
                                      data_frame=None,
                                      query=0,
                                      error_code=1,
@@ -183,7 +183,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
             handler = self.get_handler(request.context)
             res = handler.get_columns(request.table)
             data = pickle.dumps(res.data_frame)
-            result = db_pb2.Response(type=res.resp_type,
+            result = common_pb2.Response(type=res.resp_type,
                                      data_frame=data,
                                      query=res.query,
                                      error_code=res.error_code,
@@ -192,7 +192,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         except Exception:
             msg = traceback.format_exc()
             logger.error("%s.get_tables: error - %s", self.__class__.__name__, msg)
-            result = db_pb2.Response(type=RESPONSE_TYPE.ERROR,
+            result = common_pb2.Response(type=RESPONSE_TYPE.ERROR,
                                      data_frame=None,
                                      query=0,
                                      error_code=1,

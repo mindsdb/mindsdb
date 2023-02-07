@@ -208,7 +208,7 @@ class MLClient(BaseClient):
             r = self._convert_response(r.json())
             response = Response(
                 data_frame=r.get("data_frame", None),
-                resp_type=r.get("resp_type"),
+                resp_type=r.get("type"),
                 error_code=r.get("error_code", 0),
                 error_message=r.get("error_message", None),
                 query=r.get("query"),

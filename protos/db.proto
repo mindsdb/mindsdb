@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "common.proto";
+
 
 // Data needs to be sent each time
 // Server can't create a Hanlder
@@ -26,23 +28,6 @@ message BinaryQueryContext {
 message ColumnsContext {
     HandlerContext context = 1;
     string table = 2;
-}
-
-// Represents server ouput without
-// data. like 'OK' or 'ERROR'
-message StatusResponse {
-    bool success = 1;
-    string error_message = 2;
-}
-
-// Represents server output with
-// some data inside. SELECT result for instance
-message Response {
-    string type = 1;
-    bytes data_frame = 2;
-    int32 query = 3;
-    int32 error_code = 4;
-    string error_message = 5;
 }
 
 // Interface exported by the server.

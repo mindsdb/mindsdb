@@ -6,7 +6,7 @@ import json
 
 import grpc
 from mindsdb.grpc.db import db_pb2_grpc
-from mindsdb.grpc.db import db_pb2
+from mindsdb.grpc.db import db_pb2, common_pb2
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -46,13 +46,13 @@ class DBClientGRPC:
                                      context=ctx_str)
 
     @staticmethod
-    def _to_status_response(response: db_pb2.StatusResponse):
+    def _to_status_response(response: common_pb2.StatusResponse):
         return StatusResponse(success=response.success,
                               error_message=response.error_message)
 
 
     @staticmethod
-    def _to_response(response: db_pb2.Response):
+    def _to_response(response: common_pb2.Response):
         data = pickle.loads(response.data_frame)
         return Response(
                 resp_type=response.type,

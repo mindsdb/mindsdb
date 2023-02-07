@@ -11,27 +11,24 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
+import mindsdb.grpc.db.common_pb2 as common__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x08\x64\x62.proto\"O\n\x0eHandlerContext\x12\x0f\n\x07\x63ontext\x18\x01 \x01(\t\x12\x14\n\x0chandler_type\x18\x02 \x01(\t\x12\x16\n\x0ehandler_params\x18\x03 \x01(\t\"E\n\x12NativeQueryContext\x12 \n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x0f.HandlerContext\x12\r\n\x05query\x18\x02 \x01(\t\"E\n\x12\x42inaryQueryContext\x12 \n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x0f.HandlerContext\x12\r\n\x05query\x18\x02 \x01(\x0c\"A\n\x0e\x43olumnsContext\x12 \n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x0f.HandlerContext\x12\r\n\x05table\x18\x02 \x01(\t\"8\n\x0eStatusResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x15\n\rerror_message\x18\x02 \x01(\t\"f\n\x08Response\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\x12\n\ndata_frame\x18\x02 \x01(\x0c\x12\r\n\x05query\x18\x03 \x01(\x05\x12\x12\n\nerror_code\x18\x04 \x01(\x05\x12\x15\n\rerror_message\x18\x05 \x01(\t2\xdc\x02\n\tDBService\x12-\n\x07\x43onnect\x12\x0f.HandlerContext\x1a\x0f.StatusResponse\"\x00\x12\x35\n\x0f\x43heckConnection\x12\x0f.HandlerContext\x1a\x0f.StatusResponse\"\x00\x12\x30\n\nDisconnect\x12\x0f.HandlerContext\x1a\x0f.StatusResponse\"\x00\x12/\n\x0bNativeQuery\x12\x13.NativeQueryContext\x1a\t.Response\"\x00\x12/\n\x0b\x42inaryQuery\x12\x13.BinaryQueryContext\x1a\t.Response\"\x00\x12)\n\tGetTables\x12\x0f.HandlerContext\x1a\t.Response\"\x00\x12*\n\nGetColumns\x12\x0f.ColumnsContext\x1a\t.Response\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x08\x64\x62.proto\x1a\x0c\x63ommon.proto\"O\n\x0eHandlerContext\x12\x0f\n\x07\x63ontext\x18\x01 \x01(\t\x12\x14\n\x0chandler_type\x18\x02 \x01(\t\x12\x16\n\x0ehandler_params\x18\x03 \x01(\t\"E\n\x12NativeQueryContext\x12 \n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x0f.HandlerContext\x12\r\n\x05query\x18\x02 \x01(\t\"E\n\x12\x42inaryQueryContext\x12 \n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x0f.HandlerContext\x12\r\n\x05query\x18\x02 \x01(\x0c\"A\n\x0e\x43olumnsContext\x12 \n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x0f.HandlerContext\x12\r\n\x05table\x18\x02 \x01(\t2\xdc\x02\n\tDBService\x12-\n\x07\x43onnect\x12\x0f.HandlerContext\x1a\x0f.StatusResponse\"\x00\x12\x35\n\x0f\x43heckConnection\x12\x0f.HandlerContext\x1a\x0f.StatusResponse\"\x00\x12\x30\n\nDisconnect\x12\x0f.HandlerContext\x1a\x0f.StatusResponse\"\x00\x12/\n\x0bNativeQuery\x12\x13.NativeQueryContext\x1a\t.Response\"\x00\x12/\n\x0b\x42inaryQuery\x12\x13.BinaryQueryContext\x1a\t.Response\"\x00\x12)\n\tGetTables\x12\x0f.HandlerContext\x1a\t.Response\"\x00\x12*\n\nGetColumns\x12\x0f.ColumnsContext\x1a\t.Response\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'db_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _HANDLERCONTEXT._serialized_start=12
-  _HANDLERCONTEXT._serialized_end=91
-  _NATIVEQUERYCONTEXT._serialized_start=93
-  _NATIVEQUERYCONTEXT._serialized_end=162
-  _BINARYQUERYCONTEXT._serialized_start=164
-  _BINARYQUERYCONTEXT._serialized_end=233
-  _COLUMNSCONTEXT._serialized_start=235
-  _COLUMNSCONTEXT._serialized_end=300
-  _STATUSRESPONSE._serialized_start=302
-  _STATUSRESPONSE._serialized_end=358
-  _RESPONSE._serialized_start=360
-  _RESPONSE._serialized_end=462
-  _DBSERVICE._serialized_start=465
-  _DBSERVICE._serialized_end=813
+  _HANDLERCONTEXT._serialized_start=26
+  _HANDLERCONTEXT._serialized_end=105
+  _NATIVEQUERYCONTEXT._serialized_start=107
+  _NATIVEQUERYCONTEXT._serialized_end=176
+  _BINARYQUERYCONTEXT._serialized_start=178
+  _BINARYQUERYCONTEXT._serialized_end=247
+  _COLUMNSCONTEXT._serialized_start=249
+  _COLUMNSCONTEXT._serialized_end=314
+  _DBSERVICE._serialized_start=317
+  _DBSERVICE._serialized_end=665
 # @@protoc_insertion_point(module_scope)

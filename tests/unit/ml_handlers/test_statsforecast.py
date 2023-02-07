@@ -11,6 +11,7 @@ from mindsdb_sql import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
 
+
 def create_mock_df():
     df2 = pd.DataFrame(pd.date_range(start="1/1/2010", periods=31, freq="Q"), columns=["time_col"])
     df3 = df2.copy()
@@ -44,14 +45,13 @@ def test_statsforecast_df_transformations():
     pd.testing.assert_frame_equal(mindsdb_results_df, df[["time_col", "target_col", "group_col"]])
 
     # Test for multiple groups
-    settings_dict["group_by"]= ["group_col", "group_col_2", "group_col_3"]
+    settings_dict["group_by"] = ["group_col", "group_col_2", "group_col_3"]
     sf_df = sf_handler._transform_to_statsforecast_df(df, "target_col", settings_dict)
     assert sf_df["unique_id"][0] == "a|a2|a3"
     # Test reversing the transform
     sf_results_df = sf_df.rename({"y": "AutoARIMA"}, axis=1).set_index("unique_id")
     mindsdb_results_df = sf_handler._get_results_from_statsforecast_df(sf_results_df, settings_dict)
     pd.testing.assert_frame_equal(mindsdb_results_df, df)
-
 
 
 class TestStatsForecast(BaseExecutorTest):
@@ -108,7 +108,6 @@ class TestStatsForecast(BaseExecutorTest):
         """
         )
         assert list(round(result_df["target_col"])) == [42, 43, 44]
-
 
         # now add more groups
         self.run_sql(

@@ -1,11 +1,11 @@
-import numpy as np
+import pandas as pd
 import dill
 from mindsdb.integrations.libs.base import BaseMLEngine
 from statsforecast import StatsForecast
 from statsforecast.models import AutoARIMA
 
 # TO-DO: generalise these
-DEFAULT_FREQUENCY = "Q"
+DEFAULT_FREQUENCY = "D"
 DEFAULT_MODEL = AutoARIMA()
 
 class StatsForecastHandler(BaseMLEngine):
@@ -18,13 +18,8 @@ class StatsForecastHandler(BaseMLEngine):
     def create(self, target, df, args):
         time_settings = args["timeseries_settings"]
         assert time_settings["is_timeseries"], "Specify time series settings in your query"
-        # Train model
-        training_df = self._transform_to_statsforecast_df(df, target, time_settings)
-        sf = StatsForecast(models=[DEFAULT_MODEL], freq=DEFAULT_FREQUENCY)
-        sf.fit(training_df)
-
         ###### store model args and time series settings in the model folder
-        model_args = sf.fitted_[0][0].model_
+        model_args = {}
         model_args["target"] = target
         model_args["frequency"] = DEFAULT_FREQUENCY
         model_args["horizon"] = time_settings["horizon"]
@@ -32,22 +27,18 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["group_by"] = time_settings["group_by"]
 
         ###### persist changes to handler folder
-        self.model_storage.file_set('model', dill.dumps(model_args))
+        self.model_storage.file_set('model_args', dill.dumps(model_args))
     
     def predict(self, df, args):
         # Load fitted model
-        model_args = dill.loads(self.model_storage.file_get('model'))
-        fitted_model = DEFAULT_MODEL
-        fitted_model.model_ = model_args
-
-        prediction_df = self._transform_to_statsforecast_df(df, model_args["target"], model_args)
+        model_args = dill.loads(self.model_storage.file_get('model_args'))
         # StatsForecast won't handle extra columns - it assumes they're external regressors
-        sf = StatsForecast(models=[AutoARIMA()], freq=model_args["frequency"], df=prediction_df)
-        sf.fitted_ = np.array([[fitted_model]])
-        forecast_df = sf.forecast(model_args["horizon"])  # TO-DO: change to sf.predict()
+        sf = StatsForecast(models=[AutoARIMA()], freq=model_args["frequency"])
+        prediction_df = self._transform_to_statsforecast_df(df, model_args["target"], model_args)
+        forecast_df = sf.forecast(model_args["horizon"], prediction_df)  # TO-DO: change to sf.predict()
 
-
-        return self._get_results_from_statsforecast_df(forecast_df, model_args)
+        results_df = self._get_results_from_statsforecast_df(forecast_df, model_args)
+        return results_df
     
     def _transform_to_statsforecast_df(self, df, target, settings_dict):
         """Transform dataframes into the specific format required by SF."""
@@ -76,4 +67,7 @@ class StatsForecastHandler(BaseMLEngine):
         if len(model_args["group_by"]) > 1:
             for i, group in enumerate(model_args["group_by"]):
                 return_df[group] = return_df["unique_id"].apply(lambda x: x.split("|")[i])
+        else:
+            group_by_col = model_args["group_by"][0]
+            return_df[group_by_col] = return_df["unique_id"]
         return return_df.drop(["unique_id"], axis=1)

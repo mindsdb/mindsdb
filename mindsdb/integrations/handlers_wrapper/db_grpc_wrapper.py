@@ -24,11 +24,11 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
             "%s.__init__: ", self.__class__.__name__
         )
 
-    def get_handler(self, handler_ctx: db_pb2.HandlerContext):
+    def _get_handler(self, handler_ctx: db_pb2.HandlerContext):
         ctx.load(handler_ctx.context)
         handler_class = get_handler(handler_ctx.handler_type)
         logger.error(
-            "%s.get_handler: requested instance of %s handler",
+            "%s._get_handler: requested instance of %s handler",
             self.__class__.__name__,
             handler_class,
         )
@@ -46,7 +46,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
             "%s.check_connection calling", self.__class__.__name__
         )
         try:
-            handler = self.get_handler(request)
+            handler = self._get_handler(request)
             res = handler.check_connection()
             result = common_pb2.StatusResponse(success=res.success, error_message=res.error_message)
         except Exception:
@@ -61,7 +61,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
             "%s.connect calling", self.__class__.__name__
         )
         try:
-            handler = self.get_handler(request)
+            handler = self._get_handler(request)
             handler.connect()
             result = common_pb2.StatusResponse(success=True, error_message="")
         except Exception:
@@ -75,7 +75,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
             "%s.disconnect calling", self.__class__.__name__
         )
         try:
-            handler = self.get_handler(request)
+            handler = self._get_handler(request)
             handler.disconnect()
             result = common_pb2.StatusResponse(success=True, error_message="")
         except Exception:
@@ -94,7 +94,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
             query,
         )
         try:
-            handler = self.get_handler(request.context)
+            handler = self._get_handler(request.context)
             res = handler.native_query(query)
             data = pickle.dumps(res.data_frame)
             result = common_pb2.Response(type=res.resp_type,
@@ -124,7 +124,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
                 self.__class__.__name__,
                 query,
             )
-            handler = self.get_handler(request.context)
+            handler = self._get_handler(request.context)
             res = handler.query(query)
             data = pickle.dumps(res.data_frame)
             result = common_pb2.Response(type=res.resp_type,
@@ -151,7 +151,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         )
         result = None
         try:
-            handler = self.get_handler(request)
+            handler = self._get_handler(request)
             res = handler.get_tables()
             data = pickle.dumps(res.data_frame)
             result = common_pb2.Response(type=res.resp_type,
@@ -180,7 +180,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         )
         result = None
         try:
-            handler = self.get_handler(request.context)
+            handler = self._get_handler(request.context)
             res = handler.get_columns(request.table)
             data = pickle.dumps(res.data_frame)
             result = common_pb2.Response(type=res.resp_type,

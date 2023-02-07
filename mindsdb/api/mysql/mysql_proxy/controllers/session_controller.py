@@ -73,6 +73,10 @@ class SessionController:
             "packet_sequence_number": self.packet_sequence_number,
         }
 
+    def from_json(self, updated):
+        for key in updated:
+            setattr(self, key, updated[key])
+
 
 class ServerSessionContorller(SessionController):
     """SessionController implementation for case of Executor service.

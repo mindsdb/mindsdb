@@ -15,7 +15,7 @@ class RocksetHandler(MySQLHandler):
         super().__init__(name, **kwargs)
 
 
-connection_args = OrderedDict([
+connection_args = OrderedDict(
     user = {
         'type': ARG_TYPE.STRING,
         'description': 'Rockset user name'
@@ -44,7 +44,7 @@ connection_args = OrderedDict([
         'type': ARG_TYPE.STRING,
         'description': 'Rockset database'
     }
-
+)
 connection_args_example = OrderedDict(
     user = 'rockset',
     password = 'rockset',
@@ -53,3 +53,4 @@ connection_args_example = OrderedDict(
     host = 'localhost',
     port = '3306',
     database = 'test'
+)

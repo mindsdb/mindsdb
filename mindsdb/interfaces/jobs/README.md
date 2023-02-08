@@ -86,7 +86,8 @@ Creates one time run job and run it once on 1st April
 **Template variables:**
 Supported variables at the moment: 
 - PREVIOUS_START_DATETIME - replaced by date and time of previous run of this job 
-- START_DATE - replaced by date 
+- START_DATE - replaced by date of job run
+- START_DATETIME- replaced by datetime of job run
 
 ## Delete job
 

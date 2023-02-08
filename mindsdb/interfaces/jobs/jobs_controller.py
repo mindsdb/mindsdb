@@ -313,6 +313,9 @@ class JobsExecutor:
                 if '{{START_DATE}}' in sql:
                     value = history_record.start_at.strftime("%Y-%m-%d")
                     sql = sql.replace('{{START_DATE}}', value)
+                if '{{START_DATETIME}}' in sql:
+                    value = history_record.start_at.strftime("%Y-%m-%d %H:%M:%S")
+                    sql = sql.replace('{{START_DATETIME}}', value)
 
                 query = parse_sql(sql, dialect='mindsdb')
 

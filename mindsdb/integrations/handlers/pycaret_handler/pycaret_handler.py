@@ -1,7 +1,7 @@
 from typing import Optional, Dict
 
 import pandas as pd
-from pycaret.classification import setup, compare_models, evaluate_model, predict_model, finalize_model, save_model, load_model
+from pycaret.classification import setup, compare_models, predict_model, finalize_model
 
 
 class PyCaretHandler(BaseMLEngine):

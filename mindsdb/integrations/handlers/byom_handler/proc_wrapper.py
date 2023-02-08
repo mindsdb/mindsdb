@@ -18,8 +18,6 @@ The flow is as follows:
     6. Exit
 """
 
-import os
-import re
 import sys
 import pickle
 import inspect
@@ -51,32 +49,6 @@ def import_string(code, module_name='model'):
     # sys.modules['my_module'] = module
     return module
 
-
-def find_requirements(code):
-    # get requirements from string
-    # they should be located at the top of the file, before code
-
-    pattern = '^[\w\\[\\]-]+[=!<>\s]*[\d\.]*[,=!<>\s]*[\d\.]*$'
-    modules = []
-    for line in code.split():
-        line = line.strip()
-        if line.startswith('#'):
-            if re.match(line, pattern):
-                modules.append(line)
-        elif line != '':
-            # it's code. exiting
-            break
-    return modules
-
-
-def install_modules(modules):
-    # install in current environment using pip
-    exec_path = os.path.basename(sys.executable)
-    pip_cmd = os.path.join(exec_path, 'pip')
-    for module in modules:
-        os.system(f'{pip_cmd} install {module}')
-
-
 def find_model_class(module):
     # find the first class that contents predict and train methods
     for _, klass in inspect.getmembers(module, inspect.isclass):
@@ -88,26 +60,6 @@ def find_model_class(module):
             return klass
 
 
-def get_model_class(code):
-    # initialize and return model class from code
-    # try to install requirements
-
-    try:
-        module = import_string(code)
-    except ModuleNotFoundError as e:
-        print(e)
-        # try to install
-        requirements = find_requirements(code)
-        if len(requirements) == 0:
-            raise e
-
-        install_modules(requirements)
-        module = import_string(code)
-
-    # find model class in module
-    return find_model_class(module)
-
-
 def main():
     # replace print output to stderr
     sys.stdout = sys.stderr
@@ -116,7 +68,10 @@ def main():
 
     method = params['method']
     code = params['code']
-    model_class = get_model_class(code)
+
+    module = import_string(code)
+
+    model_class = find_model_class(module)
 
     if method == 'train':
         df = params['df']

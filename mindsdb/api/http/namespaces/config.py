@@ -71,6 +71,10 @@ class GetConfig(Resource):
                     f'Unknown argumens: {unknown_argumens}'
                 )
 
+        config_path = Path(Config().config_path)
+        if config_path.is_file() is False:
+            config_path.write_text('{}')
+
         with open(Config().config_path, 'r') as fp:
             config_data = json.load(fp)
 

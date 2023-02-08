@@ -98,9 +98,20 @@ class OpenAIHandler(BaseMLEngine):
         if args.get('context_column', False) and args['context_column'] not in df.columns:
             raise Exception(f"This model expects context in the '{args['context_column']}' column.")
 
+        # api argument validation
         model_name = args.get('model_name', self.default_model)
-        temperature = min(1.0, max(0.0, args.get('temperature', 0.0)))
-        max_tokens = pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens))
+        api_args = {
+            'max_tokens': pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens)),
+            'temperature': min(1.0, max(0.0, args.get('temperature', 0.0))),
+            'top_p': pred_args.get('top_p', None),
+            'n': pred_args.get('n', None),
+            'stop': pred_args.get('stop', None),
+            'presence_penalty': pred_args.get('presence_penalty', None),
+            'frequency_penalty': pred_args.get('frequency_penalty', None),
+            'best_of': pred_args.get('best_of', None),
+            'logit_bias': pred_args.get('logit_bias', None),
+            'user': pred_args.get('user', None),
+        }
 
         if args.get('prompt_template', False):
             if pred_args.get('prompt_template', False):
@@ -172,7 +183,8 @@ class OpenAIHandler(BaseMLEngine):
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
         api_key = self._get_api_key(args)
-        completion = self._completion(model_name, prompts, max_tokens, temperature, api_key, args)
+        api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
+        completion = self._completion(model_name, prompts, api_key, api_args, args)
 
         # add null completion for empty prompts
         for i in sorted(empty_prompt_ids):
@@ -199,7 +211,7 @@ class OpenAIHandler(BaseMLEngine):
 
         return pred_df
 
-    def _completion(self, model_name, prompts, max_tokens, temperature, api_key, args, parallel=True):
+    def _completion(self, model_name, prompts, api_key, api_args, args, parallel=True):
         """
         Handles completion for an arbitrary amount of rows.
 
@@ -211,14 +223,13 @@ class OpenAIHandler(BaseMLEngine):
         because even with previous checks the tokens-per-minute limit may apply.
         """
         @retry_with_exponential_backoff
-        def _submit_completion(model_name, prompts, max_tokens, temperature, api_key, args):
+        def _submit_completion(model_name, prompts, api_key, api_args, args):
             return openai.Completion.create(
                 model=model_name,
                 prompt=prompts,
-                max_tokens=max_tokens,
-                temperature=temperature,
                 api_key=api_key,
-                organization=args.get('api_organization')
+                organization=args.get('api_organization'),
+                **api_args
             )
 
         def _tidy(comp):
@@ -229,9 +240,8 @@ class OpenAIHandler(BaseMLEngine):
             completion = _submit_completion(
                 model_name,
                 prompts,
-                max_tokens,
-                temperature,
                 api_key,
+                api_args,
                 args
             )
             return _tidy(completion)  
@@ -249,9 +259,8 @@ class OpenAIHandler(BaseMLEngine):
             for i in range(math.ceil(len(prompts) / max_batch_size)):
                 partial = _submit_completion(model_name,
                                              prompts[i * max_batch_size:(i + 1) * max_batch_size],
-                                             max_tokens,
-                                             temperature,
                                              api_key,
+                                             api_args,
                                              args)
                 if not completion:
                     completion = partial
@@ -267,9 +276,8 @@ class OpenAIHandler(BaseMLEngine):
                     future = executor.submit(_submit_completion,
                                              model_name,
                                              prompts[i * max_batch_size:(i + 1) * max_batch_size],
-                                             max_tokens,
-                                             temperature,
                                              api_key,
+                                             api_args,
                                              args)
                     promises.append({"choices": future})
             completion = None

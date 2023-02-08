@@ -85,7 +85,8 @@
                 "setup/custom-config",
                 "setup/environment-vars"
               ]
-            }
+            },
+            "setup/community-deploys-mindsdb"
           ]
         },
         {
@@ -342,19 +343,22 @@
               "group": "Time Series",
               "pages": [
                 "sql/tutorials/house-sales-forecasting",
-                "sql/tutorials/eeg-forecasting"
+                "sql/tutorials/eeg-forecasting",
+                "sql/tutorials/time-series-community"
               ]
             },
             {
               "group": "Classification",
               "pages": [
-                "sql/tutorials/customer-churn"
+                "sql/tutorials/customer-churn",
+                "sql/tutorials/classification-community"
               ]
             },
             {
               "group": "Regression",
               "pages": [
-                "sql/tutorials/home-rentals"
+                "sql/tutorials/home-rentals",
+                "sql/tutorials/regression-community"
               ]
             },
             "tutorials"

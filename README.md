@@ -5,7 +5,7 @@
 </h1>
 <div align="center">
 
-<a href="https://www.producthunt.com/posts/nlp-inside-your-database?utm_source=badge-featured&utm_medium=badge&utm_souce=badge-nlp&#0045;inside&#0045;your&#0045;database" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=377472&theme=light" alt="NLP&#0032;Inside&#0032;your&#0032;database - Query&#0032;OpenAI’s&#0032;GPT&#0045;3&#0032;from&#0032;directly&#0032;inside&#0032;your&#0032;database | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+<a href="https://www.producthunt.com/posts/nlp-inside-your-database?utm_source=badge-top-post-badge&utm_medium=badge&utm_souce=badge-nlp&#0045;inside&#0045;your&#0045;database" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/top-post-badge.svg?post_id=377472&theme=light&period=daily" alt="NLP&#0032;inside&#0032;your&#0032;database - Query&#0032;OpenAI’s&#0032;GPT&#0045;3&#0032;from&#0032;directly&#0032;inside&#0032;your&#0032;database | Product Hunt" style="width: 250px; height: 54px;" width="270" height="74" /></a>
 <br>
 	<a href="https://github.com/mindsdb/mindsdb/actions"><img src="https://github.com/mindsdb/mindsdb/workflows/MindsDB%20workflow/badge.svg" alt="MindsDB workflow"></a>
 

@@ -33,7 +33,7 @@ class OpenAIHandler(BaseMLEngine):
             args = args['using']
 
         if len(set(args.keys()) & {'question_column', 'prompt_template', 'json_struct'}) == 0:
-            raise Exception(f'Either of `question_column` or `prompt_template` or `json_struct` are required.')
+            raise Exception('One of `question_column`, `prompt_template` or `json_struct` is required for this engine.')
 
         keys_collection = [
             ['prompt_template'],
@@ -47,7 +47,6 @@ class OpenAIHandler(BaseMLEngine):
                         1) a `prompt_template`
                         2) a `question_column` and an optional `context_column`
                         3) a `json_struct`
-                    but do not mix the keys.
                 '''))
 
     def create(self, target, args=None, **kwargs):

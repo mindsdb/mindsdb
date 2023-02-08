@@ -291,7 +291,7 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
         res = {
                 "model_name": u_params.model_name,
                 "project_name": u_params.project_name,
-                "data_integration_ref": u_params.data_integration_ref,
+                "data_integration_ref": json.loads(u_params.data_integration_ref),
                 "fetch_data_query": u_params.fetch_data_query,
                 "join_learn_process": u_params.join_learn_process,
                 "label": u_params.label,

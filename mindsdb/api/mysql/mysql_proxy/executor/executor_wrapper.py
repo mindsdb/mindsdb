@@ -229,7 +229,6 @@ class ExecutorService:
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
-            # logger.error("%s.stmt_execute: execution error - %s", err_msg)
             return {"error": err_msg}, 500
 
     def query_execute(self):
@@ -238,34 +237,10 @@ class ExecutorService:
             executor = self._get_executor(params)
             sql = params.get("sql")
             executor.query_execute(sql)
-            # logger.debug(
-            #     "%s.query_execute: executor.data(type of %s) - %s",
-            #     self.__class__.__name__,
-            #     type(executor.data),
-            #     executor.data,
-            # )
-            # logger.debug(
-            #     "%s.query_execute: executor.columns(type of %s) - %s",
-            #     self.__class__.__name__,
-            #     type(executor.columns),
-            #     executor.columns,
-            # )
-            # logger.debug(
-            #     "%s.query_execute: executor.params(type of %s) - %s",
-            #     self.__class__.__name__,
-            #     type(executor.params),
-            #     executor.params,
-            # )
-
             resp = executor._to_json()
             return resp, 200
         except Exception:
             err_msg = traceback.format_exc()
-            # logger.error(
-            #     "%s.query_execute: execution error - %s",
-            #     self.__class__.__name__,
-            #     err_msg,
-            # )
             return {"error": err_msg}, 500
 
     def execute_external(self):

@@ -201,7 +201,7 @@ class MLClientGRPC:
         update_params = ml_pb2.UpdateParams(
                 model_name=model_name,
                 project_name=project_name,
-                data_integration_ref=data_integration_ref,
+                data_integration_ref=json.dumps(data_integration_ref),
                 fetch_data_query=fetch_data_query,
                 join_learn_process=join_learn_process,
                 label=label,

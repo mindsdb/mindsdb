@@ -23,7 +23,7 @@ class OpenAIHandler(BaseMLEngine):
         self.default_model = 'text-davinci-002'
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
-        self.default_max_tokens = 20
+        self.default_max_tokens = 100
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):

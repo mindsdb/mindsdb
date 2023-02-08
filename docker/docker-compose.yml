@@ -28,8 +28,10 @@ services:
       MINDSDB_EXECUTOR_URL: "http://executor:5002"
       BALANCER_URL: "http://balancer:80"
         # MINDSDB_DB_SERVICE_URL: "http://db_service:5000"
+      MINDSDB_DB_INTERCONNECTION_API: "grpc"
       MINDSDB_DB_SERVICE_HOST: "db_service"
-      MINDSDB_DB_SERVICE_PORT: "5000"
+      MINDSDB_DB_SERVICE_PORT: "50050"
+        # MINDSDB_DB_SERVICE_PORT: "5000"
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       FLASK_DEBUG: "1"
@@ -56,10 +58,15 @@ services:
         target: /mindsdb
     environment:
       # have to share mindsdb database, because it doens't work without it
-      PORT: 5001
+      # PORT: 5001
+      PORT: 50051
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
+        # MINDSDB_DB_SERVICE_HOST: "db_service"
+        # MINDSDB_DB_SERVICE_PORT: 5000
+      MINDSDB_DB_INTERCONNECTION_API: "grpc"
       MINDSDB_DB_SERVICE_HOST: "db_service"
-      MINDSDB_DB_SERVICE_PORT: 5000
+      MINDSDB_DB_SERVICE_PORT: "50050"
+      MINDSDB_ML_INTERCONNECTION_API: "grpc"
 
   huggingface:
     build:
@@ -75,8 +82,11 @@ services:
       # have to share mindsdb database, because it doens't work without it
       PORT: 5003
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
+        # MINDSDB_DB_SERVICE_HOST: "db_service"
+        # MINDSDB_DB_SERVICE_PORT: 5000
+      MINDSDB_DB_INTERCONNECTION_API: "grpc"
       MINDSDB_DB_SERVICE_HOST: "db_service"
-      MINDSDB_DB_SERVICE_PORT: 5000
+      MINDSDB_DB_SERVICE_PORT: "50050"
 
 
   db_service:
@@ -92,6 +102,8 @@ services:
         target: /mindsdb
     environment:
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      MINDSDB_DB_INTERCONNECTION_API: "grpc"
+      PORT: "50050"
 
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:5000"]
@@ -111,8 +123,14 @@ services:
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       BALANCER_URL: "http://balancer:80"
         # MINDSDB_DB_SERVICE_URL: "http://db_service:5000"
+      MINDSDB_DB_INTERCONNECTION_API: "grpc"
       MINDSDB_DB_SERVICE_HOST: "db_service"
-      MINDSDB_DB_SERVICE_PORT: "5000"
+      MINDSDB_DB_SERVICE_PORT: "50050"
+        # MINDSDB_DB_SERVICE_HOST: "db_service"
+        # MINDSDB_DB_SERVICE_PORT: "5000"
+      MINDSDB_ML_INTERCONNECTION_API: "grpc"
+      MINDSDB_ML_SERVICE_HOST: "lightwood"
+      MINDSDB_ML_SERVICE_PORT: "50051"
     volumes:
       - type: bind
         source: ../

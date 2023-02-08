@@ -307,7 +307,8 @@ class IntegrationController:
             )
         from mindsdb.integrations.libs.base import BaseMLEngine
         # from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
-        from mindsdb.integrations.handlers_client.ml_client import MLClient
+        # from mindsdb.integrations.handlers_client.ml_client import MLClient
+        from mindsdb.integrations.handlers_client.ml_client_factory import MLClient
 
         HandlerClass = self.handler_modules[integration_engine].Handler
 

@@ -43,21 +43,31 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
         server.add_insecure_port(addr)
         server.start()
         server.wait_for_termination()
+
     def _get_handler_controller(self):
         return IntegrationController()
+
+    def _get_file_storage(self, integration_id):
+        fs_store = FileStorage(
+            resource_group=RESOURCE_GROUP.INTEGRATION,
+            resource_id=integration_id,
+            sync=True,
+        )
+        return fs_store
 
     def _get_storage_factory(self):
         return FileStorageFactory(resource_group=RESOURCE_GROUP.PREDICTOR, sync=True)
 
     def _get_handler(self, handler_context: ml_pb2.HandlerContextML):
-        ctx.load(handler_context.context)
+        ctx.load(json.loads(handler_context.context))
         params = json.loads(handler_context.handler_params)
         integration_id = params["integration_id"]
         _type = params["integration_engine"] or params.get("name", None)
         logger.info(
-            "%s.get_handler: request handler of type - %s",
+            "%s.get_handler: request handler of type - %s, context - %s",
             self.__class__.__name__,
             _type,
+            handler_context.context,
         )
 
         handler_class = get_handler(_type)
@@ -196,7 +206,7 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
                 "data": json.loads(p_params.data),
                 "pred_format": p_params.pred_format,
                 "project_name": p_params.project_name,
-                "version": p_params.version,
+                "version": p_params.version if p_params.version > 0 else None,
                 "params": json.loads(p_params.params),
             }
         return res
@@ -243,12 +253,12 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
         res = {
                 "model_name": l_params.model_name,
                 "project_name": l_params.project_name,
-                "data_integration_ref": l_params.data_integration_ref,
+                "data_integration_ref": json.loads(l_params.data_integration_ref),
                 "fetch_data_query": l_params.fetch_data_query,
-                "problem_definition": l_params.problem_definition, 
+                "problem_definition": json.loads(l_params.problem_definition), 
                 "join_learn_process": l_params.join_learn_process,
                 "label": l_params.label,
-                "version": l_params.version,
+                "version": l_params.version if l_params.version > 0 else None,
                 "is_retrain": l_params.is_retrain,
                 "set_active": l_params.set_active,
             }
@@ -285,7 +295,7 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
                 "fetch_data_query": u_params.fetch_data_query,
                 "join_learn_process": u_params.join_learn_process,
                 "label": u_params.label,
-                "version": u_params.version,
+                "version": u_params.version if u_params.version > 0 else None,
                 "set_active": u_params.set_active,
             }
         return res

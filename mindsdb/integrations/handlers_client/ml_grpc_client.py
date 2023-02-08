@@ -31,6 +31,10 @@ class MLClientGRPC:
     def __init__(self, **handler_kwargs: dict):
 
         self.handler_params = handler_kwargs
+        # have to create a handler instance
+        # because Executor accesses to some handler attributes
+        # directly
+        self.handler = BaseMLEngineExec(**handler_kwargs)
         # remove all 'object' params from dict before sending it to the serverside.
         # all of them will be created there
         for arg in (
@@ -49,6 +53,14 @@ class MLClientGRPC:
 
     def __del__(self):
         self.channel.close()
+
+    @property
+    def database_controller(self):
+        return self.handler.database_controller
+
+    @property
+    def handler_controller(self):
+        return self.handler.handler_controller
 
     @property
     def context(self):
@@ -158,9 +170,9 @@ class MLClientGRPC:
         learn_params = ml_pb2.LearnParams(
                 model_name=model_name,
                 project_name=project_name,
-                data_integration_ref=data_integration_ref,
+                data_integration_ref=json.dumps(data_integration_ref),
                 fetch_data_query=fetch_data_query,
-                problem_definition=problem_definition,
+                problem_definition=json.dumps(problem_definition),
                 join_learn_process=join_learn_process,
                 label=label,
                 version=version,
@@ -170,8 +182,9 @@ class MLClientGRPC:
         request = ml_pb2.LearnContextML(context=self.context, learn_params=learn_params)
         resp = self.stub.Learn(request)
 
-        logger.info("%s.learn: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
-        if resp.error_code and resp.error_message:
+        logger.error("%s.learn: success - %s", self.__class__.__name__, resp.success)
+        if not resp.success:
+            logger.error("%s.learn: returned error - %s", self.__class__.__name__, resp.error_message)
             raise Exception(resp.error_message)
 
     @action_logger(logger)
@@ -198,6 +211,7 @@ class MLClientGRPC:
         request = ml_pb2.UpdateContextML(context=self.context, update_params=update_params)
         resp = self.stub.Update(request)
 
-        logger.info("%s.update: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
-        if resp.error_code and resp.error_message:
+        logger.error("%s.update: success - %s", self.__class__.__name__, resp.success)
+        if not resp.success:
+            logger.error("%s.update: returned error - %s", self.__class__.__name__, resp.error_message)
             raise Exception(resp.error_message)

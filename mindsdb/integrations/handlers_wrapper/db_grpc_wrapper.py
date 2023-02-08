@@ -25,7 +25,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         )
 
     def _get_handler(self, handler_ctx: db_pb2.HandlerContext):
-        ctx.load(handler_ctx.context)
+        ctx.load(json.loads(handler_ctx.context))
         handler_class = get_handler(handler_ctx.handler_type)
         logger.error(
             "%s._get_handler: requested instance of %s handler",

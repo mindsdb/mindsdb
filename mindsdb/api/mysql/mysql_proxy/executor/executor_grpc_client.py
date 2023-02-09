@@ -72,9 +72,6 @@ class ExecutorClientGRPC:
         self.session.from_json(json.loads(response.session))
         logger.info("%s._update_attrs: got data from service - %s", self.__class__.__name__, self.data)
 
-    def to_mysql_columns(self, columns):
-        return columns
-
     @action_logger(logger)
     def stmt_prepare(self, sql):
         params = executor_pb2.ExecutionContext(context=self._context, sql=sql)

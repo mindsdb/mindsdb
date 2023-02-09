@@ -31,6 +31,13 @@ class DBClientGRPC:
         for a in ("fs_store", "file_storage"):
             if a in self.handler_params:
                 del self.handler_params[a]
+
+        # FileController is an object
+        # so it is not a good idea to send it
+        # to service side as parameter
+        # will create a separate instace instead
+        if self.handler_type == "files":
+            del self.handler_params["file_controller"]
         self.channel = grpc.insecure_channel(f"{host}:{port}")
         self.stub = db_pb2_grpc.DBServiceStub(self.channel)
 

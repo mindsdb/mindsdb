@@ -103,8 +103,8 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
 
     @staticmethod
     def _prepare_response(executor):
-        columns=pickle.dumps(executor.to_mysql_columns(executor.columns))
-        params=pickle.dumps(executor.to_mysql_columns(executor.params))
+        columns=pickle.dumps(executor.columns)
+        params=pickle.dumps(executor.params)
         data=pickle.dumps(executor.data)
         state_track=executor.state_track
         server_status=executor.server_status

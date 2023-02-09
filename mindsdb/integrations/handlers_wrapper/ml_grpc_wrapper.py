@@ -203,7 +203,7 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
     def _params_predict_to_dict(p_params: ml_pb2.PredictParams):
         res = {
                 "model_name": p_params.model_name,
-                "data": json.loads(p_params.data),
+                "data": pickle.loads(p_params.data),
                 "pred_format": p_params.pred_format,
                 "project_name": p_params.project_name,
                 "version": p_params.version if p_params.version > 0 else None,

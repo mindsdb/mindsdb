@@ -121,15 +121,6 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
                 is_executed=is_executed,
                 session=session,
                 )
-        # res = executor_pb2.ExecutorResponse(
-        #         columns=pickle.dumps(executor.to_mysql_columns(executor.columns)),
-        #         params=pickle.dumps(executor.to_mysql_columns(executor.params)),
-        #         data=pickle.dumps(executor.data),
-        #         state_track=executor.state_track,
-        #         server_status=executor.server_status,
-        #         is_executed=executor.is_executed,
-        #         session=json.dumps(executor.session.to_json()),
-        #         )
         return res
 
     def DeleteExecutor(self, request, context):

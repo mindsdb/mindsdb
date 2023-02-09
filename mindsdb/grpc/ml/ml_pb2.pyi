@@ -85,13 +85,13 @@ class PredictParams(_message.Message):
     PRED_FORMAT_FIELD_NUMBER: _ClassVar[int]
     PROJECT_NAME_FIELD_NUMBER: _ClassVar[int]
     VERSION_FIELD_NUMBER: _ClassVar[int]
-    data: str
+    data: bytes
     model_name: str
     params: str
     pred_format: str
     project_name: str
     version: int
-    def __init__(self, model_name: _Optional[str] = ..., data: _Optional[str] = ..., pred_format: _Optional[str] = ..., project_name: _Optional[str] = ..., version: _Optional[int] = ..., params: _Optional[str] = ...) -> None: ...
+    def __init__(self, model_name: _Optional[str] = ..., data: _Optional[bytes] = ..., pred_format: _Optional[str] = ..., project_name: _Optional[str] = ..., version: _Optional[int] = ..., params: _Optional[str] = ...) -> None: ...
 
 class UpdateContextML(_message.Message):
     __slots__ = ["context", "update_params"]

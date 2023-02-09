@@ -70,6 +70,7 @@ class ExecutorClientGRPC:
         self.state_track = response.state_track
         self.is_executed = response.is_executed
         self.session.from_json(json.loads(response.session))
+        logger.info("%s._update_attrs: got data from service - %s", self.__class__.__name__, self.data)
 
     def to_mysql_columns(self, columns):
         return columns

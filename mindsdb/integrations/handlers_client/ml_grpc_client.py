@@ -137,7 +137,7 @@ class MLClientGRPC:
     ):
         predict_params = ml_pb2.PredictParams(
                 model_name=model_name,
-                data=json.dumps(data),
+                data=pickle.dumps(data),
                 pred_format=pred_format,
                 project_name=project_name,
                 version=version,

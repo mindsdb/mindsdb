@@ -45,14 +45,20 @@ class ExecutorClientGRPC:
 
     @property
     def _context(self):
-        return executor_pb2.ExecutorContext(
-                id=self.id,
-                connection_id=self.sqlserver.connection_id if hasattr(self.sqlserver, "connection_id") else -1,
-                session_id=self.session.id,
-                session=json.dumps(self.session.to_json()),
-                context=json.dumps(ctx.dump()),
-        )
+        logger.info("%s._context: preparing context. id - %s, session - %s", self.__class__.__name__, self.id, self.session)
+        _id=self.id
+        connection_id=self.sqlserver.connection_id if hasattr(self.sqlserver, "connection_id") else -1
+        session_id=self.session.id
+        session=json.dumps(self.session.to_json())
+        context=json.dumps(ctx.dump())
 
+        return executor_pb2.ExecutorContext(
+                id=_id,
+                connection_id=connection_id,
+                session_id=session_id,
+                session=session,
+                context=context,
+        )
 
     def __del__(self):
         self.stub.DeleteExecutor(self._context)
@@ -63,7 +69,7 @@ class ExecutorClientGRPC:
         self.data = pickle.loads(response.data)
         self.state_track = response.state_track
         self.is_executed = response.is_executed
-        self.session = self.session.from_json(json.loads(response.session))
+        self.session.from_json(json.loads(response.session))
 
     def to_mysql_columns(self, columns):
         return columns

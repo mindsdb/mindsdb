@@ -1,7 +1,6 @@
 import os
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
-from mindsdb.integrations.handlers_wrapper.ml_handler_wrapper import MLHandlerWrapper
 from mindsdb.integrations.handlers_wrapper.ml_grpc_wrapper import MLServiceServicer
 from mindsdb.utilities.log import initialize_log, get_log
 
@@ -11,11 +10,7 @@ if __name__ == "__main__":
     db.init()
     initialize_log(config=config)
     logger = get_log(logger_name="main")
-    api_type = os.environ.get("MINDSDB_INTERCONNECTION_API", "").lower()
-    if api_type == 'grpc':
-        app = MLServiceServicer()
-    else:
-        app = MLHandlerWrapper(__name__)
+    app = MLServiceServicer()
     port = int(os.environ.get("PORT", 5001))
     host = os.environ.get("HOST", "0.0.0.0")
     logger.info("Running ML service: host=%s, port=%s", host, port)

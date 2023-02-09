@@ -1,5 +1,4 @@
 import os
-from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 from mindsdb.integrations.handlers_client.db_grpc_client import DBClientGRPC
 from mindsdb.integrations.libs.handler_helpers import get_handler
 from mindsdb.utilities.log import get_log
@@ -10,11 +9,7 @@ logger = get_log(logger_name="main")
 
 class DBClientFactory:
     def __init__(self):
-        self.api_type = os.environ.get("MINDSDB_INTERCONNECTION_API", "rest").lower()
-        if self.api_type == 'grpc':
-            self.client_class = DBClientGRPC
-        else:
-            self.client_class = DBServiceClient
+        self.client_class = DBClientGRPC
 
         self.host = os.environ.get("MINDSDB_DB_SERVICE_HOST")
         self.port = os.environ.get("MINDSDB_DB_SERVICE_PORT")
@@ -28,9 +23,8 @@ class DBClientFactory:
             handler_class = get_handler(handler_type)
             return handler_class(**kwargs)
         
-        logger.info("%s.__call__: api to communicate with db services - %s",
+        logger.info("%s.__call__: api to communicate with db services - gRPC",
                     self.__class__.__name__,
-                    self.api_type,
                     )
 
         return self.client_class(handler_type, **kwargs)

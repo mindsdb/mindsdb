@@ -1,5 +1,4 @@
 import os
-from mindsdb.integrations.handlers_wrapper.db_handler_wrapper import DBHandlerWrapper
 from mindsdb.integrations.handlers_wrapper.db_grpc_wrapper import DBServiceServicer
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
@@ -11,11 +10,7 @@ if __name__ == "__main__":
     db.init()
     initialize_log(config=config)
     logger = get_log(logger_name="main")
-    api_type = os.environ.get("MINDSDB_INTERCONNECTION_API", "").lower()
-    if api_type == 'grpc':
-        app = DBServiceServicer()
-    else:
-        app = DBHandlerWrapper()
+    app = DBServiceServicer()
     port = int(os.environ.get("PORT", 5001))
     host = os.environ.get("HOST", "0.0.0.0")
     logger.info("Running dbservice(%s): host=%s, port=%s", type(app), host, port)

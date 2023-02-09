@@ -81,8 +81,11 @@ class BYOMUpload(Resource):
     def put(self, name):
         ''' add new model file
             params in FormData:
-                - file
+                - code
+                - requirements
         '''
+
+        return '', 200
 
         data = {}
 

@@ -131,16 +131,17 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
         return executor_pb2.ExecutorStatusResponse(success=True, error_message="")
 
     def StatementPrepare(self, request, context):
+        result = None
         try:
             params = request.json
             executor = self._get_executor(params)
             sql = params.get("sql")
             executor.stmt_prepare(sql)
-            resp = executor._to_json()
-            return resp, 200
+            result = self._prepare_response(executor)
         except Exception:
             err_msg = traceback.format_exc()
-            return {"error": err_msg}, 500
+            result = executor_pb2.Status(error_message=err_msg)
+        return result
 
     def StatementExecute(self, request, context):
         result = None

@@ -55,7 +55,7 @@ class ExecutorClientGRPC:
 
 
     def __del__(self):
-        self.stub.Delete(self._context)
+        self.stub.DeleteExecutor(self._context)
     
     def _update_attrs(self, response: executor_pb2.ExecutorResponse):
         self.columns = pickle.loads(response.columns)
@@ -65,12 +65,15 @@ class ExecutorClientGRPC:
         self.is_executed = response.is_executed
         self.session = self.session.from_json(json.loads(response.session))
 
+    def to_mysql_columns(self, columns):
+        return columns
+
     @action_logger(logger)
     def stmt_prepare(self, sql):
         params = executor_pb2.ExecutionContext(context=self._context, sql=sql)
         resp = self.stub.StatementPrepare(params)
-        if resp.error_msg != "":
-            raise Exception(resp.error_msg)
+        if resp.error_message != "":
+            raise Exception(resp.error_message)
         self._update_attrs(resp)
 
     @action_logger(logger)
@@ -80,32 +83,32 @@ class ExecutorClientGRPC:
 
         params = executor_pb2.StatementExecuteContext(context=self._context, param_values=json.dumps(param_values))
         resp = self.stub.StatementExecute(params)
-        if resp.error_msg != "":
-            raise Exception(resp.error_msg)
+        if resp.error_message != "":
+            raise Exception(resp.error_message)
         self._update_attrs(resp)
 
     @action_logger(logger)
     def query_execute(self, sql):
         params = executor_pb2.ExecutionContext(context=self._context, sql=sql)
         resp = self.stub.QueryExecute(params)
-        if resp.error_msg != "":
-            raise Exception(resp.error_msg)
+        if resp.error_message != "":
+            raise Exception(resp.error_message)
         self._update_attrs(resp)
 
     @action_logger(logger)
     def execute_external(self, sql):
         params = executor_pb2.ExecutionContext(context=self._context, sql=sql)
         resp = self.stub.ExecuteExternal(params)
-        if resp.error_msg != "":
-            raise Exception(resp.error_msg)
+        if resp.error_message != "":
+            raise Exception(resp.error_message)
         self._update_attrs(resp)
 
     @action_logger(logger)
     def parse(self, sql):
         params = executor_pb2.ExecutionContext(context=self._context, sql=sql)
         resp = self.stub.Parse(params)
-        if resp.error_msg != "":
-            raise Exception(resp.error_msg)
+        if resp.error_message != "":
+            raise Exception(resp.error_message)
         self._update_attrs(resp)
 
     @action_logger(logger)
@@ -113,14 +116,14 @@ class ExecutorClientGRPC:
         if self.is_executed:
             return
         resp = self.stub.DoExecute(self._context)
-        if resp.error_msg != "":
-            raise Exception(resp.error_msg)
+        if resp.error_message != "":
+            raise Exception(resp.error_message)
         self._update_attrs(resp)
 
     @action_logger(logger)
     def change_default_db(self, new_db):
         params = executor_pb2.DefaultDBContext(context=self._context, new_db=new_db)
         resp = self.stub.ChangeDefaultDB(params)
-        if resp.error_msg != "":
-            raise Exception(resp.error_msg)
+        if resp.error_message != "":
+            raise Exception(resp.error_message)
         self._update_attrs(resp)

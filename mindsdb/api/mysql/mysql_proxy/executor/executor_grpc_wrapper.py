@@ -38,7 +38,7 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
             "%s.__init__: ", self.__class__.__name__
         )
         self.executors_cache = {}
-        self.session_cache = {}
+        self.sessions_cache = {}
 
     def run(self, **kwargs):
         host = kwargs.get("host", "127.0.0.1")
@@ -84,7 +84,7 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
         session.auth = session_params["auth"]
         session.prepared_stmts = session_params["prepared_stmts"]
         session.packet_sequence_number = session_params["packet_sequence_number"]
-        sqlserver = SqlServerStub(connection_id=session_params["connection_id"])
+        sqlserver = SqlServerStub(connection_id=params.connection_id)
 
         logger.info(
             "%s: session info - id=%s, params=%s",
@@ -104,15 +104,32 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
 
     @staticmethod
     def _prepare_response(executor):
+        columns=pickle.dumps(executor.to_mysql_columns(executor.columns))
+        params=pickle.dumps(executor.to_mysql_columns(executor.params))
+        data=pickle.dumps(executor.data)
+        state_track=executor.state_track
+        server_status=executor.server_status
+        is_executed=executor.is_executed
+        session=json.dumps(executor.session.to_json())
+
         res = executor_pb2.ExecutorResponse(
-                columns=pickle.dumps(executor.to_mysql_columns(executor.columns)),
-                params=pickle.dumps(executor.to_mysql_columns(executor.params)),
-                data=pickle.dumps(executor.data),
-                state_track=executor.state_track,
-                server_status=executor.server_status,
-                is_executed=executor.is_executed,
-                session=json.dumps(executor.session.to_json()),
+                columns=columns,
+                params=params,
+                data=data,
+                state_track=state_track,
+                server_status=server_status,
+                is_executed=is_executed,
+                session=session,
                 )
+        # res = executor_pb2.ExecutorResponse(
+        #         columns=pickle.dumps(executor.to_mysql_columns(executor.columns)),
+        #         params=pickle.dumps(executor.to_mysql_columns(executor.params)),
+        #         data=pickle.dumps(executor.data),
+        #         state_track=executor.state_track,
+        #         server_status=executor.server_status,
+        #         is_executed=executor.is_executed,
+        #         session=json.dumps(executor.session.to_json()),
+        #         )
         return res
 
     def DeleteExecutor(self, request, context):
@@ -125,8 +142,8 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
         if exec_id is not None and exec_id in self.executors_cache:
             del self.executors_cache[exec_id]
 
-        if session_id is not None and session_id in self.session_cache:
-            del self.session_cache[session_id]
+        if session_id is not None and session_id in self.sessions_cache:
+            del self.sessions_cache[session_id]
 
         return executor_pb2.ExecutorStatusResponse(success=True, error_message="")
 
@@ -140,7 +157,7 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
             result = self._prepare_response(executor)
         except Exception:
             err_msg = traceback.format_exc()
-            result = executor_pb2.Status(error_message=err_msg)
+            result = executor_pb2.ExecutorResponse(error_message=err_msg)
         return result
 
     def StatementExecute(self, request, context):
@@ -152,7 +169,7 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
             result = self._prepare_response(executor)
         except Exception:
             err_msg = traceback.format_exc()
-            result = executor_pb2.Status(error_message=err_msg)
+            result = executor_pb2.ExecutorResponse(error_message=err_msg)
         return result
 
     def QueryExecute(self, request, context):
@@ -164,7 +181,7 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
             result = self._prepare_response(executor)
         except Exception:
             err_msg = traceback.format_exc()
-            result = executor_pb2.Status(error_message=err_msg)
+            result = executor_pb2.ExecutorResponse(error_message=err_msg)
         return result
 
     def ExecuteExternal(self, request, context):
@@ -176,7 +193,7 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
             result = self._prepare_response(executor)
         except Exception:
             err_msg = traceback.format_exc()
-            result = executor_pb2.Status(error_message=err_msg)
+            result = executor_pb2.ExecutorResponse(error_message=err_msg)
         return result
 
     def Parse(self, request, context):
@@ -188,7 +205,7 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
             result = self._prepare_response(executor)
         except Exception:
             err_msg = traceback.format_exc()
-            result = executor_pb2.Status(error_message=err_msg)
+            result = executor_pb2.ExecutorResponse(error_message=err_msg)
         return result
 
     def DoExecute(self, request, context):
@@ -199,7 +216,7 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
             result = self._prepare_response(executor)
         except Exception:
             err_msg = traceback.format_exc()
-            result = executor_pb2.Status(error_message=err_msg)
+            result = executor_pb2.ExecutorResponse(error_message=err_msg)
         return result
 
     def ChangeDefaultDB(self, request, context):
@@ -211,7 +228,7 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
             result = self._prepare_response(executor)
         except Exception:
             err_msg = traceback.format_exc()
-            result = executor_pb2.Status(error_message=err_msg)
+            result = executor_pb2.ExecutorResponse(error_message=err_msg)
         return result
 
 

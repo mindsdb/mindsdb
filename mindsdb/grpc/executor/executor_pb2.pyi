@@ -27,12 +27,12 @@ class ExecutorContext(_message.Message):
     ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
-    connection_id: str
+    connection_id: int
     context: str
     id: str
     session: str
     session_id: str
-    def __init__(self, id: _Optional[str] = ..., connection_id: _Optional[str] = ..., session_id: _Optional[str] = ..., session: _Optional[str] = ..., context: _Optional[str] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., connection_id: _Optional[int] = ..., session_id: _Optional[str] = ..., session: _Optional[str] = ..., context: _Optional[str] = ...) -> None: ...
 
 class ExecutorResponse(_message.Message):
     __slots__ = ["columns", "data", "error_message", "is_executed", "params", "server_status", "session", "state_track"]
@@ -44,15 +44,15 @@ class ExecutorResponse(_message.Message):
     SERVER_STATUS_FIELD_NUMBER: _ClassVar[int]
     SESSION_FIELD_NUMBER: _ClassVar[int]
     STATE_TRACK_FIELD_NUMBER: _ClassVar[int]
-    columns: str
-    data: str
+    columns: bytes
+    data: bytes
     error_message: str
     is_executed: bool
-    params: str
+    params: bytes
     server_status: str
     session: str
     state_track: str
-    def __init__(self, columns: _Optional[str] = ..., params: _Optional[str] = ..., data: _Optional[str] = ..., state_track: _Optional[str] = ..., server_status: _Optional[str] = ..., is_executed: bool = ..., session: _Optional[str] = ..., error_message: _Optional[str] = ...) -> None: ...
+    def __init__(self, columns: _Optional[bytes] = ..., params: _Optional[bytes] = ..., data: _Optional[bytes] = ..., state_track: _Optional[str] = ..., server_status: _Optional[str] = ..., is_executed: bool = ..., session: _Optional[str] = ..., error_message: _Optional[str] = ...) -> None: ...
 
 class ExecutorStatusResponse(_message.Message):
     __slots__ = ["error_message", "success"]

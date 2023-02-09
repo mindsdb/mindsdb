@@ -176,7 +176,7 @@ class ExecutorService:
         self.executors_cache[exec_id] = executor
         return executor
 
-    def _run(self, **kwargs):
+    def run(self, **kwargs):
         """Launch internal Flask application."""
         self.app.run(**kwargs)
 

@@ -5,7 +5,7 @@ syntax = "proto3";
 // instance without it
 message ExecutorContext {
     string id = 1;
-    string connection_id = 2;
+    int32 connection_id = 2;
     string session_id = 3;
     string session = 4;
     string context = 5;
@@ -27,9 +27,9 @@ message DefaultDBContext{
 }
 
 message ExecutorResponse {
-    string columns = 1;
-    string params = 2;
-    string data = 3;
+    bytes columns = 1;
+    bytes params = 2;
+    bytes data = 3;
     string state_track = 4;
     string server_status = 5;
     bool is_executed = 6;

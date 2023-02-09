@@ -20,14 +20,14 @@ logger = get_log(logger_name="main")
 class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
 
     def __init__(self):
-        logger.error(
+        logger.info(
             "%s.__init__: ", self.__class__.__name__
         )
 
     def _get_handler(self, handler_ctx: db_pb2.HandlerContext):
         ctx.load(json.loads(handler_ctx.context))
         handler_class = get_handler(handler_ctx.handler_type)
-        logger.error(
+        logger.info(
             "%s._get_handler: requested instance of %s handler",
             self.__class__.__name__,
             handler_class,
@@ -42,7 +42,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
     def CheckConnection(self, request, context):
 
         result = None
-        logger.error(
+        logger.info(
             "%s.check_connection calling", self.__class__.__name__
         )
         try:
@@ -57,7 +57,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
     def Connect(self, request, context):
 
         result = None
-        logger.error(
+        logger.info(
             "%s.connect calling", self.__class__.__name__
         )
         try:
@@ -71,7 +71,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
 
     def Disconnect(self, request, context):
         result = None
-        logger.error(
+        logger.info(
             "%s.disconnect calling", self.__class__.__name__
         )
         try:
@@ -88,7 +88,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         result = None
         query = request.query
 
-        logger.error(
+        logger.info(
             "%s.native_query: calling 'native_query' with query - %s",
             self.__class__.__name__,
             query,
@@ -119,7 +119,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         try:
             query = pickle.loads(request.query)
 
-            logger.error(
+            logger.info(
                 "%s.query: calling 'query' with query - %s",
                 self.__class__.__name__,
                 query,
@@ -145,7 +145,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
 
     def GetTables(self, request, context):
 
-        logger.error(
+        logger.info(
             "%s.get_tables: calling",
             self.__class__.__name__,
         )
@@ -173,7 +173,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
     def GetColumns(self, request, context):
 
 
-        logger.error(
+        logger.info(
             "%s.get_columns: calling for table - %s",
             self.__class__.__name__,
             request.table,
@@ -208,7 +208,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         db_pb2_grpc.add_DBServiceServicer_to_server(
             DBServiceServicer(), server)
         server.add_insecure_port(addr)
-        # logger.error("staring rpc server on [::]:50051")
+        # logger.info("staring rpc server on [::]:50051")
         server.start()
         server.wait_for_termination()
 
@@ -219,7 +219,7 @@ def serve():
     db_pb2_grpc.add_DBServiceServicer_to_server(
         DBServiceServicer(), server)
     server.add_insecure_port('[::]:50051')
-    logger.error("staring rpc server on [::]:50051")
+    logger.info("staring rpc server on [::]:50051")
     server.start()
     server.wait_for_termination()
 

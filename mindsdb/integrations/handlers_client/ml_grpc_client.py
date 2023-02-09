@@ -18,7 +18,6 @@ from mindsdb.integrations.libs.response import (
 )
 
 
-from mindsdb.integrations.handlers_client.base_client import BaseClient, Switcher
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.handler_helpers import action_logger
 from mindsdb.utilities.context import context as ctx
@@ -88,9 +87,7 @@ class MLClientGRPC:
     def native_query(self, query):
         request = ml_pb2.NativeQueryContextML(context=self.context, query=query)
         resp = self.stub.NativeQuery(request)
-        logger.error("%s.native_query: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
-        # data = pickle.loads(resp.data_frame)
-        # logger.error("%s.native_query: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
+        logger.info("%s.native_query: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
 
         return self._to_response(resp)
 
@@ -99,9 +96,7 @@ class MLClientGRPC:
         query = pickle.dumps(query)
         request = ml_pb2.BinaryQueryContextML(context=self.context, query=query)
         resp = self.stub.BinaryQuery(request)
-        logger.error("%s.query: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
-        # data = pickle.loads(resp.data_frame)
-        # logger.error("%s.query: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
+        logger.info("%s.query: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
 
         return self._to_response(resp)
 
@@ -109,9 +104,7 @@ class MLClientGRPC:
     @action_logger(logger)
     def get_tables(self):
         resp = self.stub.GetTables(self.context)
-        logger.error("%s.get_tables: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
-        # data = pickle.loads(resp.data_frame)
-        # logger.error("%s.get_tables: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
+        logger.info("%s.get_tables: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
 
         return self._to_response(resp)
 
@@ -119,9 +112,7 @@ class MLClientGRPC:
     def get_columns(self, table):
         request = ml_pb2.ColumnsContextML(context=self.context, table=table)
         resp = self.stub.GetColumns(request)
-        logger.error("%s.get_columns: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
-        # data = pickle.loads(resp.data_frame)
-        # logger.error("%s.get_columns: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
+        logger.info("%s.get_columns: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
 
         return self._to_response(resp)
 
@@ -182,7 +173,7 @@ class MLClientGRPC:
         request = ml_pb2.LearnContextML(context=self.context, learn_params=learn_params)
         resp = self.stub.Learn(request)
 
-        logger.error("%s.learn: success - %s", self.__class__.__name__, resp.success)
+        logger.info("%s.learn: success - %s", self.__class__.__name__, resp.success)
         if not resp.success:
             logger.error("%s.learn: returned error - %s", self.__class__.__name__, resp.error_message)
             raise Exception(resp.error_message)
@@ -211,7 +202,7 @@ class MLClientGRPC:
         request = ml_pb2.UpdateContextML(context=self.context, update_params=update_params)
         resp = self.stub.Update(request)
 
-        logger.error("%s.update: success - %s", self.__class__.__name__, resp.success)
+        logger.info("%s.update: success - %s", self.__class__.__name__, resp.success)
         if not resp.success:
             logger.error("%s.update: returned error - %s", self.__class__.__name__, resp.error_message)
             raise Exception(resp.error_message)

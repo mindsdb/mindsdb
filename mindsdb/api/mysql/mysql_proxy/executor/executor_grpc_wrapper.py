@@ -34,7 +34,7 @@ class SqlServerStub:
 class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
 
     def __init__(self):
-        logger.error(
+        logger.info(
             "%s.__init__: ", self.__class__.__name__
         )
         self.executors_cache = {}
@@ -48,7 +48,6 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
         executor_pb2_grpc.add_ExecutorServiceServicer_to_server(
             ExecutorServiceServicer(), server)
         server.add_insecure_port(addr)
-        # logger.error("staring rpc server on [::]:50051")
         server.start()
         server.wait_for_termination()
 

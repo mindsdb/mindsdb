@@ -13,8 +13,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
 )
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb.integrations.handlers_client.base_client import BaseClient, Switcher
-from mindsdb.integrations.libs.handler_helpers import get_handler
+from mindsdb.integrations.libs.handler_helpers import get_handler, action_logger
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
 
@@ -63,107 +62,72 @@ class DBClientGRPC:
         )
 
 
+    @action_logger(logger)
     def connect(self):
         resp = self.stub.Connect(self.context)
-        logger.error("%s.connect: returns success - %s, error - %s",
+        logger.info("%s.connect: returns success - %s, error - %s",
                      self.__class__.__name__,
                      resp.success,
                      resp.error_message)
 
         return self._to_status_response(resp)
 
+    @action_logger(logger)
     def check_connection(self):
         resp = self.stub.CheckConnection(self.context)
-        logger.error("%s.check_connection: returns success - %s, error - %s",
+        logger.info("%s.check_connection: returns success - %s, error - %s",
                      self.__class__.__name__,
                      resp.success,
                      resp.error_message)
 
         return self._to_status_response(resp)
 
+    @action_logger(logger)
     def disconnect(self):
         resp = self.stub.Disconnect(self.context)
-        logger.error("%s.disconnect: returns success - %s, error - %s",
+        logger.info("%s.disconnect: returns success - %s, error - %s",
                      self.__class__.__name__,
                      resp.success,
                      resp.error_message)
 
         return self._to_status_response(resp)
 
+    @action_logger(logger)
     def native_query(self, query):
-        logger.error("%s.native_query: calling for query - %s",
-                     self.__class__.__name__,
-                     query)
         request = db_pb2.NativeQueryContext(context=self.context, query=query)
         resp = self.stub.NativeQuery(request)
-        logger.error("%s.native_query: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
+        logger.info("%s.native_query: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
         data = pickle.loads(resp.data_frame)
-        logger.error("%s.native_query: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
+        logger.info("%s.native_query: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
 
         return self._to_response(resp)
 
+    @action_logger(logger)
     def query(self, query):
-        logger.error("%s.query: calling for query - %s",
-                     self.__class__.__name__,
-                     query)
         query = pickle.dumps(query)
         request = db_pb2.BinaryQueryContext(context=self.context, query=query)
         resp = self.stub.BinaryQuery(request)
-        logger.error("%s.query: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
+        logger.info("%s.query: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
         data = pickle.loads(resp.data_frame)
-        logger.error("%s.query: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
+        logger.info("%s.query: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
 
         return self._to_response(resp)
 
-
+    @action_logger(logger)
     def get_tables(self):
-        logger.error("%s.get_tables: calling",
-                     self.__class__.__name__)
         resp = self.stub.GetTables(self.context)
-        logger.error("%s.get_tables: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
+        logger.info("%s.get_tables: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
         data = pickle.loads(resp.data_frame)
-        logger.error("%s.get_tables: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
+        logger.info("%s.get_tables: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
 
         return self._to_response(resp)
 
+    @action_logger(logger)
     def get_columns(self, table):
-        logger.error("%s.get_columns: calling for table - %s",
-                     self.__class__.__name__,
-                     table)
         request = db_pb2.ColumnsContext(context=self.context, table=table)
         resp = self.stub.GetColumns(request)
-        logger.error("%s.get_columns: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
+        logger.info("%s.get_columns: returned error - %s, error_message - %s", self.__class__.__name__, resp.error_code, resp.error_message)
         data = pickle.loads(resp.data_frame)
-        logger.error("%s.get_columns: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
+        logger.info("%s.get_columns: returned data(type of %s) - %s", self.__class__.__name__, type(data), data)
 
         return self._to_response(resp)
-
-
-def test(fail=False):
-    if fail:
-        handler_type = 'mysql'
-    else:
-        handler_type = "postgres"
-    params = {'connection_data':
-              {'user': 'demo_user',
-               'password': 'demo_password',
-               'host': '3.220.66.106',
-               'port': '5432',
-               'database': 'demo',
-               'dbname': 'demo'
-               },
-              'integration_id': 6,
-              'name': 'example_db',
-              }
-
-    client = DBClientGRPC(handler_type, **params)
-    res = client.check_connection()
-    logger.error("response returned - %s", res)
-    query = "SELECT * FROM demo_data.home_rentals LIMIT 10;"
-    client.native_query(query)
-
-
-if __name__ == '__main__':
-    test()
-
-    # test(fail=True)

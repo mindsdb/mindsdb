@@ -21,11 +21,33 @@ The flow is as follows:
 import sys
 import pickle
 import inspect
+import io
+
+import pandas as pd
+
+
+def pd_encode(df):
+    return df.to_parquet(engine='pyarrow')
+
+
+def pd_decode(encoded):
+    fd = io.BytesIO()
+    fd.write(encoded)
+    fd.seek(0)
+    return pd.read_parquet(fd, engine='pyarrow')
+
+
+def encode(obj):
+    return pickle.dumps(obj, protocol=5)
+
+
+def decode(encoded):
+    return pickle.loads(encoded)
 
 
 def return_output(obj):
     # read stdin
-    encoded = pickle.dumps(obj)
+    encoded = encode(obj)
     with open(1, 'wb') as fd:
         fd.write(encoded)
     sys.exit(0)
@@ -35,7 +57,7 @@ def get_input():
     # write to stdout
     with open(0, 'rb') as fd:
         encoded = fd.read()
-        obj = pickle.loads(encoded)
+        obj = decode(encoded)
     return obj
 
 
@@ -74,24 +96,26 @@ def main():
     model_class = find_model_class(module)
 
     if method == 'train':
-        df = params['df']
+        df = pd_decode(params['df'])
         to_predict = params['to_predict']
         model = model_class()
         model.train(df, to_predict)
 
         # return model
         data = model.__dict__
-        return_output(data)
+
+        model_state = encode(data)
+        return_output(model_state)
 
     elif method == 'predict':
-        data = params['model']
-        df = params['df']
+        model_state = params['model_state']
+        df = pd_decode(params['df'])
 
         model = model_class()
-        model.__dict__ = data
+        model.__dict__ = decode(model_state)
 
         res = model.predict(df)
-        return_output(res)
+        return_output(pd_encode(res))
 
     raise NotImplementedError(method)
 

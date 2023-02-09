@@ -14,6 +14,8 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 
+from .proc_wrapper import pd_decode, pd_encode, encode, decode
+
 
 class BYOMHandler(BaseMLEngine):
 
@@ -36,8 +38,7 @@ class BYOMHandler(BaseMLEngine):
 
         model_state = model_proxy.train(df, target)
 
-        encoded = pickle.dumps(model_state)
-        self.model_storage.file_set('model', encoded)
+        self.model_storage.file_set('model', model_state)
 
         # TODO return columns?
 
@@ -60,11 +61,10 @@ class BYOMHandler(BaseMLEngine):
     def predict(self, df, args=None):
         model_proxy = ModelWrapper(
             model_code=self._get_model_code(),
-            model_id=self.model_storage.integration_id
+            model_id=self.engine_storage.integration_id
         )
 
-        encoded = self.model_storage.file_get('model')
-        model_state = pickle.loads(encoded)
+        model_state = self.model_storage.file_get('model')
 
         pred_df = model_proxy.predict(df, model_state)
 
@@ -133,7 +133,10 @@ class ModelWrapper:
 
         is_pandas = any([m.lower().startswith('pandas') for m in modules])
         if not is_pandas:
-            modules.append('pandas')
+            modules.append('pandas >=1.1.5,<=1.3.3')
+
+        # for dataframe serialization
+        modules.append('pyarrow==11.0.0')
         return modules
 
     def install_modules(self, modules):
@@ -144,7 +147,7 @@ class ModelWrapper:
             os.system(f'{pip_cmd} install {module}')
 
     def _run_command(self, params):
-        params_enc = pickle.dumps(params)
+        params_enc = encode(params)
 
         wrapper_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'proc_wrapper.py')
         p = subprocess.Popen(
@@ -161,7 +164,7 @@ class ModelWrapper:
         p.wait()
 
         try:
-            ret = pickle.loads(ret_enc)
+            ret = decode(ret_enc)
         except (pickle.UnpicklingError, EOFError):
             raise RuntimeError(p.stderr.read())
         return ret
@@ -169,7 +172,7 @@ class ModelWrapper:
     def train(self, df, target):
         params = {
             'method': 'train',
-            'df': df,
+            'df': pd_encode(df),
             'code': self.model_code,
             'to_predict': target
         }
@@ -182,11 +185,11 @@ class ModelWrapper:
         params = {
             'method': 'predict',
             'code': self.model_code,
-            'df': df,
-            'model': model_state,
+            'df': pd_encode(df),
+            'model_state': model_state,
         }
         pred_df = self._run_command(params)
-        return pred_df
+        return pd_decode(pred_df)
 
 
 connection_args = OrderedDict(

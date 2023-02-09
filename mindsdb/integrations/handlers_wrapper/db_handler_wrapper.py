@@ -47,6 +47,8 @@ class BaseDBWrapper:
         # self.index becomes a flask API endpoint
         default_router = self.app.route("/")
         self.index = default_router(self.index)
+        self.after_request = self.app.after_request(self.after_request)
+        self.before_request = self.app.before_request(self.before_request)
         logger.info(
             "%s: base params and route have been initialized", self.__class__.__name__
         )
@@ -73,6 +75,13 @@ class BaseDBWrapper:
         if _json["handler_type"] == "files":
             handler_kwargs["file_controller"] = FileController()
         return handler_class(**handler_kwargs)
+
+    def before_request(self):
+        logger.info("%s [%s %s]: params - %s", self.__class__.__name__, request.method, request.full_path, request.json)
+
+    def after_request(self, response):
+        logger.info("%s [%s %s] - %s: result - %s", self.__class__.__name__, request.method, request.full_path, response.status, response.json)
+        return response
 
 
 class DBHandlerWrapper(BaseDBWrapper):
@@ -168,9 +177,6 @@ class DBHandlerWrapper(BaseDBWrapper):
 
     def check_connection(self):
         """Check connection to the database server."""
-        logger.info(
-            "%s.check_connection: calling 'check_connection'", self.__class__.__name__
-        )
         try:
             handler = self.get_handler(request.json)
             result = handler.check_connection()
@@ -186,11 +192,6 @@ class DBHandlerWrapper(BaseDBWrapper):
     def native_query(self):
         """Execute received string query."""
         query = request.json.get("query")
-        logger.info(
-            "%s.native_query: calling 'native_query' with query - %s",
-            self.__class__.__name__,
-            query,
-        )
         try:
             handler = self.get_handler(request.json)
             result = handler.native_query(query)
@@ -205,12 +206,6 @@ class DBHandlerWrapper(BaseDBWrapper):
 
     def query(self):
         """Execute received query object"""
-        logger.info("%s.query: calling", self.__class__.__name__)
-        logger.debug(
-            "%s.query: calling with raw data - %s",
-            self.__class__.__name__,
-            request.get_data(),
-        )
         try:
             # Have received json with context and
             # serialized query object
@@ -246,7 +241,6 @@ class DBHandlerWrapper(BaseDBWrapper):
             return result.to_json(), 500
 
     def get_tables(self):
-        logger.info("%s.get_tables: calling.", self.__class__.__name__)
         try:
             handler = self.get_handler(request.json)
             result = handler.get_tables()
@@ -261,7 +255,6 @@ class DBHandlerWrapper(BaseDBWrapper):
             return result.to_json(), 500
 
     def get_columns(self):
-        logger.info("%s.get_columns: calling", self.__class__.__name__)
         try:
             table = request.json.get("table")
             logger.info(

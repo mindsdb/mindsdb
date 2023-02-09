@@ -343,6 +343,8 @@ class BaseMLEngineExec:
         if join_learn_process is True:
             p.join()
 
+        return predictor_record
+
     def predict(self, model_name: str, data: list, pred_format: str = 'dict',
                 project_name: str = None, version=None, params: dict = None):
         """ Generates predictions with some model and input data. """
@@ -357,6 +359,8 @@ class BaseMLEngineExec:
             if version is not None:
                 model_name = f'{model_name}.{version}'
             raise Exception(f"Error: model '{model_name}' does not exists!")
+        if predictor_record.status != PREDICTOR_STATUS.COMPLETE:
+            raise Exception("Error: model creation not completed")
 
         ml_handler = self._get_ml_handler(predictor_record.id)
 
@@ -452,3 +456,5 @@ class BaseMLEngineExec:
         p.start()
         if join_learn_process is True:
             p.join()
+
+        return base_predictor_record

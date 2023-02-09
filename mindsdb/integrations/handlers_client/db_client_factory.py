@@ -10,7 +10,7 @@ logger = get_log(logger_name="main")
 
 class DBClientFactory:
     def __init__(self):
-        self.api_type = os.environ.get("MINDSDB_DB_INTERCONNECTION_API", "rest").lower()
+        self.api_type = os.environ.get("MINDSDB_INTERCONNECTION_API", "rest").lower()
         if self.api_type == 'grpc':
             self.client_class = DBClientGRPC
         else:

@@ -11,7 +11,7 @@ if __name__ == "__main__":
     db.init()
     initialize_log(config=config)
     logger = get_log(logger_name="main")
-    api_type = os.environ.get("MINDSDB_ML_INTERCONNECTION_API", "").lower()
+    api_type = os.environ.get("MINDSDB_INTERCONNECTION_API", "").lower()
     if api_type == 'grpc':
         app = MLServiceServicer()
     else:

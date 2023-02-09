@@ -217,7 +217,7 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
 
 def serve():
     host = "127.0.0.1"
-    port = 50051
+    port = 50052
     addr = f"{host}:{port}"
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     executor_pb2_grpc.add_ExecutorServiceServicer_to_server(

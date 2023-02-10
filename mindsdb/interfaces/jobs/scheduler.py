@@ -16,6 +16,8 @@ logger = log.get_log('jobs')
 
 
 def scheduler_monitor(config):
+    check_interval = config.get('jobs', {}).get('check_interval', 30)
+
     while True:
 
         logger.debug('Scheduler check timetable')
@@ -27,7 +29,8 @@ def scheduler_monitor(config):
             logger.error(e)
 
         # different instances should start in not the same time
-        time.sleep(20 + random.randint(1, 10))
+
+        time.sleep(check_interval + random.randint(1, 10))
 
 
 def check_timetable(config):

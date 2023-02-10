@@ -137,10 +137,13 @@ Result columns: NAME, PROJECT, START_AT, END_AT, ERROR, QUERY
 
 ## config
 
-By default, scheduled is always starting with start of mindsdb. 
-To disable scheduler need to add to config:
 ```
     "jobs": {
-        "disable": false
+        "disable": false,
+        "check_interval": 30
     }
 ```
+
+1. disable: scheduler activity. By default, scheduled is always starting with start of mindsdb. 
+To disable scheduler need to set it to false
+2. check_interval: interval in seconds to check schedule table. Default is 30 sec 

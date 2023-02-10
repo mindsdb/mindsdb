@@ -2,7 +2,6 @@ import re
 import datetime as dt
 from dateutil.relativedelta import relativedelta
 
-import torch.multiprocessing as mp
 import sqlalchemy as sa
 
 from mindsdb_sql import parse_sql, ParsingException
@@ -11,8 +10,6 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
-
-mp_ctx = mp.get_context('spawn')
 
 
 def split_sql(sql):

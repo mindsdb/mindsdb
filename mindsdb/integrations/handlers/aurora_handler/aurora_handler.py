@@ -134,3 +134,35 @@ class AuroraHandler(DatabaseHandler):
         """
 
         return self.db.get_columns(table_name)
+
+
+connection_args = OrderedDict(
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the Amazon Aurora DB cluster.'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the Amazon Aurora DB cluster.'
+    },
+    database={
+        'type': ARG_TYPE.STR,
+        'description': 'The database name to use when connecting with the Amazon Aurora DB cluster.'
+    },
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the Amazon Aurora DB cluster. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.'
+    },
+    port={
+        'type': ARG_TYPE.INT,
+        'description': 'The TCP/IP port of the Amazon Aurora DB cluster. Must be an integer.'
+    }
+)
+
+connection_args_example = OrderedDict(
+    host='127.0.0.1',
+    port=3306,
+    user='root',
+    password='password',
+    database='database'
+)

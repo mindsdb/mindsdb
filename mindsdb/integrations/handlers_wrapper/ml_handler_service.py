@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     app = MLServiceServicer()
     port = int(os.environ.get("PORT", 5001))
-    host = os.environ.get("HOST", "0.0.0.0")
+    host = os.environ.get("HOST")
 
     # If there is a handler discovery service
     # start a thread to send service info
@@ -28,4 +28,4 @@ if __name__ == "__main__":
         registry(registry_url, data, interval)
 
     logger.info("Running ML service: host=%s, port=%s", host, port)
-    app.run(debug=True, host=host, port=port)
+    app.run(debug=True, host="0.0.0.0", port=port)

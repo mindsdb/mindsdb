@@ -14,7 +14,7 @@ Parameters:
 - START - optional, first date when job have to start. Default is now
 - END - optional, after this date job shouldn't run anymore. If not set - repeat forever
 - EVERY - optional job repeat rule.
-  - If not set - run once (no mather what was set in END)
+  - If not set - run once (no matter what was set in END)
   - if <number> is not set - default value is 1 
 
 Supported periods:

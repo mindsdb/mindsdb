@@ -1,6 +1,8 @@
-from flask import request, session
+import base64
 from pathlib import Path
 
+import requests
+from flask import request, session, redirect, url_for
 from flask_restx import Resource
 from flask_restx import fields
 
@@ -19,6 +21,33 @@ def check_auth() -> bool:
     if config['auth']['http_auth_enabled'] is False:
         return True
     return session.get('username') == config['auth']['username']
+
+
+@ns_conf.route('/auth/callback', methods=['GET'])
+class Auth(Resource):
+    def get(self):
+        config = Config()
+        code = request.args.get('code')
+        client_id = config['auth']['client_id']
+        client_secret = config['auth']['client_secret']
+        client_basic = base64.b64encode(
+            f'{client_id}:{client_secret}'.encode()
+        ).decode()
+        response = requests.post(
+            'https://alpha.mindsdb.com/auth/token',
+            data={
+                'code': code,
+                'grant_type': 'authorization_code',
+                'redirect_uri': 'https://3fee-91-210-47-113.eu.ngrok.io/api/auth/callback'
+            },
+            # cls.GRANT_TYPE authorization_code
+            headers={
+                # 'Content-Type': 'multipart/form-data',
+                'Authorization': f'Basic {client_basic}'
+            }
+        )
+        tokens = response.json()
+        return redirect(url_for('root_index'))
 
 
 @ns_conf.route('/login', methods=['POST'])
@@ -109,6 +138,9 @@ class StatusRoute(Resource):
                 'provider': auth_provider
             }
         }
+
+        if environment == 'aws_marketplace':
+            resp['client_id'] = Config()['auth']['client_id']
 
         if environment != 'cloud':
             marker_file = Path(Config().paths['root']).joinpath('gui_first_launch.txt')

@@ -62,7 +62,7 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
         ctx.load(json.loads(handler_context.context))
         params = json.loads(handler_context.handler_params)
         integration_id = params["integration_id"]
-        _type = params["integration_engine"] or params.get("name", None)
+        _type = params.get("integration_engine") or params.get("name", None)
         logger.info(
             "%s.get_handler: request handler of type - %s, context - %s",
             self.__class__.__name__,

@@ -5,6 +5,7 @@ import json
 from typing import Optional
 
 import pickle
+import requests
 
 import grpc
 from mindsdb.grpc.ml import ml_pb2_grpc
@@ -27,13 +28,14 @@ from mindsdb.utilities.log import get_log
 logger = get_log(logger_name="main")
 
 class MLClientGRPC:
-    def __init__(self, **handler_kwargs: dict):
-
-        self.handler_params = handler_kwargs
+    def __init__(self, host, port, handler_params: dict):
+        self.host = host
+        self.port = port
+        self.handler_params = handler_params
         # have to create a handler instance
         # because Executor accesses to some handler attributes
         # directly
-        self.handler = BaseMLEngineExec(**handler_kwargs)
+        self.handler = BaseMLEngineExec(**self.handler_params)
         # remove all 'object' params from dict before sending it to the serverside.
         # all of them will be created there
         for arg in (
@@ -45,9 +47,7 @@ class MLClientGRPC:
             if arg in self.handler_params:
                 del self.handler_params[arg]
 
-        host = os.environ.get("MINDSDB_ML_SERVICE_HOST", None)
-        port = os.environ.get("MINDSDB_ML_SERVICE_PORT", None)
-        self.channel = grpc.insecure_channel(f"{host}:{port}")
+        self.channel = grpc.insecure_channel(f"{self.host}:{self.port}")
         self.stub = ml_pb2_grpc.MLServiceStub(self.channel)
 
     def __del__(self):

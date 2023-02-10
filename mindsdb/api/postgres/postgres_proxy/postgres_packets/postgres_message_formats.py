@@ -1,48 +1,11 @@
-from enum import Enum
-from typing import BinaryIO, Any, Union, Sequence, Dict, Type
+from typing import BinaryIO, Any, Sequence, Dict, Type
 
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import PostgresField
-from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_packets import PostgresPacketBuilder, \
-    PostgresPacketReader
+from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message import PostgresMessage
+from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_identifiers import \
+    PostgresBackendMessageIdentifier, PostgresFrontendMessageIdentifier, PostgresAuthType
 
-
-class PostgresBackendMessageIdentifier(Enum):
-    NOTICE_RESPONSE = b'N'
-    AUTHENTICATION_REQUEST = b'R'
-    READY_FOR_QUERY = b'Z'
-    COMPLETE = b'C'
-    ERROR = b'E'
-    ROW_DESCRIPTION = b'T'
-    DATA_ROW = b'D'
-
-
-class PostgresFrontendMessageIdentifier(Enum):
-    EXECUTE = b'E'
-    QUERY = b'Q'
-    TERMINATE = b'X'
-
-
-class PostgresAuthType(Enum):
-    PASSWORD = b'p'
-
-class PostgresMessage:
-    identifier: Union[PostgresBackendMessageIdentifier, PostgresFrontendMessageIdentifier]
-    backend_capable: bool
-    frontend_capable: bool
-
-    def __init__(self):
-        pass
-
-    def send(self, write_file: BinaryIO):
-        pass
-
-    def read(self, packet_reader: PostgresPacketReader):
-        pass
-
-    def get_packet_builder(self) -> PostgresPacketBuilder:
-        ppb = PostgresPacketBuilder()
-        ppb.set_identifier(self.identifier)
-        return ppb
+from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_packets import PostgresPacketReader
 
 
 # All docstrings for Messages are taken from
@@ -315,12 +278,12 @@ class DataRow(PostgresMessage):
     rows: Sequence[Sequence[bytes]]
     num_cols: int
 
-    def __init__(self, rows: Sequence[Sequence[Any]]):
+    def __init__(self, rows: Sequence[Sequence[bytes]]):
         self.identifier = PostgresBackendMessageIdentifier.DATA_ROW
         self.backend_capable = True
         self.frontend_capable = False
         self.num_cols = len(rows[0])
-        self.rows = [b'%r' % elem for elem in rows]
+        self.rows = rows
         super().__init__()
 
     def send(self, write_file: BinaryIO):
@@ -356,6 +319,7 @@ class Query(PostgresMessage):
     def read(self, packet_reader: PostgresPacketReader):
         self.length = packet_reader.read_int32()
         self.sql = packet_reader.read_bytes(self.length - 4)
+        return self
 
 
 class Terminate(PostgresMessage):
@@ -366,7 +330,7 @@ class Terminate(PostgresMessage):
         super().__init__()
 
     def read(self, packet_reader: PostgresPacketReader):
-        pass
+        return self
 
 
 IMPLEMENTED_BACKEND_POSTGRES_MESSAGE_CLASSES = [
@@ -376,13 +340,11 @@ IMPLEMENTED_BACKEND_POSTGRES_MESSAGE_CLASSES = [
 IMPLEMENTED_FRONTEND_POSTGRES_MESSAGE_CLASSES = [
     Query, Terminate
 ]
-
-SUPPORTED_AUTH_TYPES = [PostgresAuthType.PASSWORD]
-
 FE_MESSAGE_MAP: Dict[PostgresFrontendMessageIdentifier, Type[PostgresMessage]] = {
     PostgresFrontendMessageIdentifier.QUERY: Query,
     PostgresFrontendMessageIdentifier.TERMINATE: Terminate
 }
+SUPPORTED_AUTH_TYPES = [PostgresAuthType.PASSWORD]
 
 # Below Lies Unimplemented Messages
 
@@ -1020,3 +982,4 @@ Identifies the message as a termination.
 
 Int32(4)
 Length of message contents in bytes, including self. '''
+

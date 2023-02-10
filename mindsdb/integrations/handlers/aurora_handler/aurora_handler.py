@@ -74,14 +74,14 @@ class AuroraHandler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        pass
+        return self.db.connect()
 
     def disconnect(self):
         """
         Close any existing connections.
         """
 
-        pass
+        return self.db.disconnect()
 
     def check_connection(self) -> StatusResponse:
         """
@@ -90,7 +90,7 @@ class AuroraHandler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        pass
+        return self.db.check_connection()
 
     def native_query(self, query: str) -> StatusResponse:
         """
@@ -101,7 +101,7 @@ class AuroraHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        return self.db.native_query(query)
 
     def query(self, query: ASTNode) -> StatusResponse:
         """
@@ -113,7 +113,7 @@ class AuroraHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        return self.db.query(query)
 
     def get_tables(self) -> StatusResponse:
         """
@@ -122,7 +122,7 @@ class AuroraHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        return self.db.get_tables()
 
     def get_columns(self, table_name: str) -> StatusResponse:
         """
@@ -133,4 +133,4 @@ class AuroraHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        return self.db.get_columns(table_name)

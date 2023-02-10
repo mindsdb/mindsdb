@@ -370,7 +370,7 @@ class TestCompanyIndependent:
             self.sql_via_http(
                 query.format(char, char),
                 company_id=cid,
-                expected_resp_type=RESPONSE_TYPE.OK
+                expected_resp_type=RESPONSE_TYPE.TABLE
             )
             response = self.sql_via_http(
                 predict_query.format(char),

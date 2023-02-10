@@ -1,15 +1,17 @@
 import os
 import re
 import math
+import json
 import tempfile
 import datetime
+import textwrap
 import subprocess
 import concurrent.futures
-import numpy as np
-import pandas as pd
 from typing import Optional, Dict
 
 import openai
+import numpy as np
+import pandas as pd
 
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -24,7 +26,7 @@ class OpenAIHandler(BaseMLEngine):
         self.default_model = 'text-davinci-002'
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
-        self.default_max_tokens = 20
+        self.default_max_tokens = 100
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -33,11 +35,22 @@ class OpenAIHandler(BaseMLEngine):
         else:
             args = args['using']
 
-        if 'question_column' not in args and 'prompt_template' not in args:
-            raise Exception(f'Either of `question_column` or `prompt_template` are required.')
+        if len(set(args.keys()) & {'question_column', 'prompt_template', 'json_struct'}) == 0:
+            raise Exception('One of `question_column`, `prompt_template` or `json_struct` is required for this engine.')
 
-        if 'prompt_template' in args and 'question_column' in args:
-            raise Exception('Please provide either 1) a `prompt_template` or 2) a `question_column` and an optional `context_column`, but not both.')  # noqa
+        keys_collection = [
+            ['prompt_template'],
+            ['question_column', 'context_column'],
+            ['json_struct']
+        ]
+        for keys in keys_collection:
+            if keys[0] in args and any(x[0] in args for x in keys_collection if x != keys):
+                raise Exception(textwrap.dedent('''\
+                    Please provide one of
+                        1) a `prompt_template`
+                        2) a `question_column` and an optional `context_column`
+                        3) a `json_struct`
+                '''))
 
     def create(self, target, args=None, **kwargs):
         args = args['using']
@@ -49,12 +62,13 @@ class OpenAIHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
     def _get_api_key(self, args):
-        # API_KEY preference order:
-        #   1. provided at model creation
-        #   2. provided at engine creation
-        #   3. OPENAI_API_KEY env variable
-        #   4. openai.api_key setting in config.json
-
+        """ 
+        API_KEY preference order:
+            1. provided at model creation
+            2. provided at engine creation
+            3. OPENAI_API_KEY env variable
+            4. openai.api_key setting in config.json
+        """  # noqa
         # 1
         if 'api_key' in args:
             return args['api_key']
@@ -91,9 +105,20 @@ class OpenAIHandler(BaseMLEngine):
         if args.get('context_column', False) and args['context_column'] not in df.columns:
             raise Exception(f"This model expects context in the '{args['context_column']}' column.")
 
+        # api argument validation
         model_name = args.get('model_name', self.default_model)
-        temperature = min(1.0, max(0.0, args.get('temperature', 0.0)))
-        max_tokens = pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens))
+        api_args = {
+            'max_tokens': pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens)),
+            'temperature': min(1.0, max(0.0, args.get('temperature', 0.0))),
+            'top_p': pred_args.get('top_p', None),
+            'n': pred_args.get('n', None),
+            'stop': pred_args.get('stop', None),
+            'presence_penalty': pred_args.get('presence_penalty', None),
+            'frequency_penalty': pred_args.get('frequency_penalty', None),
+            'best_of': pred_args.get('best_of', None),
+            'logit_bias': pred_args.get('logit_bias', None),
+            'user': pred_args.get('user', None),
+        }
 
         if args.get('prompt_template', False):
             if pred_args.get('prompt_template', False):
@@ -135,6 +160,28 @@ class OpenAIHandler(BaseMLEngine):
             questions = list(df[args['question_column']].apply(lambda x: str(x)))
             prompts = [f'Context: {c}\nQuestion: {q}\nAnswer: ' for c, q in zip(contexts, questions)]
 
+        elif args.get('json_struct', False):
+            empty_prompt_ids = np.where(df[[args['input_text']]].isna().all(axis=1).values)[0]
+            prompts = []
+            for i in df.index:
+                if 'json_struct' in df.columns:
+                    if isinstance(df['json_struct'][i], str):
+                        df['json_struct'][i] = json.loads(df['json_struct'][i])
+                    json_struct = ', '.join(df['json_struct'][i].values())
+                else:
+                    json_struct = ', '.join(args['json_struct'].values())
+                p = textwrap.dedent(f'''\
+                    From sentence below generate a one-dimensional array with data in it:
+                    {json_struct}.
+                    The sentence is:
+                    {{{{{args['input_text']}}}}}
+                ''')
+                for column in df.columns:
+                    if column == 'json_struct':
+                        continue
+                    p = p.replace(f'{{{{{column}}}}}', df[column][i])
+                prompts.append(p)
+
         else:
             empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
             prompts = list(df[args['question_column']].apply(lambda x: str(x)))
@@ -143,16 +190,35 @@ class OpenAIHandler(BaseMLEngine):
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
         api_key = self._get_api_key(args)
-        completion = self._completion(model_name, prompts, max_tokens, temperature, api_key, args)
+        api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
+        completion = self._completion(model_name, prompts, api_key, api_args, args)
 
         # add null completion for empty prompts
         for i in sorted(empty_prompt_ids):
             completion.insert(i, None)
 
         pred_df = pd.DataFrame(completion, columns=[args['target']])
+
+        # restore json struct
+        if args.get('json_struct', False):
+            for i in pred_df.index:
+                try:
+                    if 'json_struct' in df.columns:
+                        json_keys = df['json_struct'][i].keys()
+                    else:
+                        json_keys = args['json_struct'].keys()
+                    pred_df[args['target']][i] = {
+                        key: val for key, val in zip(
+                            json_keys,
+                            json.loads(pred_df[args['target']][i])
+                        )
+                    }
+                except Exception:
+                    pred_df[args['target']][i] = None
+
         return pred_df
 
-    def _completion(self, model_name, prompts, max_tokens, temperature, api_key, args, parallel=True):
+    def _completion(self, model_name, prompts, api_key, api_args, args, parallel=True):
         """
         Handles completion for an arbitrary amount of rows.
 
@@ -164,14 +230,13 @@ class OpenAIHandler(BaseMLEngine):
         because even with previous checks the tokens-per-minute limit may apply.
         """
         @retry_with_exponential_backoff()
-        def _submit_completion(model_name, prompts, max_tokens, temperature, api_key, args):
+        def _submit_completion(model_name, prompts, api_key, api_args, args):
             return openai.Completion.create(
                 model=model_name,
                 prompt=prompts,
-                max_tokens=max_tokens,
-                temperature=temperature,
                 api_key=api_key,
-                organization=args.get('api_organization')
+                organization=args.get('api_organization'),
+                **api_args
             )
 
         def _tidy(comp):
@@ -182,9 +247,8 @@ class OpenAIHandler(BaseMLEngine):
             completion = _submit_completion(
                 model_name,
                 prompts,
-                max_tokens,
-                temperature,
                 api_key,
+                api_args,
                 args
             )
             return _tidy(completion)  
@@ -202,9 +266,8 @@ class OpenAIHandler(BaseMLEngine):
             for i in range(math.ceil(len(prompts) / max_batch_size)):
                 partial = _submit_completion(model_name,
                                              prompts[i * max_batch_size:(i + 1) * max_batch_size],
-                                             max_tokens,
-                                             temperature,
                                              api_key,
+                                             api_args,
                                              args)
                 if not completion:
                     completion = partial
@@ -220,9 +283,8 @@ class OpenAIHandler(BaseMLEngine):
                     future = executor.submit(_submit_completion,
                                              model_name,
                                              prompts[i * max_batch_size:(i + 1) * max_batch_size],
-                                             max_tokens,
-                                             temperature,
                                              api_key,
+                                             api_args,
                                              args)
                     promises.append({"choices": future})
             completion = None

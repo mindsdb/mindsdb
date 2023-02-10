@@ -37,8 +37,16 @@ def start(verbose, no_studio, with_nlp):
     log.initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
 
     # start static initialization in a separate thread
+    static_root = config['paths']['static']
+    gui_exists = Path(static_root).joinpath('index.html').is_file()
     init_static_thread = None
-    if not no_studio:
+    if (
+        no_studio is False
+        and (
+            config['gui']['autoupdate'] is True
+            or gui_exists is False
+        )
+    ):
         init_static_thread = threading.Thread(target=initialize_static)
         init_static_thread.start()
 
@@ -46,7 +54,6 @@ def start(verbose, no_studio, with_nlp):
     Compress(app)
     initialize_interfaces(app)
 
-    static_root = config['paths']['static']
     if os.path.isabs(static_root) is False:
         static_root = os.path.join(os.getcwd(), static_root)
     static_root = Path(static_root)
@@ -136,7 +143,7 @@ def start(verbose, no_studio, with_nlp):
     host = config['api']['http']['host']
 
     # waiting static initialization
-    if not no_studio:
+    if not no_studio and init_static_thread is not None:
         init_static_thread.join()
     if server.lower() == 'waitress':
         if host in ('', '0.0.0.0'):

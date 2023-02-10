@@ -45,6 +45,8 @@ class BaseMLWrapper:
         # self.index becomes a flask API endpoint
         default_router = self.app.route("/")
         self.index = default_router(self.index)
+        self.after_request = self.app.after_request(self.after_request)
+        self.before_request = self.app.before_request(self.before_request)
 
     def index(self):
         """Default GET endpoint - '/'."""
@@ -53,6 +55,13 @@ class BaseMLWrapper:
     def run(self, **kwargs):
         """Launch internal Flask application."""
         return self.app.run(**kwargs)
+
+    def before_request(self):
+        logger.info("%s [%s %s]: params - %s", self.__class__.__name__, request.method, request.full_path, request.json)
+
+    def after_request(self, response):
+        logger.info("%s [%s %s] - %s: result - %s", self.__class__.__name__, request.method, request.full_path, response.status, response.json)
+        return response
 
 
 class MLHandlerWrapper(BaseMLWrapper):
@@ -164,7 +173,6 @@ class MLHandlerWrapper(BaseMLWrapper):
         return BaseMLEngineExec(**params)
 
     def get_columns(self):
-        logger.info("%s.get_columns has called.", self.__class__.__name__)
         try:
             params = request.json.get("method_params")
             table_name = params.get("table_name")
@@ -187,7 +195,6 @@ class MLHandlerWrapper(BaseMLWrapper):
             return result.to_json(), 500
 
     def get_tables(self):
-        logger.info("%s.get_tables has called.", self.__class__.__name__)
         try:
             handler = self._get_handler()
             result = handler.get_tables()
@@ -203,7 +210,6 @@ class MLHandlerWrapper(BaseMLWrapper):
             return result.to_json(), 500
 
     def native_query(self):
-        logger.info("%s.native_query has called.", self.__class__.__name__)
         try:
             params = request.json.get("method_params")
             query = params.get("query")
@@ -224,7 +230,6 @@ class MLHandlerWrapper(BaseMLWrapper):
             return result.to_json(), 500
 
     def query(self):
-        logger.info("%s.query has called.", self.__class__.__name__)
         try:
             params = request.json.get("method_params")
             query_s64 = params.get("query")
@@ -249,7 +254,6 @@ class MLHandlerWrapper(BaseMLWrapper):
 
     def predict(self):
         """See 'predict' method in MLHandler"""
-        logger.info("%s.predict has called.", self.__class__.__name__)
         try:
             params = request.json.get("method_params")
             logger.info(
@@ -281,7 +285,6 @@ class MLHandlerWrapper(BaseMLWrapper):
             return result.to_json(), 500
 
     def learn(self):
-        logger.info("%s.learn has called.", self.__class__.__name__)
         try:
             params = request.json.get("method_params")
             logger.info(

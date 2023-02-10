@@ -294,11 +294,12 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
 
     If some error then do nothing.
     """
-    init_static_thread.join()
+    if init_static_thread is not None:
+        init_static_thread.join()
     inject_telemetry_to_static(static_folder)
     logger = get_log('http')
     try:
-        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=10,
+        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=15,
                                            pid=pid, port=port)
         if is_http_active:
             webbrowser.open(url)

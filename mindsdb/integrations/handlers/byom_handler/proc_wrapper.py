@@ -95,6 +95,17 @@ def main():
 
     model_class = find_model_class(module)
 
+    if method == 'check':
+        model = model_class()
+
+        if not hasattr(model, 'train'):
+            raise RuntimeError('Model class has to have "train" method')
+
+        if not hasattr(model, 'predict'):
+            raise RuntimeError('Model class has to have "predict" method')
+
+        return_output(True)
+
     if method == 'train':
         df = pd_decode(params['df'])
         to_predict = params['to_predict']

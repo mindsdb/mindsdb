@@ -7,9 +7,15 @@ import multipart
 from flask import request, send_file, abort, current_app as ca
 from flask_restx import Resource
 
+from mindsdb_sql.parser.ast import Identifier
+from mindsdb_sql.parser.dialects.mindsdb import CreateMLEngine
+
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.handlers import ns_conf
 from mindsdb.integrations.utilities.install import install_dependencies
+
+from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
 
 
 @ns_conf.route('/')
@@ -79,64 +85,61 @@ class InstallDependencies(Resource):
 class BYOMUpload(Resource):
     @ns_conf.doc('put_file')
     def put(self, name):
-        ''' add new model file
+        ''' upload new model
             params in FormData:
                 - code
-                - requirements
+                - modules
         '''
 
-        return '', 200
-
-        data = {}
+        params = {}
 
         def on_field(field):
             name = field.field_name.decode()
             value = field.value.decode()
-            data[name] = value
-
-        file_object = None
+            params[name] = value
 
         def on_file(file):
-            nonlocal file_object
-            data['file'] = file.file_name.decode()
-            file_object = file.file_object
+            params[file.field_name.decode()] = file.file_object
 
         temp_dir_path = tempfile.mkdtemp(prefix='mindsdb_file_')
 
-        if request.headers['Content-Type'].startswith('multipart/form-data'):
-            parser = multipart.create_form_parser(
-                headers=request.headers,
-                on_field=on_field,
-                on_file=on_file,
-                config={
-                    'UPLOAD_DIR': temp_dir_path.encode(),  # bytes required
-                    'UPLOAD_KEEP_FILENAME': True,
-                    'UPLOAD_KEEP_EXTENSIONS': True,
-                    'MAX_MEMORY_FILE_SIZE': 0
-                }
-            )
+        parser = multipart.create_form_parser(
+            headers=request.headers,
+            on_field=on_field,
+            on_file=on_file,
+            config={
+                'UPLOAD_DIR': temp_dir_path.encode(),  # bytes required
+                'UPLOAD_KEEP_FILENAME': True,
+                'UPLOAD_KEEP_EXTENSIONS': True,
+                'MAX_MEMORY_FILE_SIZE': 0
+            }
+        )
 
-            while True:
-                chunk = request.stream.read(8192)
-                if not chunk:
-                    break
-                parser.write(chunk)
-            parser.finalize()
-            parser.close()
+        while True:
+            chunk = request.stream.read(8192)
+            if not chunk:
+                break
+            parser.write(chunk)
+        parser.finalize()
+        parser.close()
 
-            if file_object is not None and not file_object.closed:
-                file_object.close()
-        else:
-            data = request.json
+        params['code'].close()
+        params['modules'].close()
 
-        file_path = os.path.join(temp_dir_path, data['file'])
+        sql_session = SessionController()
+
+        command_executor = ExecuteCommands(sql_session, executor=None)
 
         connection_args = {
-            'model_code': file_path
+            'code': params['code'].name.decode(),
+            'modules': params['modules'].name.decode(),
         }
-        ca.integration_controller.add(name, 'byom', connection_args)
 
-        os.unlink(file_path)
-        os.rmdir(temp_dir_path)
+        ast_query = CreateMLEngine(
+            name=Identifier(name),
+            handler='byom',
+            params=connection_args
+        )
+        command_executor.execute_command(ast_query)
 
         return '', 200

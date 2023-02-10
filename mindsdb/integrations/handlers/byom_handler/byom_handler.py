@@ -5,6 +5,7 @@ import pickle
 import subprocess
 from collections import OrderedDict
 from pathlib import Path
+import shutil
 
 import numpy as np
 from pandas.api import types as pd_types
@@ -21,20 +22,22 @@ class BYOMHandler(BaseMLEngine):
 
     name = 'byom'
 
-    def _get_model_code(self):
-        # TODO :
-        file_name = self.engine_storage.get_connection_args()['model_code']
-        return self.engine_storage.file_get(file_name)
+    def _get_model_proxy(self):
+        code = self.engine_storage.file_get('code')
+        modules_str = self.engine_storage.file_get('modules')
+
+        return ModelWrapper(
+            code=code,
+            modules_str=modules_str,
+            engine_id=self.engine_storage.integration_id
+        )
 
     def create(self, target, df=None, args=None, **kwargs):
         is_cloud = Config().get('cloud', False)
         if is_cloud is True:
             raise RuntimeError('BYOM is disabled on cloud')
 
-        model_proxy = ModelWrapper(
-            model_code=self._get_model_code(),
-            model_id=self.engine_storage.integration_id
-        )
+        model_proxy = self._get_model_proxy()
 
         model_state = model_proxy.train(df, target)
 
@@ -59,10 +62,8 @@ class BYOMHandler(BaseMLEngine):
         self.model_storage.columns_set(columns)
 
     def predict(self, df, args=None):
-        model_proxy = ModelWrapper(
-            model_code=self._get_model_code(),
-            model_id=self.engine_storage.integration_id
-        )
+
+        model_proxy = self._get_model_proxy()
 
         model_state = self.model_storage.file_get('model')
 
@@ -73,15 +74,29 @@ class BYOMHandler(BaseMLEngine):
         # pred_df = pred_df.rename(columns={target: 'prediction'})
         return pred_df
 
+    def create_engine(self, connection_args):
+        # check code and requirements
+
+        model_proxy = self._get_model_proxy()
+
+        try:
+            model_proxy.check()
+        except Exception as e:
+            # remove venv
+            model_proxy.remove_venv()
+
+            raise e
+
 
 class ModelWrapper:
-    def __init__(self, model_code, model_id):
-        self.model_code = model_code
-        requirements = self.find_requirements()
+    def __init__(self, code, modules_str, engine_id):
+        self.code = code
+        modules = self.parse_requirements(modules_str)
 
-        self.prepare_env(model_id, requirements)
+        self.env_path = None
+        self.prepare_env(modules, engine_id)
 
-    def prepare_env(self, model_id, requirements):
+    def prepare_env(self, modules, engine_id):
         config = Config()
 
         try:
@@ -92,20 +107,20 @@ class ModelWrapper:
                 # create in root path
                 base_path = Path(config.paths['root']) / 'venvs'
 
-            env_path = base_path / f'env_{model_id}'
+            self.env_path = base_path / f'env_{engine_id}'
 
-            self.python_path = env_path / 'bin' / 'python'
+            self.python_path = self.env_path / 'bin' / 'python'
 
-            if env_path.exists():
+            if self.env_path.exists():
                 # already exists. it means requirements are already installed
                 return
 
             # create
-            virtualenv.cli_run(['-p', sys.executable, str(env_path)])
-            log.logger.info(f"Created new environment: {env_path}")
+            virtualenv.cli_run(['-p', sys.executable, str(self.env_path)])
+            log.logger.info(f"Created new environment: {self.env_path}")
 
-            if len(requirements) > 0:
-                self.install_modules(requirements)
+            if len(modules) > 0:
+                self.install_modules(modules)
 
         except Exception as e:
             log.logger.info("Can't create virtual environment. venv module should be installed")
@@ -113,23 +128,25 @@ class ModelWrapper:
             self.python_path = Path(sys.executable)
 
             # try to install modules everytime
-            self.install_modules(requirements)
+            self.install_modules(modules)
 
-    def find_requirements(self):
+    def remove_venv(self):
+        if self.env_path is not None and self.env_path.exists():
+            shutil.rmtree(str(self.env_path))
+
+    def parse_requirements(self, requirements):
         # get requirements from string
         # they should be located at the top of the file, before code
 
         pattern = '^[\w\\[\\]-]+[=!<>\s]*[\d\.]*[,=!<>\s]*[\d\.]*$'
         modules = []
-        for line in self.model_code.split(b'\n'):
+        for line in requirements.split(b'\n'):
             line = line.decode().strip()
-            if line.startswith('#'):
-                module = line.lstrip('# ')
-                if re.match(pattern, module):
-                    modules.append(module)
-            elif line != '':
-                # it's code. exiting
-                break
+            if line:
+                if re.match(pattern, line):
+                    modules.append(line)
+                else:
+                    raise Exception(f'Wrong requirement: {line}')
 
         is_pandas = any([m.lower().startswith('pandas') for m in modules])
         if not is_pandas:
@@ -169,11 +186,19 @@ class ModelWrapper:
             raise RuntimeError(p.stderr.read())
         return ret
 
+    def check(self):
+
+        params = {
+            'method': 'check',
+            'code': self.code,
+        }
+        return self._run_command(params)
+
     def train(self, df, target):
         params = {
             'method': 'train',
             'df': pd_encode(df),
-            'code': self.model_code,
+            'code': self.code,
             'to_predict': target
         }
 
@@ -184,7 +209,7 @@ class ModelWrapper:
 
         params = {
             'method': 'predict',
-            'code': self.model_code,
+            'code': self.code,
             'df': pd_encode(df),
             'model_state': model_state,
         }
@@ -193,8 +218,12 @@ class ModelWrapper:
 
 
 connection_args = OrderedDict(
-    model_code={
+    code={
         'type': ARG_TYPE.PATH,
-        'description': 'The path name to model code'
+        'description': 'The path to model code'
+    },
+    modules={
+        'type': ARG_TYPE.PATH,
+        'description': 'The path to model requirements'
     }
 )

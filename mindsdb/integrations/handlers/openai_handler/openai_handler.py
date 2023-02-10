@@ -2,6 +2,7 @@ import os
 import re
 import math
 import json
+import shutil
 import tempfile
 import datetime
 import textwrap
@@ -428,3 +429,4 @@ class OpenAIHandler(BaseMLEngine):
         args['runtime'] = runtime.total_seconds()
 
         self.model_storage.json_set('args', args)
+        shutil.rmtree(temp_storage_path)

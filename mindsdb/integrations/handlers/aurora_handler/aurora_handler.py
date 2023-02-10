@@ -1,19 +1,7 @@
+from typing import Optional
 from collections import OrderedDict
 
-import pandas as pd
-
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast.base import ASTNode
-
-from mindsdb.utilities import log
-from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+import boto3
 
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
@@ -42,6 +30,38 @@ class AuroraHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
+
+        database_engine = self.get_database_engine()
+        if database_engine == 'aurora':
+            self.db = MySQLHandler(
+                host=self.connection_data['host'],
+                port=self.connection_data['port'],
+                user=self.connection_data['user'],
+                password=self.connection_data['password'],
+                database=self.connection_data['database']
+            )
+        elif database_engine == 'aurora-postgresql':
+            self.db = PostgresHandler(
+                host=self.connection_data['host'],
+                port=self.connection_data['port'],
+                user=self.connection_data['user'],
+                password=self.connection_data['password'],
+                database=self.connection_data['database']
+            )
+        else:
+            pass
+
+    def get_database_engine(self):
+        session = boto3.session.Session(
+            aws_access_key_id=self.connection_data['aws_access_key_id'],
+            aws_secret_access_key=self.connection_data['aws_secret_access_key']
+        )
+
+        rds = session.client('rds')
+
+        response = rds.describe_db_clusters()
+
+        return next(item for item in response if item["DBClusterIdentifier"] == self.connection_data['host'].split('.')[0])['Engine']
 
     def __del__(self):
         if self.is_connected is True:

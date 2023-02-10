@@ -801,6 +801,8 @@ class ExecuteCommands:
 
             try:
                 ml_handler.create_engine(statement.params)
+            except NotImplementedError:
+                pass
             except Exception as e:
                 # something wrong, drop ml engine
                 ast_drop = DropMLEngine(name=statement.name)

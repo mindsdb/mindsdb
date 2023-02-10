@@ -15,14 +15,23 @@ trainer_dict = {
 }
 
 DEFAULT_MODE = "regression"
-DEFAULT_EPOCHS = 1
-DEFAULT_TRIALS = 1
+DEFAULT_EPOCHS = 3
+DEFAULT_TRIALS = 3
 
 def train_autokeras_model(df, target, mode=DEFAULT_MODE):
     training_df = df.drop(target, axis=1)
     trainer = trainer_dict[mode](overwrite=True, max_trials=DEFAULT_TRIALS)
     trainer.fit(training_df, df[target], epochs=DEFAULT_EPOCHS)
     return trainer.export_model()
+
+
+def get_preds_from_autokeras_model(df, model, target):
+    cols_to_drop = ["__mindsdb_row_id", target]
+    for col in cols_to_drop:
+        if col in df.columns:
+            df = df.drop(col, axis=1)
+    return model.predict(df)
+
 
 
 class AutokerasHandler(BaseMLEngine):
@@ -52,13 +61,7 @@ class AutokerasHandler(BaseMLEngine):
         model = load_model(args["folder_path"], custom_objects=ak.CUSTOM_OBJECTS)
 
         df_to_predict = df.copy()
-        cols_to_drop = ["__mindsdb_row_id", args["target"]]
-        for col in cols_to_drop:
-            if col in df_to_predict.columns:
-                df_to_predict = df_to_predict.drop(col, axis=1)
-        df_to_predict.to_csv("raw_df.csv")
-        preds = model.predict(df_to_predict)
-
-        df_to_predict[args["target"]] = preds
+        predictions = get_preds_from_autokeras_model(df_to_predict, model, args["target"])
+        df_to_predict[args["target"]] = predictions
         return df_to_predict
 

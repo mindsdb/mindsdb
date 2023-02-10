@@ -1,6 +1,7 @@
 import os
 import re
 import math
+import tempfile
 import datetime
 import subprocess
 import concurrent.futures
@@ -272,10 +273,9 @@ class OpenAIHandler(BaseMLEngine):
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
 
         openai.api_key = self._get_api_key(args)
-        folder_name = 'finetune_artifacts'
         adjust_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
-        temp_storage_path = self.engine_storage.folder_get(folder_name)
+        temp_storage_path = tempfile.mkdtemp()
         temp_file_name = f"ft_{adjust_time}"
         temp_model_storage_path = f"{temp_storage_path}/{temp_file_name}.jsonl"
         df.to_json(temp_model_storage_path, orient='records', lines=True)
@@ -320,14 +320,14 @@ class OpenAIHandler(BaseMLEngine):
             'validation_file': val_file_id,
             'model': _get_model_type(prev_model_name),
             'suffix': 'mindsdb',
-            'n_epochs': None,
-            'batch_size': None,
-            'learning_rate_multiplier': None,
-            'prompt_loss_weight': None,
-            'compute_classification_metrics': None,
-            'classification_n_classes': None,
-            'classification_positive_class': None,
-            'classification_betas': None,
+            'n_epochs': using_args.get('n_epochs', None),
+            'batch_size': using_args.get('batch_size', None),
+            'learning_rate_multiplier': using_args.get('learning_rate_multiplier', None),
+            'prompt_loss_weight': using_args.get('prompt_loss_weight', None),
+            'compute_classification_metrics': using_args.get('compute_classification_metrics', None),
+            'classification_n_classes': using_args.get('classification_n_classes', None),
+            'classification_positive_class': using_args.get('classification_positive_class', None),
+            'classification_betas': using_args.get('classification_betas', None),
         }
 
         start_time = datetime.datetime.now()
@@ -366,4 +366,3 @@ class OpenAIHandler(BaseMLEngine):
         args['runtime'] = runtime.total_seconds()
 
         self.model_storage.json_set('args', args)
-        self.engine_storage.folder_sync(folder_name)

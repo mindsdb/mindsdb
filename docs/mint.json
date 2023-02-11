@@ -156,7 +156,8 @@
                     "sql/create/predictor",
                     "sql/create/table",
                     "sql/create/view",
-                    "sql/create/ml-engine"
+                    "sql/create/ml-engine",
+                    "sql/create/jobs"
                   ]
                 },
                 "sql/api/update",

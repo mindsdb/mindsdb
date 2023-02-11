@@ -31,13 +31,13 @@ def discover():
     try:
         for k in Cache:
             _type = Cache[k]
-            rec = {"host": k[0], "port":k[1]}
+            rec = {"host": k[0], "port": k[1]}
             if _type not in res:
                 res[_type] = [rec]
             else:
                 res[_type].append(rec)
     except Exception as e:
-        return {"error": str(e)} , 500
+        return {"error": str(e)}, 500
     return res, 200
 
 

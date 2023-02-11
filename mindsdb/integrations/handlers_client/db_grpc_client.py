@@ -1,6 +1,4 @@
 import os
-import base64
-import traceback
 import pickle
 import json
 
@@ -12,8 +10,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
 )
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb.integrations.libs.handler_helpers import get_handler, action_logger
+from mindsdb.integrations.libs.handler_helpers import action_logger
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
 
@@ -56,46 +53,50 @@ class DBClientGRPC:
         return StatusResponse(success=response.success,
                               error_message=response.error_message)
 
-
     @staticmethod
     def _to_response(response: common_pb2.Response):
         data = pickle.loads(response.data_frame)
         return Response(
-                resp_type=response.type,
-                data_frame=data,
-                query=response.query,
-                error_code=response.error_code,
-                error_message=response.error_message,
+            resp_type=response.type,
+            data_frame=data,
+            query=response.query,
+            error_code=response.error_code,
+            error_message=response.error_message,
         )
-
 
     @action_logger(logger)
     def connect(self):
         resp = self.stub.Connect(self.context)
-        logger.info("%s.connect: returns success - %s, error - %s",
-                     self.__class__.__name__,
-                     resp.success,
-                     resp.error_message)
+        logger.info(
+            "%s.connect: returns success - %s, error - %s",
+            self.__class__.__name__,
+            resp.success,
+            resp.error_message
+        )
 
         return self._to_status_response(resp)
 
     @action_logger(logger)
     def check_connection(self):
         resp = self.stub.CheckConnection(self.context)
-        logger.info("%s.check_connection: returns success - %s, error - %s",
-                     self.__class__.__name__,
-                     resp.success,
-                     resp.error_message)
+        logger.info(
+            "%s.check_connection: returns success - %s, error - %s",
+            self.__class__.__name__,
+            resp.success,
+            resp.error_message
+        )
 
         return self._to_status_response(resp)
 
     @action_logger(logger)
     def disconnect(self):
         resp = self.stub.Disconnect(self.context)
-        logger.info("%s.disconnect: returns success - %s, error - %s",
-                     self.__class__.__name__,
-                     resp.success,
-                     resp.error_message)
+        logger.info(
+            "%s.disconnect: returns success - %s, error - %s",
+            self.__class__.__name__,
+            resp.success,
+            resp.error_message,
+        )
 
         return self._to_status_response(resp)
 

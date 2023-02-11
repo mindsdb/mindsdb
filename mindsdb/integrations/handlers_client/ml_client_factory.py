@@ -27,7 +27,7 @@ class MLClientFactory:
                 self.__class__.__name__,
             )
             return BaseMLEngineExec(**kwargs)
-        
+
         logger.info("%s.__call__: api to communicate with ML services - gRPC, host - %s, port - %s",
                     self.__class__.__name__,
                     host,

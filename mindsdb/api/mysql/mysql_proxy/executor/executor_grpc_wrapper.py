@@ -103,23 +103,23 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
 
     @staticmethod
     def _prepare_response(executor):
-        columns=pickle.dumps(executor.columns)
-        params=pickle.dumps(executor.params)
-        data=pickle.dumps(executor.data)
-        state_track=executor.state_track
-        server_status=executor.server_status
-        is_executed=executor.is_executed
-        session=json.dumps(executor.session.to_json())
+        columns = pickle.dumps(executor.columns)
+        params = pickle.dumps(executor.params)
+        data = pickle.dumps(executor.data)
+        state_track = executor.state_track
+        server_status = executor.server_status
+        is_executed = executor.is_executed
+        session = json.dumps(executor.session.to_json())
 
         res = executor_pb2.ExecutorResponse(
-                columns=columns,
-                params=params,
-                data=data,
-                state_track=state_track,
-                server_status=server_status,
-                is_executed=is_executed,
-                session=session,
-                )
+            columns=columns,
+            params=params,
+            data=data,
+            state_track=state_track,
+            server_status=server_status,
+            is_executed=is_executed,
+            session=session,
+        )
         return res
 
     def DeleteExecutor(self, request, context):

@@ -2,11 +2,11 @@ import os
 
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
 from mindsdb.api.mysql.mysql_proxy.executor.executor_grpc_client import ExecutorClientGRPC
-
 from mindsdb.utilities.log import get_log
 
 
 logger = get_log(logger_name="main")
+
 
 class ExecutorClientFactory:
     def __init__(self):
@@ -22,7 +22,7 @@ class ExecutorClientFactory:
                 self.__class__.__name__,
             )
             return Executor(session, sqlserver)
-        
+
         logger.info("%s.__call__: api to communicate with db services - gRPC",
                     self.__class__.__name__,
                     )

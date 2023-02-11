@@ -1,9 +1,7 @@
 import os
 import json
-import traceback
 import pickle
 from uuid import uuid4
-
 
 import grpc
 from mindsdb.grpc.executor import executor_pb2_grpc
@@ -11,11 +9,11 @@ from mindsdb.grpc.executor import executor_pb2
 
 from mindsdb.utilities.log import get_log
 from mindsdb.utilities.context import context as ctx
-from mindsdb.integrations.libs.net_helpers import sending_attempts
 from mindsdb.integrations.libs.handler_helpers import action_logger
 
 
 logger = get_log("main")
+
 
 class ExecutorClientGRPC:
 
@@ -46,23 +44,23 @@ class ExecutorClientGRPC:
     @property
     def _context(self):
         logger.info("%s._context: preparing context. id - %s, session - %s", self.__class__.__name__, self.id, self.session)
-        _id=self.id
-        connection_id=self.sqlserver.connection_id if hasattr(self.sqlserver, "connection_id") else -1
-        session_id=self.session.id
-        session=json.dumps(self.session.to_json())
-        context=json.dumps(ctx.dump())
+        _id = self.id
+        connection_id = self.sqlserver.connection_id if hasattr(self.sqlserver, "connection_id") else -1
+        session_id = self.session.id
+        session = json.dumps(self.session.to_json())
+        context = json.dumps(ctx.dump())
 
         return executor_pb2.ExecutorContext(
-                id=_id,
-                connection_id=connection_id,
-                session_id=session_id,
-                session=session,
-                context=context,
+            id=_id,
+            connection_id=connection_id,
+            session_id=session_id,
+            session=session,
+            context=context,
         )
 
     def __del__(self):
         self.stub.DeleteExecutor(self._context)
-    
+
     def _update_attrs(self, response: executor_pb2.ExecutorResponse):
         self.columns = pickle.loads(response.columns)
         self.params = pickle.loads(response.params)

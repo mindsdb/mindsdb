@@ -54,9 +54,11 @@ class AuroraHandler(DatabaseHandler):
                 connection_data=self.connection_data
             )
         else:
+            # TODO: handle the else situation
             pass
 
     def get_database_engine(self):
+        # TODO: add error handling for when the provided credentials are incorrect
         session = boto3.session.Session(
             aws_access_key_id=self.connection_data['aws_access_key_id'],
             aws_secret_access_key=self.connection_data['aws_secret_access_key']

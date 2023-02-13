@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 import boto3
 
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
 

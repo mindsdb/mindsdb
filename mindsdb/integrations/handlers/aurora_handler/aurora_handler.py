@@ -31,6 +31,7 @@ class AuroraHandler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         # TODO: check if using the same name parameter here and when instantiating the objects will be feasible
+        # TODO: check if any of these other parameters like parse_sql are required
         super().__init__(name)
         self.parser = parse_sql
         self.dialect = 'aurora'

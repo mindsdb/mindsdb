@@ -31,15 +31,11 @@ class AuroraHandler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         # TODO: check if using the same name parameter here and when instantiating the objects will be feasible
-        # TODO: check if any of these other parameters like parse_sql are required
         super().__init__(name)
-        self.parser = parse_sql
+
         self.dialect = 'aurora'
         self.connection_data = connection_data
         self.kwargs = kwargs
-
-        self.connection = None
-        self.is_connected = False
 
         database_engine = ""
         if 'db_engine' not in self.connection_data:
@@ -73,8 +69,7 @@ class AuroraHandler(DatabaseHandler):
         return next(item for item in response if item["DBClusterIdentifier"] == self.connection_data['host'].split('.')[0])['Engine']
 
     def __del__(self):
-        if self.is_connected is True:
-            self.disconnect()
+        self.db.__del__()
 
     def connect(self) -> StatusResponse:
         """

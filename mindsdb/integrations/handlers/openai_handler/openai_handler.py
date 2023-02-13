@@ -2,16 +2,20 @@ import os
 import re
 import math
 import json
+import shutil
+import tempfile
+import datetime
 import textwrap
+import subprocess
 import concurrent.futures
-import numpy as np
-import pandas as pd
-from typing import Optional
+from typing import Optional, Dict
 
 import openai
+import numpy as np
+import pandas as pd
 
-from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities.config import Config
+from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
 
 
@@ -53,15 +57,19 @@ class OpenAIHandler(BaseMLEngine):
         args = args['using']
 
         args['target'] = target
+        if not args.get('model_name'):
+            args['model_name'] = self.default_model
+
         self.model_storage.json_set('args', args)
 
     def _get_api_key(self, args):
-        # API_KEY preference order:
-        #   1. provided at model creation
-        #   2. provided at engine creation
-        #   3. OPENAI_API_KEY env variable
-        #   4. openai.api_key setting in config.json
-
+        """ 
+        API_KEY preference order:
+            1. provided at model creation
+            2. provided at engine creation
+            3. OPENAI_API_KEY env variable
+            4. openai.api_key setting in config.json
+        """  # noqa
         # 1
         if 'api_key' in args:
             return args['api_key']
@@ -222,7 +230,7 @@ class OpenAIHandler(BaseMLEngine):
         Additionally, single completion calls are done with exponential backoff to guarantee all prompts are processed,
         because even with previous checks the tokens-per-minute limit may apply.
         """
-        @retry_with_exponential_backoff
+        @retry_with_exponential_backoff()
         def _submit_completion(model_name, prompts, api_key, api_args, args):
             return openai.Completion.create(
                 model=model_name,
@@ -290,6 +298,7 @@ class OpenAIHandler(BaseMLEngine):
         return _tidy(completion)
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+        # TODO: Update to use update() artifacts
         args = self.model_storage.json_get('args')
         api_key = self._get_api_key(args)
 
@@ -298,3 +307,126 @@ class OpenAIHandler(BaseMLEngine):
 
         return pd.DataFrame([[meta['id'], meta['object'], meta['owned_by'], meta['permission'], args]],
                             columns=['id', 'object', 'owned_by', 'permission', 'model_args'])
+
+    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        """
+        Fine-tune OpenAI GPT models. Steps are roughly:
+          - Analyze input data and modify it according to suggestions made by the OpenAI utility tool
+          - Get a training and validation file
+          - Determine base model to use
+          - Submit a fine-tuning job via the OpenAI API
+          - Monitor progress with exponential backoff (which has been modified for greater control given a time budget in hours), 
+          - Gather stats once fine-tuning finishes
+          - Modify model metadata so that the new version triggers the fine-tuned version of the model (stored in the user's OpenAI account)
+
+        Caveats: 
+          - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you adjust successively more than once, any fine-tuning other than the most recent one is lost.
+        """  # noqa
+
+        args = args if args else {}
+        using_args = args.pop('using') if 'using' in args else {}
+        prompt_col = using_args.get('prompt_column', 'prompt')
+        completion_col = using_args.get('completion_column', 'completion')
+
+        for col in [prompt_col, completion_col]:
+            if col not in set(df.columns):
+                raise Exception(f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first.")  # noqa
+
+        args = {**using_args, **args}
+        prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
+
+        openai.api_key = self._get_api_key(args)
+        adjust_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
+        temp_storage_path = tempfile.mkdtemp()
+        temp_file_name = f"ft_{adjust_time}"
+        temp_model_storage_path = f"{temp_storage_path}/{temp_file_name}.jsonl"
+        df.to_json(temp_model_storage_path, orient='records', lines=True)
+
+        # TODO avoid subprocess usage once OpenAI enables non-CLI access
+        subprocess.run(
+            [
+                "openai", "tools", "fine_tunes.prepare_data",
+                "-f", temp_model_storage_path,                  # from file
+                '-q'                                            # quiet mode (accepts all suggestions)
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+        )
+
+        file_names = [f'{temp_file_name}.jsonl',
+                      f'{temp_file_name}_prepared_train.jsonl',
+                      f'{temp_file_name}_prepared_valid.jsonl']
+        returns = []
+        for file_name in file_names:
+            if os.path.isfile(os.path.join(temp_storage_path, file_name)):
+                returns.append(openai.File.create(
+                    file=open(f"{temp_storage_path}/{file_name}", "rb"),
+                    purpose='fine-tune')
+                )
+            else:
+                returns.append(None)
+
+        train_file_id = returns[1].id if isinstance(returns[1], openai.File) else returns[0].id
+        val_file_id = returns[2].id if isinstance(returns[2], openai.File) else None
+
+        def _get_model_type(model_name: str):
+            for model_type in ['ada', 'curie', 'babbage', 'davinci']:
+                if model_type in model_name.lower():
+                    return model_type
+            return 'ada'
+
+        # `None` values are internally imputed by OpenAI to `null` or default values
+        ft_params = {
+            'training_file': train_file_id,
+            'validation_file': val_file_id,
+            'model': _get_model_type(prev_model_name),
+            'suffix': 'mindsdb',
+            'n_epochs': using_args.get('n_epochs', None),
+            'batch_size': using_args.get('batch_size', None),
+            'learning_rate_multiplier': using_args.get('learning_rate_multiplier', None),
+            'prompt_loss_weight': using_args.get('prompt_loss_weight', None),
+            'compute_classification_metrics': using_args.get('compute_classification_metrics', None),
+            'classification_n_classes': using_args.get('classification_n_classes', None),
+            'classification_positive_class': using_args.get('classification_positive_class', None),
+            'classification_betas': using_args.get('classification_betas', None),
+        }
+
+        start_time = datetime.datetime.now()
+        ft_result = openai.FineTune.create(**{k: v for k, v in ft_params.items() if v is not None})
+
+        @retry_with_exponential_backoff(hour_budget=args.get('hour_budget', 8))
+        def _check_ft_status(model_id):
+            ft_retrieved = openai.FineTune.retrieve(id=model_id)
+            if ft_retrieved['status'] in ('succeeded', 'failed'):
+                return ft_retrieved
+            else:
+                raise openai.error.OpenAIError('Fine-tuning still pending!')
+
+        ft_stats = _check_ft_status(ft_result.id)
+        ft_model_name = ft_stats['fine_tuned_model']
+
+        if ft_stats['status'] != 'succeeded':
+            raise Exception(f"Fine-tuning did not complete successfully (status: {ft_stats['status']}). Error message: {ft_stats['events'][-1]['message']}")  # noqa
+
+        end_time = datetime.datetime.now()
+        runtime = end_time - start_time
+
+        result_file_id = openai.FineTune.retrieve(id=ft_result.id)['result_files'][0].id
+        name_extension = openai.File.retrieve(id=result_file_id).filename
+        result_path = f'{temp_storage_path}/ft_{adjust_time}_result_{name_extension}'
+        with open(result_path, 'wb') as f:
+            f.write(openai.File.download(id=result_file_id))
+
+        train_stats = pd.read_csv(result_path)
+        if 'validation_token_accuracy' in train_stats.columns:
+            train_stats = train_stats[train_stats['validation_token_accuracy'].notnull()]
+
+        args['model_name'] = ft_model_name
+        args['ft_api_info'] = ft_stats.to_dict_recursive()
+        args['ft_result_stats'] = train_stats.to_dict()
+        args['runtime'] = runtime.total_seconds()
+
+        self.model_storage.json_set('args', args)
+        shutil.rmtree(temp_storage_path)

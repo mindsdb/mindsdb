@@ -31,22 +31,19 @@ class AuroraHandler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
 
-        database_engine = self.get_database_engine()
-        if database_engine == 'aurora':
+        database_engine = ""
+        if 'db_engine' not in self.connection_data:
+            database_engine = self.get_database_engine()
+
+        if self.connection_data['db_engine'] == 'mysql' or database_engine == 'aurora':
             self.db = MySQLHandler(
-                host=self.connection_data['host'],
-                port=self.connection_data['port'],
-                user=self.connection_data['user'],
-                password=self.connection_data['password'],
-                database=self.connection_data['database']
+                name=name,
+                connection_data=self.connection_data
             )
-        elif database_engine == 'aurora-postgresql':
+        elif self.connection_data['db_engine'] == 'postgresql' or database_engine == 'aurora-postgresql':
             self.db = PostgresHandler(
-                host=self.connection_data['host'],
-                port=self.connection_data['port'],
-                user=self.connection_data['user'],
-                password=self.connection_data['password'],
-                database=self.connection_data['database']
+                name=name,
+                connection_data=self.connection_data
             )
         else:
             pass

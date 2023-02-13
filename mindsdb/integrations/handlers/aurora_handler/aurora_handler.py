@@ -134,14 +134,6 @@ class AuroraHandler(DatabaseHandler):
 
 
 connection_args = OrderedDict(
-    aws_access_key_id={
-        'type': ARG_TYPE.STR,
-        'description': 'The access key for the AWS account.'
-    },
-    aws_secret_access_key={
-        'type': ARG_TYPE.STR,
-        'description': 'The secret key for the AWS account.'
-    },
     user={
         'type': ARG_TYPE.STR,
         'description': 'The user name used to authenticate with the Amazon Aurora DB cluster.'
@@ -161,12 +153,22 @@ connection_args = OrderedDict(
     port={
         'type': ARG_TYPE.INT,
         'description': 'The TCP/IP port of the Amazon Aurora DB cluster. Must be an integer.'
-    }
+    },
+    db_engine={
+        'type': ARG_TYPE.STR,
+        'description': "The database engine of the Amazon Aurora DB cluster. This can take one of two values: 'mysql' or 'postgresql'. This parameter is optional, but if it is not provided, 'aws_access_key_id' and 'aws_secret_access_key' parameters must be provided"
+    },
+    aws_access_key_id={
+        'type': ARG_TYPE.STR,
+        'description': "The access key for the AWS account. This parameter is optional and is only required to be provided if the 'db_engine' parameter is not provided."
+    },
+    aws_secret_access_key={
+        'type': ARG_TYPE.STR,
+        'description': "The secret key for the AWS account. This parameter is optional and is only required to be provided if the 'db_engine' parameter is not provided."
+    },
 )
 
 connection_args_example = OrderedDict(
-    aws_access_key_id='PCAQ2LJDOSWLNSQKOCPW',
-    aws_secret_access_key='U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i',
     host='127.0.0.1',
     port=3306,
     user='root',

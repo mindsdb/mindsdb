@@ -1,0 +1,4 @@
+psycopg[binary] >= 1.15.3
+docker >= 5.0.3
+mysql-connector-python
+boto3

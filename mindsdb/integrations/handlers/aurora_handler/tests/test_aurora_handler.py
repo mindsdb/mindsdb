@@ -12,7 +12,8 @@ class AuroraHandlerTest(unittest.TestCase):
                 "port": 0,
                 "user": "",
                 "password": "",
-                "database": ""
+                "database": "",
+                "db_engine": ""
             }
         }
         cls.handler = AuroraHandler('test_aurora_handler', cls.kwargs)

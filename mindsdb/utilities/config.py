@@ -147,6 +147,21 @@ class Config():
     def get_all(self):
         return self._config
 
+    def update(self, data: dict):
+        config_path = Path(self.config_path)
+        if config_path.is_file() is False:
+            config_path.write_text('{}')
+
+        with open(self.config_path, 'r') as fp:
+            config_data = json.load(fp)
+
+        config_data.update(data)
+
+        with open(self.config_path, 'wt') as fp:
+            fp.write(json.dumps(config_data, indent=4))
+
+        self.init_config()
+
     @property
     def paths(self):
         return self._config['paths']

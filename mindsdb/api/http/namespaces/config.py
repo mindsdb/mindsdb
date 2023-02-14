@@ -71,17 +71,7 @@ class GetConfig(Resource):
                     f'Unknown argumens: {unknown_argumens}'
                 )
 
-        config_path = Path(Config().config_path)
-        if config_path.is_file() is False:
-            config_path.write_text('{}')
-
-        with open(Config().config_path, 'r') as fp:
-            config_data = json.load(fp)
-
-        config_data.update(data)
-
-        with open(Config().config_path, 'wt') as fp:
-            fp.write(json.dumps(config_data, indent=4))
+        Config().update(data)
 
         return '', 200
 

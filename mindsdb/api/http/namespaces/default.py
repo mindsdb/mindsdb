@@ -1,6 +1,7 @@
 import base64
 from pathlib import Path
 import secrets
+import urllib
 
 import requests
 from flask import request, session, redirect, url_for
@@ -28,6 +29,7 @@ def check_auth() -> bool:
 class Auth(Resource):
     def get(self):
         config = Config()
+        # todo add location arg
         code = request.args.get('code')
         client_id = config['auth']['client_id']
         client_secret = config['auth']['client_secret']
@@ -38,8 +40,8 @@ class Auth(Resource):
             'https://alpha.mindsdb.com/auth/token',
             data={
                 'code': code,
-                'grant_type': 'authorization_code',
-                'redirect_uri': 'https://3fee-91-210-47-113.eu.ngrok.io/api/auth/callback'
+                'grant_type': 'authorization_code'
+                # 'redirect_uri': 'https://3fee-91-210-47-113.eu.ngrok.io/api/auth/callback'
             },
             # cls.GRANT_TYPE authorization_code
             headers={
@@ -51,7 +53,7 @@ class Auth(Resource):
         return redirect(url_for('root_index'))
 
 
-@ns_conf.route('/cloud_login', methods=['GET'])
+@ns_conf.route('/auth/cloud_login', methods=['GET'])
 class CloudLoginRoute(Resource):
     @ns_conf.doc(
         responses={
@@ -63,11 +65,19 @@ class CloudLoginRoute(Resource):
     def get(self):
         ''' redirect ot cloud login form
         '''
+        # todo add location arg
         config = Config()
         public_host = config['public_host']
         auth_server = config['auth']['cloud_auth_server']
-        # ?client_id={config['oauth']['client_id']}&scope=openid+aws_marketplace&response_type=code&nonce={secrets.token_urlsafe()}&redirect_uri={public_host}
-        return redirect(f'{auth_server}/authorize')
+        # public_host_encoded = urllib.parse.quote(public_host)
+        args = urllib.parse.urlencode({
+            'client_id': config['oauth']['client_id'],
+            'scope': 'openid aws_marketplace',
+            'response_type': 'code',
+            'nonce': secrets.token_urlsafe(),
+            'redirect_uri': f'https://{public_host}/api/auth/callback'
+        })
+        return redirect(f'{auth_server}/authorize?{args}')
 
 
 @ns_conf.route('/login', methods=['POST'])

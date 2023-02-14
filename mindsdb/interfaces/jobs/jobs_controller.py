@@ -291,6 +291,8 @@ class JobsExecutor:
 
         error = ''
 
+        project_controller = ProjectController()
+        project = project_controller.get(record.project_id)
         for sql in split_sql(record.query_str):
             try:
                 #  fill template variables
@@ -320,7 +322,7 @@ class JobsExecutor:
                 from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
 
                 sql_session = SessionController()
-                sql_session.database = 'mindsdb'
+                sql_session.database = project.name
 
                 command_executor = ExecuteCommands(sql_session, executor=None)
 

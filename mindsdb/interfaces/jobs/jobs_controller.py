@@ -265,7 +265,8 @@ class JobsExecutor:
 
         history_record = db.JobsHistory(
             job_id=record.id,
-            start_at=record.next_run_at
+            start_at=record.next_run_at,
+            company_id=record.company_id
         )
 
         db.session.add(history_record)
@@ -284,8 +285,11 @@ class JobsExecutor:
         if history_id is None:
             history_record = db.JobsHistory(
                 job_id=record.id,
-                start_at=dt.datetime.now()
+                start_at=dt.datetime.now(),
+                company_id=record.company_id,
             )
+            db.session.add(history_record)
+            db.session.flush()
         else:
             history_record = db.JobsHistory.query.get(history_id)
 

@@ -174,12 +174,34 @@ def download_gui(destignation, version):
 
 
 def initialize_static():
-    success = update_static()
+    config = Config()
+    last_gui_version_lv = get_last_compatible_gui_version()
+    current_gui_version_lv = get_current_gui_version()
+    required_gui_version = config['gui'].get('version')
+
+    if required_gui_version is not None:
+        required_gui_version_lv = LooseVersion(required_gui_version)
+        success = True
+        if (
+            current_gui_version_lv is None
+            or required_gui_version_lv != current_gui_version_lv
+        ):
+            success = update_static(required_gui_version_lv)
+    else:
+        if last_gui_version_lv is False:
+            return False
+
+        if current_gui_version_lv is not None:
+            if current_gui_version_lv >= last_gui_version_lv:
+                return True
+
+        success = update_static(last_gui_version_lv)
+
     db.session.close()
     return success
 
 
-def update_static():
+def update_static(gui_version_lv):
     ''' Update Scout files basing on compatible-config.json content.
         Files will be downloaded and updated if new version of GUI > current.
         Current GUI version stored in static/version.txt.
@@ -188,20 +210,10 @@ def update_static():
     logger = get_log('http')
     static_path = Path(config['paths']['static'])
 
-    last_gui_version_lv = get_last_compatible_gui_version()
-    current_gui_version_lv = get_current_gui_version()
-
-    if last_gui_version_lv is False:
-        return False
-
-    if current_gui_version_lv is not None:
-        if current_gui_version_lv >= last_gui_version_lv:
-            return True
-
-    logger.info(f'New version of GUI available ({last_gui_version_lv.vstring}). Downloading...')
+    logger.info(f'New version of GUI available ({gui_version_lv.vstring}). Downloading...')
 
     temp_dir = tempfile.mkdtemp(prefix='mindsdb_gui_files_')
-    success = download_gui(temp_dir, last_gui_version_lv.vstring)
+    success = download_gui(temp_dir, gui_version_lv.vstring)
     if success is False:
         shutil.rmtree(temp_dir)
         return False
@@ -213,7 +225,7 @@ def update_static():
     shutil.copytree(temp_dir, str(static_path))
     shutil.rmtree(temp_dir_for_rm)
 
-    logger.info(f'GUI version updated to {last_gui_version_lv.vstring}')
+    logger.info(f'GUI version updated to {gui_version_lv.vstring}')
     return True
 
 
@@ -294,11 +306,12 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
 
     If some error then do nothing.
     """
-    init_static_thread.join()
+    if init_static_thread is not None:
+        init_static_thread.join()
     inject_telemetry_to_static(static_folder)
     logger = get_log('http')
     try:
-        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=10,
+        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=15,
                                            pid=pid, port=port)
         if is_http_active:
             webbrowser.open(url)

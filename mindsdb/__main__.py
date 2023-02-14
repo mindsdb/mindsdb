@@ -8,9 +8,6 @@ import psutil
 import asyncio
 import secrets
 import traceback
-
-import torch.multiprocessing as mp
-mp.set_start_method('spawn')
 from packaging import version
 
 from mindsdb.__about__ import __version__ as mindsdb_version
@@ -30,6 +27,13 @@ from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 from mindsdb.utilities.context import context as ctx
+
+
+import torch.multiprocessing as mp
+try:
+    mp.set_start_method('spawn')
+except RuntimeError:
+    log.logger.info('Torch multiprocessing context already set, ignoring...')
 
 # is_ray_worker = False
 # if sys.argv[0].endswith('ray/workers/default_worker.py'):

@@ -47,6 +47,13 @@ First, you should prepare a `config.json` file based on the following template; 
     },
     "debug": false,
     "integrations": {},
+    "gui": {
+        "autoupdate": True
+    }
+    "auth":{
+        "username": "mindsdb",
+        "password": "123"
+    }
     "api": {
         "http": {
             "host": "127.0.0.1",
@@ -54,9 +61,7 @@ First, you should prepare a `config.json` file based on the following template; 
         },
         "mysql": {
             "host": "127.0.0.1",
-            "password": "",
             "port": "47335",
-            "user": "mindsdb",
             "database": "mindsdb",
             "ssl": true
         },

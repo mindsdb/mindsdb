@@ -68,7 +68,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         self.run_sql('create database proj')
 
         # -- create model --
-        self.run_sql(
+        ret = self.run_sql(
             '''
                 CREATE PREDICTOR proj.task_model
                 from pg (select * from tasks)
@@ -78,6 +78,8 @@ class TestProjectStructure(BaseExecutorDummyML):
                 join_learn_process=true
             '''
         )
+        assert ret['NAME'][0] == 'task_model'
+        assert ret['ENGINE'][0] == 'dummy_ml'
         self.wait_predictor('proj', 'task_model')
 
         # check input to data handler
@@ -99,7 +101,7 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # -- retrain predictor with tag --
         data_handler.reset_mock()
-        self.run_sql(
+        ret = self.run_sql(
             '''
                 retrain proj.task_model
                 from pg (select * from tasks where a=2)
@@ -108,6 +110,8 @@ class TestProjectStructure(BaseExecutorDummyML):
                 join_learn_process=true
             '''
         )
+        assert ret['NAME'][0] == 'task_model'
+        assert ret['TAG'][0] == 'second'
         self.wait_predictor('proj', 'task_model', {'tag': 'second'})
 
         # get current model

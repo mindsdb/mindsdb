@@ -4,6 +4,8 @@ import json
 import base64
 import datetime as dt
 from copy import deepcopy
+
+import pandas as pd
 from dateutil.parser import parse as parse_datetime
 
 from sqlalchemy import func, null
@@ -309,7 +311,9 @@ class ModelController():
         if params['model_name'] in project_tables:
             raise Exception(f"Error: model '{params['model_name']}' already exists in project {params['project_name']}!")
 
-        ml_handler.learn(**params)
+        predictor_record = ml_handler.learn(**params)
+
+        return self.get_model_info(predictor_record)
 
     def retrain_model(self, statement, ml_handler):
         # active setting
@@ -346,7 +350,9 @@ class ModelController():
 
         params['is_retrain'] = True
         params['set_active'] = set_active
-        ml_handler.learn(**params)
+        predictor_record = ml_handler.learn(**params)
+
+        return self.get_model_info(predictor_record)
 
     @staticmethod
     def _get_retrain_adjust_version(model_name, project_name, base_predictor_record):
@@ -414,7 +420,30 @@ class ModelController():
         params = self.prepare_adjust_statement(statement, ml_handler.database_controller)
 
         params['set_active'] = set_active
-        ml_handler.update(**params)
+        predictor_record = ml_handler.update(**params)
+        return self.get_model_info(predictor_record)
+
+    def get_model_info(self, predictor_record):
+
+        from mindsdb.interfaces.database.projects import ProjectController
+        projects_controller = ProjectController()
+        project = projects_controller.get(id=predictor_record.project_id)
+
+        columns = ['NAME', 'ENGINE', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS',
+                   'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG']
+
+        project_name = project.name
+        model = project.get_models(model_id=predictor_record.id)[0]
+        table_name = model['name']
+        table_meta = model['metadata']
+        record = [
+            table_name, table_meta['engine'], project_name, table_meta['active'], table_meta['version'], table_meta['status'],
+            table_meta['accuracy'], table_meta['predict'], table_meta['update_status'],
+            table_meta['mindsdb_version'], table_meta['error'], table_meta['select_data_query'],
+            str(table_meta['training_options']), table_meta['label']
+        ]
+
+        return pd.DataFrame([record], columns=columns)
 
     def update_model_version(self, models, active=None):
         if active is None:

@@ -694,9 +694,16 @@ class ExecuteCommands:
             )
 
         self._sync_predictor_check(phase_name='retrain')
-        self.session.model_controller.retrain_model(statement, ml_handler)
+        df = self.session.model_controller.retrain_model(statement, ml_handler)
 
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        resp_dict = df.to_dict(orient='split')
+
+        columns = [
+            Column(col)
+            for col in resp_dict['columns']
+        ]
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
 
     def answer_adjust_predictor(self, statement):
         model_record = self._get_model_record(statement)
@@ -712,9 +719,16 @@ class ExecuteCommands:
         ml_handler = self.session.integration_controller.get_handler(integration_record.name)
 
         self._sync_predictor_check(phase_name='adjust')
-        self.session.model_controller.adjust_model(statement, ml_handler)
+        df = self.session.model_controller.adjust_model(statement, ml_handler)
 
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        resp_dict = df.to_dict(orient='split')
+
+        columns = [
+            Column(col)
+            for col in resp_dict['columns']
+        ]
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
 
     def _create_integration(self, name: str, engine: str, connection_args: dict):
         # we have connection checkers not for any db. So do nothing if fail
@@ -972,9 +986,15 @@ class ExecuteCommands:
             ml_integration_name
         )
 
-        self.session.model_controller.create_model(statement, ml_handler)
+        df = self.session.model_controller.create_model(statement, ml_handler)
+        resp_dict = df.to_dict(orient='split')
 
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        columns = [
+            Column(col)
+            for col in resp_dict['columns']
+        ]
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
 
     def delete_predictor_query(self, query):
 

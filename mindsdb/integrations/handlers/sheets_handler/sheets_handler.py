@@ -55,11 +55,10 @@ class SheetsHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
-
         url = f"https://docs.google.com/spreadsheets/d/{self.connection_data['spreadsheet_id']}/gviz/tq?tqx=out:csv&sheet={self.connection_data['sheet_name']}"
-        globals()[self.connection_data['sheet_name']] = pd.read_csv(url)
-
+        self.sheet = pd.read_csv(url, on_bad_lines='skip')
         self.connection = duckdb.connect()
+        self.connection.register(self.connection_data['sheet_name'], self.sheet)
         self.is_connected = True
 
         return self.connection
@@ -68,7 +67,6 @@ class SheetsHandler(DatabaseHandler):
         """
         Close any existing connections.
         """
-
         if self.is_connected is False:
             return
 
@@ -82,7 +80,6 @@ class SheetsHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
-
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -110,21 +107,14 @@ class SheetsHandler(DatabaseHandler):
         """
 
         need_to_close = self.is_connected is False
-
         connection = self.connect()
-        cursor = connection.cursor()
         try:
-            cursor.execute(query)
-            result = cursor.fetchall()
-            if result:
+            result = connection.execute(query).fetchdf()
+            if not result.empty:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cursor.description]
-                    )
+                    result
                 )
-
             else:
                 response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
@@ -149,7 +139,6 @@ class SheetsHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         return self.native_query(query.to_string())
 
     def get_tables(self) -> StatusResponse:
@@ -158,7 +147,6 @@ class SheetsHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         response = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
@@ -177,13 +165,12 @@ class SheetsHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
         response = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 {
-                    'column_name': list(globals()[self.connection_data['sheet_name']].columns),
-                    'data_type': globals()[self.connection_data['sheet_name']].dtypes
+                    'column_name': list(self.sheet.columns),
+                    'data_type': self.sheet.dtypes
                 }
             )
         )

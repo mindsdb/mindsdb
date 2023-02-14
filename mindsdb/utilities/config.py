@@ -108,6 +108,9 @@ class Config():
                     "db": "WARNING"
                 }
             },
+            "gui": {
+                "autoupdate": True
+            },
             "debug": False,
             "integrations": {},
             "api": {

@@ -9,7 +9,7 @@ The `CREATE JOB` statement lets you schedule the execution of queries by providi
 
 ## Syntax
 
-### Creating a Job [todo-testing]
+### Creating a Job
 
 Here is the syntax:
 
@@ -36,6 +36,8 @@ Here are the supported `<date>` formats:
 - `'%Y-%m-%d %H:%M:%S'`
 - `'%Y-%m-%d'`
 
+Please note that the default time zone is UTC.
+
 And the supported `<period>` values:
 - `minute` / `minutes` / `min`
 - `hour` / `hours`
@@ -43,7 +45,7 @@ And the supported `<period>` values:
 - `week` / `weeks`
 - `month` / `months`
 
-### Deleting a Job [todo-testing]
+### Deleting a Job
 
 Here is the syntax for deleting a job:
 
@@ -71,7 +73,7 @@ Here we drop the `create_table_job` job that resides in the current project.
 
 To learn more about projects in MindsDB, visit our docs [here](/sql/project).
 
-### Querying Jobs [todo-testing&docs]
+### Querying Jobs [todo-docs]
 
 Here is how we can view all jobs in the current project:
 
@@ -83,7 +85,12 @@ FROM jobs;
 On execution, we get:
 
 ```sql
-todo
++---------
+| NAME      | PROJECT     | START_AT           | END_AT           | NEXT_RUN_AT         | SCHEDULE_STR       | QUERY           |
++-----------
+|
+|
+|
 ```
 
 We can also view jobs from a defined project:
@@ -96,7 +103,12 @@ FROM my_project.jobs;
 On execution, we get:
 
 ```sql
-todo
++---------
+| NAME      | PROJECT     | START_AT           | END_AT           | NEXT_RUN_AT         | SCHEDULE_STR       | QUERY           |
++-----------
+|
+|
+|
 ```
 
 And here is how to view jobs from all projects at once:
@@ -109,10 +121,15 @@ FROM information_schema.jobs;
 On execution, we get:
 
 ```sql
-todo
++---------
+| NAME      | PROJECT     | START_AT           | END_AT           | NEXT_RUN_AT         | SCHEDULE_STR       | QUERY           |
++-----------
+|
+|
+|
 ```
 
-### Querying Jobs History [todo-testing&docs]
+### Querying Jobs History [todo-docs]
 
 You can query the history of jobs similar to querying for jobs.
 
@@ -126,7 +143,12 @@ FROM jobs_history;
 On execution, we get:
 
 ```sql
-todo
++---------
+| NAME      | PROJECT     | START_AT           | END_AT           | ERROR       | QUERY           |
++-----------
+|
+|
+|
 ```
 
 We can also view jobs history from a defined project:
@@ -139,7 +161,12 @@ FROM my_project.jobs_history;
 On execution, we get:
 
 ```sql
-todo
++---------
+| NAME      | PROJECT     | START_AT           | END_AT           | ERROR       | QUERY           |
++-----------
+|
+|
+|
 ```
 
 And here is how to view jobs history from all projects at once:
@@ -152,14 +179,19 @@ FROM information_schema.jobs_history;
 On execution, we get:
 
 ```sql
-todo
++---------
+| NAME      | PROJECT     | START_AT           | END_AT           | ERROR       | QUERY           |
++-----------
+|
+|
+|
 ```
 
 ### Additional Configuration [todo-testing&docs]
 
 todo
 
-## Example 1 [todo-testing]
+## Example 1
 
 In this example, we create a job in the current project to retrain the `home_rentals_model` model and insert predictions into the `rentals` table.
 
@@ -171,9 +203,9 @@ CREATE JOB retrain_rentals (
       join_learn_process = true;
 
    INSERT INTO my_integration.rentals (
-      SELECT *
-      FROM example_db.demo_data.home_rentals
-      JOIN mindsdb.home_rentals_model
+      SELECT m.rental_price, m.rental_price_explain
+      FROM mindsdb.home_rentals_model AS m
+      JOIN example_db.demo_data.home_rentals AS d
    )
 )
 END '2023-04-01 00:00:00'
@@ -186,23 +218,24 @@ Please note that the `join_learn_process` parameter in the `USING` clause of the
 
 The `retrain_rentals` job starts its execution on the current system date and ends on the 1st of April 2023. The job is executed every 2 days.
 
-## Example 2 [todo-testing]
+## Example 2
 
-In this example, the job creates a table named as `result_{{START_DATE}}` and inserts predictions into it.
+In this example, the job creates a table named as `result_{{START_DATETIME}}` and inserts predictions into it.
 
 ```sql
 CREATE JOB slice_predictions (
-   INSERT INTO int1.`result_{{START_DATETIME}}`( -- todo - should be create table instead of insert into
-      SELECT *
-      FROM example_db.demo_data.home_rentals
-      JOIN mindsdb.home_rentals_model2
+
+   CREATE TABLE my_integration.`result_{{START_DATETIME}}` (
+      SELECT m.rental_price, m.rental_price_explain
+      FROM mindsdb.home_rentals_model AS m
+      JOIN example_db.demo_data.home_rentals AS d
    )
 )
 EVERY hour;
 ```
 
 <Tip>
-Please note that the uniqueness of the created table name is ensured here by using the `{{START_DATE}}` variable.
+Please note that the uniqueness of the created table name is ensured here by using the `{{START_DATETIME}}` variable.
 
 You can use the following variables for this purpose:
 - `PREVIOUS_START_DATETIME` is replaced by date and time of the previous run of this job.

@@ -8,7 +8,10 @@ import psutil
 import asyncio
 import secrets
 import traceback
+from pathlib import Path
 from packaging import version
+
+import requests
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.start import start as start_http
@@ -129,6 +132,43 @@ if __name__ == '__main__':
 
     mp.freeze_support()
     config = Config()
+
+    is_marketplace = config.get('environment') == 'aws_marketplace'
+    if is_marketplace:
+        try:
+            resp = requests.get('http://169.254.169.254/latest/meta-data/public-hostname', timeout=1)
+            if resp.status_code != 200:
+                raise Exception()
+            public_host = resp.text
+            if (
+                config.get('public_host') != public_host
+                or config.get('oauth') is None
+            ):
+                resp = requests.post(
+                    'https://alpha.mindsdb.com/auth/register_client',     # to config
+                    json={
+                        'client_name': f'aws_marketplace_{public_host}',  # or instance_id?
+                        'client_uri': public_host,
+                        'grant_types': 'authorization_code',
+                        'redirect_uris': f'{public_host} {public_host}/cloud_home',
+                        'response_types': 'code',
+                        'scope': 'openid aws_marketplace',
+                        'token_endpoint_auth_method': 'client_secret_basic'
+                    }
+                )
+
+                if resp.status_code != 200:
+                    raise Exception()
+                keys = resp.json()
+                Config().update({
+                    'public_host': public_host,
+                    'oauth': {
+                        'client_id': keys['client_id'],
+                        'client_secret': keys['client_secret']
+                    }
+                })
+        except Exception as e:
+            print(f'Something went wrong during client register: {e}')
 
     is_cloud = config.get('cloud', False)
     # need configure migration behavior by env_variables

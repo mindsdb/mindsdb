@@ -43,6 +43,9 @@ class Executor:
         self.state_track = None
         self.server_status = None
         self.is_executed = False
+        self.error_message = None
+        self.error_code = None
+
 
         # self.predictor_metadata = {}
 
@@ -112,6 +115,7 @@ class Executor:
 
         self.parse(sql)
         self.do_execute()
+
 
     def execute_external(self, sql):
 
@@ -191,6 +195,8 @@ class Executor:
             return
 
         ret = self.command_executor.execute_command(self.query)
+        self.error_code = ret.error_code
+        self.error_message = ret.error_message
 
         self.is_executed = True
 

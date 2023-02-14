@@ -34,7 +34,8 @@ message ExecutorResponse {
     string server_status = 5;
     bool is_executed = 6;
     string session = 7;
-    string error_message = 8;
+    int32 error_code = 8;
+    string error_message = 9;
 }
 
 message ExecutorStatusResponse {

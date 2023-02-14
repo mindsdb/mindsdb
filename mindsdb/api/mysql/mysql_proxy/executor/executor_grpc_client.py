@@ -68,6 +68,8 @@ class ExecutorClientGRPC:
         self.state_track = response.state_track
         self.is_executed = response.is_executed
         self.session.from_json(json.loads(response.session))
+        self.error_code = response.error_code
+        self.error_message = response.error_message
         logger.info("%s._update_attrs: got data from service - %s", self.__class__.__name__, self.data)
 
     @action_logger(logger)

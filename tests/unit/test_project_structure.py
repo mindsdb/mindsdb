@@ -464,6 +464,122 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert row['t3a'] == 6
 
 
+class TestJobs(BaseExecutorDummyML):
+
+    def run_sql(self, sql, throw_error=True, database='mindsdb'):
+        self.command_executor.session.database = database
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb')
+        )
+        if throw_error:
+            assert ret.error_code is None
+        if ret.data is not None:
+            columns = [
+                col.alias if col.alias is not None else col.name
+                for col in ret.columns
+            ]
+            return pd.DataFrame(ret.data, columns=columns)
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_jobs(self, data_handler):
+        df1 = pd.DataFrame([
+            {'a': 1, 'c': 1, 'b': dt.datetime(2020, 1, 1)},
+            {'a': 2, 'c': 1, 'b': dt.datetime(2020, 1, 2)},
+            {'a': 1, 'c': 3, 'b': dt.datetime(2020, 1, 3)},
+            {'a': 3, 'c': 2, 'b': dt.datetime(2020, 1, 2)},
+        ])
+        self.set_handler(data_handler, name='pg', tables={'tbl1': df1})
+
+        self.run_sql('create database proj1')
+        # create job
+        self.run_sql('create job j1 (select * from models; select * from models)', database='proj1')
+
+        # check jobs table
+        ret = self.run_sql('select * from jobs', database='proj1')
+        assert len(ret) == 1, "should be 1 job"
+        row = ret.iloc[0]
+        assert row.NAME == 'j1'
+        assert row.START_AT is not None, "start date didn't calc"
+        assert row.NEXT_RUN_AT is not None, "next date didn't calc"
+        assert row.SCHEDULE_STR is None
+
+        # new project
+        self.run_sql('create database proj2')
+
+        # create job with start time and schedule
+        self.run_sql('''
+            create job proj2.j2 ( 
+                select * from pg.tbl1 where b>'{{PREVIOUS_START_DATETIME}}'
+            )
+            start now
+            every hour
+        ''', database='proj1')
+
+        # check jobs table
+        ret = self.run_sql('select * from proj2.jobs')
+        assert len(ret) == 1, "should be 1 job"
+        row = ret.iloc[0]
+        assert row.NAME == 'j2'
+        assert row.SCHEDULE_STR == 'every hour'
+
+        # check global jobs table
+        ret = self.run_sql('select * from information_schema.jobs')
+        # all jobs in list
+        assert len(ret) == 2
+        assert set(ret.NAME.unique()) == {'j1', 'j2'}
+
+        # drop first job
+        self.run_sql('drop job proj1.j1')
+
+        # ------------ executing
+
+        # run scheduler once
+        data_handler.reset_mock()
+        from mindsdb.interfaces.jobs.scheduler import check_timetable
+        check_timetable(config={})
+
+        # check query to integration
+        assert data_handler().query.call_args[0][0].to_string() == "SELECT * FROM tbl1 WHERE tbl1.b > 'null'"
+
+        # check jobs table
+        ret = self.run_sql('select * from jobs', database='proj2')
+        # next run is about 60 minutes from previous
+        minutes = (ret.NEXT_RUN_AT - ret.START_AT)[0].seconds / 60
+        assert minutes > 58 and minutes < 62
+
+        # check history table
+        ret = self.run_sql('select * from jobs_history', database='proj2')
+        # proj2.j2 was run one time
+        assert len(ret) == 1
+        assert ret.PROJECT[0] == 'proj2' and ret.NAME[0] == 'j2'
+
+        # run once again
+        check_timetable(config={})
+
+        # job wasn't executed
+        ret = self.run_sql('select * from jobs_history', database='proj2')
+        assert len(ret) == 1
+        prev_run = ret.START_AT[0]
+
+        # shift 'next run' and run once again
+        job = self.db.Jobs.query.filter(self.db.Jobs.name == 'j2').first()
+        job.next_run_at = job.start_at - dt.timedelta(seconds=1)  # different time because there is unique key
+        self.db.session.commit()
+
+        data_handler.reset_mock()
+        check_timetable(config={})
+
+        # check query to integration
+        assert data_handler().query.call_args[0][0].to_string() == f"SELECT * FROM tbl1 WHERE tbl1.b > '{prev_run.strftime('%Y-%m-%d %H:%M:%S')}'"
+
+        ret = self.run_sql('select * from jobs_history', database='proj2')
+        assert len(ret) == 2  # was executed
+
+        # check global history table
+        ret = self.run_sql('select * from information_schema.jobs_history', database='proj2')
+        assert len(ret) == 2  # was executed
+
+
 
 
 

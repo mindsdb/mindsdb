@@ -1,5 +1,6 @@
 import base64
 from pathlib import Path
+import secrets
 
 import requests
 from flask import request, session, redirect, url_for
@@ -48,6 +49,25 @@ class Auth(Resource):
         )
         tokens = response.json()
         return redirect(url_for('root_index'))
+
+
+@ns_conf.route('/cloud_login', methods=['GET'])
+class CloudLoginRoute(Resource):
+    @ns_conf.doc(
+        responses={
+            200: 'Success',
+            400: 'Error in username or password',
+            # 401: 'Invalid username or password'
+        }
+    )
+    def get(self):
+        ''' redirect ot cloud login form
+        '''
+        config = Config()
+        public_host = config['public_host']
+        auth_server = config['auth']['cloud_auth_server']
+        # ?client_id={config['oauth']['client_id']}&scope=openid+aws_marketplace&response_type=code&nonce={secrets.token_urlsafe()}&redirect_uri={public_host}
+        return redirect(f'{auth_server}/authorize')
 
 
 @ns_conf.route('/login', methods=['POST'])

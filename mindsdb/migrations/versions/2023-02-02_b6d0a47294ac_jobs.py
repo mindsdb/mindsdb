@@ -44,7 +44,6 @@ def upgrade():
         sa.Column('deleted_at', sa.DateTime(), nullable=True),
         sa.Column('updated_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['project_id'], ['project.id'], name='fk_jobs_project_id'),
         sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###

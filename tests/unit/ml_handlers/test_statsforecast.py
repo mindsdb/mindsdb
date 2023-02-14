@@ -144,7 +144,8 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql("create database proj")
 
         # mock a time series dataset
-        df = pd.read_parquet("tests/unit/ml_handlers/data/time_series_df.parquet")
+        df = pd.read_parquet('https://datasets-nixtla.s3.amazonaws.com/m4-hourly.parquet')
+        df = df[df.unique_id.isin(["H1", "H2", "H3"])]  # subset for speed
         n_groups = df["unique_id"].nunique()
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 

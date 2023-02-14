@@ -9,6 +9,14 @@ DEFAULT_MODEL = AutoARIMA()
 DEFAULT_MODEL_NAME = "AutoARIMA"
 
 
+def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
+    try:  # infer frequency from time column
+        inferred_freq = pd.infer_freq(df[time_column])
+    except TypeError:
+        inferred_freq = default
+    return inferred_freq if inferred_freq is not None else default
+
+
 class StatsForecastHandler(BaseMLEngine):
     """Integration with the Nixtla StatsForecast library for
     time series forecasting with classical methods.
@@ -16,14 +24,14 @@ class StatsForecastHandler(BaseMLEngine):
 
     name = "statsforecast"
 
-    def create(self, target, df=None, args={}):
+    def create(self, target, df, args={}):
         """Create the StatsForecast Handler.
 
         Requires specifying the target column to predict and time series arguments for
         prediction horizon, time column (order by) and grouping column(s).
 
-        Does not require a dataframe, because model fitting takes place jointly with
-        forecasting in the "predict step".
+        Saves args, models params, and the formatted training df to disk. The training df
+        is used later in the predict() method.
         """
         time_settings = args["timeseries_settings"]
         assert time_settings["is_timeseries"], "Specify time series settings in your query"
@@ -33,28 +41,37 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["horizon"] = time_settings["horizon"]
         model_args["order_by"] = time_settings["order_by"]
         model_args["group_by"] = time_settings["group_by"]
+        model_args["frequency"] =  infer_frequency(df, time_settings["order_by"])
+ 
+        training_df = self._transform_to_statsforecast_df(df, model_args)
+        sf = StatsForecast(models=[DEFAULT_MODEL], freq=model_args["frequency"], df=training_df)
+        fitted_models = sf.fit().fitted_
 
         ###### persist changes to handler folder
         self.model_storage.file_set("model_args", dill.dumps(model_args))
+        self.model_storage.file_set("saved_models", dill.dumps(fitted_models))
+        self.model_storage.file_set("training_df", dill.dumps(training_df))
 
     def predict(self, df, args={}):
         """Makes forecasts with the StatsForecast Handler.
 
-        This method takes care of both model fitting and forecasting in one step.
-        Model fitting is extremely fast, so model parameters do not need to be
-        stored separately. Instead, we re-fit each time this method is called.
+        StatsForecast is setup to predict for all groups, so it won't handle
+        a dataframe that's been filtered to one group very well. Instead, we make
+        the prediction for all groups then take care of the filtering after the
+        forecasting. Prediction is nearly instant.
         """
         # Load model arguments
         model_args = dill.loads(self.model_storage.file_get("model_args"))
-        try:  # infer frequency from time column
-            inferred_freq = pd.infer_freq(df[model_args["order_by"]])
-            model_args["frequency"] = DEFAULT_FREQUENCY if inferred_freq is None else inferred_freq
-        except TypeError:
-            model_args["frequency"] = DEFAULT_FREQUENCY
+        loaded_models = dill.loads(self.model_storage.file_get("saved_models"))
+        training_df = dill.loads(self.model_storage.file_get("training_df"))
 
         prediction_df = self._transform_to_statsforecast_df(df, model_args)
-        sf = StatsForecast(models=[DEFAULT_MODEL], freq=model_args["frequency"])
-        forecast_df = sf.forecast(model_args["horizon"], prediction_df)
+        groups_to_keep = prediction_df["unique_id"].unique()
+
+        sf = StatsForecast(models=[DEFAULT_MODEL], freq=model_args["frequency"], df=training_df)
+        sf.fitted_ = loaded_models
+        forecast_df = sf.predict(model_args["horizon"])
+        forecast_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
         return self._get_results_from_statsforecast_df(forecast_df, model_args)
 
     def _transform_to_statsforecast_df(self, df, settings_dict):

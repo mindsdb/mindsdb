@@ -48,9 +48,9 @@ class StatsForecastHandler(BaseMLEngine):
         fitted_models = sf.fit().fitted_
 
         ###### persist changes to handler folder
-        self.model_storage.file_set("model_args", dill.dumps(model_args))
-        self.model_storage.file_set("saved_models", dill.dumps(fitted_models))
+        self.model_storage.json_set("model_args", model_args)
         self.model_storage.file_set("training_df", dill.dumps(training_df))
+        self.model_storage.file_set("fitted_models", dill.dumps(fitted_models))
 
     def predict(self, df, args={}):
         """Makes forecasts with the StatsForecast Handler.
@@ -61,15 +61,15 @@ class StatsForecastHandler(BaseMLEngine):
         forecasting. Prediction is nearly instant.
         """
         # Load model arguments
-        model_args = dill.loads(self.model_storage.file_get("model_args"))
-        loaded_models = dill.loads(self.model_storage.file_get("saved_models"))
+        model_args = self.model_storage.json_get("model_args")
         training_df = dill.loads(self.model_storage.file_get("training_df"))
+        fitted_models = dill.loads(self.model_storage.file_get("fitted_models"))
 
         prediction_df = self._transform_to_statsforecast_df(df, model_args)
         groups_to_keep = prediction_df["unique_id"].unique()
 
         sf = StatsForecast(models=[DEFAULT_MODEL], freq=model_args["frequency"], df=training_df)
-        sf.fitted_ = loaded_models
+        sf.fitted_ = fitted_models
         forecast_df = sf.predict(model_args["horizon"])
         forecast_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
         return self._get_results_from_statsforecast_df(forecast_df, model_args)

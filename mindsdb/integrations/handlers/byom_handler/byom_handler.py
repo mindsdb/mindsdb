@@ -69,9 +69,6 @@ class BYOMHandler(BaseMLEngine):
 
         pred_df = model_proxy.predict(df, model_state)
 
-        # rename target column
-        # target = self.model_storage.get_info()['to_predict'][0]
-        # pred_df = pred_df.rename(columns={target: 'prediction'})
         return pred_df
 
     def create_engine(self, connection_args):

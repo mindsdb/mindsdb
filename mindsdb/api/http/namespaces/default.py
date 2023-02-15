@@ -67,6 +67,18 @@ class LoginRoute(Resource):
         return '', 200
 
 
+@ns_conf.route('/logout', methods=['POST'])
+class LogoutRoute(Resource):
+    @ns_conf.doc(
+        responses={
+            200: 'Success'
+        }
+    )
+    def post(self):
+        session.clear()
+        return '', 200
+
+
 @ns_conf.route('/status')
 class StatusRoute(Resource):
     @ns_conf.doc(

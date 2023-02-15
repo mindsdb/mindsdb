@@ -13,6 +13,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.project_datanode import Pro
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.jobs.jobs_controller import JobsController
 
 
 class InformationSchemaDataNode(DataNode):
@@ -36,7 +37,9 @@ class InformationSchemaDataNode(DataNode):
         'MODELS_VERSIONS': ['NAME', 'ENGINE', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
         'DATABASES': ['NAME', 'TYPE', 'ENGINE'],
         'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
-        'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR']
+        'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR'],
+        'JOBS': ['NAME', 'PROJECT', 'START_AT', 'END_AT', 'NEXT_RUN_AT', 'SCHEDULE_STR', 'QUERY'],
+        'JOBS_HISTORY': ['NAME', 'PROJECT', 'START_AT', 'END_AT', 'ERROR', 'QUERY']
     }
 
     def __init__(self, session):
@@ -66,7 +69,9 @@ class InformationSchemaDataNode(DataNode):
             'MODELS_VERSIONS': self._get_models_versions,
             'DATABASES': self._get_databases,
             'ML_ENGINES': self._get_ml_engines,
-            'HANDLERS': self._get_handlers
+            'HANDLERS': self._get_handlers,
+            'JOBS': self._get_jobs,
+            'JOBS_HISTORY': self._get_jobs_history,
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -269,6 +274,64 @@ class InformationSchemaDataNode(DataNode):
 
         df = pd.DataFrame(data, columns=columns)
         return df
+
+    def _get_jobs(self, query: ASTNode = None):
+        jobs_controller = JobsController()
+
+        project_name = None
+        if (
+                isinstance(query, Select)
+                and type(query.where) == BinaryOperation
+                and query.where.op == '='
+                and query.where.args[0].parts == ['project']
+                and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        data = jobs_controller.get_list(project_name)
+
+        columns = self.information_schema['JOBS']
+        columns_lower = [col.lower() for col in columns]
+
+        # to list of lists
+        data = [
+            [
+                row[k]
+                for k in columns_lower
+            ]
+            for row in data
+        ]
+
+        return pd.DataFrame(data, columns=columns)
+
+    def _get_jobs_history(self, query: ASTNode = None):
+        jobs_controller = JobsController()
+
+        project_name = None
+        if (
+                isinstance(query, Select)
+                and type(query.where) == BinaryOperation
+                and query.where.op == '='
+                and query.where.args[0].parts == ['project']
+                and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        data = jobs_controller.get_history(project_name)
+
+        columns = self.information_schema['JOBS_HISTORY']
+        columns_lower = [col.lower() for col in columns]
+
+        # to list of lists
+        data = [
+            [
+                row[k]
+                for k in columns_lower
+            ]
+            for row in data
+        ]
+
+        return pd.DataFrame(data, columns=columns)
 
     def _get_databases(self, query: ASTNode = None):
         columns = self.information_schema['DATABASES']

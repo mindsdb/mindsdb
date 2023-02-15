@@ -158,7 +158,10 @@ class ModelWrapper:
 
         pip_cmd = self.python_path.parent / 'pip'
         for module in modules:
-            os.system(f'{pip_cmd} install {module}')
+            p = subprocess.Popen([pip_cmd, 'install', module], stderr=subprocess.PIPE)
+            p.wait()
+            if p.returncode != 0:
+                raise Exception(f'Problem with installing module {module}: {p.stderr.read()}')
 
     def _run_command(self, params):
         params_enc = encode(params)

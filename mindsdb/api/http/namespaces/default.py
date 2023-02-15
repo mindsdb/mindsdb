@@ -2,6 +2,7 @@ import base64
 from pathlib import Path
 import secrets
 import urllib
+import time
 
 import requests
 from flask import request, session, redirect, url_for
@@ -13,6 +14,30 @@ from mindsdb.utilities.config import Config
 from mindsdb.api.http.utils import http_error
 
 
+def request_user_info():
+    ''' request user info from cloud
+
+        Returns:
+            dict: user data
+    '''
+    config = Config()
+
+    access_token = config.get('auth', {}).get('oauth', {}).get('tokens', {}).get('access_token')
+    if access_token is None:
+        raise KeyError()
+
+    response = requests.get(
+        'https://alpha.mindsdb.com/auth/userinfo',
+        headers={
+            'Authorization': f'Bearer {access_token}'
+        }
+    )
+    if response.status_code != 200:
+        raise Exception(f'Wrong response: {response.status_code}, {response.text}')
+
+    return response.json()
+
+
 def check_auth() -> bool:
     ''' checking whether current user is authenticated
 
@@ -22,6 +47,16 @@ def check_auth() -> bool:
     config = Config()
     if config['auth']['http_auth_enabled'] is False:
         return True
+
+    if config['auth'].get('provider') == 'cloud':
+        if isinstance(session.get('username'), str) is False:
+            return False
+
+        if config['auth']['oauth']['tokens']['expires_at'] >= time.time():
+            return False
+
+        return True
+
     return session.get('username') == config['auth']['username']
 
 
@@ -31,25 +66,44 @@ class Auth(Resource):
         config = Config()
         # todo add location arg
         code = request.args.get('code')
-        client_id = config['auth']['client_id']
-        client_secret = config['auth']['client_secret']
+        client_id = config['auth']['oauth']['client_id']
+        client_secret = config['auth']['oauth']['client_secret']
+        auth_server = config['auth']['oauth']['server_host']
+        public_host = config['public_host']
         client_basic = base64.b64encode(
             f'{client_id}:{client_secret}'.encode()
         ).decode()
         response = requests.post(
-            'https://alpha.mindsdb.com/auth/token',
+            f'https://{auth_server}/auth/token',
             data={
                 'code': code,
-                'grant_type': 'authorization_code'
-                # 'redirect_uri': 'https://3fee-91-210-47-113.eu.ngrok.io/api/auth/callback'
+                'grant_type': 'authorization_code',
+                'redirect_uri': f'https://{public_host}/api/auth/callback'
             },
-            # cls.GRANT_TYPE authorization_code
             headers={
-                # 'Content-Type': 'multipart/form-data',
                 'Authorization': f'Basic {client_basic}'
             }
         )
         tokens = response.json()
+        if 'expires_in' in tokens:
+            tokens['expires_at'] = round(time.time() + tokens['expires_in'] - 1)
+            del tokens['expires_in']
+
+        config.update({
+            'auth': {
+                'provider': 'cloud',
+                'oauth': {
+                    'tokens': tokens
+                }
+            }
+        })
+
+        user_data = request_user_info()
+
+        session['username'] = user_data['name']
+        session['auth_provider'] = 'cloud'
+        session.permanent = True
+
         return redirect(url_for('root_index'))
 
 
@@ -57,9 +111,7 @@ class Auth(Resource):
 class CloudLoginRoute(Resource):
     @ns_conf.doc(
         responses={
-            200: 'Success',
-            400: 'Error in username or password',
-            # 401: 'Invalid username or password'
+            302: 'Redirect to auth server'
         }
     )
     def get(self):
@@ -68,16 +120,15 @@ class CloudLoginRoute(Resource):
         # todo add location arg
         config = Config()
         public_host = config['public_host']
-        auth_server = config['auth']['cloud_auth_server']
-        # public_host_encoded = urllib.parse.quote(public_host)
+        auth_server = config['auth']['oauth']['server_host']
         args = urllib.parse.urlencode({
-            'client_id': config['oauth']['client_id'],
-            'scope': 'openid aws_marketplace',
+            'client_id': config['auth']['oauth']['client_id'],
+            'scope': 'openid profile aws_marketplace',
             'response_type': 'code',
             'nonce': secrets.token_urlsafe(),
             'redirect_uri': f'https://{public_host}/api/auth/callback'
         })
-        return redirect(f'{auth_server}/authorize?{args}')
+        return redirect(f'https://{auth_server}/auth/authorize?{args}')
 
 
 @ns_conf.route('/login', methods=['POST'])
@@ -120,6 +171,7 @@ class LoginRoute(Resource):
                 'Invalid username or password'
             )
 
+        session.clear()
         session['username'] = username
         session.permanent = True
 
@@ -170,7 +222,12 @@ class StatusRoute(Resource):
             else:
                 environment = 'local'
 
-        auth_provider = 'local' if config['auth']['http_auth_enabled'] else 'disabled'
+        auth_provider = 'disabled'
+        if config['auth']['http_auth_enabled'] is True:
+            if config['auth'].get('provider') is not None:
+                auth_provider = config['auth'].get('provider')
+            else:
+                auth_provider = 'local'
 
         resp = {
             'environment': environment,
@@ -180,9 +237,6 @@ class StatusRoute(Resource):
                 'provider': auth_provider
             }
         }
-
-        if environment == 'aws_marketplace':
-            resp['client_id'] = Config()['auth']['client_id']
 
         if environment != 'cloud':
             marker_file = Path(Config().paths['root']).joinpath('gui_first_launch.txt')

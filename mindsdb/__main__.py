@@ -143,12 +143,13 @@ if __name__ == '__main__':
             public_host = resp.text
             if (
                 config.get('public_host') != public_host
-                or config.get('oauth') is None
+                or config.get('auth', {}).get('oauth', {}).get('client_id') is None
             ):
+                auth_server_host = config['auth']['oauth']['server_host']
                 resp = requests.post(
-                    'https://alpha.mindsdb.com/auth/register_client',     # to config
+                    f'https://{auth_server_host}/auth/register_client',
                     json={
-                        'client_name': f'aws_marketplace_{public_host}',  # or instance_id?
+                        'client_name': f'aws_marketplace_{public_host}',
                         'client_uri': public_host,
                         'grant_types': 'authorization_code',
                         'redirect_uris': textwrap.dedent(f'''
@@ -156,7 +157,7 @@ if __name__ == '__main__':
                             https://{public_host}/api/auth/callback/cloud_home
                         '''),
                         'response_types': 'code',
-                        'scope': 'openid aws_marketplace',
+                        'scope': 'openid profile aws_marketplace',
                         'token_endpoint_auth_method': 'client_secret_basic'
                     }
                 )
@@ -166,9 +167,11 @@ if __name__ == '__main__':
                 keys = resp.json()
                 Config().update({
                     'public_host': public_host,
-                    'oauth': {
-                        'client_id': keys['client_id'],
-                        'client_secret': keys['client_secret']
+                    'auth': {
+                        'oauth': {
+                            'client_id': keys['client_id'],
+                            'client_secret': keys['client_secret']
+                        }
                     }
                 })
         except Exception as e:

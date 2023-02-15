@@ -1,5 +1,6 @@
 import os
 import json
+import collections.abc
 from copy import deepcopy
 from pathlib import Path
 
@@ -155,7 +156,7 @@ class Config():
         with open(self.config_path, 'r') as fp:
             config_data = json.load(fp)
 
-        config_data.update(data)
+        config_data = _merge_configs(config_data, data)
 
         with open(self.config_path, 'wt') as fp:
             fp.write(json.dumps(config_data, indent=4))

@@ -175,9 +175,10 @@ If you need commercial support, please [contact](https://mindsdb.com/contact/?ut
 
 ## Contributing
 
-A great place to start contributing to MindsDB will be our GitHub projects for checkered_flag:
+A great place to start contributing to MindsDB will be our GitHub projects for :checkered_flag:
 * Community writers [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/7).
 * Community code contributors [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/8).
+* [First timers only issues](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3Afirst-timers-only), if this is your first time contributing on open source project.
 
 Also, we are always open to suggestions so feel free to open new issues with your ideas and we can guide you!
 

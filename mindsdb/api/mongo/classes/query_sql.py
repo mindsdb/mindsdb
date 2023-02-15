@@ -1,6 +1,7 @@
 from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
 from mindsdb.api.mysql.mysql_proxy.executor import Executor
 
+
 class SqlServerStub:
     """This class is just an emulation of Server object,
     used by Executor.

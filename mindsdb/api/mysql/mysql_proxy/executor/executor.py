@@ -46,7 +46,6 @@ class Executor:
         self.error_message = None
         self.error_code = None
 
-
         # self.predictor_metadata = {}
 
         self.sql = ""
@@ -115,7 +114,6 @@ class Executor:
 
         self.parse(sql)
         self.do_execute()
-
 
     def execute_external(self, sql):
 

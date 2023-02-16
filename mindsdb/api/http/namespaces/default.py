@@ -90,16 +90,24 @@ class Auth(Resource):
             tokens['expires_at'] = round(time.time() + tokens['expires_in'] - 1)
             del tokens['expires_in']
 
+        user_data = request_user_info()
+
+        previous_username = config['auth']['oauth'].get('username')
+        if (
+            previous_username is not None
+            and user_data['name'] != previous_username
+        ):
+            return redirect('/wrong_login')
+
         config.update({
             'auth': {
                 'provider': 'cloud',
                 'oauth': {
+                    'username': user_data['name'],
                     'tokens': tokens
                 }
             }
         })
-
-        user_data = request_user_info()
 
         session['username'] = user_data['name']
         session['auth_provider'] = 'cloud'

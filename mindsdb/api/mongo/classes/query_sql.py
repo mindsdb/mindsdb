@@ -24,7 +24,7 @@ def run_sql_command(mindsdb_env, ast_query):
     if executor.error_code:
         raise Exception(executor.error_message)
 
-    if executor.columns is None:
+    if not executor.columns:
         # return no data
         return []
 

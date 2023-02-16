@@ -14,15 +14,18 @@ from mindsdb.utilities.config import Config
 from mindsdb.api.http.utils import http_error
 
 
-def request_user_info():
+def get_access_token():
+    return Config().get('auth', {}).get('oauth', {}).get('tokens', {}).get('access_token')
+
+
+def request_user_info(access_token: str = None):
     ''' request user info from cloud
 
         Returns:
             dict: user data
     '''
-    config = Config()
-
-    access_token = config.get('auth', {}).get('oauth', {}).get('tokens', {}).get('access_token')
+    if access_token is None:
+        access_token = get_access_token()
     if access_token is None:
         raise KeyError()
 
@@ -90,20 +93,20 @@ class Auth(Resource):
             tokens['expires_at'] = round(time.time() + tokens['expires_in'] - 1)
             del tokens['expires_in']
 
-        user_data = request_user_info()
+        user_data = request_user_info(tokens['access_token'])
 
         previous_username = config['auth']['oauth'].get('username')
+        new_username = user_data['name']
         if (
             previous_username is not None
-            and user_data['name'] != previous_username
+            and new_username != previous_username
         ):
-            return redirect('/wrong_login')
+            return redirect('/forbidden')
 
         config.update({
             'auth': {
                 'provider': 'cloud',
                 'oauth': {
-                    'username': user_data['name'],
                     'tokens': tokens
                 }
             }
@@ -113,9 +116,10 @@ class Auth(Resource):
         session['auth_provider'] = 'cloud'
         session.permanent = True
 
-        # TODO different redirect
-
-        return redirect(url_for('root_index'))
+        if request.path.endswith('/auth/callback/cloud_home'):
+            return redirect('https://cloud.mindsdb.com')
+        else:
+            return redirect(url_for('root_index'))
 
 
 @ns_conf.route('/auth/cloud_login', methods=['GET'])

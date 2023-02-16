@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import Any
 import ast as py_ast
 
 import pandas as pd
@@ -8,7 +8,6 @@ from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete
 from mindsdb.integrations.libs.base import BaseHandler
 
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
@@ -110,8 +109,8 @@ class APITable():
 
     def get_columns(self) -> list:
         raise NotImplementedError()
-        
-          
+
+
 class APIHandler(BaseHandler):
 
     def __init__(self, name: str):
@@ -151,7 +150,7 @@ class APIHandler(BaseHandler):
             return Response(RESPONSE_TYPE.TABLE, result)
         else:
             raise NotImplementedError
-    
+
     def get_columns(self, table_name: str) -> Response:
         """ Returns a list of entity columns"""
 
@@ -164,13 +163,10 @@ class APIHandler(BaseHandler):
 
     def get_tables(self) -> Response:
         """ Return list of entities"""
-        
+
         result = list(self._tables.keys())
 
         df = pd.DataFrame(result, columns=['table_name'])
         df['table_type'] = 'BASE TABLE'
 
         return Response(RESPONSE_TYPE.TABLE, df)
-
-
-    

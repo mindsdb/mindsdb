@@ -1,7 +1,7 @@
-__title__ = 'MindsDB MySQL handler'
-__package_name__ = 'mindsdb_mysql_handler'
+__title__ = 'MindsDB Twitter handler'
+__package_name__ = 'mindsdb_twitter_handler'
 __version__ = '0.0.1'
-__description__ = "MindsDB handler for MySQL"
+__description__ = "MindsDB handler for Twitter"
 __author__ = 'MindsDB Inc'
 __github__ = 'https://github.com/mindsdb/mindsdb'
 __pypi__ = 'https://pypi.org/project/mindsdb/'

@@ -1189,7 +1189,19 @@ class SQLQuery():
                 if step.is_replace:
                     is_replace = True
 
-            data = step.dataframe.result_data
+            if step.dataframe is not None:
+                data = step.dataframe.result_data
+            elif step.query is not None:
+                data = ResultSet()
+                for col in step.query.columns:
+                    data.add_column(Column(col.name))
+
+                for row in step.query.values:
+                    record = [v.value for v in row]
+                    data.add_record_raw(record)
+            else:
+                raise ErLogicError(f'Data not found for insert: {step}')
+
             integration_name = step.table.parts[0]
             table_name = Identifier(parts=step.table.parts[1:])
 

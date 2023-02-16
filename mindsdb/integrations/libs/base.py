@@ -20,14 +20,11 @@ class BaseHandler:
         self.is_connected: bool = False
         self.name = name
 
-    def connect(self) -> HandlerStatusResponse:
+    def connect(self):
         """ Set up any connections required by the handler
 
-        Should return output of check_connection() method after attempting
-        connection. Should switch self.is_connected.
+        Should return connection
 
-        Returns:
-            HandlerStatusResponse
         """
         raise NotImplementedError()
 

@@ -4,6 +4,14 @@ from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Opti
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class BinaryExecutionContext(_message.Message):
+    __slots__ = ["context", "sql"]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    SQL_FIELD_NUMBER: _ClassVar[int]
+    context: ExecutorContext
+    sql: bytes
+    def __init__(self, context: _Optional[_Union[ExecutorContext, _Mapping]] = ..., sql: _Optional[bytes] = ...) -> None: ...
+
 class DefaultDBContext(_message.Message):
     __slots__ = ["context", "new_db"]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]

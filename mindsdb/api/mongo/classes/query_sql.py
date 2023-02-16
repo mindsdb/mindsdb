@@ -20,7 +20,7 @@ def run_sql_command(mindsdb_env, ast_query):
     sqlserver = SqlServerStub(connection_id=-1)
 
     executor = Executor(sql_session, sqlserver)
-    executor.query_execute(ast_query.to_string())
+    executor.binary_query_execute(ast_query)
     if executor.error_code:
         raise Exception(executor.error_message)
 

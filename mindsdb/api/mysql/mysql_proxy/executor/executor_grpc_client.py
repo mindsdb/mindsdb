@@ -100,6 +100,15 @@ class ExecutorClientGRPC:
         self._update_attrs(resp)
 
     @action_logger(logger)
+    def binary_query_execute(self, sql):
+        sql = pickle.dumps(sql)
+        params = executor_pb2.BinaryExecutionContext(context=self._context, sql=sql)
+        resp = self.stub.BinaryQueryExecute(params)
+        if resp.error_message != "":
+            raise Exception(resp.error_message)
+        self._update_attrs(resp)
+
+    @action_logger(logger)
     def execute_external(self, sql):
         params = executor_pb2.ExecutionContext(context=self._context, sql=sql)
         resp = self.stub.ExecuteExternal(params)

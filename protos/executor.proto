@@ -16,6 +16,11 @@ message ExecutionContext{
     string sql = 2;
 }
 
+message BinaryExecutionContext{
+    ExecutorContext context = 1;
+    bytes sql = 2;
+}
+
 message StatementExecuteContext{
     ExecutorContext context = 1;
     string params = 2;
@@ -50,6 +55,8 @@ service ExecutorService {
   rpc StatementExecute(StatementExecuteContext) returns (ExecutorResponse) {}
 
   rpc QueryExecute(ExecutionContext) returns (ExecutorResponse) {}
+
+  rpc BinaryQueryExecute(BinaryExecutionContext) returns (ExecutorResponse) {}
 
   rpc ExecuteExternal(ExecutionContext) returns (ExecutorResponse) {}
 

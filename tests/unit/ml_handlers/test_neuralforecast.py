@@ -66,7 +66,8 @@ class TestNeuralForecast(BaseExecutorTest):
            group by group_col
            horizon 3
            using
-             engine='neuralforecast'
+             engine='neuralforecast',
+             frequency='D'
         """
         )
         self.wait_predictor("proj", "model_1_group")
@@ -92,7 +93,8 @@ class TestNeuralForecast(BaseExecutorTest):
            group by group_col, group_col_2, group_col_3
            horizon 3
            using
-             engine='neuralforecast'
+             engine='neuralforecast',
+             frequency='D'
         """
         )
         self.wait_predictor("proj", "model_multi_group")

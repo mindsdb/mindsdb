@@ -1,3 +1,4 @@
+import os
 import string
 import random
 import numpy as np
@@ -49,6 +50,10 @@ class NeuralForecastHandler(BaseMLEngine):
         model_args["group_by"] = time_settings["group_by"]
         model_args["frequency"] =  using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
 
+        # You have to save neuralforecast into a different folder each time.
+        # Make sure you call random before creating the model, as that fixes the random seed
+        random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=24))
+        model_args["model_folder"] = os.path.join("neuralforecast", random_string)
  
         sf_df = self._transform_to_statsforecast_df(df, model_args)
 
@@ -60,9 +65,6 @@ class NeuralForecastHandler(BaseMLEngine):
         model = DEFAULT_MODEL(model_args["horizon"], input_size, max_epochs=DEFAULT_MAX_EPOCHS)
         nf = NeuralForecast(models=[model], freq=model_args["frequency"])
         nf.fit(train_df)
-
-        random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=24))
-        model_args["model_folder"] = random_string
         nf.save(model_args["model_folder"], overwrite=True)
 
         ###### persist changes to handler folder

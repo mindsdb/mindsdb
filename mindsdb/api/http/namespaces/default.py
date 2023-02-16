@@ -52,7 +52,7 @@ def check_auth() -> bool:
         if isinstance(session.get('username'), str) is False:
             return False
 
-        if config['auth']['oauth']['tokens']['expires_at'] >= time.time():
+        if config['auth']['oauth']['tokens']['expires_at'] < time.time():
             return False
 
         return True
@@ -61,6 +61,7 @@ def check_auth() -> bool:
 
 
 @ns_conf.route('/auth/callback', methods=['GET'])
+@ns_conf.route('/auth/callback/cloud_home', methods=['GET'])
 class Auth(Resource):
     def get(self):
         config = Config()
@@ -104,6 +105,8 @@ class Auth(Resource):
         session['auth_provider'] = 'cloud'
         session.permanent = True
 
+        # TODO different redirect
+
         return redirect(url_for('root_index'))
 
 
@@ -115,18 +118,22 @@ class CloudLoginRoute(Resource):
         }
     )
     def get(self):
-        ''' redirect ot cloud login form
+        ''' redirect to cloud login form
         '''
-        # todo add location arg
+        location = request.args.get('location')
         config = Config()
         public_host = config['public_host']
         auth_server = config['auth']['oauth']['server_host']
+        if location == 'cloud_home':
+            redirect_uri = f'https://{public_host}/api/auth/callback/cloud_home'
+        else:
+            redirect_uri = f'https://{public_host}/api/auth/callback'
         args = urllib.parse.urlencode({
             'client_id': config['auth']['oauth']['client_id'],
             'scope': 'openid profile aws_marketplace',
             'response_type': 'code',
             'nonce': secrets.token_urlsafe(),
-            'redirect_uri': f'https://{public_host}/api/auth/callback'
+            'redirect_uri': redirect_uri
         })
         return redirect(f'https://{auth_server}/auth/authorize?{args}')
 

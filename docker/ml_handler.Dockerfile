@@ -7,10 +7,9 @@ RUN pip3 install --upgrade pip
 WORKDIR /
 
 # Install our reqs
-COPY mindsdb/integrations/handlers_wrapper/common_requirements.txt /mindsdb/
-COPY mindsdb/integrations/handlers_wrapper/huggingface_requirements.txt /mindsdb/
-RUN pip3 install -r /mindsdb/common_requirements.txt
-RUN pip3 install -r /mindsdb/huggingface_requirements.txt
+COPY requirements.txt /requirements.txt
+RUN pip install -r requirements.txt --no-cache-dir --force-reinstall
+RUN pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
 # Install our app
 COPY ./mindsdb /mindsdb/mindsdb
 

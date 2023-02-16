@@ -809,12 +809,15 @@ class SQLQuery():
                 if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                     version = int(step.predictor.parts[-1])
 
-                predictions, columns_dtypes = project_datanode.predict(
+                predictions = project_datanode.predict(
                     model_name=predictor_name,
                     data=where_data,
                     version=version,
                     params=step.params,
                 )
+                columns_dtypes = dict(predictions.dtypes)
+                predictions = predictions.to_dict(orient='records')
+
                 # update predictions with input data
                 for row in predictions:
                     for k, v in where_data.items():
@@ -919,12 +922,15 @@ class SQLQuery():
                         version = None
                         if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                             version = int(step.predictor.parts[-1])
-                        data, columns_dtypes = project_datanode.predict(
+                        predictions = project_datanode.predict(
                             model_name=predictor_name,
                             data=where_data,
                             version=version,
                             params=step.params,
                         )
+                        data = predictions.to_dict(orient='records')
+                        columns_dtypes = dict(predictions.dtypes)
+
                         if data is not None and isinstance(data, list):
                             predictor_cache.set(key, data)
                     else:
@@ -958,7 +964,7 @@ class SQLQuery():
                 df_a, names_a = left_data.to_df_cols(prefix='A')
                 df_b, names_b = right_data.to_df_cols(prefix='B')
 
-                if right_data.is_prediction:
+                if right_data.is_prediction or left_data.is_prediction:
                     # ignore join condition, use row_id
                     a_row_id = left_data.find_columns('__mindsdb_row_id')[0].get_hash_name(prefix='A')
                     b_row_id = right_data.find_columns('__mindsdb_row_id')[0].get_hash_name(prefix='B')

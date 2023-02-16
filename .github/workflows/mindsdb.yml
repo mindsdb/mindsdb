@@ -61,6 +61,7 @@ jobs:
       run: |
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
           pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
+          pip install gluonts==0.11.4  # temp fix until next lightwood release (>23.1.2.1)
     - name: Run integration api and flow tests
       run: |
         python3 -m flake8
@@ -84,6 +85,9 @@ jobs:
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
 
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
+
+          # it is too early for such tests
+          # env PYTHONPATH=./ pytest tests/unit/test_interfaces_consistency.py
 
           echo -e "\n===============MySQL Handler===============\n"
           pytest -svx tests/handler_tests/test_mysql_handler.py

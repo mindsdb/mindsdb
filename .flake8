@@ -14,6 +14,7 @@ per-file-ignores =
 exclude =
   __init__.py,
   build/*
+  mindsdb/grpc/*
   # TODO: clean up this code
   mindsdb/integrations/handlers/access_handler/access_handler.py
   mindsdb/integrations/handlers/airtable_handler/airtable_handler.py

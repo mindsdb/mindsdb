@@ -1,10 +1,9 @@
 import os
 import json
 from copy import deepcopy
+from pathlib import Path
 
-from mindsdb.utilities.fs import create_directory
-
-from mindsdb.utilities.fs import get_or_create_data_dir
+from mindsdb.utilities.fs import create_directory, get_or_create_data_dir
 
 
 def _merge_key_recursive(target_dict, source_dict, key):
@@ -25,22 +24,30 @@ def _merge_configs(original_config, override_config):
 
 
 config = None
+config_mtime = -1
 
 
 class Config():
     def __init__(self):
         # initialize once
-        global config
+        global config, config_mtime
         self.config_path = os.environ.get('MINDSDB_CONFIG_PATH', 'absent')
         self.use_docker_env = os.environ.get('MINDSDB_DOCKER_ENV', False)
         if self.use_docker_env:
             self.use_docker_env = True
+
+        if Path(self.config_path).is_file():
+            current_config_mtime = os.path.getmtime(self.config_path)
+            if config_mtime != current_config_mtime:
+                config = self.init_config()
+                config_mtime = current_config_mtime
+
         if config is None:
             config = self.init_config()
+
         self._config = config
 
     def init_config(self):
-
         if self.config_path == 'absent':
             self._override_config = {}
         else:
@@ -56,7 +63,7 @@ class Config():
         else:
             root_storage_dir = get_or_create_data_dir()
             os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
-        # regionend
+        # endregion
 
         if os.path.isdir(root_storage_dir) is False:
             os.makedirs(root_storage_dir)
@@ -89,12 +96,20 @@ class Config():
             },
             'storage_dir': os.environ['MINDSDB_STORAGE_DIR'],
             'paths': paths,
+            'auth': {
+                'http_auth_enabled': False,
+                'username': 'mindsdb',
+                'password': ''
+            },
             "log": {
                 "level": {
                     "console": "INFO",
                     "file": "DEBUG",
                     "db": "WARNING"
                 }
+            },
+            "gui": {
+                "autoupdate": True
             },
             "debug": False,
             "integrations": {},
@@ -107,7 +122,6 @@ class Config():
                     "host": "127.0.0.1" if not self.use_docker_env else "0.0.0.0",
                     "password": "",
                     "port": "47335",
-                    "user": "mindsdb",
                     "database": "mindsdb",
                     "ssl": True
                 },

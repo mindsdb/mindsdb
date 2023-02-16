@@ -14,7 +14,7 @@ In particular, three big components are included:
 
     - `predict_process` method: handles async dispatch of the `predict` method in an engine.
 
-"""
+""" # noqa
 
 import datetime as dt
 import traceback
@@ -113,9 +113,14 @@ def learn_process(class_path, context_dump, integration_id,
         handlerStorage = HandlerStorage(integration_id)
         modelStorage = ModelStorage(predictor_id)
 
+        kwargs = {}
+        if base_predictor_id is not None:
+            kwargs['base_model_storage'] = ModelStorage(base_predictor_id)
+
         ml_handler = HandlerClass(
             engine_storage=handlerStorage,
             model_storage=modelStorage,
+            **kwargs
         )
 
         # create new model
@@ -160,6 +165,7 @@ class BaseMLEngineExec:
         """
         ML handler interface converter
         """  # noqa
+        # TODO move this class to model controller
 
         self.name = name
         self.config = Config()
@@ -181,7 +187,7 @@ class BaseMLEngineExec:
 
         self.handler_class = kwargs['handler_class']
 
-    def get_ml_handler(self, predictor_id=None):
+    def _get_ml_handler(self, predictor_id=None):
         # returns instance or wrapper over it
 
         integration_id = self.integration_id
@@ -253,7 +259,9 @@ class BaseMLEngineExec:
         query_ast = self.parser(query, dialect=self.dialect)
         return self.query(query_ast)
 
-    def query(self, query: ASTNode) -> Response:
+    def query_(self, query: ASTNode) -> Response:
+        raise Exception('Should not be used')
+
         """ Intakes a pre-parsed SQL query (via `mindsdb_sql`) and returns the answer given by the ML engine. """
         statement = query
 
@@ -340,6 +348,8 @@ class BaseMLEngineExec:
         if join_learn_process is True:
             p.join()
 
+        return predictor_record
+
     def predict(self, model_name: str, data: list, pred_format: str = 'dict',
                 project_name: str = None, version=None, params: dict = None):
         """ Generates predictions with some model and input data. """
@@ -354,8 +364,10 @@ class BaseMLEngineExec:
             if version is not None:
                 model_name = f'{model_name}.{version}'
             raise Exception(f"Error: model '{model_name}' does not exists!")
+        if predictor_record.status != PREDICTOR_STATUS.COMPLETE:
+            raise Exception("Error: model creation not completed")
 
-        ml_handler = self.get_ml_handler(predictor_record.id)
+        ml_handler = self._get_ml_handler(predictor_record.id)
 
         args = {
             'pred_format': pred_format,
@@ -372,12 +384,9 @@ class BaseMLEngineExec:
 
         ml_handler.close()
 
-        columns_dtypes = dict(predictions.dtypes)
         # mdb indexes
         if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
             predictions['__mindsdb_row_id'] = df['__mindsdb_row_id']
-
-        predictions = predictions.to_dict(orient='records')
 
         after_predict_hook(
             company_id=self.company_id,
@@ -386,7 +395,7 @@ class BaseMLEngineExec:
             columns_in_count=df.shape[1],
             rows_out_count=len(predictions)
         )
-        return predictions, columns_dtypes
+        return predictions
 
     def update(
             self, model_name, project_name, version,
@@ -410,6 +419,8 @@ class BaseMLEngineExec:
         predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
 
         base_predictor_record = predictor_records[0]
+        learn_args = base_predictor_record.learn_args
+        learn_args['using'] = args if not learn_args.get('using', False) else {**learn_args['using'], **args}
 
         predictor_record = db.Predictor(
             company_id=ctx.company_id,
@@ -419,7 +430,7 @@ class BaseMLEngineExec:
             fetch_data_query=fetch_data_query,
             mindsdb_version=mindsdb_version,
             to_predict=base_predictor_record.to_predict,
-            learn_args=base_predictor_record.learn_args,
+            learn_args=learn_args,
             data={'name': model_name},
             project_id=project.id,
             training_data_columns_count=None,
@@ -452,3 +463,5 @@ class BaseMLEngineExec:
         p.start()
         if join_learn_process is True:
             p.join()
+
+        return base_predictor_record

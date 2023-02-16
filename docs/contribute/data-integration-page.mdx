@@ -1,0 +1,36 @@
+---
+title: How to Create a Data Integration Doc Page
+sidebarTitle: Create a Data Integration Doc Page
+---
+
+Currently, all the supported data integrations are listed [here](/data-integrations/all-data-integrations).
+
+We plan to provide extensive instructions on how to connect and use each of the data integrations. Thus, each data integration requires its dedicated doc page.
+
+Please follow the steps below to create a dedicated doc page for your chosen data integration.
+
+## Step 1. Create a File
+
+Create a file under the `mindsdb/docs/data-integrations` directory and name it with the database name.
+
+For example, if you implement a doc page for the Amazon Redshift database, name the file as `amazon-redshift.mdx`.
+
+## Step 2. Implement the Content
+
+Here are the resources you should use to implement the content of the doc page:
+
+- Use the connection template and example from [here](/data-integrations/all-data-integrations).
+
+    For example, if you implement a doc page for the Google BigQuery database, use [this chapter](/data-integrations/all-data-integrations#google-bigquery).
+
+- Check out the dedicated handler folder [here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).
+
+    For example, if you implement a doc page for the Google BigQuery database, go to [its handler folder here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/bigquery_handler). Pay attention to the `readme.md` file, as it contains valuable information that should be included in the doc page.
+
+You are welcome to provide usage examples of the data integrations in MindsDB!
+
+## Step 3. Create a PR
+
+Once you are done, create a PR. We'll review it soon!
+
+Thank you for contributing to MindsDB!

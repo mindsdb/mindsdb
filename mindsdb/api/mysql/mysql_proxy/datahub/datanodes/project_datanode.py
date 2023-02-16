@@ -52,9 +52,10 @@ class ProjectDataNode(DataNode):
     def predict(self, model_name: str, data, version=None, params=None):
         project_tables = self.project.get_tables()
         predictor_table_meta = project_tables[model_name]
+        if predictor_table_meta['update_status'] == 'available':
+            raise Exception(f"model '{model_name}' is obsolete and needs to be updated. Run 'RETRAIN {model_name};'")
         handler = self.integration_controller.get_handler(predictor_table_meta['engine_name'])
-        predictions, columns_dtypes = handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
-        return predictions, columns_dtypes
+        return handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
 
     def query(self, query=None, native_query=None, session=None):
         if query is None and native_query is not None:
@@ -67,7 +68,7 @@ class ProjectDataNode(DataNode):
             query.from_table.parts[0] = 'models'
             query_table = 'models'
         # endregion
-        if query_table in ('models', 'models_versions'):
+        if query_table in ('models', 'models_versions', 'jobs', 'jobs_history'):
             new_query = deepcopy(query)
             project_filter = BinaryOperation('=', args=[
                 Identifier('project'),

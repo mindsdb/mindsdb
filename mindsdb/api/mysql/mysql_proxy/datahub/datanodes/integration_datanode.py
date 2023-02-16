@@ -1,10 +1,11 @@
 import numpy as np
 from numpy import dtype as np_dtype
+import pandas as pd
 from pandas.api import types as pd_types
-
 from sqlalchemy.types import (
     Integer, Float, Text
 )
+
 from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn, DropTables
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
@@ -26,7 +27,7 @@ class IntegrationDataNode(DataNode):
 
     def get_tables(self):
         response = self.integration_handler.get_tables()
-        if response.type is RESPONSE_TYPE.TABLE:
+        if response.type == RESPONSE_TYPE.TABLE:
             result_dict = response.data_frame.to_dict(orient='records')
             result = []
             for row in result_dict:
@@ -133,7 +134,7 @@ class IntegrationDataNode(DataNode):
             return
 
         df = result.data_frame
-        df = df.replace({np.nan: None})
+        df = df.replace(np.NaN, pd.NA).where(df.notnull(), None)
         columns_info = [
             {
                 'name': k,

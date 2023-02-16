@@ -29,7 +29,7 @@ from pandas.api import types as pd_types
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
@@ -49,10 +49,10 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
     ERR,
     COMMANDS,
-    TYPES,
     DEFAULT_AUTH_METHOD,
     SERVER_STATUS,
-    CAPABILITIES
+    CAPABILITIES,
+    TYPES,
 )
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
@@ -73,7 +73,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     BinaryResultsetRowPacket
 )
 
-from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
+from mindsdb.api.mysql.mysql_proxy.executor import Executor
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.hooks as hooks
 
@@ -86,8 +86,10 @@ def check_auth(username, password, scramble_func, salt, company_id, config):
     '''
     '''
     try:
-        hardcoded_user = config['api']['mysql']['user']
-        hardcoded_password = config['api']['mysql']['password']
+        hardcoded_user = config['auth'].get('username')
+        hardcoded_password = config['auth'].get('password')
+        if hardcoded_password is None:
+            hardcoded_password = ''
         hardcoded_password_hash = scramble_func(hardcoded_password, salt)
         hardcoded_password = hardcoded_password.encode()
 
@@ -329,6 +331,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data = []
         packets = []
         for i, column in enumerate(columns):
+            logger.info("%s._get_column_defenition_packets: handling column - %s of %s type", self.__class__.__name__, column, type(column))
             table_name = column.get('table_name', 'table_name')
             column_name = column.get('name', 'column_name')
             column_alias = column.get('alias', column_name)
@@ -431,9 +434,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             'is_cloud': False
         }
 
-    # --------------
-
     def to_mysql_columns(self, columns_list):
+        """Converts raw columns data into convinient format(list of lists) for the futher usage.
+        Plus, it is also converts column types into internal ones."""
 
         result = []
 
@@ -695,7 +698,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                         session=self.session,
                         sqlserver=self
                     )
-                    executor.command_executor.change_default_db(new_database)
+                    executor.change_default_db(new_database)
 
                     response = SQLAnswer(RESPONSE_TYPE.OK)
                 elif p.type.value == COMMANDS.COM_FIELD_LIST:

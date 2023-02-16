@@ -1,16 +1,18 @@
-from distutils.version import LooseVersion
-import requests
 import os
 import shutil
 import threading
 import webbrowser
-from zipfile import ZipFile
-from pathlib import Path
 import traceback
 import tempfile
 import mimetypes
+import datetime
+import secrets
+from pathlib import Path
+from zipfile import ZipFile
+from distutils.version import LooseVersion
 
 # import concurrent.futures
+import requests
 from flask import Flask, url_for, make_response
 from flask.json import dumps
 from flask_restx import Api
@@ -154,7 +156,7 @@ def download_gui(destignation, version):
 
     os.remove(dist_zip_path)
 
-    version_txt_path = destignation.joinpath('version.txt')  # os.path.join(destignation, 'version.txt')
+    version_txt_path = destignation.joinpath('version.txt')
     with open(version_txt_path, 'wt') as f:
         f.write(version)
 
@@ -172,12 +174,34 @@ def download_gui(destignation, version):
 
 
 def initialize_static():
-    success = update_static()
+    config = Config()
+    last_gui_version_lv = get_last_compatible_gui_version()
+    current_gui_version_lv = get_current_gui_version()
+    required_gui_version = config['gui'].get('version')
+
+    if required_gui_version is not None:
+        required_gui_version_lv = LooseVersion(required_gui_version)
+        success = True
+        if (
+            current_gui_version_lv is None
+            or required_gui_version_lv != current_gui_version_lv
+        ):
+            success = update_static(required_gui_version_lv)
+    else:
+        if last_gui_version_lv is False:
+            return False
+
+        if current_gui_version_lv is not None:
+            if current_gui_version_lv >= last_gui_version_lv:
+                return True
+
+        success = update_static(last_gui_version_lv)
+
     db.session.close()
     return success
 
 
-def update_static():
+def update_static(gui_version_lv):
     ''' Update Scout files basing on compatible-config.json content.
         Files will be downloaded and updated if new version of GUI > current.
         Current GUI version stored in static/version.txt.
@@ -186,20 +210,10 @@ def update_static():
     logger = get_log('http')
     static_path = Path(config['paths']['static'])
 
-    last_gui_version_lv = get_last_compatible_gui_version()
-    current_gui_version_lv = get_current_gui_version()
-
-    if last_gui_version_lv is False:
-        return False
-
-    if current_gui_version_lv is not None:
-        if current_gui_version_lv >= last_gui_version_lv:
-            return True
-
-    logger.info(f'New version of GUI available ({last_gui_version_lv.vstring}). Downloading...')
+    logger.info(f'New version of GUI available ({gui_version_lv.vstring}). Downloading...')
 
     temp_dir = tempfile.mkdtemp(prefix='mindsdb_gui_files_')
-    success = download_gui(temp_dir, last_gui_version_lv.vstring)
+    success = download_gui(temp_dir, gui_version_lv.vstring)
     if success is False:
         shutil.rmtree(temp_dir)
         return False
@@ -211,7 +225,7 @@ def update_static():
     shutil.copytree(temp_dir, str(static_path))
     shutil.rmtree(temp_dir_for_rm)
 
-    logger.info(f'GUI version updated to {last_gui_version_lv.vstring}')
+    logger.info(f'GUI version updated to {gui_version_lv.vstring}')
     return True
 
 
@@ -234,6 +248,9 @@ def initialize_flask(config, init_static_thread, no_studio):
         **kwargs
     )
 
+    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
+    app.config['SESSION_COOKIE_NAME'] = 'session'
+    app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=31)
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     app.json_encoder = CustomJSONEncoder
@@ -289,11 +306,12 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
 
     If some error then do nothing.
     """
-    init_static_thread.join()
+    if init_static_thread is not None:
+        init_static_thread.join()
     inject_telemetry_to_static(static_folder)
     logger = get_log('http')
     try:
-        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=10,
+        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=15,
                                            pid=pid, port=port)
         if is_http_active:
             webbrowser.open(url)

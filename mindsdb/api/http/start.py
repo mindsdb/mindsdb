@@ -9,6 +9,7 @@ from waitress import serve
 from flask import send_from_directory, request
 from flask_compress import Compress
 
+from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
@@ -17,6 +18,9 @@ from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
 from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
+from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
+from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
+from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities import log
@@ -33,8 +37,16 @@ def start(verbose, no_studio, with_nlp):
     log.initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
 
     # start static initialization in a separate thread
+    static_root = config['paths']['static']
+    gui_exists = Path(static_root).joinpath('index.html').is_file()
     init_static_thread = None
-    if not no_studio:
+    if (
+        no_studio is False
+        and (
+            config['gui']['autoupdate'] is True
+            or gui_exists is False
+        )
+    ):
         init_static_thread = threading.Thread(target=initialize_static)
         init_static_thread.start()
 
@@ -42,7 +54,6 @@ def start(verbose, no_studio, with_nlp):
     Compress(app)
     initialize_interfaces(app)
 
-    static_root = config['paths']['static']
     if os.path.isabs(static_root) is False:
         static_root = os.path.join(os.getcwd(), static_root)
     static_root = Path(static_root)
@@ -57,16 +68,24 @@ def start(verbose, no_studio, with_nlp):
         else:
             return send_from_directory(static_root, 'index.html')
 
-    api.add_namespace(stream_ns)
-    api.add_namespace(utils_ns)
-    api.add_namespace(conf_ns)
-    api.add_namespace(file_ns)
-    api.add_namespace(sql_ns)
-    api.add_namespace(analysis_ns)
-    api.add_namespace(handlers_ns)
-    api.add_namespace(tree_ns)
+    protected_namespaces = [
+        tab_ns,
+        stream_ns,
+        utils_ns,
+        conf_ns,
+        file_ns,
+        sql_ns,
+        analysis_ns,
+        handlers_ns,
+        tree_ns,
+        projects_ns
+    ]
     if with_nlp:
-        api.add_namespace(nlp_ns)
+        protected_namespaces.append(nlp_ns)
+
+    for ns in protected_namespaces:
+        api.add_namespace(ns)
+    api.add_namespace(default_ns)
 
     @api.errorhandler(Exception)
     def handle_exception(e):
@@ -84,6 +103,20 @@ def start(verbose, no_studio, with_nlp):
     @app.before_request
     def before_request():
         ctx.set_default()
+        config = Config()
+
+        # region routes where auth is required
+        if (
+            config['auth']['http_auth_enabled'] is True
+            and any(request.path.startswith(f'/api{ns.path}') for ns in protected_namespaces)
+            and check_auth() is False
+        ):
+            return http_error(
+                403, 'Forbidden',
+                'Authorization is required to complete the request'
+            )
+        # endregion
+
         company_id = request.headers.get('company-id')
         user_class = request.headers.get('user-class')
 
@@ -110,7 +143,7 @@ def start(verbose, no_studio, with_nlp):
     host = config['api']['http']['host']
 
     # waiting static initialization
-    if not no_studio:
+    if not no_studio and init_static_thread is not None:
         init_static_thread.join()
     if server.lower() == 'waitress':
         if host in ('', '0.0.0.0'):

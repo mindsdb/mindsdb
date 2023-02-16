@@ -232,6 +232,14 @@ On execution, we get:
 +--------------+
 ```
 
+Here is how to make batch predictions:
+
+```sql
+SELECT m.rental_price, m.rental_price_explain
+FROM mindsdb.home_rentals_model AS m
+JOIN example_data.demo_data.home_rentals AS d;
+```
+
 <Check>
 **Congratulations!** If you got this far, you have successfully trained a predictive model using SQL
 and got the future data!

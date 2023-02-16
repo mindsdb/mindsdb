@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import dill
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -7,6 +8,8 @@ from neuralforecast.models import NHITS
 DEFAULT_FREQUENCY = "D"
 DEFAULT_MODEL = NHITS
 DEFAULT_MODEL_NAME = "NHITS"
+DEFAULT_TRAIN_PERCENT = 90
+DEFAULT_MAX_EPOCHS = 100
 
 
 def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
@@ -42,16 +45,24 @@ class NeuralForecastHandler(BaseMLEngine):
         model_args["order_by"] = time_settings["order_by"]
         model_args["group_by"] = time_settings["group_by"]
         model_args["frequency"] =  infer_frequency(df, time_settings["order_by"])
- 
-        training_df = self._transform_to_statsforecast_df(df, model_args)
-        sf = NeuralForecast(models=[DEFAULT_MODEL], freq=model_args["frequency"], df=training_df)
 
-        """
+ 
+        sf_df = self._transform_to_statsforecast_df(df, model_args)
+
+        train_set_end_date = np.percentile(sf_df["ds"], DEFAULT_TRAIN_PERCENT)
+        train_df = sf_df[sf_df["ds"] <= train_set_end_date]
+        test_df = sf_df[sf_df["ds"] > train_set_end_date]
+
+        input_size = 2 * model_args["horizon"]
+        model = DEFAULT_MODEL(model_args["horizon"], input_size, max_epochs=DEFAULT_MAX_EPOCHS)
+        nf = NeuralForecast(models=[model], freq=model_args["frequency"])
+        nf.fit(train_df)
+        model_args["model_folder"] = "neuralforecast"
+        nf.save(model_args["model_folder"], overwrite=True)
+
         ###### persist changes to handler folder
         self.model_storage.json_set("model_args", model_args)
-        self.model_storage.file_set("training_df", dill.dumps(training_df))
-        self.model_storage.file_set("fitted_models", dill.dumps(fitted_models))
-        """
+        self.model_storage.file_set("training_df", dill.dumps(sf_df))
 
     def predict(self, df, args={}):
         """Makes forecasts with the NeuralForecast Handler.
@@ -63,15 +74,12 @@ class NeuralForecastHandler(BaseMLEngine):
         """
         # Load model arguments
         model_args = self.model_storage.json_get("model_args")
-        training_df = dill.loads(self.model_storage.file_get("training_df"))
-        fitted_models = dill.loads(self.model_storage.file_get("fitted_models"))
 
         prediction_df = self._transform_to_statsforecast_df(df, model_args)
         groups_to_keep = prediction_df["unique_id"].unique()
 
-        sf = NeuralForecast(models=[DEFAULT_MODEL], freq=model_args["frequency"], df=training_df)
-        sf.fitted_ = fitted_models
-        forecast_df = sf.predict(model_args["horizon"])
+        nf = NeuralForecast.load(model_args["model_folder"])
+        forecast_df = nf.predict(prediction_df, )
         forecast_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
         return self._get_results_from_statsforecast_df(forecast_df, model_args)
 

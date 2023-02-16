@@ -101,6 +101,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='statsforecast', data={}, engine='statsforecast')
         db.session.add(r)
+        r = db.Integration(name='neuralforecast', data={}, engine='neuralforecast')
+        db.session.add(r)
         r = db.Integration(name='lightwood', data={}, engine='lightwood')
         db.session.add(r)
         db.session.flush()

@@ -13,6 +13,6 @@ except Exception as e:
 title = "NeuralForecast"
 name = "neuralforecast"
 type = HANDLER_TYPE.ML
-permanent = False
+permanent = True
 
 __all__ = ["Handler", "version", "name", "type", "title", "description", "import_error"]

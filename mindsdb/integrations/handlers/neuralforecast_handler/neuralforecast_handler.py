@@ -1,3 +1,5 @@
+import string
+import random
 import numpy as np
 import pandas as pd
 import dill
@@ -57,7 +59,9 @@ class NeuralForecastHandler(BaseMLEngine):
         model = DEFAULT_MODEL(model_args["horizon"], input_size, max_epochs=DEFAULT_MAX_EPOCHS)
         nf = NeuralForecast(models=[model], freq=model_args["frequency"])
         nf.fit(train_df)
-        model_args["model_folder"] = "neuralforecast"
+
+        random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=24))
+        model_args["model_folder"] = random_string
         nf.save(model_args["model_folder"], overwrite=True)
 
         ###### persist changes to handler folder
@@ -79,7 +83,7 @@ class NeuralForecastHandler(BaseMLEngine):
         groups_to_keep = prediction_df["unique_id"].unique()
 
         nf = NeuralForecast.load(model_args["model_folder"])
-        forecast_df = nf.predict(prediction_df, )
+        forecast_df = nf.predict(prediction_df)
         forecast_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
         return self._get_results_from_statsforecast_df(forecast_df, model_args)
 

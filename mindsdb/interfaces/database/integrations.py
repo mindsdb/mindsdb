@@ -107,6 +107,12 @@ class IntegrationController:
 
         integration_record = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name).first()
 
+        # if this is ml engine
+        engine_models = get_model_records(ml_handler_name=name, deleted_at=None)
+        active_models = [m.name for m in engine_models if m.deleted_at is None]
+        if len(active_models) > 0:
+            raise Exception(f'Unable to drop ml engine with active models: {active_models}')
+
         # check linked predictors
         models = get_model_records()
         for model in models:
@@ -117,6 +123,11 @@ class IntegrationController:
                 and model.data_integration_ref['id'] == integration_record.id
             ):
                 model.data_integration_ref = None
+
+        # unlink deleted models
+        for model in engine_models:
+            if model.deleted_at is not None:
+                model.integration_id = None
 
         db.session.delete(integration_record)
         db.session.commit()

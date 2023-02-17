@@ -36,13 +36,13 @@
     <span> | </span>
     <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
     <span> | </span>
-    <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ">Community Slack</a>
+    <a href="https://mindsdb.com/joincommunity">Community Slack</a>
     <span> | </span>
     <a href="https://github.com/mindsdb/mindsdb/projects">Contribute</a>
     <span> | </span>
-    <a href="https://cloud.mindsdb.com">Demo</a>
+    <a href="https://cloud.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Demo</a>
     <span> | </span>
-    <a href="https://mindsdb.com/in-database-nlp-tutorials-contest?utm_medium=community&utm_source=github&utm_campaign=22q4-huggingface-preview">NLP Contest</a>
+    <a href="https://mindsdb.com/mindsdb-hackathon?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Hackathon</a>
   </h3>
   
 </div>

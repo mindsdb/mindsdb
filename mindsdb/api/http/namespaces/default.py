@@ -119,6 +119,7 @@ class Auth(Resource):
             'auth': {
                 'provider': 'cloud',
                 'oauth': {
+                    'username': new_username,
                     'tokens': tokens
                 }
             }

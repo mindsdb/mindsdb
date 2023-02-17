@@ -231,7 +231,7 @@ class Jobs(Base):
     company_id = Column(Integer)
 
     name = Column(String, nullable=False)
-    project_id = Column(Integer)
+    project_id = Column(Integer, nullable=False)
     query_str = Column(String, nullable=False)
     start_at = Column(DateTime, default=datetime.datetime.now)
     end_at = Column(DateTime)

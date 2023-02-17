@@ -4,6 +4,14 @@ from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Opti
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class BinaryExecutionContext(_message.Message):
+    __slots__ = ["context", "sql"]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    SQL_FIELD_NUMBER: _ClassVar[int]
+    context: ExecutorContext
+    sql: bytes
+    def __init__(self, context: _Optional[_Union[ExecutorContext, _Mapping]] = ..., sql: _Optional[bytes] = ...) -> None: ...
+
 class DefaultDBContext(_message.Message):
     __slots__ = ["context", "new_db"]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
@@ -35,9 +43,10 @@ class ExecutorContext(_message.Message):
     def __init__(self, id: _Optional[str] = ..., connection_id: _Optional[int] = ..., session_id: _Optional[str] = ..., session: _Optional[str] = ..., context: _Optional[str] = ...) -> None: ...
 
 class ExecutorResponse(_message.Message):
-    __slots__ = ["columns", "data", "error_message", "is_executed", "params", "server_status", "session", "state_track"]
+    __slots__ = ["columns", "data", "error_code", "error_message", "is_executed", "params", "server_status", "session", "state_track"]
     COLUMNS_FIELD_NUMBER: _ClassVar[int]
     DATA_FIELD_NUMBER: _ClassVar[int]
+    ERROR_CODE_FIELD_NUMBER: _ClassVar[int]
     ERROR_MESSAGE_FIELD_NUMBER: _ClassVar[int]
     IS_EXECUTED_FIELD_NUMBER: _ClassVar[int]
     PARAMS_FIELD_NUMBER: _ClassVar[int]
@@ -46,13 +55,14 @@ class ExecutorResponse(_message.Message):
     STATE_TRACK_FIELD_NUMBER: _ClassVar[int]
     columns: bytes
     data: bytes
+    error_code: int
     error_message: str
     is_executed: bool
     params: bytes
     server_status: str
     session: str
     state_track: str
-    def __init__(self, columns: _Optional[bytes] = ..., params: _Optional[bytes] = ..., data: _Optional[bytes] = ..., state_track: _Optional[str] = ..., server_status: _Optional[str] = ..., is_executed: bool = ..., session: _Optional[str] = ..., error_message: _Optional[str] = ...) -> None: ...
+    def __init__(self, columns: _Optional[bytes] = ..., params: _Optional[bytes] = ..., data: _Optional[bytes] = ..., state_track: _Optional[str] = ..., server_status: _Optional[str] = ..., is_executed: bool = ..., session: _Optional[str] = ..., error_code: _Optional[int] = ..., error_message: _Optional[str] = ...) -> None: ...
 
 class ExecutorStatusResponse(_message.Message):
     __slots__ = ["error_message", "success"]

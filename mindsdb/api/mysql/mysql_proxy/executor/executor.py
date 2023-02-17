@@ -43,6 +43,8 @@ class Executor:
         self.state_track = None
         self.server_status = None
         self.is_executed = False
+        self.error_message = None
+        self.error_code = None
 
         # self.predictor_metadata = {}
 
@@ -112,6 +114,22 @@ class Executor:
 
         self.parse(sql)
         self.do_execute()
+
+    # for awesome Mongo API only
+    def binary_query_execute(self, sql):
+        self.sql = sql.to_string()
+        self.sql_lower = self.sql.lower()
+
+        ret = self.command_executor.execute_command(sql)
+        self.error_code = ret.error_code
+        self.error_message = ret.error_message
+
+        self.data = ret.data
+        self.server_status = ret.status
+        if ret.columns is not None:
+            self.columns = ret.columns
+
+        self.state_track = ret.state_track
 
     def execute_external(self, sql):
 
@@ -191,6 +209,8 @@ class Executor:
             return
 
         ret = self.command_executor.execute_command(self.query)
+        self.error_code = ret.error_code
+        self.error_message = ret.error_message
 
         self.is_executed = True
 

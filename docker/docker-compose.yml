@@ -23,7 +23,8 @@ services:
     ports:
       - '47334:47334'
       - '47335:47335'
-    command: bash -c "cd /mindsdb && python -m mindsdb"
+      - '47336:47336'
+    command: bash -c "cd /mindsdb && python -m mindsdb --api=http,mysql,mongodb"
     environment:
       MINDSDB_EXECUTOR_SERVICE_HOST: "executor"
       MINDSDB_EXECUTOR_SERVICE_PORT: "50052"

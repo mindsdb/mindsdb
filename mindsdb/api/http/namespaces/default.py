@@ -33,8 +33,10 @@ def request_user_info(access_token: str = None):
     if access_token is None:
         raise KeyError()
 
+    auth_server = Config['auth']['oauth']['server_host']
+
     response = requests.get(
-        'https://alpha.mindsdb.com/auth/userinfo',
+        f'https://{auth_server}/auth/userinfo',
         headers={
             'Authorization': f'Bearer {access_token}'
         }
@@ -124,7 +126,7 @@ class Auth(Resource):
 
         try:
             resp = requests.put(
-                'https://cloud.mindsdb.com/cloud/instance',
+                'https://{auth_server}/cloud/instance',
                 json={
                     'instance_id': instance_id,
                     'public_hostname': public_hostname,
@@ -145,7 +147,7 @@ class Auth(Resource):
         session.permanent = True
 
         if request.path.endswith('/auth/callback/cloud_home'):
-            return redirect('https://cloud.mindsdb.com')
+            return redirect('https://{auth_server}')
         else:
             return redirect(url_for('root_index'))
 

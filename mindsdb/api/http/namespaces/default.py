@@ -72,7 +72,6 @@ def check_auth() -> bool:
 class Auth(Resource):
     def get(self):
         config = Config()
-        # todo add location arg
         code = request.args.get('code')
 
         aws_meta_data = config['aws_meta_data']
@@ -86,12 +85,14 @@ class Auth(Resource):
         client_basic = base64.b64encode(
             f'{client_id}:{client_secret}'.encode()
         ).decode()
+
+        redirect_uri = f'https://{public_hostname}{request.path}'
         response = requests.post(
             f'https://{auth_server}/auth/token',
             data={
                 'code': code,
                 'grant_type': 'authorization_code',
-                'redirect_uri': f'https://{public_hostname}/api/auth/callback'
+                'redirect_uri': redirect_uri
             },
             headers={
                 'Authorization': f'Basic {client_basic}'
@@ -122,7 +123,7 @@ class Auth(Resource):
         })
 
         try:
-            resp = request.put(
+            resp = requests.put(
                 'https://cloud.mindsdb.com/cloud/instance',
                 json={
                     'instance_id': instance_id,

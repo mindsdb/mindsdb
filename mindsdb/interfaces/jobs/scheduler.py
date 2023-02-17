@@ -99,5 +99,6 @@ def start(verbose=False):
     except (KeyboardInterrupt, SystemExit):
         pass
 
+
 if __name__ == '__main__':
     start()

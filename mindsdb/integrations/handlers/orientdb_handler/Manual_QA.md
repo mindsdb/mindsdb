@@ -1,42 +1,31 @@
-# Welcome to the MindsDB Manual QA Testing for Access Handler
+# Welcome to the MindsDB Manual QA Testing for OrientDB Handler
 
-> **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
+## Testing OrientDB Handler 
 
-## Testing Access Handler with [Dataset Name](https://raw.githubusercontent.com/mindsdb/mindsdb-examples/a43f66f0250c460c0c4a0793baa941307b09c9f2/others/diabetes_example/dataset/diabetes-train.csv)
+## e.g Predicting Home Rental Prices with MindsDB
 
-**1. Testing CREATE DATABASE**
+**1. Connecting the Data**
 
-``` Tested locally on Windows 10 with both 2013 and 2016 Access Runtimes installed (ran python -m mindsdb --install-handlers access) before running python -m mindsdb
-CREATE DATABASE access_test
-WITH
-engine='access',
-parameters={
-    "db_file":"C:\\Work\\HacktoberFest\\ManualQA\\Diabetes.accdb"
-};
-```
+![img](https://uniplore.feishu.cn/space/api/box/stream/download/asynccode/?code=MDI4OTU0MzExMTcxODM3ZDFkODMyZmRlZmUxMjFjYjdfdkJoSTBUNGI1cXd2eTlFdjlUajRVOXBWTVRUMGIyOThfVG9rZW46Ym94Y255WUVDU3pSQmQyZHFqamNiZE1pVHpPXzE2NzY2NjA5NTI6MTY3NjY2NDU1Ml9WNA)
 
-![CREATE_DATABASE](https://user-images.githubusercontent.com/241893/199141975-e817adb0-55da-468e-9766-ca15f41aa388.png)
+**2. Testing SELECT Data**
 
-**2. Testing CREATE PREDICTOR**
+![img](https://uniplore.feishu.cn/space/api/box/stream/download/asynccode/?code=YTcxOGQ1OGQ3ZDU3Njc4MmE0YTg4Y2UxOGY5ZWE5ZGZfTlZRN3JTY2ZQNnp4WDFXdmI5dDY4ck1wcFNBbWM5VjJfVG9rZW46Ym94Y24wRDhkUXJMTW5qRlF3aTRiSnhQbkRnXzE2NzY2NjA5OTA6MTY3NjY2NDU5MF9WNA)
 
-```
-N/A
-```
+**3. Testing CREATE PREDICTOR**
 
-![CREATE_PREDICTOR](Image URL of the screenshot)
+![img](https://uniplore.feishu.cn/space/api/box/stream/download/asynccode/?code=ZDA4Y2Q0ZGZkZjVjYmNhMDRhZTc0M2ZmMTAyM2E1MTNfTGMzYzhRWW9pMHB2RUtNRjM4QVIwNmpaMDNJR3hVaW5fVG9rZW46Ym94Y25jNjMxQTA2bDRRNlVveGozaHRWQ3ViXzE2NzY2NjEwNjk6MTY3NjY2NDY2OV9WNA)
 
-**3. Testing SELECT FROM PREDICTOR**
+**4. Testing SELECT PREDICTOR STATUS**
 
-```
-N/A
-```
-
-![SELECT_FROM](Image URL of the screenshot)
-
-### Results
-
-Drop a remark based on your observation.
-- [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [X] There's a Bug 🪲 [Access Handler Not Behaving As Expected]((https://github.com/mindsdb/mindsdb/issues/3947) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+![img](https://uniplore.feishu.cn/space/api/box/stream/download/asynccode/?code=OGU4ZjBiNWRiNzlkMGI1MDhiODhlMmNkMzVkY2EwY2ZfTWFFOUFTMTdIY01ZTTRyYnk4WHBZR01tbnR6QWZUbWtfVG9rZW46Ym94Y25sNHp0Vk9lTmxNeEF5bTZZSXhWcGZwXzE2NzY2NjExMzg6MTY3NjY2NDczOF9WNA)
 
 ---
+
+**5. Making a Single Prediction**
+
+![img](https://uniplore.feishu.cn/space/api/box/stream/download/asynccode/?code=NGM1NmU4YzFmYmFkMjYzNjk4MjY0MTk3Mjg2NDc5ODVfYmcxOVBjWGpPWjJtV0M4ajNiY2cycE9KZm9FcjhaR0hfVG9rZW46Ym94Y245c1dRcHRIWW1FaU9jaU9IZm1aT1FnXzE2NzY2NjEyMDI6MTY3NjY2NDgwMl9WNA)
+
+**6.Making Batch Predictions**
+
+![img](https://uniplore.feishu.cn/space/api/box/stream/download/asynccode/?code=NjkzMzMzMzg4NWY3MjdiYzgzM2FhZmQ1YTlhMjUyY2JfRnZhVzNUTUxraW9tOFo3aEhpMWpJNE9iZEtLUHlmRkpfVG9rZW46Ym94Y25xejl6UjVUYjlUamkyZTR2NnJ5UEhlXzE2NzY2NjEyMDk6MTY3NjY2NDgwOV9WNA)

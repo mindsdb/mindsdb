@@ -5,73 +5,83 @@ sidebarTitle: MongoDB Shell
 
 MongoDB Shell is the quickest way to connect and work with MongoDB.
 
-MindsDB provides a powerful MongoDB API that allows users to connect to it using
-the [MongoDB Shell](https://www.mongodb.com/try/download/shell). Please note
-that connection to MindsDB's MongoDB API is the same as connection to a MongoDB
-database.
+MindsDB provides a powerful MongoDB API, allowing users to connect MindsDB to the [MongoDB Shell](https://www.mongodb.com/try/download/shell). Please note that connection to MongoDB API provided by MindsDB is the same as connection to a MongoDB database.
+
+## Overview
+
+Here is an overview of the connection between MindsDB and MongoDB Compass:
+
+<p align="center">
+  <img src="/assets/connect_mongo_compass.png" />
+</p>
+
+Let's go through the steps presented above:
+
+1. We connect MongoDB Compass to MindsDB. It is discussed in the following content.
+
+2. We connect MindsDB to a database. You can use the [`CREATE DATABASE`](/sql/create/databases) statement to accomplish this step.
+
+3. Having completed steps 1 and 2, you can access the connected database from MongoDB Compass through MindsDB.
 
 ## How to Connect
 
-To connect to MindsDB, run the below command in your Mongo Shell and provide the
-connection details, such as host, port, username, and password.
+Here is how to connect MongoDB Compass to MindsDB using either MindsDB Coud or local installation.
+
+In both cases, you can run the below command from MongoDB Shell, providing all connection details, such as host, port, username, and password, to create a connection from MongoDB Shell to MindsDB.
 
 ```bash
 mongo --host [hostname] --port [TCP/IP port number] -u [user] -p [password]
 ```
 
-Here are the commands that allow you to connect to either a local MindsDB
-installation or a MindsDB Cloud instance.
+<Tabs>
 
-<CodeGroup>
+  <Tab title= "Connecting to Local MindsDB Installation">
+  
+    Here is how to connect to a local MindsDB installation:
 
-    ```bash Self-Hosted Local Deployment
+    ```bash
     mongo --host 127.0.0.1 --port 47336
     ```
 
-    ```bash MindsDB Cloud
-    mongo --host cloud.mindsdb.com -u [mindsdb_cloud_username] -p [mindsdb_cloud_password]
+    Let's look at an example:
+
+    ```bash
+    mongo --host cloud.mindsdb.com -u zoran@mindsdb.com -p
     ```
 
-</CodeGroup>
+    On execution, we get:
 
-On execution, we get:
+    ```bash
+    MongoDB shell version v4.0.28
+    Enter password:
+    connecting to: mongodb://cloud.mindsdb.com:27017/?gssapiServiceName=mongodb
+    Implicit session: session { "id" : UUID("b2afbba1-ddfd-4379-944f-asdasaasd") }
+    MongoDB server version: 4.0.28
+    ```
 
-```bash
-MongoDB shell version v4.0.28
-Enter password:
-connecting to: mongodb://cloud.mindsdb.com:27017/?gssapiServiceName=mongodb
-Implicit session: session { "id" : UUID("b2afbba1-ddfd-4379-944f-ca2eadsdas") }
-MongoDB server version: 4.0.28
->
-```
+  </Tab>
 
-## Example
+  <Tab title="Connecting to MindsDB Cloud">
 
-In this example, we connect to the MindsDB Cloud instance, as below.
+    Here is how to connect to MindsDB Cloud.
 
-```bash
-mongo --host cloud.mindsdb.com -u zoran@mindsdb.com -p
-```
+    ```bash
+    mongo --host cloud.mindsdb.com -u mindsdb_cloud_username -p mindsdb_cloud_password
+    ```
 
-On execution, we get:
+    Please replace the `mindsdb_cloud_username` placeholder with your MindsDB Cloud account email. You can replace the `mindsdb_cloud_password` placeholder with your MindsDB Cloud password or run the command without it and pass the password at runtime, as below.
 
-```bash
-MongoDB shell version v4.0.28
-Enter password:
-connecting to: mongodb://cloud.mindsdb.com:27017/?gssapiServiceName=mongodb
-Implicit session: session { "id" : UUID("b2afbba1-ddfd-4379-944f-asdasaasd") }
-MongoDB server version: 4.0.28
-```
+    ```bash
+    mongo --host cloud.mindsdb.com -u mindsdb_cloud_username -p
+    ```
+
+  </Tab>
+</Tabs>
 
 ## What's Next?
 
-Now that you are all set, we recommend you check out our **Tutorials** and
-**Community Tutorials** sections, where you'll find various examples of
-regression, classification, and time series predictions with MindsDB.
+Now that you are all set, we recommend you check out our **Tutorials** section, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
 
-To learn more about MindsDB itself, follow the guide on
-[MindsDB collection structure](/sql/table-structure/). Also, don't miss out on
-the remaining pages from the **Mongo API** section, as they explain a common MQL
-syntax with examples.
+To learn more about MindsDB itself, follow the guide on [MindsDB collection structure](/mongo/collection-structure/). Also, don't miss out on the remaining pages from the **Mongo API** section, as these explain common MQL syntax with examples.
 
 Have fun!

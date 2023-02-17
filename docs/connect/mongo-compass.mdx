@@ -14,46 +14,56 @@ sidebarTitle: MongoDB Compass
   allowfullscreen
 ></iframe>
 
-MongoDB Compass is the GUI for MongoDB. Compass provides detailed schema
-visualizations, real-time performance metrics, sophisticated querying
-abilities, and much more. You can download MongoDB Compass [here](https://www.mongodb.com/try/download/compass).
+MongoDB Compass is a graphical user interface (GUI) for MongoDB. It provides detailed schema visualizations, real-time performance metrics, sophisticated querying abilities, and more. You can download MongoDB Compass [here](https://www.mongodb.com/try/download/compass).
 
-## Connect
+## Overview
+
+Here is an overview of the connection between MindsDB and MongoDB Compass:
+
+<p align="center">
+  <img src="/assets/connect_mongo_compass.png" />
+</p>
+
+Let's go through the steps presented above:
+
+1. We connect MongoDB Compass to MindsDB. It is discussed in the following content.
+
+2. We connect MindsDB to a database. You can use the [`CREATE DATABASE`](/sql/create/databases) statement to accomplish this step.
+
+3. Having completed steps 1 and 2, you can access the connected database from MongoDB Compass through MindsDB.
+
+## How to Connect
+
+Here is how to connect MongoDB Compass to MindsDB using either MindsDB Cloud or local installation.
 
 <Tabs>
 
-  <Tab title= "Connecting to local MindsDB">
+  <Tab title= "Connecting to Local MindsDB Installation">
   
-    First, create a new connection in Compass by clicking the `New Connection` from
-    the left navigation panel. Next, paste the connection string:
+    First, create a new connection in MongoDB Compass by clicking the `New Connection` button from the left navigation panel.
+
+    The host value is `127.0.0.1` and the port value is `47336`. Input the value in the `Host` field, as below.
 
     <p align="center">
-      <img src="/assets/connect_compass_srv.png" />
-    </p>
-
-    Or, fill in connection fields individualy:
-
-    <p align="center">
-      <img src="/assets/connect_compassm.png" />
+      <img src="/assets/connect_mongo_compass_3.png" />
     </p>
 
   </Tab>
 
-  <Tab title="Connecting to your MindsDB Cloud account">
+  <Tab title="Connecting to MindsDB Cloud">
 
-    You can connect to your MindsDB Cloud account. To do that, please use the
-    connection details below:
+    First, create a new connection in MongoDB Compass by clicking the `New Connection` button from the left navigation panel.
 
-    ```
-    Hostname: `cloud.mindsdb.com`
-    Port: `27018`
-    Authentication: `Username / Password`
-    Username: *your MindsDB Cloud email*
-    Password: *your MindsDB Cloud password*
-    ```
+    The host value is `cloud.mindsdb.com` and the port value is `27017`. Input the value in the `Host` field, as below.
 
     <p align="center">
-      <img src="/assets/connect_compass_cloud.png" />
+      <img src="/assets/connect_mongo_compass_1.png" />
+    </p>
+
+    Next, go to the `Authentication` tab and input the username and password to your MindsDB Cloud account, as below.
+
+    <p align="center">
+      <img src="/assets/connect_mongo_compass_2.png" />
     </p>
 
   </Tab>
@@ -61,13 +71,8 @@ abilities, and much more. You can download MongoDB Compass [here](https://www.mo
 
 ## What's Next?
 
-Now that you are all set, we recommend you check out our **Tutorials** and
-**Community Tutorials** sections, where you'll find various examples of
-regression, classification, and time series predictions with MindsDB.
+Now that you are all set, we recommend you check out our **Tutorials** section, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
 
-To learn more about MindsDB itself, follow the guide on
-[MindsDB collection structure](/mongo/collection-structure/). Also, don't miss
-out on the remaining pages from the **MONGO API** section, as they explain a
-common MQL syntax with examples.
+To learn more about MindsDB itself, follow the guide on [MindsDB collection structure](/mongo/collection-structure/). Also, don't miss out on the remaining pages from the **Mongo API** section, as these explain common MQL syntax with examples.
 
 Have fun!

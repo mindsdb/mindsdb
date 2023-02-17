@@ -126,7 +126,7 @@ class Auth(Resource):
 
         try:
             resp = requests.put(
-                'https://{auth_server}/cloud/instance',
+                f'https://{auth_server}/cloud/instance',
                 json={
                     'instance_id': instance_id,
                     'public_hostname': public_hostname,
@@ -147,7 +147,7 @@ class Auth(Resource):
         session.permanent = True
 
         if request.path.endswith('/auth/callback/cloud_home'):
-            return redirect('https://{auth_server}')
+            return redirect(f'https://{auth_server}')
         else:
             return redirect(url_for('root_index'))
 

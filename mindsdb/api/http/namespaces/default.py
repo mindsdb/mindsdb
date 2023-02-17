@@ -12,6 +12,10 @@ from flask_restx import fields
 from mindsdb.api.http.namespaces.configs.default import ns_conf
 from mindsdb.utilities.config import Config
 from mindsdb.api.http.utils import http_error
+from mindsdb.utilities.log import get_log
+
+
+log = get_log('http')
 
 
 def get_access_token():
@@ -70,10 +74,15 @@ class Auth(Resource):
         config = Config()
         # todo add location arg
         code = request.args.get('code')
-        client_id = config['auth']['oauth']['client_id']
-        client_secret = config['auth']['oauth']['client_secret']
-        auth_server = config['auth']['oauth']['server_host']
-        public_host = config['public_host']
+
+        aws_meta_data = config['aws_meta_data']
+        public_hostname = aws_meta_data['public-hostname']
+        instance_id = aws_meta_data['instance-id']
+
+        oauth_meta = config['auth']['oauth']
+        client_id = oauth_meta['client_id']
+        client_secret = oauth_meta['client_secret']
+        auth_server = oauth_meta['server_host']
         client_basic = base64.b64encode(
             f'{client_id}:{client_secret}'.encode()
         ).decode()
@@ -82,7 +91,7 @@ class Auth(Resource):
             data={
                 'code': code,
                 'grant_type': 'authorization_code',
-                'redirect_uri': f'https://{public_host}/api/auth/callback'
+                'redirect_uri': f'https://{public_hostname}/api/auth/callback'
             },
             headers={
                 'Authorization': f'Basic {client_basic}'
@@ -111,6 +120,23 @@ class Auth(Resource):
                 }
             }
         })
+
+        try:
+            resp = request.put(
+                'https://cloud.mindsdb.com/cloud/instance',
+                json={
+                    'instance_id': instance_id,
+                    'public_hostname': public_hostname
+                },
+                headers={
+                    'Authorization': f'Bearer {tokens["access_token"]}'
+                },
+                timeout=5
+            )
+            if resp.status_code != 200:
+                log.warn(f'Wrong response from cloud server: {resp.status_code}')
+        except Exception as e:
+            log.warn(f"Cant't send request to cloud server: {e}")
 
         session['username'] = user_data['name']
         session['auth_provider'] = 'cloud'

@@ -33,7 +33,7 @@ def request_user_info(access_token: str = None):
     if access_token is None:
         raise KeyError()
 
-    auth_server = Config['auth']['oauth']['server_host']
+    auth_server = Config()['auth']['oauth']['server_host']
 
     response = requests.get(
         f'https://{auth_server}/auth/userinfo',

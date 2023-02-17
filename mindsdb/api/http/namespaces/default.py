@@ -126,7 +126,8 @@ class Auth(Resource):
                 'https://cloud.mindsdb.com/cloud/instance',
                 json={
                     'instance_id': instance_id,
-                    'public_hostname': public_hostname
+                    'public_hostname': public_hostname,
+                    'ami_id': aws_meta_data.get('ami-id')
                 },
                 headers={
                     'Authorization': f'Bearer {tokens["access_token"]}'
@@ -160,12 +161,13 @@ class CloudLoginRoute(Resource):
         '''
         location = request.args.get('location')
         config = Config()
-        public_host = config['public_host']
+        aws_meta_data = config['aws_meta_data']
+        public_hostname = aws_meta_data['public-hostname']
         auth_server = config['auth']['oauth']['server_host']
         if location == 'cloud_home':
-            redirect_uri = f'https://{public_host}/api/auth/callback/cloud_home'
+            redirect_uri = f'https://{public_hostname}/api/auth/callback/cloud_home'
         else:
-            redirect_uri = f'https://{public_host}/api/auth/callback'
+            redirect_uri = f'https://{public_hostname}/api/auth/callback'
         args = urllib.parse.urlencode({
             'client_id': config['auth']['oauth']['client_id'],
             'scope': 'openid profile aws_marketplace',

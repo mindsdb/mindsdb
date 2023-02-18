@@ -1,14 +1,9 @@
 tasks:
-  - init: pip install -U pip
-  - init: pip install -r requirements.txt
-
-  - name: setup mindsdb
-    env:
-      TMPDIR: "/workspace/mindsdb/tmp"
-    before: |
-      mkdir tmp
-      cd docker
+  - name: Setup mindsdb development environment
     init: |
-      docker compose pull
+      pip install -U pip
+      pip install -r requirements.txt
+      pip install -r requirements-dev.txt
+      python setup.py develop
     command: |
-      docker compose up
+      python -m mindsdb

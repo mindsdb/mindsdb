@@ -1,6 +1,8 @@
 tasks:
   - name: Setup mindsdb development environment
     init: |
+      python -m venv mindsdb-venv
+      source mindsdb-venv
       pip install -U pip
       pip install -r requirements.txt
       pip install -r requirements-dev.txt

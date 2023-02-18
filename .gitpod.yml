@@ -23,6 +23,8 @@ tasks:
       python -m mindsdb
 
   - name: docs
+    before: |
+      cd docs
     init: |
       npm i mintlify -g
     command: |

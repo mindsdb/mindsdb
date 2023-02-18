@@ -8,6 +8,5 @@ tasks:
       pip install -U pip
       pip install -r requirements.txt
       pip install -r requirements-dev.txt
-      python setup.py develop
     command: |
       python -m mindsdb

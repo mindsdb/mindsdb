@@ -7,7 +7,7 @@ ports:
     onOpen: open-preview
 
   # Mindsdb Docs
-  - port: 47334
+  - port: 3000
     onOpen: open-preview
 
   # PostgreSQL server

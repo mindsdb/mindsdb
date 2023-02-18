@@ -6,10 +6,6 @@ ports:
   - port: 47334
     onOpen: open-preview
 
-  # Mindsdb Docs
-  - port: 3000
-    onOpen: open-preview
-
   # PostgreSQL server
   - port: 5432
     onOpen: ignore
@@ -21,11 +17,3 @@ tasks:
       pip install -r requirements.txt
     command: |
       python -m mindsdb
-
-  - name: docs
-    before: |
-      cd docs
-    init: |
-      npm i mintlify -g
-    command: |
-      mintlify dev

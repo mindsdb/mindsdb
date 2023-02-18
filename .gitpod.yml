@@ -1,7 +1,7 @@
 image: gitpod/workspace-postgres
 
 ports:
-  # Mindsdb server
+  # Mindsdb GUI
   - port: 47334
     onOpen: open-preview
   # PostgreSQL server

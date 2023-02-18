@@ -1,12 +1,17 @@
-image: gitpod/workspace-python-3.8
+image: gitpod/workspace-postgres
+
+ports:
+  # Mindsdb server
+  - port: 47334
+    onOpen: open-preview
+  # PostgreSQL server
+  - port: 5432
+    onOpen: ignore
 
 tasks:
-  - name: Setup mindsdb development environment
+  - name: mindsdb
     init: |
-      python -m venv mindsdb-venv
-      source mindsdb-venv
       pip install -U pip
       pip install -r requirements.txt
-      pip install -r requirements-dev.txt
     command: |
       python -m mindsdb

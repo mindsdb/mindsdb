@@ -1,3 +1,5 @@
+image: gitpod/workspace-python-3.8
+
 tasks:
   - name: Setup mindsdb development environment
     init: |

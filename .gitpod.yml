@@ -1,4 +1,5 @@
-image: gitpod/workspace-postgres
+image:
+  file: .gitpod.Dockerfile
 
 ports:
   # Mindsdb GUI

@@ -1,0 +1,9 @@
+CREATE DATABASE couchbase_datasource
+WITH
+engine='couchbase',
+parameters={
+    "host": "localhost",
+    "bucket":"test-bucker",
+    "user": "admin",
+    "password": "password"
+};

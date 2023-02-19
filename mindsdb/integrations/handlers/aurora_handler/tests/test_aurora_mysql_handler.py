@@ -7,14 +7,12 @@ class AuroraMySQLHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "connection_data": {
-                "host": "",
-                "port": 3306,
-                "user": "",
-                "password": "",
-                "database": "",
-                "db_engine": "mysql"
-            }
+            "host": "",
+            "port": 3306,
+            "user": "admin",
+            "password": "",
+            "database": "public",
+            "db_engine": "mysql"
         }
         cls.handler = AuroraHandler('test_aurora_mysql_handler', cls.kwargs)
 
@@ -22,7 +20,7 @@ class AuroraMySQLHandlerTest(unittest.TestCase):
         assert self.handler.check_connection()
 
     def test_1_native_query_select(self):
-        query = ""
+        query = "SELECT * FROM person"
         result = self.handler.native_query(query)
         assert result.type is RESPONSE_TYPE.TABLE
 
@@ -31,7 +29,7 @@ class AuroraMySQLHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('')
+        columns = self.handler.get_columns('person')
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 

@@ -5,6 +5,7 @@ import boto3
 
 from mindsdb_sql.parser.ast.base import ASTNode
 
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse
@@ -51,21 +52,23 @@ class AuroraHandler(DatabaseHandler):
                 connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
             )
         else:
-            # TODO: handle the else situation
-            pass
+            raise Exception("The database engine should be either MySQL or PostgreSQL!")
 
     def get_database_engine(self):
-        # TODO: add error handling for when the provided credentials are incorrect
-        session = boto3.session.Session(
-            aws_access_key_id=self.connection_data['aws_access_key_id'],
-            aws_secret_access_key=self.connection_data['aws_secret_access_key']
-        )
+        try:
+            session = boto3.session.Session(
+                aws_access_key_id=self.connection_data['aws_access_key_id'],
+                aws_secret_access_key=self.connection_data['aws_secret_access_key']
+            )
 
-        rds = session.client('rds')
+            rds = session.client('rds')
 
-        response = rds.describe_db_clusters()
+            response = rds.describe_db_clusters()
 
-        return next(item for item in response if item["DBClusterIdentifier"] == self.connection_data['host'].split('.')[0])['Engine']
+            return next(item for item in response if item["DBClusterIdentifier"] == self.connection_data['host'].split('.')[0])['Engine']
+        except Exception as e:
+            log.logger.error(f'Error connecting to Aurora, {e}!')
+            log.logger.error('If the database engine is not provided as a parameter, please ensure that the credentials for the AWS account are passed instead!')
 
     def __del__(self):
         self.db.__del__()

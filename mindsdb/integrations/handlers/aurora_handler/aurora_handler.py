@@ -18,7 +18,7 @@ from mindsdb.integrations.handlers.postgres_handler.postgres_handler import Post
 
 class AuroraHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Firebird statements.
+    This handler handles connection and execution of the Amazon Aurora statements.
     """
 
     name = 'aurora'
@@ -68,7 +68,7 @@ class AuroraHandler(DatabaseHandler):
             return next(item for item in response if item["DBClusterIdentifier"] == self.connection_data['host'].split('.')[0])['Engine']
         except Exception as e:
             log.logger.error(f'Error connecting to Aurora, {e}!')
-            log.logger.error('If the database engine is not provided as a parameter, please ensure that the credentials for the AWS account are passed instead!')
+            log.logger.error('If the database engine is not provided as a parameter, please ensure that the credentials for the AWS account are passed in instead!')
 
     def __del__(self):
         self.db.__del__()

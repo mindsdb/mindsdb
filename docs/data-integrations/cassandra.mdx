@@ -1,0 +1,10 @@
+CREATE DATABASE sc
+WITH ENGINE = "cassandra",
+PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": "9043",
+    "user": "user",
+    "password": "pass",
+    "keyspace": "test_data",
+    "protocol_version": 4
+    }

@@ -1,0 +1,10 @@
+CREATE DATABASE redshift_datasource
+WITH
+engine='redshift',
+parameters={
+    "host": "examplecluster.abc123xyz789.us-west-1.redshift.amazonaws.com",
+    "port": 5439,
+    "database": "example_db",
+    "user": "awsuser",
+    "password": "my_password"
+};

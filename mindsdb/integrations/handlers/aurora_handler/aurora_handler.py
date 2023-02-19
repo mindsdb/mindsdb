@@ -30,7 +30,6 @@ class AuroraHandler(DatabaseHandler):
             connection_data (dict): parameters for connecting to the database
             **kwargs: arbitrary keyword arguments.
         """
-        # TODO: check if using the same name parameter here and when instantiating the objects will be feasible
         super().__init__(name)
 
         self.dialect = 'aurora'
@@ -43,15 +42,13 @@ class AuroraHandler(DatabaseHandler):
 
         if self.connection_data['db_engine'] == 'mysql' or database_engine == 'aurora':
             self.db = MySQLHandler(
-                # TODO: check if using the same name parameter here again will be feasible
-                name=name,
+                name=name + 'mysql',
                 connection_data=self.connection_data
             )
         elif self.connection_data['db_engine'] == 'postgresql' or database_engine == 'aurora-postgresql':
             self.db = PostgresHandler(
-                # TODO: check if using the same name parameter here again will be feasible
-                name=name,
-                connection_data=self.connection_data
+                name=name + 'postgresql',
+                connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
             )
         else:
             # TODO: handle the else situation

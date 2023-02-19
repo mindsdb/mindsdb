@@ -3,17 +3,17 @@ from mindsdb.integrations.handlers.aurora_handler.aurora_handler import AuroraHa
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
-class AuroraHandlerTest(unittest.TestCase):
+class AuroraPostgresHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
             "connection_data": {
                 "host": "",
-                "port": 0,
+                "port": 5342,
                 "user": "",
                 "password": "",
                 "database": "",
-                "db_engine": ""
+                "db_engine": "postgresql"
             }
         }
         cls.handler = AuroraHandler('test_aurora_handler', cls.kwargs)

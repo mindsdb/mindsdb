@@ -179,7 +179,7 @@ connection_args = OrderedDict(
 
 connection_args_example = OrderedDict(
     db_engine='mysql',
-    host='127.0.0.1',
+    host='mysqlcluster.cluster-123456789012.us-east-1.rds.amazonaws.com',
     port=3306,
     user='root',
     password='password',

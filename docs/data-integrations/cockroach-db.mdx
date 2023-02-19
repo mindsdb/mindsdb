@@ -1,0 +1,10 @@
+CREATE DATABASE cockroach_datasource        --- display name for the database
+WITH ENGINE = 'cockroachdb',                --- name of the MindsDB handler
+PARAMETERS = {
+  "host": " ",                              --- host name or IP address
+  "port": ,                                 --- port used to make TCP/IP connection
+  "database": " ",                          --- database name
+  "user": " ",                              --- database user
+  "password": " ",                          --- database password
+  "publish": " "                            --- optional, publish
+};

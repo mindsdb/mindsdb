@@ -184,6 +184,7 @@ class TestAutokeras(BaseExecutorTest):
             SELECT m.*
             FROM pg.df as t 
             JOIN proj.modelx as m
+            WHERE t.b>25
         """
         )
         avg_c = pd.to_numeric(ret.c).mean()
@@ -419,6 +420,7 @@ class TestAutokeras(BaseExecutorTest):
             SELECT m.*
             FROM pg.df as t 
             JOIN proj.modelx as m
+            WHERE t.b>25
         """
         )
 

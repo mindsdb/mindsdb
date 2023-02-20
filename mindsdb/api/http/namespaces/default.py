@@ -122,10 +122,4 @@ class StatusRoute(Resource):
             }
         }
 
-        if environment != 'cloud':
-            marker_file = Path(Config().paths['root']).joinpath('gui_first_launch.txt')
-            if marker_file.is_file() is False:
-                resp['is_first_launch'] = True
-                marker_file.write_text('')
-
         return resp

@@ -1437,12 +1437,12 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     CREATE DATABASE snowflake_datasource
     WITH ENGINE = 'snowflake',
     PARAMETERS = {
-      "host": "127.0.0.1",
+      "host": "account_name.snowflakecomputing.com",
       "port": 443,
       "database": "snowflake",
       "user": "user",
       "password": "password",
-      "account": "account",
+      "account": "account_name",
       "schema": "public",
       "protocol": "https",
       "warehouse": "warehouse"

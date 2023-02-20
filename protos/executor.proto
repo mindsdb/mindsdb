@@ -16,6 +16,11 @@ message ExecutionContext{
     string sql = 2;
 }
 
+message BinaryExecutionContext{
+    ExecutorContext context = 1;
+    bytes sql = 2;
+}
+
 message StatementExecuteContext{
     ExecutorContext context = 1;
     string params = 2;
@@ -34,7 +39,8 @@ message ExecutorResponse {
     string server_status = 5;
     bool is_executed = 6;
     string session = 7;
-    string error_message = 8;
+    int32 error_code = 8;
+    string error_message = 9;
 }
 
 message ExecutorStatusResponse {
@@ -49,6 +55,8 @@ service ExecutorService {
   rpc StatementExecute(StatementExecuteContext) returns (ExecutorResponse) {}
 
   rpc QueryExecute(ExecutionContext) returns (ExecutorResponse) {}
+
+  rpc BinaryQueryExecute(BinaryExecutionContext) returns (ExecutorResponse) {}
 
   rpc ExecuteExternal(ExecutionContext) returns (ExecutorResponse) {}
 

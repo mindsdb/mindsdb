@@ -48,6 +48,12 @@ def train_autokeras_model(df, target):
 
 
 def get_preds_from_autokeras_model(df, model, target, categorical_dummy_column_names):
+    # Remove columns that didn't exist in the training df
+    cols_to_drop = ["__mindsdb_row_id", target]
+    for col in cols_to_drop:
+        if col in df.columns.values.tolist():
+            df = df.drop(col, axis=1)
+
     # Get dummies for any categorical columns and then populate the missing ones with zeros
     prediction_df = pd.get_dummies(df)
     for col in categorical_dummy_column_names:
@@ -88,8 +94,8 @@ class AutokerasHandler(BaseMLEngine):
 
         model = load_model(args["folder_path"], custom_objects=ak.CUSTOM_OBJECTS)
 
-        df_to_predict = df.copy()
         # Remove column that didn't exist in the training df so that we can do filtering
+        df_to_predict = df.copy()
         if "__mindsdb_row_id" in df_to_predict.columns.values.tolist():
             df_to_predict = df_to_predict.drop("__mindsdb_row_id", axis=1)
 
@@ -98,12 +104,6 @@ class AutokerasHandler(BaseMLEngine):
         i1 = training_df.set_index(keys).index
         i2 = df_to_predict.set_index(keys).index
         filtered_df = training_df[i1.isin(i2)]
-
-        # Remove columns that didn't exist in the training df
-        cols_to_drop = ["__mindsdb_row_id", args["target"]]
-        for col in cols_to_drop:
-            if col in filtered_df.columns.values.tolist():
-                filtered_df = filtered_df.drop(col, axis=1)
 
         if filtered_df.empty:
             # TODO: Rephrase the exception message in a more user-friendly way

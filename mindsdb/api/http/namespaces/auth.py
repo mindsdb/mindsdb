@@ -16,12 +16,20 @@ from mindsdb.utilities.log import get_log
 log = get_log('http')
 
 
-def get_access_token():
+def get_access_token() -> str:
+    ''' return current access token
+
+        Returns:
+            str: token
+    '''
     return Config().get('auth', {}).get('oauth', {}).get('tokens', {}).get('access_token')
 
 
-def request_user_info(access_token: str = None):
+def request_user_info(access_token: str = None) -> dict:
     ''' request user info from cloud
+
+        Args:
+            access_token (str, optional): token that used to get user data
 
         Returns:
             dict: user data
@@ -47,8 +55,14 @@ def request_user_info(access_token: str = None):
 
 @ns_conf.route('/callback', methods=['GET'])
 @ns_conf.route('/callback/cloud_home', methods=['GET'])
+@ns_conf.hide
 class Auth(Resource):
+    @ns_conf.doc(
+        params={'code': 'authentification code'}
+    )
     def get(self):
+        ''' callback from auth server if authentification is successful
+        '''
         config = Config()
         code = request.args.get('code')
 
@@ -130,11 +144,13 @@ class Auth(Resource):
 
 
 @ns_conf.route('/cloud_login', methods=['GET'])
+@ns_conf.hide
 class CloudLoginRoute(Resource):
     @ns_conf.doc(
         responses={
             302: 'Redirect to auth server'
-        }
+        },
+        params={'location': 'final redirection should lead to that location'}
     )
     def get(self):
         ''' redirect to cloud login form

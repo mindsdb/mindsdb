@@ -45,7 +45,8 @@ def request_user_info(access_token: str = None) -> dict:
         f'https://{auth_server}/auth/userinfo',
         headers={
             'Authorization': f'Bearer {access_token}'
-        }
+        },
+        timeout=5
     )
     if response.status_code != 200:
         raise Exception(f'Wrong response: {response.status_code}, {response.text}')
@@ -157,13 +158,16 @@ class CloudLoginRoute(Resource):
         '''
         location = request.args.get('location')
         config = Config()
+
         aws_meta_data = config['aws_meta_data']
         public_hostname = aws_meta_data['public-hostname']
         auth_server = config['auth']['oauth']['server_host']
+
         if location == 'cloud_home':
             redirect_uri = f'https://{public_hostname}/api/auth/callback/cloud_home'
         else:
             redirect_uri = f'https://{public_hostname}/api/auth/callback'
+
         args = urllib.parse.urlencode({
             'client_id': config['auth']['oauth']['client_id'],
             'scope': 'openid profile aws_marketplace',

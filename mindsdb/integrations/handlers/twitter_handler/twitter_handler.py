@@ -2,6 +2,7 @@ import datetime as dt
 import tweepy
 import ast
 from collections import defaultdict
+import pytz
 
 import pandas as pd
 
@@ -49,6 +50,7 @@ def parse_date(date_str):
             pass
     if date is None:
         raise ValueError(f"Can't parse date: {date_str}")
+    date = date.astimezone(pytz.utc)
     return date
 
 
@@ -61,10 +63,15 @@ class TweetsTable(APITable):
         params = {}
         for op, arg1, arg2 in conditions:
             if arg1 == 'created_at':
+                date = parse_date(arg2)
                 if op == '>':
-                    params['start_time'] = parse_date(arg2)
+                    # "tweets/search/recent" doesn't accept dates earlier than 7 days
+                    if (dt.datetime.now(dt.timezone.utc) - date).days > 7:
+                        # skip this condition
+                        continue
+                    params['start_time'] = date
                 elif op == '<':
-                    params['end_time'] = parse_date(arg2)
+                    params['end_time'] = date
                 else:
                     raise NotImplementedError
                 continue
@@ -118,21 +125,6 @@ class TweetsTable(APITable):
             'edit_history_tweet_ids',
             'author_username',
             'author_name',
-
-            # 'conversation_id',
-            # 'hashtags',
-            # 'cashtags',
-            # 'links',
-            # 'mentions',
-            # 'media',
-            # 'lang',
-            # 'context',
-            # 'entities',
-            # 'place',
-            # 'place_country',
-            # 'place_geo_coordinates'
-            # 'attachments',
-            # 'public_metrics'
         ]
 
     def insert(self, query:ast.Insert):
@@ -140,7 +132,9 @@ class TweetsTable(APITable):
         columns = [col.name for col in query.columns]
         for row in query.values:
             params = dict(zip(columns, row))
+
             self.handler.call_twitter_api('create_tweet', params)
+
 
 class TwitterHandler(APIHandler):
     """A class for handling connections and interactions with the Twitter API.

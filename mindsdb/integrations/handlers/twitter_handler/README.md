@@ -120,8 +120,9 @@ CREATE JOB auto_respond AS (
  FROM my_twitter.tweets t
  JOIN mindsdb.twitter_response_model r 
       WHERE 
-      AND t.query = 'mindsdb or #mindsdb' 
-      AND created_at > {{PREVIOUS_START_DATETIME}}
+      t.query = 'mindsdb OR #mindsdb' 
+      AND t.created_at > "{{PREVIOUS_START_DATETIME}}"
+  limit 2
 )
 EVERY HOUR
 ```

@@ -1129,7 +1129,14 @@ class SQLQuery():
                             else:
                                 col_list = rs_in.find_columns(column_name, table_alias=table_name_or_alias)
                                 if len(col_list) == 0:
-                                    raise SqlApiException(f'Can not find appropriate table for column {table_name_or_alias}.{column_name}')
+                                    if rs_in.length() > 0:
+                                        raise SqlApiException(f'Can not find appropriate table for column {table_name_or_alias}.{column_name}')
+                                    else:
+                                        # FIXME: made up column if resultSet is empty
+                                        # columns from predictor may not exist if predictor wasn't called
+                                        col = Column(name=table_name_or_alias, table_name=table_name_or_alias)
+                                        col_list = [col]
+                                        rs_in.add_column(col)
 
                                 col_added = rs_in.copy_column_to(col_list[0], rs_out)
                                 col_added.alias = column_alias

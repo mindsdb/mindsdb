@@ -333,6 +333,8 @@ class InformationSchemaDataNode(DataNode):
             for row in project_models:
                 table_name = row['name']
                 table_meta = row['metadata']
+                if table_meta['active'] is not True:
+                    continue
                 data.append([
                     table_name, table_meta['engine'], project_name, table_meta['version'], table_meta['status'],
                     table_meta['accuracy'], table_meta['predict'], table_meta['update_status'],

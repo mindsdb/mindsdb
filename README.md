@@ -30,19 +30,21 @@
 	</br>
 	<a href="https://deepnote.com/project/Machine-Learning-With-SQL-8GDF7bc7SzKlhBLorqoIcw/%2Fmindsdb_demo.ipynb" target="_blank"><img src="https://deepnote.com/buttons/launch-in-deepnote-white.svg" alt="Launch in Deepnote"></a>
 	</br>
+	<a href="https://gitpod.io/#https://github.com/mindsdb/mindsdb" target="_blank"><img src="https://gitpod.io/button/open-in-gitpod.svg" alt="Open in Gitpod"></a>
+	</br>
 	
   <h3 align="center">
     <a href="https://www.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Website</a>
     <span> | </span>
     <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
     <span> | </span>
-    <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ">Community Slack</a>
+    <a href="https://mindsdb.com/joincommunity">Community Slack</a>
     <span> | </span>
     <a href="https://github.com/mindsdb/mindsdb/projects">Contribute</a>
     <span> | </span>
-    <a href="https://cloud.mindsdb.com">Demo</a>
+    <a href="https://cloud.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Demo</a>
     <span> | </span>
-    <a href="https://mindsdb.com/in-database-nlp-tutorials-contest?utm_medium=community&utm_source=github&utm_campaign=22q4-huggingface-preview">NLP Contest</a>
+    <a href="https://mindsdb.com/mindsdb-hackathon?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Hackathon</a>
   </h3>
   
 </div>
@@ -175,9 +177,10 @@ If you need commercial support, please [contact](https://mindsdb.com/contact/?ut
 
 ## Contributing
 
-A great place to start contributing to MindsDB will be our GitHub projects for checkered_flag:
+A great place to start contributing to MindsDB will be our GitHub projects for :checkered_flag:
 * Community writers [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/7).
 * Community code contributors [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/8).
+* [First timers only issues](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3Afirst-timers-only), if this is your first time contributing on open source project.
 
 Also, we are always open to suggestions so feel free to open new issues with your ideas and we can guide you!
 

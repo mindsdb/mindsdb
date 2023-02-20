@@ -1,35 +1,33 @@
-import duckdb
 from collections import OrderedDict
 
+import duckdb
+import pandas as pd
+from duckdb import DuckDBPyConnection
 from mindsdb_sql import parse_sql
-from mindsdb.integrations.libs.base import DatabaseHandler
-
 from mindsdb_sql.parser.ast.base import ASTNode
 
-
-from mindsdb.utilities import log
-
+from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.const import (
+    HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE,
+)
+from mindsdb.integrations.libs.response import RESPONSE_TYPE
+from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE,
 )
-
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.utilities import log
 
 
 class DuckDBHandler(DatabaseHandler):
-    """
-    This handler handles connection and execution of the DuckDB statements.
-    """
+    """This handler handles connection and execution of the DuckDB statements."""
 
-    name = "duckdb"
+    name = 'duckdb'
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = "duckdb"
-        self.connection_data = kwargs.get("connection_data")
+        self.dialect = 'duckdb'
+        self.connection_data = kwargs.get('connection_data')
 
         self.connection = None
         self.is_connected = False
@@ -38,24 +36,37 @@ class DuckDBHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self):
-        """
-        Handles the connection to a DuckDB database instance.
+    def connect(self) -> DuckDBPyConnection:
+        """Connect to a DuckDB database.
+
+        Returns:
+            DuckDBPyConnection: The database connection.
         """
 
         if self.is_connected is True:
             return self.connection
 
-        self.connection = duckdb.connect(self.connection_data['db_file'])
+        self.connection = duckdb.connect(self.connection_data['database'])
         self.is_connected = True
 
         return self.connection
 
     def disconnect(self):
-        pass
+        """Close the database connection."""
+
+        if self.is_connected is False:
+            return
+
+        self.connection.close()
+        self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
-        
+        """Check the connection to the DuckDB database.
+
+        Returns:
+            StatusResponse: Connection success status and error message if an error occurs.
+        """
+
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -63,7 +74,9 @@ class DuckDBHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to DuckDB {self.connection_data["db_file"]}, {e}!')
+            log.logger.error(
+                f'Error connecting to DuckDB {self.connection_data["database"]}, {e}!'
+            )
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -74,6 +87,14 @@ class DuckDBHandler(DatabaseHandler):
         return response
 
     def native_query(self, query: str) -> Response:
+        """Execute a SQL query.
+
+        Args:
+            query (str): The SQL query to execute.
+
+        Returns:
+            Response: The query result.
+        """
         need_to_close = self.is_connected is False
 
         connection = self.connect()
@@ -81,6 +102,7 @@ class DuckDBHandler(DatabaseHandler):
 
         try:
             cursor.execute(query)
+
             result = cursor.fetchall()
             if result:
                 response = Response(
@@ -94,7 +116,7 @@ class DuckDBHandler(DatabaseHandler):
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
             log.logger.error(
-                f'Error running query: {query} on {self.connection_data["db_file"]}!'
+                f'Error running query: {query} on {self.connection_data["database"]}!'
             )
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
@@ -105,44 +127,58 @@ class DuckDBHandler(DatabaseHandler):
         return response
 
     def query(self, query: ASTNode) -> Response:
-        query_str = query.to_string()
+        """Render and execute a SQL query.
+
+        Args:
+            query (ASTNode): The SQL query.
+
+        Returns:
+            Response: The query result.
+        """
+
+        if isinstance(query, ASTNode):
+            query_str = query.to_string()
+        else:
+            query_str = str(query)
+
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:
-        """
-        Get a list of all of the table in the database
+        """Get a list of all the tables in the database.
+
         Returns:
-            HandlerResponse
+            Response: Names of the tables in the database.
         """
 
-        q = "SHOW TABLES;"
+        q = 'SHOW TABLES;'
         result = self.native_query(q)
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
+        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
         return result
 
     def get_columns(self, table_name: str) -> Response:
-        """
-        Return details about the table columns.
+        """Get details about a table.
+
         Args:
-            table_name (str): name of one of table
+            table_name (str): Name of the table to retrieve details of.
+
         Returns:
-            HandlerResponse
+            Response: Details of the table.
         """
 
-        query = f"DESCRIBE {table_name};"
+        query = f'DESCRIBE {table_name};'
         return self.native_query(query)
 
 
 connection_args = OrderedDict(
     database={
-        "type": ARG_TYPE.STR,
-        "description": "The database file to read and write from. The special value :memory: (default) can be used to create an in-memory database.",
+        'type': ARG_TYPE.STR,
+        'description': 'The database file to read and write from. The special value :memory: (default) can be used to create an in-memory database.',
     },
     read_only={
-        "type": ARG_TYPE.BOOL,
-        "description": "A flag that specifies if the connection should be made in read-only mode.",
+        'type': ARG_TYPE.BOOL,
+        'description': 'A flag that specifies if the connection should be made in read-only mode.',
     },
 )
 
-connection_args_example = OrderedDict(database="database.duckdb", read_only=True)
+connection_args_example = OrderedDict(database='db.duckdb', read_only=True)

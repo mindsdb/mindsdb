@@ -81,7 +81,7 @@ class GetConfig(Resource):
         config_data.update(data)
 
         with open(Config().config_path, 'wt') as fp:
-            fp.write(json.dumps(config_data))
+            fp.write(json.dumps(config_data, indent=4))
 
         return '', 200
 

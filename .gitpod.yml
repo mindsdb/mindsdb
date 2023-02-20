@@ -1,0 +1,19 @@
+image:
+  file: .gitpod.Dockerfile
+
+ports:
+  # Mindsdb GUI
+  - port: 47334
+    onOpen: open-preview
+
+  # PostgreSQL server
+  - port: 5432
+    onOpen: ignore
+
+tasks:
+  - name: mindsdb
+    init: |
+      pip install -U pip
+      pip install -r requirements.txt
+    command: |
+      python -m mindsdb

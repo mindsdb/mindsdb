@@ -113,9 +113,14 @@ def learn_process(class_path, context_dump, integration_id,
         handlerStorage = HandlerStorage(integration_id)
         modelStorage = ModelStorage(predictor_id)
 
+        kwargs = {}
+        if base_predictor_id is not None:
+            kwargs['base_model_storage'] = ModelStorage(base_predictor_id)
+
         ml_handler = HandlerClass(
             engine_storage=handlerStorage,
             model_storage=modelStorage,
+            **kwargs
         )
 
         # create new model
@@ -414,6 +419,8 @@ class BaseMLEngineExec:
         predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
 
         base_predictor_record = predictor_records[0]
+        learn_args = base_predictor_record.learn_args
+        learn_args['using'] = args if not learn_args.get('using', False) else {**learn_args['using'], **args}
 
         predictor_record = db.Predictor(
             company_id=ctx.company_id,
@@ -423,7 +430,7 @@ class BaseMLEngineExec:
             fetch_data_query=fetch_data_query,
             mindsdb_version=mindsdb_version,
             to_predict=base_predictor_record.to_predict,
-            learn_args=base_predictor_record.learn_args,
+            learn_args=learn_args,
             data={'name': model_name},
             project_id=project.id,
             training_data_columns_count=None,

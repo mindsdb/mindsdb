@@ -135,7 +135,7 @@ class BaseMLEngine:
       - Any output produced by the ML engine is then formatted by the wrapper and passed back into the MindsDB executor, which can then morph the data to comply with the original SQL query
     """  # noqa
 
-    def __init__(self, model_storage, engine_storage) -> None:
+    def __init__(self, model_storage, engine_storage, **kwargs) -> None:
         """
         Warning: This method should not be overridden.
 
@@ -146,6 +146,11 @@ class BaseMLEngine:
         """
         self.model_storage = model_storage
         self.engine_storage = engine_storage
+
+        if kwargs.get('base_model_storage'):
+            self.base_model_storage = kwargs['base_model_storage']  # available when updating a model
+        else:
+            self.base_model_storage = None
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """

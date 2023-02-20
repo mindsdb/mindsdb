@@ -1,0 +1,32 @@
+# Couchbase Handler
+
+This is the implementation of the Couchbase handler for MindsDB.
+
+## Implementation
+This handler was implemented using the `couchbase` library, the Python driver for Couchbase.
+
+The required arguments to establish a connection are,
+* `host`: the host name or IP address of the Couchbase server
+* `bucket`: the port to use when connecting with the Couchbase server
+* `user`: the user to authenticate the user with the Couchbase server
+* `password`: the password to authenticate the user with the Couchbase server
+* `scope`: the scope to use for making queries based on a scoped context because, couchbase uses scope just like schema in mysql, but scopes are mandatory. N.B the scope is optional, if ommited, will default to `_default`
+
+## Usage
+In order to make use of this handler and connect to a Couchbase server in MindsDB, the following syntax can be used,
+~~~~sql
+CREATE DATABASE couchbase_datasource
+WITH
+engine='couchbase',
+parameters={
+    "host": "localhost",
+    "bucket":"test-bucker",
+    "user": "admin",
+    "password": "password"
+};
+~~~~
+
+Now, you can use this established connection to query your database as follows,
+~~~~sql
+SELECT * FROM couchbase_datasource.collection
+~~~~

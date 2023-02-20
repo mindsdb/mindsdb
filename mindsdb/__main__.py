@@ -9,7 +9,6 @@ import asyncio
 import secrets
 import textwrap
 import traceback
-from pathlib import Path
 from packaging import version
 
 import requests

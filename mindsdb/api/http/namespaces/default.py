@@ -1,5 +1,4 @@
 from flask import request, session
-from pathlib import Path
 
 from flask_restx import Resource
 from flask_restx import fields

@@ -33,8 +33,8 @@ class InformationSchemaDataNode(DataNode):
         'CHARACTER_SETS': ['CHARACTER_SET_NAME', 'DEFAULT_COLLATE_NAME', 'DESCRIPTION', 'MAXLEN'],
         'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
         # MindsDB specific:
-        'MODELS': ['NAME', 'ENGINE', 'PROJECT', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
-        'MODELS_VERSIONS': ['NAME', 'ENGINE', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
+        'MODELS': ['NAME', 'ENGINE', 'PROJECT', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG', 'CREATED_AT'],
+        'MODELS_VERSIONS': ['NAME', 'ENGINE', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG', 'CREATED_AT'],
         'DATABASES': ['NAME', 'TYPE', 'ENGINE'],
         'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
         'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR'],
@@ -254,27 +254,6 @@ class InformationSchemaDataNode(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def _get_models(self, query: ASTNode = None):
-        columns = self.information_schema['MODELS']
-        data = []
-        for project_name in self.get_projects_names():
-            project = self.database_controller.get_project(name=project_name)
-            project_tables = project.get_tables()
-            for table_name, table_meta in project_tables.items():
-                if table_meta['type'] != 'model':
-                    continue
-                data.append([
-                    table_name, table_meta['engine'], project_name, table_meta['version'], table_meta['status'], table_meta['accuracy'], table_meta['predict'],
-                    table_meta['update_status'], table_meta['mindsdb_version'], table_meta['error'],
-                    table_meta['select_data_query'], table_meta['training_options'], table_meta['label']
-                ])
-            # TODO optimise here
-            # if target_table is not None and target_table != project_name:
-            #     continue
-
-        df = pd.DataFrame(data, columns=columns)
-        return df
-
     def _get_jobs(self, query: ASTNode = None):
         jobs_controller = JobsController()
 
@@ -345,6 +324,28 @@ class InformationSchemaDataNode(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
+    def _get_models(self, query: ASTNode = None):
+        columns = self.information_schema['MODELS']
+        data = []
+        for project_name in self.get_projects_names():
+            project = self.database_controller.get_project(name=project_name)
+            project_models = project.get_models()
+            for row in project_models:
+                table_name = row['name']
+                table_meta = row['metadata']
+                data.append([
+                    table_name, table_meta['engine'], project_name, table_meta['version'], table_meta['status'],
+                    table_meta['accuracy'], table_meta['predict'], table_meta['update_status'],
+                    table_meta['mindsdb_version'], table_meta['error'], table_meta['select_data_query'],
+                    table_meta['training_options'], table_meta['label'], row['created_at']
+                ])
+            # TODO optimise here
+            # if target_table is not None and target_table != project_name:
+            #     continue
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
     def _get_models_versions(self, query: ASTNode = None):
         columns = self.information_schema['MODELS_VERSIONS']
         data = []
@@ -358,7 +359,7 @@ class InformationSchemaDataNode(DataNode):
                     table_name, table_meta['engine'], project_name, table_meta['active'], table_meta['version'], table_meta['status'],
                     table_meta['accuracy'], table_meta['predict'], table_meta['update_status'],
                     table_meta['mindsdb_version'], table_meta['error'], table_meta['select_data_query'],
-                    table_meta['training_options'], table_meta['label']
+                    table_meta['training_options'], table_meta['label'], row['created_at']
                 ])
 
         df = pd.DataFrame(data, columns=columns)

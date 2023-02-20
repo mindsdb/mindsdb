@@ -97,7 +97,7 @@ SELECT t.id, t.author_username, t.text, r.response
 FROM my_twitter.tweets t
 JOIN mindsdb.twitter_response_model r 
 WHERE 
-   t.query = 'mindsdb OR #mindsdb' 
+   t.query = '(mindsdb OR #mindsdb) -is:retweet' 
 LIMIT 2
 ```
 # At last: lets create the job
@@ -120,7 +120,7 @@ CREATE JOB auto_respond AS (
  FROM my_twitter.tweets t
  JOIN mindsdb.twitter_response_model r 
       WHERE 
-      t.query = 'mindsdb OR #mindsdb' 
+      t.query = '(mindsdb OR #mindsdb) -is:retweet' 
       AND t.created_at > "{{PREVIOUS_START_DATETIME}}"
   limit 2
 )

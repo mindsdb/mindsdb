@@ -12,16 +12,24 @@ from tensorflow.keras.models import load_model
 from mindsdb.utilities import log
 
 # Makes this run on Windows Subsystem for Linux
-os.environ["XLA_FLAGS"]="--xla_gpu_cuda_data_dir=/usr/lib/cuda"
+os.environ["XLA_FLAGS"] = "--xla_gpu_cuda_data_dir=/usr/lib/cuda"
 
-trainer_dict = {
-    "regression": ak.StructuredDataRegressor,
-    "classification": ak.StructuredDataClassifier
-}
+trainer_dict = {"regression": ak.StructuredDataRegressor, "classification": ak.StructuredDataClassifier}
 
 DEFAULT_TRIALS = 2
 
+
 def train_model(df, target):
+    """Helper function to trains an AutoKeras model with an input df.
+
+    Automatically decides on classification vs. regression depending on
+    the type of the target.
+
+    Will auto-encode categorical variables as dummies.
+
+    Returns both trained model and the names of categoric dummy columns, which
+    are passed later to the prediction method.
+    """
     # Choose regressor of classifier based on target data type
     if np.issubdtype(df[target].dtype, np.number):
         mode = "regression"
@@ -36,17 +44,22 @@ def train_model(df, target):
 
     # Save the column names of all numeric columns before transforming any categorical columns into dummies
     numeric_column_names = training_df.select_dtypes(include=[np.number]).columns.values.tolist()
-    # Extract all dummy column names - these are used in the prediction method
     training_df = pd.get_dummies(training_df)
-    categorical_dummy_column_names = [col for col in training_df.columns.values.tolist() if col not in numeric_column_names]
+    categorical_dummy_column_names = [
+        col for col in training_df.columns.values.tolist() if col not in numeric_column_names
+    ]
     trainer.fit(training_df, y_train, verbose=2, epochs=10)
     return trainer.export_model(), categorical_dummy_column_names
 
 
 def get_prediction_df(mindsdb_df, training_df):
-    """
-    mindsdb_df is passed in from the .predict() method
-    training_df is the full df from training
+    """Gets a prediction df using the df passed by the predict() method and the training df.
+
+    mindsdb_df is passed in from the .predict() method. This drops columns when users call
+    the WHERE clause in a SQL query.
+
+    training_df is the full df from training. This contains the dropped columns, which we
+    join with the rows from the mindsdb_df.
     """
     # Remove column that didn't exist in the training df so that we can do filtering
     df_to_predict = mindsdb_df.copy()
@@ -61,12 +74,14 @@ def get_prediction_df(mindsdb_df, training_df):
 
     if filtered_df.empty:
         # TODO: Rephrase the exception message in a more user-friendly way
-        raise Exception("The condition(s) in the WHERE clause filtered out all the data. Please refine these and try again")
+        raise Exception(
+            "The condition(s) in the WHERE clause filtered out all the data. Please refine these and try again"
+        )
     return filtered_df
 
 
 def get_preds_from_model(df, model, target, categorical_dummy_column_names):
-    # Remove columns that didn't exist in the training df
+    """Gets predictions from the stored AutoKeras model."""
     cols_to_drop = ["__mindsdb_row_id", target]
     for col in cols_to_drop:
         if col in df.columns.values.tolist():
@@ -74,7 +89,7 @@ def get_preds_from_model(df, model, target, categorical_dummy_column_names):
 
     # Get dummies for any categorical columns and then populate the missing ones with zeros
     prediction_df = pd.get_dummies(df)
-    for col in categorical_dummy_column_names:
+    for col in categorical_dummy_column_names:  # exception handler for empty columns
         if col not in prediction_df.columns.values.tolist():
             prediction_df[col] = 0
 
@@ -82,6 +97,13 @@ def get_preds_from_model(df, model, target, categorical_dummy_column_names):
 
 
 def format_categorical_preds(predictions, original_y, df_to_predict, target_col):
+    """Transforms class predictions back to their original class.
+
+    Categoric predictions come out the AutoKeras model in a binary
+    format e.g. (0, 1, 0). This function maps them back to their
+    original class e.g. 'Blue', and adds a DF column for the
+    model confidence score.
+    """
     # Turn prediction back into categorical value
     lb = preprocessing.LabelBinarizer()
     lb.fit(original_y)
@@ -98,26 +120,28 @@ class AutokerasHandler(BaseMLEngine):
     Integration with the AutoKeras ML library.
     """  # noqa
 
-    name = 'autokeras'
+    name = "autokeras"
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
+        """Create and tune AutoKeras model using the input df.
+
+        Saves the AutoKeras best model params to model storage.
         """
-        Create and train model on the input df
-        """
-        args = args['using']  # ignore the rest of the problem definition
+        args = args["using"]  # ignore the rest of the problem definition
         args["target"] = target
         # Save the training df in order to filter the training data based on the predict df
         args["training_df"] = df.to_json()
-        args["training_data_column_count"] = len(df.columns) - 1 # subtract 1 for target
+        args["training_data_column_count"] = len(df.columns) - 1  # subtract 1 for target
 
-        random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=24))
+        random_string = "".join(random.choices(string.ascii_uppercase + string.digits, k=24))
         args["folder_path"] = os.path.join("autokeras", random_string)
 
         model, args["data_column_names"] = train_model(df, target)
         model.save(args["folder_path"])
         self.model_storage.json_set("predict_args", args)
-    
+
     def predict(self, df, args=None):
+        """Predicts with best saved AutoKeras model."""
         args = self.model_storage.json_get("predict_args")
         training_df = pd.read_json(args["training_df"])
         model = load_model(args["folder_path"], custom_objects=ak.CUSTOM_OBJECTS)

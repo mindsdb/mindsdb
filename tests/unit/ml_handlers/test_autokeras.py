@@ -35,7 +35,6 @@ class TestAutokeras(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_regression_with_numerical_training(self, mock_handler):
-
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
@@ -72,7 +71,6 @@ class TestAutokeras(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_regression_with_categorical_training(self, mock_handler):
-
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
@@ -111,7 +109,6 @@ class TestAutokeras(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_regression_with_nulls_in_training_data(self, mock_handler):
-
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
@@ -154,7 +151,6 @@ class TestAutokeras(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_regression_with_bulk_predict_query(self, mock_handler):
-
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
@@ -193,7 +189,6 @@ class TestAutokeras(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_regression_error_on_predict_query_too_strict(self, mock_handler):
-
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
@@ -230,10 +225,9 @@ class TestAutokeras(BaseExecutorTest):
             assert False
         except Exception:
             assert True
-        
+
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_classification_with_numerical_training(self, mock_handler):
-
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
@@ -267,10 +261,8 @@ class TestAutokeras(BaseExecutorTest):
         )
         assert ret.d[0] in ["even", "odd"]
 
-
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_classification_with_categorical_training(self, mock_handler):
-
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
@@ -308,7 +300,6 @@ class TestAutokeras(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_classification_with_nulls_in_training_data(self, mock_handler):
-
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
@@ -350,7 +341,6 @@ class TestAutokeras(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_classification_error_on_predict_query_too_strict(self, mock_handler):
-
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
@@ -390,7 +380,6 @@ class TestAutokeras(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_classification_with_bulk_predict_query(self, mock_handler):
-
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a

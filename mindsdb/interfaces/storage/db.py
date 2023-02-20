@@ -127,6 +127,9 @@ class Predictor(Base):
     lightwood_version = Column(String, nullable=True)
     dtype_dict = Column(Json, nullable=True)
     project_id = Column(Integer, ForeignKey('project.id', name='fk_project_id'), nullable=False)
+    training_phase_current = Column(Integer)
+    training_phase_total = Column(Integer)
+    training_phase_name = Column(String)
 
 
 class Project(Base):

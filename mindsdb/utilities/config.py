@@ -1,6 +1,5 @@
 import os
 import json
-import collections.abc
 from copy import deepcopy
 from pathlib import Path
 
@@ -91,6 +90,7 @@ class Config():
         for path_name in paths:
             create_directory(paths[path_name])
 
+        api_host = "127.0.0.1" if not self.use_docker_env else "0.0.0.0"
         self._default_config = {
             'permanent_storage': {
                 'location': 'local'
@@ -116,18 +116,18 @@ class Config():
             "integrations": {},
             "api": {
                 "http": {
-                    "host": "127.0.0.1" if not self.use_docker_env else "0.0.0.0",
+                    "host": api_host,
                     "port": "47334"
                 },
                 "mysql": {
-                    "host": "127.0.0.1" if not self.use_docker_env else "0.0.0.0",
+                    "host": api_host,
                     "password": "",
                     "port": "47335",
                     "database": "mindsdb",
                     "ssl": True
                 },
                 "mongodb": {
-                    "host": "127.0.0.1" if not self.use_docker_env else "0.0.0.0",
+                    "host": api_host,
                     "port": "47336",
                     "database": "mindsdb"
                 }

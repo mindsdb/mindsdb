@@ -7,11 +7,8 @@ import signal
 import psutil
 import asyncio
 import secrets
-import textwrap
 import traceback
 from packaging import version
-
-import requests
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.start import start as start_http

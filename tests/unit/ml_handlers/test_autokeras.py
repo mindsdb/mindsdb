@@ -152,7 +152,6 @@ class TestAutokeras(BaseExecutorTest):
         # value is around 1
         assert (avg_c > -5) and (avg_c < 5)
 
-    @pytest.mark.skip("Can't figure out how to assert it")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_regression_with_bulk_predict_query(self, mock_handler):
 
@@ -182,9 +181,9 @@ class TestAutokeras(BaseExecutorTest):
         # run predict
         ret = self.run_sql(
             """
-            SELECT t.c, m.c, t.a, t.b
+            SELECT m.*
             FROM pg.df as t 
-            JOIN proj.modelx as m limit 10;
+            JOIN proj.modelx as m
         """
         )
         avg_c = pd.to_numeric(ret.c).mean()
@@ -265,7 +264,7 @@ class TestAutokeras(BaseExecutorTest):
            WHERE a=1;
         """
         )
-        assert ret.d[0][0] in ["even", "odd"]
+        assert ret.d[0] in ["even", "odd"]
 
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
@@ -304,7 +303,7 @@ class TestAutokeras(BaseExecutorTest):
         """
         )
 
-        assert ret.d[0][0] in ["even", "odd"]
+        assert ret.d[0] in ["even", "odd"]
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_classification_with_nulls_in_training_data(self, mock_handler):
@@ -346,7 +345,7 @@ class TestAutokeras(BaseExecutorTest):
         """
         )
 
-        assert ret.d[0][0] in ["even", "odd"]
+        assert ret.d[0] in ["even", "odd"]
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_classification_error_on_predict_query_too_strict(self, mock_handler):
@@ -388,7 +387,6 @@ class TestAutokeras(BaseExecutorTest):
         except Exception:
             assert True
 
-    @pytest.mark.skip("Can't figure out how to assert it")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_classification_with_bulk_predict_query(self, mock_handler):
 
@@ -418,11 +416,11 @@ class TestAutokeras(BaseExecutorTest):
         # run predict
         ret = self.run_sql(
             """
-            SELECT t.d, m.d, t.a, t.b
+            SELECT m.*
             FROM pg.df as t 
-            JOIN proj.modelx as m limit 10;
+            JOIN proj.modelx as m
         """
         )
 
-        for i, row in enumerate(ret.d):
-            assert ret.d[i][0] in ["even", "odd"]
+        for i in range(len(ret)):
+            assert ret.d[i] in ["even", "odd"]

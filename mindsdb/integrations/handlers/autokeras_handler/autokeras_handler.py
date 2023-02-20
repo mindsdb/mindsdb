@@ -1,3 +1,5 @@
+import random
+import string
 from typing import Optional
 import os
 import pandas as pd
@@ -46,19 +48,13 @@ def train_autokeras_model(df, target):
 
 
 def get_preds_from_autokeras_model(df, model, target, categorical_dummy_column_names):
-    # Remove columns that didn't exist in the training df
-    cols_to_drop = ["__mindsdb_row_id", target]
-    for col in cols_to_drop:
-        if col in df.columns.values.tolist():
-            df = df.drop(col, axis=1)
-
     # Get dummies for any categorical columns and then populate the missing ones with zeros
-    df = pd.get_dummies(df)
+    prediction_df = pd.get_dummies(df)
     for col in categorical_dummy_column_names:
-        if col not in df.columns.values.tolist():
-            df[col] = 0
+        if col not in prediction_df.columns.values.tolist():
+            prediction_df[col] = 0
 
-    return model.predict(df)
+    return model.predict(prediction_df)
 
 
 
@@ -75,10 +71,12 @@ class AutokerasHandler(BaseMLEngine):
         """
         args = args['using']  # ignore the rest of the problem definition
         args["target"] = target
-        args["folder_path"] = "autokeras"
         # Save the training df in order to filter the training data based on the predict df
         args["training_df"] = df.to_json()
         args["training_data_column_count"] = len(df.columns) - 1 # subtract 1 for target
+
+        random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=24))
+        args["folder_path"] = os.path.join("autokeras", random_string)
 
         model, args["data_column_names"] = train_autokeras_model(df, target)
         model.save(args["folder_path"])
@@ -101,6 +99,12 @@ class AutokerasHandler(BaseMLEngine):
         i2 = df_to_predict.set_index(keys).index
         filtered_df = training_df[i1.isin(i2)]
 
+        # Remove columns that didn't exist in the training df
+        cols_to_drop = ["__mindsdb_row_id", args["target"]]
+        for col in cols_to_drop:
+            if col in filtered_df.columns.values.tolist():
+                filtered_df = filtered_df.drop(col, axis=1)
+
         if filtered_df.empty:
             # TODO: Rephrase the exception message in a more user-friendly way
             raise Exception("The condition(s) in the WHERE clause filtered out all the data. Please refine these and try again")
@@ -116,7 +120,8 @@ class AutokerasHandler(BaseMLEngine):
             preds = lb.inverse_transform(predictions)
 
             # Add the confidence score next to the prediction
-            filtered_df[args["target"]] = [(preds[i], max(row)) for i, row in enumerate(predictions)]
+            filtered_df[args["target"]] = pd.Series(preds).astype(original_y.dtype)
+            filtered_df["confidence"] = [max(row) for _, row in enumerate(predictions)]
             return filtered_df
 
 

@@ -45,8 +45,8 @@ def request_user_info(access_token: str = None):
     return response.json()
 
 
-@ns_conf.route('/auth/callback', methods=['GET'])
-@ns_conf.route('/auth/callback/cloud_home', methods=['GET'])
+@ns_conf.route('/callback', methods=['GET'])
+@ns_conf.route('/callback/cloud_home', methods=['GET'])
 class Auth(Resource):
     def get(self):
         config = Config()
@@ -129,7 +129,7 @@ class Auth(Resource):
             return redirect(url_for('root_index'))
 
 
-@ns_conf.route('/auth/cloud_login', methods=['GET'])
+@ns_conf.route('/cloud_login', methods=['GET'])
 class CloudLoginRoute(Resource):
     @ns_conf.doc(
         responses={

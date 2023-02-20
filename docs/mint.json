@@ -366,6 +366,7 @@
           "group": "Contributing Guide",
           "pages": [
             "contribute",
+            "contribute/issue-labels",
             "contribute/install",
             "contribute/issues",
             "contribute/data-integration-page",

@@ -68,6 +68,8 @@ class ExecutorClientGRPC:
         self.state_track = response.state_track
         self.is_executed = response.is_executed
         self.session.from_json(json.loads(response.session))
+        self.error_code = response.error_code
+        self.error_message = response.error_message
         logger.info("%s._update_attrs: got data from service - %s", self.__class__.__name__, self.data)
 
     @action_logger(logger)
@@ -93,6 +95,15 @@ class ExecutorClientGRPC:
     def query_execute(self, sql):
         params = executor_pb2.ExecutionContext(context=self._context, sql=sql)
         resp = self.stub.QueryExecute(params)
+        if resp.error_message != "":
+            raise Exception(resp.error_message)
+        self._update_attrs(resp)
+
+    @action_logger(logger)
+    def binary_query_execute(self, sql):
+        sql = pickle.dumps(sql)
+        params = executor_pb2.BinaryExecutionContext(context=self._context, sql=sql)
+        resp = self.stub.BinaryQueryExecute(params)
         if resp.error_message != "":
             raise Exception(resp.error_message)
         self._update_attrs(resp)

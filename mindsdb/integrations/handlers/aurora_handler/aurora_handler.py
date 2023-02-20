@@ -3,13 +3,22 @@ from collections import OrderedDict
 
 import boto3
 
+from mindsdb_sql.parser.ast.base import ASTNode
+
+from mindsdb.utilities import log
+from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse
+)
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
 
 
 class AuroraHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Firebird statements.
+    This handler handles connection and execution of the Amazon Aurora statements.
     """
 
     name = 'aurora'
@@ -23,49 +32,46 @@ class AuroraHandler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        self.parser = parse_sql
+
         self.dialect = 'aurora'
         self.connection_data = connection_data
         self.kwargs = kwargs
 
-        self.connection = None
-        self.is_connected = False
+        database_engine = ""
+        if 'db_engine' not in self.connection_data:
+            database_engine = self.get_database_engine()
 
-        database_engine = self.get_database_engine()
-        if database_engine == 'aurora':
+        if self.connection_data['db_engine'] == 'mysql' or database_engine == 'aurora':
             self.db = MySQLHandler(
-                host=self.connection_data['host'],
-                port=self.connection_data['port'],
-                user=self.connection_data['user'],
-                password=self.connection_data['password'],
-                database=self.connection_data['database']
+                name=name + 'mysql',
+                connection_data=self.connection_data
             )
-        elif database_engine == 'aurora-postgresql':
+        elif self.connection_data['db_engine'] == 'postgresql' or database_engine == 'aurora-postgresql':
             self.db = PostgresHandler(
-                host=self.connection_data['host'],
-                port=self.connection_data['port'],
-                user=self.connection_data['user'],
-                password=self.connection_data['password'],
-                database=self.connection_data['database']
+                name=name + 'postgresql',
+                connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
             )
         else:
-            pass
+            raise Exception("The database engine should be either MySQL or PostgreSQL!")
 
     def get_database_engine(self):
-        session = boto3.session.Session(
-            aws_access_key_id=self.connection_data['aws_access_key_id'],
-            aws_secret_access_key=self.connection_data['aws_secret_access_key']
-        )
+        try:
+            session = boto3.session.Session(
+                aws_access_key_id=self.connection_data['aws_access_key_id'],
+                aws_secret_access_key=self.connection_data['aws_secret_access_key']
+            )
 
-        rds = session.client('rds')
+            rds = session.client('rds')
 
-        response = rds.describe_db_clusters()
+            response = rds.describe_db_clusters()
 
-        return next(item for item in response if item["DBClusterIdentifier"] == self.connection_data['host'].split('.')[0])['Engine']
+            return next(item for item in response if item["DBClusterIdentifier"] == self.connection_data['host'].split('.')[0])['Engine']
+        except Exception as e:
+            log.logger.error(f'Error connecting to Aurora, {e}!')
+            log.logger.error('If the database engine is not provided as a parameter, please ensure that the credentials for the AWS account are passed in instead!')
 
     def __del__(self):
-        if self.is_connected is True:
-            self.disconnect()
+        self.db.__del__()
 
     def connect(self) -> StatusResponse:
         """
@@ -137,14 +143,6 @@ class AuroraHandler(DatabaseHandler):
 
 
 connection_args = OrderedDict(
-    aws_access_key_id={
-        'type': ARG_TYPE.STR,
-        'description': 'The access key for the AWS account.'
-    },
-    aws_secret_access_key={
-        'type': ARG_TYPE.STR,
-        'description': 'The secret key for the AWS account.'
-    },
     user={
         'type': ARG_TYPE.STR,
         'description': 'The user name used to authenticate with the Amazon Aurora DB cluster.'
@@ -164,13 +162,24 @@ connection_args = OrderedDict(
     port={
         'type': ARG_TYPE.INT,
         'description': 'The TCP/IP port of the Amazon Aurora DB cluster. Must be an integer.'
-    }
+    },
+    db_engine={
+        'type': ARG_TYPE.STR,
+        'description': "The database engine of the Amazon Aurora DB cluster. This can take one of two values: 'mysql' or 'postgresql'. This parameter is optional, but if it is not provided, 'aws_access_key_id' and 'aws_secret_access_key' parameters must be provided"
+    },
+    aws_access_key_id={
+        'type': ARG_TYPE.STR,
+        'description': "The access key for the AWS account. This parameter is optional and is only required to be provided if the 'db_engine' parameter is not provided."
+    },
+    aws_secret_access_key={
+        'type': ARG_TYPE.STR,
+        'description': "The secret key for the AWS account. This parameter is optional and is only required to be provided if the 'db_engine' parameter is not provided."
+    },
 )
 
 connection_args_example = OrderedDict(
-    aws_access_key_id='PCAQ2LJDOSWLNSQKOCPW',
-    aws_secret_access_key='U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i',
-    host='127.0.0.1',
+    db_engine='mysql',
+    host='mysqlcluster.cluster-123456789012.us-east-1.rds.amazonaws.com',
     port=3306,
     user='root',
     password='password',

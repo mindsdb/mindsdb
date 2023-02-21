@@ -1,5 +1,4 @@
 from flask import request, session
-from pathlib import Path
 
 from flask_restx import Resource
 from flask_restx import fields
@@ -67,6 +66,18 @@ class LoginRoute(Resource):
         return '', 200
 
 
+@ns_conf.route('/logout', methods=['POST'])
+class LogoutRoute(Resource):
+    @ns_conf.doc(
+        responses={
+            200: 'Success'
+        }
+    )
+    def post(self):
+        session.clear()
+        return '', 200
+
+
 @ns_conf.route('/status')
 class StatusRoute(Resource):
     @ns_conf.doc(
@@ -109,11 +120,5 @@ class StatusRoute(Resource):
                 'provider': auth_provider
             }
         }
-
-        if environment != 'cloud':
-            marker_file = Path(Config().paths['root']).joinpath('gui_first_launch.txt')
-            if marker_file.is_file() is False:
-                resp['is_first_launch'] = True
-                marker_file.write_text('')
 
         return resp

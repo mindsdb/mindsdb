@@ -22,14 +22,14 @@ On MindsDB cloud you need to set the `cookie` field in the header of request e.g
 
 ```shell Shell
 curl --request GET \
-     --url https://cloud.mindsdb.com/api/api/projects/mindsdb/models \
+     --url https://cloud.mindsdb.com/api/projects/ \
      --cookie '{session=273trgsehgrui3i2riurwehe}'
 ```
 
 
 ```python Python
 import requests
-url = 'https://cloud.mindsdb.com/api/projects/mindsdb/models'
+url = 'https://cloud.mindsdb.com/api/projects/'
 cookies = '{session=273trgsehgrui3i2riurwehe}'
 resp = requests.get(url, cookies=cookies})
 ```
@@ -39,7 +39,7 @@ resp = requests.get(url, cookies=cookies})
 <ResponseExample>
 
 ```json Response
- [
+[
     {
         "name": "mindsdb"
     }

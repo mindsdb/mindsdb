@@ -385,7 +385,9 @@ class ResultSet:
         return self.get_records()
 
     def get_records(self):
-        # in dicts
+        # get records as dicts.
+        # !!! Attention: !!!
+        # if resultSet contents duplicate column name: only one of them will be in output
         names = self.get_column_names()
         records = []
         for row in self._records:
@@ -1072,14 +1074,15 @@ class SQLQuery():
                 for col in step_data.columns:
                     step_data2.add_column(col)
 
-                records = step_data.get_records()
+                records = step_data.get_records_raw()
 
                 if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
                     records = records[step.offset.value:]
                 if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
                     records = records[:step.limit.value]
 
-                step_data2.add_records(records)
+                for record in records:
+                    step_data2.add_record_raw(record)
 
                 data = step_data2
 

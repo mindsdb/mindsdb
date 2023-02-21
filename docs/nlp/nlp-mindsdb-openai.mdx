@@ -245,6 +245,22 @@ On execution, we get:
 
 For the full library of supported examples please go [here](/nlp/nlp-extended-examples).
 
+## Parameter descriptions
+
+MindsDB lets you customize models using parameters provided by OpenAI. Currently, there are eleven parameters to optionaly modify:
+
+- model_name: An optional string that identifies the model to use, it defaults to text-davinci-002 model, for a list of models available and their description visit: [Model overview](https://platform.openai.com/docs/models/overview)
+- max_tokens: The maximum number of tokens to generate in the completion. The token count of your prompt plus max_tokens cannot exceed the model's context length.
+- temperature: What sampling temperature to use. Higher values means the model will take more risks.
+- top_p: An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass.
+- n: How many completions to generate for each prompt.
+- stop: Up to 4 sequences where the API will stop generating further tokens. The returned text will not contain the stop sequence.
+- presence_penalty: Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.
+- frequency_penalty: Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim.
+- best_of: Generates best_of completions server-side and returns the "best" (the one with the highest log probability per token). Results cannot be streamed. When used with n, best_of controls the number of candidate completions and n specifies how many to return – best_of must be greater than n.
+- logit_bias: Modify the likelihood of specified tokens appearing in the completion. Accepts a json object that maps tokens (specified by their token ID in the GPT tokenizer) to an associated bias value from -100 to 100. The exact effect will vary per model, but values between -1 and 1 should decrease or increase likelihood of selection; values like -100 or 100 should result in a ban or exclusive selection of the relevant token.
+- user: A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse. 
+
 ## What's Next?
 
 Have fun while trying it out yourself!

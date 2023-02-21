@@ -108,6 +108,9 @@ class Config():
                     "db": "WARNING"
                 }
             },
+            "gui": {
+                "autoupdate": True
+            },
             "debug": False,
             "integrations": {},
             "api": {
@@ -123,7 +126,7 @@ class Config():
                     "ssl": True
                 },
                 "mongodb": {
-                    "host": "127.0.0.1",
+                    "host": "127.0.0.1" if not self.use_docker_env else "0.0.0.0",
                     "port": "47336",
                     "database": "mindsdb"
                 }

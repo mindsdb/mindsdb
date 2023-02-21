@@ -10,7 +10,7 @@ https://phoenix.apache.org/
 It is a SQL skin over HBase delivered as a client-embedded JDBC driver targeting low latency queries over HBase data.
 
 ## Implementation
-This handler was implemented using the `pyphoenix` library, the Python library for accessing the Phoenix SQL database using the remote query server introduced in Phoenix 4.4..
+This handler was implemented using the `phoenixdb` and `pyphoenix` libraries, the Python APIs for accessing the Phoenix SQL database using the remote query server introduced in Phoenix 4.4.
 
 The required arguments to establish a connection are,
 * `url`: the URL to the Phoenix Query Server

@@ -8,15 +8,13 @@ import psutil
 import asyncio
 import secrets
 import traceback
-
-import torch.multiprocessing as mp
-mp.set_start_method('spawn')
 from packaging import version
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
+from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
@@ -29,6 +27,13 @@ from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 from mindsdb.utilities.context import context as ctx
+
+
+import torch.multiprocessing as mp
+try:
+    mp.set_start_method('spawn')
+except RuntimeError:
+    log.logger.info('Torch multiprocessing context already set, ignoring...')
 
 # is_ray_worker = False
 # if sys.argv[0].endswith('ray/workers/default_worker.py'):
@@ -260,8 +265,15 @@ if __name__ == '__main__':
     start_functions = {
         'http': start_http,
         'mysql': start_mysql,
-        'mongodb': start_mongo
+        'mongodb': start_mongo,
+        'jobs': start_scheduler,
     }
+
+    if config.get('jobs', {}).get('disable') is not True:
+        apis['jobs'] = {
+            'process': None,
+            'started': False
+        }
 
     ctx = mp.get_context('spawn')
     for api_name, api_data in apis.items():

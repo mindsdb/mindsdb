@@ -54,7 +54,7 @@ class NeuralForecastHandler(BaseMLEngine):
         # Make sure you call random before creating the model, as that fixes the random seed
         random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=24))
         model_args["model_folder"] = os.path.join("neuralforecast", random_string)
- 
+
         sf_df = self._transform_to_statsforecast_df(df, model_args)
 
         train_set_end_date = np.percentile(sf_df["ds"], DEFAULT_TRAIN_PERCENT)

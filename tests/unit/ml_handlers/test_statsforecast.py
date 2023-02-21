@@ -3,7 +3,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import StatsForecastHandler, transform_to_nixtla_df
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import StatsForecastHandler, transform_to_nixtla_df, get_results_from_nixtla_df
 from statsforecast.models import AutoARIMA
 from statsforecast import StatsForecast
 from mindsdb_sql import parse_sql
@@ -29,28 +29,27 @@ def create_mock_df():
     return pd.concat([df2, df3]).reset_index(drop=True)
 
 
-def test_statsforecast_df_transformations():
-    sf_handler = StatsForecastHandler("model_storage", "engine_storage")
+def test_nixtla_df_trannixtlaormations():
     df = create_mock_df()
     settings_dict = {"order_by": "time_col", "group_by": ["group_col"], "target": "target_col"}
 
-    # Test transform for single groupby
-    sf_df = transform_to_nixtla_df(df, settings_dict)
-    assert [sf_df["unique_id"].iloc[i] == df["group_col"].iloc[i] for i in range(len(sf_df))]
-    assert [sf_df["y"].iloc[i] == df["target_col"].iloc[i] for i in range(len(sf_df))]
-    assert [sf_df["ds"].iloc[i] == df["time_col"].iloc[i] for i in range(len(sf_df))]
-    # Test reversing the transform
-    sf_results_df = sf_df.rename({"y": "AutoARIMA"}, axis=1).set_index("unique_id")
-    mindsdb_results_df = sf_handler._get_results_from_statsforecast_df(sf_results_df, settings_dict)
+    # Test trannixtlaorm for single groupby
+    nixtla_df = transform_to_nixtla_df(df, settings_dict)
+    assert [nixtla_df["unique_id"].iloc[i] == df["group_col"].iloc[i] for i in range(len(nixtla_df))]
+    assert [nixtla_df["y"].iloc[i] == df["target_col"].iloc[i] for i in range(len(nixtla_df))]
+    assert [nixtla_df["ds"].iloc[i] == df["time_col"].iloc[i] for i in range(len(nixtla_df))]
+    # Test reversing the trannixtlaorm
+    nixtla_results_df = nixtla_df.rename({"y": "AutoARIMA"}, axis=1).set_index("unique_id")
+    mindsdb_results_df = get_results_from_nixtla_df(nixtla_results_df, settings_dict)
     pd.testing.assert_frame_equal(mindsdb_results_df, df[["time_col", "target_col", "group_col"]])
 
     # Test for multiple groups
     settings_dict["group_by"] = ["group_col", "group_col_2", "group_col_3"]
-    sf_df = transform_to_nixtla_df(df, settings_dict)
-    assert sf_df["unique_id"][0] == "a|a2|a3"
-    # Test reversing the transform
-    sf_results_df = sf_df.rename({"y": "AutoARIMA"}, axis=1).set_index("unique_id")
-    mindsdb_results_df = sf_handler._get_results_from_statsforecast_df(sf_results_df, settings_dict)
+    nixtla_df = transform_to_nixtla_df(df, settings_dict)
+    assert nixtla_df["unique_id"][0] == "a|a2|a3"
+    # Test reversing the trannixtlaorm
+    nixtla_results_df = nixtla_df.rename({"y": "AutoARIMA"}, axis=1).set_index("unique_id")
+    mindsdb_results_df = get_results_from_nixtla_df(nixtla_results_df, settings_dict)
     pd.testing.assert_frame_equal(mindsdb_results_df, df)
 
 

@@ -85,13 +85,14 @@ class TestAutokeras(BaseExecutorTest):
         # run predict
         ret = self.run_sql(
             """
-           SELECT c
+           SELECT *
            FROM proj.modelx
            WHERE a=1;
         """
         )
         avg_c = pd.to_numeric(ret.c).mean()
-        # value is around 1
+        assert ret.columns.tolist() == ["a", "b", "c"]
+        assert len(ret) == 1
         assert (avg_c > -5) and (avg_c < 5)
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
@@ -130,7 +131,6 @@ class TestAutokeras(BaseExecutorTest):
         """
         )
         avg_c = pd.to_numeric(ret.c).mean()
-        # value is around 1
         assert (avg_c > -5) and (avg_c < 5)
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
@@ -173,7 +173,6 @@ class TestAutokeras(BaseExecutorTest):
         """
         )
         avg_c = pd.to_numeric(ret.c).mean()
-        # value is around 1
         assert (avg_c > -5) and (avg_c < 5)
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
@@ -212,7 +211,6 @@ class TestAutokeras(BaseExecutorTest):
         """
         )
         avg_c = pd.to_numeric(ret.c).mean()
-        # value is around 1
         assert (avg_c > -5) and (avg_c < 5)
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")

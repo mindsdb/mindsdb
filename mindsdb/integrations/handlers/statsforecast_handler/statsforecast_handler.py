@@ -44,7 +44,7 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
 
     This will return the dataframe to the original format supplied by the MindsDB query.
     """
-    renaming_dict = {"ds": model_args["order_by"], DEFAULT_MODEL_NAME: model_args["target"]}
+    renaming_dict = {"ds": model_args["order_by"], model_args["model_name"]: model_args["target"]}
     return_df = nixtla_df.reset_index().rename(renaming_dict, axis=1)
     if len(model_args["group_by"]) > 1:
         for i, group in enumerate(model_args["group_by"]):
@@ -88,8 +88,9 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["order_by"] = time_settings["order_by"]
         model_args["group_by"] = time_settings["group_by"]
         model_args["frequency"] =  infer_frequency(df, time_settings["order_by"])
+        model_args["model_name"] = DEFAULT_MODEL_NAME
 
-        training_df = self._transform_to_statsforecast_df(df, model_args)
+        training_df = transform_to_nixtla_df(df, model_args)
         sf = StatsForecast(models=[DEFAULT_MODEL], freq=model_args["frequency"], df=training_df)
         fitted_models = sf.fit().fitted_
 
@@ -111,11 +112,11 @@ class StatsForecastHandler(BaseMLEngine):
         training_df = dill.loads(self.model_storage.file_get("training_df"))
         fitted_models = dill.loads(self.model_storage.file_get("fitted_models"))
 
-        prediction_df = self._transform_to_statsforecast_df(df, model_args)
+        prediction_df = transform_to_nixtla_df(df, model_args)
         groups_to_keep = prediction_df["unique_id"].unique()
 
         sf = StatsForecast(models=[DEFAULT_MODEL], freq=model_args["frequency"], df=training_df)
         sf.fitted_ = fitted_models
         forecast_df = sf.predict(model_args["horizon"])
         forecast_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
-        return self._get_results_from_statsforecast_df(forecast_df, model_args)
+        return get_results_from_nixtla_df(forecast_df, model_args)

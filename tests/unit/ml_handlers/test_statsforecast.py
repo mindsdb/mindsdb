@@ -29,9 +29,10 @@ def create_mock_df():
     return pd.concat([df2, df3]).reset_index(drop=True)
 
 
-def test_nixtla_df_trannixtlaormations():
+def test_nixtla_df_transformations():
     df = create_mock_df()
-    settings_dict = {"order_by": "time_col", "group_by": ["group_col"], "target": "target_col"}
+    model_name = "ARIMA"
+    settings_dict = {"order_by": "time_col", "group_by": ["group_col"], "target": "target_col", "model_name": model_name}
 
     # Test trannixtlaorm for single groupby
     nixtla_df = transform_to_nixtla_df(df, settings_dict)
@@ -39,7 +40,7 @@ def test_nixtla_df_trannixtlaormations():
     assert [nixtla_df["y"].iloc[i] == df["target_col"].iloc[i] for i in range(len(nixtla_df))]
     assert [nixtla_df["ds"].iloc[i] == df["time_col"].iloc[i] for i in range(len(nixtla_df))]
     # Test reversing the trannixtlaorm
-    nixtla_results_df = nixtla_df.rename({"y": "AutoARIMA"}, axis=1).set_index("unique_id")
+    nixtla_results_df = nixtla_df.rename({"y": model_name}, axis=1).set_index("unique_id")
     mindsdb_results_df = get_results_from_nixtla_df(nixtla_results_df, settings_dict)
     pd.testing.assert_frame_equal(mindsdb_results_df, df[["time_col", "target_col", "group_col"]])
 
@@ -48,7 +49,7 @@ def test_nixtla_df_trannixtlaormations():
     nixtla_df = transform_to_nixtla_df(df, settings_dict)
     assert nixtla_df["unique_id"][0] == "a|a2|a3"
     # Test reversing the trannixtlaorm
-    nixtla_results_df = nixtla_df.rename({"y": "AutoARIMA"}, axis=1).set_index("unique_id")
+    nixtla_results_df = nixtla_df.rename({"y": model_name}, axis=1).set_index("unique_id")
     mindsdb_results_df = get_results_from_nixtla_df(nixtla_results_df, settings_dict)
     pd.testing.assert_frame_equal(mindsdb_results_df, df)
 

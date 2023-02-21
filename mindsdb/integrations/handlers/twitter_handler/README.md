@@ -37,7 +37,7 @@ SELECT
    id, created_at, author_username, text 
 FROM my_twitter.tweets 
 WHERE 
-   query = '(mindsdb OR #mindsdb) -is:retweet' 
+   query = '(mindsdb OR #mindsdb) -is:retweet -is:reply' 
    AND created_at > '2023-02-16' 
 LIMIT 20;
 ```
@@ -48,7 +48,7 @@ MindsDB twitter integration also supports native queries, which in this case wil
 # this should handle authentication and pagiantion for us
 SELECT * FROM my_twitter (
   search_recent_tweets(
-    query = '(mindsdb OR #mindsdb) -is:retweet',
+    query = '(mindsdb OR #mindsdb) -is:retweet -is:reply'',
     start_time = '2023-02-16T00:00:00.000Z',
     max_results = 2
   )
@@ -97,7 +97,7 @@ SELECT t.id, t.author_username, t.text, r.response
 FROM my_twitter.tweets t
 JOIN mindsdb.twitter_response_model r 
 WHERE 
-   t.query = '(mindsdb OR #mindsdb) -is:retweet' 
+   t.query = '(mindsdb OR #mindsdb) -is:retweet -is:reply'' 
 LIMIT 2
 ```
 # At last: lets create the job
@@ -120,7 +120,7 @@ CREATE JOB auto_respond AS (
  FROM my_twitter.tweets t
  JOIN mindsdb.twitter_response_model r 
       WHERE 
-      t.query = '(mindsdb OR #mindsdb) -is:retweet' 
+      t.query = '(mindsdb OR #mindsdb) -is:retweet -is:reply'' 
       AND t.created_at > "{{PREVIOUS_START_DATETIME}}"
   limit 2
 )

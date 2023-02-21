@@ -84,7 +84,7 @@ class TweetsTable(APITable):
         if query.limit is not None:
             params['max_results'] = query.limit.value
 
-        params['expansions'] = ['author_id']
+        params['expansions'] = ['author_id', 'in_reply_to_user_id']
         params['tweet_fields'] = ['created_at']
         params['user_fields'] = ['name', 'username']
 
@@ -113,18 +113,23 @@ class TweetsTable(APITable):
         if len(result) == 0:
             result = pd.DataFrame([], columns=columns)
         else:
-            result = result[columns]
+            # add absent columns
+            for col in set(columns) & set(result.columns) ^ set(columns):
+                result[col] = None
         return result
 
     def get_columns(self):
         return [
-            'text',
             'id',
-            'author_id',
             'created_at',
+            'text',
             'edit_history_tweet_ids',
-            'author_username',
+            'author_id',
             'author_name',
+            'author_username',
+            'in_reply_to_user_id',
+            'in_reply_to_user_name',
+            'in_reply_to_user_username'
         ]
 
     def insert(self, query:ast.Insert):
@@ -133,6 +138,7 @@ class TweetsTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
 
+            print('create_tweet', params)
             self.handler.call_twitter_api('create_tweet', params)
 
 
@@ -211,7 +217,7 @@ class TwitterHandler(APIHandler):
         # method > table > columns
         expansions_map = {
             'search_recent_tweets': {
-                'users': ['author_id'],
+                'users': ['author_id', 'in_reply_to_user_id'],
             },
             'search_all_tweets': {
                 'users': ['author_id'],

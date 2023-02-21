@@ -6,8 +6,21 @@ import numpy as np
 from mindsdb_sql import parse_sql
 
 
+from mindsdb.integrations.handlers.autokeras_handler.autokeras_handler import format_categorical_preds, get_prediction_df
 from tests.unit.executor_test_base import BaseExecutorTest
 
+
+def test_format_categorical_preds():
+    predictions = np.array([
+        [0.9, 0.05, 0.05],
+        [0, 1, 0],
+        [0, 0, 1]
+    ])
+    original_y = pd.Series(["a", "b", "c"])
+    keras_output_df = pd.DataFrame({"target": predictions.tolist()})
+    formatted_df = format_categorical_preds(predictions, original_y, keras_output_df, "target")
+    assert formatted_df["target"].tolist() == ["a", "b", "c"]
+    assert formatted_df["confidence"].tolist() == [max(row) for row in predictions]
 
 class TestAutokeras(BaseExecutorTest):
     def wait_predictor(self, project, name):

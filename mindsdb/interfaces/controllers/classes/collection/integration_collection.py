@@ -4,6 +4,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.controllers.abc.collection import Collection
 from mindsdb.interfaces.controllers.classes.database.integration_db import IntegrationDB
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.database.integrations import IntegrationController
 
 
 class IntegrationCollection(Collection):
@@ -11,7 +12,15 @@ class IntegrationCollection(Collection):
         pass
 
     def all(self):
-        integration_records = db.session.query(db.Integration).filter_by(company_id=ctx.company_id).all()
+        # TODO optimize here
+        integration_controller = IntegrationController()
+        handlers = integration_controller.get_all()
+        ml_engines = [key for key, value in handlers.items() if value['type'] == 'ml']
+
+        integration_records = db.session.query(db.Integration).filter(
+            (db.Integration.company_id == ctx.company_id)
+            & (db.Integration.engine.not_in(ml_engines))
+        ).all()
         integrations = [IntegrationDB.from_record(r) for r in integration_records]
         return integrations
 

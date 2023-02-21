@@ -75,6 +75,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlWrongArguments
 )
 from mindsdb.utilities.cache import get_cache, json_checksum
+from mindsdb.interfaces.controllers.classes.collection.database_collection import DatabaseCollection
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -522,27 +523,25 @@ class SQLQuery():
         }
 
     def _fetch_dataframe_step(self, step):
-        dn = self.datahub.get(step.integration)
+        dbc = DatabaseCollection()
+        db = dbc.get(step.integration)
+
         query = step.query
 
-        if dn is None:
+        if db is None:
             raise SqlApiUnknownError(f'Unknown integration name: {step.integration}')
 
         if query is None:
             table_alias = (self.database, 'result', 'result')
 
-            # fetch raw_query
-            data, columns_info = dn.query(
-                native_query=step.raw_query,
-                session=self.session
+            data, columns_info = db.query(
+                native_query=step.raw_query
             )
         else:
             table_alias = get_table_alias(step.query.from_table, self.database)
-            # TODO for information_schema we have 'database' = 'mindsdb'
 
-            data, columns_info = dn.query(
-                query=query,
-                session=self.session
+            data, columns_info = db.query(
+                query=query
             )
 
         # if this is query: execute it

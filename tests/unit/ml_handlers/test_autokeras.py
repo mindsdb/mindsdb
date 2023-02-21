@@ -51,7 +51,8 @@ class TestAutokeras(BaseExecutorTest):
            from pg (select * from df)
            predict c
            using
-             engine='autokeras';
+             engine='autokeras',
+             train_time=0.01
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -88,7 +89,8 @@ class TestAutokeras(BaseExecutorTest):
            from pg (select * from df)
            predict c
            using
-             engine='autokeras';
+             engine='autokeras',
+             train_time=0.01
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -99,7 +101,7 @@ class TestAutokeras(BaseExecutorTest):
            SELECT c
            FROM proj.modelx
            WHERE a=1
-           AND d="odd";
+           AND d="odd"
         """
         )
         avg_c = pd.to_numeric(ret.c).mean()
@@ -130,7 +132,8 @@ class TestAutokeras(BaseExecutorTest):
            from pg (select * from df)
            predict c
            using
-             engine='autokeras';
+             engine='autokeras',
+             train_time=0.01
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -168,7 +171,8 @@ class TestAutokeras(BaseExecutorTest):
            from pg (select * from df)
            predict c
            using
-             engine='autokeras';
+             engine='autokeras',
+             train_time=0.01
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -206,7 +210,8 @@ class TestAutokeras(BaseExecutorTest):
            from pg (select * from df)
            predict c
            using
-             engine='autokeras';
+             engine='autokeras',
+             train_time=0.01
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -245,7 +250,8 @@ class TestAutokeras(BaseExecutorTest):
            from pg (select * from df)
            predict d
            using
-             engine='autokeras';
+             engine='autokeras',
+             train_time=0.01
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -280,7 +286,8 @@ class TestAutokeras(BaseExecutorTest):
            from pg (select * from df)
            predict d
            using
-             engine='autokeras';
+             engine='autokeras',
+             train_time=0.01
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -321,7 +328,8 @@ class TestAutokeras(BaseExecutorTest):
            from pg (select * from df)
            predict d
            using
-             engine='autokeras';
+             engine='autokeras',
+             train_time=0.01
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -358,7 +366,8 @@ class TestAutokeras(BaseExecutorTest):
            from pg (select * from df)
            predict d
            using
-             engine='autokeras';
+             engine='autokeras',
+             train_time=0.01
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -397,7 +406,8 @@ class TestAutokeras(BaseExecutorTest):
            from pg (select * from df)
            predict d
            using
-             engine='autokeras';
+             engine='autokeras',
+             train_time=0.01
         """
         )
         self.wait_predictor("proj", "modelx")

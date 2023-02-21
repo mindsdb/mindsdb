@@ -21,6 +21,7 @@ from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
 from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
 from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
+from mindsdb.api.http.namespaces.auth import ns_conf as auth_ns
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.api.http.initialize import initialize_flask, initialize_interfaces, initialize_static
 from mindsdb.utilities import log
@@ -86,6 +87,7 @@ def start(verbose, no_studio, with_nlp):
     for ns in protected_namespaces:
         api.add_namespace(ns)
     api.add_namespace(default_ns)
+    api.add_namespace(auth_ns)
 
     @api.errorhandler(Exception)
     def handle_exception(e):

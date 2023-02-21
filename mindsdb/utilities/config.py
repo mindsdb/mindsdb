@@ -90,6 +90,7 @@ class Config():
         for path_name in paths:
             create_directory(paths[path_name])
 
+        api_host = "127.0.0.1" if not self.use_docker_env else "0.0.0.0"
         self._default_config = {
             'permanent_storage': {
                 'location': 'local'
@@ -115,18 +116,18 @@ class Config():
             "integrations": {},
             "api": {
                 "http": {
-                    "host": "127.0.0.1" if not self.use_docker_env else "0.0.0.0",
+                    "host": api_host,
                     "port": "47334"
                 },
                 "mysql": {
-                    "host": "127.0.0.1" if not self.use_docker_env else "0.0.0.0",
+                    "host": api_host,
                     "password": "",
                     "port": "47335",
                     "database": "mindsdb",
                     "ssl": True
                 },
                 "mongodb": {
-                    "host": "127.0.0.1" if not self.use_docker_env else "0.0.0.0",
+                    "host": api_host,
                     "port": "47336",
                     "database": "mindsdb"
                 }
@@ -146,6 +147,21 @@ class Config():
 
     def get_all(self):
         return self._config
+
+    def update(self, data: dict):
+        config_path = Path(self.config_path)
+        if config_path.is_file() is False:
+            config_path.write_text('{}')
+
+        with open(self.config_path, 'r') as fp:
+            config_data = json.load(fp)
+
+        config_data = _merge_configs(config_data, data)
+
+        with open(self.config_path, 'wt') as fp:
+            fp.write(json.dumps(config_data, indent=4))
+
+        self.init_config()
 
     @property
     def paths(self):

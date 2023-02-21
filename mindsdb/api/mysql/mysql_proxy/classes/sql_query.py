@@ -414,6 +414,8 @@ class SQLQuery():
 
         self.mindsdb_database_name = 'mindsdb'
 
+        self.dbc = DatabaseCollection()
+
         if isinstance(sql, str):
             # region workaround for subqueries in superset
             if 'as virtual_table' in sql.lower():
@@ -523,8 +525,7 @@ class SQLQuery():
         }
 
     def _fetch_dataframe_step(self, step):
-        dbc = DatabaseCollection()
-        db = dbc.get(step.integration)
+        db = self.dbc.get(step.integration)
 
         query = step.query
 
@@ -804,6 +805,8 @@ class SQLQuery():
                 project_name = step.namespace
                 predictor_name = step.predictor.parts[0]
                 where_data = step.row_dict
+
+                # project_db = self.dbc.get(step.integration)
                 project_datanode = self.datahub.get(project_name)
 
                 version = None

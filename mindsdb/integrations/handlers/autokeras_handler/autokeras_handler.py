@@ -17,6 +17,7 @@ os.environ["XLA_FLAGS"] = "--xla_gpu_cuda_data_dir=/usr/lib/cuda"
 trainer_dict = {"regression": ak.StructuredDataRegressor, "classification": ak.StructuredDataClassifier}
 
 DEFAULT_TRIALS = 2
+DEFAULT_EPOCHS = 1000
 
 
 def train_model(df, target):
@@ -48,7 +49,7 @@ def train_model(df, target):
     categorical_dummy_column_names = [
         col for col in training_df.columns.values.tolist() if col not in numeric_column_names
     ]
-    trainer.fit(training_df, y_train, verbose=2, epochs=10)
+    trainer.fit(training_df, y_train, verbose=2, epochs=DEFAULT_EPOCHS)
     return trainer.export_model(), categorical_dummy_column_names
 
 

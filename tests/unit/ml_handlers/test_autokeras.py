@@ -2,7 +2,6 @@ import time
 from unittest.mock import patch
 import pandas as pd
 import numpy as np
-import pytest
 
 from mindsdb_sql import parse_sql
 
@@ -51,7 +50,7 @@ class TestAutokeras(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict c
-           using 
+           using
              engine='autokeras';
         """
         )
@@ -88,7 +87,7 @@ class TestAutokeras(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict c
-           using 
+           using
              engine='autokeras';
         """
         )
@@ -130,7 +129,7 @@ class TestAutokeras(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict c
-           using 
+           using
              engine='autokeras';
         """
         )
@@ -168,7 +167,7 @@ class TestAutokeras(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict c
-           using 
+           using
              engine='autokeras';
         """
         )
@@ -178,7 +177,7 @@ class TestAutokeras(BaseExecutorTest):
         ret = self.run_sql(
             """
             SELECT m.*
-            FROM pg.df as t 
+            FROM pg.df as t
             JOIN proj.modelx as m
             WHERE t.b>25
         """
@@ -206,7 +205,7 @@ class TestAutokeras(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict c
-           using 
+           using
              engine='autokeras';
         """
         )
@@ -214,7 +213,7 @@ class TestAutokeras(BaseExecutorTest):
 
         try:
             # run predict
-            ret = self.run_sql(
+            _ = self.run_sql(
                 """
             SELECT c
             FROM proj.modelx
@@ -245,7 +244,7 @@ class TestAutokeras(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict d
-           using 
+           using
              engine='autokeras';
         """
         )
@@ -280,7 +279,7 @@ class TestAutokeras(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict d
-           using 
+           using
              engine='autokeras';
         """
         )
@@ -321,7 +320,7 @@ class TestAutokeras(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict d
-           using 
+           using
              engine='autokeras';
         """
         )
@@ -358,7 +357,7 @@ class TestAutokeras(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict d
-           using 
+           using
              engine='autokeras';
         """
         )
@@ -366,7 +365,7 @@ class TestAutokeras(BaseExecutorTest):
 
         try:
             # run predict
-            ret = self.run_sql(
+            _ = self.run_sql(
                 """
             SELECT d
             FROM proj.modelx
@@ -397,7 +396,7 @@ class TestAutokeras(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict d
-           using 
+           using
              engine='autokeras';
         """
         )
@@ -407,7 +406,7 @@ class TestAutokeras(BaseExecutorTest):
         ret = self.run_sql(
             """
             SELECT m.*
-            FROM pg.df as t 
+            FROM pg.df as t
             JOIN proj.modelx as m
             WHERE t.b>25
         """

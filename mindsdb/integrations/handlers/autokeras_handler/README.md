@@ -22,7 +22,8 @@ However, the model search and auto-training process is slow because AutoKeras us
 
 
 # What are the recommended system specifications for models created with this framework?
-N/A - model training is computationally light.
+We recommend training this handler on a machine with a CUDA-enabled GPU.
+We would also recommend training on a remote server, or a machine you can leave running, given potentially long training times.
 
 # To what degree can users control the underlying framework by passing parameters via the USING syntax?
 We provide an optional argument,

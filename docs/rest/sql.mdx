@@ -68,7 +68,7 @@ curl --request POST \
 import requests
 url = 'https://cloud.mindsdb.com/api/sql/query'
 cookies = '{session=273trgsehgrui3i2riurwehe}'
-resp = requests.post(url, data={'query': 
+resp = requests.post(url, json={'query': 
                     'SELECT * FROM example_db.demo_data.home_rentals LIMIT 10;', cookies=cookies})
 ```
 

@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+// Data needs to be sent each time
+// Server can't create a Hanlder
+// instance without it
+message ExecutorContext {
+    string id = 1;
+    int32 connection_id = 2;
+    string session_id = 3;
+    string session = 4;
+    string context = 5;
+}
+
+message ExecutionContext{
+    ExecutorContext context = 1;
+    string sql = 2;
+}
+
+message BinaryExecutionContext{
+    ExecutorContext context = 1;
+    bytes sql = 2;
+}
+
+message StatementExecuteContext{
+    ExecutorContext context = 1;
+    string params = 2;
+}
+
+message DefaultDBContext{
+    ExecutorContext context = 1;
+    string new_db = 2;
+}
+
+message ExecutorResponse {
+    bytes columns = 1;
+    bytes params = 2;
+    bytes data = 3;
+    string state_track = 4;
+    string server_status = 5;
+    bool is_executed = 6;
+    string session = 7;
+    int32 error_code = 8;
+    string error_message = 9;
+}
+
+message ExecutorStatusResponse {
+    bool success = 1;
+    string error_message = 2;
+}
+
+service ExecutorService {
+
+  rpc StatementPrepare(ExecutionContext) returns (ExecutorResponse) {}
+
+  rpc StatementExecute(StatementExecuteContext) returns (ExecutorResponse) {}
+
+  rpc QueryExecute(ExecutionContext) returns (ExecutorResponse) {}
+
+  rpc BinaryQueryExecute(BinaryExecutionContext) returns (ExecutorResponse) {}
+
+  rpc ExecuteExternal(ExecutionContext) returns (ExecutorResponse) {}
+
+  rpc Parse(ExecutionContext) returns (ExecutorResponse) {}
+
+  rpc DoExecute(ExecutorContext) returns (ExecutorResponse) {}
+
+  rpc ChangeDefaultDB(DefaultDBContext) returns (ExecutorResponse) {}
+
+  rpc DeleteExecutor(ExecutorContext) returns (ExecutorStatusResponse) {}
+}

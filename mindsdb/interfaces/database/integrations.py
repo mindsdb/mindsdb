@@ -14,7 +14,8 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
-from mindsdb.integrations.handlers_client.db_client import DBServiceClient
+# from mindsdb.integrations.handlers_client.db_client import DBServiceClient
+from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
@@ -251,7 +252,7 @@ class IntegrationController:
         )
 
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-        return DBServiceClient(handler_type, **handler_ars)
+        return DBClient(handler_type, **handler_ars)
 
     def get_handler(self, name, case_sensitive=False):
         if case_sensitive:
@@ -306,7 +307,8 @@ class IntegrationController:
             )
         from mindsdb.integrations.libs.base import BaseMLEngine
         # from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
-        from mindsdb.integrations.handlers_client.ml_client import MLClient
+        # from mindsdb.integrations.handlers_client.ml_client import MLClient
+        from mindsdb.integrations.handlers_client.ml_client_factory import MLClient
 
         HandlerClass = self.handler_modules[integration_engine].Handler
 
@@ -319,7 +321,7 @@ class IntegrationController:
         else:
 
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
-            handler = DBServiceClient(integration_engine, **handler_ars)
+            handler = DBClient(integration_engine, **handler_ars)
 
         return handler
 

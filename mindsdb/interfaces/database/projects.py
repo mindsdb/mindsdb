@@ -103,8 +103,8 @@ class Project:
         subquery_ast = parse_sql(view_meta['query'], dialect='mindsdb')
         return subquery_ast
 
-    def get_models(self):
-        records = (
+    def get_models(self, model_id=None):
+        query = (
             db.session.query(db.Predictor, db.Integration).filter_by(
                 project_id=self.id,
                 deleted_at=sa.null(),
@@ -112,12 +112,13 @@ class Project:
             )
             .join(db.Integration, db.Integration.id == db.Predictor.integration_id)
             .order_by(db.Predictor.name, db.Predictor.id)
-            .all()
         )
+        if model_id is not None:
+            query = query.filter(db.Predictor.id == model_id)
 
         data = []
 
-        for predictor_record, integraion_record in records:
+        for predictor_record, integraion_record in query.all():
             predictor_data = deepcopy(predictor_record.data) or {}
             predictor_meta = {
                 'type': 'model',
@@ -135,12 +136,16 @@ class Project:
                 'select_data_query': predictor_record.fetch_data_query,
                 'training_options': predictor_record.learn_args,
                 'deletable': True,
-                'label': predictor_record.label,
+                'label': predictor_record.label
             }
             if predictor_data is not None and predictor_data.get('accuracies', None) is not None:
                 if len(predictor_data['accuracies']) > 0:
                     predictor_meta['accuracy'] = float(np.mean(list(predictor_data['accuracies'].values())))
-            data.append({'name': predictor_record.name, 'metadata': predictor_meta})
+            data.append({
+                'name': predictor_record.name,
+                'metadata': predictor_meta,
+                'created_at': predictor_record.created_at
+            })
 
         return data
 

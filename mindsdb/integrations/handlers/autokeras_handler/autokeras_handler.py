@@ -9,7 +9,6 @@ from sklearn import preprocessing
 from mindsdb.integrations.libs.base import BaseMLEngine
 from tensorflow.keras.models import load_model
 
-from mindsdb.utilities import log
 
 # Makes this run on Windows Subsystem for Linux
 os.environ["XLA_FLAGS"] = "--xla_gpu_cuda_data_dir=/usr/lib/cuda"

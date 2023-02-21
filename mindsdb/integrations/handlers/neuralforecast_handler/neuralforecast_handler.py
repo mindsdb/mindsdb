@@ -8,17 +8,32 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import infer_frequency, transform_to_nixtla_df, get_results_from_nixtla_df
 from neuralforecast import NeuralForecast
 from neuralforecast.models import NHITS
+from neuralforecast.auto import AutoNHITS
+from ray.tune.search.hyperopt import HyperOptSearch
 
 DEFAULT_FREQUENCY = "D"
-DEFAULT_MODEL = NHITS
 DEFAULT_MODEL_NAME = "NHITS"
-DEFAULT_TRAIN_PERCENT = 90
-DEFAULT_MAX_EPOCHS = 100
+DEFAULT_TRIALS=20
+MIN_TRIALS_FOR_AUTOTUNE = 3
+
+
+def choose_model(num_trials, horizon, window, threshold=MIN_TRIALS_FOR_AUTOTUNE):
+    """Chooses model based on the number of trials allowed by the user.
+
+    A lower args for training time reduces the number of trial models we can
+    search through. Below a certain threshold, we switch to the default
+    NHITS implementation instead of using AutoML to search for the best config.
+    """
+    if num_trials >= threshold:
+        model = AutoNHITS(horizon, gpus=0, num_samples=num_trials, search_alg=HyperOptSearch())
+    else:  # faster implementation without auto parameter tuning
+        model = NHITS(horizon, window)
+    return model
 
 
 class NeuralForecastHandler(BaseMLEngine):
     """Integration with the Nixtla NeuralForecast library for
-    time series forecasting with classical methods.
+    time series forecasting with neural networks.
     """
 
     name = "neuralforecast"
@@ -29,8 +44,7 @@ class NeuralForecastHandler(BaseMLEngine):
         Requires specifying the target column to predict and time series arguments for
         prediction horizon, time column (order by) and grouping column(s).
 
-        Saves args, models params, and the formatted training df to disk. The training df
-        is used later in the predict() method.
+        Saves model params to desk, which are called later in the predict() method.
         """
         with open("args.txt", "w+") as f:
             f.write(str(args))
@@ -45,25 +59,21 @@ class NeuralForecastHandler(BaseMLEngine):
         model_args["group_by"] = time_settings["group_by"]
         model_args["frequency"] =  using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
         model_args["model_name"] =  DEFAULT_MODEL_NAME
+        num_trials = int(DEFAULT_TRIALS * using_args["train_time"]) if "train_time" in using_args else DEFAULT_TRIALS
 
         # You have to save neuralforecast into a different folder each time.
-        # Make sure you call random before creating the model, as that fixes the random seed
+        # You must call random before creating the model, as neuralforecast sets the random seed
         random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=24))
         model_args["model_folder"] = os.path.join("neuralforecast", random_string)
 
+        model = choose_model(num_trials, time_settings["horizon"], time_settings["window"])
         nixtla_df = transform_to_nixtla_df(df, model_args)
-
-        train_set_end_date = np.percentile(nixtla_df["ds"], DEFAULT_TRAIN_PERCENT)
-        train_df = nixtla_df[nixtla_df["ds"] <= train_set_end_date]
-
-        model = DEFAULT_MODEL(model_args["horizon"], time_settings["window"], max_epochs=DEFAULT_MAX_EPOCHS)
         nf = NeuralForecast(models=[model], freq=model_args["frequency"])
-        nf.fit(train_df)
+        nf.fit(nixtla_df)
         nf.save(model_args["model_folder"], overwrite=True)
 
         ###### persist changes to handler folder
         self.model_storage.json_set("model_args", model_args)
-        self.model_storage.file_set("training_df", dill.dumps(nixtla_df))
 
     def predict(self, df, args={}):
         """Makes forecasts with the NeuralForecast Handler.

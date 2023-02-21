@@ -68,7 +68,8 @@ class TestNeuralForecast(BaseExecutorTest):
            horizon 3
            using
              engine='neuralforecast',
-             frequency='D'
+             frequency='D',
+             train_time=0.01
         """
         )
         self.wait_predictor("proj", "model_1_group")
@@ -96,7 +97,8 @@ class TestNeuralForecast(BaseExecutorTest):
            horizon 3
            using
              engine='neuralforecast',
-             frequency='D'
+             frequency='D',
+             train_time=0.01
         """
         )
         self.wait_predictor("proj", "model_multi_group")

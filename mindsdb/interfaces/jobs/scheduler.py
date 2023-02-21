@@ -89,12 +89,15 @@ def task_process(record_id, exec_method):
 
 
 def start(verbose=False):
-    config = Config()
-    db.init()
-    initialize_log(config, 'jobs', wrap_print=True)
+    try:
+        config = Config()
+        db.init()
+        initialize_log(config, 'jobs', wrap_print=True)
 
-    logger.info('Scheduler starts')
-    scheduler_monitor(config)
+        logger.info('Scheduler starts')
+        scheduler_monitor(config)
+    except (KeyboardInterrupt, SystemExit):
+        pass
 
 
 if __name__ == '__main__':

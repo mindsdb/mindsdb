@@ -264,6 +264,8 @@ class TwitterHandler(APIHandler):
             else:
                 if isinstance(resp.data, dict):
                     data.append(resp.data)
+                if hasattr(resp.data, 'data') and isinstance(resp.data.data, dict):
+                    data.append(resp.data.data)
                 break
 
             # next page ?

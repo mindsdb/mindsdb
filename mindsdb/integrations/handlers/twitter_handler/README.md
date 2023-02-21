@@ -34,7 +34,7 @@ Let's get a list tweets that contain or hashtag the word mindsdb
 
 ```
 SELECT 
-   id, created_at, username, text 
+   id, created_at, author_username, text 
 FROM my_twitter.tweets 
 WHERE 
    query = '(mindsdb OR #mindsdb) -is:retweet' 

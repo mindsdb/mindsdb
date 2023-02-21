@@ -174,12 +174,8 @@ class TwitterHandler(APIHandler):
         return self.api
 
     def check_connection(self) -> StatusResponse:
-        """
-        Check the connection of the PostgreSQL database
-        :return: success status and error message if error occurs
-        """
+
         response = StatusResponse(False)
-        need_to_close = self.is_connected is False
 
         try:
             api = self.connect()

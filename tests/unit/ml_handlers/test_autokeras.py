@@ -6,21 +6,33 @@ import numpy as np
 from mindsdb_sql import parse_sql
 
 
-from mindsdb.integrations.handlers.autokeras_handler.autokeras_handler import format_categorical_preds, get_prediction_df
+from mindsdb.integrations.handlers.autokeras_handler.autokeras_handler import (
+    format_categorical_preds,
+    get_prediction_df,
+)
 from tests.unit.executor_test_base import BaseExecutorTest
 
 
 def test_format_categorical_preds():
-    predictions = np.array([
-        [0.9, 0.05, 0.05],
-        [0, 1, 0],
-        [0, 0, 1]
-    ])
+    """Tests helper function to put categorical predictions into the right format"""
+    predictions = np.array([[0.9, 0.05, 0.05], [0, 1, 0], [0, 0, 1]])
     original_y = pd.Series(["a", "b", "c"])
     keras_output_df = pd.DataFrame({"target": predictions.tolist()})
     formatted_df = format_categorical_preds(predictions, original_y, keras_output_df, "target")
     assert formatted_df["target"].tolist() == ["a", "b", "c"]
     assert formatted_df["confidence"].tolist() == [max(row) for row in predictions]
+
+
+def test_get_prediction_df():
+    """Tests helper function to format prediction df"""
+    training_df = pd.DataFrame({"col1": [1, 2, 3], "col2": ["a", "b", "c"]})
+    mindsdb_df = training_df.iloc[:1, :]
+    mindsdb_df["__mindsdb_row_id"] = 0
+
+    prediction_df = get_prediction_df(mindsdb_df, training_df)
+    assert "__mindsdb_row_id" not in prediction_df.columns
+    pd.testing.assert_frame_equal(prediction_df, pd.DataFrame({"col1": [1], "col2": ["a"]}))
+
 
 class TestAutokeras(BaseExecutorTest):
     def wait_predictor(self, project, name):

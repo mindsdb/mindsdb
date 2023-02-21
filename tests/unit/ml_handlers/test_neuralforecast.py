@@ -64,6 +64,7 @@ class TestNeuralForecast(BaseExecutorTest):
            predict target_col
            order by time_col
            group by group_col
+           window 6
            horizon 3
            using
              engine='neuralforecast',
@@ -91,6 +92,7 @@ class TestNeuralForecast(BaseExecutorTest):
            predict target_col
            order by time_col
            group by group_col, group_col_2, group_col_3
+           window 6
            horizon 3
            using
              engine='neuralforecast',

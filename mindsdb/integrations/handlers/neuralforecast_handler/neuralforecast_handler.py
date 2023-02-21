@@ -32,6 +32,8 @@ class NeuralForecastHandler(BaseMLEngine):
         Saves args, models params, and the formatted training df to disk. The training df
         is used later in the predict() method.
         """
+        with open("args.txt", "w+") as f:
+            f.write(str(args))
         time_settings = args["timeseries_settings"]
         using_args = args["using"]
         assert time_settings["is_timeseries"], "Specify time series settings in your query"
@@ -54,8 +56,7 @@ class NeuralForecastHandler(BaseMLEngine):
         train_set_end_date = np.percentile(nixtla_df["ds"], DEFAULT_TRAIN_PERCENT)
         train_df = nixtla_df[nixtla_df["ds"] <= train_set_end_date]
 
-        input_size = 2 * model_args["horizon"]
-        model = DEFAULT_MODEL(model_args["horizon"], input_size, max_epochs=DEFAULT_MAX_EPOCHS)
+        model = DEFAULT_MODEL(model_args["horizon"], time_settings["window"], max_epochs=DEFAULT_MAX_EPOCHS)
         nf = NeuralForecast(models=[model], freq=model_args["frequency"])
         nf.fit(train_df)
         nf.save(model_args["model_folder"], overwrite=True)

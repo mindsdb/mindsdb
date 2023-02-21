@@ -806,12 +806,18 @@ class SQLQuery():
                 predictor_name = step.predictor.parts[0]
                 where_data = step.row_dict
 
-                # project_db = self.dbc.get(step.integration)
-                project_datanode = self.datahub.get(project_name)
+                project_db = self.dbc.projects.get(project_name)
+                model_table = project_db.get(predictor_name)
 
                 version = None
                 if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                     version = int(step.predictor.parts[-1])
+
+                predictions = model_table.predict(
+                    data=where_data,
+                    version=version,
+                    params=step.params
+                )
 
                 predictions = project_datanode.predict(
                     model_name=predictor_name,

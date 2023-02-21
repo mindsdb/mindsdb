@@ -26,7 +26,7 @@ class DuckDBHandler(DatabaseHandler):
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'duckdb'
+        self.dialect = 'postgresql'
         self.connection_data = kwargs.get('connection_data')
 
         self.connection = None
@@ -136,11 +136,7 @@ class DuckDBHandler(DatabaseHandler):
             Response: The query result.
         """
 
-        if isinstance(query, ASTNode):
-            query_str = query.to_string()
-        else:
-            query_str = str(query)
-
+        query_str = self.renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:

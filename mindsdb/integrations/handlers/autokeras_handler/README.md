@@ -45,6 +45,11 @@ Not implemented yet.
 AutoKeras automatically splits the data into training and validation sets, the user does not need to do this.
 The original Keras library was for computer vision, so this would be a good option if users want to do image analysis.
 
+Users should set up a Conda environment to use this handler, as Keras depends on Tensorflow rather than PyTorch.
+They should follow the instructions at:
+1. https://www.tensorflow.org/install/pip
+2. https://autokeras.com/install/
+
 # Any directions for future work in subsequent versions of the handler?
 Implement the DESCRIBE and UPDATE methods.
 

@@ -117,7 +117,7 @@ class TestNeuralForecast(BaseExecutorTest):
              exogenous_vars=['exog_var_1']
         """
         )
-        self.wait_predictor("proj", "model_multi_group")
+        self.wait_predictor("proj", "model_exog_var")
 
         result_df = self.run_sql(
             """

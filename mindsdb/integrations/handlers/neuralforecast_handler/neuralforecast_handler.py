@@ -1,11 +1,12 @@
 import os
 import string
 import random
-import numpy as np
-import pandas as pd
-import dill
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import infer_frequency, transform_to_nixtla_df, get_results_from_nixtla_df
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import (
+    infer_frequency,
+    transform_to_nixtla_df,
+    get_results_from_nixtla_df,
+)
 from neuralforecast import NeuralForecast
 from neuralforecast.models import NHITS
 from neuralforecast.auto import AutoNHITS
@@ -13,7 +14,7 @@ from ray.tune.search.hyperopt import HyperOptSearch
 
 DEFAULT_FREQUENCY = "D"
 DEFAULT_MODEL_NAME = "NHITS"
-DEFAULT_TRIALS=20
+DEFAULT_TRIALS = 20
 MIN_TRIALS_FOR_AUTOTUNE = 3
 
 
@@ -57,14 +58,16 @@ class NeuralForecastHandler(BaseMLEngine):
         model_args["horizon"] = time_settings["horizon"]
         model_args["order_by"] = time_settings["order_by"]
         model_args["group_by"] = time_settings["group_by"]
-        model_args["frequency"] =  using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
-        model_args["model_name"] =  DEFAULT_MODEL_NAME
+        model_args["frequency"] = (
+            using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
+        )
+        model_args["model_name"] = DEFAULT_MODEL_NAME
         num_trials = int(DEFAULT_TRIALS * using_args["train_time"]) if "train_time" in using_args else DEFAULT_TRIALS
         exog_vars = using_args["exogenous_vars"] if "exogenous_vars" in using_args else []
 
         # You have to save neuralforecast into a different folder each time.
         # You must call random before creating the model, as neuralforecast sets the random seed
-        random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=24))
+        random_string = "".join(random.choices(string.ascii_uppercase + string.digits, k=24))
         model_args["model_folder"] = os.path.join("neuralforecast", random_string)
 
         model = choose_model(num_trials, time_settings["horizon"], time_settings["window"])

@@ -88,7 +88,7 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["horizon"] = time_settings["horizon"]
         model_args["order_by"] = time_settings["order_by"]
         model_args["group_by"] = time_settings["group_by"]
-        model_args["frequency"] =  infer_frequency(df, time_settings["order_by"])
+        model_args["frequency"] = infer_frequency(df, time_settings["order_by"])
         model_args["model_name"] = DEFAULT_MODEL_NAME
 
         training_df = transform_to_nixtla_df(df, model_args)

@@ -3,7 +3,10 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import transform_to_nixtla_df, get_results_from_nixtla_df
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import (
+    transform_to_nixtla_df,
+    get_results_from_nixtla_df,
+)
 from statsforecast.models import AutoARIMA
 from statsforecast import StatsForecast
 from mindsdb_sql import parse_sql
@@ -32,7 +35,12 @@ def create_mock_df():
 def test_nixtla_df_transformations():
     df = create_mock_df()
     model_name = "ARIMA"
-    settings_dict = {"order_by": "time_col", "group_by": ["group_col"], "target": "target_col", "model_name": model_name}
+    settings_dict = {
+        "order_by": "time_col",
+        "group_by": ["group_col"],
+        "target": "target_col",
+        "model_name": model_name,
+    }
 
     # Test transform for single groupby
     nixtla_df = transform_to_nixtla_df(df, settings_dict)
@@ -58,7 +66,6 @@ def test_nixtla_df_transformations():
     settings_dict["exogenous_vars"] = ["group_col_2", "group_col_3"]
     nixtla_df = transform_to_nixtla_df(df, settings_dict, exog_vars=["group_col_2", "group_col_3"])
     assert nixtla_df.columns.tolist() == ["unique_id", "ds", "y", "group_col_2", "group_col_3"]
-
 
 
 class TestStatsForecast(BaseExecutorTest):
@@ -151,7 +158,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql("create database proj")
 
         # mock a time series dataset
-        df = pd.read_parquet('https://datasets-nixtla.s3.amazonaws.com/m4-hourly.parquet')
+        df = pd.read_parquet("https://datasets-nixtla.s3.amazonaws.com/m4-hourly.parquet")
         df = df[df.unique_id.isin(["H1", "H2", "H3"])]  # subset for speed
         n_groups = df["unique_id"].nunique()
         self.set_handler(mock_handler, name="pg", tables={"df": df})

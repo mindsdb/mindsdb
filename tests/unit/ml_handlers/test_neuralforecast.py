@@ -1,11 +1,8 @@
 import time
 from unittest.mock import patch
-import numpy as np
 import pandas as pd
 
-from mindsdb.integrations.handlers.neuralforecast_handler.neuralforecast_handler import NeuralForecastHandler
 from mindsdb_sql import parse_sql
-
 
 from tests.unit.executor_test_base import BaseExecutorTest
 
@@ -57,7 +54,6 @@ class TestNeuralForecast(BaseExecutorTest):
         df = create_mock_df()
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
-
         # now add more groups
         self.run_sql(
             """
@@ -104,7 +100,6 @@ class TestNeuralForecast(BaseExecutorTest):
         df["exog_var_1"] = 5 * df.index
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
-
         # now add more groups
         self.run_sql(
             """
@@ -130,5 +125,6 @@ class TestNeuralForecast(BaseExecutorTest):
            FROM pg.df as t
            JOIN proj.model_exog_var as p
            where t.group_col='b'
-        """)
+        """
+        )
         assert list(round(result_df["target_col"])) == [42, 43, 44]

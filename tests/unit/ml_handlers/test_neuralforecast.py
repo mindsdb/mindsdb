@@ -57,33 +57,6 @@ class TestNeuralForecast(BaseExecutorTest):
         df = create_mock_df()
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
-        self.run_sql(
-            """
-           create model proj.model_1_group
-           from pg (select * from df)
-           predict target_col
-           order by time_col
-           group by group_col
-           window 6
-           horizon 3
-           using
-             engine='neuralforecast',
-             frequency='D',
-             train_time=0.01
-        """
-        )
-        self.wait_predictor("proj", "model_1_group")
-
-        # run predict
-        result_df = self.run_sql(
-            """
-           SELECT p.*
-           FROM pg.df as t
-           JOIN proj.model_1_group as p
-           where t.group_col='b'
-        """
-        )
-        assert list(round(result_df["target_col"])) == [42, 43, 44]
 
         # now add more groups
         self.run_sql(
@@ -97,7 +70,7 @@ class TestNeuralForecast(BaseExecutorTest):
            horizon 3
            using
              engine='neuralforecast',
-             frequency='D',
+             frequency='Q',
              train_time=0.01
         """
         )
@@ -112,3 +85,13 @@ class TestNeuralForecast(BaseExecutorTest):
         """
         )
         assert list(round(result_df["target_col"])) == [32, 33, 34]
+
+        result_df = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.model_multi_group as p
+           where t.group_col='b'
+        """
+        )
+        assert list(round(result_df["target_col"])) == [42, 43, 44]

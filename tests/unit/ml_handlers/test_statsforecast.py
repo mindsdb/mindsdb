@@ -3,7 +3,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import StatsForecastHandler, transform_to_nixtla_df, get_results_from_nixtla_df
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import transform_to_nixtla_df, get_results_from_nixtla_df
 from statsforecast.models import AutoARIMA
 from statsforecast import StatsForecast
 from mindsdb_sql import parse_sql

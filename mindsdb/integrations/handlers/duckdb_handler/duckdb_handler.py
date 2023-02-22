@@ -47,10 +47,10 @@ class DuckDBHandler(DatabaseHandler):
             return self.connection
 
         args = {
-            "database": self.connection_data.get('database'),
-            "read_only": self.connection_data.get('read_only')
+            'database': self.connection_data.get('database'),
+            'read_only': self.connection_data.get('read_only'),
         }
-        
+
         self.connection = duckdb.connect(**args)
         self.is_connected = True
 

@@ -1,0 +1,6 @@
+mindsdb>=23.2.2.1
+mindsdb_sql >= 0.4.8
+
+torch
+torchvision
+autogluon

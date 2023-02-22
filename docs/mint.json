@@ -175,7 +175,8 @@
                     "sql/api/join-on"
                   ]
                 },
-                "sql/api/use"
+                "sql/api/use",
+                "sql/api/adjust"
               ]
             }
           ]
@@ -365,6 +366,7 @@
           "group": "Contributing Guide",
           "pages": [
             "contribute",
+            "contribute/issue-labels",
             "contribute/install",
             "contribute/issues",
             "contribute/data-integration-page",

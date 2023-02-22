@@ -116,6 +116,7 @@ class SnowflakeHandler(DatabaseHandler):
         """
         q = "SHOW TABLES;"
         result = self.native_query(q)
+        result.data_frame = result.data_frame.rename(columns={'name': 'table_name'})
         return result
 
     def get_columns(self, table_name) -> Response:

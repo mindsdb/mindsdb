@@ -197,6 +197,35 @@ integrations.
     </Tab>
 </Tabs>
 
+## Cloud Spanner
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE cloud_spanner_datasource       --- display name for the database
+    WITH ENGINE = 'cloud_spanner',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "instance_id": " ",                          --- the instance identifier
+      "database_id": ,                             --- the database identifier
+      "project_id": " ",                           --- the identifier of the project that owns the instances and data
+      "credentials": " ",                          --- a stringified GCP service account key JSON
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE cloud_spanner_datasource
+    WITH ENGINE = 'cloud_spanner',
+    PARAMETERS = {
+      "instance_id": "my-instance",
+      "database_id": "example-db",
+      "project": "my-project",
+      "credentials": "{...}"
+    };
+    ```
+    </Tab>
+</Tabs>
+
 ## Cockroach Labs
 
 <Tabs>

@@ -149,6 +149,19 @@ class TestHTTP:
         response = session.get(f'{HTTP_API_ROOT}/tree/')
         assert response.status_code == 200
 
+        response = session.post(f'{HTTP_API_ROOT}/logout')
+        assert response.status_code == 200
+
+        response = session.get(f'{HTTP_API_ROOT}/tree/')
+        assert response.status_code == 403
+
+        response = session.post(f'{HTTP_API_ROOT}/login', json={
+                'username': 'mindsdb',
+                'password': 'mindsdb'
+            }
+        )
+        assert response.status_code == 200
+
         response = session.put(f'{HTTP_API_ROOT}/config/', json={
             'auth': {
                 'http_auth_enabled': False,

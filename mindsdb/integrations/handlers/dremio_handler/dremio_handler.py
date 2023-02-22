@@ -1,6 +1,7 @@
 from typing import Optional
 from collections import OrderedDict
 
+import requests, time
 import pandas as pd
 
 from mindsdb_sql import parse_sql
@@ -37,7 +38,11 @@ class DremioHandler(DatabaseHandler):
         self.parser = parse_sql
         self.dialect = 'dremio'
 
-        pass
+        self.connection_data = connection_data
+        self.kwargs = kwargs
+
+        self.connection = None
+        self.is_connected = False
 
     def __del__(self):
         if self.is_connected is True:
@@ -50,14 +55,25 @@ class DremioHandler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        pass
+        base_url = f"http://{self.connection_data['host']:{self.connection_data['port']}}"
+
+        headers = {
+            'Content-Type': 'application/json',
+        }
+
+        data = f'{"userName": "{self.connection_data["username"]}","password": "{self.connection_data["password"]}"}'
+
+        response = requests.post(base_url + '/apiv2/login', headers=headers, data=data, verify=False)
+
+        return '_dremio' + response.json()['token']
 
     def disconnect(self):
         """
         Close any existing connections.
         """
 
-        pass
+        self.is_connected = False
+        return
 
     def check_connection(self) -> StatusResponse:
         """
@@ -66,7 +82,22 @@ class DremioHandler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        pass
+        response = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
+        try:
+            self.connect()
+            response.success = True
+        except Exception as e:
+            log.logger.error(f'Error connecting to Dremio, {e}!')
+            response.error_message = str(e)
+        finally:
+            if response.success is True and need_to_close:
+                self.disconnect()
+            if response.success is False and self.is_connected is True:
+                self.is_connected = False
+
+        return response
 
     def native_query(self, query: str) -> StatusResponse:
         """

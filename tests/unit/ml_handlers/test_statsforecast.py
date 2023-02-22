@@ -34,12 +34,12 @@ def test_nixtla_df_transformations():
     model_name = "ARIMA"
     settings_dict = {"order_by": "time_col", "group_by": ["group_col"], "target": "target_col", "model_name": model_name}
 
-    # Test trannixtlaorm for single groupby
+    # Test transform for single groupby
     nixtla_df = transform_to_nixtla_df(df, settings_dict)
     assert [nixtla_df["unique_id"].iloc[i] == df["group_col"].iloc[i] for i in range(len(nixtla_df))]
     assert [nixtla_df["y"].iloc[i] == df["target_col"].iloc[i] for i in range(len(nixtla_df))]
     assert [nixtla_df["ds"].iloc[i] == df["time_col"].iloc[i] for i in range(len(nixtla_df))]
-    # Test reversing the trannixtlaorm
+    # Test reversing the transformation
     nixtla_results_df = nixtla_df.rename({"y": model_name}, axis=1).set_index("unique_id")
     mindsdb_results_df = get_results_from_nixtla_df(nixtla_results_df, settings_dict)
     pd.testing.assert_frame_equal(mindsdb_results_df, df[["time_col", "target_col", "group_col"]])
@@ -48,10 +48,17 @@ def test_nixtla_df_transformations():
     settings_dict["group_by"] = ["group_col", "group_col_2", "group_col_3"]
     nixtla_df = transform_to_nixtla_df(df, settings_dict)
     assert nixtla_df["unique_id"][0] == "a|a2|a3"
-    # Test reversing the trannixtlaorm
+    # Test reversing the transformation
     nixtla_results_df = nixtla_df.rename({"y": model_name}, axis=1).set_index("unique_id")
     mindsdb_results_df = get_results_from_nixtla_df(nixtla_results_df, settings_dict)
     pd.testing.assert_frame_equal(mindsdb_results_df, df)
+
+    # Test with exogenous vars
+    settings_dict["group_by"] = ["group_col"]
+    settings_dict["exogenous_vars"] = ["group_col_2", "group_col_3"]
+    nixtla_df = transform_to_nixtla_df(df, settings_dict, exog_vars=["group_col_2", "group_col_3"])
+    assert nixtla_df.columns.tolist() == ["unique_id", "ds", "y", "group_col_2", "group_col_3"]
+
 
 
 class TestStatsForecast(BaseExecutorTest):

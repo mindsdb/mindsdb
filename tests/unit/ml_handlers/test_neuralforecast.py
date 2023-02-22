@@ -95,3 +95,40 @@ class TestNeuralForecast(BaseExecutorTest):
         """
         )
         assert list(round(result_df["target_col"])) == [42, 43, 44]
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_with_exog_vars(self, mock_handler):
+        # create project
+        self.run_sql("create database proj")
+        df = create_mock_df()
+        df["exog_var_1"] = 5 * df.index
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+
+        # now add more groups
+        self.run_sql(
+            """
+           create model proj.model_exog_var
+           from pg (select * from df)
+           predict target_col
+           order by time_col
+           group by group_col, group_col_2, group_col_3
+           window 6
+           horizon 3
+           using
+             engine='neuralforecast',
+             frequency='Q',
+             train_time=0.01,
+             exogenous_vars=['exog_var_1']
+        """
+        )
+        self.wait_predictor("proj", "model_multi_group")
+
+        result_df = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.model_exog_var as p
+           where t.group_col='b'
+        """)
+        assert list(round(result_df["target_col"])) == [42, 43, 44]

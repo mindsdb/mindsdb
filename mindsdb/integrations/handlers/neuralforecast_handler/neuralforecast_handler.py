@@ -17,7 +17,7 @@ DEFAULT_TRIALS=20
 MIN_TRIALS_FOR_AUTOTUNE = 3
 
 
-def choose_model(num_trials, horizon, window, threshold=MIN_TRIALS_FOR_AUTOTUNE):
+def choose_model(num_trials, horizon, window, exog_vars=[], threshold=MIN_TRIALS_FOR_AUTOTUNE):
     """Chooses model based on the number of trials allowed by the user.
 
     A lower args for training time reduces the number of trial models we can
@@ -27,7 +27,7 @@ def choose_model(num_trials, horizon, window, threshold=MIN_TRIALS_FOR_AUTOTUNE)
     if num_trials >= threshold:
         model = AutoNHITS(horizon, gpus=0, num_samples=num_trials, search_alg=HyperOptSearch())
     else:  # faster implementation without auto parameter tuning
-        model = NHITS(horizon, window)
+        model = NHITS(horizon, window, hist_exog_list=exog_vars)
     return model
 
 
@@ -60,6 +60,7 @@ class NeuralForecastHandler(BaseMLEngine):
         model_args["frequency"] =  using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
         model_args["model_name"] =  DEFAULT_MODEL_NAME
         num_trials = int(DEFAULT_TRIALS * using_args["train_time"]) if "train_time" in using_args else DEFAULT_TRIALS
+        exog_vars = using_args["exogenous_vars"] if "exogenous_vars" in using_args else []
 
         # You have to save neuralforecast into a different folder each time.
         # You must call random before creating the model, as neuralforecast sets the random seed
@@ -67,7 +68,7 @@ class NeuralForecastHandler(BaseMLEngine):
         model_args["model_folder"] = os.path.join("neuralforecast", random_string)
 
         model = choose_model(num_trials, time_settings["horizon"], time_settings["window"])
-        nixtla_df = transform_to_nixtla_df(df, model_args)
+        nixtla_df = transform_to_nixtla_df(df, model_args, exog_vars)
         nf = NeuralForecast(models=[model], freq=model_args["frequency"])
         nf.fit(nixtla_df)
         nf.save(model_args["model_folder"], overwrite=True)

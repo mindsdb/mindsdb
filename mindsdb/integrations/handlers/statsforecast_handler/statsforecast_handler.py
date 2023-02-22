@@ -9,7 +9,7 @@ DEFAULT_MODEL = AutoARIMA()
 DEFAULT_MODEL_NAME = "AutoARIMA"
 
 
-def transform_to_nixtla_df(df, settings_dict):
+def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
     """Transform dataframes into the specific format required by StatsForecast.
 
     Nixtla packages require dataframes to have the following columns:
@@ -36,7 +36,8 @@ def transform_to_nixtla_df(df, settings_dict):
         {settings_dict["target"]: "y", settings_dict["order_by"]: "ds", group_col: "unique_id"}, axis=1
     )
 
-    return nixtla_df[["unique_id", "ds", "y"]]
+    columns_to_keep = ["unique_id", "ds", "y"] + exog_vars
+    return nixtla_df[columns_to_keep]
 
 
 def get_results_from_nixtla_df(nixtla_df, model_args):

@@ -27,7 +27,7 @@ class CloudSpannerHandler(DatabaseHandler):
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'postgresql'
+        self.dialect = 'googlesql'
         self.connection_data = kwargs.get('connection_data')
 
         self.connection = None
@@ -76,7 +76,6 @@ class CloudSpannerHandler(DatabaseHandler):
         """
 
         response = StatusResponse(False)
-        need_to_close = self.is_connected is False
 
         try:
             self.connect()
@@ -87,9 +86,9 @@ class CloudSpannerHandler(DatabaseHandler):
             )
             response.error_message = str(e)
         finally:
-            if response.success is True and need_to_close:
+            if response.success is True and self.is_connected:
                 self.disconnect()
-            if response.success is False and self.is_connected is True:
+            if response.success is False and self.is_connected:
                 self.is_connected = False
 
         return response
@@ -103,7 +102,6 @@ class CloudSpannerHandler(DatabaseHandler):
         Returns:
             Response: The query result.
         """
-        need_to_close = self.is_connected is False
 
         connection = self.connect()
         cursor = connection.cursor()
@@ -111,8 +109,10 @@ class CloudSpannerHandler(DatabaseHandler):
         try:
             cursor.execute(query)
 
-            result = cursor.fetchall()
-            if result:
+            # The cursor description check indicates if there are any results.
+            # This is required as spanner_dbapi will fail on a fetchall() call on an empty cursor.
+            if cursor.description:
+                result = cursor.fetchall()
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.DataFrame(
@@ -120,8 +120,9 @@ class CloudSpannerHandler(DatabaseHandler):
                     ),
                 )
             else:
-                connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
+
+            connection.commit()
         except Exception as e:
             log.logger.error(
                 f'Error running query: {query} on {self.connection_data["database_id"]}!'
@@ -129,7 +130,7 @@ class CloudSpannerHandler(DatabaseHandler):
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
-        if need_to_close is True:
+        if self.is_connected:
             self.disconnect()
 
         return response
@@ -143,8 +144,11 @@ class CloudSpannerHandler(DatabaseHandler):
         Returns:
             Response: The query result.
         """
+        if isinstance(query, ASTNode):
+            query_str = query.to_string()
+        else:
+            query_str = str(query)
 
-        query_str = query.to_string()
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:
@@ -154,8 +158,15 @@ class CloudSpannerHandler(DatabaseHandler):
             Response: Names of the tables in the database.
         """
 
-        q = 'SHOW TABLES;'
-        result = self.native_query(q)
+        query = '''
+            SELECT
+              t.table_name
+            FROM
+              information_schema.tables AS t
+            WHERE
+              t.table_schema = ''
+        '''
+        result = self.native_query(query)
         df = result.data_frame
         result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
         return result
@@ -170,7 +181,16 @@ class CloudSpannerHandler(DatabaseHandler):
             Response: Details of the table.
         """
 
-        query = f'DESCRIBE {table_name};'
+        query = f'''
+            SELECT
+              t.column_name,
+              t.spanner_type,
+              t.is_nullable
+            FROM
+              information_schema.columns AS t
+            WHERE
+              t.table_name = '{table_name}'
+        '''
         return self.native_query(query)
 
 
@@ -194,5 +214,5 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    instance_id='my-instance', datbase_id='example-db', project='my-project'
+    instance_id='test-instance', datbase_id='example-db', project='your-project-id'
 )

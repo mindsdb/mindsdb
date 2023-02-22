@@ -1,4 +1,9 @@
 
+Execution alembic should perform in mindsdb/migrations directory 
+with adding mindsdb folder to python path. Example:
+- cd mindsdb/migrations
+- env PYTHONPATH=../../ alembic upgrade head
+
 ## Create migration 
 
 - alembic revision --autogenerate -m <migration_name>

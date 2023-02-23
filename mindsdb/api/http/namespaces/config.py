@@ -1,11 +1,10 @@
-import json
-import copy
-import datetime
-from dateutil.parser import parse as parse_datetime
 import os
-import tempfile
+import copy
 import shutil
+import datetime
+import tempfile
 from pathlib import Path
+from dateutil.parser import parse as parse_datetime
 
 from flask import request
 from flask_restx import Resource, abort
@@ -71,17 +70,7 @@ class GetConfig(Resource):
                     f'Unknown argumens: {unknown_argumens}'
                 )
 
-        config_path = Path(Config().config_path)
-        if config_path.is_file() is False:
-            config_path.write_text('{}')
-
-        with open(Config().config_path, 'r') as fp:
-            config_data = json.load(fp)
-
-        config_data.update(data)
-
-        with open(Config().config_path, 'wt') as fp:
-            fp.write(json.dumps(config_data, indent=4))
+        Config().update(data)
 
         return '', 200
 

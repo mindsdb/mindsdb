@@ -186,7 +186,12 @@ class DremioHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        query = 'SELECT * FROM INFORMATION_SCHEMA.\\"TABLES\\'
+        result = self.native_query(query)
+        df = result.data_frame
+        df[df.columns[0]] = df[df.columns[0]].apply(lambda row: row.strip())
+        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        return result
 
     def get_columns(self, table_name: str) -> StatusResponse:
         """
@@ -197,4 +202,8 @@ class DremioHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        query = f"DESCRIBE {table_name}"
+        result = self.native_query(query)
+        df = result.data_frame
+        result.data_frame = df.rename(columns={'COLUMN_NAME': 'column_name', 'DATA_TYPE': 'data_type'})
+        return result

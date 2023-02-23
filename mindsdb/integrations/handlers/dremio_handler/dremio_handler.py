@@ -2,7 +2,8 @@ from typing import Optional
 from collections import OrderedDict
 
 import json
-import requests, time
+import time
+import requests
 import pandas as pd
 
 from mindsdb_sql import parse_sql
@@ -43,7 +44,7 @@ class DremioHandler(DatabaseHandler):
         self.connection_data = connection_data
         self.kwargs = kwargs
 
-        self.base_url = f"http://{self.connection_data['host']:{self.connection_data['port']}}"
+        self.base_url = f"http://{self.connection_data['host']}:{self.connection_data['port']}"
 
         self.connection = None
         self.is_connected = False
@@ -52,7 +53,7 @@ class DremioHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self) -> StatusResponse:
+    def connect(self) -> dict:
         """
         Set up the connection required by the handler.
         Returns:
@@ -63,11 +64,14 @@ class DremioHandler(DatabaseHandler):
             'Content-Type': 'application/json',
         }
 
-        data = f'{"userName": "{self.connection_data["username"]}","password": "{self.connection_data["password"]}"}'
+        data = '{' + f'"userName": "{self.connection_data["username"]}","password": "{self.connection_data["password"]}"' + '}'
 
         response = requests.post(self.base_url + '/apiv2/login', headers=headers, data=data, verify=False)
 
-        return '_dremio' + response.json()['token']
+        return {
+            'Authorization': '_dremio' + response.json()['token'],
+            'Content-Type': 'application/json',
+        }
 
     def disconnect(self):
         """
@@ -116,11 +120,11 @@ class DremioHandler(DatabaseHandler):
         data = '{' + f'"sql": "{query}"' + '}'
 
         try:
-            result = requests.post(self.base_url + '/api/v3/sql', headers=auth_headers, data=data)
+            sql_result = requests.post(self.base_url + '/api/v3/sql', headers=auth_headers, data=data)
 
-            job_id = result.json()['id']
+            job_id = sql_result.json()['id']
 
-            if result.status_code is 200:
+            if sql_result.status_code == 200:
                 log.logger.info('Job creation successful. Job id is: ' + job_id)
             else:
                 log.logger.info('Job creation failed.')
@@ -135,23 +139,20 @@ class DremioHandler(DatabaseHandler):
                 job_status = requests.request("GET", self.base_url + "/api/v3/job/" + job_id, headers=auth_headers).json()[
                     'jobState']
 
-            result = json.loads(requests.request("GET", self.base_url + "/api/v3/job/" + job_id + "/results", headers=auth_headers))
+            job_result = json.loads(requests.request("GET", self.base_url + "/api/v3/job/" + job_id + "/results", headers=auth_headers).text)
 
-            if result['rowCount']:
+            if 'errorMessage' not in job_result:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.DataFrame(
-                        result.text['rows']
+                        job_result['rows']
                     )
                 )
             else:
-                if 'errorMessage' in result:
-                    response = Response(
-                        RESPONSE_TYPE.ERROR,
-                        error_message=str(result['errorMessage'])
-                    )
-                else:
-                    response = Response(RESPONSE_TYPE.OK)
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(job_result['errorMessage'])
+                )
 
         except Exception as e:
             log.logger.error(f'Error running query: {query} on Dremio!')
@@ -186,10 +187,9 @@ class DremioHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        query = 'SELECT * FROM INFORMATION_SCHEMA.\\"TABLES\\'
+        query = 'SELECT * FROM INFORMATION_SCHEMA.\\"TABLES\\"'
         result = self.native_query(query)
         df = result.data_frame
-        df[df.columns[0]] = df[df.columns[0]].apply(lambda row: row.strip())
         result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
         return result
 

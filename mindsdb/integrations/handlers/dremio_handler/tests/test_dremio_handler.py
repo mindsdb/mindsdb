@@ -10,7 +10,7 @@ class DremioHandlerTest(unittest.TestCase):
             "host": "localhost",
             "port": 9047,
             "username": "minura_punchihewa",
-            "scheme": "password"
+            "password": "password"
         }
         cls.handler = DremioHandler('test_dremio_handler', cls.kwargs)
 

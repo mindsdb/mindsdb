@@ -1,12 +1,14 @@
 from typing import Optional
 from collections import OrderedDict
 
+import json
 import requests, time
 import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
+from sqlalchemy_dremio.base import DremioDialect
 
 from mindsdb_sql.parser.ast.base import ASTNode
 
@@ -41,6 +43,8 @@ class DremioHandler(DatabaseHandler):
         self.connection_data = connection_data
         self.kwargs = kwargs
 
+        self.base_url = f"http://{self.connection_data['host']:{self.connection_data['port']}}"
+
         self.connection = None
         self.is_connected = False
 
@@ -55,15 +59,13 @@ class DremioHandler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        base_url = f"http://{self.connection_data['host']:{self.connection_data['port']}}"
-
         headers = {
             'Content-Type': 'application/json',
         }
 
         data = f'{"userName": "{self.connection_data["username"]}","password": "{self.connection_data["password"]}"}'
 
-        response = requests.post(base_url + '/apiv2/login', headers=headers, data=data, verify=False)
+        response = requests.post(self.base_url + '/apiv2/login', headers=headers, data=data, verify=False)
 
         return '_dremio' + response.json()['token']
 
@@ -108,7 +110,60 @@ class DremioHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        need_to_close = self.is_connected is False
+
+        auth_headers = self.connect()
+        data = '{' + f'"sql": "{query}"' + '}'
+
+        try:
+            result = requests.post(self.base_url + '/api/v3/sql', headers=auth_headers, data=data)
+
+            job_id = result.json()['id']
+
+            if result.status_code is 200:
+                log.logger.info('Job creation successful. Job id is: ' + job_id)
+            else:
+                log.logger.info('Job creation failed.')
+
+            log.logger.info('Waiting for the job to complete...')
+
+            job_status = requests.request("GET", self.base_url + "/api/v3/job/" + job_id, headers=auth_headers).json()[
+                'jobState']
+
+            while job_status != 'COMPLETED':
+                time.sleep(2)
+                job_status = requests.request("GET", self.base_url + "/api/v3/job/" + job_id, headers=auth_headers).json()[
+                    'jobState']
+
+            result = json.loads(requests.request("GET", self.base_url + "/api/v3/job/" + job_id + "/results", headers=auth_headers))
+
+            if result['rowCount']:
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.DataFrame(
+                        result.text['rows']
+                    )
+                )
+            else:
+                if 'errorMessage' in result:
+                    response = Response(
+                        RESPONSE_TYPE.ERROR,
+                        error_message=str(result['errorMessage'])
+                    )
+                else:
+                    response = Response(RESPONSE_TYPE.OK)
+
+        except Exception as e:
+            log.logger.error(f'Error running query: {query} on Dremio!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
 
     def query(self, query: ASTNode) -> StatusResponse:
         """
@@ -120,7 +175,9 @@ class DremioHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        renderer = SqlalchemyRender(DremioDialect)
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
 
     def get_tables(self) -> StatusResponse:
         """

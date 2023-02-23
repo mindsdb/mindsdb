@@ -52,48 +52,22 @@ def train_model(df, target, max_trials=DEFAULT_TRIALS):
     return trainer.export_model(), categorical_dummy_column_names
 
 
-def get_prediction_df(mindsdb_df, training_df):
-    """Gets a prediction df using the df passed by the predict() method and the training df.
-
-    mindsdb_df is passed in from the .predict() method. This drops columns when users call
-    the WHERE clause in a SQL query.
-
-    training_df is the full df from training. This contains the dropped columns, which we
-    join with the rows from the mindsdb_df.
-    """
-    # Remove column that didn't exist in the training df so that we can do filtering
-    df_to_predict = mindsdb_df.copy()
-    if "__mindsdb_row_id" in df_to_predict.columns.values.tolist():
-        df_to_predict = df_to_predict.drop("__mindsdb_row_id", axis=1)
-
-    # Filter the training df based on the predict df
-    keys = list(df_to_predict.columns.values)
-    i1 = training_df.set_index(keys).index
-    i2 = df_to_predict.set_index(keys).index
-    filtered_df = training_df[i1.isin(i2)]
-
-    if filtered_df.empty:
-        # TODO: Rephrase the exception message in a more user-friendly way
-        raise Exception(
-            "The condition(s) in the WHERE clause filtered out all the data. Please refine these and try again"
-        )
-    return filtered_df
-
-
-def get_preds_from_model(df, model, target, categorical_dummy_column_names):
+def get_preds_from_model(df, model, target, column_count, categorical_dummy_column_names):
     """Gets predictions from the stored AutoKeras model."""
-    cols_to_drop = ["__mindsdb_row_id", target]
-    for col in cols_to_drop:
-        if col in df.columns.values.tolist():
-            df = df.drop(col, axis=1)
+    df_to_predict = df.copy()
+    for col in ["__mindsdb_row_id", target]:
+        if col in df_to_predict.columns.values.tolist():
+            df_to_predict = df_to_predict.drop(col, axis=1)
 
+    if len(df_to_predict.columns) != column_count:
+        raise Exception("All feature columns must be defined in the WHERE clause when making predictions")
     # Get dummies for any categorical columns and then populate the missing ones with zeros
-    prediction_df = pd.get_dummies(df)
+    df_with_dummies = pd.get_dummies(df_to_predict)
     for col in categorical_dummy_column_names:  # exception handler for empty columns
-        if col not in prediction_df.columns.values.tolist():
-            prediction_df[col] = 0
+        if col not in df_with_dummies.columns.values.tolist():
+            df_with_dummies[col] = 0
 
-    return model.predict(prediction_df, verbose=2)
+    return model.predict(df_with_dummies, verbose=2)
 
 
 def format_categorical_preds(predictions, original_y, df_to_predict, target_col):
@@ -147,8 +121,8 @@ class AutokerasHandler(BaseMLEngine):
         training_df = pd.read_json(args["training_df"])
         model = load_model(args["folder_path"], custom_objects=ak.CUSTOM_OBJECTS)
 
-        df_to_predict = get_prediction_df(df, training_df)
-        predictions = get_preds_from_model(df_to_predict, model, args["target"], args["data_column_names"])
+        df_to_predict = df.copy()
+        predictions = get_preds_from_model(df_to_predict, model, args["target"], args["training_data_column_count"], args["data_column_names"])
 
         # If we used the classifier we need to pre-process the predictions before returning them
         original_y = training_df[args["target"]]

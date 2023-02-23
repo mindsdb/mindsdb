@@ -8,7 +8,6 @@ from mindsdb_sql import parse_sql
 
 from mindsdb.integrations.handlers.autokeras_handler.autokeras_handler import (
     format_categorical_preds,
-    get_prediction_df,
 )
 from tests.unit.executor_test_base import BaseExecutorTest
 
@@ -21,17 +20,6 @@ def test_format_categorical_preds():
     formatted_df = format_categorical_preds(predictions, original_y, keras_output_df, "target")
     assert formatted_df["target"].tolist() == ["a", "b", "c"]
     assert formatted_df["confidence"].tolist() == [max(row) for row in predictions]
-
-
-def test_get_prediction_df():
-    """Tests helper function to format prediction df"""
-    training_df = pd.DataFrame({"col1": [1, 2, 3], "col2": ["a", "b", "c"]})
-    mindsdb_df = training_df.iloc[:1, :]
-    mindsdb_df["__mindsdb_row_id"] = 0
-
-    prediction_df = get_prediction_df(mindsdb_df, training_df)
-    assert "__mindsdb_row_id" not in prediction_df.columns
-    pd.testing.assert_frame_equal(prediction_df, pd.DataFrame({"col1": [1], "col2": ["a"]}))
 
 
 class TestAutokeras(BaseExecutorTest):
@@ -87,7 +75,8 @@ class TestAutokeras(BaseExecutorTest):
             """
            SELECT *
            FROM proj.modelx
-           WHERE a=1;
+           WHERE a=1
+           AND b=25;
         """
         )
         avg_c = pd.to_numeric(ret.c).mean()
@@ -126,8 +115,7 @@ class TestAutokeras(BaseExecutorTest):
             """
            SELECT c
            FROM proj.modelx
-           WHERE a=1
-           AND d="odd"
+           WHERE a=1 AND b=25 AND d="odd"
         """
         )
         avg_c = pd.to_numeric(ret.c).mean()
@@ -168,8 +156,7 @@ class TestAutokeras(BaseExecutorTest):
             """
            SELECT c
            FROM proj.modelx
-           WHERE a=1
-           AND d="odd";
+           WHERE a=1 AND b=25 AND d="odd";
         """
         )
         avg_c = pd.to_numeric(ret.c).mean()
@@ -207,14 +194,14 @@ class TestAutokeras(BaseExecutorTest):
             SELECT m.*
             FROM pg.df as t
             JOIN proj.modelx as m
-            WHERE t.b>25
+            where t.b>25
         """
         )
         avg_c = pd.to_numeric(ret.c).mean()
         assert (avg_c > -5) and (avg_c < 5)
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_regression_error_on_predict_query_too_strict(self, mock_handler):
+    def test_regression_error_on_predict_query_missing_cols(self, mock_handler):
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
@@ -240,7 +227,7 @@ class TestAutokeras(BaseExecutorTest):
         self.wait_predictor("proj", "modelx")
 
         try:
-            # run predict
+            # run predict but missing column d in the WHERE clause
             _ = self.run_sql(
                 """
             SELECT c
@@ -284,7 +271,7 @@ class TestAutokeras(BaseExecutorTest):
             """
            SELECT d
            FROM proj.modelx
-           WHERE a=1;
+           WHERE a=1 AND b=25 AND c=10
         """
         )
         assert ret.d[0] in ["even", "odd"]

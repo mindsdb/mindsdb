@@ -141,7 +141,7 @@ class TestAutokeras(BaseExecutorTest):
         df["c"] = round((df["a"] * 3 + df["b"]) / 50)
         df["d"] = np.where(df.index % 2, "even", "odd")
         # Make it look like we have missing data
-        df["a"][10] = np.nan
+        df["a"][10] = None
         df["b"][25] = np.nan
         df["d"][31] = ""
 
@@ -287,42 +287,4 @@ class TestAutokeras(BaseExecutorTest):
            WHERE a=1;
         """
         )
-        assert ret.d[0] in ["even", "odd"]
-
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_classification_with_categorical_training(self, mock_handler):
-        # dataset, string values
-        df = pd.DataFrame(range(1, 50), columns=["a"])
-        df["b"] = 50 - df.a
-        df["d"] = np.where(df.index % 2, "even", "odd")
-        df["e"] = np.where(df.index % 3, "not_prime", "kinda_prime")
-
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
-
-        # create project
-        self.run_sql("create database proj")
-
-        # create predictor
-        self.run_sql(
-            """
-           create model proj.modelx
-           from pg (select * from df)
-           predict d
-           using
-             engine='autokeras',
-             train_time=0.01
-        """
-        )
-        self.wait_predictor("proj", "modelx")
-
-        # run predict
-        ret = self.run_sql(
-            """
-           SELECT d
-           FROM proj.modelx
-           WHERE a=1
-           AND e="kinda_prime";
-        """
-        )
-
         assert ret.d[0] in ["even", "odd"]

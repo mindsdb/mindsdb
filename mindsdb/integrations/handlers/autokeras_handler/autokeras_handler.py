@@ -10,7 +10,8 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from tensorflow.keras.models import load_model
 
 
-# Makes this run on Windows Subsystem for Linux
+# Makes this run on systems where this arg isn't specified, like Windows Subsystem for Linux
+# Doesn't break things on Mac
 os.environ["XLA_FLAGS"] = "--xla_gpu_cuda_data_dir=/usr/lib/cuda"
 
 trainer_dict = {"regression": ak.StructuredDataRegressor, "classification": ak.StructuredDataClassifier}

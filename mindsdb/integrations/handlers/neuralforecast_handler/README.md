@@ -2,9 +2,10 @@
 NeuralForecast is a ML package for time series forecasting.
 We have integrated the NHITS and AutoNHITS models from this package.
 These are flexible, deep-learning models for time-series forecasting, based on https://arxiv.org/abs/2201.12886
+Neuralforecast documentation is available at https://nixtla.github.io/neuralforecast/
 
 Call this handler by
-`USING ENGINE="neuralforecast"` - you can see a full example in https://github.com/mindsdb/mindsdb/pull/4615
+`USING ENGINE='neuralforecast'` - you can see a full example in https://github.com/mindsdb/mindsdb/pull/4615
 
 # Why is this integration useful? What does the ideal predictive use case for this integration look like? When would you definitely not use this integration?
 Neuralforecast uses fast and accurate deep learning methods.
@@ -41,7 +42,7 @@ Not implemented yet.
 # Are there any other noteworthy aspects to this handler?
 The default configuration will use AutoNHITs, which automatically searches for the best network architecture and hyperparameters.
 However, this can take a long time.
-If users specify a very low training time, the model will switch to NHITS with sensible default parameters instead of searching with AutoNHITS.
+If users specify a very low training time (below 0.1), the model will switch to NHITS with sensible default parameters instead of searching with AutoNHITS.
 While this is much faster, it is less accurate.
 
 # Any directions for future work in subsequent versions of the handler?

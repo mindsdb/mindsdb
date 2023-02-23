@@ -41,6 +41,7 @@ def check_timetable(config):
 
     db.session.remove()
 
+
 def execute_sync(record, config):
     logger.info(f'Job execute: {record.name}({record.id})')
 

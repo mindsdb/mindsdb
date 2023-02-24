@@ -32,6 +32,7 @@ Example:
 ckan.action.datastore_search_sql(sql='SELECT * FROM "resource_id"')
 ```
 ## Usage
+In order to make use of this handler and connect to a Ckan server in MindsDB, the following syntax can be used:
 ```sql
 CREATE DATABASE ckan_datasource          --- display name for the database
 WITH ENGINE = 'ckan',                    --- name of the MindsDB handler

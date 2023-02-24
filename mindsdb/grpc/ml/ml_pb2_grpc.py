@@ -15,89 +15,25 @@ class MLServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.GetTables = channel.unary_unary(
-                '/MLService/GetTables',
-                request_serializer=ml__pb2.HandlerContextML.SerializeToString,
-                response_deserializer=common__pb2.Response.FromString,
-                )
-        self.GetColumns = channel.unary_unary(
-                '/MLService/GetColumns',
-                request_serializer=ml__pb2.ColumnsContextML.SerializeToString,
-                response_deserializer=common__pb2.Response.FromString,
-                )
-        self.NativeQuery = channel.unary_unary(
-                '/MLService/NativeQuery',
-                request_serializer=ml__pb2.NativeQueryContextML.SerializeToString,
-                response_deserializer=common__pb2.Response.FromString,
-                )
-        self.BinaryQuery = channel.unary_unary(
-                '/MLService/BinaryQuery',
-                request_serializer=ml__pb2.BinaryQueryContextML.SerializeToString,
-                response_deserializer=common__pb2.Response.FromString,
-                )
         self.Predict = channel.unary_unary(
                 '/MLService/Predict',
-                request_serializer=ml__pb2.PredictContextML.SerializeToString,
+                request_serializer=ml__pb2.PredictCall.SerializeToString,
                 response_deserializer=common__pb2.Response.FromString,
                 )
-        self.Learn = channel.unary_unary(
-                '/MLService/Learn',
-                request_serializer=ml__pb2.LearnContextML.SerializeToString,
+        self.Create = channel.unary_unary(
+                '/MLService/Create',
+                request_serializer=ml__pb2.CreateCall.SerializeToString,
                 response_deserializer=common__pb2.StatusResponse.FromString,
                 )
         self.Update = channel.unary_unary(
                 '/MLService/Update',
-                request_serializer=ml__pb2.UpdateContextML.SerializeToString,
+                request_serializer=ml__pb2.UpdateCall.SerializeToString,
                 response_deserializer=common__pb2.StatusResponse.FromString,
                 )
 
 
 class MLServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
-
-    def GetTables(self, request, context):
-        """A simple RPC.
-
-        Performs 'get_tables' request and returns the result
-
-        wrapped into Response object
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetColumns(self, request, context):
-        """A simple RPC.
-
-        Performs 'get_columns' request and returns the result
-
-        wrapped into Response object
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def NativeQuery(self, request, context):
-        """A simple RPC.
-
-        Execute native query (string) and returns the result
-
-        wrapped into Response object
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def BinaryQuery(self, request, context):
-        """A simple RPC.
-
-        Execute query (object) and returns the result
-
-        wrapped into Response object
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
 
     def Predict(self, request, context):
         """A simple RPC.
@@ -110,7 +46,7 @@ class MLServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def Learn(self, request, context):
+    def Create(self, request, context):
         """A simple RPC.
 
         Performs 'learn' request and returns the result
@@ -135,39 +71,19 @@ class MLServiceServicer(object):
 
 def add_MLServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'GetTables': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetTables,
-                    request_deserializer=ml__pb2.HandlerContextML.FromString,
-                    response_serializer=common__pb2.Response.SerializeToString,
-            ),
-            'GetColumns': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetColumns,
-                    request_deserializer=ml__pb2.ColumnsContextML.FromString,
-                    response_serializer=common__pb2.Response.SerializeToString,
-            ),
-            'NativeQuery': grpc.unary_unary_rpc_method_handler(
-                    servicer.NativeQuery,
-                    request_deserializer=ml__pb2.NativeQueryContextML.FromString,
-                    response_serializer=common__pb2.Response.SerializeToString,
-            ),
-            'BinaryQuery': grpc.unary_unary_rpc_method_handler(
-                    servicer.BinaryQuery,
-                    request_deserializer=ml__pb2.BinaryQueryContextML.FromString,
-                    response_serializer=common__pb2.Response.SerializeToString,
-            ),
             'Predict': grpc.unary_unary_rpc_method_handler(
                     servicer.Predict,
-                    request_deserializer=ml__pb2.PredictContextML.FromString,
+                    request_deserializer=ml__pb2.PredictCall.FromString,
                     response_serializer=common__pb2.Response.SerializeToString,
             ),
-            'Learn': grpc.unary_unary_rpc_method_handler(
-                    servicer.Learn,
-                    request_deserializer=ml__pb2.LearnContextML.FromString,
+            'Create': grpc.unary_unary_rpc_method_handler(
+                    servicer.Create,
+                    request_deserializer=ml__pb2.CreateCall.FromString,
                     response_serializer=common__pb2.StatusResponse.SerializeToString,
             ),
             'Update': grpc.unary_unary_rpc_method_handler(
                     servicer.Update,
-                    request_deserializer=ml__pb2.UpdateContextML.FromString,
+                    request_deserializer=ml__pb2.UpdateCall.FromString,
                     response_serializer=common__pb2.StatusResponse.SerializeToString,
             ),
     }
@@ -181,74 +97,6 @@ class MLService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def GetTables(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/MLService/GetTables',
-            ml__pb2.HandlerContextML.SerializeToString,
-            common__pb2.Response.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def GetColumns(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/MLService/GetColumns',
-            ml__pb2.ColumnsContextML.SerializeToString,
-            common__pb2.Response.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def NativeQuery(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/MLService/NativeQuery',
-            ml__pb2.NativeQueryContextML.SerializeToString,
-            common__pb2.Response.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def BinaryQuery(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/MLService/BinaryQuery',
-            ml__pb2.BinaryQueryContextML.SerializeToString,
-            common__pb2.Response.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
     def Predict(request,
             target,
             options=(),
@@ -260,13 +108,13 @@ class MLService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/MLService/Predict',
-            ml__pb2.PredictContextML.SerializeToString,
+            ml__pb2.PredictCall.SerializeToString,
             common__pb2.Response.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def Learn(request,
+    def Create(request,
             target,
             options=(),
             channel_credentials=None,
@@ -276,8 +124,8 @@ class MLService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/MLService/Learn',
-            ml__pb2.LearnContextML.SerializeToString,
+        return grpc.experimental.unary_unary(request, target, '/MLService/Create',
+            ml__pb2.CreateCall.SerializeToString,
             common__pb2.StatusResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
@@ -294,7 +142,7 @@ class MLService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/MLService/Update',
-            ml__pb2.UpdateContextML.SerializeToString,
+            ml__pb2.UpdateCall.SerializeToString,
             common__pb2.StatusResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

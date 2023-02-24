@@ -50,6 +50,8 @@ from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.model.functions import get_model_records
 
+from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
+
 from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
 import torch.multiprocessing as mp
@@ -57,7 +59,7 @@ mp.get_context('spawn')
 
 
 @mark_process(name='learn')
-def learn_process(class_path, context_dump, integration_id,
+def learn_process(class_path, engine, context_dump, integration_id,
                   predictor_id, data_integration_ref, fetch_data_query,
                   project_name, problem_definition, set_active,
                   base_predictor_id=None):
@@ -109,6 +111,7 @@ def learn_process(class_path, context_dump, integration_id,
         module_name, class_name = class_path
         module = importlib.import_module(module_name)
         HandlerClass = getattr(module, class_name)
+        HandlerClass = MLClientFactory(handler_class=HandlerClass, engine=engine)
 
         handlerStorage = HandlerStorage(integration_id)
         modelStorage = ModelStorage(predictor_id)
@@ -167,6 +170,8 @@ class BaseMLEngineExec:
         """  # noqa
         # TODO move this class to model controller
 
+        print(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!BaseMLEngineExec.__init__: calling with - {kwargs}")
+
         self.name = name
         self.config = Config()
         self.handler_controller = kwargs.get('handler_controller')
@@ -175,6 +180,8 @@ class BaseMLEngineExec:
         self.storage_factory = kwargs.get('storage_factory')
         self.integration_id = kwargs.get('integration_id')
         self.execution_method = kwargs.get('execution_method')
+        self.engine = kwargs.get("integration_engine")
+
 
         self.model_controller = ModelController()
 
@@ -185,7 +192,8 @@ class BaseMLEngineExec:
 
         self.is_connected = True
 
-        self.handler_class = kwargs['handler_class']
+        self.handler_class = MLClientFactory(handler_class=kwargs['handler_class'], engine=self.engine)
+        # self.handler_class = kwargs['handler_class']
 
     def _get_ml_handler(self, predictor_id=None):
         # returns instance or wrapper over it
@@ -335,6 +343,7 @@ class BaseMLEngineExec:
         p = HandlerProcess(
             learn_process,
             class_path,
+            self.engine,
             ctx.dump(),
             self.integration_id,
             predictor_record.id,
@@ -374,6 +383,7 @@ class BaseMLEngineExec:
             'predict_params': {} if params is None else params
         }
         # FIXME
+        # if self.handler_class.__name__ == 'LightwoodHandler':
         if self.handler_class.__name__ == 'LightwoodHandler':
             args['code'] = predictor_record.code
             args['target'] = predictor_record.to_predict[0]
@@ -450,6 +460,7 @@ class BaseMLEngineExec:
         p = HandlerProcess(
             learn_process,
             class_path,
+            self.engine,
             ctx.dump(),
             self.integration_id,
             predictor_record.id,

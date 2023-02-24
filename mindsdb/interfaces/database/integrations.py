@@ -317,9 +317,9 @@ class IntegrationController:
                 sync=True
             )
         from mindsdb.integrations.libs.base import BaseMLEngine
-        # from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
+        from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
         # from mindsdb.integrations.handlers_client.ml_client import MLClient
-        from mindsdb.integrations.handlers_client.ml_client_factory import MLClient
+        # from mindsdb.integrations.handlers_client.ml_client_factory import MLClient
 
         HandlerClass = self.handler_modules[integration_engine].Handler
 
@@ -328,7 +328,8 @@ class IntegrationController:
             handler_ars['execution_method'] = getattr(self.handler_modules[integration_engine], 'execution_method', None)
             handler_ars['integration_engine'] = integration_engine
             logger.info("%s.get_handler: create a ML client, params - %s", self.__class__.__name__, handler_ars)
-            handler = MLClient(**handler_ars)
+            handler = BaseMLEngineExec(**handler_ars)
+            # handler = MLClient(**handler_ars)
         else:
 
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)

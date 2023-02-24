@@ -170,8 +170,6 @@ class BaseMLEngineExec:
         """  # noqa
         # TODO move this class to model controller
 
-        print(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!BaseMLEngineExec.__init__: calling with - {kwargs}")
-
         self.name = name
         self.config = Config()
         self.handler_controller = kwargs.get('handler_controller')
@@ -193,7 +191,6 @@ class BaseMLEngineExec:
         self.is_connected = True
 
         self.handler_class = MLClientFactory(handler_class=kwargs['handler_class'], engine=self.engine)
-        # self.handler_class = kwargs['handler_class']
 
     def _get_ml_handler(self, predictor_id=None):
         # returns instance or wrapper over it

@@ -138,14 +138,15 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
             target = request.target
             df = pickle.loads(request.df)
             logger.info(
-                "%s.Create: target - %s args - %s",
+                "%s.Create: target - %s df - %s, args - %s",
                 self.__class__.__name__,
                 target,
+                df,
                 args,
             )
 
             handler = self._get_handler(request.context)
-            handler.create(target, df, args)
+            handler.create(target, df=df, args=args)
 
             result = common_pb2.StatusResponse(success=True, error_message="")
 

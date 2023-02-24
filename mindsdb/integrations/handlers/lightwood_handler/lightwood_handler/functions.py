@@ -48,6 +48,9 @@ def run_generate(df: DataFrame, predictor_id: int, args: dict = None):
     if 'dtype_dict' in json_ai_override:
         args['dtype_dict'] = json_ai_override.pop('dtype_dict')
 
+    if 'problem_definition' in json_ai_override:
+        args = {**args, **json_ai_override['problem_definition']}
+
     if 'timeseries_settings' in args:
         for tss_key in [f.name for f in dataclasses.fields(lightwood.api.TimeseriesSettings)]:
             k = f'timeseries_settings.{tss_key}'

@@ -13,6 +13,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.project_datanode import Pro
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, TABLES_ROW_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.jobs.jobs_controller import JobsController
 
 
 class InformationSchemaDataNode(DataNode):
@@ -32,11 +33,13 @@ class InformationSchemaDataNode(DataNode):
         'CHARACTER_SETS': ['CHARACTER_SET_NAME', 'DEFAULT_COLLATE_NAME', 'DESCRIPTION', 'MAXLEN'],
         'COLLATIONS': ['COLLATION_NAME', 'CHARACTER_SET_NAME', 'ID', 'IS_DEFAULT', 'IS_COMPILED', 'SORTLEN', 'PAD_ATTRIBUTE'],
         # MindsDB specific:
-        'MODELS': ['NAME', 'ENGINE', 'PROJECT', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
-        'MODELS_VERSIONS': ['NAME', 'ENGINE', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG'],
+        'MODELS': ['NAME', 'ENGINE', 'PROJECT', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG', 'CREATED_AT'],
+        'MODELS_VERSIONS': ['NAME', 'ENGINE', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG', 'CREATED_AT'],
         'DATABASES': ['NAME', 'TYPE', 'ENGINE'],
         'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
-        'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR']
+        'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR'],
+        'JOBS': ['NAME', 'PROJECT', 'START_AT', 'END_AT', 'NEXT_RUN_AT', 'SCHEDULE_STR', 'QUERY'],
+        'JOBS_HISTORY': ['NAME', 'PROJECT', 'START_AT', 'END_AT', 'ERROR', 'QUERY']
     }
 
     def __init__(self, session):
@@ -66,7 +69,9 @@ class InformationSchemaDataNode(DataNode):
             'MODELS_VERSIONS': self._get_models_versions,
             'DATABASES': self._get_databases,
             'ML_ENGINES': self._get_ml_engines,
-            'HANDLERS': self._get_handlers
+            'HANDLERS': self._get_handlers,
+            'JOBS': self._get_jobs,
+            'JOBS_HISTORY': self._get_jobs_history,
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -249,26 +254,63 @@ class InformationSchemaDataNode(DataNode):
         df = pd.DataFrame(data, columns=columns)
         return df
 
-    def _get_models(self, query: ASTNode = None):
-        columns = self.information_schema['MODELS']
-        data = []
-        for project_name in self.get_projects_names():
-            project = self.database_controller.get_project(name=project_name)
-            project_tables = project.get_tables()
-            for table_name, table_meta in project_tables.items():
-                if table_meta['type'] != 'model':
-                    continue
-                data.append([
-                    table_name, table_meta['engine'], project_name, table_meta['version'], table_meta['status'], table_meta['accuracy'], table_meta['predict'],
-                    table_meta['update_status'], table_meta['mindsdb_version'], table_meta['error'],
-                    table_meta['select_data_query'], table_meta['training_options'], table_meta['label']
-                ])
-            # TODO optimise here
-            # if target_table is not None and target_table != project_name:
-            #     continue
+    def _get_jobs(self, query: ASTNode = None):
+        jobs_controller = JobsController()
 
-        df = pd.DataFrame(data, columns=columns)
-        return df
+        project_name = None
+        if (
+                isinstance(query, Select)
+                and type(query.where) == BinaryOperation
+                and query.where.op == '='
+                and query.where.args[0].parts == ['project']
+                and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        data = jobs_controller.get_list(project_name)
+
+        columns = self.information_schema['JOBS']
+        columns_lower = [col.lower() for col in columns]
+
+        # to list of lists
+        data = [
+            [
+                row[k]
+                for k in columns_lower
+            ]
+            for row in data
+        ]
+
+        return pd.DataFrame(data, columns=columns)
+
+    def _get_jobs_history(self, query: ASTNode = None):
+        jobs_controller = JobsController()
+
+        project_name = None
+        if (
+                isinstance(query, Select)
+                and type(query.where) == BinaryOperation
+                and query.where.op == '='
+                and query.where.args[0].parts == ['project']
+                and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        data = jobs_controller.get_history(project_name)
+
+        columns = self.information_schema['JOBS_HISTORY']
+        columns_lower = [col.lower() for col in columns]
+
+        # to list of lists
+        data = [
+            [
+                row[k]
+                for k in columns_lower
+            ]
+            for row in data
+        ]
+
+        return pd.DataFrame(data, columns=columns)
 
     def _get_databases(self, query: ASTNode = None):
         columns = self.information_schema['DATABASES']
@@ -278,6 +320,30 @@ class InformationSchemaDataNode(DataNode):
             [x['name'], x['type'], x['engine']]
             for x in project
         ]
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
+    def _get_models(self, query: ASTNode = None):
+        columns = self.information_schema['MODELS']
+        data = []
+        for project_name in self.get_projects_names():
+            project = self.database_controller.get_project(name=project_name)
+            project_models = project.get_models()
+            for row in project_models:
+                table_name = row['name']
+                table_meta = row['metadata']
+                if table_meta['active'] is not True:
+                    continue
+                data.append([
+                    table_name, table_meta['engine'], project_name, table_meta['version'], table_meta['status'],
+                    table_meta['accuracy'], table_meta['predict'], table_meta['update_status'],
+                    table_meta['mindsdb_version'], table_meta['error'], table_meta['select_data_query'],
+                    table_meta['training_options'], table_meta['label'], row['created_at']
+                ])
+            # TODO optimise here
+            # if target_table is not None and target_table != project_name:
+            #     continue
 
         df = pd.DataFrame(data, columns=columns)
         return df
@@ -295,7 +361,7 @@ class InformationSchemaDataNode(DataNode):
                     table_name, table_meta['engine'], project_name, table_meta['active'], table_meta['version'], table_meta['status'],
                     table_meta['accuracy'], table_meta['predict'], table_meta['update_status'],
                     table_meta['mindsdb_version'], table_meta['error'], table_meta['select_data_query'],
-                    table_meta['training_options'], table_meta['label']
+                    table_meta['training_options'], table_meta['label'], row['created_at']
                 ])
 
         df = pd.DataFrame(data, columns=columns)

@@ -156,8 +156,7 @@
                     "sql/create/predictor",
                     "sql/create/table",
                     "sql/create/view",
-                    "sql/create/ml-engine",
-                    "sql/create/job"
+                    "sql/create/ml-engine"
                   ]
                 },
                 "sql/api/update",
@@ -175,7 +174,8 @@
                     "sql/api/join-on"
                   ]
                 },
-                "sql/api/use"
+                "sql/api/use",
+                "sql/api/adjust"
               ]
             }
           ]
@@ -289,8 +289,7 @@
         {
           "group": "Data Integrations",
           "pages": [
-            "data-integrations/all-data-integrations",
-            "data-integrations/couchbase"
+            "data-integrations/all-data-integrations"
           ]
         },
         {
@@ -366,6 +365,7 @@
           "group": "Contributing Guide",
           "pages": [
             "contribute",
+            "contribute/issue-labels",
             "contribute/install",
             "contribute/issues",
             "contribute/data-integration-page",

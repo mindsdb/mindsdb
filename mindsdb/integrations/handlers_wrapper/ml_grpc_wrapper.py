@@ -60,6 +60,7 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
         return FileStorageFactory(resource_group=RESOURCE_GROUP.PREDICTOR, sync=True)
 
     def _get_handler(self, handler_context: ml_pb2.HandlerContextML):
+        ctx.load(json.loads(handler_context.context))
         params = json.loads(handler_context.handler_params)
         logger.info(
             "%s._get_handler: create handler. params - %s",
@@ -101,6 +102,7 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
 
             handler = self._get_handler(request.context)
             predictions = handler.predict(df, args)
+            handler.close()
 
             logger.info(
                 "%s.Predict: got predictions - %s(type - %s)",
@@ -143,7 +145,7 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
             )
 
             handler = self._get_handler(request.context)
-            handler.learn(target, df, args)
+            handler.create(target, df, args)
 
             result = common_pb2.StatusResponse(success=True, error_message="")
 

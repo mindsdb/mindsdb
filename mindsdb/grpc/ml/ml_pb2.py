@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 import mindsdb.grpc.ml.common_pb2 as common__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x08ml.proto\x1a\x0c\x63ommon.proto\"X\n\x10HandlerContextML\x12\x16\n\x0eintegration_id\x18\x01 \x01(\x05\x12\x14\n\x0cpredictor_id\x18\x02 \x01(\x05\x12\x16\n\x0ehandler_params\x18\x03 \x01(\t\"K\n\x0bPredictCall\x12\"\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x11.HandlerContextML\x12\n\n\x02\x64\x66\x18\x02 \x01(\x0c\x12\x0c\n\x04\x61rgs\x18\x03 \x01(\t\"Z\n\nCreateCall\x12\"\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x11.HandlerContextML\x12\x0e\n\x06target\x18\x02 \x01(\t\x12\n\n\x02\x64\x66\x18\x03 \x01(\x0c\x12\x0c\n\x04\x61rgs\x18\x04 \x01(\t\"J\n\nUpdateCall\x12\"\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x11.HandlerContextML\x12\n\n\x02\x64\x66\x18\x03 \x01(\x0c\x12\x0c\n\x04\x61rgs\x18\x04 \x01(\t2\x85\x01\n\tMLService\x12$\n\x07Predict\x12\x0c.PredictCall\x1a\t.Response\"\x00\x12(\n\x06\x43reate\x12\x0b.CreateCall\x1a\x0f.StatusResponse\"\x00\x12(\n\x06Update\x12\x0b.UpdateCall\x1a\x0f.StatusResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x08ml.proto\x1a\x0c\x63ommon.proto\"i\n\x10HandlerContextML\x12\x16\n\x0eintegration_id\x18\x01 \x01(\x05\x12\x14\n\x0cpredictor_id\x18\x02 \x01(\x05\x12\x0f\n\x07\x63ontext\x18\x03 \x01(\t\x12\x16\n\x0ehandler_params\x18\x04 \x01(\t\"K\n\x0bPredictCall\x12\"\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x11.HandlerContextML\x12\n\n\x02\x64\x66\x18\x02 \x01(\x0c\x12\x0c\n\x04\x61rgs\x18\x03 \x01(\t\"Z\n\nCreateCall\x12\"\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x11.HandlerContextML\x12\x0e\n\x06target\x18\x02 \x01(\t\x12\n\n\x02\x64\x66\x18\x03 \x01(\x0c\x12\x0c\n\x04\x61rgs\x18\x04 \x01(\t\"J\n\nUpdateCall\x12\"\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x11.HandlerContextML\x12\n\n\x02\x64\x66\x18\x03 \x01(\x0c\x12\x0c\n\x04\x61rgs\x18\x04 \x01(\t2\x85\x01\n\tMLService\x12$\n\x07Predict\x12\x0c.PredictCall\x1a\t.Response\"\x00\x12(\n\x06\x43reate\x12\x0b.CreateCall\x1a\x0f.StatusResponse\"\x00\x12(\n\x06Update\x12\x0b.UpdateCall\x1a\x0f.StatusResponse\"\x00\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'ml_pb2', globals())
@@ -22,13 +22,13 @@ if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
   _HANDLERCONTEXTML._serialized_start=26
-  _HANDLERCONTEXTML._serialized_end=114
-  _PREDICTCALL._serialized_start=116
-  _PREDICTCALL._serialized_end=191
-  _CREATECALL._serialized_start=193
-  _CREATECALL._serialized_end=283
-  _UPDATECALL._serialized_start=285
-  _UPDATECALL._serialized_end=359
-  _MLSERVICE._serialized_start=362
-  _MLSERVICE._serialized_end=495
+  _HANDLERCONTEXTML._serialized_end=131
+  _PREDICTCALL._serialized_start=133
+  _PREDICTCALL._serialized_end=208
+  _CREATECALL._serialized_start=210
+  _CREATECALL._serialized_end=300
+  _UPDATECALL._serialized_start=302
+  _UPDATECALL._serialized_end=376
+  _MLSERVICE._serialized_start=379
+  _MLSERVICE._serialized_end=512
 # @@protoc_insertion_point(module_scope)

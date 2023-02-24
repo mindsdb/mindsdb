@@ -18,14 +18,16 @@ class CreateCall(_message.Message):
     def __init__(self, context: _Optional[_Union[HandlerContextML, _Mapping]] = ..., target: _Optional[str] = ..., df: _Optional[bytes] = ..., args: _Optional[str] = ...) -> None: ...
 
 class HandlerContextML(_message.Message):
-    __slots__ = ["handler_params", "integration_id", "predictor_id"]
+    __slots__ = ["context", "handler_params", "integration_id", "predictor_id"]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
     HANDLER_PARAMS_FIELD_NUMBER: _ClassVar[int]
     INTEGRATION_ID_FIELD_NUMBER: _ClassVar[int]
     PREDICTOR_ID_FIELD_NUMBER: _ClassVar[int]
+    context: str
     handler_params: str
     integration_id: int
     predictor_id: int
-    def __init__(self, integration_id: _Optional[int] = ..., predictor_id: _Optional[int] = ..., handler_params: _Optional[str] = ...) -> None: ...
+    def __init__(self, integration_id: _Optional[int] = ..., predictor_id: _Optional[int] = ..., context: _Optional[str] = ..., handler_params: _Optional[str] = ...) -> None: ...
 
 class PredictCall(_message.Message):
     __slots__ = ["args", "context", "df"]

@@ -13,7 +13,7 @@ from mindsdb.integrations.libs.response import (
 
 # from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.handler_helpers import action_logger
-# from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
 
 
@@ -50,6 +50,7 @@ class MLClientGRPC:
         return ml_pb2.HandlerContextML(
             predictor_id=self.predictor_id,
             integration_id=self.integration_id,
+            context=json.dumps(ctx.dump()),
             handler_params=json.dumps(self.handler_params),
         )
 
@@ -114,3 +115,7 @@ class MLClientGRPC:
         if not resp.success:
             logger.error("%s.update: returned error - %s", self.__class__.__name__, resp.error_message)
             raise Exception(resp.error_message)
+
+    @action_logger(logger)
+    def close(self):
+        pass

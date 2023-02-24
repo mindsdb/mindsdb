@@ -9,7 +9,8 @@ import "common.proto";
 message HandlerContextML {
     int32 integration_id = 1;
     int32 predictor_id = 2;
-    string handler_params = 3;
+    string context = 3;
+    string handler_params = 4;
 }
 
 message PredictCall {

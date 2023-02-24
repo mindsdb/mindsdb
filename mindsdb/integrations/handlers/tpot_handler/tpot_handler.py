@@ -13,9 +13,6 @@ class TPOTHandler(BaseMLEngine):
         if args is None:
             args = {}
         
-        
-        self.target=target
-
         target_dtype=infer_types(df,0).to_dict()["dtypes"][self.target]
 
 

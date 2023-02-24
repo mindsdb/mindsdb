@@ -156,7 +156,8 @@
                     "sql/create/predictor",
                     "sql/create/table",
                     "sql/create/view",
-                    "sql/create/ml-engine"
+                    "sql/create/ml-engine",
+                    "sql/create/job"
                   ]
                 },
                 "sql/api/update",
@@ -288,7 +289,8 @@
         {
           "group": "Data Integrations",
           "pages": [
-            "data-integrations/all-data-integrations"
+            "data-integrations/all-data-integrations",
+            "data-integrations/couchbase"
           ]
         },
         {

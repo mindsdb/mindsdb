@@ -11,7 +11,9 @@ DEFAULT_MODEL_NAME = "AutoARIMA"
 
 def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
     try:  # infer frequency from time column
-        inferred_freq = pd.infer_freq(df[time_column])
+        date_series = pd.to_datetime(df[time_column]).unique()
+        date_series.sort()
+        inferred_freq = pd.infer_freq(date_series)
     except TypeError:
         inferred_freq = default
     return inferred_freq if inferred_freq is not None else default
@@ -42,7 +44,7 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["order_by"] = time_settings["order_by"]
         model_args["group_by"] = time_settings["group_by"]
         model_args["frequency"] =  infer_frequency(df, time_settings["order_by"])
- 
+
         training_df = self._transform_to_statsforecast_df(df, model_args)
         sf = StatsForecast(models=[DEFAULT_MODEL], freq=model_args["frequency"], df=training_df)
         fitted_models = sf.fit().fitted_

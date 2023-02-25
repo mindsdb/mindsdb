@@ -136,12 +136,16 @@ class Project:
                 'select_data_query': predictor_record.fetch_data_query,
                 'training_options': predictor_record.learn_args,
                 'deletable': True,
-                'label': predictor_record.label,
+                'label': predictor_record.label
             }
             if predictor_data is not None and predictor_data.get('accuracies', None) is not None:
                 if len(predictor_data['accuracies']) > 0:
                     predictor_meta['accuracy'] = float(np.mean(list(predictor_data['accuracies'].values())))
-            data.append({'name': predictor_record.name, 'metadata': predictor_meta})
+            data.append({
+                'name': predictor_record.name,
+                'metadata': predictor_meta,
+                'created_at': predictor_record.created_at
+            })
 
         return data
 

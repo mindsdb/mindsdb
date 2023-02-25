@@ -9,7 +9,7 @@ import multipart
 import requests
 
 from mindsdb.utilities import log
-from mindsdb.api.http.utils import http_error
+from mindsdb.api.http.utils import http_error, safe_extract
 from mindsdb.api.http.namespaces.configs.files import ns_conf
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
@@ -134,7 +134,7 @@ class File(Resource):
                     f.extractall(temp_dir_path)
             elif lp.endswith('.tar.gz'):
                 with tarfile.open(file_path) as f:
-                    f.extractall(temp_dir_path)
+                    safe_extract(f, temp_dir_path)
             os.remove(file_path)
             files = os.listdir(temp_dir_path)
             if len(files) != 1:

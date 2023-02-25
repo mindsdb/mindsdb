@@ -33,11 +33,14 @@ class ModelStorage:
             rec.data = status_info
         db.session.commit()
 
-    def training_state_set(self, current_state_num, total_states, state_name):
+    def training_state_set(self, current_state_num=None, total_states=None, state_name=None):
         rec = db.Predictor.query.get(self.predictor_id)
-        rec.training_phase_current = current_state_num
-        rec.training_phase_total = total_states
-        rec.training_phase_name = state_name
+        if current_state_num is not None:
+            rec.training_phase_current = current_state_num
+        if total_states is not None:
+            rec.training_phase_total = total_states
+        if state_name is not None:
+            rec.training_phase_name = state_name
         db.session.commit()
 
     def training_state_get(self):

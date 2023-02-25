@@ -47,7 +47,6 @@ class ModelStorage:
         rec = db.Predictor.query.get(self.predictor_id)
         return [rec.training_phase_current, rec.training_phase_total, rec.training_phase_name]
 
-
     def columns_get(self):
         rec = db.Predictor.query.get(self.predictor_id)
         return rec.dtype_dict

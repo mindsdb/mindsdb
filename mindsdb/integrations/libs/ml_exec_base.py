@@ -180,9 +180,7 @@ class BaseMLEngineExec:
         self.execution_method = kwargs.get('execution_method')
         self.engine = kwargs.get("integration_engine")
 
-
         self.model_controller = ModelController()
-
         self.database_controller = DatabaseController()
 
         self.parser = parse_sql

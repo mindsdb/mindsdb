@@ -7,7 +7,6 @@ import grpc
 from mindsdb.grpc.ml import ml_pb2_grpc
 from mindsdb.grpc.ml import ml_pb2, common_pb2
 
-from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.interfaces.storage.fs import (
     FileStorage,
     FileStorageFactory,

@@ -7,123 +7,50 @@ import "common.proto";
 // Server can't create a Hanlder
 // instance without it
 message HandlerContextML {
-    string context = 1;
-    string handler_params = 2;
+    int32 integration_id = 1;
+    int32 predictor_id = 2;
+    string context = 3;
+    string handler_params = 4;
 }
 
-// Data of 'native_query' request
-message NativeQueryContextML {
+message PredictCall {
     HandlerContextML context = 1;
-    string query = 2;
+    bytes df = 2;
+    string args = 3;
 }
 
-// Data of 'query' request
-message BinaryQueryContextML {
+message CreateCall {
     HandlerContextML context = 1;
-    bytes query = 2;
+    string target = 2;
+    bytes df = 3;
+    string args = 4;
 }
 
-// Data of 'get_columns' request
-message ColumnsContextML {
+message UpdateCall {
     HandlerContextML context = 1;
-    string table = 2;
-}
-
-message LearnContextML {
-    HandlerContextML context = 1;
-    LearnParams learn_params = 2;
-}
-
-message LearnParams {
-    string model_name = 1;
-    string project_name = 2;
-    string data_integration_ref = 3;
-    string fetch_data_query = 4;
-    string problem_definition = 5;
-    bool join_learn_process = 6;
-    string label = 7;
-    int32 version = 8;
-    bool is_retrain = 9;
-    bool set_active = 10;
-}
-
-message PredictParams {
-    string model_name = 1;
-    bytes data = 2;
-    string pred_format = 3;
-    string project_name = 4;
-    int32 version = 5;
-    string params = 6;
-}
-
-message PredictContextML {
-    HandlerContextML context = 1;
-    PredictParams predict_params = 2;
-}
-
-message UpdateParams {
-    string model_name = 1;
-    string project_name = 2;
-    string data_integration_ref = 3;
-    string fetch_data_query = 4;
-    bool join_learn_process = 5;
-    string label = 6;
-    int32 version = 7;
-    bool set_active = 8;
-}
-
-message UpdateContextML {
-    HandlerContextML context = 1;
-    UpdateParams update_params = 2;
+    bytes df = 3;
+    string args = 4;
 }
 
 service MLService {
   // A simple RPC.
   //
-  // Performs 'get_tables' request and returns the result
-  //
-  // wrapped into Response object
-  rpc GetTables(HandlerContextML) returns (Response) {}
-
-  // A simple RPC.
-  //
-  // Performs 'get_columns' request and returns the result
-  //
-  // wrapped into Response object
-  rpc GetColumns(ColumnsContextML) returns (Response) {}
-
-  // A simple RPC.
-  //
-  // Execute native query (string) and returns the result
-  //
-  // wrapped into Response object
-  rpc NativeQuery(NativeQueryContextML) returns (Response) {}
-
-  // A simple RPC.
-  //
-  // Execute query (object) and returns the result
-  //
-  // wrapped into Response object
-  rpc BinaryQuery(BinaryQueryContextML) returns (Response) {}
-
-  // A simple RPC.
-  //
   // Performs 'predict' request and returns the result
   //
   // wrapped into Response object
-  rpc Predict(PredictContextML) returns (Response) {}
+  rpc Predict(PredictCall) returns (Response) {}
 
   // A simple RPC.
   //
   // Performs 'learn' request and returns the result
   //
   // wrapped into Response object
-  rpc Learn(LearnContextML) returns (StatusResponse) {}
+  rpc Create(CreateCall) returns (StatusResponse) {}
 
   // A simple RPC.
   //
   // Performs 'update' request and returns the result
   //
   // wrapped into Response object
-  rpc Update(UpdateContextML) returns (StatusResponse) {}
+  rpc Update(UpdateCall) returns (StatusResponse) {}
 }

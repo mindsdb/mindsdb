@@ -68,7 +68,7 @@
    Machine Learning using SQL 
    <br/>
    <br/>
-  <img width="800" src="./docs/assets/mdb_image.png" alt="MindsDB">	
+  <img width="450" src="https://docs.google.com/drawings/d/e/2PACX-1vQ1KImK0cqvZ_KpPm3SKDZF6peuM-d1lZwOkrZNpT1_PO5UVyveEIyeJGbDZFBF124LmWbHSB2HFQ97/pub?w=691&h=728" alt="MindsDB">	
 
 </h2>
 

@@ -114,6 +114,7 @@ class JobsController:
         # create job record
         record = db.Jobs(
             company_id=ctx.company_id,
+            user_class=ctx.user_class,
             name=name,
             project_id=project.id,
             query_str=query_str,
@@ -281,6 +282,8 @@ class JobsExecutor:
 
         ctx.set_default()
         ctx.company_id = record.company_id
+        if record.user_class is not None:
+            ctx.user_class = record.user_class
 
         if history_id is None:
             history_record = db.JobsHistory(

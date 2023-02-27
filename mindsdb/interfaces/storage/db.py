@@ -229,6 +229,7 @@ class Jobs(Base):
     __tablename__ = 'jobs'
     id = Column(Integer, primary_key=True)
     company_id = Column(Integer)
+    user_class = Column(Integer, nullable=True)
 
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)

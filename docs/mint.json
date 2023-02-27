@@ -291,7 +291,8 @@
           "group": "Data Integrations",
           "pages": [
             "data-integrations/all-data-integrations",
-            "data-integrations/amazon-redshift"
+            "data-integrations/amazon-redshift",
+            "data-integrations/cockroachdb"
           ]
         },
         {

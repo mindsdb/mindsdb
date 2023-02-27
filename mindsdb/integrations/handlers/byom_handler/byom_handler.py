@@ -23,8 +23,9 @@ class BYOMHandler(BaseMLEngine):
     name = 'byom'
 
     def _get_model_proxy(self):
-        code = self.engine_storage.file_get('code')
-        modules_str = self.engine_storage.file_get('modules')
+        con_args = self.engine_storage.get_connection_args()
+        code = self.engine_storage.file_get(con_args['code'])
+        modules_str = self.engine_storage.file_get(con_args['modules'])
 
         return ModelWrapper(
             code=code,

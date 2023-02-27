@@ -640,7 +640,9 @@ class ExecuteCommands:
         return model_record
 
     def _sync_predictor_check(self, phase_name):
-        """ Checks if there is already a predictor retraining or adjusting """
+        """ Checks if there is already a predictor retraining or adjusting
+            Do not allow to run retrain if there is another model in training process in less that 1h
+        """
         is_cloud = self.session.config.get('cloud', False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)

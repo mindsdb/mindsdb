@@ -14,6 +14,7 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
+from mindsdb.api.postgres.start import start as start_postgres
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
@@ -244,7 +245,7 @@ if __name__ == '__main__':
     # @TODO Backwards compatibility for tests, remove later
 
     if args.api is None:
-        api_arr = ['http', 'mysql']
+        api_arr = ['http', 'mysql', 'postgres']
     else:
         api_arr = args.api.split(',')
 
@@ -264,7 +265,8 @@ if __name__ == '__main__':
     start_functions = {
         'http': start_http,
         'mysql': start_mysql,
-        'mongodb': start_mongo
+        'mongodb': start_mongo,
+        'postgres': start_postgres
     }
 
     ctx = mp.get_context('spawn')

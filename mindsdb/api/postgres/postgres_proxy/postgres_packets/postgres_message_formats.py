@@ -1,5 +1,7 @@
 from typing import BinaryIO, Any, Sequence, Dict, Type
+import re
 
+from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import PostgresField
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message import PostgresMessage
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_identifiers import \
@@ -248,6 +250,8 @@ class RowDescriptions(PostgresMessage):
         super().__init__()
 
     def send(self, write_file: BinaryIO):
+        print("writing fields")
+        print("fields", self.fields)
         self.get_packet_builder() \
             .add_int16(len(self.fields)) \
             .add_fields(self.fields) \
@@ -287,10 +291,13 @@ class DataRow(PostgresMessage):
         super().__init__()
 
     def send(self, write_file: BinaryIO):
-        self.get_packet_builder() \
-            .add_int16(self.num_cols) \
-            .add_rows(self.rows) \
-            .write(write_file=write_file)
+        print("length", self.num_cols)
+        print("rows", self.rows)
+        for row in self.rows:
+            self.get_packet_builder() \
+                .add_int16(self.num_cols) \
+                .add_row(row) \
+                .write(write_file=write_file)
 
 
 class Query(PostgresMessage):
@@ -320,6 +327,19 @@ class Query(PostgresMessage):
         self.length = packet_reader.read_int32()
         self.sql = packet_reader.read_bytes(self.length - 4)
         return self
+
+    def get_parsed_sql(self, encoding=None):
+        if not encoding:
+            encoding = 'utf-8'
+        try:
+            sql = self.sql.decode('utf-8')
+        except Exception:
+            raise Exception(f'SQL contains non {encoding} values: {self.sql}')
+        # Remove null bytes from end of sql statement. This is important.
+        sql = re.sub(r'[\s\x00]+$', '', sql)
+        sql = SqlStatementParser.clear_sql(sql)
+        return sql
+
 
 
 class Terminate(PostgresMessage):
@@ -982,4 +1002,3 @@ Identifies the message as a termination.
 
 Int32(4)
 Length of message contents in bytes, including self. '''
-

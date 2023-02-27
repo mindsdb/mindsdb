@@ -129,6 +129,11 @@ class Config():
                     "host": "127.0.0.1",
                     "port": "47336",
                     "database": "mindsdb"
+                },
+                "postgres": {
+                    "host": "127.0.0.1",
+                    "port": "55432",
+                    "database": "mindsdb"
                 }
             },
             "cache": {

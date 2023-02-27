@@ -141,14 +141,10 @@ class PostgresPacketBuilder:
             pack += "i"
             self.pack_args = [self.length] + self.pack_args
         pack += self.pack_string
-        print("WRITING")
-        print(pack)
-        print(self.identifier)
-        print(self.pack_args)
+        print("pack string", self.pack_string)
+        print("identifier", self.identifier)
+        print("pack args", self.pack_args)
         l = struct.pack(pack, self.identifier, *self.pack_args)
-        print("calcsize:", struct.calcsize(pack))
-        print("total:", len(l))
-        print(l)
         write_file.write(l)
 
     def add_char(self, s: bytes):
@@ -208,9 +204,4 @@ class PostgresPacketBuilder:
     def add_row(self, row: Sequence[bytes]):
         for val in row:
             self.add_column_value(val)
-        return self
-
-    def add_rows(self, rows: Sequence[Sequence[bytes]]):
-        for row in rows:
-            self.add_row(row)
         return self

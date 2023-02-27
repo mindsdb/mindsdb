@@ -644,16 +644,17 @@ class ExecuteCommands:
         is_cloud = self.session.config.get('cloud', False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)
-            longest_training = None
-            for p in models:
+            shortest_training = None
+            for model in models:
                 if (
-                        p.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
-                        and p.training_start_at is not None and p.training_stop_at is None
+                        model.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
+                        and model.training_start_at is not None and model.training_stop_at is None
                 ):
-                    training_time = datetime.datetime.now() - p.training_start_at
-                    if longest_training is None or training_time > longest_training:
-                        longest_training = training_time
-            if longest_training is not None and longest_training > datetime.timedelta(hours=1):
+                    training_time = datetime.datetime.now() - model.training_start_at
+                    if shortest_training is None or training_time < shortest_training:
+                        shortest_training = training_time
+
+            if shortest_training is not None and shortest_training < datetime.timedelta(hours=1):
                 raise SqlApiException(
                     f"Can't start {phase_name} process while predictor is in status 'training' or 'generating'"
                 )

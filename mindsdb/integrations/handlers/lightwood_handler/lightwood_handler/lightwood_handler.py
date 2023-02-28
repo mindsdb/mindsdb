@@ -409,6 +409,10 @@ class LightwoodHandler(BaseMLEngine):
 
         return pd.DataFrame([[ai_info_str]], columns=['ensemble'])
 
+    def _get_progress_data(self):
+        progress_info = self.model_storage.training_state_get()
+        return pd.DataFrame([progress_info], columns=["current", "total", "name"])
+
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         if attribute is None:
 
@@ -442,6 +446,9 @@ class LightwoodHandler(BaseMLEngine):
 
             elif attribute == "ensemble":
                 return self._get_ensemble_data()
+
+            elif attribute == "progress":
+                return self._get_progress_data()
 
             else:
                 raise Exception("DESCRIBE '%s' predictor attribute is not supported yet" % attribute)

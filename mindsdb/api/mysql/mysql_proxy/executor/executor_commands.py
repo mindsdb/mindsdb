@@ -534,13 +534,8 @@ class ExecuteCommands:
             self.delete_predictor_query(statement)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Insert:
-            if statement.from_select is None:
-                raise ErNotSupportedYet(
-                    "At this moment only 'insert from select' is supported."
-                )
-            else:
-                SQLQuery(statement, session=self.session, execute=True)
-                return ExecuteAnswer(ANSWER_TYPE.OK)
+            SQLQuery(statement, session=self.session, execute=True)
+            return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
             if statement.from_select is None:
                 if statement.table.parts[-1].lower() == "models_versions":
@@ -603,7 +598,7 @@ class ExecuteCommands:
 
     def answer_describe_predictor(self, statement):
         # describe attr
-        predictor_attrs = ("model", "features", "ensemble")
+        predictor_attrs = ("model", "features", "ensemble", "progress")
         attribute = None
         if statement.value.parts[-1] in predictor_attrs:
             attribute = statement.value.parts.pop(-1)
@@ -640,20 +635,23 @@ class ExecuteCommands:
         return model_record
 
     def _sync_predictor_check(self, phase_name):
-        """ Checks if there is already a predictor retraining or adjusting """
+        """ Checks if there is already a predictor retraining or adjusting
+            Do not allow to run retrain if there is another model in training process in less that 1h
+        """
         is_cloud = self.session.config.get('cloud', False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)
-            longest_training = None
-            for p in models:
+            shortest_training = None
+            for model in models:
                 if (
-                        p.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
-                        and p.training_start_at is not None and p.training_stop_at is None
+                        model.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
+                        and model.training_start_at is not None and model.training_stop_at is None
                 ):
-                    training_time = datetime.datetime.now() - p.training_start_at
-                    if longest_training is None or training_time > longest_training:
-                        longest_training = training_time
-            if longest_training is not None and longest_training > datetime.timedelta(hours=1):
+                    training_time = datetime.datetime.now() - model.training_start_at
+                    if shortest_training is None or training_time < shortest_training:
+                        shortest_training = training_time
+
+            if shortest_training is not None and shortest_training < datetime.timedelta(hours=1):
                 raise SqlApiException(
                     f"Can't start {phase_name} process while predictor is in status 'training' or 'generating'"
                 )

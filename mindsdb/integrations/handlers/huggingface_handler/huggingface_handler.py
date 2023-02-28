@@ -188,7 +188,17 @@ class HuggingFaceHandler(BaseMLEngine):
                                          tokenizer=hf_model_storage_path)
 
         input_list = df[args['input_column']]
-        input_list_str = [str(x) for x in input_list]
+
+        max_tokens = pipeline.tokenizer.model_max_length
+        input_list_str = []
+        errors = []
+        for i, line in enumerate(input_list):
+            if max_tokens is not None:
+                tokens = len(pipeline.tokenizer(line)['input_ids'])
+                if tokens > max_tokens:
+                    errors.append([i, f'Tokens count exceed model limit: {tokens} > {max_tokens}'])
+                    continue
+            input_list_str.append(str(line))
 
         top_k = args.get('top_k', 1000)
 
@@ -213,6 +223,11 @@ class HuggingFaceHandler(BaseMLEngine):
             output_list_tidy = [tidy_output_summarization(args, x) for x in output_list_messy]
         else:
             raise RuntimeError(f'Unknown task: {task}')
+
+        # inject errors info
+        for i, msg in errors:
+            output_list_tidy.insert(i, {'value_error': msg})
+
         pred_df = pd.DataFrame(output_list_tidy)
 
         return pred_df

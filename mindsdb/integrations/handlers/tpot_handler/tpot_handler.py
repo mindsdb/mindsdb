@@ -13,13 +13,13 @@ class TPOTHandler(BaseMLEngine):
         if args is None:
             args = {}
         
-        target_dtype=infer_types(df,0).to_dict()["dtypes"][self.target]
+        target_dtype=infer_types(df,0).to_dict()["dtypes"][target]
 
 
         if target_dtype in ['binary','categorical','tags']:
             model = TPOTClassifier(generations=args.get('generations', 10),
                                        population_size=args.get('population_size', 100),
-                                       verbosity=2,
+                                       verbosity=0,
                                        max_time_mins=args.get('max_time_mins', None),
                                        n_jobs=args.get('n_jobs', -1))
             
@@ -27,22 +27,23 @@ class TPOTHandler(BaseMLEngine):
         elif target_dtype in ['integer','float','quantity'] :
             model = TPOTRegressor(generations=args.get('generations', 10),
                                       population_size=args.get('population_size', 100),
-                                      verbosity=2,
+                                      verbosity=0,
                                       max_time_mins=args.get('max_time_mins', None),
                                       n_jobs=args.get('n_jobs', -1))
-        else:
-            print('Unexpected error Occur')
+        
 
         if df is not None:
-            model.fit(df.drop(columns=[self.target]), df[self.target])
+            model.fit(df.drop(columns=[target]), df[target])
+
         self.model_storage.json_set('args', args)
         self.model_storage.file_set('model', dill.dumps(model.fitted_pipeline_))
         
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
+
         model=dill.loads(self.model_storage.file_get("model"))
-        args=self.model_storage.json_get('args')
-        target=args.get("target","Not Found")
+        target=self.model_storage.json_get('args').get("target")
+        
         results=pd.DataFrame(model.predict(df),columns=[target])
         
         return results

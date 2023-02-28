@@ -534,13 +534,8 @@ class ExecuteCommands:
             self.delete_predictor_query(statement)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Insert:
-            if statement.from_select is None:
-                raise ErNotSupportedYet(
-                    "At this moment only 'insert from select' is supported."
-                )
-            else:
-                SQLQuery(statement, session=self.session, execute=True)
-                return ExecuteAnswer(ANSWER_TYPE.OK)
+            SQLQuery(statement, session=self.session, execute=True)
+            return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
             if statement.from_select is None:
                 if statement.table.parts[-1].lower() == "models_versions":

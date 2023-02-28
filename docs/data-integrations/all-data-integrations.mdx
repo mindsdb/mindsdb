@@ -259,7 +259,7 @@ integrations.
     </Tab>
 </Tabs>
 
-## Crate.io
+## CrateDB
 
 <Tabs>
     <Tab title="Template">
@@ -492,6 +492,31 @@ integrations.
       "port": 8888,
       "path": "/druid/v2/sql/",
       "scheme": "http"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+## DuckDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE duckdb_datasource       --- display name for the database
+    WITH ENGINE = 'duckdb',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "database": " ",                      --- database file name
+      "read_only":                          --- flag used to set the connection to read-only mode
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE duckdb_datasource
+    WITH ENGINE = 'duckdb',
+    PARAMETERS = {
+      "database": "db.duckdb",
+      "read_only": False
     };
     ```
     </Tab>

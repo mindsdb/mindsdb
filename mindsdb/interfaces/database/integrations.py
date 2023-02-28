@@ -14,7 +14,6 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
-# from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
@@ -107,6 +106,12 @@ class IntegrationController:
 
         integration_record = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name).first()
 
+        # if this is ml engine
+        engine_models = get_model_records(ml_handler_name=name, deleted_at=None)
+        active_models = [m.name for m in engine_models if m.deleted_at is None]
+        if len(active_models) > 0:
+            raise Exception(f'Unable to drop ml engine with active models: {active_models}')
+
         # check linked predictors
         models = get_model_records()
         for model in models:
@@ -117,6 +122,11 @@ class IntegrationController:
                 and model.data_integration_ref['id'] == integration_record.id
             ):
                 model.data_integration_ref = None
+
+        # unlink deleted models
+        for model in engine_models:
+            if model.deleted_at is not None:
+                model.integration_id = None
 
         db.session.delete(integration_record)
         db.session.commit()
@@ -306,9 +316,7 @@ class IntegrationController:
                 sync=True
             )
         from mindsdb.integrations.libs.base import BaseMLEngine
-        # from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
-        # from mindsdb.integrations.handlers_client.ml_client import MLClient
-        from mindsdb.integrations.handlers_client.ml_client_factory import MLClient
+        from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
         HandlerClass = self.handler_modules[integration_engine].Handler
 
@@ -317,7 +325,8 @@ class IntegrationController:
             handler_ars['execution_method'] = getattr(self.handler_modules[integration_engine], 'execution_method', None)
             handler_ars['integration_engine'] = integration_engine
             logger.info("%s.get_handler: create a ML client, params - %s", self.__class__.__name__, handler_ars)
-            handler = MLClient(**handler_ars)
+            handler = BaseMLEngineExec(**handler_ars)
+            # handler = MLClient(**handler_ars)
         else:
 
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)

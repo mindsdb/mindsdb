@@ -1,0 +1,48 @@
+---
+title: DB2
+sidebarTitle: DB2
+---
+
+# DB2 Handler
+
+This is the implementation of the IBM DB2 handler for MindsDB.
+
+## IBM DB2
+DB2 is a database product from IBM. It is a Relational Database Management System (RDBMS). DB2 is designed to store, analyze and retrieve the data efficiently. DB2 product is extended with the support of Object-Oriented features and non-relational structures with XML. 
+
+## Implementation
+This handler was implemented using the `ibm_db/ibm_db_dbi`, a Python library that allows you to use Python code to run SQL commands on DB2 Database.
+
+
+The required arguments to establish a connection are:
+
+| Name                                  | Description                                                                              |
+| ------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `user`                            |  This is the username asscociated with the database.
+| `password`                                |  This is the password required to authenticate your access to the database. |
+| `host`                                |  This is the host to server IP Address or hostname.                                                  |
+| `port`                                |  This is the port through which TCP/IP connection is to be made.                              |
+| `database`                            |  This is the database name to be connected.                          |
+| `schema`                            |  Schema name required to get the tables
+
+## Usage
+A text example of usage of this handler and connect to DB2 in MindsDB can be seen below,
+
+~~~~sql
+CREATE DATABASE DB2_datasource
+WITH
+engine='DB2',
+parameters={
+    "user":"db2admin",
+    "password":"1234",
+    "host":"127.0.0.1",
+    "port":25000,
+    "schema_name":"db2admin",
+    "database":"BOOKS"
+};
+~~~~
+
+Now, you can use this established connection to query your database as follows,
+~~~~sql
+SELECT * FROM DB2_datasource.AUTHORS;
+~~~~

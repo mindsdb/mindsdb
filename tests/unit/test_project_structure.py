@@ -539,7 +539,8 @@ class TestJobs(BaseExecutorDummyML):
         check_timetable(config={})
 
         # check query to integration
-        assert data_handler().query.call_args[0][0].to_string() == "SELECT * FROM tbl1 WHERE tbl1.b > 'null'"
+        assert data_handler().query.call_args[0][0].to_string() ==\
+               "SELECT * FROM tbl1 WHERE tbl1.b > '1900-01-01 00:00:00'"
 
         # check jobs table
         ret = self.run_sql('select * from jobs', database='proj2')

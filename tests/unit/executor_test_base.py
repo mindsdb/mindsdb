@@ -93,6 +93,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='views', data={}, engine='views')
         db.session.add(r)
+        r = db.Integration(name='autokeras', data={}, engine='autokeras')
+        db.session.add(r)
         r = db.Integration(name='huggingface', data={}, engine='huggingface')
         db.session.add(r)
         r = db.Integration(name='merlion', data={}, engine='merlion')

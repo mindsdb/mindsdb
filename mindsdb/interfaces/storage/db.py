@@ -108,7 +108,7 @@ class Predictor(Base):
     company_id = Column(Integer)
     mindsdb_version = Column(String)
     native_version = Column(String)
-    integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'), nullable=False)
+    integration_id = Column(ForeignKey('integration.id', name='fk_integration_id'))
     data_integration_ref = Column(Json)
     fetch_data_query = Column(String)
     is_custom = Column(Boolean)
@@ -229,9 +229,10 @@ class Jobs(Base):
     __tablename__ = 'jobs'
     id = Column(Integer, primary_key=True)
     company_id = Column(Integer)
+    user_class = Column(Integer, nullable=True)
 
     name = Column(String, nullable=False)
-    project_id = Column(Integer)
+    project_id = Column(Integer, nullable=False)
     query_str = Column(String, nullable=False)
     start_at = Column(DateTime, default=datetime.datetime.now)
     end_at = Column(DateTime)

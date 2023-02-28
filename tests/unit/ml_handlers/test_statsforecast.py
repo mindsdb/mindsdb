@@ -6,6 +6,7 @@ import pandas as pd
 from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import (
     transform_to_nixtla_df,
     get_results_from_nixtla_df,
+    infer_frequency
 )
 from statsforecast.models import AutoARIMA
 from statsforecast import StatsForecast
@@ -15,8 +16,8 @@ from mindsdb_sql import parse_sql
 from tests.unit.executor_test_base import BaseExecutorTest
 
 
-def create_mock_df():
-    df2 = pd.DataFrame(pd.date_range(start="1/1/2010", periods=31, freq="Q"), columns=["time_col"])
+def create_mock_df(freq="Q-DEC"):
+    df2 = pd.DataFrame(pd.date_range(start="1/1/2010", periods=31, freq=freq), columns=["time_col"])
     df3 = df2.copy()
 
     df2["target_col"] = range(1, 32)
@@ -32,7 +33,23 @@ def create_mock_df():
     return pd.concat([df2, df3]).reset_index(drop=True)
 
 
-def test_nixtla_df_transformations():
+def test_infer_frequency():
+    df = create_mock_df()
+    assert infer_frequency(df, "time_col") == "Q-DEC"
+
+    df = create_mock_df(freq="M")
+    assert infer_frequency(df, "time_col") == "M"
+
+    # Should still work if we pass string dates
+    df["time_col"] = df["time_col"].astype(str)
+    assert infer_frequency(df, "time_col") == "M"
+
+    # Should still work if we pass unordered dates
+    unordered_df = pd.concat([df.iloc[:3, :], df.iloc[3:, :]])
+    assert infer_frequency(unordered_df, "time_col") == "M"
+
+
+def test_statsforecast_df_transformations():
     df = create_mock_df()
     model_name = "ARIMA"
     settings_dict = {

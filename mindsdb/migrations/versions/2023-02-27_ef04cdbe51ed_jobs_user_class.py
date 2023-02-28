@@ -1,7 +1,7 @@
 """jobs_user_class
 
 Revision ID: ef04cdbe51ed
-Revises: ee63d868fa84
+Revises: 3154382dab17
 Create Date: 2023-02-27 11:32:35.298375
 
 """
@@ -12,7 +12,7 @@ import mindsdb.interfaces.storage.db # noqa
 
 # revision identifiers, used by Alembic.
 revision = 'ef04cdbe51ed'
-down_revision = 'ee63d868fa84'
+down_revision = '3154382dab17'
 branch_labels = None
 depends_on = None
 

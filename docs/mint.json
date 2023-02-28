@@ -338,7 +338,8 @@
                     "nlp/text-summarization-inside-mysql-with-openai",
                     "nlp/sentiment-analysis-inside-mongodb-with-openai",
                     "nlp/question-answering-inside-mongodb-with-openai",
-                    "nlp/text-summarization-inside-mongodb-with-openai"
+                    "nlp/text-summarization-inside-mongodb-with-openai",
+                    "nlp/json-from-text"
                   ]
                 }
               ]
@@ -398,7 +399,8 @@
             "nlp/text-summarization-inside-mysql-with-openai",
             "nlp/sentiment-analysis-inside-mongodb-with-openai",
             "nlp/question-answering-inside-mongodb-with-openai",
-            "nlp/text-summarization-inside-mongodb-with-openai"
+            "nlp/text-summarization-inside-mongodb-with-openai",
+            "nlp/json-from-text"
           ]
         },
         "nlp/nlp-extended-examples"

@@ -21,7 +21,7 @@ In order to make use of this handler and connect to Dremio in MindsDB, the follo
 ~~~~sql
 CREATE DATABASE dremio_datasource
 WITH
-engine='druid',
+engine='dremio',
 parameters={
     "host": "localhost",
     "port": 9047,

@@ -598,7 +598,7 @@ class ExecuteCommands:
 
     def answer_describe_predictor(self, statement):
         # describe attr
-        predictor_attrs = ("model", "features", "ensemble")
+        predictor_attrs = ("model", "features", "ensemble", "progress")
         attribute = None
         if statement.value.parts[-1] in predictor_attrs:
             attribute = statement.value.parts.pop(-1)

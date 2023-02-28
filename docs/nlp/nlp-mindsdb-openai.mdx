@@ -266,6 +266,111 @@ MindsDB lets you customize models using parameters provided by OpenAI. Currently
 - logit_bias: Modify the likelihood of specified tokens appearing in the completion. Accepts a json object that maps tokens (specified by their token ID in the GPT tokenizer) to an associated bias value from -100 to 100. The exact effect will vary per model, but values between -1 and 1 should decrease or increase likelihood of selection; values like -100 or 100 should result in a ban or exclusive selection of the relevant token.
 - user: A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
 
+## Fine-Tuning the Model
+
+MindsDB lets you fine-tune the OpenAI models with your own data using the `ADJUST` statement. Let's go over an example.
+
+Here, we create a model using the OpenAI engine, and then, fine-tune it using the `ADJUST` statement.
+
+Let's create an OpenAI model that we'll use to answer the questions.
+
+```sql
+CREATE MODEL question_answering_model_adjust
+PREDICT true_answer
+USING
+    engine = 'openai',
+    prompt_template = 'answer the question of text:{{question}} about text:{{article_title}}';
+```
+
+We can check its status using the below query.
+
+```sql
+SELECT * FROM models
+WHERE name = 'question_answering_model_adjust';
+```
+
+Once the status is complete, we can query for predictions. We use the `questions` table from our sample MySQL database called `mysql_demo_db`.
+
+```sql
+SELECT input.article_title, input.question, output.true_answer
+FROM mysql_demo_db.questions AS input
+JOIN question_answering_model_adjust AS output
+LIMIT 5;
+```
+
+On execution, we get:
+
+```sql
++----------------+-----------------------------------------------------------+--------------------------------------------------------------------+
+|article_title   |question                                                   |answer                                                              |
++----------------+-----------------------------------------------------------+--------------------------------------------------------------------+
+|Alessandro_Volta|Was Volta an Italian physicist?                            |Yes, Volta was an Italian physicist.                                |
+|Alessandro_Volta|Is Volta buried in the city of Pittsburgh?                 |No, Volta is not buried in the city of Pittsburgh.                  |
+|Alessandro_Volta|Did Volta have a passion for the study of electricity?     |Yes, Volta had a passion for the study of electricity.              |
+|Alessandro_Volta|What is the battery made by Volta credited to be?          |The battery made by Volta is credited to be the first battery.      |
+|Alessandro_Volta|What important electrical unit was named in honor of Volta?|The volt, a unit of electric potential, was named in honor of Volta.|
++----------------+-----------------------------------------------------------+--------------------------------------------------------------------+
+```
+
+<Tip>
+Here is how you can connect to our sample MySQL database:
+
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = 'mysql',
+PARAMETERS = {
+    "user": "user",
+    "password": "MindsDBUser123!",
+    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "port": "3306",
+    "database": "public"
+};
+```
+</Tip>
+
+We can fine-tune the `question_answering_model_adjust` model using the `ADJUST` statement.
+
+```sql
+ADJUST question_answering_model_adjust
+FROM mysql_demo_db
+    (SELECT *
+    FROM questions
+    WHERE article_title = 'Alessandro_Volta');
+```
+
+<Tip>
+Please note that the target column (here, it is the `true_answer` column) must be present in the dataset used for fine-tuning.
+</Tip>
+
+After executing the `ADJUST` statement, there is a new version of the model in the `models_versions` table.
+
+```sql
+SELECT *
+FROM mindsdb.models_versions
+WHERE name = 'question_answering_model_adjust';
+```
+
+On exection, we get:
+
+```sql
+todo
+```
+
+Once the status of the new model version is complete, we can query for predictions again.
+
+```sql
+SELECT input.article_title, input.question, output.true_answer
+FROM mysql_demo_db.questions AS input
+JOIN question_answering_model_adjust AS output
+LIMIT 5;
+```
+
+On execution, we get:
+
+```sql
+todo
+```
+
 ## What's Next?
 
 Have fun while trying it out yourself!

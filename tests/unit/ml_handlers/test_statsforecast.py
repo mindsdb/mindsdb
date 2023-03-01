@@ -3,7 +3,11 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import StatsForecastHandler, infer_frequency, choose_model
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import (
+    StatsForecastHandler,
+    infer_frequency,
+    choose_model,
+)
 from statsforecast.models import AutoCES
 from statsforecast import StatsForecast
 from mindsdb_sql import parse_sql
@@ -75,10 +79,10 @@ def test_choose_model():
     assert str(model) == "CES"  # Nixtla sometimes doesn't include the "Auto"
     assert model.season_length == 4
 
-
     model = choose_model("AutoTheta", "M")
     assert str(model) == "AutoTheta"
     assert model.season_length == 12
+
 
 class TestStatsForecast(BaseExecutorTest):
     def wait_predictor(self, project, name):
@@ -170,7 +174,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql("create database proj")
 
         # mock a time series dataset
-        df = pd.read_parquet('https://datasets-nixtla.s3.amazonaws.com/m4-hourly.parquet')
+        df = pd.read_parquet("https://datasets-nixtla.s3.amazonaws.com/m4-hourly.parquet")
         df = df[df.unique_id.isin(["H1", "H2", "H3"])]  # subset for speed
         n_groups = df["unique_id"].nunique()
         self.set_handler(mock_handler, name="pg", tables={"df": df})

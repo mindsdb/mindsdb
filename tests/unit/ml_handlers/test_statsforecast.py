@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import StatsForecastHandler, infer_frequency
-from statsforecast.models import AutoARIMA
+from statsforecast.models import AutoCES
 from statsforecast import StatsForecast
 from mindsdb_sql import parse_sql
 
@@ -123,6 +123,7 @@ class TestStatsForecast(BaseExecutorTest):
            where t.group_col='b'
         """
         )
+        print(result_df)
         assert list(round(result_df["target_col"])) == [42, 43, 44]
 
         # now add more groups
@@ -151,7 +152,7 @@ class TestStatsForecast(BaseExecutorTest):
         assert list(round(result_df["target_col"])) == [32, 33, 34]
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_ts_series(self, mock_handler):
+    def test_model_choice(self, mock_handler):
         """This sends a dataframe where the data is already in time series format i.e.
         doesn't need grouped
         """
@@ -167,9 +168,9 @@ class TestStatsForecast(BaseExecutorTest):
 
         # generate ground truth predictions from the package
         prediction_horizon = 4
-        sf = StatsForecast(models=[AutoARIMA()], freq="Q")
+        sf = StatsForecast(models=[AutoCES()], freq=infer_frequency(df, "ds"))
         sf.fit(df)
-        forecast_df = sf.forecast(prediction_horizon)
+        forecast_df = sf.predict(prediction_horizon)
         package_predictions = forecast_df.reset_index(drop=True).iloc[:, -1]
 
         # create predictor
@@ -182,7 +183,8 @@ class TestStatsForecast(BaseExecutorTest):
            group by unique_id
            horizon {prediction_horizon}
            using
-             engine='statsforecast'
+             engine='statsforecast',
+             model_name='AutoCES'
         """
         )
         self.wait_predictor("proj", "modelx")

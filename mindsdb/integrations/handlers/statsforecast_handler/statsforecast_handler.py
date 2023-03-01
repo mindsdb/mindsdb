@@ -2,14 +2,25 @@ import pandas as pd
 import dill
 from mindsdb.integrations.libs.base import BaseMLEngine
 from statsforecast import StatsForecast
-from statsforecast.models import AutoARIMA
+from statsforecast.models import AutoARIMA, AutoCES, AutoETS, AutoTheta, MSTL
 
 DEFAULT_FREQUENCY = "D"
-DEFAULT_MODEL = AutoARIMA()
 DEFAULT_MODEL_NAME = "AutoARIMA"
+model_dict = {
+    "AutoARIMA": AutoARIMA,
+    "AutoCES": AutoCES,
+    "AutoETS": AutoETS,
+    "AutoTheta": AutoTheta,
+    "MSTL": MSTL,
+}
 
 
 def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
+    """Infers frequency from the time column of the dataframe.
+
+    If we can't infer frequency, will default to daily to prevent
+    pipeline failure.
+    """
     try:  # infer frequency from time column
         date_series = pd.to_datetime(df[time_column]).unique()
         date_series.sort()
@@ -17,6 +28,28 @@ def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
     except TypeError:
         inferred_freq = default
     return inferred_freq if inferred_freq is not None else default
+
+
+def choose_model(model_name, frequency):
+    """Chooses which model to use in StatsForecast.
+
+    We set a sensible default for seasonality based on the
+    frequency parameter. For example: we assume monthly data
+    has a season length of 12 (months in a year).
+
+    If the inferred frequency isn't found, we default to 1 i.e.
+    no seasonality.
+    """
+    model = model_dict[model_name]
+    season_dict = {
+        "H": 24,
+        "M": 12,
+        "Q": 4,
+        "A": 1
+        }
+    new_freq = frequency[:1]  # shortens longer frequencies like Q-DEC
+    season_length = season_dict[new_freq] if frequency in season_dict else 1
+    return model(season_length=season_length)
 
 
 class StatsForecastHandler(BaseMLEngine):
@@ -45,8 +78,10 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["group_by"] = time_settings["group_by"]
         model_args["frequency"] =  infer_frequency(df, time_settings["order_by"])
 
+        model_args["model_name"] = DEFAULT_MODEL_NAME if "model_name" not in args["using"] else args["using"]["model_name"]
         training_df = self._transform_to_statsforecast_df(df, model_args)
-        sf = StatsForecast(models=[DEFAULT_MODEL], freq=model_args["frequency"], df=training_df)
+        model = choose_model(model_args["model_name"], model_args["frequency"])
+        sf = StatsForecast(models=[model], freq=model_args["frequency"], df=training_df)
         fitted_models = sf.fit().fitted_
 
         ###### persist changes to handler folder
@@ -70,7 +105,7 @@ class StatsForecastHandler(BaseMLEngine):
         prediction_df = self._transform_to_statsforecast_df(df, model_args)
         groups_to_keep = prediction_df["unique_id"].unique()
 
-        sf = StatsForecast(models=[DEFAULT_MODEL], freq=model_args["frequency"], df=training_df)
+        sf = StatsForecast(models=[], freq=model_args["frequency"], df=training_df)
         sf.fitted_ = fitted_models
         forecast_df = sf.predict(model_args["horizon"])
         forecast_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
@@ -110,12 +145,12 @@ class StatsForecastHandler(BaseMLEngine):
 
         This will return the dataframe to the original format supplied by the MindsDB query.
         """
-        renaming_dict = {"ds": model_args["order_by"], DEFAULT_MODEL_NAME: model_args["target"]}
-        return_df = statsforecast_df.reset_index().rename(renaming_dict, axis=1)
+        return_df = statsforecast_df.reset_index()
+        return_df.columns = ["unique_id", "ds", model_args["target"]]
         if len(model_args["group_by"]) > 1:
             for i, group in enumerate(model_args["group_by"]):
                 return_df[group] = return_df["unique_id"].apply(lambda x: x.split("|")[i])
         else:
             group_by_col = model_args["group_by"][0]
             return_df[group_by_col] = return_df["unique_id"]
-        return return_df.drop(["unique_id"], axis=1)
+        return return_df.drop(["unique_id"], axis=1).rename({"ds": model_args["order_by"]}, axis=1)

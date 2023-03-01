@@ -2,7 +2,7 @@ import pandas as pd
 import dill
 from mindsdb.integrations.libs.base import BaseMLEngine
 from statsforecast import StatsForecast
-from statsforecast.models import AutoARIMA, AutoCES, AutoETS, AutoTheta, MSTL
+from statsforecast.models import AutoARIMA, AutoCES, AutoETS, AutoTheta
 
 DEFAULT_FREQUENCY = "D"
 DEFAULT_MODEL_NAME = "AutoARIMA"
@@ -11,7 +11,6 @@ model_dict = {
     "AutoCES": AutoCES,
     "AutoETS": AutoETS,
     "AutoTheta": AutoTheta,
-    "MSTL": MSTL,
 }
 
 
@@ -48,7 +47,7 @@ def choose_model(model_name, frequency):
         "A": 1
         }
     new_freq = frequency[:1]  # shortens longer frequencies like Q-DEC
-    season_length = season_dict[new_freq] if frequency in season_dict else 1
+    season_length = season_dict[new_freq] if new_freq in season_dict else 1
     return model(season_length=season_length)
 
 

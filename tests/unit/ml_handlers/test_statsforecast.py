@@ -153,8 +153,8 @@ class TestStatsForecast(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_model_choice(self, mock_handler):
-        """This sends a dataframe where the data is already in time series format i.e.
-        doesn't need grouped
+        """This tests whether changing the model_name USING arg will switch the
+        actual model used.
         """
 
         # create project

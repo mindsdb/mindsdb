@@ -1,3 +1,8 @@
+---
+title: Ckan
+sidebarTitle: Ckan
+---
+
 ## CKAN Integration handler
 
 This handler is used to integrate with [CKAN](https://ckan.org/).
@@ -24,6 +29,15 @@ action supports raw SQL commands to be used to search for the data
 
 Example:
 ```python
-
 ckan.action.datastore_search_sql(sql='SELECT * FROM "resource_id"')
+```
+## Usage
+In order to make use of this handler and connect to a Ckan server in MindsDB, the following syntax can be used:
+```sql
+CREATE DATABASE ckan_datasource          --- display name for the database
+WITH ENGINE = 'ckan',                    --- name of the MindsDB handler
+PARAMETERS = {
+  "url": " ",                            --- host name, IP address, or a URL
+  "apikey": " "                          --- the API key used for authentication
+};
 ```

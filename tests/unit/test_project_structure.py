@@ -463,6 +463,17 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         assert row['t3a'] == 6
 
+    def test_create_validation(self):
+        with pytest.raises(RuntimeError) as exc_info:
+            self.run_sql(
+                '''
+                    CREATE model task_model_x 
+                    PREDICT a
+                    using 
+                       engine='dummy_ml', 
+                       error=1
+                '''
+            )
 
 class TestJobs(BaseExecutorDummyML):
 
@@ -539,7 +550,8 @@ class TestJobs(BaseExecutorDummyML):
         check_timetable(config={})
 
         # check query to integration
-        assert data_handler().query.call_args[0][0].to_string() == "SELECT * FROM tbl1 WHERE tbl1.b > 'null'"
+        assert data_handler().query.call_args[0][0].to_string() ==\
+               "SELECT * FROM tbl1 WHERE tbl1.b > '1900-01-01 00:00:00'"
 
         # check jobs table
         ret = self.run_sql('select * from jobs', database='proj2')

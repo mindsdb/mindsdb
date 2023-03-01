@@ -40,13 +40,17 @@ def choose_model(model_name, frequency):
     no seasonality.
     """
     model = model_dict[model_name]
-    season_dict = {
+    season_dict = {  # https://pandas.pydata.org/docs/user_guide/timeseries.html#timeseries-offset-aliases
         "H": 24,
         "M": 12,
         "Q": 4,
-        "A": 1
+        "SM": 24,
+        "BM": 12,
+        "BMS": 12,
+        "BQ": 4,
+        "BH": 24,
         }
-    new_freq = frequency[:1]  # shortens longer frequencies like Q-DEC
+    new_freq = frequency.split("-")[0] if "-" in frequency else frequency  # shortens longer frequencies like Q-DEC
     season_length = season_dict[new_freq] if new_freq in season_dict else 1
     return model(season_length=season_length)
 

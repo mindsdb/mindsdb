@@ -3,7 +3,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import StatsForecastHandler, infer_frequency
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import StatsForecastHandler, infer_frequency, choose_model
 from statsforecast.models import AutoCES
 from statsforecast import StatsForecast
 from mindsdb_sql import parse_sql
@@ -69,6 +69,16 @@ def test_statsforecast_df_transformations():
     mindsdb_results_df = sf_handler._get_results_from_statsforecast_df(sf_results_df, settings_dict)
     pd.testing.assert_frame_equal(mindsdb_results_df, df)
 
+
+def test_choose_model():
+    model = choose_model("AutoCES", "Q-DEC")
+    assert str(model) == "CES"  # Nixtla sometimes doesn't include the "Auto"
+    assert model.season_length == 4
+
+
+    model = choose_model("AutoTheta", "M")
+    assert str(model) == "AutoTheta"
+    assert model.season_length == 12
 
 class TestStatsForecast(BaseExecutorTest):
     def wait_predictor(self, project, name):

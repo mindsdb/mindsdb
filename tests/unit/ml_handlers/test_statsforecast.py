@@ -123,7 +123,6 @@ class TestStatsForecast(BaseExecutorTest):
            where t.group_col='b'
         """
         )
-        print(result_df)
         assert list(round(result_df["target_col"])) == [42, 43, 44]
 
         # now add more groups
@@ -153,8 +152,8 @@ class TestStatsForecast(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_model_choice(self, mock_handler):
-        """This tests whether changing the model_name USING arg will switch the
-        actual model used.
+        """This tests whether changing the model_name and frequency USING args
+        will switch the actual model used.
         """
 
         # create project
@@ -168,7 +167,7 @@ class TestStatsForecast(BaseExecutorTest):
 
         # generate ground truth predictions from the package
         prediction_horizon = 4
-        sf = StatsForecast(models=[AutoCES()], freq=infer_frequency(df, "ds"))
+        sf = StatsForecast(models=[AutoCES(season_length=24)], freq="H")
         sf.fit(df)
         forecast_df = sf.predict(prediction_horizon)
         package_predictions = forecast_df.reset_index(drop=True).iloc[:, -1]
@@ -184,7 +183,8 @@ class TestStatsForecast(BaseExecutorTest):
            horizon {prediction_horizon}
            using
              engine='statsforecast',
-             model_name='AutoCES'
+             model_name='AutoCES',
+             frequency='H'
         """
         )
         self.wait_predictor("proj", "modelx")

@@ -68,6 +68,7 @@ class StatsForecastHandler(BaseMLEngine):
         is used later in the predict() method.
         """
         time_settings = args["timeseries_settings"]
+        using_args = args["using"]
         assert time_settings["is_timeseries"], "Specify time series settings in your query"
         ###### store model args and time series settings in the model folder
         model_args = {}
@@ -76,8 +77,11 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["order_by"] = time_settings["order_by"]
         model_args["group_by"] = time_settings["group_by"]
         model_args["frequency"] =  infer_frequency(df, time_settings["order_by"])
+        model_args["frequency"] = (
+            using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
+        )
 
-        model_args["model_name"] = DEFAULT_MODEL_NAME if "model_name" not in args["using"] else args["using"]["model_name"]
+        model_args["model_name"] = DEFAULT_MODEL_NAME if "model_name" not in using_args else using_args["model_name"]
         training_df = self._transform_to_statsforecast_df(df, model_args)
         model = choose_model(model_args["model_name"], model_args["frequency"])
         sf = StatsForecast(models=[model], freq=model_args["frequency"], df=training_df)

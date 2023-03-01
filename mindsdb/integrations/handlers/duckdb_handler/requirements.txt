@@ -1,0 +1,3 @@
+# Has to be pre-release version of duckdb for now.
+# Current stable is causing segmentation faults when using DB-API con.description after fetchall().
+duckdb==0.7.1.dev187

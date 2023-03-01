@@ -1,12 +1,16 @@
-from flask import request, session
-from pathlib import Path
+import time
 
+from flask import request, session
 from flask_restx import Resource
 from flask_restx import fields
 
 from mindsdb.api.http.namespaces.configs.default import ns_conf
 from mindsdb.utilities.config import Config
 from mindsdb.api.http.utils import http_error
+from mindsdb.utilities.log import get_log
+
+
+log = get_log('http')
 
 
 def check_auth() -> bool:
@@ -18,6 +22,16 @@ def check_auth() -> bool:
     config = Config()
     if config['auth']['http_auth_enabled'] is False:
         return True
+
+    if config['auth'].get('provider') == 'cloud':
+        if isinstance(session.get('username'), str) is False:
+            return False
+
+        if config['auth']['oauth']['tokens']['expires_at'] < time.time():
+            return False
+
+        return True
+
     return session.get('username') == config['auth']['username']
 
 
@@ -61,6 +75,7 @@ class LoginRoute(Resource):
                 'Invalid username or password'
             )
 
+        session.clear()
         session['username'] = username
         session.permanent = True
 
@@ -111,7 +126,12 @@ class StatusRoute(Resource):
             else:
                 environment = 'local'
 
-        auth_provider = 'local' if config['auth']['http_auth_enabled'] else 'disabled'
+        auth_provider = 'disabled'
+        if config['auth']['http_auth_enabled'] is True:
+            if config['auth'].get('provider') is not None:
+                auth_provider = config['auth'].get('provider')
+            else:
+                auth_provider = 'local'
 
         resp = {
             'environment': environment,
@@ -121,11 +141,5 @@ class StatusRoute(Resource):
                 'provider': auth_provider
             }
         }
-
-        if environment != 'cloud':
-            marker_file = Path(Config().paths['root']).joinpath('gui_first_launch.txt')
-            if marker_file.is_file() is False:
-                resp['is_first_launch'] = True
-                marker_file.write_text('')
 
         return resp

@@ -169,6 +169,22 @@ class ExecutorServiceServicer(executor_pb2_grpc.ExecutorServiceServicer):
             sql = request.sql
             executor.query_execute(sql)
             result = self._prepare_response(executor)
+            result.error_code = executor.error_code if executor.error_code else 0
+            result.error_message = executor.error_message if executor.error_message else ""
+        except Exception:
+            err_msg = traceback.format_exc()
+            result = executor_pb2.ExecutorResponse(error_message=err_msg)
+        return result
+
+    def BinaryQueryExecute(self, request, context):
+        result = None
+        try:
+            executor = self._get_executor(request.context)
+            sql = pickle.loads(request.sql)
+            executor.binary_query_execute(sql)
+            result = self._prepare_response(executor)
+            result.error_code = executor.error_code if executor.error_code else 0
+            result.error_message = executor.error_message if executor.error_message else ""
         except Exception:
             err_msg = traceback.format_exc()
             result = executor_pb2.ExecutorResponse(error_message=err_msg)

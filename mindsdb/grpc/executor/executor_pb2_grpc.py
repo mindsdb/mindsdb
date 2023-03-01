@@ -29,6 +29,11 @@ class ExecutorServiceStub(object):
                 request_serializer=executor__pb2.ExecutionContext.SerializeToString,
                 response_deserializer=executor__pb2.ExecutorResponse.FromString,
                 )
+        self.BinaryQueryExecute = channel.unary_unary(
+                '/ExecutorService/BinaryQueryExecute',
+                request_serializer=executor__pb2.BinaryExecutionContext.SerializeToString,
+                response_deserializer=executor__pb2.ExecutorResponse.FromString,
+                )
         self.ExecuteExternal = channel.unary_unary(
                 '/ExecutorService/ExecuteExternal',
                 request_serializer=executor__pb2.ExecutionContext.SerializeToString,
@@ -72,6 +77,12 @@ class ExecutorServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def QueryExecute(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def BinaryQueryExecute(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -123,6 +134,11 @@ def add_ExecutorServiceServicer_to_server(servicer, server):
             'QueryExecute': grpc.unary_unary_rpc_method_handler(
                     servicer.QueryExecute,
                     request_deserializer=executor__pb2.ExecutionContext.FromString,
+                    response_serializer=executor__pb2.ExecutorResponse.SerializeToString,
+            ),
+            'BinaryQueryExecute': grpc.unary_unary_rpc_method_handler(
+                    servicer.BinaryQueryExecute,
+                    request_deserializer=executor__pb2.BinaryExecutionContext.FromString,
                     response_serializer=executor__pb2.ExecutorResponse.SerializeToString,
             ),
             'ExecuteExternal': grpc.unary_unary_rpc_method_handler(
@@ -207,6 +223,23 @@ class ExecutorService(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/ExecutorService/QueryExecute',
             executor__pb2.ExecutionContext.SerializeToString,
+            executor__pb2.ExecutorResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def BinaryQueryExecute(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/ExecutorService/BinaryQueryExecute',
+            executor__pb2.BinaryExecutionContext.SerializeToString,
             executor__pb2.ExecutorResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

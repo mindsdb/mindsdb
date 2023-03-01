@@ -385,7 +385,9 @@ class ResultSet:
         return self.get_records()
 
     def get_records(self):
-        # in dicts
+        # get records as dicts.
+        # !!! Attention: !!!
+        # if resultSet contents duplicate column name: only one of them will be in output
         names = self.get_column_names()
         records = []
         for row in self._records:
@@ -1072,14 +1074,15 @@ class SQLQuery():
                 for col in step_data.columns:
                     step_data2.add_column(col)
 
-                records = step_data.get_records()
+                records = step_data.get_records_raw()
 
                 if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
                     records = records[step.offset.value:]
                 if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
                     records = records[:step.limit.value]
 
-                step_data2.add_records(records)
+                for record in records:
+                    step_data2.add_record_raw(record)
 
                 data = step_data2
 
@@ -1129,7 +1132,14 @@ class SQLQuery():
                             else:
                                 col_list = rs_in.find_columns(column_name, table_alias=table_name_or_alias)
                                 if len(col_list) == 0:
-                                    raise SqlApiException(f'Can not find appropriate table for column {table_name_or_alias}.{column_name}')
+                                    if rs_in.length() > 0:
+                                        raise SqlApiException(f'Can not find appropriate table for column {table_name_or_alias}.{column_name}')
+                                    else:
+                                        # FIXME: made up column if resultSet is empty
+                                        # columns from predictor may not exist if predictor wasn't called
+                                        col = Column(name=table_name_or_alias, table_name=table_name_or_alias)
+                                        col_list = [col]
+                                        rs_in.add_column(col)
 
                                 col_added = rs_in.copy_column_to(col_list[0], rs_out)
                                 col_added.alias = column_alias
@@ -1195,7 +1205,19 @@ class SQLQuery():
                 if step.is_replace:
                     is_replace = True
 
-            data = step.dataframe.result_data
+            if step.dataframe is not None:
+                data = step.dataframe.result_data
+            elif step.query is not None:
+                data = ResultSet()
+                for col in step.query.columns:
+                    data.add_column(Column(col.name))
+
+                for row in step.query.values:
+                    record = [v.value for v in row]
+                    data.add_record_raw(record)
+            else:
+                raise ErLogicError(f'Data not found for insert: {step}')
+
             integration_name = step.table.parts[0]
             table_name = Identifier(parts=step.table.parts[1:])
 

@@ -39,6 +39,8 @@ def check_timetable(config):
     for record in scheduler.get_next_tasks():
         execute_sync(record, config)
 
+    db.session.remove()
+
 
 def execute_sync(record, config):
     logger.info(f'Job execute: {record.name}({record.id})')
@@ -78,23 +80,27 @@ def task_process(record_id, exec_method):
             history_id = scheduler.lock_record(record_id)
         except Exception as e:
             db.session.rollback()
+            db.session.remove()
             logger.error(f'Unable create history record, is locked? {e}')
             return
 
         scheduler.execute_task_local(record_id, history_id)
-
+        db.session.remove()
     else:
         # TODO add microservice mode
         raise NotImplementedError()
 
 
 def start(verbose=False):
-    config = Config()
-    db.init()
-    initialize_log(config, 'jobs', wrap_print=True)
+    try:
+        config = Config()
+        db.init()
+        initialize_log(config, 'jobs', wrap_print=True)
 
-    logger.info('Scheduler starts')
-    scheduler_monitor(config)
+        logger.info('Scheduler starts')
+        scheduler_monitor(config)
+    except (KeyboardInterrupt, SystemExit):
+        pass
 
 
 if __name__ == '__main__':

@@ -1,10 +1,14 @@
-import pandas as pd
 import dill
 from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.utilities.time_series_utils import (
+    transform_to_nixtla_df,
+    get_results_from_nixtla_df,
+    infer_frequency,
+)
 from statsforecast import StatsForecast
 from statsforecast.models import AutoARIMA, AutoCES, AutoETS, AutoTheta
 
-DEFAULT_FREQUENCY = "D"
+DEFAULT_MODEL = AutoARIMA()
 DEFAULT_MODEL_NAME = "AutoARIMA"
 model_dict = {
     "AutoARIMA": AutoARIMA,
@@ -12,21 +16,6 @@ model_dict = {
     "AutoETS": AutoETS,
     "AutoTheta": AutoTheta,
 }
-
-
-def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
-    """Infers frequency from the time column of the dataframe.
-
-    If we can't infer frequency, will default to daily to prevent
-    pipeline failure.
-    """
-    try:  # infer frequency from time column
-        date_series = pd.to_datetime(df[time_column]).unique()
-        date_series.sort()
-        inferred_freq = pd.infer_freq(date_series)
-    except TypeError:
-        inferred_freq = default
-    return inferred_freq if inferred_freq is not None else default
 
 
 def choose_model(model_name, frequency):
@@ -80,7 +69,6 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["horizon"] = time_settings["horizon"]
         model_args["order_by"] = time_settings["order_by"]
         model_args["group_by"] = time_settings["group_by"]
-        model_args["frequency"] =  infer_frequency(df, time_settings["order_by"])
         model_args["frequency"] = (
             using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
         )
@@ -109,7 +97,7 @@ class StatsForecastHandler(BaseMLEngine):
         training_df = dill.loads(self.model_storage.file_get("training_df"))
         fitted_models = dill.loads(self.model_storage.file_get("fitted_models"))
 
-        prediction_df = self._transform_to_statsforecast_df(df, model_args)
+        prediction_df = transform_to_nixtla_df(df, model_args)
         groups_to_keep = prediction_df["unique_id"].unique()
 
         sf = StatsForecast(models=[], freq=model_args["frequency"], df=training_df)

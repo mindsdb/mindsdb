@@ -142,7 +142,8 @@
                 {
                   "group": "Regression",
                   "pages": [
-                    "sql/tutorials/home-rentals"
+                    "sql/tutorials/home-rentals",
+                    "sql/tutorials/regression-community"
                   ]
                 }
               ]

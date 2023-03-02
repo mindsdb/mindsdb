@@ -12,7 +12,7 @@ OVERRIDE_CONFIG = {
     'integrations': {},
 }
 # used by (required for) mindsdb_app fixture in conftest
-API_LIST = ["http",]
+API_LIST = ["http", ]
 
 
 class QueryStorage:
@@ -41,7 +41,7 @@ USING engine='huggingface',
     """
     check_status = """
 SELECT *
-FROM models 
+FROM models
 WHERE name = 'sentiment_classifier';
     """
     prediction = """
@@ -53,6 +53,7 @@ SELECT input.comment, model.sentiment
 FROM example_db.demo_data.user_comments AS input
 JOIN sentiment_classifier AS model;
     """
+
 
 @pytest.mark.usefixtures("mindsdb_app")
 class TestPredictTextSentimentHuggingface(HTTPHelperMixin):

@@ -26,7 +26,7 @@ class HTTPHelperMixin:
             'query': request,
             'context': context
         }
-        response = self.api_request('post', f'/sql/query', payload)
+        response = self.api_request('post', '/sql/query', payload)
 
         assert response.status_code == 200, f"sql/query is not accessible - {response.text}"
         response = response.json()

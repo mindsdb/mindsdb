@@ -12,7 +12,7 @@ OVERRIDE_CONFIG = {
     'integrations': {},
 }
 # used by (required for) mindsdb_app fixture in conftest
-API_LIST = ["http",]
+API_LIST = ["http", ]
 
 
 class QueryStorage:
@@ -25,17 +25,17 @@ PARAMETERS = {
     "host": "3.220.66.106",
     "port": "5432",
     "database": "demo"
-    }; 
+    };
 """
 
     check_db_created = """
-SELECT * 
-FROM example_db.demo_data.house_sales 
+SELECT *
+FROM example_db.demo_data.house_sales
 LIMIT 10;
 """
 
     create_model = """
-CREATE MODEL 
+CREATE MODEL
   mindsdb.house_sales_model
 FROM example_db
   (SELECT * FROM demo_data.house_sales)
@@ -46,13 +46,13 @@ WINDOW 8
 HORIZON 4;
 """
     check_status = """
-SELECT * 
-FROM mindsdb.models 
+SELECT *
+FROM mindsdb.models
 WHERE name='house_sales_model';
 """
     prediction = """
 SELECT m.saledate as date, m.ma as forecast
-  FROM mindsdb.house_sales_model as m 
+  FROM mindsdb.house_sales_model as m
   JOIN example_db.demo_data.house_sales as t
   WHERE t.saledate > LATEST AND t.type = 'house'
   AND t.bedrooms=2

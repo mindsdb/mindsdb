@@ -12,7 +12,7 @@ OVERRIDE_CONFIG = {
     'integrations': {},
 }
 # used by (required for) mindsdb_app fixture in conftest
-API_LIST = ["http",]
+API_LIST = ["http", ]
 
 
 class QueryStorage:
@@ -27,8 +27,8 @@ PARAMETERS = {
     "database": "demo"
     }; """
     check_db_created = """
-SELECT * 
-FROM example_db.demo_data.home_rentals 
+SELECT *
+FROM example_db.demo_data.home_rentals
 LIMIT 10;
     """
     create_model = """
@@ -44,8 +44,8 @@ FROM mindsdb.models
 WHERE name='home_rentals_model';
     """
     prediction = """
-SELECT rental_price, 
-       rental_price_explain 
+SELECT rental_price,
+       rental_price_explain
 FROM mindsdb.home_rentals_model
 WHERE sqft = 823
 AND location='good'
@@ -53,12 +53,13 @@ AND neighborhood='downtown'
 AND days_on_market=10;
     """
     bulk_prediction = """
-SELECT t.rental_price as real_price, 
+SELECT t.rental_price as real_price,
 m.rental_price as predicted_price,
-t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market 
-FROM example_db.demo_data.home_rentals as t 
+t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market
+FROM example_db.demo_data.home_rentals as t
 JOIN mindsdb.home_rentals_model as m limit 100;
     """
+
 
 @pytest.mark.usefixtures("mindsdb_app")
 class TestHomeRentalPrices(HTTPHelperMixin):

@@ -13,7 +13,7 @@ OVERRIDE_CONFIG = {
     'integrations': {},
 }
 # used by (required for) mindsdb_app fixture in conftest
-API_LIST = ["http",]
+API_LIST = ["http", ]
 OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 
 

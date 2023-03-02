@@ -78,6 +78,7 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
+from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.context import context as ctx
 
 
@@ -598,7 +599,7 @@ class ExecuteCommands:
 
     def answer_describe_predictor(self, statement):
         # describe attr
-        predictor_attrs = ("model", "features", "ensemble")
+        predictor_attrs = ("model", "features", "ensemble", "progress")
         attribute = None
         if statement.value.parts[-1] in predictor_attrs:
             attribute = statement.value.parts.pop(-1)
@@ -811,9 +812,30 @@ class ExecuteCommands:
         if handler_module_meta.get("import", {}).get("success") is not True:
             raise SqlApiException(f"Can't import engine '{statement.handler}'")
 
-        self.session.integration_controller._add_integration_record(
-            name=name, engine=statement.handler, connection_args=statement.params
+        integration_id = self.session.integration_controller.add(
+            name=name,
+            engine=statement.handler,
+            connection_args=statement.params
         )
+
+        HandlerClass = self.session.integration_controller.handler_modules[handler_module_meta['name']].Handler
+
+        if hasattr(HandlerClass, 'create_engine'):
+            handlerStorage = HandlerStorage(integration_id)
+            ml_handler = HandlerClass(
+                engine_storage=handlerStorage,
+                model_storage=None,
+            )
+
+            try:
+                ml_handler.create_engine(statement.params)
+            except NotImplementedError:
+                pass
+            except Exception as e:
+                # something wrong, drop ml engine
+                ast_drop = DropMLEngine(name=statement.name)
+                self.answer_drop_ml_engine(ast_drop)
+                raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 

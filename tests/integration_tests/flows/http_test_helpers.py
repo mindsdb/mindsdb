@@ -56,6 +56,18 @@ class HTTPHelperMixin:
             time.sleep(1)
         return status
 
+    def await_model_by_query(self, query, timeout=60):
+        start = time.time()
+        status = None
+        while (time.time() - start) < timeout:
+            resp = self.sql_via_http(query, RESPONSE_TYPE.TABLE)
+            status_index = [x.lower() for x in resp['column_names']].index('status')
+            status = resp['data'][0][status_index]
+            if status in ['complete', 'error']:
+                break
+            time.sleep(1)
+        return status
+
 
 def get_predictors_list(company_id=None):
     headers = {}

@@ -17,8 +17,6 @@ OVERRIDE_CONFIG = {
 # used by (required for) mindsdb_app fixture in conftest
 API_LIST = ["http",]
 
-# HTTP_API_ROOT = f'http://127.0.0.1:47334/api'
-
 
 class QueryStorage:
     create_db = """
@@ -30,43 +28,37 @@ PARAMETERS = {
     "host": "3.220.66.106",
     "port": "5432",
     "database": "demo"
-    }; 
-"""
-
+    }; """
     check_db_created = """
-SELECT * 
-FROM example_db.demo_data.house_sales 
-LIMIT 10;
-"""
-
+SELECT *
+FROM example_db.demo_data.user_comments LIMIT 3;
+    """
     create_model = """
-CREATE MODEL 
-  mindsdb.house_sales_model
-FROM example_db
-  (SELECT * FROM demo_data.house_sales)
-PREDICT ma
-ORDER BY saledate
-GROUP BY bedrooms, type
-WINDOW 8
-HORIZON 4;
-"""
+CREATE MODEL sentiment_classifier
+PREDICT sentiment
+USING engine='huggingface',
+  task = 'text-classification',
+  model_name= 'cardiffnlp/twitter-roberta-base-sentiment',
+  input_column = 'comment',
+  labels=['negative','neutral','positive'];
+    """
     check_status = """
-SELECT * 
-FROM mindsdb.models 
-WHERE name='house_sales_model';
-"""
+SELECT *
+FROM models 
+WHERE name = 'sentiment_classifier';
+    """
     prediction = """
-SELECT m.saledate as date, m.ma as forecast
-  FROM mindsdb.house_sales_model as m 
-  JOIN example_db.demo_data.house_sales as t
-  WHERE t.saledate > LATEST AND t.type = 'house'
-  AND t.bedrooms=2
-  LIMIT 4;
-"""
-
+SELECT * FROM sentiment_classifier
+WHERE comment='It is really easy to do NLP with MindsDB';
+    """
+    bulk_prediction = """
+SELECT input.comment, model.sentiment
+FROM example_db.demo_data.user_comments AS input
+JOIN sentiment_classifier AS model;
+    """
 
 @pytest.mark.usefixtures("mindsdb_app")
-class TestForecastQuaterlyHouseSales(HTTPHelperMixin):
+class TestPredictTextSentiment(HTTPHelperMixin):
 
     @classmethod
     def setup_class(cls):
@@ -83,7 +75,7 @@ class TestForecastQuaterlyHouseSales(HTTPHelperMixin):
     def test_db_created(self):
         sql = QueryStorage.check_db_created
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
-        assert len(resp['data']) == 10
+        assert len(resp['data']) == 3
 
     def test_create_model(self):
         sql = QueryStorage.create_model
@@ -95,9 +87,16 @@ class TestForecastQuaterlyHouseSales(HTTPHelperMixin):
         assert resp['data'][0][status] == 'generating'
 
     def test_wait_training_complete(self):
-        self.await_model("house_sales_model", timeout=600)
+        status = self.await_model_by_query(QueryStorage.check_status, timeout=600)
+        assert status == 'complete'
+        # self.await_model("home_rentals_model", timeout=600)
 
     def test_prediction(self):
         sql = QueryStorage.prediction
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
-        assert len(resp['data']) == 4
+        assert len(resp['data']) == 1
+
+    def test_bulk_prediciton(self):
+        sql = QueryStorage.bulk_prediction
+        resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
+        assert len(resp['data']) >= 1

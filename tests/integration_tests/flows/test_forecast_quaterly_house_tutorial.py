@@ -1,12 +1,9 @@
 from pathlib import Path
 import json
-import time
-import requests
-import pandas as pd
 import pytest
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from .conftest import make_test_csv, CONFIG_PATH
+from .conftest import CONFIG_PATH
 from .http_test_helpers import HTTPHelperMixin
 
 
@@ -16,8 +13,6 @@ OVERRIDE_CONFIG = {
 }
 # used by (required for) mindsdb_app fixture in conftest
 API_LIST = ["http",]
-
-# HTTP_API_ROOT = f'http://127.0.0.1:47334/api'
 
 
 class QueryStorage:

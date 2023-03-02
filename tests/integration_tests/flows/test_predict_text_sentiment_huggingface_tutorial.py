@@ -27,41 +27,35 @@ PARAMETERS = {
     "database": "demo"
     }; """
     check_db_created = """
-SELECT * 
-FROM example_db.demo_data.home_rentals 
-LIMIT 10;
+SELECT *
+FROM example_db.demo_data.user_comments LIMIT 3;
     """
     create_model = """
-CREATE MODEL
-  mindsdb.home_rentals_model
-FROM example_db
-  (SELECT * FROM demo_data.home_rentals)
-PREDICT rental_price;
+CREATE MODEL sentiment_classifier
+PREDICT sentiment
+USING engine='huggingface',
+  task = 'text-classification',
+  model_name= 'cardiffnlp/twitter-roberta-base-sentiment',
+  input_column = 'comment',
+  labels=['negative','neutral','positive'];
     """
     check_status = """
 SELECT *
-FROM mindsdb.models
-WHERE name='home_rentals_model';
+FROM models 
+WHERE name = 'sentiment_classifier';
     """
     prediction = """
-SELECT rental_price, 
-       rental_price_explain 
-FROM mindsdb.home_rentals_model
-WHERE sqft = 823
-AND location='good'
-AND neighborhood='downtown'
-AND days_on_market=10;
+SELECT * FROM sentiment_classifier
+WHERE comment='It is really easy to do NLP with MindsDB';
     """
     bulk_prediction = """
-SELECT t.rental_price as real_price, 
-m.rental_price as predicted_price,
-t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market 
-FROM example_db.demo_data.home_rentals as t 
-JOIN mindsdb.home_rentals_model as m limit 100;
+SELECT input.comment, model.sentiment
+FROM example_db.demo_data.user_comments AS input
+JOIN sentiment_classifier AS model;
     """
 
 @pytest.mark.usefixtures("mindsdb_app")
-class TestHomeRentalPrices(HTTPHelperMixin):
+class TestPredictTextSentimentHuggingface(HTTPHelperMixin):
 
     @classmethod
     def setup_class(cls):
@@ -78,7 +72,7 @@ class TestHomeRentalPrices(HTTPHelperMixin):
     def test_db_created(self):
         sql = QueryStorage.check_db_created
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
-        assert len(resp['data']) == 10
+        assert len(resp['data']) == 3
 
     def test_create_model(self):
         sql = QueryStorage.create_model
@@ -90,7 +84,9 @@ class TestHomeRentalPrices(HTTPHelperMixin):
         assert resp['data'][0][status] == 'generating'
 
     def test_wait_training_complete(self):
-        self.await_model("home_rentals_model", timeout=600)
+        status = self.await_model_by_query(QueryStorage.check_status, timeout=600)
+        assert status == 'complete'
+        # self.await_model("home_rentals_model", timeout=600)
 
     def test_prediction(self):
         sql = QueryStorage.prediction
@@ -100,4 +96,4 @@ class TestHomeRentalPrices(HTTPHelperMixin):
     def test_bulk_prediciton(self):
         sql = QueryStorage.bulk_prediction
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
-        assert len(resp['data']) == 100
+        assert len(resp['data']) >= 1

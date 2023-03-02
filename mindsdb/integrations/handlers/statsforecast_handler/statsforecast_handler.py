@@ -1,4 +1,3 @@
-import pandas as pd
 import dill
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.time_series_utils import (

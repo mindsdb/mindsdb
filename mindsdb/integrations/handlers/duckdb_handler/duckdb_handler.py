@@ -5,6 +5,7 @@ import pandas as pd
 from duckdb import DuckDBPyConnection
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.const import (
@@ -28,6 +29,7 @@ class DuckDBHandler(DatabaseHandler):
         self.parser = parse_sql
         self.dialect = 'postgresql'
         self.connection_data = kwargs.get('connection_data')
+        self.renderer = SqlalchemyRender('postgres')
 
         self.connection = None
         self.is_connected = False
@@ -46,7 +48,12 @@ class DuckDBHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.connection = duckdb.connect(self.connection_data['database'])
+        args = {
+            'database': self.connection_data.get('database'),
+            'read_only': self.connection_data.get('read_only'),
+        }
+
+        self.connection = duckdb.connect(**args)
         self.is_connected = True
 
         return self.connection

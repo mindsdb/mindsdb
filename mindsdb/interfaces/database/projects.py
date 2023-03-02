@@ -136,7 +136,10 @@ class Project:
                 'select_data_query': predictor_record.fetch_data_query,
                 'training_options': predictor_record.learn_args,
                 'deletable': True,
-                'label': predictor_record.label
+                'label': predictor_record.label,
+                'current_training_phase': predictor_record.training_phase_current,
+                'total_training_phases': predictor_record.training_phase_total,
+                'training_phase_name': predictor_record.training_phase_name,
             }
             if predictor_data is not None and predictor_data.get('accuracies', None) is not None:
                 if len(predictor_data['accuracies']) > 0:

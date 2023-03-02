@@ -134,7 +134,22 @@ class IntegrationDataNode(DataNode):
             return
 
         df = result.data_frame
-        df = df.replace(np.NaN, pd.NA).where(df.notnull(), None)
+        # region clearing df from NaN values
+        # recursion error appears in pandas 1.5.3 https://github.com/pandas-dev/pandas/pull/45749
+        if isinstance(df, pd.Series):
+            df = df.to_frame()
+
+        try:
+            df = df.replace(np.NaN, pd.NA)
+        except Exception as e:
+            print(f'Issue with clearing DF from NaN values: {e}')
+
+        try:
+            df = df.where(pd.notnull(df), None)
+        except Exception as e:
+            print(f'Issue with clearing DF from NaN values: {e}')
+        # endregion
+
         columns_info = [
             {
                 'name': k,

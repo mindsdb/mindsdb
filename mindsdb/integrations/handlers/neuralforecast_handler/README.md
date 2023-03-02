@@ -27,7 +27,7 @@ Models can be trained on either CPU or GPU.
 # To what degree can users control the underlying framework by passing parameters via the USING syntax?
 Users define the forecast horizon with the `horizon` parameter.
 
-The training window is defined with the `window` parameter.
+The training window is defined with the `window` parameter. Note that Neuralforecast will ignore this parameter if allowed to train for long enough, as it will automatically select the best training window as part of hyperparameter tuning.
 
 Users can specify `train_time` as a USING arg (see example in PR). `train_time` $\in [0, 1]$. This defaults to 1, and lower values will reduce trainig time linearly by reducing the number of searches allowed for the best configuration by AutoNHITS.
 

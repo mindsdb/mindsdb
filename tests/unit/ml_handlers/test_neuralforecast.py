@@ -77,7 +77,7 @@ class TestNeuralForecast(BaseExecutorTest):
            SELECT p.*
            FROM pg.df as t
            JOIN proj.model_multi_group as p
-           where t.group_col_2='a2'
+           where t.group_col_2='a2' AND t.time_col > LATEST
         """
         )
         assert list(round(result_df["target_col"])) == [32, 33, 34]
@@ -87,7 +87,7 @@ class TestNeuralForecast(BaseExecutorTest):
            SELECT p.*
            FROM pg.df as t
            JOIN proj.model_multi_group as p
-           where t.group_col='b'
+           where t.group_col='b' AND t.time_col > LATEST
         """
         )
         assert list(round(result_df["target_col"])) == [42, 43, 44]
@@ -124,7 +124,7 @@ class TestNeuralForecast(BaseExecutorTest):
            SELECT p.*
            FROM pg.df as t
            JOIN proj.model_exog_var as p
-           where t.group_col='b'
+           where t.group_col='b' AND t.time_col > LATEST
         """
         )
         assert list(round(result_df["target_col"])) == [42, 43, 44]

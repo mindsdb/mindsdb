@@ -50,5 +50,7 @@ Implement the DESCRIBE and UPDATE methods.
 
 Implement alternative forecasting models, other than NHITS, from the NeuralForecast package.
 
+Support exogenous regressors that are categoric, as the current implementation only supports numeric regressors.
+
 # Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
 See integration test in https://github.com/mindsdb/mindsdb/pull/4615

@@ -1,6 +1,6 @@
 __title__ = "MindsDB NeuralForecast handler"
 __package_name__ = "mindsdb_neuralforecast_handler"
-__version__ = "0.0.0"
+__version__ = "0.0.1"
 __description__ = "MindsDB handler for Nixtla's NeuralForecast package"
 __author__ = "MindsDB Inc"
 __github__ = "https://github.com/mindsdb/mindsdb"

@@ -1,11 +1,12 @@
 import os
+import tempfile
 import string
 import random
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import (
-    infer_frequency,
+from mindsdb.integrations.utilities.time_series_utils import (
     transform_to_nixtla_df,
     get_results_from_nixtla_df,
+    infer_frequency,
 )
 from neuralforecast import NeuralForecast
 from neuralforecast.models import NHITS
@@ -47,8 +48,6 @@ class NeuralForecastHandler(BaseMLEngine):
 
         Saves model params to desk, which are called later in the predict() method.
         """
-        with open("args.txt", "w+") as f:
-            f.write(str(args))
         time_settings = args["timeseries_settings"]
         using_args = args["using"]
         assert time_settings["is_timeseries"], "Specify time series settings in your query"
@@ -64,12 +63,9 @@ class NeuralForecastHandler(BaseMLEngine):
         model_args["model_name"] = DEFAULT_MODEL_NAME
         num_trials = int(DEFAULT_TRIALS * using_args["train_time"]) if "train_time" in using_args else DEFAULT_TRIALS
         exog_vars = using_args["exogenous_vars"] if "exogenous_vars" in using_args else []
+        model_args["model_folder"] = tempfile.mkdtemp()
 
-        # You have to save neuralforecast into a different folder each time.
-        # You must call random before creating the model, as neuralforecast sets the random seed
-        random_string = "".join(random.choices(string.ascii_uppercase + string.digits, k=24))
-        model_args["model_folder"] = os.path.join("neuralforecast", random_string)
-
+        # Train model
         model = choose_model(num_trials, time_settings["horizon"], time_settings["window"])
         nixtla_df = transform_to_nixtla_df(df, model_args, exog_vars)
         nf = NeuralForecast(models=[model], freq=model_args["frequency"])

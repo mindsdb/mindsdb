@@ -114,6 +114,7 @@ class JobsController:
         # create job record
         record = db.Jobs(
             company_id=ctx.company_id,
+            user_class=ctx.user_class,
             name=name,
             project_id=project.id,
             query_str=query_str,
@@ -281,6 +282,8 @@ class JobsExecutor:
 
         ctx.set_default()
         ctx.company_id = record.company_id
+        if record.user_class is not None:
+            ctx.user_class = record.user_class
 
         if history_id is None:
             history_record = db.JobsHistory(
@@ -308,9 +311,11 @@ class JobsExecutor:
                         .order_by(db.JobsHistory.id.desc())\
                         .first()
                     if history_prev is None:
-                        value = 'null'
+                        # very old date
+                        value = dt.datetime(1900, 1, 1)
                     else:
-                        value = history_prev.start_at.strftime("%Y-%m-%d %H:%M:%S")
+                        value = history_prev.start_at
+                    value = value.strftime("%Y-%m-%d %H:%M:%S")
                     sql = sql.replace('{{PREVIOUS_START_DATETIME}}', value)
 
                 if '{{START_DATE}}' in sql:
@@ -319,7 +324,6 @@ class JobsExecutor:
                 if '{{START_DATETIME}}' in sql:
                     value = history_record.start_at.strftime("%Y-%m-%d %H:%M:%S")
                     sql = sql.replace('{{START_DATETIME}}', value)
-
                 query = parse_sql(sql, dialect='mindsdb')
 
                 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
@@ -335,6 +339,7 @@ class JobsExecutor:
                     error = ret.error_message
                     break
             except Exception as e:
+                log.logger.error(e)
                 error = str(e)
                 break
 

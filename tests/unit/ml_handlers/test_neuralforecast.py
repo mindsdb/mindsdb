@@ -4,24 +4,8 @@ import pandas as pd
 
 from mindsdb_sql import parse_sql
 
+from tests.unit.ml_handlers.test_time_series_utils import create_mock_df
 from tests.unit.executor_test_base import BaseExecutorTest
-
-
-def create_mock_df():
-    df2 = pd.DataFrame(pd.date_range(start="1/1/2010", periods=31, freq="Q"), columns=["time_col"])
-    df3 = df2.copy()
-
-    df2["target_col"] = range(1, 32)
-    df2["group_col"] = "a"
-    df2["group_col_2"] = "a2"
-    df2["group_col_3"] = "a3"
-
-    df3["target_col"] = range(11, 42)
-    df3["group_col"] = "b"
-    df3["group_col_2"] = "b2"
-    df3["group_col_3"] = "b3"
-
-    return pd.concat([df2, df3]).reset_index(drop=True)
 
 
 class TestNeuralForecast(BaseExecutorTest):

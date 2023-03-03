@@ -198,7 +198,7 @@ class HuggingFaceHandler(BaseMLEngine):
                 if len(tokens) > max_tokens:
                     truncation_policy = args.get('truncation_policy', 'strict')
                     if truncation_policy == 'strict':
-                        errors.append([i, f'Tokens count exceed model limit: {tokens} > {max_tokens}'])
+                        errors.append([i, f'Tokens count exceed model limit: {len(tokens)} > {max_tokens}'])
                         continue
                     elif truncation_policy == 'left':
                         tokens = tokens[-max_tokens + 1: -1]  # cut 2 empty tokens from left and right

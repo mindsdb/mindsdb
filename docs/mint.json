@@ -294,6 +294,7 @@
           "pages": [
             "data-integrations/all-data-integrations",
             "data-integrations/amazon-redshift",
+            "data-integrations/cratedb"
             "data-integrations/cockroachdb",
             "data-integrations/ckan"
           ]

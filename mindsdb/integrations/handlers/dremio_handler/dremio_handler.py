@@ -115,6 +115,7 @@ class DremioHandler(DatabaseHandler):
         """
 
         query = query.replace('"', '\\"').replace('\n', ' ')
+
         need_to_close = self.is_connected is False
 
         auth_headers = self.connect()

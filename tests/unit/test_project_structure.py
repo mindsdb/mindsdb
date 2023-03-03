@@ -463,6 +463,17 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         assert row['t3a'] == 6
 
+    def test_create_validation(self):
+        with pytest.raises(RuntimeError) as exc_info:
+            self.run_sql(
+                '''
+                    CREATE model task_model_x 
+                    PREDICT a
+                    using 
+                       engine='dummy_ml', 
+                       error=1
+                '''
+            )
 
 class TestJobs(BaseExecutorDummyML):
 

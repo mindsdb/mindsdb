@@ -35,7 +35,7 @@
   },
   "anchors": [
     {
-      "name": "Community",
+      "name": "Join our Slack",
       "icon": "slack",
       "url": "https://mindsdb.com/joincommunity"
     },
@@ -85,7 +85,8 @@
                 "setup/custom-config",
                 "setup/environment-vars"
               ]
-            }
+            },
+            "setup/community-deploys-mindsdb"
           ]
         },
         {
@@ -141,7 +142,8 @@
                 {
                   "group": "Regression",
                   "pages": [
-                    "sql/tutorials/home-rentals"
+                    "sql/tutorials/home-rentals",
+                    "sql/tutorials/regression-community"
                   ]
                 }
               ]
@@ -292,6 +294,7 @@
           "pages": [
             "data-integrations/all-data-integrations",
             "data-integrations/amazon-redshift",
+            "data-integrations/cratedb"
             "data-integrations/cockroachdb",
             "data-integrations/ckan"
           ]
@@ -348,7 +351,8 @@
               "group": "Time Series",
               "pages": [
                 "sql/tutorials/house-sales-forecasting",
-                "sql/tutorials/eeg-forecasting"
+                "sql/tutorials/eeg-forecasting",
+                "sql/tutorials/time-series-community"
               ]
             },
             {

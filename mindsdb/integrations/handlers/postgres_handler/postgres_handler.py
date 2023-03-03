@@ -43,15 +43,18 @@ class PostgresHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        # TODO: Check psycopg_pool
-        if self.connection_args.get('dbname') is None:
-            self.connection_args['dbname'] = self.database
-        args = self.connection_args.copy()
+        config = {
+            'host': self.connection_args.get('host'),
+            'port': self.connection_args.get('port'),
+            'user': self.connection_args.get('user'),
+            'password': self.connection_args.get('password'),
+            'dbname': self.connection_args.get('database')
+        }
 
-        for key in ['type', 'publish', 'test', 'date_last_update', 'integrations_name', 'database_name', 'id', 'database']:
-            if key in args:
-                del args[key]
-        connection = psycopg.connect(**args, connect_timeout=10)
+        if self.connection_args.get('schema'):
+            config['options'] = f'-c search_path={self.connection_args.get("schema")},public'
+
+        connection = psycopg.connect(**config, connect_timeout=10)
 
         self.is_connected = True
         self.connection = connection

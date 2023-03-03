@@ -27,6 +27,9 @@ def make_test_csv(name, data):
     return str(test_csv_path)
 
 def docker_inet_ip():
+    if os.environ.get("MICROSERVICE_MODE", False):
+        return "127.0.0.1"
+
     """Get ip of docker0 interface."""
     if "docker0" not in netifaces.interfaces():
         raise Exception("Unable to find 'docker' interface. Please install docker first.")
@@ -50,6 +53,27 @@ def config(temp_dir):
     The config is created once for the whole test module.
     See 'scope' fixture parameter.
     """
+    if os.environ.get("MICROSERVICE_MODE", False):
+        config_json = {
+                "api":
+                {
+                    "http": {
+                        "host": "127.0.0.1",
+                        "port": 47334,
+                    },
+                    "mysql": {
+                        "host": "127.0.0.1",
+                        "port": 47335,
+                    },
+
+                    "mongodb": {
+                        "host": "127.0.0.1",
+                        "port": 47336,
+                    },
+                }
+        }
+        return config_json
+
     with open(TEST_CONFIG, 'rt') as f:
         config_json = json.loads(f.read())
         config_json['storage_dir'] = f'{TEMP_DIR}'
@@ -76,30 +100,37 @@ def mindsdb_app(request, config):
     """Start mindsdb app before tests and stop it after ones.
     Takes 'OVERRIDE_CONFIG' and 'API_LIST' from test module (file)
     """
-    apis = getattr(request.module, "API_LIST", [])
-    if not apis:
-        api_str = "http,mysql"
+    if os.environ.get("MICROSERVICE_MODE", False):
+        cmd = ['docker-compose', '-f', './docker/docker-compose.yml', 'up']
+        timeout = 1800
     else:
-        api_str = ",".join(apis)
-    to_override_conf = getattr(request.module, "OVERRIDE_CONFIG", {})
-    if to_override_conf:
-        override_recursive(config, to_override_conf)
-    config_path = TEMP_DIR.joinpath('config.json')
-    with open(config_path, "wt") as f:
-        f.write(json.dumps(config))
 
-    os.environ['CHECK_FOR_UPDATES'] = '0'
+        apis = getattr(request.module, "API_LIST", [])
+        if not apis:
+            api_str = "http,mysql"
+        else:
+            api_str = ",".join(apis)
+        to_override_conf = getattr(request.module, "OVERRIDE_CONFIG", {})
+        if to_override_conf:
+            override_recursive(config, to_override_conf)
+        config_path = TEMP_DIR.joinpath('config.json')
+        with open(config_path, "wt") as f:
+            f.write(json.dumps(config))
+
+        os.environ['CHECK_FOR_UPDATES'] = '0'
+        cmd = ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={config_path}', '--verbose']
+        timeout = 90
+
     print('Starting mindsdb process!')
     app = subprocess.Popen(
-        ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={config_path}', '--verbose'],
+        cmd,
         close_fds=True,
         stdout=sys.stdout,
         stderr=sys.stderr,
         shell=False
     )
-    threshold = time.time() + 60
+    threshold = time.time() + timeout
 
-    print("starting mindsdb app...")
     while True:
         try:
             host = config["api"]["http"]["host"]
@@ -111,10 +142,9 @@ def mindsdb_app(request, config):
             time.sleep(1)
             if time.time() > threshold:
                 raise Exception("unable to launch mindsdb app in 60 seconds")
-    print("mindsdb app has started.")
 
     def cleanup():
-        print(f"STOPPING APPLICATION")
+        print(f"Stopping Application")
         for ch in get_child_pids(app.pid):
             ch.kill()
         app.kill()

@@ -32,11 +32,11 @@ class TestHTTP:
 
     @classmethod
     def setup_class(cls):
-        cls.config = json.loads(
-            Path(CONFIG_PATH).read_text()
-        )
+        # cls.config = json.loads(
+        #     Path(CONFIG_PATH).read_text()
+        # )
 
-        cls.initial_integrations_names = list(cls.config['integrations'].keys())
+        # cls.initial_integrations_names = list(cls.config['integrations'].keys())
         cls._sql_via_http_context = {}
 
     def sql_via_http(self, request: str, expected_resp_type: str = None, context: dict = None) -> dict:

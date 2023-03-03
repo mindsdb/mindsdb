@@ -114,6 +114,8 @@ class DremioHandler(DatabaseHandler):
             HandlerResponse
         """
 
+        query = query.replace('"', '\\"').replace('\n', ' ')
+
         need_to_close = self.is_connected is False
 
         auth_headers = self.connect()
@@ -218,9 +220,9 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.INT,
         'description': 'The port that Dremio is running on.'
     },
-    user={
+    username={
         'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the Dremio server.'
+        'description': 'The username used to authenticate with the Dremio server.'
     },
     password={
         'type': ARG_TYPE.STR,
@@ -231,6 +233,6 @@ connection_args = OrderedDict(
 connection_args_example = OrderedDict(
     host='localhost',
     database=9047,
-    user='admin',
+    username='admin',
     password='password'
 )

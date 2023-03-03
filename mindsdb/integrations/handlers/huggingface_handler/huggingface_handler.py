@@ -71,7 +71,7 @@ class HuggingFaceHandler(BaseMLEngine):
                 input_keys.remove(key)
 
         # optional keys
-        for key in ['labels', 'max_length']:
+        for key in ['labels', 'max_length', 'truncation_policy']:
             if key in input_keys:
                 input_keys.remove(key)
 
@@ -194,10 +194,19 @@ class HuggingFaceHandler(BaseMLEngine):
         errors = []
         for i, line in enumerate(input_list):
             if max_tokens is not None:
-                tokens = len(pipeline.tokenizer(line)['input_ids'])
-                if tokens > max_tokens:
-                    errors.append([i, f'Tokens count exceed model limit: {tokens} > {max_tokens}'])
-                    continue
+                tokens = pipeline.tokenizer.encode(line)
+                if len(tokens) > max_tokens:
+                    truncation_policy = args.get('truncation_policy', 'strict')
+                    if truncation_policy == 'strict':
+                        errors.append([i, f'Tokens count exceed model limit: {tokens} > {max_tokens}'])
+                        continue
+                    elif truncation_policy == 'left':
+                        tokens = tokens[-max_tokens + 1: -1]  # cut 2 empty tokens from left and right
+                    else:
+                        tokens = tokens[1: max_tokens - 1]  # cut 2 empty tokens from left and right
+
+                    line = pipeline.tokenizer.decode(tokens)
+
             input_list_str.append(str(line))
 
         top_k = args.get('top_k', 1000)

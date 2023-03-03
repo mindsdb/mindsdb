@@ -235,7 +235,7 @@ class HuggingFaceHandler(BaseMLEngine):
 
         # inject errors info
         for i, msg in errors:
-            output_list_tidy.insert(i, {'value_error': msg})
+            output_list_tidy.insert(i, {'error': msg})
 
         pred_df = pd.DataFrame(output_list_tidy)
 

@@ -12,6 +12,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
+from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
 
 
 class CloudSQLHandler(DatabaseHandler):
@@ -37,15 +38,20 @@ class CloudSQLHandler(DatabaseHandler):
         if self.connection_data['db_engine'] == 'mysql':
             self.db = MySQLHandler(
                 name=name + 'mysql',
-                connection_data=self.connection_data
+                connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
             )
         elif self.connection_data['db_engine'] == 'postgresql':
             self.db = PostgresHandler(
                 name=name + 'postgresql',
                 connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
             )
+        elif self.connection_data['db_engine'] == 'mssql':
+            self.db = SqlServerHandler(
+                name=name + 'mssql',
+                connection_data={key: self.connection_data[key] for key in self.connection_data if key != 'db_engine'}
+            )
         else:
-            raise Exception("The database engine should be either MySQL or PostgreSQL!")
+            raise Exception("The database engine should be either MySQL, PostgreSQL or SQL Server!")
 
     def __del__(self):
         self.db.__del__()

@@ -85,7 +85,8 @@
                 "setup/custom-config",
                 "setup/environment-vars"
               ]
-            }
+            },
+            "setup/community-deploys-mindsdb"
           ]
         },
         {
@@ -338,7 +339,8 @@
                     "nlp/text-summarization-inside-mysql-with-openai",
                     "nlp/sentiment-analysis-inside-mongodb-with-openai",
                     "nlp/question-answering-inside-mongodb-with-openai",
-                    "nlp/text-summarization-inside-mongodb-with-openai"
+                    "nlp/text-summarization-inside-mongodb-with-openai",
+                    "nlp/json-from-text"
                   ]
                 }
               ]
@@ -347,7 +349,8 @@
               "group": "Time Series",
               "pages": [
                 "sql/tutorials/house-sales-forecasting",
-                "sql/tutorials/eeg-forecasting"
+                "sql/tutorials/eeg-forecasting",
+                "sql/tutorials/time-series-community"
               ]
             },
             {
@@ -398,7 +401,8 @@
             "nlp/text-summarization-inside-mysql-with-openai",
             "nlp/sentiment-analysis-inside-mongodb-with-openai",
             "nlp/question-answering-inside-mongodb-with-openai",
-            "nlp/text-summarization-inside-mongodb-with-openai"
+            "nlp/text-summarization-inside-mongodb-with-openai",
+            "nlp/json-from-text"
           ]
         },
         "nlp/nlp-extended-examples"

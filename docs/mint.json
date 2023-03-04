@@ -358,7 +358,8 @@
             {
               "group": "Classification",
               "pages": [
-                "sql/tutorials/customer-churn"
+                "sql/tutorials/customer-churn",
+                "sql/tutorials/classification-community"
               ]
             },
             {

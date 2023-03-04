@@ -34,9 +34,12 @@ class TPOTHandler(BaseMLEngine):
 
         if df is not None:
             model.fit(df.drop(columns=[target]), df[target])
-
-        self.model_storage.json_set('args', args)
-        self.model_storage.file_set('model', dill.dumps(model.fitted_pipeline_))
+            self.model_storage.json_set('args', args)
+            self.model_storage.file_set('model', dill.dumps(model.fitted_pipeline_))
+        else :
+            raise Exception(
+                "Data is empty!!"
+            )
         
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:

@@ -1,0 +1,47 @@
+---
+title: Apache Cassandra
+sidebarTitle: Cassandra
+---
+
+## Cassandra
+
+Cassandra is a free and open-source, distributed, wide-column store, NoSQL database management system designed to handle large amounts of data across many commodity servers, providing high availability with no single point of failure. You can find more details [here](https://cassandra.apache.org/_/index.html).
+
+## Implementation
+
+ScyllaDB is API-compatible with Apache Cassandra. So, this handler just extends the ScyllaHandler and is using the python `scylla-driver` library.
+
+The required arguments to establish a connection are:
+
+* `host`: the host name or IP address of the Cassandra 
+* `port`: the port to use when connecting 
+* `user`: the user to authenticate 
+* `password`: the password to authenticate the user
+* `keyspace`: the keyspace to connect to(top level container for tables)
+* `protocol_version`: not required, default to 4
+
+## Usage
+
+In order to make use of this handler and connect to a Cassandra server in MindsDB, the following syntax can be used.
+
+```sql
+CREATE DATABASE cassandra_datasource        --- display name for the database
+WITH ENGINE = 'cassandra',                  --- name of the MindsDB handler
+PARAMETERS = {
+  "host": " ",                              --- host name or IP address
+  "port": ,                                 --- port used to make TCP/IP connection
+  "user": " ",                              --- database user
+  "password": " ",                          --- database password
+  "keyspace": " ",                          --- database name
+  "protocol_version": ,                     --- optional, protocol version (defaults to 4 if left blank)
+  "secure_connect_bundle": {                --- optional, secure connect bundle file
+    "path": " "                                 --- either "path" or "url"
+  }
+};
+```
+
+Now, you can use this established connection to query your database as follows.
+
+```sql
+SELECT * FROM cassandra_datasource.example_table LIMIT 10;
+```

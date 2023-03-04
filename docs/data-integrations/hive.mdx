@@ -1,0 +1,52 @@
+---
+title: Apache Hive
+sidebarTitle: Hive
+---
+
+## Hive
+
+Apache Hive is a data warehouse software project built on top of Apache Hadoop for providing data query and analysis. Hive gives an SQL-like interface to query data stored in various databases and file systems that integrate with Hadoop.
+
+## Implementation
+This handler is implemented using the `pyHive`, a Python library that allows you to use Python code to run SQL commands on Hive.
+
+The required arguments to establish a connection are:
+
+* `user`: username asscociated with database
+* `password`: password to authenticate your access
+* `host`: host to server IP Address or hostname
+* `port`: port through which TCPIP connection is to be made
+* `database`: Database name to be connected
+* `auth`: Defaults to CUSTOM in case not provided. Check for other options in [https://pypi.org/project/PyHive/](https://pypi.org/project/PyHive/)
+
+
+## Usage
+In order to make use of this handler and connect to Hive in MindsDB, the following syntax can be used.
+
+```sql
+CREATE DATABASE hive_datasource   --- display name for the database
+WITH ENGINE = 'hive',             --- name of the MindsDB handler
+PARAMETERS = {
+  "user": " ",                    --- database user
+  "password": " ",                --- database password
+  "host": " ",                    --- host name or IP address
+  "port": ,                       --- port used to make TCP/IP connection
+  "database": " ",                --- database name
+  "auth": " "                     --- defaults to CUSTOM if not provided; check for options here: https://pypi.org/project/PyHive/
+};
+```
+
+Now, you can use this established connection to query your database as follows,
+
+```sql
+SELECT * FROM hive_datasource.table_name;
+```
+
+
+> **NOTE** : To install `pyHive` the following Linux packages are required.
+> - libsasl2-dev 
+> - sasl2-bin 
+> - libsasl2-2 
+> - libsasl2-dev 
+> - libsasl2-modules 
+> - libsasl2-modules-gssapi-mit.

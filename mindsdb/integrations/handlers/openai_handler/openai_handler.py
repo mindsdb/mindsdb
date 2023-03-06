@@ -28,6 +28,7 @@ class OpenAIHandler(BaseMLEngine):
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
+        self.chat_completion_models = ('gpt-3.5-turbo', 'gpt-3.5-turbo-0301')
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -95,6 +96,7 @@ class OpenAIHandler(BaseMLEngine):
         If there is a prompt template, we use it. Otherwise, we use the concatenation of `context_column` (optional) and `question_column` to ask for a completion.
         """ # noqa
         # TODO: support for edits, embeddings and moderation
+        # TODO: tiktoken for pre-API call max_tokens validation
 
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
@@ -232,16 +234,44 @@ class OpenAIHandler(BaseMLEngine):
         """
         @retry_with_exponential_backoff()
         def _submit_completion(model_name, prompts, api_key, api_args, args):
-            return openai.Completion.create(
-                model=model_name,
-                prompt=prompts,
-                api_key=api_key,
-                organization=args.get('api_organization'),
-                **api_args
-            )
+            if model_name in self.chat_completion_models:
+                method = getattr(openai.ChatCompletion, 'create')
+                messages = []
+                for prompt in prompts:
+                    if isinstance(prompt, str):
+                        messages.append({'role': 'user', 'content': prompt})
+                    elif isinstance(prompt, dict) and 'role' in prompt and 'content' in prompt:
+                        messages.append(prompt)
+                    else:
+                        raise Exception(f'Ill-formed prompt, please try again.\nPrompt : {prompt}')
+                kwargs = {
+                    'model': model_name,
+                    'messages': messages,
+                    'api_key': api_key,
+                    'organization': args.get('api_organization'),
+                    **api_args
+                }
+            else:
+                method = getattr(openai.Completion, 'create')
+                kwargs = {
+                    'model': model_name,
+                    'prompt': prompts,
+                    'api_key': api_key,
+                    'organization': args.get('api_organization'),
+                    **api_args
+                }
+            return method(**kwargs)
 
         def _tidy(comp):
-            return [c['text'].strip('\n').strip('') for c in comp['choices']]
+            tidy_comps = []
+            for c in comp['choices']:
+                # normal completion
+                if 'text' in c:
+                    tidy_comps.append(c['text'].strip('\n').strip(''))
+                # chat completion
+                elif 'message' in c:
+                    tidy_comps.append(c['message']['content'].strip('\n').strip(''))
+            return tidy_comps
 
         try:
             # check if simple completion works
@@ -261,6 +291,10 @@ class OpenAIHandler(BaseMLEngine):
                 max_batch_size = int(e[e.find(pattern) + len(pattern):].split(').')[0])
             else:
                 max_batch_size = self.max_batch_size  # guards against changes in the API message
+
+            # override batch_size to 1 if it's a conversational model:
+            if model_name in self.chat_completion_models:
+                max_batch_size = 1
 
         if not parallel:
             completion = None

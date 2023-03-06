@@ -1,6 +1,6 @@
 ---
 title: Databend
-sidebarTitle: databend
+sidebarTitle: Databend
 ---
 
 ## Databend
@@ -21,7 +21,7 @@ The required arguments to establish a connection are,
 
 ## Usage
 In order to make use of this handler and connect to Databend in MindsDB, the following syntax can be used,
-~~~~sql
+```sql
 CREATE DATABASE databend_datasource
 WITH
 engine='databend',
@@ -33,9 +33,9 @@ parameters={
     "host": "some-url.aws-us-east-2.default.databend.com",
     "database": "test_db"
 };
-~~~~
+```
 
 Now, you can use this established connection to query your data warehouse as follows,
-~~~~sql
+```sql
 SELECT * FROM databend_datasource.example_tbl
-~~~~
+```

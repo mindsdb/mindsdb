@@ -3,55 +3,11 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import StatsForecastHandler
 from statsforecast.models import AutoARIMA
 from statsforecast import StatsForecast
 from mindsdb_sql import parse_sql
-
-
+from tests.unit.ml_handlers.test_time_series_utils import create_mock_df
 from tests.unit.executor_test_base import BaseExecutorTest
-
-
-def create_mock_df():
-    df2 = pd.DataFrame(pd.date_range(start="1/1/2010", periods=31, freq="Q"), columns=["time_col"])
-    df3 = df2.copy()
-
-    df2["target_col"] = range(1, 32)
-    df2["group_col"] = "a"
-    df2["group_col_2"] = "a2"
-    df2["group_col_3"] = "a3"
-
-    df3["target_col"] = range(11, 42)
-    df3["group_col"] = "b"
-    df3["group_col_2"] = "b2"
-    df3["group_col_3"] = "b3"
-
-    return pd.concat([df2, df3]).reset_index(drop=True)
-
-
-def test_statsforecast_df_transformations():
-    sf_handler = StatsForecastHandler("model_storage", "engine_storage")
-    df = create_mock_df()
-    settings_dict = {"order_by": "time_col", "group_by": ["group_col"], "target": "target_col"}
-
-    # Test transform for single groupby
-    sf_df = sf_handler._transform_to_statsforecast_df(df, settings_dict)
-    assert [sf_df["unique_id"].iloc[i] == df["group_col"].iloc[i] for i in range(len(sf_df))]
-    assert [sf_df["y"].iloc[i] == df["target_col"].iloc[i] for i in range(len(sf_df))]
-    assert [sf_df["ds"].iloc[i] == df["time_col"].iloc[i] for i in range(len(sf_df))]
-    # Test reversing the transform
-    sf_results_df = sf_df.rename({"y": "AutoARIMA"}, axis=1).set_index("unique_id")
-    mindsdb_results_df = sf_handler._get_results_from_statsforecast_df(sf_results_df, settings_dict)
-    pd.testing.assert_frame_equal(mindsdb_results_df, df[["time_col", "target_col", "group_col"]])
-
-    # Test for multiple groups
-    settings_dict["group_by"] = ["group_col", "group_col_2", "group_col_3"]
-    sf_df = sf_handler._transform_to_statsforecast_df(df, settings_dict)
-    assert sf_df["unique_id"][0] == "a|a2|a3"
-    # Test reversing the transform
-    sf_results_df = sf_df.rename({"y": "AutoARIMA"}, axis=1).set_index("unique_id")
-    mindsdb_results_df = sf_handler._get_results_from_statsforecast_df(sf_results_df, settings_dict)
-    pd.testing.assert_frame_equal(mindsdb_results_df, df)
 
 
 class TestStatsForecast(BaseExecutorTest):
@@ -144,7 +100,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql("create database proj")
 
         # mock a time series dataset
-        df = pd.read_parquet('https://datasets-nixtla.s3.amazonaws.com/m4-hourly.parquet')
+        df = pd.read_parquet("https://datasets-nixtla.s3.amazonaws.com/m4-hourly.parquet")
         df = df[df.unique_id.isin(["H1", "H2", "H3"])]  # subset for speed
         n_groups = df["unique_id"].nunique()
         self.set_handler(mock_handler, name="pg", tables={"df": df})

@@ -170,19 +170,32 @@ class OpenAIHandler(BaseMLEngine):
                 if 'json_struct' in df.columns:
                     if isinstance(df['json_struct'][i], str):
                         df['json_struct'][i] = json.loads(df['json_struct'][i])
-                    json_struct = ', '.join(df['json_struct'][i].values())
+                    json_struct = ''
+                    for ind, val in enumerate(df['json_struct'][i].values()):
+                        json_struct = json_struct + f'{ind}. {val}\n'
                 else:
-                    json_struct = ', '.join(args['json_struct'].values())
+                    json_struct = ''
+                    for ind, val in enumerate(args['json_struct'].values()):
+                        json_struct = json_struct + f'{ind + 1}. {val}\n'
+
                 p = textwrap.dedent(f'''\
-                    From sentence below generate a one-dimensional array with data in it:
-                    {json_struct}.
-                    The sentence is:
+                    Using text starting after 'The text is:', give exactly {len(args['json_struct'])} answers to the questions:
+                    {{{{json_struct}}}}
+
+                    Answers should be in the same order as the questions.
+                    Each answer should start with a question number.
+                    Each answer must end with new line.
+                    If there is no answer to the question in the text, put a -.
+                    Answers should be as short as possible, ideally 1-2 words (unless otherwise specified).
+
+                    The text is:
                     {{{{{args['input_text']}}}}}
                 ''')
+                p = p.replace('{{json_struct}}', json_struct)
                 for column in df.columns:
                     if column == 'json_struct':
                         continue
-                    p = p.replace(f'{{{{{column}}}}}', df[column][i])
+                    p = p.replace(f'{{{{{column}}}}}', str(df[column][i]))
                 prompts.append(p)
 
         else:
@@ -210,10 +223,13 @@ class OpenAIHandler(BaseMLEngine):
                         json_keys = df['json_struct'][i].keys()
                     else:
                         json_keys = args['json_struct'].keys()
+                    responses = pred_df[args['target']][i].split('\n')
+                    responses = [x[3:] for x in responses]      # del question index
+
                     pred_df[args['target']][i] = {
                         key: val for key, val in zip(
                             json_keys,
-                            json.loads(pred_df[args['target']][i])
+                            responses
                         )
                     }
                 except Exception:

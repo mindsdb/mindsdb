@@ -250,32 +250,26 @@ class OpenAIHandler(BaseMLEngine):
         """
         @retry_with_exponential_backoff()
         def _submit_completion(model_name, prompts, api_key, api_args, args):
+            kwargs = {
+                'model': model_name,
+                'api_key': api_key,
+                'organization': args.get('api_organization'),
+            }
             if model_name in self.chat_completion_models:
                 method = getattr(openai.ChatCompletion, 'create')
                 messages = []
                 for prompt in prompts:
                     if isinstance(prompt, str):
+                        # TODO: role definition via user-provided column, useful for continuing previous conversations
                         messages.append({'role': 'user', 'content': prompt})
-                    elif isinstance(prompt, dict) and 'role' in prompt and 'content' in prompt:
-                        messages.append(prompt)
                     else:
                         raise Exception(f'Ill-formed prompt, please try again.\nPrompt : {prompt}')
-                kwargs = {
-                    'model': model_name,
-                    'messages': messages,
-                    'api_key': api_key,
-                    'organization': args.get('api_organization'),
-                    **api_args
-                }
+                kwargs['messages'] = messages
+
             else:
                 method = getattr(openai.Completion, 'create')
-                kwargs = {
-                    'model': model_name,
-                    'prompt': prompts,
-                    'api_key': api_key,
-                    'organization': args.get('api_organization'),
-                    **api_args
-                }
+                kwargs['prompt'] = prompts
+            kwargs = {**kwargs, **api_args}
             return method(**kwargs)
 
         def _tidy(comp):

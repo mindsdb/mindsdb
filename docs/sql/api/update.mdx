@@ -46,7 +46,8 @@ And the steps followed by the syntax:
       and shop_id = <row.shop_id>
   ```
 
-Note: in `WHERE` block it is better to use primary key for table
-or set of rows that can be a primary key (and identifies every row in table).
-Otherwise, it can lead to unexpected results when one row in destination table was updated several times
-from different rows in source table (because conditions from different rows are fit).
+<Tip>
+It is recommended to use the primary key column(s) in the WHERE clause, as the primary key column(s) uniquely 
+identify each row. Otherwise, the UPDATE statement may lead to unexpected results by altering rows that you didn't 
+want to affect.
+</Tip>

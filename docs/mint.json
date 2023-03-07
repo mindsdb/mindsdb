@@ -35,7 +35,7 @@
   },
   "anchors": [
     {
-      "name": "Community",
+      "name": "Join our Slack",
       "icon": "slack",
       "url": "https://mindsdb.com/joincommunity"
     },
@@ -294,8 +294,11 @@
           "pages": [
             "data-integrations/all-data-integrations",
             "data-integrations/amazon-redshift",
+            "data-integrations/db2",
+            "data-integrations/cratedb",
             "data-integrations/cockroachdb",
-            "data-integrations/ckan"
+            "data-integrations/ckan",
+            "data-integrations/databend"
           ]
         },
         {

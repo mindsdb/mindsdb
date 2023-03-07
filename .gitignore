@@ -25,6 +25,14 @@ storage_dir
 docker/dist/*
 .directory
 MindsDB.egg-info/*
+
+# Autokeras generated files
+auto_model
+autokeras
+structured_data_classifier
+structured_data_regressor
+mindsdb/integrations/handlers/autokeras_handler/structured_data_classifier
+
 # VisualStudioCode
 .vscode
 .vscode/*

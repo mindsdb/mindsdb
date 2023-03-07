@@ -35,7 +35,7 @@ class DBServiceServicer(db_pb2_grpc.DBServiceServicer):
         handler_kwargs = json.loads(handler_ctx.handler_params)
         # Create an instance of FileController for
         # 'files' type of handler
-        if handler_ctx == "files":
+        if handler_ctx.handler_type == "files":
             handler_kwargs["file_controller"] = FileController()
         return handler_class(**handler_kwargs)
 

@@ -35,7 +35,7 @@
   },
   "anchors": [
     {
-      "name": "Community",
+      "name": "Join our Slack",
       "icon": "slack",
       "url": "https://mindsdb.com/joincommunity"
     },
@@ -85,7 +85,8 @@
                 "setup/custom-config",
                 "setup/environment-vars"
               ]
-            }
+            },
+            "setup/community-deploys-mindsdb"
           ]
         },
         {
@@ -141,7 +142,8 @@
                 {
                   "group": "Regression",
                   "pages": [
-                    "sql/tutorials/home-rentals"
+                    "sql/tutorials/home-rentals",
+                    "sql/tutorials/regression-community"
                   ]
                 }
               ]
@@ -292,7 +294,11 @@
           "pages": [
             "data-integrations/all-data-integrations",
             "data-integrations/amazon-redshift",
-            "data-integrations/db2"
+            "data-integrations/db2",
+            "data-integrations/cratedb",
+            "data-integrations/cockroachdb",
+            "data-integrations/ckan",
+            "data-integrations/databend"
           ]
         },
         {
@@ -337,7 +343,8 @@
                     "nlp/text-summarization-inside-mysql-with-openai",
                     "nlp/sentiment-analysis-inside-mongodb-with-openai",
                     "nlp/question-answering-inside-mongodb-with-openai",
-                    "nlp/text-summarization-inside-mongodb-with-openai"
+                    "nlp/text-summarization-inside-mongodb-with-openai",
+                    "nlp/json-from-text"
                   ]
                 }
               ]
@@ -346,7 +353,8 @@
               "group": "Time Series",
               "pages": [
                 "sql/tutorials/house-sales-forecasting",
-                "sql/tutorials/eeg-forecasting"
+                "sql/tutorials/eeg-forecasting",
+                "sql/tutorials/time-series-community"
               ]
             },
             {
@@ -397,7 +405,8 @@
             "nlp/text-summarization-inside-mysql-with-openai",
             "nlp/sentiment-analysis-inside-mongodb-with-openai",
             "nlp/question-answering-inside-mongodb-with-openai",
-            "nlp/text-summarization-inside-mongodb-with-openai"
+            "nlp/text-summarization-inside-mongodb-with-openai",
+            "nlp/json-from-text"
           ]
         },
         "nlp/nlp-extended-examples"

@@ -24,6 +24,6 @@ action supports raw SQL commands to be used to search for the data
 
 Example:
 ```python
-...
+
 ckan.action.datastore_search_sql(sql='SELECT * FROM "resource_id"')
 ```

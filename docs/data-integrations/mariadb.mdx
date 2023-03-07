@@ -1,0 +1,60 @@
+---
+title: MariaDB
+sidebarTitle: MariaDB
+---
+
+## MariaDB
+
+MariaDB is a community-developed, commercially supported fork of the MySQL relational database management system (RDBMS), intended to remain free and open-source software under the GNU General Public License.
+MariaDB is intended to maintain high compatibility with MySQL, with library binary parity and exact matching with MySQL APIs and commands, allowing it in many cases to function as drop-in replacement for MySQL.
+
+## Implementation
+
+This handler is implemented using the `mysql-connector`,  a self-contained Python driver for communicating with MariaDB servers using MySQL.
+
+The required arguments to establish a connection are:
+
+* `user`: database user
+* `password`: database password
+* `host`: host IP address or URL
+* `port`: port used to make TCP/IP connection
+* `database`: database name *optional.
+
+There are several optional arguments that can be used as well.
+
+* `ssl`: the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+* `ssl_ca`: SSL Certificate Authority
+* `ssl_cert`: SSL certificates
+* `ssl_key`: SSL keys
+
+## Usage
+
+In order to make use of this handler and connect to MariaDB in MindsDB, the following syntax can be used.
+
+```sql
+CREATE DATABASE maria_datasource            --- display name for the database
+WITH ENGINE = 'mariadb',                    --- name of the MindsDB handler
+PARAMETERS = {
+  "host": " ",                              --- host IP address or URL
+  "port": ,                                 --- port used to make TCP/IP connection
+  "database": " ",                          --- database name
+  "user": " ",                              --- database user
+  "password": " ",                          --- database password
+  "ssl": ,                                  --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+  "ssl_ca": {                               --- optional, SSL Certificate Authority
+    "path": " "                                 --- either "path" or "url"
+  },
+  "ssl_cert": {                             --- optional, SSL certificates
+    "url": " "                                  --- either "path" or "url"
+  },
+  "ssl_key": {                              --- optional, SSL keys
+    "path": " "                                 --- either "path" or "url"
+  }
+};
+```
+
+Now, you can use this established connection to query your database as follows.
+
+```sql
+SELECT * FROM maria_datasource.example_table
+```

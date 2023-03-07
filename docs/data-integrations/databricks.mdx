@@ -1,0 +1,50 @@
+---
+title: Databricks
+sidebarTitle: Databricks
+---
+
+## Databricks
+
+A data lakehouse unifies the best of data warehouses and data lakes in one simple platform to handle all your data, analytics and AI use cases. It’s built on an open and reliable data foundation that efficiently handles all data types and applies one common security and governance approach across all of your data and cloud platforms.
+You can find more details [here](https://databricks.com/).
+
+## Implementation
+
+This handler was implemented using the `databricks-sql-connector`, a Python library that allows you to use Python code to run SQL commands on Databricks clusters and Databricks SQL warehouses.
+
+The required arguments to establish a connection are:
+
+* `server_hostname`: the server hostname for the cluster or SQL warehouse
+* `http_path`: the HTTP path of the cluster or SQL warehouse
+* `access_token`: a Databricks personal access token for the workspace for the cluster or SQL warehouse
+
+There are several optional arguments that can be used as well.
+
+* `session_configuration`: a dictionary of Spark session configuration parameters
+* `http_headers`: additional (key, value) pairs to set in HTTP headers on every RPC request the client makes
+* `catalog`: catalog to use for the connection. If left blank, the default catalog, typically `hive_metastore` will be used
+* `schema`: schema (database) to use for the connection. If left blank, the default schema `default` will be used
+
+## Usage
+
+In order to make use of this handler and connect to Databricks in MindsDB, the following syntax can be used.
+
+```sql
+CREATE DATABASE databricks_datasource         --- display name for the database
+WITH ENGINE = 'databricks',                   --- name of the MindsDB handler
+PARAMETERS = {
+  "server_hostname": " ",                     --- server hostname of the cluster or SQL warehouse
+  "http_path": " ",                           --- http path to the cluster or SQL warehouse
+  "access_token": " ",                        --- personal Databricks access token
+  "schema": " ",                              --- schema name (defaults to `default` if left blank)
+  "session_configuration": " ",               --- optional, dictionary of Spark session configuration parameters
+  "http_headers": " ",                        --- optional, additional (key, value) pairs to set in HTTP headers on every RPC request the client makes
+  "catalog": " "                              --- catalog (defaults to `hive_metastore` if left blank)
+};
+```
+
+Now, you can use this established connection to query your database as follows.
+
+```sql
+SELECT * FROM databricks_datasource.example_table
+```

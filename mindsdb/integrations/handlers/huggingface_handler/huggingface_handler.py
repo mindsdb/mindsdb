@@ -71,7 +71,7 @@ class HuggingFaceHandler(BaseMLEngine):
                 input_keys.remove(key)
 
         # optional keys
-        for key in ['labels', 'max_length']:
+        for key in ['labels', 'max_length', 'truncation_policy']:
             if key in input_keys:
                 input_keys.remove(key)
 
@@ -188,7 +188,26 @@ class HuggingFaceHandler(BaseMLEngine):
                                          tokenizer=hf_model_storage_path)
 
         input_list = df[args['input_column']]
-        input_list_str = [str(x) for x in input_list]
+
+        max_tokens = pipeline.tokenizer.model_max_length
+        input_list_str = []
+        errors = []
+        for i, line in enumerate(input_list):
+            if max_tokens is not None:
+                tokens = pipeline.tokenizer.encode(line)
+                if len(tokens) > max_tokens:
+                    truncation_policy = args.get('truncation_policy', 'strict')
+                    if truncation_policy == 'strict':
+                        errors.append([i, f'Tokens count exceed model limit: {len(tokens)} > {max_tokens}'])
+                        continue
+                    elif truncation_policy == 'left':
+                        tokens = tokens[-max_tokens + 1: -1]  # cut 2 empty tokens from left and right
+                    else:
+                        tokens = tokens[1: max_tokens - 1]  # cut 2 empty tokens from left and right
+
+                    line = pipeline.tokenizer.decode(tokens)
+
+            input_list_str.append(str(line))
 
         top_k = args.get('top_k', 1000)
 
@@ -213,6 +232,11 @@ class HuggingFaceHandler(BaseMLEngine):
             output_list_tidy = [tidy_output_summarization(args, x) for x in output_list_messy]
         else:
             raise RuntimeError(f'Unknown task: {task}')
+
+        # inject errors info
+        for i, msg in errors:
+            output_list_tidy.insert(i, {'error': msg})
+
         pred_df = pd.DataFrame(output_list_tidy)
 
         return pred_df

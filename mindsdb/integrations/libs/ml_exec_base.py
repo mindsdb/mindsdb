@@ -307,8 +307,11 @@ class BaseMLEngineExec:
         project = self.database_controller.get_project(name=project_name)
 
         # handler-side validation
-        if hasattr(self.handler_class, 'create_validation'):
-            self.handler_class.create_validation(target, args=problem_definition)
+        # self.handler_class is a instance of MLClientFactory
+        # so need to check self.handler_class.handler_class attribute
+        # which is a class of a real MLHandler
+        if hasattr(self.handler_class.handler_class, 'create_validation'):
+            self.handler_class.handler_class.create_validation(target, args=problem_definition)
 
         predictor_record = db.Predictor(
             company_id=ctx.company_id,

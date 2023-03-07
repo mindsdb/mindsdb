@@ -71,8 +71,9 @@ class TestHuggingface(BaseExecutorTest):
         create_sql = '''
             CREATE PREDICTOR mindsdb.spam_classifier
             predict PRED
-            USING
+            USING                
                 engine='huggingface',
+                join_learn_process=true,
                 task='text-classification',
                 model_name= "mrm8488/bert-tiny-finetuned-sms-spam-detection",
                 input_column = 'text_spammy',
@@ -106,6 +107,7 @@ class TestHuggingface(BaseExecutorTest):
            predict PRED
            USING
                 engine='huggingface',
+                join_learn_process=true,
                 task='text-classification',
                 model_name= "cardiffnlp/twitter-roberta-base-sentiment",
                 input_column = 'text_short',
@@ -130,6 +132,7 @@ class TestHuggingface(BaseExecutorTest):
             predict PREDZS
          USING
             engine='huggingface',
+            join_learn_process=true,
             task="zero-shot-classification",
             model_name= "facebook/bart-large-mnli",
             input_column = "text_short",
@@ -154,6 +157,7 @@ class TestHuggingface(BaseExecutorTest):
             predict TRANSLATION
         USING
             engine='huggingface',
+            join_learn_process=true,
             task = "translation",
             model_name = "t5-base",
             input_column = "text_short",

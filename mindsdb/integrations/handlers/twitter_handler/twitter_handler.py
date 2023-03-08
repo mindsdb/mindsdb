@@ -12,30 +12,13 @@ from mindsdb_sql.parser import ast
 from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-
-
-def extract_conditions(binary_op):
-    conditions = []
-
-    def _extract_conditions(node, **kwargs):
-        if isinstance(node, ast.BinaryOperation):
-            op = node.op.lower()
-            if op == 'and':
-                return
-            elif op == 'or':
-                raise NotImplementedError
-            elif not isinstance(node.args[0], ast.Identifier) or not isinstance(node.args[1], ast.Constant):
-                raise NotImplementedError
-            conditions.append([op, node.args[0].parts[-1], node.args[1].value])
-
-    query_traversal(binary_op, _extract_conditions)
-    return conditions
 
 
 def parse_date(date_str):
@@ -55,10 +38,10 @@ def parse_date(date_str):
 
 
 class TweetsTable(APITable):
-    
+
     def select(self, query: ast.Select) -> Response:
 
-        conditions = extract_conditions(query.where)
+        conditions = extract_comparison_conditions(query.where)
 
         params = {}
         for op, arg1, arg2 in conditions:
@@ -132,7 +115,7 @@ class TweetsTable(APITable):
             'in_reply_to_user_username'
         ]
 
-    def insert(self, query:ast.Insert):
+    def insert(self, query: ast.Insert):
         # https://docs.tweepy.org/en/stable/client.html#tweepy.Client.create_tweet
         columns = [col.name for col in query.columns]
         for row in query.values:
@@ -212,7 +195,7 @@ class TwitterHandler(APIHandler):
             data_frame=df
         )
 
-    def call_twitter_api(self, method_name:str = None, params:dict = None):
+    def call_twitter_api(self, method_name: str = None, params: dict = None):
 
         # method > table > columns
         expansions_map = {
@@ -288,7 +271,7 @@ class TwitterHandler(APIHandler):
                     continue
 
                 for col_id in expansions[table]:
-                    col = col_id[:-3] # cut _id
+                    col = col_id[:-3]  # cut _id
                     if col_id not in df.columns:
                         continue
 
@@ -301,4 +284,3 @@ class TwitterHandler(APIHandler):
                     df = df.merge(df_ref2, on=col_id, how='left')
 
         return df
-

@@ -9,32 +9,16 @@ import pandas as pd
 from mindsdb.utilities import log
 
 from mindsdb_sql.parser import ast
-from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from mindsdb.integrations.utilities.date_utils import parse_utc_date
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-
-
-def parse_date(date_str):
-    if isinstance(date_str, dt.datetime):
-        return date_str
-    date_formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
-    date = None
-    for date_format in date_formats:
-        try:
-            date = dt.datetime.strptime(date_str, date_format)
-        except ValueError:
-            pass
-    if date is None:
-        raise ValueError(f"Can't parse date: {date_str}")
-    date = date.astimezone(pytz.utc)
-    return date
 
 
 class TweetsTable(APITable):
@@ -46,7 +30,7 @@ class TweetsTable(APITable):
         params = {}
         for op, arg1, arg2 in conditions:
             if arg1 == 'created_at':
-                date = parse_date(arg2)
+                date = parse_utc_date(arg2)
                 if op == '>':
                     # "tweets/search/recent" doesn't accept dates earlier than 7 days
                     if (dt.datetime.now(dt.timezone.utc) - date).days > 7:

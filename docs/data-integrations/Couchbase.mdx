@@ -19,7 +19,7 @@ The required arguments to establish a connection are,
 
 ## Usage
 In order to make use of this handler and connect to a Couchbase server in MindsDB, the following syntax can be used,
-~~~~sql
+```sql
 CREATE DATABASE couchbase_datasource
 WITH
 engine='couchbase',
@@ -29,9 +29,9 @@ parameters={
     "user": "admin",
     "password": "password"
 };
-~~~~
+```
 
 Now, you can use this established connection to query your database as follows,
-~~~~sql
+```sql
 SELECT * FROM couchbase_datasource.collection
-~~~~
+```

@@ -10,20 +10,15 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-
-
-
 import pandas as pd
 import jaydebeapi as jdbcconnector
-
-
-
 
 
 class DerbyHandler(DatabaseHandler):
 
 
     name= 'derby'
+
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """ Initialize the handler
@@ -37,7 +32,7 @@ class DerbyHandler(DatabaseHandler):
         self.kwargs = kwargs
         self.parser = parse_sql
         self.database = connection_data['database']
-        self.connectionData = connection_data
+        self.connection_config = connection_data
         self.host = connection_data['host']
         self.port = connection_data['port']
         self.schema =  'APP'
@@ -55,28 +50,28 @@ class DerbyHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        user = self.connectionData.get('user')
-        password = self.connectionData.get('password')
-        jdbcClass = self.connectionData.get('jdbcClass')
-        jarLocation = self.connectionData.get('jdbcJarLocation')
+        user = self.connection_config.get('user')
+        password = self.connection_config.get('password')
+        jdbc_class = self.connection_config.get('jdbcClass')
+        jar_location = self.connection_config.get('jdbcJarLocation')
 
-        jdbcUrl = "jdbc:derby://" + self.host + ":" + self.port + "/" + self.database + ";"
+        jdbc_url = "jdbc:derby://" + self.host + ":" + self.port + "/" + self.database + ";"
 
-        if not jdbcClass: 
-            jdbcClass = "org.apache.derby.jdbc.ClientDriver"
+        if not jdbc_class: 
+            jdbc_class = "org.apache.derby.jdbc.ClientDriver"
 
         if user: 
             self.schema = user
 
         try:
-            if user and password and jarLocation: 
-                self.connection = jdbcconnector.connect(jclassname=jdbcClass, url=jdbcUrl, driver_args=[user, password], jars=jarLocation.split(","))
+            if user and password and jar_location: 
+                self.connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[user, password], jars=jar_location.split(","))
             elif user and password: 
-                self.connection = jdbcconnector.connect(jclassname=jdbcClass, url=jdbcUrl, driver_args=[user, password])
-            elif jarLocation: 
-                self.connection = jdbcconnector.connect(jclassname=jdbcClass, url=jdbcUrl, jars=jarLocation.split(","))
+                self.connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[user, password])
+            elif jar_location: 
+                self.connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, jars=jar_location.split(","))
             else:
-                self.connection = jdbcconnector.connect(jdbcClass, jdbcUrl)
+                self.connection = jdbcconnector.connect(jdbc_class, jdbc_url)
         except Exception as e:
             log.logger.error(f"Error while connecting to {self.database}, {e}")
 
@@ -204,14 +199,9 @@ class DerbyHandler(DatabaseHandler):
 
         query = f''' SELECT COLUMNNAME FROM SYS.SYSCOLUMNS INNER JOIN SYS.SYSTABLES ON SYS.SYSCOLUMNS.REFERENCEID=SYS.SYSTABLES.TABLEID WHERE TABLENAME='{table_name}' '''
         return self.native_query(query)
-
-        
-
-
-
-
-
-connection_args = OrderedDict(
+    
+    
+    connection_args = OrderedDict(
     host={
         'type': ARG_TYPE.STR,
         'description': 'The host name or IP address of the Apache Derby server/database.'
@@ -244,6 +234,7 @@ connection_args = OrderedDict(
     }
 
 )
+
 
 connection_args_example = OrderedDict(
     host='localhost',

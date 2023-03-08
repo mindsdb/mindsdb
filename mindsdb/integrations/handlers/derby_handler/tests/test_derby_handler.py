@@ -21,24 +21,23 @@ class DerbyHandlerTest(unittest.TestCase):
         self.handler.check_connection()
 
     def test_2_create(self):
-        res = self.handler.query('CREATE TABLE TESTTABLEKBThree (ID INT PRIMARY KEY, NAME VARCHAR(14))')
+        res = self.handler.query('CREATE TABLE TESTTABLEX (ID INT PRIMARY KEY, NAME VARCHAR(14))')
         assert res.type is RESPONSE_TYPE.OK
 
     def test_3_insert(self):
-        res = self.handler.query("INSERT INTO TESTTABLEKBThree VALUES (100,'ONE HUNDRED'),(200,'TWO HUNDRED'),(300,'THREE HUNDRED')")
+        res = self.handler.query("INSERT INTO TESTTABLEX VALUES (100,'ONE HUNDRED'),(200,'TWO HUNDRED'),(300,'THREE HUNDRED')")
         assert res.type is RESPONSE_TYPE.OK
 
     def test_4_select(self):
-        res = self.handler.query('SELECT * FROM TESTTABLEKBThree')
+        res = self.handler.query('SELECT * FROM TESTTABLEX')
         assert res.type is RESPONSE_TYPE.TABLE
     
     def test_5_get_tables(self):
         res = self.handler.get_tables()
-        print(res)
         assert res.type is RESPONSE_TYPE.TABLE
 
     def test_6_get_columns(self):
-        res = self.handler.get_columns("TESTTABLEKBThree")
+        res = self.handler.get_columns("TESTTABLEX")
         assert res.type is RESPONSE_TYPE.TABLE
     
 

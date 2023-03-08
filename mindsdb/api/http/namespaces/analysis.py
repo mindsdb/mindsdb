@@ -11,7 +11,7 @@ from mindsdb_sql.planner.utils import query_traversal
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.analysis import ns_conf
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
+from mindsdb.api.common.libs import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 
 
 def analyze_df(df: DataFrame) -> dict:

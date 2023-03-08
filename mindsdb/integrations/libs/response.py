@@ -1,8 +1,7 @@
-import json
 from pandas import DataFrame
 
 from mindsdb.utilities.log import get_log
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.common.libs import RESPONSE_TYPE
 from mindsdb_sql.parser.ast import ASTNode
 
 

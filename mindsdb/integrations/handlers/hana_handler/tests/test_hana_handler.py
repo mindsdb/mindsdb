@@ -2,7 +2,7 @@ import os
 import unittest
 
 from mindsdb.integrations.handlers.hana_handler.hana_handler import HanaHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.common.libs import RESPONSE_TYPE
 
 
 """

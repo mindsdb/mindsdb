@@ -40,7 +40,7 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.model.functions import (
     get_model_record
 )
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
+from mindsdb.api.common.classes.sql_query import SQLQuery
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.processes import HandlerProcess
 from mindsdb.utilities.functions import mark_process

@@ -10,7 +10,7 @@ from mindsdb_sql.parser.ast import (
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
+from mindsdb.api.common.classes.sql_query import SQLQuery
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 
 

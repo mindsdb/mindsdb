@@ -59,13 +59,13 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlWrongArguments,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery, Column
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
+from mindsdb.api.common.classes.sql_query import SQLQuery, Column
+from mindsdb.api.common.libs.constants.mysql import (
     CHARSET_NUMBERS,
     TYPES,
     SERVER_VARIABLES,
 )
-from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
+from mindsdb.api.common.executor.data_types import ExecuteAnswer, ANSWER_TYPE
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE
 from mindsdb.interfaces.model.functions import (

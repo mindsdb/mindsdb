@@ -7,8 +7,8 @@ from mindsdb.utilities.log import (
     get_log,
 )
 from mindsdb.utilities.context import context as ctx
-from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import (
+from mindsdb.api.common.executor.executor import Executor
+from mindsdb.api.common.controllers.session_controller import (
     SessionController,
 )
 

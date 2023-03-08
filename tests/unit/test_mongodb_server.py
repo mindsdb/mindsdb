@@ -1,7 +1,6 @@
 import datetime as dt
 import json
 import threading
-import unittest
 import inspect
 from unittest.mock import patch
 import tempfile
@@ -10,9 +9,8 @@ import os
 from pymongo import MongoClient
 from mindsdb_sql import parse_sql
 
-import mindsdb.api.mongo.functions as helpers
-from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column
+from mindsdb.api.common.executor.data_types import ExecuteAnswer, ANSWER_TYPE
+from mindsdb.api.common.classes.sql_query import Column
 
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py

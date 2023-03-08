@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.impala_handler.impala_handler import ImpalaHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.common.libs import RESPONSE_TYPE
 
 
 class ImpalaHandlerTest(unittest.TestCase):

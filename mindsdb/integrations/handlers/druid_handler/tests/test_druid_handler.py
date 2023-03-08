@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.druid_handler.druid_handler import DruidHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.common.libs import RESPONSE_TYPE
 
 
 class DruidHandlerTest(unittest.TestCase):

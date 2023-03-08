@@ -15,7 +15,6 @@ import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.json_encoder import json_serialiser
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.interfaces.model.functions import (
     get_model_record,
     get_model_records

@@ -1,7 +1,7 @@
 import unittest
 
 from mindsdb.integrations.handlers.matrixone_handler.matrixone_handler import MatrixOneHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.common.libs import RESPONSE_TYPE
 
 
 class MatrixOneHandlerTest(unittest.TestCase):

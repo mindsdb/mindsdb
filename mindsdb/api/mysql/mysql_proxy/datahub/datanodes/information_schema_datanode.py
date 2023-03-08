@@ -6,7 +6,7 @@ from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import BinaryOperation, Select, Identifier, Constant
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
+from mindsdb.api.common.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import IntegrationDataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.project_datanode import ProjectDataNode

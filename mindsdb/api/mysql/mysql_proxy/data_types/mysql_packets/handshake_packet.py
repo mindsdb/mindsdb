@@ -10,7 +10,7 @@
 """
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
+from mindsdb.api.common.libs import (
     DEFAULT_AUTH_METHOD,
     DEFAULT_COALLITION_ID,
     FILLER_FOR_WIRESHARK_DUMP,

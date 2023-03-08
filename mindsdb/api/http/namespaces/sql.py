@@ -5,7 +5,7 @@ from flask import request
 
 from mindsdb.api.http.namespaces.configs.sql import ns_conf
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
+from mindsdb.api.common.libs import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     SqlApiUnknownError

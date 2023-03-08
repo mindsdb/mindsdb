@@ -353,8 +353,13 @@
               "group": "Time Series",
               "pages": [
                 "sql/tutorials/house-sales-forecasting",
-                "sql/tutorials/eeg-forecasting",
-                "sql/tutorials/time-series-community"
+                "sql/tutorials/time-series-community",
+                {
+                  "group": "Nixtla",
+                  "pages": [
+                    "nixtla/statsforecast"
+                  ]
+                }
               ]
             },
             {

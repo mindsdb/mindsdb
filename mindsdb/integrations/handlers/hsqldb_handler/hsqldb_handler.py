@@ -15,9 +15,6 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
-import sqlalchemy.dialects.postgresql as PostgresDialect
-# from sqlalchemy_access.base import AccessDialect
-
 class HSQLDBHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the HyperSQL statements.
@@ -164,7 +161,7 @@ class HSQLDBHandler(DatabaseHandler):
 
         connection = self.connect()
         cursor = connection.cursor()
-        cursor.execute("SELECT * FROM information_schema.tables WHERE table_schema='PUBLIC' AND table_type='BASE TABLE'")
+        cursor.execute("SELECT * FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog') AND table_type='BASE TABLE'")
         results = cursor.fetchall()
         df = pd.DataFrame([x[2] for x in results], columns=['table_name']) # Workaround since cursor.tables() wont work with postgres driver
         response = Response(

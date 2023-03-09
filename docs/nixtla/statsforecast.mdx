@@ -9,6 +9,21 @@ In this tutorial, we introduce Nixtla’s StatsForecast integration which offers
 
 To follow along, you can sign up for an account at [MindsDB Cloud](https://cloud.mindsdb.com/). Alternatively, head to [MindsDB Docs](https://docs.mindsdb.com) and follow the instructions to manually set up a local instance of MindsDB via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [pip](https://docs.mindsdb.com/setup/self-hosted/pip/source). You can also set up MindsDB on AWS following [this instruction set](https://aws.amazon.com/marketplace/pp/prodview-2nmhvskydmyrw).
 
+Please note that before using the StatsForecast engine, you should create it with the below command:
+
+```sql
+CREATE ML_ENGINE statsforecast
+FROM statsforecast;
+```
+
+You can check the available engines with this command:
+
+```sql
+SHOW ML_ENGINES;
+```
+
+If you see the StatsForecast engine on the list, you are ready to follow the tutorials.
+
 ## Tutorial using SQL
 
 In this tutorial, we create a model to predict expenditures based on historical data using the StatsForecast engine. Nixtla’s StatsForecast offers numerous univariate time series forecasting models optimized for high performance and scalability. Follow along to see how it works.

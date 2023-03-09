@@ -1,17 +1,11 @@
-from typing import Optional
 from collections import OrderedDict
 
 import pandas as pd
 import pyodbc
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-import SQLAlchemy.dialects.postgresql as PostgresDialect
-# from sqlalchemy_access.base import AccessDialect
-from mindsdb.integrations.libs.base import DatabaseHandler
-
 from mindsdb_sql.parser.ast.base import ASTNode
-
+from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb_sql import parse_sql
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -19,11 +13,14 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
+import sqlalchemy.dialects.postgresql as PostgresDialect
+# from sqlalchemy_access.base import AccessDialect
 
 class HSQLDBHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Microsoft Access statements.
+    This handler handles connection and execution of the HyperSQL statements.
     """
 
     name = 'hsqldb'
@@ -39,20 +36,13 @@ class HSQLDBHandler(DatabaseHandler):
         super().__init__(name)
         self.parser = parse_sql
         self.dialect = 'hsqldb'
-        self.server = kwargs.get('server')
-        self.port = kwargs.get('port', 9001)
-        self.database = kwargs.get('database')
-        self.username = kwargs.get('username')
-        self.password = kwargs.get('password')
-        self.conn_str = (
-            'DRIVER={{PostgreSQL Unicode}};'
-            'SERVER={0};'
-            'PORT={1};'
-            'DATABASE={2};'
-            'UID={3};'
-            'PWD={4};'
-        ).format(self.server, self.port, self.database, self.username, self.password)
-
+        self.connection_args = kwargs.get('connection_data')
+        self.server_name = self.connection_args.get('server_name', 'localhost')
+        self.port = self.connection_args.get('port')
+        self.database_name = self.connection_args.get('database_name')
+        self.username = self.connection_args.get('username')
+        self.password = self.connection_args.get('password')
+        self.conn_str = f"DRIVER={{PostgreSQL Unicode}};SERVER={self.server_name};PORT={self.port};DATABASE={self.database_name};UID={self.username};PWD={self.password};Trusted_Connection=True"
         self.connection = None
         self.is_connected = False
 
@@ -70,7 +60,7 @@ class HSQLDBHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.connection = pyodbc.connect(self.conn_str)
+        self.connection = pyodbc.connect(self.conn_str, timeout=10)
         self.is_connected = True
 
         return self.connection
@@ -161,7 +151,7 @@ class HSQLDBHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        renderer = SqlalchemyRender(PostgresDialect)
+        renderer = SqlalchemyRender('postgres')
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
@@ -173,9 +163,10 @@ class HSQLDBHandler(DatabaseHandler):
         """
 
         connection = self.connect()
-        with connection.cursor() as cursor:
-            df = pd.DataFrame([table.table_name for table in cursor.tables(tableType='Table')], columns=['table_name'])
-
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM information_schema.tables WHERE table_schema='PUBLIC' AND table_type='BASE TABLE'")
+        results = cursor.fetchall()
+        df = pd.DataFrame([x[2] for x in results], columns=['table_name']) # Workaround since cursor.tables() wont work with postgres driver
         response = Response(
             RESPONSE_TYPE.TABLE,
             df
@@ -193,11 +184,14 @@ class HSQLDBHandler(DatabaseHandler):
         """
 
         connection = self.connect()
-        with connection.cursor() as cursor:
-            df = pd.DataFrame(
-                [(column.column_name, column.type_name) for column in cursor.columns(table=table_name)],
-                columns=['column_name', 'data_type']
-            )
+        cursor = connection.cursor()
+        query = f'SELECT * FROM information_schema.columns WHERE table_name ={table_name}' # Workaround since cursor.columns() wont work with postgres driver
+        cursor.execute(query)
+        results = cursor.fetchall()
+        df = pd.DataFrame(
+            [(x[3], x[7]) for x in results],
+            columns=['column_name', 'data_type']
+        )
 
         response = Response(
             RESPONSE_TYPE.TABLE,
@@ -207,7 +201,7 @@ class HSQLDBHandler(DatabaseHandler):
         return response
 
 connection_args = OrderedDict(
-    server={
+    server_name={
         'type': ARG_TYPE.STR,
         'description': 'The host name or IP address of the database'
     },
@@ -215,7 +209,7 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.INT,
         'description': 'Specify port to connect.'
     },
-    database={
+    database_name={
         'type': ARG_TYPE.STR,
         'description': '''
             The database name to use when connecting.
@@ -233,9 +227,9 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    server = '3.220.66.106',
-    port =  5432,
-    database = 'demo',
-    username = 'demo_user',
-    password = 'demo_password'
+    server_name = 'localhost',
+    port =  9001,
+    database_name = 'xdb',
+    username = 'SA',
+    password = 'password'
 )

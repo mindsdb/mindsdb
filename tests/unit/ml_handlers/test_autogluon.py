@@ -4,10 +4,13 @@ import pandas as pd
 from mindsdb_sql import parse_sql
 
 # PATH ISSUES AGAIN :(
-from ..executor_test_base import BaseExecutorTest
+try:
+    from tests.unit.executor_test_base import BaseExecutorTest
+except ImportError:
+    from ..executor_test_base import BaseExecutorTest
 
 
-# from tests.unit.executor_test_base import BaseExecutorTest
+
 
 class TestAutoGluon(BaseExecutorTest):
 
@@ -41,7 +44,7 @@ class TestAutoGluon(BaseExecutorTest):
             return pd.DataFrame(ret.data, columns=columns)
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_simple(self, mock_handler):
+    def test_creation(self, mock_handler):
 
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=['a'])

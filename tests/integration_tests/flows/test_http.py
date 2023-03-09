@@ -515,6 +515,7 @@ class TestHTTP:
 
     @pytest.mark.parametrize("method,payload,expected_code,result",
                              [
+                                 ("post", {}, 200, {}),
                                  ("get", {}, 200, {}),
                                  ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}),
                                  ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}),

@@ -1,5 +1,6 @@
 import sys
 import os
+import shutil
 import time
 import json
 import subprocess
@@ -145,9 +146,14 @@ def mindsdb_app(request, config):
 
     def cleanup():
         print(f"Stopping Application")
-        for ch in get_child_pids(app.pid):
-            ch.kill()
-        app.kill()
+        if os.environ.get("MICROSERVICE_MODE", False):
+            cmd = 'docker-compose -f ./docker/docker-compose-ci.yml down'
+            subprocess.run(cmd, shell=True)
+            # shutil.rmtree("./var")
+        else:
+            for ch in get_child_pids(app.pid):
+                ch.kill()
+            app.kill()
     request.addfinalizer(cleanup)
     return
 

@@ -58,15 +58,14 @@ class TestAutoGluon(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict c
-           using 
-             engine='autogluon';
+           using engine='autogluon';
         ''')
         self.wait_predictor('proj', 'modelx')
 
         # run predict
         ret = self.run_sql('''
            SELECT p.*
-           FROM pg.df as t 
+           FROM pg.df as t
            JOIN proj.modelx as p
            where t.c=1
         ''')

@@ -1,15 +1,9 @@
-import sys
-import json
-import copy
-from typing import Optional, Dict
-from datetime import datetime
-from typing import Optional
+from typing import Dict
 import pandas as pd
 from typing import Optional
 import logging
 from autogluon.tabular import TabularDataset, TabularPredictor
 import dill
-import numpy as np
 
 import mindsdb.interfaces.storage.db as db
 
@@ -53,7 +47,6 @@ class AutoGluonHandler(BaseMLEngine):
         self.model_storage.file_set("trained_model", dill.dumps(predictor))
         logging.debug('Bye Create!')
 
-
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         logging.debug('Predict!')
         args = self.model_storage.json_get('args')
@@ -62,10 +55,8 @@ class AutoGluonHandler(BaseMLEngine):
         logging.debug('bye predict!')
         return pd.DataFrame(y_pred)
 
-
     def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         logging.debug('Update!')
-
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')
@@ -74,4 +65,3 @@ class AutoGluonHandler(BaseMLEngine):
 
     def create_engine(self, connection_args: dict):
         logging.debug('Create engine!')
-

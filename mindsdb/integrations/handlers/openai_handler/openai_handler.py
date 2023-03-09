@@ -11,13 +11,13 @@ import concurrent.futures
 from typing import Optional, Dict
 
 import openai
-import tiktoken
 import numpy as np
 import pandas as pd
 
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
+from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff, \
+    truncate_msgs_for_token_limit
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -100,7 +100,6 @@ class OpenAIHandler(BaseMLEngine):
         If there is a prompt template, we use it. Otherwise, we use the concatenation of `context_column` (optional) and `question_column` to ask for a completion.
         """ # noqa
         # TODO: support for edits, embeddings and moderation
-        # [DONE]: tiktoken for pre-API call max_tokens validation
 
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
@@ -220,7 +219,7 @@ class OpenAIHandler(BaseMLEngine):
 
         api_key = self._get_api_key(args)
         api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
-        completion = self._completion(model_name, prompts, api_key, api_args, args, df)
+        completion = self._completion(model_name, prompts, api_key, api_args, args)
 
         # add null completion for empty prompts
         for i in sorted(empty_prompt_ids):
@@ -250,7 +249,7 @@ class OpenAIHandler(BaseMLEngine):
 
         return pred_df
 
-    def _completion(self, model_name, prompts, api_key, api_args, args, df, parallel=True):
+    def _completion(self, model_name, prompts, api_key, api_args, args, parallel=True):
         """
         Handles completion for an arbitrary amount of rows.
 
@@ -305,9 +304,9 @@ class OpenAIHandler(BaseMLEngine):
                 kwargs['messages'].append({'role': 'user', 'content': prompts[pidx]})
 
                 if mode == 'conversational-full' or (mode == 'conversational' and pidx == len(prompts) - 1):
-                    kwargs['messages'] = self._truncate_msgs_for_token_limit(kwargs['messages'],
-                                                                             kwargs['model'],
-                                                                             api_args['max_tokens'])
+                    kwargs['messages'] = truncate_msgs_for_token_limit(kwargs['messages'],
+                                                                       kwargs['model'],
+                                                                       api_args['max_tokens'])
                     pkwargs = {**kwargs, **api_args}
                     last_completion_content = _tidy(openai.ChatCompletion.create(**pkwargs))
                     completions.extend(last_completion_content)
@@ -338,10 +337,6 @@ class OpenAIHandler(BaseMLEngine):
                 max_batch_size = int(e[e.find(pattern) + len(pattern):].split(').')[0])
             else:
                 max_batch_size = self.max_batch_size  # guards against changes in the API message
-
-            # override batch_size to 1 if it's a conversational model:
-            # if model_name in self.chat_completion_models:
-            #     max_batch_size = 1
 
         if not parallel:
             completion = None
@@ -377,44 +372,6 @@ class OpenAIHandler(BaseMLEngine):
                     completion['choices'].extend(p['choices'].result()['choices'])
 
         return completion
-
-    def _truncate_msgs_for_token_limit(self, messages, model_name, max_tokens, truncate='first'):
-        """ 
-        Truncates message list to fit within the token limit.
-        Note: first message for chat completion models are general directives with the system role, which will ideally be kept at all times. 
-        """  # noqa
-        encoder = tiktoken.encoding_for_model(model_name)
-        sys_priming = messages[0:1]
-        n_tokens = self._count_tokens(messages, encoder, model_name)
-        while n_tokens > max_tokens:
-            if len(messages) == 2:
-                return messages[-1]  # edge case: if limit is surpassed by just one input, we remove initial instruction
-            elif len(messages) == 1:
-                return messages
-
-            if truncate == 'first':
-                messages = sys_priming + messages[2:]
-            else:
-                messages = sys_priming + messages[1:-1]
-
-            n_tokens = self._count_tokens(messages, encoder, model_name)
-        return messages
-
-    @staticmethod
-    def _count_tokens(messages, encoder, model_name='gpt-3.5-turbo-0301'):
-        """ Original token count implementation can be found in the OpenAI cookbook. """
-        if "gpt-3.5-turbo" in model_name:  # note: future models may deviate from this (only 0301 really complies)
-            num_tokens = 0
-            for message in messages:
-                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
-                for key, value in message.items():
-                    num_tokens += len(encoder.encode(value))
-                    if key == "name":  # if there's a name, the role is omitted
-                        num_tokens += -1  # role is always required and always 1 token
-            num_tokens += 2  # every reply is primed with <im_start>assistant
-            return num_tokens
-        else:
-            raise NotImplementedError(f"""_count_tokens() is not presently implemented for model {model_name}.""")
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         # TODO: Update to use update() artifacts

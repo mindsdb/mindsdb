@@ -382,6 +382,7 @@
             "contribute/data-integration-page",
             "contribute/data-handlers",
             "contribute/ml-handlers",
+            "contribute/app-handlers",
             "contribute/docs",
             "docs-rules",
             "contribute/tests",

@@ -1,12 +1,13 @@
 import time
 from unittest.mock import patch
 import pandas as pd
-import autogluon
 from mindsdb_sql import parse_sql
 
 # PATH ISSUES AGAIN :(
 from ..executor_test_base import BaseExecutorTest
-#from tests.unit.executor_test_base import BaseExecutorTest
+
+
+# from tests.unit.executor_test_base import BaseExecutorTest
 
 class TestAutoGluon(BaseExecutorTest):
 
@@ -45,7 +46,7 @@ class TestAutoGluon(BaseExecutorTest):
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=['a'])
         df['b'] = 50 - df.a
-        df['c'] = round((df['a']*3 + df['b']) / 50)
+        df['c'] = round((df['a'] * 3 + df['b']) / 50)
 
         self.set_handler(mock_handler, name='pg', tables={'df': df})
 

@@ -123,7 +123,7 @@ numerical. Even though this example is simple (because the variable is a binary
 category), this can easily be generalized to more than two categories.
 
 We order the measurements by the `Timestamps` column that shows readings
-frequency of approximately 8 miliseconds.
+frequency of approximately 8 milliseconds.
 
 ```sql
 CREATE MODEL mindsdb.eeg_eye_forecast
@@ -192,7 +192,7 @@ know what happens right after the latest training data point that was fed. We
 have a special keyword for that, the `LATEST` keyword.
 
 Let's run a query to get predictions for the next `HORIZON` timesteps into
-the future, which in this case is roughly 80 miliseconds.
+the future, which in this case is roughly 80 milliseconds.
 
 ```sql
 SELECT m.Timestamps as timestamps,

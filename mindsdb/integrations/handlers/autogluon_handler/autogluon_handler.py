@@ -1,27 +1,9 @@
-import sys
-import json
-import copy
 from typing import Optional, Dict
-from datetime import datetime
-from typing import Optional
 import pandas as pd
 from typing import Optional
 import logging
-from autogluon.tabular import TabularDataset, TabularPredictor
 import dill
-import numpy as np
-
-import mindsdb.interfaces.storage.db as db
-
-from mindsdb.utilities.functions import cast_row_types
-# from mindsdb.utilities.hooks import after_predict as after_predict_hook
-from mindsdb.interfaces.model.functions import get_model_record
-from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.utilities import log
-
-from mindsdb.integrations.libs.base import BaseMLEngine
-
 from autogluon.tabular import TabularDataset, TabularPredictor
 
 
@@ -51,7 +33,6 @@ class AutoGluonHandler(BaseMLEngine):
         self.model_storage.json_set("model_args", args)
         self.model_storage.file_set("training_df", dill.dumps(df))
         self.model_storage.file_set("trained_model", dill.dumps(predictor))
-        logging.debug('Bye Create!')
 
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
@@ -59,7 +40,6 @@ class AutoGluonHandler(BaseMLEngine):
         args = self.model_storage.json_get('args')
         predictor = self.model_storage.file_get('trained_model')
         y_pred = predictor.predict(df)
-        logging.debug('bye predict!')
         return pd.DataFrame(y_pred)
 
 

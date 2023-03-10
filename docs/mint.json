@@ -11,7 +11,7 @@
     "light": "#55D799",
     "dark": "#117866"
   },
-  "openApi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
+  "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
     "baseUrl": [
       "https://alpha.mindsdb.com",

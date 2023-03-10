@@ -16,7 +16,8 @@ import pandas as pd
 
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
+from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff, \
+    truncate_msgs_for_token_limit
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -24,7 +25,8 @@ class OpenAIHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.default_model = 'text-davinci-002'
+        self.default_model = 'gpt-3.5-turbo'
+        self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
@@ -60,6 +62,8 @@ class OpenAIHandler(BaseMLEngine):
         args['target'] = target
         if not args.get('model_name'):
             args['model_name'] = self.default_model
+        if not args.get('mode'):
+            args['mode'] = self.default_mode
 
         self.model_storage.json_set('args', args)
 
@@ -96,7 +100,6 @@ class OpenAIHandler(BaseMLEngine):
         If there is a prompt template, we use it. Otherwise, we use the concatenation of `context_column` (optional) and `question_column` to ask for a completion.
         """ # noqa
         # TODO: support for edits, embeddings and moderation
-        # TODO: tiktoken for pre-API call max_tokens validation
 
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
@@ -122,6 +125,15 @@ class OpenAIHandler(BaseMLEngine):
             'logit_bias': pred_args.get('logit_bias', None),
             'user': pred_args.get('user', None),
         }
+
+        if pred_args.get('mode'):
+            if pred_args['mode'] in ('default', 'conversational', 'conversational-full'):
+                args['mode'] = pred_args['mode']
+            else:
+                raise Exception("Invalid operation mode. Please use one of 'default', 'conversational' or 'conversational-full'.")  # noqa
+
+        if args['mode'] != 'default' and model_name not in self.chat_completion_models:
+            raise Exception(f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}")  # noqa
 
         if args.get('prompt_template', False):
             if pred_args.get('prompt_template', False):
@@ -207,7 +219,7 @@ class OpenAIHandler(BaseMLEngine):
 
         api_key = self._get_api_key(args)
         api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
-        completion = self._completion(model_name, prompts, api_key, api_args, args)
+        completion = self._completion(model_name, prompts, api_key, api_args, args, df)
 
         # add null completion for empty prompts
         for i in sorted(empty_prompt_ids):
@@ -237,7 +249,7 @@ class OpenAIHandler(BaseMLEngine):
 
         return pred_df
 
-    def _completion(self, model_name, prompts, api_key, api_args, args, parallel=True):
+    def _completion(self, model_name, prompts, api_key, api_args, args, df, parallel=True):
         """
         Handles completion for an arbitrary amount of rows.
 
@@ -249,39 +261,73 @@ class OpenAIHandler(BaseMLEngine):
         because even with previous checks the tokens-per-minute limit may apply.
         """
         @retry_with_exponential_backoff()
-        def _submit_completion(model_name, prompts, api_key, api_args, args):
+        def _submit_completion(model_name, prompts, api_key, api_args, args, df):
             kwargs = {
                 'model': model_name,
                 'api_key': api_key,
                 'organization': args.get('api_organization'),
             }
             if model_name in self.chat_completion_models:
-                method = getattr(openai.ChatCompletion, 'create')
-                messages = []
-                for prompt in prompts:
-                    if isinstance(prompt, str):
-                        # TODO: role definition via user-provided column, useful for continuing previous conversations
-                        messages.append({'role': 'user', 'content': prompt})
-                    else:
-                        raise Exception(f'Ill-formed prompt, please try again.\nPrompt : {prompt}')
-                kwargs['messages'] = messages
-
+                return _submit_chat_completion(kwargs, prompts, api_args, df, mode=args.get('mode', 'conversational'))
             else:
-                method = getattr(openai.Completion, 'create')
-                kwargs['prompt'] = prompts
-            kwargs = {**kwargs, **api_args}
-            return method(**kwargs)
+                return _submit_normal_completion(kwargs, prompts, api_args)
 
-        def _tidy(comp):
-            tidy_comps = []
-            for c in comp['choices']:
-                # normal completion
-                if 'text' in c:
-                    tidy_comps.append(c['text'].strip('\n').strip(''))
-                # chat completion
-                elif 'message' in c:
-                    tidy_comps.append(c['message']['content'].strip('\n').strip(''))
-            return tidy_comps
+        def _submit_normal_completion(kwargs, prompts, api_args):
+            def _tidy(comp):
+                tidy_comps = []
+                for c in comp['choices']:
+                    if 'text' in c:
+                        tidy_comps.append(c['text'].strip('\n').strip(''))
+                return tidy_comps
+
+            kwargs['prompt'] = prompts
+            kwargs = {**kwargs, **api_args}
+            return _tidy(openai.Completion.create(**kwargs))
+
+        def _submit_chat_completion(kwargs, prompts, api_args, df, mode='conversational'):
+            def _tidy(comp):
+                tidy_comps = []
+                for c in comp['choices']:
+                    if 'message' in c:
+                        tidy_comps.append(c['message']['content'].strip('\n').strip(''))
+                return tidy_comps
+
+            completions = []
+            initial_prompt = {"role": "system", "content": "You are a helpful assistant. Your task is to continue the chat."}  # noqa
+            kwargs['messages'] = [initial_prompt]
+            last_completion_content = None
+
+            for pidx in range(len(prompts)):
+                kwargs['messages'].append({'role': 'user', 'content': prompts[pidx]})
+
+                if mode == 'conversational-full' or (mode == 'conversational' and pidx == len(prompts) - 1):
+                    kwargs['messages'] = truncate_msgs_for_token_limit(kwargs['messages'],
+                                                                       kwargs['model'],
+                                                                       api_args['max_tokens'])
+                    pkwargs = {**kwargs, **api_args}
+                    last_completion_content = _tidy(openai.ChatCompletion.create(**pkwargs))
+                    completions.extend(last_completion_content)
+                elif mode == 'default':
+                    kwargs['messages'] = [initial_prompt] + [kwargs['messages'][-1]]
+                    pkwargs = {**kwargs, **api_args}
+                    completions.extend(_tidy(openai.ChatCompletion.create(**pkwargs)))
+                else:
+                    # in "normal" conversational mode, we request completions only for the last row
+                    last_completion_content = None
+                    if args.get('answer_column') in df.columns:
+                        # insert completion if provided, which saves redundant API calls
+                        completions.extend([df.iloc[pidx][args.get('answer_column')]])
+                    else:
+                        completions.extend([''])
+
+                if args.get('answer_column') in df.columns:
+                    kwargs['messages'].append({'role': 'assistant',
+                                               'content': df.iloc[pidx][args.get('answer_column')]})
+                elif last_completion_content:
+                    # interleave assistant responses with user input
+                    kwargs['messages'].append({'role': 'assistant', 'content': last_completion_content[0]})
+
+            return completions
 
         try:
             # check if simple completion works
@@ -290,9 +336,10 @@ class OpenAIHandler(BaseMLEngine):
                 prompts,
                 api_key,
                 api_args,
-                args
+                args,
+                df
             )
-            return _tidy(completion)  
+            return completion
         except openai.error.InvalidRequestError as e:
             # else, we get the max batch size
             e = e.user_message
@@ -301,10 +348,6 @@ class OpenAIHandler(BaseMLEngine):
                 max_batch_size = int(e[e.find(pattern) + len(pattern):].split(').')[0])
             else:
                 max_batch_size = self.max_batch_size  # guards against changes in the API message
-
-            # override batch_size to 1 if it's a conversational model:
-            if model_name in self.chat_completion_models:
-                max_batch_size = 1
 
         if not parallel:
             completion = None
@@ -339,7 +382,7 @@ class OpenAIHandler(BaseMLEngine):
                 else:
                     completion['choices'].extend(p['choices'].result()['choices'])
 
-        return _tidy(completion)
+        return completion
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         # TODO: Update to use update() artifacts

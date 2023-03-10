@@ -42,7 +42,7 @@ def interval_str_to_duration_ms(interval_str: str) -> int:
       - days (e.g. 5d)
       - weeks (e.g. 1w)
     """
-    duration_match = re.search('^\d+', interval_str)
+    duration_match = re.search(r'^\d+', interval_str)
     time_unit_match = re.search('[smhdw]', interval_str)
     if not duration_match or not time_unit_match:
         raise ValueError('Invalid interval {}'.format(interval_str))

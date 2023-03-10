@@ -163,7 +163,7 @@ class APIHandler(BaseHandler):
 
     def _register_table(self, table_name: str, table_class: Any):
         """
-        Register the data resource. For e.g if you are using Twitter API it registers the `tweets` resource from `/api/v2/tweets`.                                                                                                                                  
+        Register the data resource. For e.g if you are using Twitter API it registers the `tweets` resource from `/api/v2/tweets`.
         """
         self._tables[table_name] = table_class
 

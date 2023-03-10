@@ -72,24 +72,26 @@ as below.
   },
   "debug": false,
   "integrations": {},
+    "auth":{
+        "username": "mindsdb",
+        "password": "123"
+    },
   "api": {
-    "http": {
-      "host": "0.0.0.0",
-      "port": "47334"
-    },
-    "mysql": {
-      "host": "0.0.0.0",
-      "password": "",
-      "port": "47335",
-      "user": "mindsdb",
-      "database": "mindsdb",
-      "ssl": true
-    },
-    "mongodb": {
-      "host": "0.0.0.0",
-      "port": "47336",
-      "database": "mindsdb"
-    }
+      "http": {
+          "host": "127.0.0.1",
+          "port": "47334"
+      },
+      "mysql": {
+          "host": "127.0.0.1",
+          "port": "47335",
+          "database": "mindsdb",
+          "ssl": true
+      },
+      "mongodb": {
+          "host": "127.0.0.1",
+          "port": "47336",
+          "database": "mindsdb"
+      }
   }
 }
 ```
@@ -121,7 +123,10 @@ docker run -e MKL_SERVICE_FORCE_INTEL=1 -p 47334:47334 -p 47335:47335 mindsdb/mi
 ```
 
 <Tip>
+**Using OpenAI in Docker** Please note that when using MindsDB installation in Docker, it is required to provide own OpenAI API key.
+</Tip>
+
+<Tip>
 **What's next?** We recommend you follow one of our tutorials or learn more about the
 [MindsDB Database](/sql/table-structure/).
-
 </Tip>

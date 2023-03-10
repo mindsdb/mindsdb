@@ -1,4 +1,4 @@
-# Welcome to the MindsDB Manual QA Testing for HSQLDB
+# Welcome to the MindsDB Manual QA Testing for Access Handler
 
 > **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
 
@@ -6,7 +6,7 @@
 
 **1. Testing CREATE DATABASE**
 
-```Tested locally on Windows 10 with both 2013 and 2016 Access Runtimes installed (ran python -m mindsdb --install-handlers access) before running python -m mindsdb
+``` Tested locally on Windows 10 with both 2013 and 2016 Access Runtimes installed (ran python -m mindsdb --install-handlers access) before running python -m mindsdb
 CREATE DATABASE access_test
 WITH
 engine='access',
@@ -36,8 +36,7 @@ N/A
 ### Results
 
 Drop a remark based on your observation.
-
 - [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [x] There's a Bug 🪲 [Access Handler Not Behaving As Expected]((https://github.com/mindsdb/mindsdb/issues/3947) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+- [X] There's a Bug 🪲 [Access Handler Not Behaving As Expected]((https://github.com/mindsdb/mindsdb/issues/3947) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
 
 ---

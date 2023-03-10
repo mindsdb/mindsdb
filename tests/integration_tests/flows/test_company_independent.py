@@ -260,6 +260,8 @@ class TestCompanyIndependent:
             tables = self.get_tables_in('mindsdb', cid)
             self.assert_list(
                 tables, {
+                    'jobs',
+                    'jobs_history',
                     'models',
                     'models_versions'
                 }

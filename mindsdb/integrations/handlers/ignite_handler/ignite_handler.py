@@ -1,6 +1,7 @@
 from typing import Optional
 from collections import OrderedDict
 
+from pyignite import Client
 import pandas as pd
 
 from mindsdb_sql import parse_sql
@@ -53,14 +54,27 @@ class IgniteHandler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        pass
+        if self.is_connected is True:
+            return self.connection
+
+        client = Client(
+            username=self.connection_data['username'],
+            password=self.connection_data['password']
+        )
+
+        nodes = [(self.connection_data['host'], self.connection_data['port'])]
+        self.connection = client.connect(nodes)
+        self.is_connected = True
+
+        return self.connection
 
     def disconnect(self):
         """
         Close any existing connections.
         """
 
-        pass
+        self.is_connected = False
+        return
 
     def check_connection(self) -> StatusResponse:
         """
@@ -69,7 +83,22 @@ class IgniteHandler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        pass
+        response = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
+        try:
+            self.connect()
+            response.success = True
+        except Exception as e:
+            log.logger.error(f'Error connecting to Apache Ignite!')
+            response.error_message = str(e)
+        finally:
+            if response.success is True and need_to_close:
+                self.disconnect()
+            if response.success is False and self.is_connected is True:
+                self.is_connected = False
+
+        return response
 
     def native_query(self, query: str) -> StatusResponse:
         """

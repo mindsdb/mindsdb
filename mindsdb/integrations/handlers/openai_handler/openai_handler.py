@@ -219,7 +219,7 @@ class OpenAIHandler(BaseMLEngine):
 
         api_key = self._get_api_key(args)
         api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
-        completion = self._completion(model_name, prompts, api_key, api_args, args)
+        completion = self._completion(model_name, prompts, api_key, api_args, args, df)
 
         # add null completion for empty prompts
         for i in sorted(empty_prompt_ids):
@@ -249,7 +249,7 @@ class OpenAIHandler(BaseMLEngine):
 
         return pred_df
 
-    def _completion(self, model_name, prompts, api_key, api_args, args, parallel=True):
+    def _completion(self, model_name, prompts, api_key, api_args, args, df, parallel=True):
         """
         Handles completion for an arbitrary amount of rows.
 
@@ -261,14 +261,14 @@ class OpenAIHandler(BaseMLEngine):
         because even with previous checks the tokens-per-minute limit may apply.
         """
         @retry_with_exponential_backoff()
-        def _submit_completion(model_name, prompts, api_key, api_args, args):
+        def _submit_completion(model_name, prompts, api_key, api_args, args, df):
             kwargs = {
                 'model': model_name,
                 'api_key': api_key,
                 'organization': args.get('api_organization'),
             }
             if model_name in self.chat_completion_models:
-                return _submit_chat_completion(kwargs, prompts, api_args, mode=args.get('mode', 'conversational'))
+                return _submit_chat_completion(kwargs, prompts, api_args, df, mode=args.get('mode', 'conversational'))
             else:
                 return _submit_normal_completion(kwargs, prompts, api_args)
 
@@ -284,7 +284,7 @@ class OpenAIHandler(BaseMLEngine):
             kwargs = {**kwargs, **api_args}
             return _tidy(openai.Completion.create(**kwargs))
 
-        def _submit_chat_completion(kwargs, prompts, api_args, mode='conversational'):
+        def _submit_chat_completion(kwargs, prompts, api_args, df, mode='conversational'):
             def _tidy(comp):
                 tidy_comps = []
                 for c in comp['choices']:
@@ -298,9 +298,6 @@ class OpenAIHandler(BaseMLEngine):
             last_completion_content = None
 
             for pidx in range(len(prompts)):
-                if last_completion_content:
-                    # interleave assistant responses with user input
-                    kwargs['messages'].append({'role': 'assistant', 'content': last_completion_content[0]})
                 kwargs['messages'].append({'role': 'user', 'content': prompts[pidx]})
 
                 if mode == 'conversational-full' or (mode == 'conversational' and pidx == len(prompts) - 1):
@@ -316,7 +313,20 @@ class OpenAIHandler(BaseMLEngine):
                     completions.extend(_tidy(openai.ChatCompletion.create(**pkwargs)))
                 else:
                     # in "normal" conversational mode, we request completions only for the last row
-                    completions.extend([''])
+                    last_completion_content = None
+                    if args.get('answer_column') in df.columns:
+                        # insert completion if provided, which saves redundant API calls
+                        completions.extend([df.iloc[pidx][args.get('answer_column')]])
+                    else:
+                        completions.extend([''])
+
+                if args.get('answer_column') in df.columns:
+                    kwargs['messages'].append({'role': 'assistant',
+                                               'content': df.iloc[pidx][args.get('answer_column')]})
+                elif last_completion_content:
+                    # interleave assistant responses with user input
+                    kwargs['messages'].append({'role': 'assistant', 'content': last_completion_content[0]})
+
             return completions
 
         try:
@@ -326,7 +336,8 @@ class OpenAIHandler(BaseMLEngine):
                 prompts,
                 api_key,
                 api_args,
-                args
+                args,
+                df
             )
             return completion
         except openai.error.InvalidRequestError as e:

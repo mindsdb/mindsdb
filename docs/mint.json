@@ -51,7 +51,10 @@
       "pages": [
         {
           "group": "Quickstart",
-          "pages": ["what-is-mindsdb", "quickstart"]
+          "pages": [
+            "what-is-mindsdb",
+            "quickstart"
+          ]
         },
         {
           "group": "Running MindsDB",
@@ -78,7 +81,10 @@
             },
             {
               "group": "Configuration Options",
-              "pages": ["setup/custom-config", "setup/environment-vars"]
+              "pages": [
+                "setup/custom-config",
+                "setup/environment-vars"
+              ]
             },
             "setup/community-deploys-mindsdb"
           ]
@@ -116,15 +122,22 @@
                 "ml-types",
                 {
                   "group": "NLP",
-                  "pages": ["nlp/nlp-mindsdb-hf", "nlp/nlp-mindsdb-openai"]
+                  "pages": [
+                    "nlp/nlp-mindsdb-hf",
+                    "nlp/nlp-mindsdb-openai"
+                  ]
                 },
                 {
                   "group": "Time Series",
-                  "pages": ["sql/tutorials/eeg-forecasting"]
+                  "pages": [
+                    "sql/tutorials/eeg-forecasting"
+                  ]
                 },
                 {
                   "group": "Classification",
-                  "pages": ["sql/tutorials/customer-churn"]
+                  "pages": [
+                    "sql/tutorials/customer-churn"
+                  ]
                 },
                 {
                   "group": "Regression",
@@ -159,7 +172,10 @@
                 "sql/api/select-files",
                 {
                   "group": "JOIN",
-                  "pages": ["sql/api/join", "sql/api/join-on"]
+                  "pages": [
+                    "sql/api/join",
+                    "sql/api/join-on"
+                  ]
                 },
                 "sql/api/use",
                 "sql/api/adjust"
@@ -172,7 +188,10 @@
           "pages": [
             {
               "group": "Connect to MindsDB",
-              "pages": ["connect/mongo-compass", "connect/mongo-shell"]
+              "pages": [
+                "connect/mongo-compass",
+                "connect/mongo-shell"
+              ]
             },
             {
               "group": "Machine Learning Examples",
@@ -190,7 +209,10 @@
                 "mongo/collection-structure",
                 {
                   "group": "Insert()",
-                  "pages": ["mongo/database", "mongo/insert"]
+                  "pages": [
+                    "mongo/database",
+                    "mongo/insert"
+                  ]
                 },
                 "mongo/stats",
                 "mongo/find",
@@ -218,7 +240,9 @@
             },
             {
               "group": "Projects",
-              "pages": ["rest/projects/get-projects"]
+              "pages": [
+                "rest/projects/get-projects"
+              ]
             },
             {
               "group": "Models",
@@ -291,11 +315,17 @@
             },
             {
               "group": "NLP",
-              "pages": ["custom-model/huggingface", "custom-model/openai"]
+              "pages": [
+                "custom-model/huggingface",
+                "custom-model/openai"
+              ]
             },
             {
               "group": "Bring Your Own Models",
-              "pages": ["custom-model/ray-serve", "custom-model/mlflow"]
+              "pages": [
+                "custom-model/ray-serve",
+                "custom-model/mlflow"
+              ]
             }
           ]
         },
@@ -330,11 +360,15 @@
             },
             {
               "group": "Classification",
-              "pages": ["sql/tutorials/customer-churn"]
+              "pages": [
+                "sql/tutorials/customer-churn"
+              ]
             },
             {
               "group": "Regression",
-              "pages": ["sql/tutorials/home-rentals"]
+              "pages": [
+                "sql/tutorials/home-rentals"
+              ]
             },
             "sql/tutorials/twitter-chatbot",
             "tutorials"

@@ -45,8 +45,6 @@ Let's review the purpose of each method.
 | `check_connection()`   | It evaluates if the connection is alive and healthy.                                                                                                                 |
 | `native_query()`       | It parses any *native* statement string and acts upon it (for example, raw syntax commands).                                                                                                              |
 | `call_application_api()`| It calls the application API and maps the data to pandas DataFrame. This method handles the paggination and data mapping.                                                                                                               |
-| `get_tables()`         | It lists and returns all the available tables. Each handler decides what a *table* means for the underlying system when interacting with it from the data layer. Typically, these are actual data entities.   |
-| `get_columns()`        | It returns columns of a table registered in the handler with the respective data type.                                                                                                                 |
 
 Authors can opt for adding private methods, new files and folders, or any combination of these to structure all the necessary work that will enable the core methods to work as intended.
 

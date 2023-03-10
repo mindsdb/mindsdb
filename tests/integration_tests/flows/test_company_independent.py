@@ -321,6 +321,8 @@ class TestCompanyIndependent:
             tables = self.get_tables_in('mindsdb', cid)
             self.assert_list(
                 tables, {
+                    'jobs',
+                    'jobs_history',
                     'models',
                     'models_versions',
                     f'test_view_{char}'
@@ -344,6 +346,8 @@ class TestCompanyIndependent:
             tables = self.get_tables_in('mindsdb', cid)
             self.assert_list(
                 tables, {
+                    'jobs',
+                    'jobs_history',
                     'models',
                     'models_versions'
                 }
@@ -417,6 +421,8 @@ class TestCompanyIndependent:
 
         collections = client_a.mindsdb.list_collection_names()
         self.assert_list(collections, {
+            'jobs',
+            'jobs_history',
             'models',
             'models_versions',
             'test_mon_p_a',
@@ -424,6 +430,8 @@ class TestCompanyIndependent:
         })
         collections = client_b.mindsdb.list_collection_names()
         self.assert_list(collections, {
+            'jobs',
+            'jobs_history',
             'models',
             'models_versions',
             'model_b'

@@ -182,6 +182,7 @@ class JobsController:
         }
         for record in query:
             data.append({
+                'id': record.id,
                 'name': record.name,
                 'project': project_names[record.project_id],
                 'start_at': record.start_at,

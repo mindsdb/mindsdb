@@ -243,7 +243,7 @@ This job runs once on the 1st of April 2023.
 
 ## Example 4: Twitter Chatbot
 
-You can easily create a chatbot to respond to tweets using jobs.
+You can easily create a chatbot to respond to tweets using jobs. But before you get to it, you should connect your Twitter account to MindsDB following the instructions [here](/data-integrations/twitter).
 
 Let's create a job that runs every hour, checks for new tweets, and responds using the OpenAI model.
 
@@ -263,4 +263,8 @@ CREATE JOB auto_respond AS (
 EVERY hour;
 ```
 
-The [`SELECT`](/sql/api/select) statement joins the data table with the model table to get responses for tweets posted after the `{{PREVIOUS_START_DATETIME}}` timestamp. And then, the [`INSERT INTO`](/sql/api/insert) statement writes these responses to the `tweets` table of the `my_twitter` integration.
+The [`SELECT`](/sql/api/select) statement joins the data table with the model table to get responses for tweets posted after the `{{PREVIOUS_START_DATETIME}}` timestamp. Then, the [`INSERT INTO`](/sql/api/insert) statement writes these responses to the `tweets` table of the `my_twitter` integration.
+
+<Tip>
+To learn more about OpenAI integration with MindsDB, visit our docs [here](/nlp/nlp-mindsdb-openai).
+</Tip>

@@ -1,0 +1,132 @@
+---
+title: Building a Chatbot for Twitter using MindsDB and GPT-3
+sidebarTitle: Twitter Chatbot
+---
+
+In this section, we present how to build a chatbot for Twitter using MindsDB and GPT-3.
+
+<Tip>
+Make sure you have access to a working MindsDB installation, either locally or at [MindsDB Cloud](https://cloud.mindsdb.com/).
+</Tip>
+
+## Connecting a Twitter Account
+
+Please note that a Twitter developer account is required to follow this tutorial.
+
+Follow the instructions on the [Twitter developer website](https://developer.twitter.com/en) to generate API keys.
+
+To connect your Twitter account, you need a bearer token that can be obtained following [these steps](https://developer.twitter.com/en/docs/authentication/oauth-2-0/bearer-tokens).
+
+Now, you are ready to connect your Twitter account to MindsDB.
+
+```sql
+CREATE DATABASE my_twitter 
+WITH 
+    ENGINE = 'twitter',
+    PARAMETERS = {
+      "bearer_token": "twitter bearer token",
+      "consumer_key": "twitter consumer key",
+      "consumer_secret": "twitter consumer key secret",
+      "access_token": "twitter access token",
+	  "access_token_secret": "twitter access token secret"
+    };
+```
+
+The [`CREATE DATABASE`](/sql/create/databases) statement creates a database called `my_twitter` that contains a table called `tweets`.
+
+## Searching and Writing Tweets
+
+Here is how to search tweets containing `mindsdb` keyword:
+
+```sql
+SELECT id, created_at, author_username, text 
+FROM my_twitter.tweets 
+WHERE query = '(mindsdb OR #mindsdb) -is:retweet -is:reply'
+AND created_at > '2023-02-16' 
+LIMIT 20;
+```
+
+Alternatively, we can use a Twitter native query, as below:
+
+```sql
+SELECT * FROM my_twitter (
+  search_recent_tweets(
+    query = '(mindsdb OR #mindsdb) -is:retweet -is:reply',
+    start_time = '2023-02-16T00:00:00.000Z',
+    max_results = 2
+  )
+);
+```
+
+<Tip>
+To learn more about native queries in MindsDB, visit our docs [here](/sql/native-queries).
+</Tip>
+
+Here is how to write tweets:
+
+```sql
+INSERT INTO my_twitter.tweets (reply_to_tweet_id, text)
+VALUES 
+    (1626198053446369280, 'MindsDB is great! now its super simple to build ML powered apps'),
+    (1626198053446369280, 'Holy!! MindsDB is the best thing they have invented for developers doing ML');
+```
+
+We write tweets by inserting values into the `tweets` table.
+
+## Responding to Tweets
+
+Let's create an OpenAI model to respond to tweets.
+
+```sql
+CREATE MODEL mindsdb.twitter_response_model                           
+PREDICT response
+USING
+  engine = 'openai', 
+  max_tokens = 200,             
+  prompt_template = 'from tweet "{{text}}" by "{{author_username}}", if their comment is a question invite them to join the MindsDB slack using this link http://bitly.com/abc. Otherwise, simply write a thank you message';
+```
+
+This model responds to tweets as instructed in the `prompt_template` parameter.
+
+<Tip>
+To learn more about OpenAI integration with MindsDB, visit our docs [here](/nlp/nlp-mindsdb-openai).
+</Tip>
+
+Here is how you can get a response by manually querying the model:
+
+```sql
+SELECT response
+FROM mindsdb.twitter_response_model 
+WHERE author_username = '@pedro'
+AND text = 'I love this, can I learn more?';
+```
+
+Follow along to see how to automate the responses.
+
+## Automating Responses to Tweets
+
+Finally, we create a chatbot by automating responses to tweets using jobs.
+
+<Tip>
+To learn more about jobs, visit our docs [here](/sql/create/jobs).
+</Tip>
+
+Let's create a job that runs every hour, checks for new tweets, and responds using the OpenAI model.
+
+```sql
+CREATE JOB auto_respond AS (
+
+    INSERT INTO my_twitter.tweets (in_reply_to_tweet_id, text)
+        SELECT 
+            t.id AS in_reply_to_tweet_id, 
+            r.response AS text
+        FROM my_twitter.tweets t
+        JOIN mindsdb.twitter_response_model r 
+        WHERE t.query = '(mindsdb OR #mindsdb) -is:retweet -is:reply'' 
+        AND t.created_at > "{{PREVIOUS_START_DATETIME}}"
+        LIMIT 2
+)
+EVERY hour;
+```
+
+The `EVERY hour` clause ensures the job runs once every hour. The job uses the [`SELECT`](/sql/api/select) statement to join the data table with the model table and get responses for tweets posted after the `{{PREVIOUS_START_DATETIME}}` timestamp. Then, the [`INSERT INTO`](/sql/api/insert) statement writes these responses to the `tweets` table of the `my_twitter` integration.

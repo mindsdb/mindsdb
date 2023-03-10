@@ -293,6 +293,7 @@
           "group": "Data Integrations",
           "pages": [
             "data-integrations/all-data-integrations",
+            "data-integrations/twitter",
             "data-integrations/amazon-redshift",
             "data-integrations/db2",
             "data-integrations/cratedb",

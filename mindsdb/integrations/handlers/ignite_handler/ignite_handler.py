@@ -40,6 +40,7 @@ class IgniteHandler(DatabaseHandler):
         self.connection_data = connection_data
         self.kwargs = kwargs
 
+        self.client = None
         self.connection = None
         self.is_connected = False
 
@@ -57,16 +58,16 @@ class IgniteHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        client = Client(
+        self.client = Client(
             username=self.connection_data['username'],
             password=self.connection_data['password']
         )
 
         nodes = [(self.connection_data['host'], self.connection_data['port'])]
-        self.connection = client.connect(nodes)
+        self.connection = self.client.connect(nodes)
         self.is_connected = True
 
-        return self.connection
+        return self.client, self.connection
 
     def disconnect(self):
         """
@@ -109,7 +110,36 @@ class IgniteHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        need_to_close = self.is_connected is False
+
+        client, connection = self.connect()
+
+        try:
+            with connection:
+                with client.sql(query, include_field_names=True) as cursor:
+                    result = list(cursor)
+                    if result and result[0][0] != 'UPDATED':
+                        response = Response(
+                            RESPONSE_TYPE.TABLE,
+                            data_frame=pd.DataFrame(
+                                result[1:],
+                                columns=[result[0]]
+                            )
+                        )
+                    else:
+                        response = Response(RESPONSE_TYPE.OK)
+        except Exception as e:
+            log.logger.error(f'Error running query: {query} on Apache Ignite!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+
+        cursor.close()
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
 
     def query(self, query: ASTNode) -> StatusResponse:
         """
@@ -121,7 +151,12 @@ class IgniteHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        if isinstance(query, ASTNode):
+            query_str = query.to_string()
+        else:
+            query_str = str(query)
+
+        return self.native_query(query_str)
 
     def get_tables(self) -> StatusResponse:
         """

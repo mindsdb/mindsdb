@@ -74,8 +74,12 @@ class IgniteHandler(DatabaseHandler):
         Close any existing connections.
         """
 
+        if self.is_connected is False:
+            return
+
+        self.client.close()
         self.is_connected = False
-        return
+        return self.is_connected
 
     def check_connection(self) -> StatusResponse:
         """

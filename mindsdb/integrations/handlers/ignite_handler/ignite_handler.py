@@ -184,3 +184,35 @@ class IgniteHandler(DatabaseHandler):
         """
 
         pass
+
+
+connection_args = OrderedDict(
+    host={
+        'type': ARG_TYPE.STR,
+        'description': "The host name or IP address of the Apache Ignite cluster's node."
+    },
+    port={
+        'type': ARG_TYPE.INT,
+        'description': "The TCP/IP port of the Apache Ignite cluster's node. Must be an integer."
+    },
+    username={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the Apache Ignite cluster. This parameter is optional. Default: None.'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the Apache Ignite cluster. This parameter is optional. Default: None.'
+    },
+    schema={
+        'type': ARG_TYPE.STR,
+        'description': 'Schema to use for the connection to the Apache Ignite cluster. This parameter is optional. Default: PUBLIC.'
+    }
+)
+
+connection_args_example = OrderedDict(
+    host='127.0.0.1',
+    port='10800',
+    username='root',
+    password='password',
+    schema='schema'
+)

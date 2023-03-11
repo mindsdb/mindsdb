@@ -161,7 +161,7 @@ class IgniteHandler(DatabaseHandler):
         #     query_str = str(query)
         #
         # return self.native_query(query_str)
-        renderer = SqlalchemyRender('firebird')
+        renderer = SqlalchemyRender('ignite')
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 

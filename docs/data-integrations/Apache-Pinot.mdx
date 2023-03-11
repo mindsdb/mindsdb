@@ -23,7 +23,7 @@ path: the query path
 Usage
 In order to make use of this handler and connect to a Apache Pinot cluster in MindsDB, the following syntax can be used,
 
-```
+```sql
 CREATE DATABASE pinot_datasource
 WITH
 engine='pinot',
@@ -38,6 +38,6 @@ parameters={
 
 Now, you can use this established connection to query your database as follows,
 
-```
+```sql
 SELECT * FROM pinot_datasource.example_tbl
 ```

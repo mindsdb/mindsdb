@@ -155,11 +155,14 @@ class IgniteHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        if isinstance(query, ASTNode):
-            query_str = query.to_string()
-        else:
-            query_str = str(query)
-
+        # if isinstance(query, ASTNode):
+        #     query_str = query.to_string()
+        # else:
+        #     query_str = str(query)
+        #
+        # return self.native_query(query_str)
+        renderer = SqlalchemyRender('firebird')
+        query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
     def get_tables(self) -> StatusResponse:

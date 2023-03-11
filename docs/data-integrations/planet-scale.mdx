@@ -25,14 +25,14 @@ The required arguments to establish a connection are,
 The following syntax can be used, in order to connect to the PlanetScale DB:
 
 ```sql
-CREATE DATABASE PlanetScale_datasource         --- display name for the database
-WITH ENGINE = 'PlanetScale',                   --- name of the MindsDB handler
+CREATE DATABASE planetscale_datasource     --- display name for the database
+WITH ENGINE = 'planet_scale',              --- name of the MindsDB handler
 PARAMETERS = {
-  "host": " ",                            --- host name or IP address
-  "port": ,                               --- port used to make TCP/IP connection
-  "sid": " ",                             --- unique identifier of the database instance
-  "user": " ",                            --- database user
-  "password": " "                         --- database password
+  "host": " ",                             --- host name or IP address
+  "port": ,                                --- port used to make TCP/IP connection
+  "user": " ",                             --- database user
+  "password": " ",                         --- database password
+  "database": " "                          --- database name
 };
 ```
 

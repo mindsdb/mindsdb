@@ -120,7 +120,7 @@ class IgniteHandler(DatabaseHandler):
 
         try:
             with connection:
-                with client.sql(query, include_field_names=True) as cursor:
+                with client.sql(query, include_field_names=True, schema=self.connection_data['schema']) as cursor:
                     result = list(cursor)
                     if result and result[0][0] != 'UPDATED':
                         response = Response(

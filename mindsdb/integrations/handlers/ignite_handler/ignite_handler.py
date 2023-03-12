@@ -200,8 +200,9 @@ class IgniteHandler(DatabaseHandler):
         """
         result = self.native_query(query)
         df = result.data_frame
-        df['TYPE'] = df['TYPE'].apply(lambda row: row.split('.')[-1])
-        result.data_frame = df.rename(columns={'FIELD_NAME': 'COLUMN_NAME', 'TYPE': 'data_type'})
+        df['TYPE'] = df.apply(lambda row: row['TYPE'].split('.')[-1], axis=1)
+        df = df.iloc[2:]
+        result.data_frame = df.rename(columns={'COLUMN_NAME': 'column_name', 'TYPE': 'data_type'})
         return result
 
 

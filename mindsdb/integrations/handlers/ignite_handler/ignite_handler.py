@@ -37,6 +37,12 @@ class IgniteHandler(DatabaseHandler):
         super().__init__(name)
         self.parser = parse_sql
         self.dialect = 'ignite'
+
+        optional_parameters = ['username', 'password', 'schema']
+        for parameter in optional_parameters:
+            if parameter not in connection_data:
+                connection_data[parameter] = None
+
         self.connection_data = connection_data
         self.kwargs = kwargs
 

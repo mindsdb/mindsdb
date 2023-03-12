@@ -189,7 +189,14 @@ class IgniteHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        pass
+        query = f"""
+            SELECT COLUMN_NAME, TYPE FROM SYS.TABLE_COLUMNS WHERE TABLE_NAME = '{table_name.upper()}'
+        """
+        result = self.native_query(query)
+        df = result.data_frame
+        df['TYPE'] = df['TYPE'].apply(lambda row: row.split('.')[-1])
+        result.data_frame = df.rename(columns={'FIELD_NAME': 'COLUMN_NAME', 'TYPE': 'data_type'})
+        return result
 
 
 connection_args = OrderedDict(

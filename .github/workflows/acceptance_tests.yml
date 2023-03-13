@@ -1,4 +1,4 @@
-name: MindsDB Release Candidate Learning Hub Tests
+name: MindsDB Release Candidate Acceptance Tests
 
 on:
   push:
@@ -13,7 +13,7 @@ on:
       - 'README.md'
 
 jobs:
-  test:
+  tutorials_test:
     name: Learning Hub Acceptance Tests
     runs-on: ubuntu-latest
     steps:
@@ -46,6 +46,38 @@ jobs:
 
           echo -e "\n===============Predict Text Sentiment Wih OpenAI===============\n"
           pytest -vx tests/integration_tests/flows/test_predict_text_sentiment_openai_tutorial.py
+      shell: bash
+      env:
+        CHECK_FOR_UPDATES: False
+        OPEN_AI_API_KEY: ${{secrets.OPEN_AI_API_KEY}}
+
+  microservice_mode_test:
+    name: Microservice Mode Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Install dependencies
+      run: |
+        pip install 'pymssql >= 2.1.4'
+        pip install boto3
+        pip install --no-cache-dir .
+        pip install -r requirements_test.txt
+      shell: bash
+      env:
+        ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
+        mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
+      shell: bash
+    - name: Build docker-compose images
+      run: |
+        docker-compose -f ./docker/docker-compose-ci.yml build
+    - name: Run Learning Hub Tests
+      run: |
+          echo -e "\n===============HTTP API===============\n"
+          env MICROSERVICE_MODE=true pytest -vx tests/integration_tests/flow/test_http.py
       shell: bash
       env:
         CHECK_FOR_UPDATES: False

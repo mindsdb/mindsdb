@@ -1,5 +1,7 @@
 import struct
-from typing import List, Any, BinaryIO, Sequence, Union
+from typing import List, Any, BinaryIO, Sequence, Union, Dict
+
+from mindsdb.api.postgres.postgres_proxy.utilities import strip_null_byte
 from mindsdb.utilities.log import get_log
 import time
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import PostgresField
@@ -32,19 +34,20 @@ class PostgresPacketReader:
         self.fe_message_map = FE_MESSAGE_MAP
         self.supported_auth_types = SUPPORTED_AUTH_TYPES
         self.buffer = buffer
-        self.logger = get_log('postgres_packet_reader')
+        self.logger = get_log('postgres_proxy')
 
     def read_byte(self):
         return self.read_bytes(1)
 
     def read_bytes(self, n):
         data = self.buffer.read(n)
+        self.logger.debug("received data: %s", data)
         if not data:
             raise PostgresEmptyDataException("Expected data inside of buffer when performing read_bytes")
         else:
-            print(data)
             return data
 
+    #! TODO: Probably unneeded now
     def read_bytes_timeout(self, n, timeout=60):
         cur = time.time()
         end = cur + timeout
@@ -55,7 +58,6 @@ class PostgresPacketReader:
             if not data:
                 pass
             else:
-                print(data)
                 return data
         raise PostgresEmptyDataException("Expected data inside of buffer when performing read_bytes")
 
@@ -73,16 +75,28 @@ class PostgresPacketReader:
         if length != 8 and code != 80877103:
             raise UnsupportedSSLRequest("Code %s of len %s" % (code, length))
 
-    def read_startup_message(self):
+    def read_startup_message(self) -> Dict[bytes, bytes]:
         length = self.read_int32()
         version = self.read_int32()
         major_version = version >> 16
         minor_version = version & 0xffff
         message = self.read_parameters(length - 8)
-        self.logger.info('PSQL Startup Message %d.%d : %s' % (major_version, minor_version, message))
+        self.logger.debug('PSQL Startup Message %d.%d : %s' % (major_version, minor_version, message))
+        parameters = {}
+        while len(message) != 0:
+            key = message.pop(0)
+            value = message.pop(0)
+            parameters[key] = value
+        parameters[b"major_version"] = major_version
+        parameters[b"minor_version"] = minor_version
+        return parameters
 
-    def read_authentication(self):
-        auth_type = self.read_byte()
+    def read_authentication(self, encoding=None):
+        try:
+            auth_type = self.read_byte()
+        except PostgresEmptyDataException:
+            #No authentication parameters specified. Which is fine if we're local on a mindsdbuser
+            return ''
         try:
             auth_type = PostgresAuthType(auth_type)
         except Exception as e:
@@ -90,11 +104,11 @@ class PostgresPacketReader:
         if auth_type not in self.supported_auth_types:
             raise UnsupportedPostgresAuthException("%s is not a supported auth type identifier" % auth_type)
         length = self.read_int32()
-        _ = self.read_bytes(length - 4)  # password. Do something with later. We read to clear buffer.
+        password = strip_null_byte(self.read_bytes(length - 4), encoding=encoding)  # password. Do something with later. We read to clear buffer.
+        return password
 
     def read_message(self):
         message_type = self.read_byte()
-        print("Message type", message_type)
         try:
             message_type = PostgresFrontendMessageIdentifier(message_type)
         except Exception as _:
@@ -141,9 +155,6 @@ class PostgresPacketBuilder:
             pack += "i"
             self.pack_args = [self.length] + self.pack_args
         pack += self.pack_string
-        print("pack string", self.pack_string)
-        print("identifier", self.identifier)
-        print("pack args", self.pack_args)
         l = struct.pack(pack, self.identifier, *self.pack_args)
         write_file.write(l)
 

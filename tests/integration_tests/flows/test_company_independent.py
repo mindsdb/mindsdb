@@ -6,7 +6,7 @@ import pytest
 
 from pymongo import MongoClient
 
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.common.libs import RESPONSE_TYPE
 from .conftest import CONFIG_PATH
 
 # used by mindsdb_app fixture in conftest

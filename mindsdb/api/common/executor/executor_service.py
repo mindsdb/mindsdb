@@ -1,5 +1,5 @@
 import os
-from mindsdb.api.mysql.mysql_proxy.executor.executor_wrapper import ExecutorService
+from mindsdb.api.common.executor.executor_wrapper import ExecutorService
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.log import initialize_log, get_log

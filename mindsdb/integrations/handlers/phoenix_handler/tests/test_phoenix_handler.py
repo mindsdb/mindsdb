@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.phoenix_handler.phoenix_handler import PhoenixHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.common.libs import RESPONSE_TYPE
 
 
 class PhoenixHandlerTest(unittest.TestCase):

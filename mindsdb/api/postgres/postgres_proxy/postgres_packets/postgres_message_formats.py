@@ -1,6 +1,7 @@
 from typing import BinaryIO, Any, Sequence, Dict, Type
 import re
 
+from mindsdb.api.common.classes.sql_answer import SQLAnswer
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import PostgresField
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message import PostgresMessage
@@ -8,10 +9,12 @@ from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_ident
     PostgresBackendMessageIdentifier, PostgresFrontendMessageIdentifier, PostgresAuthType
 
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_packets import PostgresPacketReader
+from mindsdb.api.postgres.postgres_proxy.utilities import strip_null_byte
 
 
 # All docstrings for Messages are taken from
 # https://www.postgresql.org/docs/current/protocol-message-formats.html as of 2023-2-8 for Postgresql 15
+
 
 class NoticeResponse(PostgresMessage):
     """
@@ -202,6 +205,49 @@ class Error(PostgresMessage):
             .add_string(self.message) \
             .write(write_file=write_file)
 
+    @staticmethod
+    def from_answer(error_code: bytes, error_message: bytes):
+        return Error(severity=b"ERROR", code = error_code, message=error_message)
+
+
+
+class ConnectionFailure(Error):
+    def __init__(self, message: str = None, charset: str = "UTF-8"):
+        if message is None:
+            message = "Connection Failure occurred."
+        super().__init__(severity="FATAL".encode(encoding=charset), code="08006".encode(encoding=charset),
+                         message=message.encode(encoding=charset))
+
+
+class ParameterStatus(PostgresMessage):
+    """
+    ParameterStatus (B)
+    Byte1('S')
+    Identifies the message as a run-time parameter status report.
+
+    Int32
+    Length of message contents in bytes, including self.
+
+    String
+    The name of the run-time parameter being reported.
+
+    String
+    The current value of the parameter. """
+
+    def __init__(self, name: bytes, value: bytes):
+        self.identifier = PostgresBackendMessageIdentifier.PARAMETER
+        self.backend_capable = True
+        self.frontend_capable = False
+        self.name = name
+        self.value = value
+        super().__init__()
+
+    def send(self, write_file: BinaryIO):
+        self.get_packet_builder() \
+            .add_string(self.name) \
+            .add_string(self.value) \
+            .write(write_file=write_file)
+
 
 class RowDescriptions(PostgresMessage):
     """
@@ -250,8 +296,6 @@ class RowDescriptions(PostgresMessage):
         super().__init__()
 
     def send(self, write_file: BinaryIO):
-        print("writing fields")
-        print("fields", self.fields)
         self.get_packet_builder() \
             .add_int16(len(self.fields)) \
             .add_fields(self.fields) \
@@ -286,18 +330,58 @@ class DataRow(PostgresMessage):
         self.identifier = PostgresBackendMessageIdentifier.DATA_ROW
         self.backend_capable = True
         self.frontend_capable = False
-        self.num_cols = len(rows[0])
+        if len(rows) != 0:
+            self.num_cols = len(rows[0])
+        else:
+            self.num_cols = 0
         self.rows = rows
         super().__init__()
 
     def send(self, write_file: BinaryIO):
-        print("length", self.num_cols)
-        print("rows", self.rows)
         for row in self.rows:
             self.get_packet_builder() \
                 .add_int16(self.num_cols) \
                 .add_row(row) \
                 .write(write_file=write_file)
+
+
+class NegotiateProtocolVersion(PostgresMessage):
+    """
+    NegotiateProtocolVersion (B)
+    Byte1('v')
+    Identifies the message as a protocol version negotiation message.
+
+    Int32
+    Length of message contents in bytes, including self.
+
+    Int32
+    Newest minor protocol version supported by the server for the major protocol version requested by the client.
+
+    Int32
+    Number of protocol options not recognized by the server.
+
+    Then, for protocol option not recognized by the server, there is the following:
+
+    String
+    The option name. """
+
+    def __init__(self, major_version, minor_version, option_not_recognized=None):
+        self.identifier = PostgresBackendMessageIdentifier.NEGOTIATE_VERSION
+        self.backend_capable = True
+        self.frontend_capable = False
+        self.major_version = major_version
+        self.minor_version = minor_version
+        self.option_not_recognized = option_not_recognized
+        super().__init__()
+
+    def send(self, write_file: BinaryIO):
+        packet_builder = self.get_packet_builder() \
+            .add_int32(self.major_version) \
+            .add_int32(self.minor_version)
+        if self.option_not_recognized:
+            packet_builder = packet_builder.add_string(self.option_not_recognized)
+
+        packet_builder.write(write_file=write_file)
 
 
 class Query(PostgresMessage):
@@ -336,13 +420,20 @@ class Query(PostgresMessage):
         except Exception:
             raise Exception(f'SQL contains non {encoding} values: {self.sql}')
         # Remove null bytes from end of sql statement. This is important.
-        sql = re.sub(r'[\s\x00]+$', '', sql)
+        sql = strip_null_byte(sql)
         sql = SqlStatementParser.clear_sql(sql)
         return sql
 
 
-
 class Terminate(PostgresMessage):
+    """
+    Terminate (F)
+    Byte1('X')
+    Identifies the message as a termination.
+
+    Int32(4)
+    Length of message contents in bytes, including self. """
+
     def __init__(self):
         self.identifier = PostgresFrontendMessageIdentifier.TERMINATE
         self.backend_capable = False
@@ -353,16 +444,158 @@ class Terminate(PostgresMessage):
         return self
 
 
+class BaseFrontendMessage(PostgresMessage):
+    def __init__(self):
+        self.backend_capable = False
+        self.frontend_capable = True
+        super().__init__()
+
+    def read(self, packet_reader: PostgresPacketReader):
+        self.length = packet_reader.read_int32()
+        if (self.length - 4) > 0:
+            self.response = packet_reader.read_bytes(self.length - 4)
+        return self
+
+
+class Parse(BaseFrontendMessage):
+    """
+    Parse (F)
+    Byte1('P')
+    Identifies the message as a Parse command.
+
+    Int32
+    Length of message contents in bytes, including self.
+
+    String
+    The name of the destination prepared statement (an empty string selects the unnamed prepared statement).
+
+    String
+    The query string to be parsed.
+
+    Int16 The number of parameter data types specified (can be zero). Note that this is not an indication of the
+    number of parameters that might appear in the query string, only the number that the frontend wants to prespecify
+    types for.
+
+    Then, for each parameter, there is the following:
+
+    Int32 Specifies the object ID of the parameter data type. Placing a zero here is equivalent to leaving the type
+    unspecified."""
+
+    def __init__(self):
+        self.identifier = PostgresFrontendMessageIdentifier.PARSE
+        super().__init__()
+
+class Bind(BaseFrontendMessage):
+    """
+    Bind (F)
+    Byte1('B')
+    Identifies the message as a Bind command.
+
+    Int32
+    Length of message contents in bytes, including self.
+
+    String
+    The name of the destination portal (an empty string selects the unnamed portal).
+
+    String
+    The name of the source prepared statement (an empty string selects the unnamed prepared statement).
+
+    Int16 The number of parameter format codes that follow (denoted C below). This can be zero to indicate that there
+    are no parameters or that the parameters all use the default format (text); or one, in which case the specified
+    format code is applied to all parameters; or it can equal the actual number of parameters.
+
+    Int16[C]
+    The parameter format codes. Each must presently be zero (text) or one (binary).
+
+    Int16
+    The number of parameter values that follow (possibly zero). This must match the number of parameters needed by the query.
+
+    Next, the following pair of fields appear for each parameter:
+
+    Int32 The length of the parameter value, in bytes (this count does not include itself). Can be zero. As a special
+    case, -1 indicates a NULL parameter value. No value bytes follow in the NULL case.
+
+    Byten
+    The value of the parameter, in the format indicated by the associated format code. n is the above length.
+
+    After the last parameter, the following fields appear:
+
+    Int16 The number of result-column format codes that follow (denoted R below). This can be zero to indicate that
+    there are no result columns or that the result columns should all use the default format (text); or one,
+    in which case the specified format code is applied to all result columns (if any); or it can equal the actual
+    number of result columns of the query.
+
+    Int16[R]
+    The result-column format codes. Each must presently be zero (text) or one (binary). """
+    def __init__(self):
+        self.identifier = PostgresFrontendMessageIdentifier.BIND
+        super().__init__()
+
+class Execute(BaseFrontendMessage):
+    """
+    Execute (F)
+    Byte1('E')
+    Identifies the message as an Execute command.
+
+    Int32
+    Length of message contents in bytes, including self.
+
+    String
+    The name of the portal to execute (an empty string selects the unnamed portal).
+
+    Int32
+    Maximum number of rows to return, if portal contains a query that returns rows (ignored otherwise). Zero denotes “no limit”. """
+
+    def __init__(self):
+        self.identifier = PostgresFrontendMessageIdentifier.EXECUTE
+        super().__init__()
+
+class Sync(BaseFrontendMessage):
+    """
+    Sync (F)
+    Byte1('S')
+    Identifies the message as a Sync command.
+
+    Int32(4)
+    Length of message contents in bytes, including self. """
+
+    def __init__(self):
+        self.identifier = PostgresFrontendMessageIdentifier.SYNC
+        super().__init__()
+
+class Describe(BaseFrontendMessage):
+    """
+    Describe (F)
+    Byte1('D')
+    Identifies the message as a Describe command.
+
+    Int32
+    Length of message contents in bytes, including self.
+
+    Byte1
+    'S' to describe a prepared statement; or 'P' to describe a portal.
+
+    String
+    The name of the prepared statement or portal to describe (an empty string selects the unnamed prepared statement or portal). """
+    def __init__(self):
+        self.identifier = PostgresFrontendMessageIdentifier.DESCRIBE
+        super().__init__()
+
 IMPLEMENTED_BACKEND_POSTGRES_MESSAGE_CLASSES = [
     NoticeResponse, AuthenticationOk, AuthenticationClearTextPassword, ReadyForQuery, CommandComplete, Error,
-    RowDescriptions, DataRow
+    RowDescriptions, DataRow, NegotiateProtocolVersion, ParameterStatus
 ]
 IMPLEMENTED_FRONTEND_POSTGRES_MESSAGE_CLASSES = [
-    Query, Terminate
+    Query, Terminate, Parse
 ]
 FE_MESSAGE_MAP: Dict[PostgresFrontendMessageIdentifier, Type[PostgresMessage]] = {
     PostgresFrontendMessageIdentifier.QUERY: Query,
-    PostgresFrontendMessageIdentifier.TERMINATE: Terminate
+    PostgresFrontendMessageIdentifier.TERMINATE: Terminate,
+    PostgresFrontendMessageIdentifier.PARSE: Parse,
+    PostgresFrontendMessageIdentifier.BIND: Bind,
+    PostgresFrontendMessageIdentifier.EXECUTE: Execute,
+    PostgresFrontendMessageIdentifier.SYNC: Sync,
+    PostgresFrontendMessageIdentifier.DESCRIBE: Describe
 }
 SUPPORTED_AUTH_TYPES = [PostgresAuthType.PASSWORD]
 
@@ -498,45 +731,6 @@ The process ID of this backend.
 
 Int32
 The secret key of this backend. '''
-
-'''
-Bind (F)
-Byte1('B')
-Identifies the message as a Bind command.
-
-Int32
-Length of message contents in bytes, including self.
-
-String
-The name of the destination portal (an empty string selects the unnamed portal).
-
-String
-The name of the source prepared statement (an empty string selects the unnamed prepared statement).
-
-Int16
-The number of parameter format codes that follow (denoted C below). This can be zero to indicate that there are no parameters or that the parameters all use the default format (text); or one, in which case the specified format code is applied to all parameters; or it can equal the actual number of parameters.
-
-Int16[C]
-The parameter format codes. Each must presently be zero (text) or one (binary).
-
-Int16
-The number of parameter values that follow (possibly zero). This must match the number of parameters needed by the query.
-
-Next, the following pair of fields appear for each parameter:
-
-Int32
-The length of the parameter value, in bytes (this count does not include itself). Can be zero. As a special case, -1 indicates a NULL parameter value. No value bytes follow in the NULL case.
-
-Byten
-The value of the parameter, in the format indicated by the associated format code. n is the above length.
-
-After the last parameter, the following fields appear:
-
-Int16
-The number of result-column format codes that follow (denoted R below). This can be zero to indicate that there are no result columns or that the result columns should all use the default format (text); or one, in which case the specified format code is applied to all result columns (if any); or it can equal the actual number of result columns of the query.
-
-Int16[R]
-The result-column format codes. Each must presently be zero (text) or one (binary). '''
 
 '''
 BindComplete (B)
@@ -799,25 +993,6 @@ Byten
 GSSAPI/SSPI specific message data. '''
 
 '''
-NegotiateProtocolVersion (B)
-Byte1('v')
-Identifies the message as a protocol version negotiation message.
-
-Int32
-Length of message contents in bytes, including self.
-
-Int32
-Newest minor protocol version supported by the server for the major protocol version requested by the client.
-
-Int32
-Number of protocol options not recognized by the server.
-
-Then, for protocol option not recognized by the server, there is the following:
-
-String
-The option name. '''
-
-'''
 NoData (B)
 Byte1('n')
 Identifies the message as a no-data indicator.
@@ -857,20 +1032,6 @@ Then, for each parameter, there is the following:
 
 Int32
 Specifies the object ID of the parameter data type. '''
-
-'''
-ParameterStatus (B)
-Byte1('S')
-Identifies the message as a run-time parameter status report.
-
-Int32
-Length of message contents in bytes, including self.
-
-String
-The name of the run-time parameter being reported.
-
-String
-The current value of the parameter. '''
 
 '''
 Parse (F)
@@ -950,14 +1111,6 @@ Byten
 SASL mechanism specific message data. '''
 
 '''
-SSLRequest (F)
-Int32(8)
-Length of message contents in bytes, including self.
-
-Int32(80877103)
-The SSL request code. The value is chosen to contain 1234 in the most significant 16 bits, and 5679 in the least significant 16 bits. (To avoid confusion, this code must not be the same as any protocol version number.) '''
-
-'''
 StartupMessage (F)
 Int32
 Length of message contents in bytes, including self.
@@ -987,18 +1140,4 @@ In addition to the above, other parameters may be listed. Parameter names beginn
 String
 The parameter value. '''
 
-'''
-Sync (F)
-Byte1('S')
-Identifies the message as a Sync command.
 
-Int32(4)
-Length of message contents in bytes, including self. '''
-
-'''
-Terminate (F)
-Byte1('X')
-Identifies the message as a termination.
-
-Int32(4)
-Length of message contents in bytes, including self. '''

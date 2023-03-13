@@ -135,9 +135,9 @@ class BaseExecutorTest(BaseUnitTest):
                      mock_model_controller=False,
                      import_dummy_ml=False):
         # creates executor instance with mocked model_interface
-        from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+        from mindsdb.api.common.controllers.session_controller import SessionController
 
-        from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+        from mindsdb.api.common.executor.executor_commands import ExecuteCommands
         from mindsdb.interfaces.database.integrations import IntegrationController
         from mindsdb.interfaces.file.file_controller import FileController
         from mindsdb.interfaces.model.model_controller import ModelController

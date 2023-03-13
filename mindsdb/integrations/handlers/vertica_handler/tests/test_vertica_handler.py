@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.vertica_handler.vertica_handler import VerticaHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.common.libs import RESPONSE_TYPE
 
 
 class VerticaHandlerTest(unittest.TestCase):

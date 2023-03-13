@@ -1,8 +1,8 @@
 import pytest
 
-from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
-from mindsdb.api.mysql.mysql_proxy.executor.executor_client import ExecutorClient
-from mindsdb.api.mysql.mysql_proxy.executor.executor_service import ExecutorService
+from mindsdb.api.common.executor.executor import Executor
+from mindsdb.api.common.executor import ExecutorClient
+from mindsdb.api.common.executor.executor_service import ExecutorService
 
 from mindsdb.integrations.handlers_client.db_client import DBServiceClient
 from mindsdb.integrations.handlers_wrapper.db_handler_wrapper import DBHandlerWrapper

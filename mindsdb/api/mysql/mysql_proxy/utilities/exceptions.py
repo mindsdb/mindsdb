@@ -1,4 +1,4 @@
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ERR
+from mindsdb.api.common.libs import ERR
 
 
 # base exception for unknown error

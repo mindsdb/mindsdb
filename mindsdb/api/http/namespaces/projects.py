@@ -1,7 +1,7 @@
 from flask import request
 from flask_restx import Resource, abort
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.common.controllers.session_controller import SessionController
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 

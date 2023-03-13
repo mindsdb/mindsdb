@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.timescaledb_handler.timescaledb_handler import TimeScaleDBHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.common.libs import RESPONSE_TYPE
 
 
 class TimeScaleDBHandlerTest(unittest.TestCase):

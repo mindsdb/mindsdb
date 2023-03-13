@@ -4,14 +4,14 @@ from pandas.api import types as pd_types
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import utils as planner_utils
 
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column, SQLQuery
+from mindsdb.api.common.classes.sql_query import Column, SQLQuery
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErBadDbError,
     SqlApiException,
     logger,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
+from mindsdb.api.common.libs.constants.mysql import (
     TYPES,
 )
 
@@ -19,7 +19,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
 # logger = logging.getLogger("mindsdb.main")
 
 
-from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+from mindsdb.api.common.executor.executor_commands import ExecuteCommands
 
 
 class Executor:

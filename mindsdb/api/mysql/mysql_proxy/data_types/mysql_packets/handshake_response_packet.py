@@ -14,7 +14,7 @@
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CAPABILITIES
+from mindsdb.api.common.libs import CAPABILITIES
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 
 

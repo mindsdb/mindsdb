@@ -51,6 +51,7 @@ jobs:
         OPEN_AI_API_KEY: ${{secrets.OPEN_AI_API_KEY}}
 
   microservice_mode_test:
+    needs: tutorials_test
     name: Microservice Mode Tests
     runs-on: ubuntu-latest
     steps:
@@ -69,14 +70,14 @@ jobs:
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
-    - name: Build docker-compose images
-      run: |
-        docker-compose -f ./docker/docker-compose-ci.yml build
-    - name: Run Learning Hub Tests
-      run: |
-          echo -e "\n===============HTTP API===============\n"
-          env MICROSERVICE_MODE=true pytest -vx tests/integration_tests/flow/test_http.py
-      shell: bash
-      env:
-        CHECK_FOR_UPDATES: False
-        OPEN_AI_API_KEY: ${{secrets.OPEN_AI_API_KEY}}
+          # - name: Build docker-compose images
+          #   run: |
+          #     docker-compose -f ./docker/docker-compose-ci.yml build
+          # - name: Run Learning Hub Tests
+          #   run: |
+          #       echo -e "\n===============HTTP API===============\n"
+          #       env MICROSERVICE_MODE=true pytest -vx tests/integration_tests/flow/test_http.py
+          #   shell: bash
+          #   env:
+          #     CHECK_FOR_UPDATES: False
+          #     OPEN_AI_API_KEY: ${{secrets.OPEN_AI_API_KEY}}

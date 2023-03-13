@@ -28,6 +28,7 @@ jobs:
         pip install boto3
         pip install --no-cache-dir .
         pip install -r requirements_test.txt
+        pip install 'openai >= 0.27.0'
       shell: bash
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}

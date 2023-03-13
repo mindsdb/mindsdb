@@ -1,21 +1,20 @@
-import tempfile
-from mindsdb.integrations.libs.base import BaseMLEngine
-from type_infer.infer import infer_types
-from type_infer.dtype import dtype
-
-
-### original imports
-import os
-import ast
 import glob
-import pandas as pd
-import xgboost as xgb
+import dill
+import tempfile
 from datetime import datetime
 
-import xgboost_ray
+import ray
+import pandas as pd
 from ray import tune
-from ray.air.config import RunConfig, ScalingConfig
+from type_infer.dtype import dtype
+from type_infer.infer import infer_types
 from xgboost_ray import RayDMatrix, RayParams, RayFileType, train, predict
+
+from mindsdb.integrations.libs.base import BaseMLEngine
+
+# TODO: rm
+# import xgboost_ray
+# from ray.air.config import RunConfig, ScalingConfig
 
 
 class XGBoostRayHandler(BaseMLEngine):
@@ -27,13 +26,15 @@ class XGBoostRayHandler(BaseMLEngine):
 
     def create(self, target, df, args={}):
         using_args = args["using"]
-        model_args = {}
-        model_args["model_folder"] = tempfile.mkdtemp()
+        model_args = {
+            'target': target,
+            "model_folder": tempfile.mkdtemp(),
+            'dtypes': infer_types(df, 0).to_dict()["dtypes"]
+        }
 
         # type checking
-        dtypes = infer_types(df, 0).to_dict()["dtypes"]
-        is_categorical = dtypes[target] in (dtype.categorical, dtype.tags, dtype.binary)
-        is_numerical = dtypes[target] in (dtype.integer, dtype.float, dtype.quantity)
+        is_categorical = model_args['dtypes'][target] in (dtype.categorical, dtype.tags, dtype.binary)
+        is_numerical = model_args['dtypes'][target] in (dtype.integer, dtype.float, dtype.quantity)
         if not is_categorical and not is_numerical:
             raise Exception("Target column must be either categorical or numerical.")
 
@@ -42,21 +43,17 @@ class XGBoostRayHandler(BaseMLEngine):
             n_class = len(df[target].unique())
         else:
             loss = "reg:squarederror"
-
-        # train_x, train_y should both be numpy arrays
-        # x shape: (n_rows, n_features); y shape: (n_rows, )
+            n_class = None
 
         if using_args.get('mode', 'df'):
-            columns = df.columns.tolist()
             df = df.dropna()
-
-            train_y = df.pop(target).values
-            train_x = df.values
+            train_y = df.pop(target).values           # shape: (n_rows, )
+            train_x = df.values                       # shape: (n_rows, n_features)
             train_set = RayDMatrix(train_x, train_y)
 
         elif using_args.get('mode', 'parquet'):
             dataset = args["dataset"]  # TODO better mechanism for this
-            columns = args['columns']  # TODO better mechanism for this
+            columns = args.get('columns', df.columns.tolist())  # TODO better mechanism for this
             path = list(sorted(glob.glob(f"./{dataset}_*.parquet")))
             train_set = RayDMatrix(
                 path,
@@ -75,26 +72,26 @@ class XGBoostRayHandler(BaseMLEngine):
         else:
             config = {
                 "tree_method": "approx",
-                # "objective": "binary:logistic",
-                # "eval_metric": ["logloss", "error"],
-                # "eta": tune.loguniform(1e-4, 1e-1),
-                # "subsample": tune.uniform(0.5, 1.0),
-                # "max_depth": tune.randint(1, 9)
+                "objective": loss,
+                # "eval_metric": ["logloss", "error"],  # TODO: add this back
+                "eta": tune.loguniform(1e-4, 1e-1),
+                "subsample": tune.uniform(0.5, 1.0),
+                "max_depth": tune.randint(1, 9)
             }
 
+        if is_categorical:
+            config["num_class"] = n_class
+
         # Other param settings
-        num_actors = args.get('num_actors', 4)
-        num_cpus_per_actor = args.get('num_cpus_per_actor', 4)
+        model_args['ray_params_dict'] = {
+            'num_actors': args.get('num_actors', 4),
+            'num_cpus_per_actor': args.get('num_cpus_per_actor', 4),
+            'elastic_training': True,
+            'max_failed_actors': args.get('max_failed_actors', 2),
+            'max_actor_restarts': 3,
+        }
 
-        ray_params = RayParams(
-            num_actors=num_actors,
-            cpus_per_actor=num_cpus_per_actor,
-            elastic_training=True,
-            max_failed_actors=num_actors // 2,
-            max_actor_restarts=3,
-        )
-
-        # Train model
+        ray_params = RayParams(**model_args['ray_params_dict'])
         evals_result = {}
         start_ts = datetime.now()
 
@@ -106,20 +103,29 @@ class XGBoostRayHandler(BaseMLEngine):
             verbose_eval=False,
             ray_params=ray_params)
 
-        model_filename = f"xgbr_model_{start_ts}.xgb"
-        bst.save_model(model_filename)
-
         model_args["runtime"] = (datetime.now() - start_ts).total_seconds()
-
+        self.model_storage.file_set('model', dill.dumps(bst))
         self.model_storage.json_set("model_args", model_args)
+        ray.shutdown()
 
     def predict(self, df, args={}):
-        # Load model arguments
         model_args = self.model_storage.json_get("model_args")
+        model = dill.loads(self.model_storage.file_get('model'))
 
-        groups_to_keep = prediction_df["unique_id"].unique()
+        # preprocessing
+        df = df.dropna()
+        type_map = {
+            dtype.integer: int,
+            dtype.float: float,
+            dtype.binary: int,
+            dtype.categorical: int
+        }
+        for col, it in model_args['dtypes'].dtypes.items():
+            if it in (dtype.categorical, dtype.binary):
+                df[col] = pd.factorize(df[col])[0]
+            df[col] = df[col].astype(type_map[it])
 
-        nf = NeuralForecast.load(model_args["model_folder"])
-        forecast_df = nf.predict(prediction_df)
-        forecast_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
-        return get_results_from_nixtla_df(forecast_df, model_args)
+        dpred = RayDMatrix(df, label=model_args['target'])
+
+        predictions = predict(model, dpred, model_args['ray_params_dict'])
+        return predictions

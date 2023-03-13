@@ -1,0 +1,44 @@
+---
+title: Oracle
+sidebarTitle: Oracle
+---
+
+##Oracle 
+
+This is the implementation of the Oracle data integration for MindsDB.
+
+##Implementation
+This handler is implemented using the oracledb library. Please install it before using this handler:
+
+```bash
+pip install oracledb
+```
+
+The required arguments to establish a connection are,
+* `host`: the host name or IP address 
+* `port`: the TCP/IP port number
+* `sid`: the unique identifier of the database instance
+* `user`: the database username 
+* `password`: the password to authenticate the user 
+
+##Usage
+The following syntax can be used, in order to connect to the Oracle DB:
+
+```sql
+CREATE DATABASE oracle_datasource         --- display name for the database
+WITH ENGINE = 'oracle',                   --- name of the MindsDB handler
+PARAMETERS = {
+  "host": " ",                            --- host name or IP address
+  "port": ,                               --- port used to make TCP/IP connection
+  "sid": " ",                             --- unique identifier of the database instance
+  "user": " ",                            --- database user
+  "password": " "                         --- database password
+};
+```
+The connection accepts either sid or service_name arguments to target to the right DB instance.
+
+Now, you can use this established connection to query your database as follows:
+
+```sql
+SELECT * FROM oracle_db.my_table
+```

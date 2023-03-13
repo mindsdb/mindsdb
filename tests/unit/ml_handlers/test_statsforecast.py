@@ -3,8 +3,8 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from statsforecast.models import AutoARIMA
 from statsforecast import StatsForecast
+from statsforecast.models import AutoCES
 from mindsdb_sql import parse_sql
 from tests.unit.ml_handlers.test_time_series_utils import create_mock_df
 from tests.unit.executor_test_base import BaseExecutorTest
@@ -91,9 +91,9 @@ class TestStatsForecast(BaseExecutorTest):
         assert list(round(result_df["target_col"])) == [32, 33, 34]
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_ts_series(self, mock_handler):
-        """This sends a dataframe where the data is already in time series format i.e.
-        doesn't need grouped
+    def test_model_choice(self, mock_handler):
+        """This tests whether changing the model_name and frequency USING args
+        will switch the actual model used.
         """
 
         # create project
@@ -107,9 +107,9 @@ class TestStatsForecast(BaseExecutorTest):
 
         # generate ground truth predictions from the package
         prediction_horizon = 4
-        sf = StatsForecast(models=[AutoARIMA()], freq="Q")
+        sf = StatsForecast(models=[AutoCES(season_length=24)], freq="H")
         sf.fit(df)
-        forecast_df = sf.forecast(prediction_horizon)
+        forecast_df = sf.predict(prediction_horizon)
         package_predictions = forecast_df.reset_index(drop=True).iloc[:, -1]
 
         # create predictor
@@ -122,7 +122,9 @@ class TestStatsForecast(BaseExecutorTest):
            group by unique_id
            horizon {prediction_horizon}
            using
-             engine='statsforecast'
+             engine='statsforecast',
+             model_name='AutoCES',
+             frequency='H'
         """
         )
         self.wait_predictor("proj", "modelx")

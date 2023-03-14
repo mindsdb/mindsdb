@@ -362,7 +362,8 @@
               "group": "Classification",
               "pages": [
                 "sql/tutorials/customer-churn",
-                "sql/tutorials/classification-community"
+                "sql/tutorials/classification-community",
+                "sql/tutorials/zero-shot-classification-postgresql"
               ]
             },
             {

@@ -10,6 +10,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 
 
 def split_sql(sql):
@@ -42,17 +43,26 @@ def calc_next_date(schedule_str, base_date: dt.datetime):
         raise Exception(f"Number expected: {value}")
     value = int(value)
     if period in ('minute', 'minutes', 'min'):
-        next_date = base_date + dt.timedelta(minutes=value)
+        delta = dt.timedelta(minutes=value)
     elif period in ('hour', 'hours'):
-        next_date = base_date + dt.timedelta(hours=value)
+        delta = dt.timedelta(hours=value)
     elif period in ('day', 'days'):
-        next_date = base_date + dt.timedelta(days=value)
+        delta = dt.timedelta(days=value)
     elif period in ('week', 'weeks'):
-        next_date = base_date + dt.timedelta(days=value * 7)  # 1 week = 7 days
+        delta = dt.timedelta(days=value * 7)  # 1 week = 7 days
     elif period in ('month', 'months'):
-        next_date = base_date + relativedelta(months=value)
+        delta = relativedelta(months=value)
     else:
         raise Exception(f"Unknown period: {period}")
+
+    config = Config()
+
+    is_cloud = config.get('cloud', False)
+    if is_cloud and ctx.user_class == 0:
+        if delta < dt.timedelta(days=1):
+            raise Exception("Minimal allowed period can't be less than one day")
+
+    next_date = base_date + delta
 
     return next_date
 

@@ -115,12 +115,12 @@ class LangChainHandler(OpenAIHandler):
         return pred_df
 
     def sql_agent_completion(self, df, args=None):
-        pred_args = args['predict_params'] if args else {}
+        pred_args = args.get('predict_params', {}) if args else {}
         model_name = args.get('model_name', self.default_agent_model)
 
         # TODO: get an index from DB with communication via SQLAlchemy?
         dbengine = self._mdb_sqlalchemy_connection()
-        sql_database = SQLDatabase(dbengine, include_tables=args.get('ref_table'))  # TODO: multiple table support
+        sql_database = SQLDatabase(dbengine, include_tables=[args.get('ref_table')])  # TODO: multiple table support
         # TODO: support casting unstructured into structured, automatically
         index = GPTSQLStructStoreIndex(
             [],
@@ -141,8 +141,17 @@ class LangChainHandler(OpenAIHandler):
         llm = OpenAI(temperature=0)
         agent_chain = initialize_agent(tools, llm, agent="conversational-react-description", memory=memory)
 
+        # TODO abstract into a common utility method
+        if pred_args.get('prompt_template', False):
+            base_template = pred_args['prompt_template']  # override with predict-time template if available
+        else:
+            base_template = args['prompt_template']
+
+        # TODO: temporal
+        target_col = list(re.finditer("{{(.*?)}}", base_template))[-1].group(0).lstrip('{').rstrip('}')
+
         # TODO: replace this with `last` mode in OpenAI handler
-        reply = agent_chain.run(input="hi, i am bob")
+        reply = agent_chain.run(input=df.iloc[-1][target_col])
 
         return pd.DataFrame([reply], columns=[args['target']])  # TODO: improve this
 
@@ -162,7 +171,8 @@ class LangChainHandler(OpenAIHandler):
 
         def get_connection():
             return create_engine(
-                url="mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(user, password, host, port, database)
+                # url="mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(user, password, host, port, database)
+                url='sqlite:////Users/Pato/Work/MindsDB/mindsdb_customer_projects/olla/olla.sqlite'
             )
 
         try:

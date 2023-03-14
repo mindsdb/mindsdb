@@ -1,11 +1,27 @@
 version: "3.2"
 
 services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: "mindsdb"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      PGPORT: 15432
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 1s
+      timeout: 1s
+      retries: 15
 
   migrations:
     command: bash -c "cd /mindsdb && python ./mindsdb/migrations/migrate.py"
 
     <<: &globalSettings
+      depends_on:
+        db:
+          condition: service_healthy
       build:
         context: ../
         dockerfile: ./docker/mindsdb.Dockerfile
@@ -15,7 +31,7 @@ services:
           target: /mindsdb
       environment:
         MINDSDB_STORAGE_DIR: "/mindsdb/var"
-
+        MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"
   mindsdb:
     # Copy global settings from migration above
     <<: *globalSettings
@@ -33,12 +49,16 @@ services:
       MINDSDB_DB_SERVICE_PORT: "50050"
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"
       FLASK_DEBUG: "1"
       FLASK_ENV: "development"
       FLASK_APP: "/mindsdb/mindsdb/__main__.py"
       SEPARATE_MIGRATIONS: "1"
     depends_on:
       - migrations
+      - postgres_db
+      - mysql_db
+      - maria_db
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
       interval: 30s
@@ -62,6 +82,7 @@ services:
       HOST: "lightwood"
       MINDSDB_SERVICE_TYPE: "lightwood"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"
       REGISTRY_URL: "http://handler_discovery:5000"
       MINDSDB_DB_SERVICE_HOST: "db_service"
       MINDSDB_DB_SERVICE_PORT: "50050"
@@ -82,6 +103,7 @@ services:
       HOST: "huggingface"
       MINDSDB_SERVICE_TYPE: "huggingface"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"
       REGISTRY_URL: "http://handler_discovery:5000"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_DB_SERVICE_HOST: "db_service"
@@ -94,13 +116,13 @@ services:
       dockerfile: ./docker/db_handler.Dockerfile
     depends_on:
       - mindsdb
-        # - mysql_db
     volumes:
       - type: bind
         source: ../
         target: /mindsdb
     environment:
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"
       PORT: "50050"
 
     healthcheck:
@@ -117,14 +139,11 @@ services:
       - mindsdb
     environment:
       # have to share mindsdb database, because it doens't work without it
-      # PORT: 5002
       PORT: 50052
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
-        # BALANCER_URL: "http://balancer:80"
+      MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"
       MINDSDB_DB_SERVICE_HOST: "db_service"
       MINDSDB_DB_SERVICE_PORT: "50050"
-        # MINDSDB_ML_SERVICE_HOST: "lightwood"
-        # MINDSDB_ML_SERVICE_PORT: "50051"
       REGISTRY_URL: "http://handler_discovery:5000"
     volumes:
       - type: bind
@@ -142,3 +161,35 @@ services:
       dockerfile: ./handler_discovery.Dockerfile
     environment:
       PORT: 5000
+
+  postgres_db:
+    image: "mindsdb/postgres-handler-test"
+    environment:
+      POSTGRES_PASSWORD: "supersecret"
+    healthcheck:
+      test: ["CMD", "sh -c 'pg_isready -U root -d test'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  maria_db:
+    image: "mindsdb/mariadb-handler-test"
+    environment:
+      MARIADB_ROOT_PASSWORD: "supersecret"
+    healthcheck:
+      test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MARIADB_ROOT_PASSWORD' ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  mysql_db:
+    image: "mindsdb/mysql-handler-test"
+    command: "--secure-file-priv=/"
+    environment:
+      MYSQL_ROOT_PASSWORD: "supersecret"
+      MYSQL_TCP_PORT: 13306
+    healthcheck:
+      test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD' ]
+      interval: 10s
+      timeout: 3s
+      retries: 3

@@ -96,22 +96,61 @@ class APITable():
         self.handler = handler
 
     def select(self, query: ASTNode) -> pd.DataFrame:
+        """Receive query as AST (abstract syntax tree) and act upon it.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Select
+
+        Returns:
+            HandlerResponse
+        """
         raise NotImplementedError()
 
     def insert(self, query: ASTNode) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Insert
+
+        Returns:
+            None
+        """
         raise NotImplementedError()
 
     def update(self, query: ASTNode) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Update
+        Returns:
+            None
+        """
         raise NotImplementedError()
 
     def delete(self, query: ASTNode) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Delete
+
+        Returns:
+            None
+        """
         raise NotImplementedError()
 
     def get_columns(self) -> list:
+        """Maps the columns names from the API call resource
+
+        Returns:
+            List
+        """
         raise NotImplementedError()
 
 
 class APIHandler(BaseHandler):
+    """
+    Base class for handlers associated to the applications APIs (e.g. twitter, slack, discord  etc.)
+    """
 
     def __init__(self, name: str):
         super().__init__(name)
@@ -123,9 +162,17 @@ class APIHandler(BaseHandler):
         self._tables = {}
 
     def _register_table(self, table_name: str, table_class: Any):
+        """
+        Register the data resource. For e.g if you are using Twitter API it registers the `tweets` resource from `/api/v2/tweets`.
+        """
         self._tables[table_name] = table_class
 
     def _get_table(self, name):
+        """
+        Check if the table name was added to the the _register_table
+        Args:
+            name (str): the table name
+        """
         name = name.parts[-1]
         if name not in self._tables:
             raise RuntimeError(f'Table not found: {name}')
@@ -152,7 +199,13 @@ class APIHandler(BaseHandler):
             raise NotImplementedError
 
     def get_columns(self, table_name: str) -> Response:
-        """ Returns a list of entity columns"""
+        """
+        Returns a list of entity columns
+        Args:
+            table_name (str): the table name
+        Returns:
+            RESPONSE_TYPE.TABLE
+        """
 
         result = self._get_table(table_name).get_columns()
 
@@ -162,7 +215,11 @@ class APIHandler(BaseHandler):
         return Response(RESPONSE_TYPE.TABLE, df)
 
     def get_tables(self) -> Response:
-        """ Return list of entities"""
+        """
+        Return list of entities
+        Returns:
+            RESPONSE_TYPE.TABLE
+        """
 
         result = list(self._tables.keys())
 

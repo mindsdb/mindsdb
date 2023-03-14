@@ -12,6 +12,7 @@ import pandas as pd
 from mindsdb.utilities.ps import get_child_pids
 
 
+HTTP_API_ROOT = f'http://127.0.0.1:47334/api'
 USE_PERSISTENT_STORAGE = bool(int(os.getenv('USE_PERSISTENT_STORAGE') or "0"))
 TEST_CONFIG = os.path.dirname(os.path.realpath(__file__)) + '/config/config.json'
 TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../').joinpath(

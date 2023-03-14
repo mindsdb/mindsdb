@@ -17,6 +17,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 &
         cassandra-driver \
         mysql-connector-python \
         pymssql>=2.1.4 \
+        psycopg2-binary \
         psycopg[binary]>=1.15.3 \
         pymongo certifi \
         snowflake-connector-python>=2.7.6 \

@@ -11,7 +11,7 @@
     "light": "#55D799",
     "dark": "#117866"
   },
-  "openApi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
+  "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
     "baseUrl": [
       "https://alpha.mindsdb.com",
@@ -293,7 +293,9 @@
           "group": "Data Integrations",
           "pages": [
             "data-integrations/all-data-integrations",
+            "data-integrations/twitter",
             "data-integrations/amazon-redshift",
+            "data-integrations/db2",
             "data-integrations/cratedb",
             "data-integrations/cockroachdb",
             "data-integrations/ckan",
@@ -368,6 +370,7 @@
                 "sql/tutorials/home-rentals"
               ]
             },
+            "sql/tutorials/twitter-chatbot",
             "tutorials"
           ]
         },
@@ -381,6 +384,7 @@
             "contribute/data-integration-page",
             "contribute/data-handlers",
             "contribute/ml-handlers",
+            "contribute/app-handlers",
             "contribute/docs",
             "docs-rules",
             "contribute/tests",

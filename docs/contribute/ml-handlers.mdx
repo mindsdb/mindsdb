@@ -116,32 +116,32 @@ def create_engine(self, connection_args: dict):
 MindsDB has recently decoupled some modules out of its AutoML package in order to leverage them in integrations with other ML engines. The three modules are as follows:
 
 1. The [type_infer](https://github.com/mindsdb/type_infer) module that implements automated type inference for any dataset.<br></br>
-Below is the description of input and output of this module.<br></br>
-a. **Input:** tabular dataset.<br></br>
-b. **Output:** best guesses of what type of data each column contains.
+Below is the description of the input and output of this module.<br></br>
+**Input:** tabular dataset.<br></br>
+**Output:** best guesses of what type of data each column contains.
 
 2. The [dataprep_ml](https://github.com/mindsdb/dataprep_ml) module that provides data preparation utilities, such as data cleaning, analysis, and splitting. Data cleaning procedures include column-wise cleaners, column-wise missing value imputers, and data splitters (train-val-test split, either simple or stratified).<br></br>
-Below is the description of input and output of this module.<br></br>
-a. **Input:** tabular dataset.<br></br>
-b. **Output:** cleaned dataset, plus insights useful for data analysis and model building.
+Below is the description of the input and output of this module.<br></br>
+**Input:** tabular dataset.<br></br>
+**Output:** cleaned dataset, plus insights useful for data analysis and model building.
 
 3. The [mindsdb_evaluator](https://github.com/mindsdb/mindsdb_evaluator) module that provides utilities for evaluating the accuracy and calibration of ML models.<br></br>
-Below is the description of input and output of this module.<br></br>
-a. **Input:** model predictions and the input data used to generate these, including corresponding ground truth values of the column to predict.<br></br>
-b. **Output:** accuracy metrics that evaluate prediction accuracy and calibration metrics that check whether model-emitted probabilities are calibrated.
+Below is the description of the input and output of this module.<br></br>
+**Input:** model predictions and the input data used to generate these predictions, including corresponding ground truth values of the column to predict.<br></br>
+**Output:** accuracy metrics that evaluate prediction accuracy and calibration metrics that check whether model-emitted probabilities are calibrated.
 
-We recommend new contributors to use [type_infer](https://github.com/mindsdb/type_infer) and [dataprep_ml](https://github.com/mindsdb/dataprep_ml) modules when writing ML handlers to avoid reimplementing thin AutoML layers over and over again, and instead, focusing on mapping input data and user parameters to the underlying framework’s API.
+We recommend that new contributors use [type_infer](https://github.com/mindsdb/type_infer) and [dataprep_ml](https://github.com/mindsdb/dataprep_ml) modules when writing ML handlers to avoid reimplementing thin AutoML layers over and over again; it is advised to focus on mapping input data and user parameters to the underlying framework’s API.
 
-For now, using the [mindsdb_evaluator](https://github.com/mindsdb/mindsdb_evaluator) module is not required, but will be in the short to medium term, and so it’s important to be aware of it while writing a new integration.
+For now, using the [mindsdb_evaluator](https://github.com/mindsdb/mindsdb_evaluator) module is not required, but will be in the short to medium term, so it’s important to be aware of it while writing a new integration.
 
 <Tip>
 **Example**
 
-Let’s say you want to write an integration for `TPOT`. Its high-level API exposes classes that are either for classification or regression, but as a handler designer you need to ensure that arbitrary ML tasks are dispatched properly to each class (i.e. not using a regressor for a classification problem, and vice versa). First, `type_infer` can help you by estimating the data type of the target variable (and so, you immediately know what class to use). Additionally, to quickly get a stratified train-test split, you can leverage `dataprep_ml` splitters and continue to focus on the actual usage of TPOT for the training and inference logic.
+Let’s say you want to write an integration for `TPOT`. Its high-level API exposes classes that are either for classification or regression. But as a handler designer, you need to ensure that arbitrary ML tasks are dispatched properly to each class (i.e., not using a regressor for a classification problem and vice versa). First, `type_infer` can help you by estimating the data type of the target variable (so you immediately know what class to use). Additionally, to quickly get a stratified train-test split, you can leverage `dataprep_ml` splitters and continue to focus on the actual usage of TPOT for the training and inference logic.
 </Tip>
 
 <Note>
-We would appreciate any and all feedback regarding usage & feature roadmap for the above modules, as they are quite new.
+We would appreciate your feedback regarding usage & feature roadmap for the above modules, as they are quite new.
 </Note>
 
 ## Step-by-Step Instructions
@@ -188,9 +188,9 @@ We would appreciate any and all feedback regarding usage & feature roadmap for t
 
         <Accordion title="Step 4: Modify the handler source code until your test passes">
 
-        1. Define a `create()` method that deals with the model setup arguments. This will add your handler to the models table. Depending on the framework, you may also train the model here using the ‘df’ argument.
+        1. Define a `create()` method that deals with the model setup arguments. This will add your handler to the models table. Depending on the framework, you may also train the model here using the `df` argument.
 
-        2. Save relevant arguments/trained models at the end of your `create` method. This allows them to be accessed later. Use the `engine_storage` attributes - there are examples in other handlers.
+        2. Save relevant arguments/trained models at the end of your `create` method. This allows them to be accessed later. Use the `engine_storage` attributes; you can find examples in other handlers' folders.
 
         3. Define a `predict()` method that makes model predictions. This method must return a dataframe with format matching the input, except with a column containing your model’s predictions of the target. The input df is a subset of the original df with the rows determined by the conditions in the predict SQL query.
 
@@ -206,7 +206,7 @@ We would appreciate any and all feedback regarding usage & feature roadmap for t
 
         2. Check that your handler has been added to the local server database. You can view the list of handlers with `SELECT * from information_schema.handlers`.
 
-        3. Run the relevant tutorial from the panel on the right side. For tabular data, this is `Predict Home Rental Prices`. And for time series data, this is `Forecast Quarterly House Sales`. Specify `USING ENGINE={your_handler}` while creating a model.
+        3. Run the relevant tutorial from the panel on the right side. For regular data, this is `Predict Home Rental Prices`. And for time series data, this is `Forecast Quarterly House Sales`. Specify `USING ENGINE={your_handler}` while creating a model.
 
         4. Don’t debug the `create()` and `predict()` methods with the `print()` statement because they’re inside a subthread. Instead, write relevant info to disk.
 

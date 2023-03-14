@@ -7,7 +7,7 @@ RUN apt update && apt-get upgrade -y && apt install -y build-essential
 RUN apt install -y libxml2 || true
 
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir boto3
+    pip install --no-cache-dir boto3 && pip3 install psycopg2-binary
 
 WORKDIR /
 COPY requirements.txt /requirements.txt

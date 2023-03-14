@@ -11,7 +11,7 @@
     "light": "#55D799",
     "dark": "#117866"
   },
-  "openApi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
+  "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
     "baseUrl": [
       "https://alpha.mindsdb.com",
@@ -124,19 +124,34 @@
                   "group": "NLP",
                   "pages": [
                     "nlp/nlp-mindsdb-hf",
-                    "nlp/nlp-mindsdb-openai"
+                    "nlp/nlp-mindsdb-openai",
+                    "nlp/sentiment-analysis-inside-mysql-with-openai",
+                    "nlp/question-answering-inside-mysql-with-openai",
+                    "nlp/text-summarization-inside-mysql-with-openai",
+                    "nlp/sentiment-analysis-inside-mongodb-with-openai",
+                    "nlp/question-answering-inside-mongodb-with-openai",
+                    "nlp/text-summarization-inside-mongodb-with-openai",
+                    "nlp/json-from-text"
                   ]
                 },
                 {
                   "group": "Time Series",
                   "pages": [
-                    "sql/tutorials/eeg-forecasting"
+                    "sql/tutorials/house-sales-forecasting",
+                    "sql/tutorials/time-series-community",
+                    {
+                      "group": "Nixtla",
+                      "pages": [
+                        "nixtla/statsforecast"
+                      ]
+                    }
                   ]
                 },
                 {
                   "group": "Classification",
                   "pages": [
-                    "sql/tutorials/customer-churn"
+                    "sql/tutorials/customer-churn",
+                    "sql/tutorials/classification-community"
                   ]
                 },
                 {
@@ -293,6 +308,7 @@
           "group": "Data Integrations",
           "pages": [
             "data-integrations/all-data-integrations",
+            "data-integrations/twitter",
             "data-integrations/amazon-redshift",
             "data-integrations/db2",
             "data-integrations/cratedb",
@@ -338,6 +354,8 @@
                 {
                   "group": "NLP Examples with OpenAI",
                   "pages": [
+                    "nlp/nlp-mindsdb-hf",
+                    "nlp/nlp-mindsdb-openai",
                     "nlp/sentiment-analysis-inside-mysql-with-openai",
                     "nlp/question-answering-inside-mysql-with-openai",
                     "nlp/text-summarization-inside-mysql-with-openai",
@@ -365,15 +383,18 @@
             {
               "group": "Classification",
               "pages": [
-                "sql/tutorials/customer-churn"
+                "sql/tutorials/customer-churn",
+                "sql/tutorials/classification-community"
               ]
             },
             {
               "group": "Regression",
               "pages": [
-                "sql/tutorials/home-rentals"
+                "sql/tutorials/home-rentals",
+                "sql/tutorials/regression-community"
               ]
             },
+            "sql/tutorials/twitter-chatbot",
             "tutorials"
           ]
         },
@@ -387,6 +408,7 @@
             "contribute/data-integration-page",
             "contribute/data-handlers",
             "contribute/ml-handlers",
+            "contribute/app-handlers",
             "contribute/docs",
             "docs-rules",
             "contribute/tests",

@@ -1,0 +1,80 @@
+name: MindsDB Release Candidate Acceptance Tests
+
+on:
+  release:
+    types: [created]
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+
+jobs:
+  tutorials_test:
+    name: Learning Hub Acceptance Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Install dependencies
+      run: |
+        pip install 'pymssql >= 2.1.4'
+        pip install boto3
+        pip install --no-cache-dir .
+        pip install -r requirements_test.txt
+        pip install 'openai >= 0.27.0'
+        pip install 'tiktoken >= 0.3.0'
+      shell: bash
+      env:
+        ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
+        mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
+    - name: Run Learning Hub Tests
+      run: |
+          echo -e "\n===============Home Rental Home Prices===============\n"
+          pytest -vx tests/integration_tests/flows/test_home_rental_prices_tutorial.py
+
+          echo -e "\n===============Forecast Quaterly House Sales===============\n"
+          pytest -vx tests/integration_tests/flows/test_forecast_quaterly_house_tutorial.py
+
+          echo -e "\n===============Predict Text Sentiment Wih Huggingface===============\n"
+          pytest -vx tests/integration_tests/flows/test_predict_text_sentiment_huggingface_tutorial.py
+
+          echo -e "\n===============Predict Text Sentiment Wih OpenAI===============\n"
+          pytest -vx tests/integration_tests/flows/test_predict_text_sentiment_openai_tutorial.py
+      shell: bash
+      env:
+        CHECK_FOR_UPDATES: False
+        OPEN_AI_API_KEY: ${{secrets.OPEN_AI_API_KEY}}
+
+  microservice_mode_test:
+    needs: tutorials_test
+    name: Microservice Mode Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Install dependencies
+      run: |
+        pip install 'pymssql >= 2.1.4'
+        pip install boto3
+        pip install --no-cache-dir .
+        pip install -r requirements_test.txt
+      shell: bash
+      env:
+        ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
+        mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
+          # - name: Build docker-compose images
+          #   run: |
+          #     docker-compose -f ./docker/docker-compose-ci.yml build
+          # - name: Run Learning Hub Tests
+          #   run: |
+          #       echo -e "\n===============HTTP API===============\n"
+          #       env MICROSERVICE_MODE=true pytest -vx tests/integration_tests/flow/test_http.py
+          #   shell: bash
+          #   env:
+          #     CHECK_FOR_UPDATES: False
+          #     OPEN_AI_API_KEY: ${{secrets.OPEN_AI_API_KEY}}

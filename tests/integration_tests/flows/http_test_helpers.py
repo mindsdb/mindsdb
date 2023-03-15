@@ -30,7 +30,7 @@ class HTTPHelperMixin:
 
         assert response.status_code == 200, f"sql/query is not accessible - {response.text}"
         response = response.json()
-        assert response.get('type') == (expected_resp_type or [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR])
+        assert response.get('type') == (expected_resp_type or [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR]), response  # noqa
         assert isinstance(response.get('context'), dict)
         if response['type'] == 'table':
             assert isinstance(response.get('data'), list)

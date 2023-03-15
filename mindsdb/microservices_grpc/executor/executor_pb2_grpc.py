@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import mindsdb.grpc.executor.executor_pb2 as executor__pb2
+import mindsdb.microservices_grpc.executor.executor_pb2 as executor__pb2
 
 
 class ExecutorServiceStub(object):

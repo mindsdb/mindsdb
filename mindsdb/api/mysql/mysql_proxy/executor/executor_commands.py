@@ -481,6 +481,11 @@ class ExecuteCommands:
         elif type(statement) == Set:
             category = (statement.category or "").lower()
             if category == "" and type(statement.arg) == BinaryOperation:
+                if statement.arg.args[0].parts[0].lower() == 'profiling':
+                    if statement.arg.args[1].value in (1, True):
+                        self.session.profiling = True
+                    else:
+                        self.session.profiling = False
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             elif category == "autocommit":
                 return ExecuteAnswer(ANSWER_TYPE.OK)

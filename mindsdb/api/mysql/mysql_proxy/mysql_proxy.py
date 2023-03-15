@@ -798,6 +798,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         context = {}
         if self.session.database is not None:
             context['db'] = self.session.database
+        if self.session.profiling is True:
+            context['profiling'] = True
 
         return context
 

@@ -4,15 +4,18 @@ from mindsdb.utilities.context import context as ctx
 
 
 def start(tag):
-    ctx.profiling_start_node(tag)
+    if ctx.profiling['enabled'] is True:
+        ctx.profiling_start_node(tag)
 
 
 def set_meta(**kwargs):
-    ctx.profiling_set_meta(**kwargs)
+    if ctx.profiling['enabled'] is True:
+        ctx.profiling_set_meta(**kwargs)
 
 
 def stop():
-    ctx.profiling_stop_current_node()
+    if ctx.profiling['enabled'] is True:
+        ctx.profiling_stop_current_node()
 
 
 def profile(tag: str = None):

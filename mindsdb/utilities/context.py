@@ -22,6 +22,7 @@ class Context:
             'company_id': None,
             'user_class': 0,
             'profiling': {
+                'enabled': False,
                 'pointer': None,
                 'tree': None
             }
@@ -91,7 +92,14 @@ class Context:
     def _send_profiling_results(self):
         self.profiling['company_id'] = self.company_id
         self.profiling['hostname'] = Config().get('aws_meta_data', {}).get('public-hostname', '?')
+        self.profiling['instance_id'] = Config().get('aws_meta_data', {}).get('instance-id', '?')
         hooks.send_profiling_results(self.profiling)
+
+    def enable_profiling(self):
+        self.profiling['enabled'] = True
+
+    def disable_profiling(self):
+        self.profiling['enabled'] = False
 
 
 _context_var = ContextVar('mindsdb.context')

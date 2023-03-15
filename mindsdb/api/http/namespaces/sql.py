@@ -24,6 +24,9 @@ class Query(Resource):
         query = request.json['query']
         context = request.json.get('context', {})
 
+        if context.get('profiling') is True:
+            ctx.enable_profiling()
+
         error_type = None
         error_code = None
         error_text = None

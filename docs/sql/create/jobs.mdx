@@ -245,6 +245,10 @@ This job runs once on the 1st of April 2023.
 
 You can easily create a chatbot to respond to tweets using jobs. But before you get to it, you should connect your Twitter account to MindsDB following the instructions [here](/data-integrations/twitter).
 
+<Tip>
+Follow the [tutorial on how to create a Twitter chatbot](/sql/tutorials/twitter-chatbot) to learn the details.
+</Tip>
+
 Let's create a job that runs every hour, checks for new tweets, and responds using the OpenAI model.
 
 ```sql
@@ -256,7 +260,7 @@ CREATE JOB auto_respond AS (
             r.response AS text
         FROM my_twitter.tweets t
         JOIN mindsdb.twitter_response_model r 
-        WHERE t.query = '(mindsdb OR #mindsdb) -is:retweet -is:reply'' 
+        WHERE t.query = '(mindsdb OR #mindsdb) -is:retweet -is:reply' 
         AND t.created_at > "{{PREVIOUS_START_DATETIME}}"
         LIMIT 2
 )

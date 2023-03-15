@@ -238,6 +238,8 @@ class TwitterHandler(APIHandler):
 
         max_page_size = 100
         min_page_size = 10
+        left = None
+
         while True:
             if count_results is not None:
                 left = count_results - len(data)
@@ -262,7 +264,7 @@ class TwitterHandler(APIHandler):
                     includes[table].extend([r.data for r in records])
 
             if isinstance(resp.data, list):
-                data.extend([r.data for r in resp.data])
+                chunk = [r.data for r in resp.data]
             else:
                 if isinstance(resp.data, dict):
                     data.append(resp.data)
@@ -270,6 +272,11 @@ class TwitterHandler(APIHandler):
                     data.append(resp.data.data)
                 break
 
+            # limit output
+            if left is not None:
+                chunk = chunk[:left]
+
+            data.extend(chunk)
             # next page ?
             if count_results is not None and hasattr(resp, 'meta') and 'next_token' in resp.meta:
                 params['next_token'] = resp.meta['next_token']

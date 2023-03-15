@@ -35,3 +35,16 @@ Now, you can use this established connection to query your database as follows:
 ```sql
 SELECT * FROM cloud_spanner_datasource.my_table;
 ```
+
+> **NOTE** : Cloud Spanner supports PostgreSQL syntax and also Google's GoogleSQL dialect. But, not all PostgresSQL dialect features are supported. Find the list of such features below.
+> - Change streams
+> - GoogleSQL `JSON` type (PostgreSQL-dialect databases support the PostgreSQL JSONB type.)
+> - `SELECT DISTINCT` (`DISTINCT` is supported in aggregate functions.)
+> - `FULL JOIN` with `USING`
+> - Query optimizer versioning
+> - Optimizer statistics package versioning
+> - `ORDER BY`, `LIMIT`, and `OFFSET` in `UNION`,`EXCEPT`, or `DISTINCT` statements
+> - The following columns in `SPANNER_SYS` statistics tables:
+>      - Transaction statistics: `TOTAL_LATENCY_DISTRIBUTION` and `OPERATIONS_BY_TABLE`
+>      - Query statistics: `LATENCY_DISTRIBUTION`
+>      - Lock Statistics: `SAMPLE_LOCK_REQUESTS`

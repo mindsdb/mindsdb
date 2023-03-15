@@ -1,0 +1,46 @@
+---
+title: QuestDB
+sidebarTitle: QuestDB
+---
+
+## QuestDB
+
+This is the implementation of the QuestDB data integration for MindsDB.
+
+## Implementation
+
+This handler is implemented using the `psycopg` library. Please install it before using this handler `version >= 1.15.3`:
+
+```bash
+pip install psycopg
+```
+
+The required arguments to establish a connection are,
+
+- `host`: the host name or IP address
+- `port`: the TCP/IP port number
+- `user`: the database username
+- `password`: the password to authenticate the user
+- `database`: the database name
+
+## Usage
+
+The following syntax can be used, in order to connect to the QuestDB:
+
+```sql
+CREATE DATABASE quest_datasource   --- display name for the database
+WITH ENGINE = 'questdb',           --- name of the MindsDB handler
+PARAMETERS = {
+  "host": "127.0.0.1",             --- host name or IP address
+  "port": "8812",                  --- port used to make TCP/IP connection
+  "user": "admin",                 --- database user
+  "password": "quest",             --- database password
+  "database": "databse_name",      --- database name
+};
+```
+
+Now, you can use this established connection to query your database as follows:
+
+```sql
+SELECT * FROM quest_datasource.my_table
+```

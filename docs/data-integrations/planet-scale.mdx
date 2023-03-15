@@ -1,0 +1,44 @@
+---
+title: PlanetScale
+sidebarTitle: PlanetScale
+---
+
+##PlanetScale 
+
+This is the implementation of the PlanetScale data integration for MindsDB.
+
+##Implementation
+This handler is implemented using the planetscaledb library. Please install it before using this handler:
+
+```bash
+pip install planetscaledb
+```
+
+The required arguments to establish a connection are,
+* `host`: the host name or IP address 
+* `port`: the TCP/IP port number
+* `sid`: the unique identifier of the database instance
+* `user`: the database username 
+* `password`: the password to authenticate the user
+
+##Usage
+The following syntax can be used, in order to connect to the PlanetScale DB:
+
+```sql
+CREATE DATABASE planetscale_datasource     --- display name for the database
+WITH ENGINE = 'planet_scale',              --- name of the MindsDB handler
+PARAMETERS = {
+  "host": " ",                             --- host name or IP address
+  "port": ,                                --- port used to make TCP/IP connection
+  "user": " ",                             --- database user
+  "password": " ",                         --- database password
+  "database": " "                          --- database name
+};
+```
+
+
+You can then use this datasource to query your database, like this:
+
+```sql
+SELECT * FROM planetscale_datasource.my_table
+```

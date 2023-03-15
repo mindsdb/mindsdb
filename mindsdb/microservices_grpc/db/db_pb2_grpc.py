@@ -2,8 +2,8 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import mindsdb.grpc.db.common_pb2 as common__pb2
-import mindsdb.grpc.db.db_pb2 as db__pb2
+import mindsdb.microservices_grpc.db.common_pb2 as common__pb2
+import mindsdb.microservices_grpc.db.db_pb2 as db__pb2
 
 
 class DBServiceStub(object):

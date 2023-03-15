@@ -4,8 +4,8 @@ import pickle
 from uuid import uuid4
 
 import grpc
-from mindsdb.grpc.executor import executor_pb2_grpc
-from mindsdb.grpc.executor import executor_pb2
+from mindsdb.microservices_grpc.executor import executor_pb2_grpc
+from mindsdb.microservices_grpc.executor import executor_pb2
 
 from mindsdb.utilities.log import get_log
 from mindsdb.utilities.context import context as ctx

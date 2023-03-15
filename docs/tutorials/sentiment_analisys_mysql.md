@@ -18,7 +18,7 @@ PARAMETERS = {
 
 Now that we’ve connected our database to MindsDB, let’s query the data to be used in the example:
 
-```plaintext
+```sql
 SELECT *
 FROM mysql_demo_db.amazon_reviews
 LIMIT 3;
@@ -26,7 +26,7 @@ LIMIT 3;
 
 Let’s create a model table to identify sentiment for all reviews:
 
-```plaintext
+```sql
 CREATE MODEL sentiment_classifier_model
 PREDICT sentiment
 USING
@@ -47,14 +47,14 @@ The `USING` clause specifies the parameters that this handler requires.
 
 Once the `CREATE MODEL` statement has started execution, we can check the status of the creation process with the following query:
 
-```plaintext
+```sql
 SELECT * FROM models
 WHERE name = 'sentiment_classifier_model';
 ```
 
 It may take a while to register as complete depending on the internet connection. Once the creation is complete, the behavior is the same as with any other AI table – you can query it either by specifying synthetic data in the actual query:
 
-```plaintext
+```sql
 SELECT review, sentiment
 FROM sentiment_classifier_model
 WHERE review = 'It is ok.';
@@ -62,7 +62,7 @@ WHERE review = 'It is ok.';
 
 Or by joining with another table for batch predictions:
 
-```plaintext
+```sql
 SELECT input.review, output.sentiment
 FROM mysql_demo_db.amazon_reviews AS input
 JOIN sentiment_classifier_model AS output

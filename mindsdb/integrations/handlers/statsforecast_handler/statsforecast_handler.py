@@ -19,7 +19,13 @@ model_dict = {
 
 
 def get_season_length(frequency):
-    """Infers best season length from frequency parameter"""
+    """Infers best season length from frequency parameter.
+
+    We set a sensible default for seasonality based on the
+    frequency parameter. For example: we assume monthly data
+    has a season length of 12 (months in a year). If the inferred frequency
+    isn't found, we default to 1 i.e. no seasonality.
+    """
     season_dict = {  # https://pandas.pydata.org/docs/user_guide/timeseries.html#timeseries-offset-aliases
         "H": 24,
         "M": 12,
@@ -45,18 +51,17 @@ def find_best_model(frequency, horizon, df):
 
 
 
-def choose_model(model_name, frequency):
+def choose_model(model_args, training_df):
     """Chooses which model to use in StatsForecast.
 
-    We set a sensible default for seasonality based on the
-    frequency parameter. For example: we assume monthly data
-    has a season length of 12 (months in a year).
-
-    If the inferred frequency isn't found, we default to 1 i.e.
-    no seasonality.
+    If the user passes 'auto' for their model_name, this will choose the best
+    model based on in-sample cross validation performance. This will then modify
+    the model_args dictionnary, replacing 'auto' with the best-performing model.
     """
-    season_length = get_season_length(frequency)
-    model = model_dict[model_name]
+    if model_args["model_name"] == "auto":
+        model_args["model_name"] = find_best_model(model_args["frequency"], model_args["horizon"], training_df)
+    season_length = get_season_length(model_args["frequency"])
+    model = model_dict[model_args["model_name"]]
     return model(season_length=season_length)
 
 
@@ -91,10 +96,7 @@ class StatsForecastHandler(BaseMLEngine):
         training_df = transform_to_nixtla_df(df, model_args)
 
         model_args["model_name"] = DEFAULT_MODEL_NAME if "model_name" not in using_args else using_args["model_name"]
-        if model_args["model_name"] == "auto":
-            model_args["model_name"] = find_best_model(model_args["frequency"], model_args["horizon"], training_df)
-        model = choose_model(model_args["model_name"], model_args["frequency"])
-
+        model = choose_model(model_args, training_df)
         sf = StatsForecast([model], freq=model_args["frequency"], df=training_df)
         fitted_models = sf.fit().fitted_
 

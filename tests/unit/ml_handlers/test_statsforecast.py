@@ -7,6 +7,7 @@ from statsforecast.models import AutoARIMA, AutoCES, AutoETS, AutoTheta
 from statsforecast.utils import AirPassengersDF
 from statsforecast import StatsForecast
 from mindsdb.integrations.utilities.time_series_utils import get_best_model_from_results_df
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import model_dict
 from mindsdb_sql import parse_sql
 from tests.unit.ml_handlers.test_time_series_utils import create_mock_df
 from tests.unit.executor_test_base import BaseExecutorTest
@@ -152,13 +153,15 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql("create database proj")
         self.set_handler(mock_handler, name="pg", tables={"df": AirPassengersDF})
 
-        # generate ground truth predictions from the package
-        prediction_horizon = 4
-        sf = StatsForecast([AutoARIMA(), AutoTheta(), AutoCES(), AutoETS()], freq="D", df=AirPassengersDF)
+        # generate ground truth predictions from the package - AutoTheta should win here
+        prediction_horizon = 1
+        models = [m(season_length=12) for m in model_dict.values()]
+        sf = StatsForecast(models, freq="M", df=AirPassengersDF)
         sf.cross_validation(prediction_horizon, fitted=True)
         sf_results_df = sf.cross_validation_fitted_values()
         best_model = get_best_model_from_results_df(sf_results_df)
         package_predictions = sf.forecast(prediction_horizon)[best_model]
+        assert best_model == "AutoTheta"
 
         # create predictor
         self.run_sql(
@@ -172,7 +175,7 @@ class TestStatsForecast(BaseExecutorTest):
            using
              engine='statsforecast',
              model_name='auto',
-             frequency='D'
+             frequency='M'
         """
         )
         self.wait_predictor("proj", "modelx")

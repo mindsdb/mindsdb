@@ -19,6 +19,7 @@ model_dict = {
 
 
 def get_season_length(frequency):
+    """Infers best season length from frequency parameter"""
     season_dict = {  # https://pandas.pydata.org/docs/user_guide/timeseries.html#timeseries-offset-aliases
         "H": 24,
         "M": 12,
@@ -33,7 +34,18 @@ def get_season_length(frequency):
     return season_dict[new_freq] if new_freq in season_dict else 1
 
 
-def choose_model(model_name, frequency, horizon, df):
+def find_best_model(frequency, horizon, df):
+    """Finds the best model with in-sample cross-validation."""
+    season_length = get_season_length(frequency)
+    models = [model(season_length=season_length) for model in model_dict.values()]
+    sf = StatsForecast(models, frequency)
+    sf.cross_validation(horizon, df, fitted=True)
+    results_df = sf.cross_validation_fitted_values()
+    return get_best_model_from_results_df(results_df)
+
+
+
+def choose_model(model_name, frequency):
     """Chooses which model to use in StatsForecast.
 
     We set a sensible default for seasonality based on the
@@ -44,13 +56,6 @@ def choose_model(model_name, frequency, horizon, df):
     no seasonality.
     """
     season_length = get_season_length(frequency)
-    if model_name == 'auto':
-        models = [model(season_length=season_length) for model in model_dict.values()]
-        sf = StatsForecast(models, frequency)
-        sf.cross_validation(horizon, df, fitted=True)
-        results_df = sf.cross_validation_fitted_values()
-        model_name = get_best_model_from_results_df(results_df)
-
     model = model_dict[model_name]
     return model(season_length=season_length)
 
@@ -83,10 +88,13 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["frequency"] = (
             using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
         )
+        training_df = transform_to_nixtla_df(df, model_args)
 
         model_args["model_name"] = DEFAULT_MODEL_NAME if "model_name" not in using_args else using_args["model_name"]
-        training_df = transform_to_nixtla_df(df, model_args)
-        model = choose_model(model_args["model_name"], model_args["frequency"], model_args["horizon"], training_df)
+        if model_args["model_name"] == "auto":
+            model_args["model_name"] = find_best_model(model_args["frequency"], model_args["horizon"], training_df)
+        model = choose_model(model_args["model_name"], model_args["frequency"])
+
         sf = StatsForecast([model], freq=model_args["frequency"], df=training_df)
         fitted_models = sf.fit().fitted_
 

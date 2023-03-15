@@ -110,12 +110,19 @@ class TweetsTable(APITable):
 
         if len(columns) == 0:
             columns = self.get_columns()
+
+        # columns to lower case
+        columns = [name.lower() for name in columns]
+
         if len(result) == 0:
             result = pd.DataFrame([], columns=columns)
         else:
             # add absent columns
             for col in set(columns) & set(result.columns) ^ set(columns):
                 result[col] = None
+
+            # filter by columns
+            result = result[columns]
         return result
 
     def get_columns(self):

@@ -76,6 +76,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 from mindsdb.api.mysql.mysql_proxy.executor import Executor
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.hooks as hooks
+import mindsdb.utilities.profiler as profiler
 
 
 def empty_fn():
@@ -479,6 +480,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             })
         return result
 
+    @profiler.profile()
     def process_query(self, sql):
         executor = Executor(
             session=self.session,

@@ -75,6 +75,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlWrongArguments
 )
 from mindsdb.utilities.cache import get_cache, json_checksum
+import mindsdb.utilities.profiler as profiler
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -441,6 +442,7 @@ class SQLQuery():
             self.prepare_query(prepare=False)
             self.execute_query()
 
+    @profiler.profile()
     def create_planner(self):
         databases_names = self.session.database_controller.get_list()
         databases_names = [x['name'] for x in databases_names]
@@ -539,7 +541,6 @@ class SQLQuery():
         else:
             table_alias = get_table_alias(step.query.from_table, self.database)
             # TODO for information_schema we have 'database' = 'mindsdb'
-
             data, columns_info = dn.query(
                 query=query,
                 session=self.session
@@ -639,7 +640,8 @@ class SQLQuery():
         steps_data = []
         try:
             for step in self.planner.execute_steps(params):
-                data = self.execute_step(step, steps_data)
+                with profiler.Context(f'step: {step.__class__.__name__}'):
+                    data = self.execute_step(step, steps_data)
                 step.set_result(data)
                 steps_data.append(data)
         except PlanningException as e:

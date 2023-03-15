@@ -80,6 +80,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.context import context as ctx
+import mindsdb.utilities.profiler as profiler
 
 
 def _get_show_where(
@@ -133,6 +134,7 @@ class ExecuteCommands:
         self.charset_text_type = CHARSET_NUMBERS["utf8_general_ci"]
         self.datahub = session.datahub
 
+    @profiler.profile()
     def execute_command(self, statement):
         sql = None
         if self.executor is None:

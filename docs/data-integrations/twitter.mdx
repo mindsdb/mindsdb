@@ -1,0 +1,68 @@
+---
+title: Twitter
+sidebarTitle: Twitter
+---
+
+In this section, we present how to integrate a Twitter account with MindsDB.
+
+## Connection
+
+Here are the requirements to connect a Twitter account to MindsDB:
+
+1. You need a Twitter developer account.
+2. You need to generate API keys following the instructions on the [Twitter developer website](https://developer.twitter.com/en).
+3. To connect your Twitter account, you need a bearer token that can be obtained following [these steps](https://developer.twitter.com/en/docs/authentication/oauth-2-0/bearer-tokens).
+
+Here is how to connect your Twitter account to MindsDB:
+
+```sql
+CREATE DATABASE my_twitter 
+WITH 
+    ENGINE = 'twitter',
+    PARAMETERS = {
+      "bearer_token": "twitter bearer token",
+      "consumer_key": "twitter consumer key",
+      "consumer_secret": "twitter consumer key secret",
+      "access_token": "twitter access token",
+	  "access_token_secret": "twitter access token secret"
+    };
+```
+
+## Usage
+
+The `my_twitter` database contains a table called `tweets` by default.
+
+Here is how to search tweets containing `mindsdb` keyword:
+
+```sql
+SELECT id, created_at, author_username, text 
+FROM my_twitter.tweets 
+WHERE query = '(mindsdb OR #mindsdb) -is:retweet -is:reply'
+AND created_at > '2023-02-16' 
+LIMIT 20;
+```
+
+Alternatively, you can use a Twitter native query, as below:
+
+```sql
+SELECT * FROM my_twitter (
+  search_recent_tweets(
+    query = '(mindsdb OR #mindsdb) -is:retweet -is:reply',
+    start_time = '2023-02-16T00:00:00.000Z',
+    max_results = 2
+  )
+);
+```
+
+<Tip>
+To learn more about native queries in MindsDB, visit our docs [here](/sql/native-queries).
+</Tip>
+
+Here is how to write tweets:
+
+```sql
+INSERT INTO my_twitter.tweets (reply_to_tweet_id, text)
+VALUES 
+    (1626198053446369280, 'MindsDB is great! now its super simple to build ML powered apps'),
+    (1626198053446369280, 'Holy!! MindsDB is the best thing they have invented for developers doing ML');
+```

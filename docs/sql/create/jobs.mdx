@@ -173,7 +173,7 @@ The `check_interval` parameter defines the interval in seconds between consecuti
 
 You can modify the default configuration in your local MindsDB installation by creating a `config.json` file and starting MindsDB with this file as a parameter. You can find detailed instructions [here](/setup/custom-config#starting-mindsdb-with-extended-configuration).
 
-## Example 1
+## Example 1: Retrain a Model
 
 In this example, we create a job in the current project to retrain the `home_rentals_model` model and insert predictions into the `rentals` table.
 
@@ -200,7 +200,7 @@ Please note that the `join_learn_process` parameter in the `USING` clause of the
 
 The `retrain_model_and_save_predictions` job starts its execution on the current system date and ends on the 1st of April 2023. The job is executed every 2 days.
 
-## Example 2
+## Example 2: Save Predictions
 
 In this example, the job creates a table named as `result_{{START_DATETIME}}` and inserts predictions into it.
 
@@ -227,7 +227,7 @@ You can use the following variables for this purpose:
 
 The `save_predictions` job starts its execution on the current system date and repeats every 2 hours until it is manually disabled.
 
-## Example 3
+## Example 3: Drop a Model
 
 In this example, we create a job to drop the `home_rentals_model` model scheduled on the 1st of April 2023.
 
@@ -240,3 +240,35 @@ START '2023-04-01';
 ```
 
 This job runs once on the 1st of April 2023.
+
+## Example 4: Twitter Chatbot
+
+You can easily create a chatbot to respond to tweets using jobs. But before you get to it, you should connect your Twitter account to MindsDB following the instructions [here](/data-integrations/twitter).
+
+<Tip>
+Follow the [tutorial on how to create a Twitter chatbot](/sql/tutorials/twitter-chatbot) to learn the details.
+</Tip>
+
+Let's create a job that runs every hour, checks for new tweets, and responds using the OpenAI model.
+
+```sql
+CREATE JOB auto_respond AS (
+
+    INSERT INTO my_twitter.tweets (in_reply_to_tweet_id, text)
+        SELECT 
+            t.id AS in_reply_to_tweet_id, 
+            r.response AS text
+        FROM my_twitter.tweets t
+        JOIN mindsdb.twitter_response_model r 
+        WHERE t.query = '(mindsdb OR #mindsdb) -is:retweet -is:reply' 
+        AND t.created_at > "{{PREVIOUS_START_DATETIME}}"
+        LIMIT 2
+)
+EVERY hour;
+```
+
+The [`SELECT`](/sql/api/select) statement joins the data table with the model table to get responses for tweets posted after the `{{PREVIOUS_START_DATETIME}}` timestamp. Then, the [`INSERT INTO`](/sql/api/insert) statement writes these responses to the `tweets` table of the `my_twitter` integration.
+
+<Tip>
+To learn more about OpenAI integration with MindsDB, visit our docs [here](/nlp/nlp-mindsdb-openai).
+</Tip>

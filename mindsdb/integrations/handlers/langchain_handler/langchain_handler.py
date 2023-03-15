@@ -171,8 +171,7 @@ class LangChainHandler(OpenAIHandler):
 
         def get_connection():
             return create_engine(
-                # url="mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(user, password, host, port, database)
-                url='sqlite:////Users/Pato/Work/MindsDB/mindsdb_customer_projects/olla/olla.sqlite'
+                url="mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(user, password, host, port, database)
             )
 
         try:

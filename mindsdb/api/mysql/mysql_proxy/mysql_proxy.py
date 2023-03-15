@@ -793,6 +793,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def set_context(self, context):
         if 'db' in context:
             self.session.database = context['db']
+        if 'profiling' in context:
+            self.session.profiling = context['profiling']
 
     def get_context(self, context):
         context = {}

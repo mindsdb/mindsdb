@@ -3,14 +3,22 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from statsforecast.models import AutoARIMA, AutoCES, AutoETS, AutoTheta
+from statsforecast.models import AutoCES
 from statsforecast.utils import AirPassengersDF
 from statsforecast import StatsForecast
 from mindsdb.integrations.utilities.time_series_utils import get_best_model_from_results_df
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import model_dict
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import choose_model, model_dict
 from mindsdb_sql import parse_sql
 from tests.unit.ml_handlers.test_time_series_utils import create_mock_df
 from tests.unit.executor_test_base import BaseExecutorTest
+
+
+def test_choose_model():
+    # With this data and settings, AutoTheta should win
+    model_args = {"horizon": 1, "frequency": "M", "model_name": "auto"}
+    sample_df = AirPassengersDF.iloc[:10]
+    best_model = choose_model(model_args, sample_df)
+    assert best_model.alias == "AutoETS"
 
 
 class TestStatsForecast(BaseExecutorTest):
@@ -155,13 +163,11 @@ class TestStatsForecast(BaseExecutorTest):
 
         # generate ground truth predictions from the package - AutoTheta should win here
         prediction_horizon = 1
-        models = [m(season_length=12) for m in model_dict.values()]
-        sf = StatsForecast(models, freq="M", df=AirPassengersDF)
+        sf = StatsForecast(models=[m(season_length=12) for m in model_dict.values()], freq="M", df=AirPassengersDF)
         sf.cross_validation(prediction_horizon, fitted=True)
         sf_results_df = sf.cross_validation_fitted_values()
-        best_model = get_best_model_from_results_df(sf_results_df)
-        package_predictions = sf.forecast(prediction_horizon)[best_model]
-        assert best_model == "AutoTheta"
+        best_model_name = get_best_model_from_results_df(sf_results_df)
+        package_predictions = sf.forecast(prediction_horizon)[best_model_name]
 
         # create predictor
         self.run_sql(

@@ -5,7 +5,6 @@ from pyignite import Client
 import pandas as pd
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -161,14 +160,11 @@ class IgniteHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        # if isinstance(query, ASTNode):
-        #     query_str = query.to_string()
-        # else:
-        #     query_str = str(query)
-        #
-        # return self.native_query(query_str)
-        renderer = SqlalchemyRender('ignite')
-        query_str = renderer.get_string(query, with_failback=True)
+        if isinstance(query, ASTNode):
+            query_str = query.to_string()
+        else:
+            query_str = str(query)
+
         return self.native_query(query_str)
 
     def get_tables(self) -> StatusResponse:

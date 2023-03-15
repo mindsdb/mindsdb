@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+from sklearn.metrics import mean_absolute_error
 
 DEFAULT_FREQUENCY = "D"
 
@@ -58,3 +60,16 @@ def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
     except TypeError:
         inferred_freq = default
     return inferred_freq if inferred_freq is not None else default
+
+
+def get_best_model_from_results_df(nixtla_results_df, error_metric=mean_absolute_error):
+    """Gets the best model based, on lowest error, from a results df
+    with a column for each nixtla model.
+    """
+    best_model, current_error = None, np.inf
+    for result_column in nixtla_results_df.columns[3:]:
+        model_error = error_metric(nixtla_results_df[result_column], nixtla_results_df["y"])
+        if model_error < current_error:
+            best_model = result_column
+            current_error = model_error
+    return best_model

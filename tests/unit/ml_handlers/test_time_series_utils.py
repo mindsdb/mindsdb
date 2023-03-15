@@ -4,7 +4,7 @@ from mindsdb.integrations.utilities.time_series_utils import (
     transform_to_nixtla_df,
     get_results_from_nixtla_df,
     infer_frequency,
-    get_best_model_from_results_df
+    get_best_model_from_results_df,
 )
 
 
@@ -81,6 +81,6 @@ def test_get_best_model_from_results_df():
     nixtla_df = AirPassengersDF.copy()
     nixtla_df["AutoARIMA"] = nixtla_df["y"] + 1
     nixtla_df["AutoCES"] = nixtla_df["y"]
-    nixtla_df["AutoBadModel"] = nixtla_df["y"] -2
+    nixtla_df["AutoBadModel"] = nixtla_df["y"] - 2
 
     assert get_best_model_from_results_df(nixtla_df) == "AutoCES"

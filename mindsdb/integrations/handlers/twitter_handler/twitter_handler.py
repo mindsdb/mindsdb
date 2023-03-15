@@ -145,7 +145,6 @@ class TweetsTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
 
-            print('create_tweet', params)
             self.handler.call_twitter_api('create_tweet', params)
 
 

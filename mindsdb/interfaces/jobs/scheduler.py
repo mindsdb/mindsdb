@@ -78,10 +78,10 @@ def task_process(record_id, exec_method):
     if exec_method == 'local':
         try:
             history_id = scheduler.lock_record(record_id)
-        except Exception as e:
+        except Exception:
             db.session.rollback()
             db.session.remove()
-            logger.error(f'Unable create history record, is locked?')
+            logger.error('Unable create history record, is locked?')
             return
 
         scheduler.execute_task_local(record_id, history_id)

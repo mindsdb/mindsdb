@@ -5,7 +5,7 @@ from datetime import datetime
 
 import ray
 import pandas as pd
-from ray import tune
+# from ray import tune
 from type_infer.dtype import dtype
 from type_infer.infer import infer_types
 from xgboost_ray import RayDMatrix, RayParams, RayFileType, train, predict
@@ -45,13 +45,15 @@ class XGBoostRayHandler(BaseMLEngine):
             loss = "reg:squarederror"
             n_class = None
 
-        if using_args.get('mode', 'df'):
+        if using_args.get('mode', 'df') == 'df':
             df = df.dropna()
-            train_y = df.pop(target).values           # shape: (n_rows, )
-            train_x = df.values                       # shape: (n_rows, n_features)
+            train_y = df.pop(target)    # shape: (n_rows, )
+            train_x = df                # shape: (n_rows, n_features)
+            train_y.columns = [target]
+            model_args['input_cols'] = list(train_x.columns)
             train_set = RayDMatrix(train_x, train_y)
 
-        elif using_args.get('mode', 'parquet'):
+        elif using_args.get('mode', 'df') == 'parquet':
             dataset = args["dataset"]  # TODO better mechanism for this
             columns = args.get('columns', df.columns.tolist())  # TODO better mechanism for this
             path = list(sorted(glob.glob(f"./{dataset}_*.parquet")))
@@ -61,6 +63,8 @@ class XGBoostRayHandler(BaseMLEngine):
                 columns=columns,
                 enable_categorical=is_categorical,
                 filetype=RayFileType.PARQUET)
+
+        # TODO: encoding for all non-numerical columns`
 
         # GPU check   # TODO: automatic runtime check here
         use_gpu = False
@@ -74,9 +78,9 @@ class XGBoostRayHandler(BaseMLEngine):
                 "tree_method": "approx",
                 "objective": loss,
                 # "eval_metric": ["logloss", "error"],  # TODO: add this back
-                "eta": tune.loguniform(1e-4, 1e-1),
-                "subsample": tune.uniform(0.5, 1.0),
-                "max_depth": tune.randint(1, 9)
+                # "eta": tune.loguniform(1e-4, 1e-1),  # TODO: pass tune with_parameters
+                # "subsample": tune.uniform(0.5, 1.0),
+                # "max_depth": tune.randint(1, 9)
             }
 
         if is_categorical:
@@ -84,8 +88,8 @@ class XGBoostRayHandler(BaseMLEngine):
 
         # Other param settings
         model_args['ray_params_dict'] = {
-            'num_actors': args.get('num_actors', 4),
-            'num_cpus_per_actor': args.get('num_cpus_per_actor', 4),
+            'num_actors': args.get('num_actors', 1),
+            'cpus_per_actor': args.get('num_cpus_per_actor', 4),
             'elastic_training': True,
             'max_failed_actors': args.get('max_failed_actors', 2),
             'max_actor_restarts': 3,
@@ -120,12 +124,16 @@ class XGBoostRayHandler(BaseMLEngine):
             dtype.binary: int,
             dtype.categorical: int
         }
-        for col, it in model_args['dtypes'].dtypes.items():
-            if it in (dtype.categorical, dtype.binary):
-                df[col] = pd.factorize(df[col])[0]
-            df[col] = df[col].astype(type_map[it])
+        for col, it in model_args['dtypes'].items():
+            if col in df.columns:
+                if it in (dtype.categorical, dtype.binary):
+                    df[col] = pd.factorize(df[col])[0]
+                df[col] = df[col].astype(type_map[it])
 
-        dpred = RayDMatrix(df, label=model_args['target'])
+        df = df[model_args['input_cols']]
+        dpred = RayDMatrix(df)  # , label=model_args['target'])
 
         predictions = predict(model, dpred, model_args['ray_params_dict'])
+        predictions = pd.DataFrame(predictions, columns=[model_args['target']])
+        predictions[f'{model_args["target"]}_explain'] = None
         return predictions

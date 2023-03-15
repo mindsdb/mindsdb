@@ -132,7 +132,7 @@ class IgniteHandler(DatabaseHandler):
                             RESPONSE_TYPE.TABLE,
                             data_frame=pd.DataFrame(
                                 result[1:],
-                                columns=[result[0]]
+                                columns=result[0]
                             )
                         )
                     else:

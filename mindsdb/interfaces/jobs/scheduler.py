@@ -70,8 +70,8 @@ def execute_async(record, config):
 
 
 def task_process(record_id, exec_method):
-    Config()
-    db.init()
+    # Config()
+    # db.init()
     # initialize_log(config, 'jobs', wrap_print=True)
 
     scheduler = JobsExecutor()
@@ -81,7 +81,7 @@ def task_process(record_id, exec_method):
         except Exception as e:
             db.session.rollback()
             db.session.remove()
-            logger.error(f'Unable create history record, is locked? {e}')
+            logger.error(f'Unable create history record, is locked?')
             return
 
         scheduler.execute_task_local(record_id, history_id)

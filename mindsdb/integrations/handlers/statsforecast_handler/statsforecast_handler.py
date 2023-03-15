@@ -4,6 +4,7 @@ from mindsdb.integrations.utilities.time_series_utils import (
     transform_to_nixtla_df,
     get_results_from_nixtla_df,
     infer_frequency,
+    get_best_model_from_results_df
 )
 from statsforecast import StatsForecast
 from statsforecast.models import AutoARIMA, AutoCES, AutoETS, AutoTheta
@@ -17,17 +18,7 @@ model_dict = {
 }
 
 
-def choose_model(model_name, frequency):
-    """Chooses which model to use in StatsForecast.
-
-    We set a sensible default for seasonality based on the
-    frequency parameter. For example: we assume monthly data
-    has a season length of 12 (months in a year).
-
-    If the inferred frequency isn't found, we default to 1 i.e.
-    no seasonality.
-    """
-    model = model_dict[model_name]
+def get_season_length(frequency):
     season_dict = {  # https://pandas.pydata.org/docs/user_guide/timeseries.html#timeseries-offset-aliases
         "H": 24,
         "M": 12,
@@ -39,7 +30,28 @@ def choose_model(model_name, frequency):
         "BH": 24,
         }
     new_freq = frequency.split("-")[0] if "-" in frequency else frequency  # shortens longer frequencies like Q-DEC
-    season_length = season_dict[new_freq] if new_freq in season_dict else 1
+    return season_dict[new_freq] if new_freq in season_dict else 1
+
+
+def choose_model(model_name, frequency, horizon, df):
+    """Chooses which model to use in StatsForecast.
+
+    We set a sensible default for seasonality based on the
+    frequency parameter. For example: we assume monthly data
+    has a season length of 12 (months in a year).
+
+    If the inferred frequency isn't found, we default to 1 i.e.
+    no seasonality.
+    """
+    season_length = get_season_length(frequency)
+    if model_name == 'auto':
+        models = [model(season_length=season_length) for model in model_dict.values()]
+        sf = StatsForecast(models, frequency)
+        sf.cross_validation(horizon, df, fitted=True)
+        results_df = sf.cross_validation_fitted_values()
+        model_name = get_best_model_from_results_df(results_df)
+
+    model = model_dict[model_name]
     return model(season_length=season_length)
 
 
@@ -74,8 +86,8 @@ class StatsForecastHandler(BaseMLEngine):
 
         model_args["model_name"] = DEFAULT_MODEL_NAME if "model_name" not in using_args else using_args["model_name"]
         training_df = transform_to_nixtla_df(df, model_args)
-        model = choose_model(model_args["model_name"], model_args["frequency"])
-        sf = StatsForecast(models=[model], freq=model_args["frequency"], df=training_df)
+        model = choose_model(model_args["model_name"], model_args["frequency"], model_args["horizon"], training_df)
+        sf = StatsForecast([model], freq=model_args["frequency"], df=training_df)
         fitted_models = sf.fit().fitted_
 
         ###### persist changes to handler folder

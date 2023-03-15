@@ -158,9 +158,7 @@ class TestStatsForecast(BaseExecutorTest):
         sf.cross_validation(prediction_horizon, fitted=True)
         sf_results_df = sf.cross_validation_fitted_values()
         best_model = get_best_model_from_results_df(sf_results_df)
-        nixtla_predictions = sf.forecast(prediction_horizon)
-        print(nixtla_predictions[best_model])
-        assert False
+        package_predictions = sf.forecast(prediction_horizon)[best_model]
 
         # create predictor
         self.run_sql(
@@ -172,7 +170,9 @@ class TestStatsForecast(BaseExecutorTest):
            group by unique_id
            horizon {prediction_horizon}
            using
-             engine='statsforecast'
+             engine='statsforecast',
+             model_name='auto',
+             frequency='D'
         """
         )
         self.wait_predictor("proj", "modelx")

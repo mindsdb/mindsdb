@@ -359,7 +359,8 @@ class OpenAIHandler(BaseMLEngine):
                                              prompts[i * max_batch_size:(i + 1) * max_batch_size],
                                              api_key,
                                              api_args,
-                                             args)
+                                             args,
+                                             df)
                 if not completion:
                     completion = partial
                 else:
@@ -376,7 +377,8 @@ class OpenAIHandler(BaseMLEngine):
                                              prompts[i * max_batch_size:(i + 1) * max_batch_size],
                                              api_key,
                                              api_args,
-                                             args)
+                                             args,
+                                             df)
                     promises.append({"choices": future})
             completion = None
             for p in promises:

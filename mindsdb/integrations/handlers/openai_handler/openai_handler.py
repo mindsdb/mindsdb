@@ -30,7 +30,10 @@ class OpenAIHandler(BaseMLEngine):
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
-        self.chat_completion_models = ('gpt-3.5-turbo', 'gpt-3.5-turbo-0301')
+        self.chat_completion_models = (
+            'gpt-3.5-turbo', 'gpt-3.5-turbo-0301',
+            'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-4-32k-0314'
+        )
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -356,7 +359,8 @@ class OpenAIHandler(BaseMLEngine):
                                              prompts[i * max_batch_size:(i + 1) * max_batch_size],
                                              api_key,
                                              api_args,
-                                             args)
+                                             args,
+                                             df)
                 if not completion:
                     completion = partial
                 else:
@@ -373,7 +377,8 @@ class OpenAIHandler(BaseMLEngine):
                                              prompts[i * max_batch_size:(i + 1) * max_batch_size],
                                              api_key,
                                              api_args,
-                                             args)
+                                             args,
+                                             df)
                     promises.append({"choices": future})
             completion = None
             for p in promises:

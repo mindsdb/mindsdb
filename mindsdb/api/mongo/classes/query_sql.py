@@ -14,9 +14,9 @@ class SqlServerStub:
             setattr(self, arg, kwargs[arg])
 
 
-def run_sql_command(mindsdb_env, ast_query):
+def run_sql_command(request_env, ast_query):
     sql_session = SessionController()
-    sql_session.database = 'mindsdb'
+    sql_session.database = request_env.get('database', 'mindsdb')
     sqlserver = SqlServerStub(connection_id=-1)
 
     executor = Executor(sql_session, sqlserver)

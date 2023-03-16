@@ -1218,8 +1218,12 @@ class SQLQuery():
             else:
                 raise ErLogicError(f'Data not found for insert: {step}')
 
-            integration_name = step.table.parts[0]
-            table_name = Identifier(parts=step.table.parts[1:])
+            if len(step.table.parts) > 1:
+                integration_name = step.table.parts[0]
+                table_name = Identifier(parts=step.table.parts[1:])
+            else:
+                integration_name = self.database
+                table_name = step.table
 
             dn = self.datahub.get(integration_name)
 

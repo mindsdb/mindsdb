@@ -1,0 +1,202 @@
+---
+title: Zero-shot Classification using Postgres
+sidebarTitle: Movie reviews
+---
+## Introduction
+In this tutorial, we'll use [`Hugging Face model`](https://huggingface.co/facebook/bart-large-mnli), or as we
+call it, an `AI Table` or a `predictor`. By querying the model, we'll classify 
+a movie review as positive or negative without training on positive or negative labels.
+
+Make sure you have access to a working MindsDB installation, either locally or
+at [MindsDB Cloud](https://cloud.mindsdb.com/).
+
+If you want to learn how to set up your account at MindsDB Cloud, follow
+[this guide](/setup/cloud/). Another way is to set up
+MindsDB locally using
+[Docker](/setup/self-hosted/docker/) or
+[Python](/setup/self-hosted/pip/source/).
+
+Let's get started.
+
+## Data Setup
+* Download [`Postgresql`](https://www.postgresql.org/download/)
+* Download the [`Movie review`](https://www.kaggle.com/datasets/lakshmi25npathi/imdb-dataset-of-50k-movie-reviews) dataset
+* Setup postgresql server using `pgAdmin` Management tool
+<Note>
+`pgAdmin` tool will be available post Postgresql complete the installation
+</Note>
+* Connect to the Postgresql server as shown below
+<p align="center">
+    <img src="assets/tutorials/zero-shot-classification-postgresql-pg-admin.png" />
+</p>
+* Create the Database
+* Create Table schema using the below query
+ 
+```sql
+CREATE TABLE IF NOT EXISTS public.imdbreviews
+(
+	review text COLLATE pg_catalog."default",
+	sentiment text COLLATE pg_catalog."default"
+)
+```
+We need two columns `review` and `sentiment` in our table/schema `imdbreviews` as we will review this in the `Understanding the Data` section.
+* Use the Import/Export data tool as shown below to import data to the Postgresql
+* Right click on the table/schema-> Import/Export-> keep the option values as shown below
+* Extract the Dataset and select the csv file in popup
+<p align="center">
+    <img src="assets/tutorials/zero-shot-classification-postgresql.png" />
+</p>
+<Warning>
+If you face any issue while import kindly read the logs. The usual issue might happen due to quote character in csv file. The fix for this is setting up the proper options as shown above.
+</Warning>
+### Connecting the Data
+The engine is `postgres` as we are importing postgres database tables/schema to mindsdb.
+```sql
+CREATE DATABASE imdb_ai_table  
+WITH ENGINE = 'postgres',    
+PARAMETERS = {
+	"user": "postgres",        
+	"password": "",        
+	"host": "",             
+	"port": "5432",  --default port
+	"database": "" --this is the database created in the previous section         
+};
+```
+<Note>
+Set host to `host.docker.internal` if both Docker and Postgresql server are running on the same machine
+</Note>
+### Understanding the Data
+We use the IMDb reviews dataset, where each row has a movie review and its predication whether it is a positive or negative review
+
+Below is the sample data stored in the `imdb_ai_table.imdbreviews` table.
+```sql
+select * from imdb_ai_table.imdbreviews
+LIMIT 5;
+```
+`Limit` keyword is used to restrict the data to 5 as we have 50k records in the dataset.
+```sql
++-------------+--------------------------------+
+| sentiment   |review                          |
++-------------+--------------------------------+
+| negative    |Basically there's a family......|
++-------------+--------------------------------+
+| positive    |One of the other reviewers......|
++-------------+--------------------------------+
+| positive    |A wonderful little..............|
++-------------+--------------------------------+
+| positive    |I thought this was a ...........|
++-------------+--------------------------------+
+| positive    |Petter Mattei's "Love...........|
++-------------+--------------------------------+
+```
+<Note>
+The review is too long, hence only part of it is shown.
+</Note>
+## Training a Predictor
+We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the Hugging Face models to MindsDB.
+
+Generally, it looks like this:
+```sql
+CREATE MODEL mindsdb.hf_zs_bart
+PREDICT PRED USING
+engine = 'huggingface',
+task = 'zero-shot-classification',
+model_name = 'facebook/bart-large-mnli',
+input_column = 'review',
+candidate_labels = ['positive','negative'];
+
+```
+`facebook/bart-large-mnli` is the hugging face model
+input column is the input to the model to get sentiment as prediction in this case its `review` column
+## Status of a Predictor
+```sql
+SELECT status FROM mindsdb.models WHERE name='hf_zs_bart';
+```
+If we run it right after creating a predictor, we get this output:
+
+```sql
++------------+
+| status     |
++------------+
+| generating |
++------------+
+```
+
+A bit later, this is the output:
+
+```sql
++----------+
+| status   |
++----------+
+| training |
++----------+
+```
+
+And at last, this should be the output:
+
+```sql
++----------+
+| status   |
++----------+
+| complete |
++----------+
+```
+
+## Making Predictions
+### Making a Single Prediction
+```sql
+SELECT * FROM mindsdb.hf_zs_bart where review='Average movie'
+```
+Running the above query will return the below result, where `hf_zs_bart` is the hugging face model that we created earlier. 
+Using the review column and proving the input will output the probability of the review being positive or negative.
+```sql
++------------+--------------------------------------------------------------+-------------+
+| PRED       |PRED_EXPLAIN                                                  |review       |
++------------+--------------------------------------------------------------+-------------+
+| negative   |{"negative":0.6124685406684875,"positive":0.38753142952919006}|Average movie|
++------------+--------------------------------------------------------------+-------------+
+```
+
+### Making Batch Predictions
+Using the `JOIN` keyword we can get the review input from the dataset we imported earlier to the AI table.
+`actual` column is the actual sentiment for the review which is already available in the dataset.
+`PRED` column is the predicted value. As we can see both of the columns match with the `PRED_EXPLAIN` as probability.
+```sql
+SELECT h.PRED, t.sentiment as actual, h.PRED_explain, t.review AS input_text
+FROM imdb_ai_table.imdbreviews AS t
+JOIN mindsdb.hf_zs_bart AS h
+LIMIT 5;
+```
+```sql
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| PRED       | actual      |PRED_EXPLAIN                                                     |input_text                      |
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| negative   | negative    |{'negative': 0.975321888923645, 'positive': 0.024678116664290428}|Basically there's a family......|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| positive   | positive    |{'positive': 0.5315402746200562, 'negative': 0.46845969557762146}|One of the other reviewers......|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| positive   | positive    |{'positive': 0.9874508380889893, 'negative': 0.01254915911704301}|A wonderful little..............|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| positive   | positive    |{'positive': 0.9743621349334717, 'negative': 0.02563784085214138}|I thought this was a ...........|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| positive   | positive    |{'positive': 0.8379427790641785, 'negative': 0.16205716133117676}|Petter Mattei's "Love...........|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+```
+<Note>
+The input_text is too long, hence only part of it is shown.
+</Note>
+<Warning>
+Running the above batch query without limit will result in performance issues in locally or the cloud as there are 50k predictions to make.
+</Warning>
+## What's Next?
+Have fun while trying it out yourself!
+
+- Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
+- Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
+- Engage with the MindsDB community on
+  [Slack](https://mindsdb.com/joincommunity) or
+  [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and
+  share your ideas and thoughts.
+
+If this tutorial was helpful, please give us a GitHub star
+[here](https://github.com/mindsdb/mindsdb).

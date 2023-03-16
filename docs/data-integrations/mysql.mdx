@@ -1,0 +1,58 @@
+---
+title: MySQL
+sidebarTitle: MySQL
+---
+
+## MySQL
+MySQL is a fast, reliable and scalable open source database. MySQL has been in development for more than 25 years and has been used in many production environments since.
+
+## Implementation
+
+This handler is implemented using the `mysql-connector-python` library. It's a Python client for MySQL that doesn't depend on any MySQL C libraries.
+
+The required arguments to establish a connection are:
+
+* `user`: database user
+* `password`: database password
+* `host`: host IP address or URL
+* `port`: port used to make TCP/IP connection
+* `database`: database name *optional.
+
+There are several optional arguments that can be used as well.
+
+* `ssl`: the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+* `ssl_ca`: SSL Certificate Authority
+* `ssl_cert`: SSL certificates
+* `ssl_key`: SSL keys
+
+## Usage
+
+In order to make use of this handler and connect to MySQL in MindsDB, the following syntax can be used.
+
+```sql
+CREATE DATABASE mysql_datasource            --- display name for the database
+WITH ENGINE = 'mysql',                      --- name of the MindsDB handler
+PARAMETERS = {
+  "host": " ",                              --- host IP address or URL
+  "port": ,                                 --- port used to make TCP/IP connection
+  "database": " ",                          --- database name
+  "user": " ",                              --- database user
+  "password": " ",                          --- database password
+  "ssl": ,                                  --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+  "ssl_ca": {                               --- optional, SSL Certificate Authority
+    "path": " "                             --- either "path" or "url"
+  },
+  "ssl_cert": {                             --- optional, SSL certificates
+    "url": " "                              --- either "path" or "url"
+  },
+  "ssl_key": {                              --- optional, SSL keys
+    "path": " "                             --- either "path" or "url"
+  }
+};
+```
+
+Now, you can use this established connection to query your database as follows.
+
+```sql
+SELECT * FROM mysql_datasource.example_table
+```

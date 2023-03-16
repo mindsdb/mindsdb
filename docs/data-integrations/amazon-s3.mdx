@@ -3,7 +3,6 @@ title: Amazon S3
 sidebarTitle: Amazon S3
 ---
 
-
 ##S3 Handler
 
 This is the implementation of the S3 handler for MindsDB.
@@ -19,16 +18,18 @@ This handler was implemented using the boto3, the AWS SDK for Python.
 
 The required arguments to establish a connection are,
 
-aws_access_key_id:     the AWS access key
-aws_secret_access_key: the AWS secret access key
-region_name:           the AWS region
-bucket:                the name of the S3 bucket
-key:                   the key of the object to be queried
-input_serialization:   the format of the data in the object that is to be queried
+*`aws_access_key_id`:     the AWS access key
+*`aws_secret_access_key`: the AWS secret access key
+*`region_name`:           the AWS region
+*`bucket`:                the name of the S3 bucket
+*`key`:                   the key of the object to be queried
+*`input_serialization`:   the format of the data in the object that is to be queried
+
 ##Usage
    
    In order to make use of this handler and connect to an object in a S3 bucket through MindsDB, the following syntax can be used,
 
+```sql
 CREATE DATABASE s3_datasource
 WITH
 engine='s3',
@@ -40,11 +41,12 @@ parameters={
     "key": "iris.csv",
     "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
 };
-
+```
 Now, you can use this established connection to query your object as follows,
 
-   SELECT * FROM s3_datasource.S3Object
-
+```sql
+SELECT * FROM s3_datasource.S3Object
+```
 Queries to objects in S3 are issued using S3 Select, https://aws.amazon.com/blogs/aws/s3-glacier-select/
 
 This feature is used in boto3 as described here, https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.select_object_content

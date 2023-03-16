@@ -86,7 +86,7 @@ class TweetsTable(APITable):
             params['max_results'] = query.limit.value
 
         params['expansions'] = ['author_id', 'in_reply_to_user_id']
-        params['tweet_fields'] = ['created_at']
+        params['tweet_fields'] = ['created_at', 'conversation_id']
         params['user_fields'] = ['name', 'username']
 
         if 'query' not in params:
@@ -135,6 +135,7 @@ class TweetsTable(APITable):
             'author_id',
             'author_name',
             'author_username',
+            'conversation_id',
             'in_reply_to_user_id',
             'in_reply_to_user_name',
             'in_reply_to_user_username'

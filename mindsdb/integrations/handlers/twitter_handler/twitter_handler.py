@@ -1,10 +1,11 @@
+import re
 import datetime as dt
-import tweepy
 import ast
 from collections import defaultdict
 import pytz
 
 import pandas as pd
+import tweepy
 
 from mindsdb.utilities import log
 
@@ -145,7 +146,36 @@ class TweetsTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
 
-            self.handler.call_twitter_api('create_tweet', params)
+            # split long text over 280 symbols
+            max_text_len = 280
+            text = params['text']
+            if len(text) <= 280:
+                self.handler.call_twitter_api('create_tweet', params)
+                return
+
+            words = re.split('( )', text)
+
+            messages = []
+
+            text2 = ''
+            for word in words:
+                if len(text2) + len(word) > max_text_len - 3:  # 3 is for ...
+                    messages.append(text2.strip())
+
+                    text2 = ''
+                text2 += word
+
+            # the last message
+            if text2.strip() != '':
+                messages.append(text2.strip())
+
+            last_mes_num = len(messages) - 1
+            for i, text in enumerate(messages):
+                if i < last_mes_num:
+                    text += '...'
+
+                params['text'] = text
+                self.handler.call_twitter_api('create_tweet', params)
 
 
 class TwitterHandler(APIHandler):

@@ -72,15 +72,15 @@ class LangChainHandler(OpenAIHandler):
             'best_of': pred_args.get('best_of', None),
             'request_timeout': pred_args.get('request_timeout', None),
             'logit_bias': pred_args.get('logit_bias', None),
-            'openai_api_key': self._get_api_key(args, key_name='openai_api_key'),
-            'serper_api_key': self._get_api_key(args, key_name='serper_api_key'),
+            'openai_api_key': self._get_api_key(args, key_name='openai_api_key', strict=True),
+            'serper_api_key': self._get_api_key(args, key_name='serper_api_key', strict=False),
         }
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 
         # langchain tool setup
         toolkit = pred_args.get('tools', self.default_agent_tools)
         tools = load_tools(toolkit)
-        if model_kwargs['serper_api_key']:
+        if model_kwargs.get('serper_api_key', False):
             search = GoogleSerperAPIWrapper(serper_api_key=model_kwargs.pop('serper_api_key'))
             tools.append(Tool(
                 name="Intermediate Answer (serper.dev)",

@@ -26,7 +26,7 @@ class AutoGluonHandler(BaseMLEngine):
         # save data for Describe Model without attributes
         model_deets = pd.DataFrame({'best_model': predictor.get_model_best(),
                                     'eval_metric': predictor.eval_metric.name,
-                                    'original_features': predictor.original_features,
+                                    'original_features': [predictor.original_features],
                                     'problem_type': predictor.problem_type})
         self.model_storage.json_set("model_details", model_deets.to_dict())
 
@@ -70,7 +70,7 @@ class AutoGluonHandler(BaseMLEngine):
         # displays the performance of the candidate models. For AutoGluon, its the leaderboard.
         if attribute is None:
             model_description = self.model_storage.json_get("model_details")
-            return pd.DataFrame([model_description])
+            return pd.DataFrame(model_description)
         else:
             if attribute == "model":
                 # model statement displays the performance of the candidate models.

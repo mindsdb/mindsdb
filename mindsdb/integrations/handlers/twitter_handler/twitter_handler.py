@@ -1,10 +1,11 @@
+import re
 import datetime as dt
-import tweepy
 import ast
 from collections import defaultdict
 import pytz
 
 import pandas as pd
+import tweepy
 
 from mindsdb.utilities import log
 
@@ -85,7 +86,7 @@ class TweetsTable(APITable):
             params['max_results'] = query.limit.value
 
         params['expansions'] = ['author_id', 'in_reply_to_user_id']
-        params['tweet_fields'] = ['created_at']
+        params['tweet_fields'] = ['created_at', 'conversation_id']
         params['user_fields'] = ['name', 'username']
 
         if 'query' not in params:
@@ -110,12 +111,19 @@ class TweetsTable(APITable):
 
         if len(columns) == 0:
             columns = self.get_columns()
+
+        # columns to lower case
+        columns = [name.lower() for name in columns]
+
         if len(result) == 0:
             result = pd.DataFrame([], columns=columns)
         else:
             # add absent columns
             for col in set(columns) & set(result.columns) ^ set(columns):
                 result[col] = None
+
+            # filter by columns
+            result = result[columns]
         return result
 
     def get_columns(self):
@@ -127,6 +135,7 @@ class TweetsTable(APITable):
             'author_id',
             'author_name',
             'author_username',
+            'conversation_id',
             'in_reply_to_user_id',
             'in_reply_to_user_name',
             'in_reply_to_user_username'
@@ -138,8 +147,36 @@ class TweetsTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
 
-            print('create_tweet', params)
-            self.handler.call_twitter_api('create_tweet', params)
+            # split long text over 280 symbols
+            max_text_len = 280
+            text = params['text']
+            if len(text) <= 280:
+                self.handler.call_twitter_api('create_tweet', params)
+                continue
+
+            words = re.split('( )', text)
+
+            messages = []
+
+            text2 = ''
+            for word in words:
+                if len(text2) + len(word) > max_text_len - 3:  # 3 is for ...
+                    messages.append(text2.strip())
+
+                    text2 = ''
+                text2 += word
+
+            # the last message
+            if text2.strip() != '':
+                messages.append(text2.strip())
+
+            last_mes_num = len(messages) - 1
+            for i, text in enumerate(messages):
+                if i < last_mes_num:
+                    text += '...'
+
+                params['text'] = text
+                self.handler.call_twitter_api('create_tweet', params)
 
 
 class TwitterHandler(APIHandler):
@@ -238,6 +275,8 @@ class TwitterHandler(APIHandler):
 
         max_page_size = 100
         min_page_size = 10
+        left = None
+
         while True:
             if count_results is not None:
                 left = count_results - len(data)
@@ -262,7 +301,7 @@ class TwitterHandler(APIHandler):
                     includes[table].extend([r.data for r in records])
 
             if isinstance(resp.data, list):
-                data.extend([r.data for r in resp.data])
+                chunk = [r.data for r in resp.data]
             else:
                 if isinstance(resp.data, dict):
                     data.append(resp.data)
@@ -270,6 +309,11 @@ class TwitterHandler(APIHandler):
                     data.append(resp.data.data)
                 break
 
+            # limit output
+            if left is not None:
+                chunk = chunk[:left]
+
+            data.extend(chunk)
             # next page ?
             if count_results is not None and hasattr(resp, 'meta') and 'next_token' in resp.meta:
                 params['next_token'] = resp.meta['next_token']

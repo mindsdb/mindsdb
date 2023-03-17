@@ -23,7 +23,6 @@ class TestAutoGluon(BaseExecutorTest):
         self.df = df
         self.run_sql('create database proj')
 
-
     def wait_predictor(self, project, name):
         # wait
         done = False
@@ -98,10 +97,31 @@ class TestAutoGluon(BaseExecutorTest):
             ''')
         self.wait_predictor('proj', 'modelx')
 
-            # run predict
+        # run predict
         ret = self.run_sql('''
             DESCRIBE MODEL proj.modelx.model
             ''')
         # value is greater than 0, since atleast one model has been evaluated
         assert (len(ret) > 0)
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_describe_feature(self, mock_handler):
+        self.set_handler(mock_handler, name='pg', tables={'df': self.df})
+
+        # create predictor
+        self.run_sql('''
+            create model proj.modelx
+            from pg (select * from df)
+            predict c
+            using
+                engine='autogluon',
+                tag = 'test_model';
+            ''')
+        self.wait_predictor('proj', 'modelx')
+
+        # run describe
+        ret = self.run_sql('''
+            DESCRIBE MODEL proj.modelx.features
+            ''')
+        # value is greater than 1, since atleast target and atleast one feature is used
+        assert (len(ret) > 1)

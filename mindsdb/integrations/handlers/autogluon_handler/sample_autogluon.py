@@ -4,9 +4,6 @@ import pandas as pd
 import os
 import glob
 
-def find(name, path):
-    for f in glob.glob('/Users/diptisengupta/Desktop/CODEWORK/GitHub/OpenSource/mindsdb/**/*.pkl', recursive=True):
-        print(f)
 def sample_autogluon():
     train_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv')
     subsample_size = 500  # subsample subset of data for faster demo, try setting this to much larger values
@@ -70,28 +67,5 @@ def train_books():
 
     predictor.leaderboard(test_data, silent=True)
     print(test_data.head(4))
-
-
-def book_pred():
-    label = 'genre'
-    store_path = os.environ.get('MINDSDB_STORAGE_DIR') or ''
-    save_path = os.path.join(store_path, 'agModels-predictClass')
-    test_data = TabularDataset('data_test.csv')
-    y_test = test_data[label]  # values to predict
-    test_data_nolab = test_data.drop(columns=['genre']) # delete label column to prove we're not cheating
-    test_data_nolab.drop(['index', 'title'],axis=1)
-    predictor = TabularPredictor.load(
-        save_path)# unnecessary, just demonstrates how to load previously-trained predictor from file
-
-
-    for feat in predictor.features():
-        datatype = predictor.feature_metadata_in.get_feature_type_raw(feat)
-        if feat not in test_data_nolab.columns:
-            test_data_nolab[feat] = pd.Series(dtype=datatype)
-
-    y_pred = predictor.predict(test_data_nolab)
-    perf = predictor.evaluate_predictions(y_true=y_test, y_pred=y_pred, auxiliary_metrics=True)
-    print("Performance:  \n", perf)
-
 if __name__ == '__main__':
     sample_autogluon()

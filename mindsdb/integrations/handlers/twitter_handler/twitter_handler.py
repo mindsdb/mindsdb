@@ -152,7 +152,7 @@ class TweetsTable(APITable):
             text = params['text']
             if len(text) <= 280:
                 self.handler.call_twitter_api('create_tweet', params)
-                return
+                continue
 
             words = re.split('( )', text)
 

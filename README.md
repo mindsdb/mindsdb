@@ -51,7 +51,7 @@
 
 ----------------------------------------
 
-[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) an emerging platform that helps developers build #AI powered solutions [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Powered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
+[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is an emerging low-code machine learning platform to help developers easily build #AI-powered solutions [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Powered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
 
 
 **NEW!** Check-out the [rewards and community programs.](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)
@@ -62,7 +62,8 @@
 
 ----------------------------
 
-MindsDB is an emerging open-source platform designed to help developers build AI-powered applications. We automate and integrate top machine learning frameworks into your data stacks and provide an intuitive interface to train and deploy models as the databases’ AI Tables. By automating the machine learning process, MindsDB streamlines the integration of AI into applications, making it accessible to developers of all skill levels.
+MindsDB automates and integrates top machine learning frameworks (including GPT-4) into the data stack as "AI Tables" to streamline the integration of AI into applications, making it accessible to developers of all skill levels. 
+"[AI tables](https://www.youtube.com/watch?v=tnB4Y9T1E2k)" allow you to get predictions via SQL queries and continuously learn from your data.
 
 <h2 align="center">
    <br/>
@@ -75,10 +76,11 @@ MindsDB is an emerging open-source platform designed to help developers build AI
 
 Here are some popular use cases you can build with MindsDB:
 
-* Fraud Detection: MindsDB can help developers build models to detect fraudulent activity in financial transactions,eCommerce platforms etc.
-* Sales Forecasting: MindsDB can be used to develop models to predict future sales based on historical sales data, allowing businesses to make better-informed decisions.
+* Conversational AI: Leverage MindsDB native integrations with data platforms and pre-trained large language models, like OpenAI's GPT, to quickly build conversational AI solutions without the overhead of managing complex data pipelines.
+* Fraud Detection: MindsDB can help developers build models to detect fraudulent activity in financial transactions, eCommerce platforms etc.
+Sales Forecasting: MindsDB can be used to develop models to predict future sales based on historical sales data, allowing businesses to make better-informed decisions.
 * Customer Segmentation: MindsDB can help developers segment customers based on their behavior, preferences, and other factors, allowing businesses to tailor their marketing efforts.
-* Sentiment analysis: MindsDB native integration with pre-trained models like GPT-3 and HuggingFace models can be used to analyze the sentiment of a text, such as a customer review.
+* Sentiment analysis: MindsDB native integration with pre-trained models like OpenAI GPT or Hugging Face can be used to analyze the sentiment of a text data, such as a customer reviews - in a single command, instead of individual API calls and ETL-ing data.
 * Predictive Maintenance: MindsDB can be used to build models to predict when equipment or machinery is likely to fail, allowing for proactive maintenance and minimizing downtime.
 
 See more examples and community tutorials [here](https://docs.mindsdb.com/tutorials)

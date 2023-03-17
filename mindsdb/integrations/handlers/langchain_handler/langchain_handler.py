@@ -20,6 +20,8 @@ class LangChainHandler(OpenAIHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.stops = []
+        self.default_model = 'text-davinci-003'
+        self.default_max_tokens = 2048  # requires more than vanilla OpenAI due to ongoing summarization and 3rd party input  # noqa
         self.default_agent_model = 'zero-shot-react-description'
         self.default_agent_tools = ['python_repl', 'requests', 'wikipedia']  # these require no additional arguments
 
@@ -70,9 +72,8 @@ class LangChainHandler(OpenAIHandler):
             'best_of': pred_args.get('best_of', None),
             'request_timeout': pred_args.get('request_timeout', None),
             'logit_bias': pred_args.get('logit_bias', None),
-            # TODO: make _get_api_key() key agnostic, then use in all 3rd party keys for robust retrieval (e.g. for serper)  # noqa
-            'openai_api_key': self._get_api_key(args),
-            'serper_api_key': args.get('serper_api_key', None),
+            'openai_api_key': self._get_api_key(args, key_name='openai_api_key'),
+            'serper_api_key': self._get_api_key(args, key_name='serper_api_key'),
         }
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 

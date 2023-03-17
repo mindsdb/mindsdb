@@ -57,9 +57,6 @@ class TestAutoGluon(BaseExecutorTest):
 
         self.set_handler(mock_handler, name='pg', tables={'df': self.df})
 
-        # create project
-        # self.run_sql('create database proj')
-
         # create predictor
         self.run_sql('''
            create model proj.modelx
@@ -125,3 +122,25 @@ class TestAutoGluon(BaseExecutorTest):
             ''')
         # value is greater than 1, since atleast target and atleast one feature is used
         assert (len(ret) > 1)
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_describe_model_noattr(self, mock_handler):
+        self.set_handler(mock_handler, name='pg', tables={'df': self.df})
+
+        # create predictor
+        self.run_sql('''
+            create model proj.modelx
+            from pg (select * from df)
+            predict c
+            using
+                engine='autogluon',
+                tag = 'test_model';
+            ''')
+        self.wait_predictor('proj', 'modelx')
+
+        # run predict
+        ret = self.run_sql('''
+            DESCRIBE MODEL proj.modelx
+            ''')
+        # value is greater than 0, since atleast one model has been evaluated
+        assert (len(ret) > 0)

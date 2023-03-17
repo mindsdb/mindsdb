@@ -3,3 +3,4 @@ mindsdb_sql >= 0.4.8
 torch
 torchvision
 autogluon
+pandas

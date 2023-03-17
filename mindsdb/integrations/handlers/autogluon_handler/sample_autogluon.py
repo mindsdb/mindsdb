@@ -2,8 +2,9 @@ from autogluon.tabular import TabularDataset, TabularPredictor
 from sklearn.model_selection import train_test_split
 import pandas as pd
 import os
-import glob
 
+
+# Standalone script to run autogluon. taken from https://auto.gluon.ai/0.2.0/tutorials/tabular_prediction/tabular-quickstart.html
 def sample_autogluon():
     train_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv')
     subsample_size = 500  # subsample subset of data for faster demo, try setting this to much larger values
@@ -12,7 +13,7 @@ def sample_autogluon():
     label = 'class'
     print("Summary of class variable: \n", train_data[label].describe())
     store_path = os.environ.get('MINDSDB_STORAGE_DIR') or ''
-    save_path = os.path.join(store_path,'agModels-predictClass')  # specifies folder to store trained models
+    save_path = os.path.join(store_path, 'agModels-predictClass')  # specifies folder to store trained models
     predictor = TabularPredictor(label=label, path=save_path).fit(train_data)
 
     test_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv')
@@ -25,8 +26,9 @@ def sample_autogluon():
     y_pred = predictor.predict(test_data_nolab)
     print("Predictions:  \n", y_pred)
     perf = predictor.evaluate_predictions(y_true=y_test, y_pred=y_pred, auxiliary_metrics=True)
-
+    print("Performance:  \n", perf)
     predictor.leaderboard(test_data, silent=True)
+
 
 def train_books():
     df = pd.read_csv('data.csv')
@@ -41,7 +43,7 @@ def train_books():
     label = 'genre'
     print("Summary of class variable: \n", train_data[label].describe())
     store_path = os.environ.get('MINDSDB_STORAGE_DIR') or ''
-    save_path = os.path.join(store_path,'agModels-predictClass')
+    save_path = os.path.join(store_path, 'agModels-predictClass')
 
     # AutoGluon will gauge predictive performance using evaluation metric: 'accuracy'
     # 	To change this, specify the eval_metric parameter of Predictor()
@@ -67,5 +69,7 @@ def train_books():
 
     predictor.leaderboard(test_data, silent=True)
     print(test_data.head(4))
+
+
 if __name__ == '__main__':
     sample_autogluon()

@@ -3,16 +3,15 @@ from typing import Optional, Dict
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine
 
 from langchain.llms import OpenAI
+# from langchain.chat_models import ChatOpenAI  # TODO: enable chat models (including GPT4)
+from langchain.agents import initialize_agent, load_tools, Tool
 from langchain.prompts import PromptTemplate
-from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
+from langchain.utilities import GoogleSerperAPIWrapper
+from langchain.chains.conversation.memory import ConversationSummaryMemory
 
-from langchain.agents import Tool
-from langchain.chains.conversation.memory import ConversationBufferMemory
-from langchain.agents import initialize_agent
-from llama_index import GPTSQLStructStoreIndex, SQLDatabase
+from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 
 
 class LangChainHandler(OpenAIHandler):
@@ -21,7 +20,8 @@ class LangChainHandler(OpenAIHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.stops = []
-        self.default_agent_model = 'conversational-react-description'
+        self.default_agent_model = 'zero-shot-react-description'
+        self.default_agent_tools = ['python_repl', 'requests', 'wikipedia']  # these require no additional arguments
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -53,10 +53,11 @@ class LangChainHandler(OpenAIHandler):
         return getattr(self, modal_dispatch.get(args.get('mode', 'default'), 'default_completion'))(df, args)
 
     def default_completion(self, df, args=None):
-        pred_args = args['predict_params'] if args else {}
+        pred_args = args['predict_params'] if args and 'predict_params' in args else {}
 
         # api argument validation
         model_name = args.get('model_name', self.default_model)
+        agent_name = args.get('agent_name', self.default_agent_model)
 
         model_kwargs = {
             'model_name': model_name,
@@ -67,15 +68,48 @@ class LangChainHandler(OpenAIHandler):
             'presence_penalty': pred_args.get('presence_penalty', None),
             'n': pred_args.get('n', None),
             'best_of': pred_args.get('best_of', None),
-            'openai_api_key': self._get_api_key(args),
-            'request_timeout': pred_args.get('request_timeout', None),  # TODO value?
+            'request_timeout': pred_args.get('request_timeout', None),
             'logit_bias': pred_args.get('logit_bias', None),
+            # TODO: make _get_api_key() key agnostic, then use in all 3rd party keys for robust retrieval (e.g. for serper)  # noqa
+            'openai_api_key': self._get_api_key(args),
+            'serper_api_key': args.get('serper_api_key', None),
         }
-        # filter out None values
-        model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}
-        model = OpenAI(**model_kwargs)
+        model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 
-        # TODO abstract into a common utility method
+        # langchain tool setup
+        toolkit = self.default_agent_tools
+        tools = load_tools(toolkit)
+        if model_kwargs['serper_api_key']:
+            search = GoogleSerperAPIWrapper(serper_api_key=model_kwargs.pop('serper_api_key'))
+            tools.append(Tool(
+                name="Intermediate Answer (serper.dev)",
+                func=search.run,
+                description="useful for when you need to ask with search"
+            ))
+
+        # langchain agent setup
+        llm = OpenAI(**model_kwargs)  # TODO: use ChatOpenAI for chat models
+        memory = ConversationSummaryMemory(llm=llm)
+        agent = initialize_agent(
+            tools,
+            llm,
+            memory=memory,
+            agent=agent_name,
+            verbose=False
+        )
+
+        # setup model description
+        description = {
+            'allowed_tools': [agent.agent.allowed_tools],   # packed as list to avoid additional rows
+            'agent_type': agent_name,
+            'max_iterations': agent.max_iterations,
+            'memory_type': memory.__class__.__name__,
+        }
+        description = {**description, **model_kwargs}
+        description.pop('openai_api_key', None)
+        self.model_storage.json_set('description', description)
+
+        # TODO abstract into a common utility method, this is also used in vanilla OpenAI
         if pred_args.get('prompt_template', False):
             base_template = pred_args['prompt_template']  # override with predict-time template if available
         else:
@@ -100,11 +134,13 @@ class LangChainHandler(OpenAIHandler):
                     kwargs[col] = row[col] if row[col] is not None else ''  # add empty quote if data is missing
                 prompts.append(prompt.format(**kwargs))
 
-        def _completion(model, prompts):
-            completion = [model.generate([prompt]) for prompt in prompts]
-            return [c.generations[0][0].text.strip('\n') for c in completion]
+        def _completion(agent, prompts):
+            # TODO: ensure that agent completion plus prompt match the maximum allowed by the user
+            # TODO: use async API if possible for parallelized completion
+            completion = [agent.run(prompt) for prompt in prompts]
+            return [c for c in completion]
 
-        completion = _completion(model, prompts)
+        completion = _completion(agent, prompts)
 
         # add null completion for empty prompts
         for i in sorted(empty_prompt_ids):
@@ -114,69 +150,21 @@ class LangChainHandler(OpenAIHandler):
 
         return pred_df
 
-    def sql_agent_completion(self, df, args=None):
-        pred_args = args.get('predict_params', {}) if args else {}
-        model_name = args.get('model_name', self.default_agent_model)
-
-        # TODO: get an index from DB with communication via SQLAlchemy?
-        dbengine = self._mdb_sqlalchemy_connection()
-        sql_database = SQLDatabase(dbengine, include_tables=[args.get('ref_table')])  # TODO: multiple table support
-        # TODO: support casting unstructured into structured, automatically
-        index = GPTSQLStructStoreIndex(
-            [],
-            sql_database=sql_database,
-            table_name=args.get('ref_table'),  # TODO: support multiple tables?
-        )
-
-        tools = [
-            Tool(
-                name="GPT Index",
-                func=lambda q: str(index.query(q)),
-                description=f"useful for when you want to answer questions about the table {args.get('ref_table')}. The input to this tool should be a complete english sentence.",  # noqa
-                return_direct=True
-            ),
-        ]
-
-        memory = ConversationBufferMemory(memory_key="chat_history")
-        llm = OpenAI(temperature=0)
-        agent_chain = initialize_agent(tools, llm, agent="conversational-react-description", memory=memory)
-
-        # TODO abstract into a common utility method
-        if pred_args.get('prompt_template', False):
-            base_template = pred_args['prompt_template']  # override with predict-time template if available
-        else:
-            base_template = args['prompt_template']
-
-        # TODO: temporal
-        target_col = list(re.finditer("{{(.*?)}}", base_template))[-1].group(0).lstrip('{').rstrip('}')
-
-        # TODO: replace this with `last` mode in OpenAI handler
-        reply = agent_chain.run(input=df.iloc[-1][target_col])
-
-        return pd.DataFrame([reply], columns=[args['target']])  # TODO: improve this
-
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        raise NotImplementedError('Update is not implemented for LangChain models')
+        info = self.model_storage.json_get('description')
+
+        if info is None:
+            # we do this due to the huge amount of params that can be changed at prediction time to customize behavior.
+            # for them, we report the last observed value
+            raise Exception('This model needs to be used before it can be described.')
+
+        description = pd.DataFrame(info)
+        return description
 
     def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        raise NotImplementedError('Update is not implemented for LangChain models')
+        raise NotImplementedError('Update is not supported for LangChain models')
 
-    def _mdb_sqlalchemy_connection(self):
-        # TODO: read from config.json
-        user = 'mindsdb'
-        password = ''
-        host = '127.0.0.1'
-        port = 47335
-        database = ''
-
-        def get_connection():
-            return create_engine(
-                url="mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(user, password, host, port, database)
-            )
-
-        try:
-            engine = get_connection()
-            print(f"Engine to the {host} for user {user} created successfully.")
-            return engine
-        except Exception as ex:
-            print("Engine could not be created due to the following error: \n", ex)
+    def sql_agent_completion(self, df, args=None):
+        """This completion will be used to answer based on information passed by any MindsDB DB or API engine."""
+        # TODO: figure out best way to pass DB/API dataframes to LLM handlers
+        raise NotImplementedError()

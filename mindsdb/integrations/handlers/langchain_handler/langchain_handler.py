@@ -23,7 +23,7 @@ class LangChainHandler(OpenAIHandler):
         self.default_model = 'text-davinci-003'
         self.default_max_tokens = 2048  # requires more than vanilla OpenAI due to ongoing summarization and 3rd party input  # noqa
         self.default_agent_model = 'zero-shot-react-description'
-        self.default_agent_tools = ['python_repl', 'requests', 'wikipedia']  # these require no additional arguments
+        self.default_agent_tools = ['python_repl', 'wikipedia']  # these require no additional arguments
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -52,10 +52,10 @@ class LangChainHandler(OpenAIHandler):
             'sql_agent': 'sql_agent_completion',
         }
 
-        return getattr(self, modal_dispatch.get(args.get('mode', 'default'), 'default_completion'))(df, args)
+        return getattr(self, modal_dispatch.get(args.get('mode', 'default'), 'default_completion'))(df, args, pred_args)
 
-    def default_completion(self, df, args=None):
-        pred_args = args['predict_params'] if args and 'predict_params' in args else {}
+    def default_completion(self, df, args=None, pred_args=None):
+        pred_args = pred_args if pred_args else {}
 
         # api argument validation
         model_name = args.get('model_name', self.default_model)
@@ -78,7 +78,7 @@ class LangChainHandler(OpenAIHandler):
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 
         # langchain tool setup
-        toolkit = self.default_agent_tools
+        toolkit = pred_args.get('tools', self.default_agent_tools)
         tools = load_tools(toolkit)
         if model_kwargs['serper_api_key']:
             search = GoogleSerperAPIWrapper(serper_api_key=model_kwargs.pop('serper_api_key'))
@@ -96,7 +96,8 @@ class LangChainHandler(OpenAIHandler):
             llm,
             memory=memory,
             agent=agent_name,
-            verbose=False
+            max_iterations=pred_args.get('max_iterations', 3),
+            verbose=pred_args.get('verbose', args.get('verbose', False)),
         )
 
         # setup model description

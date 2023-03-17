@@ -13,6 +13,16 @@ except ImportError:
 # from tests.unit.executor_test_base import BaseExecutorTest
 
 class TestAutoGluon(BaseExecutorTest):
+    def setup_method(self):
+        super().setup_method()
+        self.set_executor()
+        # dataset, string values
+        df = pd.DataFrame(range(1, 50), columns=['a'])
+        df['b'] = 50 - df.a
+        df['c'] = round((df['a'] * 3 + df['b']) / 50)
+        self.df = df
+        self.run_sql('create database proj')
+
 
     def wait_predictor(self, project, name):
         # wait
@@ -46,15 +56,10 @@ class TestAutoGluon(BaseExecutorTest):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_simple(self, mock_handler):
 
-        # dataset, string values
-        df = pd.DataFrame(range(1, 50), columns=['a'])
-        df['b'] = 50 - df.a
-        df['c'] = round((df['a'] * 3 + df['b']) / 50)
-
-        self.set_handler(mock_handler, name='pg', tables={'df': df})
+        self.set_handler(mock_handler, name='pg', tables={'df': self.df})
 
         # create project
-        self.run_sql('create database proj')
+        # self.run_sql('create database proj')
 
         # create predictor
         self.run_sql('''
@@ -62,7 +67,8 @@ class TestAutoGluon(BaseExecutorTest):
            from pg (select * from df)
            predict c
            using
-             engine='autogluon';
+             engine='autogluon',
+             tag = 'test_model';
         ''')
         self.wait_predictor('proj', 'modelx')
 
@@ -76,3 +82,26 @@ class TestAutoGluon(BaseExecutorTest):
         avg_c = pd.to_numeric(ret.c).mean()
         # value is around 1
         assert (avg_c > 0.9) and (avg_c < 1.1)
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_describe_model(self, mock_handler):
+        self.set_handler(mock_handler, name='pg', tables={'df': self.df})
+
+        # create predictor
+        self.run_sql('''
+            create model proj.modelx
+            from pg (select * from df)
+            predict c
+            using
+                engine='autogluon',
+                tag = 'test_model';
+            ''')
+        self.wait_predictor('proj', 'modelx')
+
+            # run predict
+        ret = self.run_sql('''
+            DESCRIBE MODEL proj.modelx.model
+            ''')
+        # value is greater than 0, since atleast one model has been evaluated
+        assert (len(ret) > 0)
+

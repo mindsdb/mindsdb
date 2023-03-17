@@ -23,7 +23,7 @@ class AutoGluonHandler(BaseMLEngine):
             model_name = args['model_name']
         except KeyError:
             model_name = 'default'
-        store_path = os.environ.get('MINDSDB_STORAGE_DIR')
+        store_path = os.environ.get('MINDSDB_STORAGE_DIR') or ''
         save_path = os.path.join(store_path, 'mindsdb-predict') # specifies folder to store trained models
         predictor = TabularPredictor(label=args['target'], path=save_path).fit(df)
 
@@ -32,16 +32,17 @@ class AutoGluonHandler(BaseMLEngine):
         #
         # ###### persist changes to handler folder
         self.model_storage.json_set("model_args", args)
-        # self.model_storage.file_set("training_df", dill.dumps(df))
+        candidates=predictor.leaderboard(df, silent=True)
+        self.model_storage.json_set("candidate_models", candidates.to_dict())
         # self.model_storage.file_set("trained_model", dill.dumps(predictor))
 
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
-        logging.debug('Predict!')
         args = self.model_storage.json_get('args')
         store_path = os.environ.get('MINDSDB_STORAGE_DIR')
         save_path = os.path.join(store_path, 'mindsdb-predict')
         predictor = TabularPredictor.load(path=save_path)
+        # AutoGluon needs all the feature columns it was trained on, even if they are not present in the input.
         for feat in predictor.features():
             datatype = predictor.feature_metadata_in.get_feature_type_raw(feat)
             if feat not in df.columns:
@@ -53,11 +54,27 @@ class AutoGluonHandler(BaseMLEngine):
     def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         logging.debug('Update!')
 
+    def _get_model_info(self):
+        model_info = self.model_storage.json_get("candidate_models")
+        return pd.DataFrame(model_info)
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        args = self.model_storage.json_get('args')
+        # displays the performance of the candidate models. For AutoGluon, its the leaderboard.
+        # Use the training_df to get the performances.
+
+        if attribute is None:
+            model_description = {}
+            return pd.DataFrame([model_description])
+        else:
+            if attribute == "model":
+                # model statement displays the performance of the candidate models.
+                return self._get_model_info()
+            elif attribute == "features":
+                # features statement displays how the model encoded the data before the training process.
+                return self._get_features_info()
+
         logging.debug('Describe!')
-        return pd.DataFrame([[args]], columns=['model_args'])
+
 
     def create_engine(self, connection_args: dict):
         logging.debug('Create engine!')

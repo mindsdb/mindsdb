@@ -14,7 +14,7 @@ def sample_autogluon():
     print(train_data.head(4))
     label = 'class'
     print("Summary of class variable: \n", train_data[label].describe())
-    store_path = os.environ.get('MINDSDB_STORAGE_DIR')
+    store_path = os.environ.get('MINDSDB_STORAGE_DIR') or ''
     save_path = os.path.join(store_path,'agModels-predictClass')  # specifies folder to store trained models
     predictor = TabularPredictor(label=label, path=save_path).fit(train_data)
 
@@ -94,4 +94,4 @@ def book_pred():
     print("Performance:  \n", perf)
 
 if __name__ == '__main__':
-    book_pred()
+    sample_autogluon()

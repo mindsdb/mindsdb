@@ -14,6 +14,9 @@ The required arguments to establish a connection are,
 * `host`: host to server IP Address or hostname
 * `port`: port through which sevice is exposed
 * `database`: Database name to be connected
+* `service`: Optional: service queue (default: "sqream")
+* `use_ssl`: use SSL connection (default: False)
+* `clustered`: Optional: Connect through load balancer, or direct to worker (Default: false - direct to worker)
 
 
 ## Usage

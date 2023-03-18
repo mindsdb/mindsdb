@@ -1,6 +1,6 @@
 ---
-title: NLP with MindsDB and Hugging Face 
-sidebarTitle: Connecting MindsDB with Hugging Face for NLP operations 
+title: MindsDB's Hugging Face Integration Makes NLP Simple with SQL
+sidebarTitle: Connect MindsDB with Hugging Face and perform text-classification queries on your dataset using SQL
 ---
 
 ## Introduction
@@ -35,6 +35,12 @@ Let's get started!
 
 ## Connecting the Data
 
+The main goal of this tutorial is to show you how to connect your dataset to Hugging Face with MindsDB. Once connected, we will perform some simple text classification queries to demonstrate what we can do with MindsDB and Hugging Face.
+The dataset we're using comes from MindsDB's public PostgreSQL demo. We're using this particular dataset because we know it holds text comments, which are perfect for text-classification operations. 
+
+Because we are focusing on text classification, we're going to use Hugging Face's [Twitter-roBERTa-base for Sentiment Analysis](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment) model.
+This Hugging Face transformer is a roBERTa-base model trained on ~58M tweets and finetuned for sentiment analysis with the TweetEval benchmark.
+
 To connect to our data we're going to use the SQL `CREATE DATABASE` statement.
 
 ```
@@ -54,13 +60,6 @@ The next step I always recommend is using the `SELECT` clause to confirm our dat
 `SELECT * FROM nlp_example.demo_data.user_comments;`
 
 ![screenshot](mindsdb/docs/tutorials/images/tutorial2.png)
-
-### Understanding the Data
-
-The main goal of this tutorial is to show you how to connect your dataset to Hugging Face with MindsDB. Once connected, we will perform some simple text classification queries to demonstrate what we can do with MindsDB and Hugging Face.
-The dataset we're using comes from MindsDB's public PostgreSQL demo. We're using this particular dataset because we know it holds text comments, which are perfect for text-classification operations. 
-Because we are focusing on text classification, we're going to use Hugging Face's [Twitter-roBERTa-base for Sentiment Analysis](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment) model.
-This Hugging Face transformer is a roBERTa-base model trained on ~58M tweets and finetuned for sentiment analysis with the TweetEval benchmark.
 
 Checkout [Hugging Face's](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment) documentation to explore more transformer models.
 

@@ -42,6 +42,7 @@ class AutoGluonHandler(BaseMLEngine):
         self.model_storage.json_set("candidate_models", candidates.to_dict())
         # self.model_storage.file_set("trained_model", dill.dumps(predictor))
 
+    # calls a model with an input dataframe. This method returns a dataframe with the predicted values.
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
 
         save_path = self.model_storage.json_get("model_path")['model_dir']
@@ -66,6 +67,7 @@ class AutoGluonHandler(BaseMLEngine):
         features_info = self.model_storage.json_get("feature_info")
         return pd.DataFrame(features_info)
 
+    # provides global model insights, such as framework-level parameters used in training.
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         # displays the performance of the candidate models. For AutoGluon, its the leaderboard.
         if attribute is None:

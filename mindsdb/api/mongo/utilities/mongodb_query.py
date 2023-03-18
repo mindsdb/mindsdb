@@ -31,8 +31,8 @@ class MongoQuery:
         #     'args': [{c: 3}]
         # }
 
-        if not 'method' in step \
-                or not 'args' in step \
+        if 'method' not in step \
+                or 'args' not in step \
                 or not isinstance(step['args'], list):
             raise AttributeError(f'Wrong step {step}')
 

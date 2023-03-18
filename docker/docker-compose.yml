@@ -24,7 +24,8 @@ services:
       - '47334:47334'
       - '47335:47335'
       - '47336:47336'
-    command: bash -c "cd /mindsdb && python -m mindsdb --api=http,mysql,mongodb"
+        # command: bash -c "cd /mindsdb && python -m mindsdb --api=http,mysql,mongodb"
+    command: bash -c "cd /mindsdb && python -m mindsdb --api=http,mysql,mongodb --config=tests/integration_tests/flows/config/docker_config.json"
     environment:
       MINDSDB_EXECUTOR_SERVICE_HOST: "executor"
       MINDSDB_EXECUTOR_SERVICE_PORT: "50052"

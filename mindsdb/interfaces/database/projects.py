@@ -176,6 +176,8 @@ class Project:
         data = OrderedDict()
         data['models'] = {'type': 'table', 'deletable': False}
         data['models_versions'] = {'type': 'table', 'deletable': False}
+        data['jobs'] = {'type': 'table', 'deletable': False}
+        data['jobs_history'] = {'type': 'table', 'deletable': False}
 
         models = self.get_models()
         for model in models:

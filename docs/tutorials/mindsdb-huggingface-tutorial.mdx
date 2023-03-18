@@ -8,7 +8,7 @@ sidebarTitle: Movie reviews
 [MindsDB](https://mindsdb.com/) is is an open-source AI layer for existing databases that allows you to effortlessly develop, train and deploy state-of-the-art machine learning models using SQL queries. 
 [Hugging Face](https://huggingface.co/) is a community and data science platform that provides tools that enables users to build, train and deploy machine learning models based on open source code and technologies. 
 **NLP**, or Natural Language Processing, is a subprocess of artificial intelligence that helps machines process and understand the human langage so that they can automatically perform repetitive tasks. 
-Some examples of NLP include machine translation, summarization, ticket classification, and spell check.
+Some examples of NLP include machine translation, summarization, ticket classification, and spell check (or "autocorrect") .
 
 The following four NLP tasks are currently supported by MindsDB:
 
@@ -19,7 +19,7 @@ The following four NLP tasks are currently supported by MindsDB:
 
 **In today's tutorial, I'll show you how to connect Hugging Face to MindsDB so you can perform NLP operations on your dataset.**
 
-## Setup
+## Data Setup
 
 Make sure you have access to a working MindsDB installation, either locally or
 via [MindsDB Cloud](https://cloud.mindsdb.com/). 
@@ -32,4 +32,114 @@ MindsDB locally using
 [Docker](/setup/self-hosted/docker/) or
 [Python](/setup/self-hosted/pip/source/).
 
+I'm going to be working locally with test data. You can download the dataset [here]() if you want to follow along.
+
 Let's get started!
+
+## Connecting the Data
+
+We're going to use a dataset from MindsDB's public PostgreSQL demo for this tutorial. 
+The dataset contains many text statements that we can perform NLP operations on. To connect to our data we're going to use the SQL `CREATE DATABASE` statement.
+
+```
+CREATE DATABASE nlp_example
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+    };
+```
+
+The next step I always recommend is using the `SELECT` clause to confirm our data:
+
+`SELECT * FROM nlp_example.demo_data.user_comments;`
+
+![nlp-screenshot](/docs/tutorials/images/tutorial2.png)
+
+### Understanding the Data
+
+The dataset we are using is a roBERTa-base model trained on ~58M tweets and finetuned for sentiment analysis with the TweetEval benchmark.
+We're using this particular dataset to perform NLP tasks because we know it holds rows and rows of text content, which is perfect for performing 
+You can find this and many other datasets in [Hugging Face's](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment) documentation.
+
+## Training a Predictor
+
+Now that we have our data, we're going to use SQL to create our model. 
+
+***Note: If you have been working on multiple projects/databases make sure you move to the correct database for this demo:***
+
+`USE mindsdb;`
+
+Let's create our model now.
+
+**We use the `CREATE MODEL` statement along with the following paramters to access the Hugging Face API and use Hugging Face transofrmers when we train our model and make predictions on our dataset.**
+
+```
+CREATE MODEL nlp_predictor
+PREDICT sentiment
+USING
+  engine = 'huggingface',
+  task = 'text-classification',
+  model_name = "cardiffnlp/twitter-Roberta-base-sentiment",
+  input_column = 'comment',
+  labels = ['negative','neutral','positive'];
+```
+
+## Status of a Predictor
+
+We can use the `SELECT` statement to check on the status of our predictor. If you get an error here, you may have made an error in your SQL syntax or your dataset may be corrupt. Be sure to get this output to read "complete" before moving forward.
+
+`SELECT * FROM mindsdb.models WHERE name = 'nlp_predictions';`
+
+![screenshot](/Users/alissa/Documents/GitHub/mindsdb/docs/tutorials/images/tutorial3.png)
+
+
+## Making predictions
+
+Now that our model is ready, we can actually start training it to make NLP predictions!
+
+Let's input a text statement we know contains negative words and see if our predictor recognizes that:
+
+input:
+
+```
+SELECT * FROM nlp_predictor
+WHERE comment = 'It is really hard to do this';
+```
+
+output:
+
+```sql
++------------+-------------+
+| sentiment     | sentiment_explain
++------------+-------------+
+| negative   |{"negative":0.040196146816015244,"neutral":0.0791015625,"positive":0.8807022571563721}|
++------------+-------------+
+```
+![screeshot](/Users/alissa/Documents/GitHub/mindsdb/docs/tutorials/images/negative1.png)
+
+Awesome! Let's change the word, "hate" to the word, "love" and see what happens.
+
+input:
+
+```
+SELECT * FROM nlp_predictor1
+WHERE comment = 'I love this world'
+```
+
+output:
+
+```sql
++------------+-------------+
+| sentiment     | sentiment_explain
++------------+-------------+
+| positive   |{"negative":0.040196146816015244,"neutral":0.0791015625,"positive":0.8807022571563721}|
++------------+-------------+
+```
+
+Wow. It looks like our predictor recognizes that this is a postive statement now! 
+
+

@@ -1,17 +1,20 @@
+from collections import OrderedDict
 from typing import Any, Optional
 
+import jaydebeapi as jdbcconnector
+from mindsdb_sql import parse_sql
+from mindsdb_sql.parser.ast.base import ASTNode
+import pandas as pd
+
 from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast.base import ASTNode
 
-import jaydebeapi as jdbcconnector
-import pandas as pd
 
 
 
@@ -200,3 +203,44 @@ class AltibaseHandler(DatabaseHandler):
             """
         
         return self.native_query(query)
+    
+connection_args = OrderedDict(
+    host = {
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the Altibase server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.'
+    },
+    port = {
+        'type': ARG_TYPE.INT,
+        'description': 'The TCP/IP port of the Altibase server. Must be an integer.'
+    },
+    user = {
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the Altibase server.'
+    },
+    password = {
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the Altibase server.'
+    },
+    database = {
+        'type': ARG_TYPE.STR,
+        'description': 'The database name to use when connecting with the Altibase server.'
+    },
+    jdbcClass = {
+        'type': ARG_TYPE.STR,
+        'description': 'The driver class of the Altibase JDBC driver'
+    },
+    jdbcJarLocation = {
+        'type': ARG_TYPE.PATH,
+        'description': 'The location of the Altibase JDBC driver jar file'
+    },
+)
+
+connection_args_example = OrderedDict(
+    host = '127.0.0.1',
+    port = 20300,
+    user = 'sys',
+    password = 'manager',
+    database = 'mydb',
+    jdbcClass='Altibase.jdbc.driver.AltibaseDriver',
+    jdbcJarLocation='/data/altibase_home/lib/Altibase.jar'
+)

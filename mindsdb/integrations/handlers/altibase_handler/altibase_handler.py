@@ -160,11 +160,43 @@ class AltibaseHandler(DatabaseHandler):
 
         return self.native_query(query_str)
 
-    def get_tables():
+    def get_tables(self) -> Response:
+        """ Return list of entities
+        Return list of entities that will be accesible as tables.
+        Returns:
+            HandlerResponse
         """
-        It lists and returns all the available tables. Each handler decides what a table means for the underlying system when interacting with it from the data layer. Typically, these are actual tables.
+        query = '''
+            SELECT 
+                TABLE_NAME, 
+                TABLE_ID, 
+                TABLE_TYPE 
+            FROM 
+                system_.sys_tables_ 
+            WHERE 
+                user_id = USER_ID();
+            '''
+    
+        return self.native_query(query)
+
+    def get_columns(self, table_name: str) -> Response:
+        """ Returns a list of entity columns
+        Args:
+            table_name (str): name of one of tables returned by self.get_tables()
+        Returns:
+            HandlerResponse
         """
-    def get_columns():
-        """
-        It returns columns of a table registered in the handler with the respective data type.
-        """
+        query = f"""
+            SELECT 
+                COLUMN_NAME, 
+                DATA_TYPE 
+            FROM 
+                system_.sys_columns_ ct 
+            inner join 
+                system_.sys_tables_ tt 
+                on ct.table_id=tt.table_id 
+            where 
+                tt.table_name = '{table_name.capitalize()}';
+            """
+        
+        return self.native_query(query)

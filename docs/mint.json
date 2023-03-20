@@ -315,7 +315,9 @@
             "data-integrations/cockroachdb",
             "data-integrations/ckan",
             "data-integrations/databend",
-            "data-integrations/cassandra"
+            "data-integrations/cassandra",
+            "data-integrations/Apache-Pinot"
+            
           ]
         },
         {

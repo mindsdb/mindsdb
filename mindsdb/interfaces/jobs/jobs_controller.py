@@ -222,8 +222,8 @@ class JobsController:
             data.append({
                 'name': record.Jobs.name,
                 'project': project_names[record.Jobs.project_id],
-                'start_at': record.JobsHistory.start_at,
-                'end_at': record.JobsHistory.end_at,
+                'run_start': record.JobsHistory.start_at,
+                'run_end': record.JobsHistory.end_at,
                 'error': record.JobsHistory.error,
                 'query': record.Jobs.query_str,
             })

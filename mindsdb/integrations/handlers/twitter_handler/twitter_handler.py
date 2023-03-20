@@ -1,4 +1,5 @@
 import re
+import os
 import datetime as dt
 import ast
 from collections import defaultdict
@@ -141,9 +142,15 @@ class TweetsTable(APITable):
             'in_reply_to_user_username'
         ]
 
-    def insert(self, query:ast.Insert):
+    def insert(self, query: ast.Insert):
         # https://docs.tweepy.org/en/stable/client.html#tweepy.Client.create_tweet
         columns = [col.name for col in query.columns]
+
+        insert_params = ('consumer_key', 'consumer_secret', 'access_token', 'access_token_secret')
+        for p in insert_params:
+            if p not in self.handler.connection_args:
+                raise Exception(f'To insert data into Twitter, you need to provide the following parameters when connecting it to MindsDB: {insert_params}')  # noqa
+
         for row in query.values:
             params = dict(zip(columns, row))
 
@@ -198,6 +205,8 @@ class TwitterHandler(APIHandler):
                   'access_token', 'access_token_secret', 'wait_on_rate_limit']:
             if k in args:
                 self.connection_args[k] = args[k]
+            elif f'TWITTER_{k.upper()}' in os.environ:
+                self.connection_args[k] = os.environ[f'TWITTER_{k.upper()}']
 
         self.api = None
         self.is_connected = False
@@ -206,7 +215,7 @@ class TwitterHandler(APIHandler):
         self._register_table('tweets', tweets)
 
     def connect(self):
-        """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""
+        """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""  # noqa
 
         if self.is_connected is True:
             return self.api

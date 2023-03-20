@@ -5,6 +5,7 @@ from flask_restx import Resource
 from mindsdb.interfaces.storage.fs import FileStorageFactory, RESOURCE_GROUP
 from mindsdb.api.http.namespaces.configs.tabs import ns_conf
 from mindsdb.utilities.log import get_log
+from mindsdb.utilities.context import context as ctx
 
 logger = get_log("main")
 
@@ -28,6 +29,8 @@ def get_storage():
 class Tab(Resource):
     @ns_conf.doc('get_tabs')
     def get(self):
+        company_id = request.headers.get("company_id", None)
+        ctx.company_id = company_id
         storage = get_storage()
         tabs = None
         try:
@@ -40,9 +43,11 @@ class Tab(Resource):
 
     @ns_conf.doc('save_tabs')
     def post(self):
+        company_id = request.headers.get("company_id", None)
+        ctx.company_id = company_id
         storage = get_storage()
         try:
-            tabs = request.json
+            tabs = request.json.get("tabs")
             b_types = json.dumps(tabs).encode("utf-8")
             storage.file_set(TABS_FILENAME, b_types)
         except Exception as e:

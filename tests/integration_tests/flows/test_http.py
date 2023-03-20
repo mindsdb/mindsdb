@@ -510,16 +510,16 @@ class TestHTTP:
 
     @pytest.mark.parametrize("method,payload,expected_code,result,headers",
                              [
-                                 ("post", {}, 200, {}, {"company_id": 1}),
-                                 ("get", {}, 200, {}, {"company_id": 1}),
-                                 ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}, {"company_id": 1}),
-                                 ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}, {"company_id": 1}),
-                                 ("get", {}, 200, {}, {"company_id": 2}),
+                                 ("post", {}, 200, {}, {"company-id": 1}),
+                                 ("get", {}, 200, {}, {"company-id": 1}),
+                                 ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}, {"company-id": 1}),
+                                 ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}, {"company-id": 1}),
+                                 ("get", {}, 200, {}, {"company-id": 2}),
                              ]
     )
     def test_tabs(self, method, payload, expected_code, result, headers):
         uri = '/tabs/'
-        call_desc = f"{method.upper()} - {uri} payload={payload}"
+        call_desc = f"{method.upper()} - {uri} payload={payload} headers={headers}"
         resp = self.api_request(method, uri, payload=payload, headers=headers)
         assert resp.status_code == expected_code, \
                 f"expected to have {expected_code} for {call_desc}, but got {resp.status_code}"

@@ -62,7 +62,7 @@ class TestHTTP:
         fnc = getattr(requests, method)
 
         url = f'{HTTP_API_ROOT}/{url.lstrip("/")}'
-        response = fnc(url, json=payload)
+        response = fnc(url, json=payload, headers=headers)
 
         return response
 
@@ -510,11 +510,11 @@ class TestHTTP:
 
     @pytest.mark.parametrize("method,payload,expected_code,result,headers",
                              [
-                                 ("post", {}, 200, {}, {"company-id": 1}),
-                                 ("get", {}, 200, {}, {"company-id": 1}),
-                                 ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}, {"company-id": 1}),
-                                 ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}, {"company-id": 1}),
-                                 ("get", {}, 200, {}, {"company-id": 2}),
+                                 ("post", {}, 200, {}, {"company-id": "1"}),
+                                 ("get", {}, 200, {}, {"company-id": "1"}),
+                                 ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}, {"company-id": "1"}),
+                                 ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}, {"company-id": "1"}),
+                                 ("get", {}, 200, {}, {"company-id": "2"}),
                              ]
     )
     def test_tabs(self, method, payload, expected_code, result, headers):

@@ -510,11 +510,11 @@ class TestHTTP:
 
     @pytest.mark.parametrize("method,payload,expected_code,result,headers",
                              [
-                                 ("post", {}, 200, {}, {"company_id": "foo"}),
-                                 ("get", {}, 200, {}, {"company_id": "foo"}),
-                                 ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}, {"company_id": "foo"}),
-                                 ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}, {"company_id": "foo"}),
-                                 ("get", {}, 200, {}, {"company_id": "NOTfoo"}),
+                                 ("post", {}, 200, {}, {"company_id": 1}),
+                                 ("get", {}, 200, {}, {"company_id": 1}),
+                                 ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}, {"company_id": 1}),
+                                 ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}, {"company_id": 1}),
+                                 ("get", {}, 200, {}, {"company_id": 2}),
                              ]
     )
     def test_tabs(self, method, payload, expected_code, result, headers):

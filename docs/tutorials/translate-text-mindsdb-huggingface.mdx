@@ -16,8 +16,27 @@ Once we import our data, we're going to use HuggingFace's [BERT multilingual bas
 
 Make sure you have a working [MindsDB Cloud Acccount](https://cloud.mindsdb.com/) or a local installation of MindsDB running so you can follow along with this tutorial. 
 
+If you want to learn how to set up your account at MindsDB Cloud, follow
+[this guide](/setup/cloud/). Another way is to set up
+MindsDB locally using
+[Docker](/setup/self-hosted/docker/) or
+[Python](/setup/self-hosted/pip/source/).
+
+
 ### Connecting the Data
 
-For this turorial, we're going to use a table from MindsDB's PostgreSQL public demo instance. We're 
+I'm working in MindsDB's Cloud Editor for this tutorial, so I'm going to start by doing the following:
 
-Thanks to MindsDB's advanced technology, we can use the SQL 'CREATE DATABASE' statement to connect our data. 
+1. Visit [MindsDB Cloud Editor]()
+2. Click 'Login' or 'Create Account' and authenticate
+3. Once logged in, click **Add Data**
+4. Select **"Files"**
+5. Click **"Import File"**
+6. Choose the file to import
+7. Name your dataset accordingly (no special characters or cases in db name)
+8. Use `SELECT` SQL command to confirm the data was uploaded successfully:
+
+```sql
+SELECT * FROM files.dataset LIMIT 10;
+```
+

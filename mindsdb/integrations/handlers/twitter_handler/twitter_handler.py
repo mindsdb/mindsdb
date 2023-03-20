@@ -1,4 +1,5 @@
 import re
+import os
 import datetime as dt
 import ast
 from collections import defaultdict
@@ -204,6 +205,8 @@ class TwitterHandler(APIHandler):
                   'access_token', 'access_token_secret', 'wait_on_rate_limit']:
             if k in args:
                 self.connection_args[k] = args[k]
+            elif f'TWITTER_{k.upper()}' in os.environ:
+                self.connection_args[k] = os.environ[f'TWITTER_{k.upper()}']
 
         self.api = None
         self.is_connected = False

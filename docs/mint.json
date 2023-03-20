@@ -317,7 +317,8 @@
             "data-integrations/databend",
             "data-integrations/cassandra",
             "data-integrations/Apache-Pinot",
-            "data-integrations/Apache-Druid"
+            "data-integrations/Apache-Druid",
+            "data-integrations/amazon-s3"
             
           ]
         },

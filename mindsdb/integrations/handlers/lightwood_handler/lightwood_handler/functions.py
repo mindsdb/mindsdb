@@ -155,8 +155,8 @@ def run_learn(df: DataFrame, args: dict, model_storage) -> None:
     db.session.commit()
 
 
-@mark_process(name='adjust')
-def run_adjust(df: DataFrame, args: dict, model_storage):
+@mark_process(name='finetune')
+def run_finetune(df: DataFrame, args: dict, model_storage):
     try:
         base_predictor_id = args['base_model_id']
         base_predictor_record = db.Predictor.query.filter_by(
@@ -170,7 +170,7 @@ def run_adjust(df: DataFrame, args: dict, model_storage):
         # TODO move this to ModelStorage (don't work with database directly)
         predictor_record.data = {'training_log': 'training'}
         predictor_record.training_start_at = datetime.now()
-        predictor_record.status = PREDICTOR_STATUS.ADJUSTING  # TODO: parallel execution block
+        predictor_record.status = PREDICTOR_STATUS.FINETUNING  # TODO: parallel execution block
         db.session.commit()
 
         base_fs = FileStorage(
@@ -190,7 +190,7 @@ def run_adjust(df: DataFrame, args: dict, model_storage):
         predictor.save(fs.folder_path / fs.folder_name)
         fs.push()
 
-        predictor_record.data = predictor.model_analysis.to_dict()  # todo: update accuracy in LW as post-adjust hook
+        predictor_record.data = predictor.model_analysis.to_dict()  # todo: update accuracy in LW as post-finetune hook
         predictor_record.code = base_predictor_record.code
         predictor_record.update_status = 'up_to_date'
         predictor_record.status = PREDICTOR_STATUS.COMPLETE

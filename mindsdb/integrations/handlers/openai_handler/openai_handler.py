@@ -412,7 +412,7 @@ class OpenAIHandler(BaseMLEngine):
           - Modify model metadata so that the new version triggers the fine-tuned version of the model (stored in the user's OpenAI account)
 
         Caveats: 
-          - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you adjust successively more than once, any fine-tuning other than the most recent one is lost.
+          - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you fine-tune successively more than once, any fine-tuning other than the most recent one is lost.
         """  # noqa
 
         args = args if args else {}
@@ -428,10 +428,10 @@ class OpenAIHandler(BaseMLEngine):
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
 
         openai.api_key = self._get_api_key(args)
-        adjust_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = tempfile.mkdtemp()
-        temp_file_name = f"ft_{adjust_time}"
+        temp_file_name = f"ft_{finetune_time}"
         temp_model_storage_path = f"{temp_storage_path}/{temp_file_name}.jsonl"
         df.to_json(temp_model_storage_path, orient='records', lines=True)
 
@@ -507,7 +507,7 @@ class OpenAIHandler(BaseMLEngine):
 
         result_file_id = openai.FineTune.retrieve(id=ft_result.id)['result_files'][0].id
         name_extension = openai.File.retrieve(id=result_file_id).filename
-        result_path = f'{temp_storage_path}/ft_{adjust_time}_result_{name_extension}'
+        result_path = f'{temp_storage_path}/ft_{finetune_time}_result_{name_extension}'
         with open(result_path, 'wb') as f:
             f.write(openai.File.download(id=result_file_id))
 

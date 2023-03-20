@@ -8,7 +8,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatasource,
     RetrainPredictor,
     CreatePredictor,
-    AdjustPredictor,
+    FinetunePredictor,
     CreateMLEngine,
     DropMLEngine,
     DropDatasource,
@@ -171,8 +171,8 @@ class ExecuteCommands:
             return self.answer_describe_predictor(statement)
         elif type(statement) == RetrainPredictor:
             return self.answer_retrain_predictor(statement)
-        elif type(statement) == AdjustPredictor:
-            return self.answer_adjust_predictor(statement)
+        elif type(statement) == FinetunePredictor:
+            return self.answer_finetune_predictor(statement)
         elif type(statement) == Show:
             sql_category = statement.category.lower()
             if hasattr(statement, "modes"):
@@ -636,7 +636,7 @@ class ExecuteCommands:
         return model_record
 
     def _sync_predictor_check(self, phase_name):
-        """ Checks if there is already a predictor retraining or adjusting
+        """ Checks if there is already a predictor retraining or fine-tuning
             Do not allow to run retrain if there is another model in training process in less that 1h
         """
         is_cloud = self.session.config.get('cloud', False)
@@ -704,7 +704,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
 
-    def answer_adjust_predictor(self, statement):
+    def answer_finetune_predictor(self, statement):
         model_record = self._get_model_record(statement)
 
         if statement.using is not None:
@@ -717,8 +717,8 @@ class ExecuteCommands:
             raise Exception('The ML engine that the model was trained with does not exist.')
         ml_handler = self.session.integration_controller.get_handler(integration_record.name)
 
-        self._sync_predictor_check(phase_name='adjust')
-        df = self.session.model_controller.adjust_model(statement, ml_handler)
+        self._sync_predictor_check(phase_name='finetune')
+        df = self.session.model_controller.finetune_model(statement, ml_handler)
 
         resp_dict = df.to_dict(orient='split')
 

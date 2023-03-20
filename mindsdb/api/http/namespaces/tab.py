@@ -29,7 +29,7 @@ def get_storage():
 class Tab(Resource):
     @ns_conf.doc('get_tabs')
     def get(self):
-        company_id = request.headers.get("company_id", None)
+        company_id = request.headers.get("company-id", None)
         ctx.company_id = company_id
         storage = get_storage()
         tabs = None
@@ -43,11 +43,11 @@ class Tab(Resource):
 
     @ns_conf.doc('save_tabs')
     def post(self):
-        company_id = request.headers.get("company_id", None)
+        company_id = request.headers.get("company-id", None)
         ctx.company_id = company_id
         storage = get_storage()
         try:
-            tabs = request.json.get("tabs")
+            tabs = request.json
             b_types = json.dumps(tabs).encode("utf-8")
             storage.file_set(TABS_FILENAME, b_types)
         except Exception as e:

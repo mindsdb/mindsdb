@@ -318,7 +318,8 @@
             "data-integrations/cassandra",
             "data-integrations/Apache-Pinot",
             "data-integrations/Apache-Druid",
-            "data-integrations/amazon-s3"
+            "data-integrations/amazon-s3",
+            "data-integrations/Airtable"
             
           ]
         },

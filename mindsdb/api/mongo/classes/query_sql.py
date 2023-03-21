@@ -1,5 +1,5 @@
-from mindsdb.api.common.controllers.session_controller import SessionController
-from mindsdb.api.common.executor.executor_commands import ExecuteCommands
+from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
 
 
 def run_sql_command(mindsdb_env, ast_query):

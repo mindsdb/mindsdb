@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.firebird_handler.firebird_handler import FirebirdHandler
-from mindsdb.api.common.libs import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 class FirebirdHandlerTest(unittest.TestCase):

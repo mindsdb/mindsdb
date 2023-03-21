@@ -11,7 +11,7 @@
 import math
 import struct
 
-from mindsdb.api.common.libs import ONE_BYTE_ENC, TWO_BYTE_ENC, THREE_BYTE_ENC, NULL_VALUE, DEFAULT_CAPABILITIES
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ONE_BYTE_ENC, TWO_BYTE_ENC, THREE_BYTE_ENC, NULL_VALUE, DEFAULT_CAPABILITIES
 from mindsdb.api.mysql.mysql_proxy.utilities import logger
 
 

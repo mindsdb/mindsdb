@@ -1,7 +1,7 @@
 import unittest
 
 from mindsdb.integrations.handlers.solr_handler.solr_handler import SolrHandler
-from mindsdb.api.common.libs import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 class SolrHandlerTest(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.yugabyte_handler.yugabyte_handler import YugabyteHandler
-from mindsdb.api.common.libs import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 class YugabyteHandlerTest(unittest.TestCase):

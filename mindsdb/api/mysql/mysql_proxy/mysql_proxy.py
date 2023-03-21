@@ -21,13 +21,12 @@ import struct
 from functools import partial
 import select
 import base64
+from typing import List, Dict
 
-from mindsdb.api.common.check_auth import check_auth
-from mindsdb.api.common.classes.sql_answer import SQLAnswer
 from mindsdb.utilities.wizards import make_ssl_cert
 from mindsdb.utilities.config import Config
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
-from mindsdb.api.common.controllers import SessionController
+from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
@@ -38,10 +37,10 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiUnknownError
 )
 
-from mindsdb.api.common.external_libs.mysql_scramble import scramble as scramble_func
+from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 
-from mindsdb.api.common.libs import RESPONSE_TYPE
-from mindsdb.api.common.libs import (
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     getConstName,
     CHARSET_NUMBERS,
     ERR,
@@ -69,13 +68,68 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     BinaryResultsetRowPacket
 )
 
-from mindsdb.api.common.executor import Executor
+from mindsdb.api.mysql.mysql_proxy.executor import Executor
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.hooks as hooks
 
 
 def empty_fn():
     pass
+
+
+def check_auth(username, password, scramble_func, salt, company_id, config):
+    '''
+    '''
+    try:
+        hardcoded_user = config['auth'].get('username')
+        hardcoded_password = config['auth'].get('password')
+        if hardcoded_password is None:
+            hardcoded_password = ''
+        hardcoded_password_hash = scramble_func(hardcoded_password, salt)
+        hardcoded_password = hardcoded_password.encode()
+
+        if password is None:
+            password = ''
+        if isinstance(password, str):
+            password = password.encode()
+
+        if username != hardcoded_user:
+            logger.warning(f'Check auth, user={username}: user mismatch')
+            return {
+                'success': False
+            }
+
+        if password != hardcoded_password and password != hardcoded_password_hash:
+            logger.warning(f'check auth, user={username}: password mismatch')
+            return {
+                'success': False
+            }
+
+        logger.info(f'Check auth, user={username}: Ok')
+        return {
+            'success': True,
+            'username': username
+        }
+    except Exception as e:
+        logger.error(f'Check auth, user={username}: ERROR')
+        logger.error(e)
+        logger.error(traceback.format_exc())
+
+
+class SQLAnswer:
+    def __init__(self, resp_type: RESPONSE_TYPE, columns: List[Dict] = None, data: List[Dict] = None,
+                 status: int = None, state_track: List[List] = None, error_code: int = None, error_message: str = None):
+        self.resp_type = resp_type
+        self.columns = columns
+        self.data = data
+        self.status = status
+        self.state_track = state_track
+        self.error_code = error_code
+        self.error_message = error_message
+
+    @property
+    def type(self):
+        return self.resp_type
 
 
 class MysqlProxy(SocketServer.BaseRequestHandler):

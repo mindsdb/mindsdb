@@ -11,7 +11,7 @@
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
-from mindsdb.api.common.libs import NULL_VALUE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import NULL_VALUE
 
 
 class ResultsetRowPacket(Packet):

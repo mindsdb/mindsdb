@@ -9,19 +9,12 @@ class PostgresBackendMessageIdentifier(Enum):
     ERROR = b'E'
     ROW_DESCRIPTION = b'T'
     DATA_ROW = b'D'
-    NEGOTIATE_VERSION = b'v'
-    PARAMETER = b'S'
 
 
 class PostgresFrontendMessageIdentifier(Enum):
     EXECUTE = b'E'
     QUERY = b'Q'
     TERMINATE = b'X'
-    SSL_REQUEST = b'F'
-    PARSE = b'P'
-    BIND = b'B'
-    SYNC = b'S'
-    DESCRIBE = b'D'
 
 
 class PostgresAuthType(Enum):

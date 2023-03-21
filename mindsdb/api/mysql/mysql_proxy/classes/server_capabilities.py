@@ -1,4 +1,4 @@
-from mindsdb.api.common.libs import DEFAULT_CAPABILITIES
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import DEFAULT_CAPABILITIES
 
 
 class ServerCapabilities():

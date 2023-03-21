@@ -11,7 +11,7 @@
 
 import struct
 
-from mindsdb.api.common.libs import MAX_PACKET_SIZE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MAX_PACKET_SIZE
 
 
 class Packet:

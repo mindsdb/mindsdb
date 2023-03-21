@@ -13,7 +13,7 @@ import struct
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
-from mindsdb.api.common.libs import SESSION_TRACK, SERVER_STATUS
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import SESSION_TRACK, SERVER_STATUS
 
 
 class OkPacket(Packet):

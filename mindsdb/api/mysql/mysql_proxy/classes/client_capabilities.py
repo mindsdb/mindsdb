@@ -1,4 +1,4 @@
-from mindsdb.api.common.libs import CAPABILITIES
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CAPABILITIES
 
 
 class ClentCapabilities():

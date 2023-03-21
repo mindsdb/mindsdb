@@ -15,7 +15,7 @@ import pandas as pd
 
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
-from mindsdb.api.common.libs import TYPES
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
 
 
 class BinaryResultsetRowPacket(Packet):

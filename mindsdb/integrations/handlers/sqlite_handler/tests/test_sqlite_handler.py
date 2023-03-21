@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.sqlite_handler.sqlite_handler import SQLiteHandler
-from mindsdb.api.common.libs import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
 class SQLiteHandlerTest(unittest.TestCase):

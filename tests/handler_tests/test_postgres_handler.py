@@ -3,7 +3,7 @@ import pytest
 
 import docker
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
-from mindsdb.api.common.libs import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 HANDLER_KWARGS = {"connection_data": {
                     "host": "localhost",

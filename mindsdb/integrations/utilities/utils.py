@@ -1,6 +1,6 @@
 import sys
 from mindsdb_sql.parser.ast import Identifier, Constant, BinaryOperation
-from mindsdb.api.common.controllers.session_controller import SessionController
+from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 
 
 def make_sql_session():

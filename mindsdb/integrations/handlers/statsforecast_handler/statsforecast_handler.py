@@ -7,6 +7,7 @@ from mindsdb.integrations.utilities.time_series_utils import (
     infer_frequency,
     get_best_model_from_results_df
 )
+from sklearn.metrics import r2_score
 from statsforecast import StatsForecast
 from statsforecast.models import AutoARIMA, AutoCES, AutoETS, AutoTheta
 
@@ -101,6 +102,12 @@ class StatsForecastHandler(BaseMLEngine):
         sf = StatsForecast([model], freq=model_args["frequency"], df=training_df)
         fitted_models = sf.fit().fitted_
 
+        # Get in-sample cross validation accuracy
+        sf.cross_validation(model_args["horizon"], fitted=True)
+        results_df = sf.cross_validation_fitted_values()
+        results_df = results_df.rename({"CES": "AutoCES"}, axis=1)  # Fixes a Nixtla bug
+        model_args["accuracy"] = r2_score(results_df[model_args["model_name"]], results_df["y"])
+
         ###### persist changes to handler folder
         self.model_storage.json_set("model_args", model_args)
         self.model_storage.file_set("training_df", dill.dumps(training_df))
@@ -132,4 +139,4 @@ class StatsForecastHandler(BaseMLEngine):
         model_args = self.model_storage.json_get("model_args")
         outputs = model_args["target"]
         inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]]
-        return pd.DataFrame({"accuracies": [0.95], "outputs": outputs, "inputs": [inputs]})
+        return pd.DataFrame({"accuracies": model_args["accuracy"], "outputs": outputs, "inputs": [inputs]})

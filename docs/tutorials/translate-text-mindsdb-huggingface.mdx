@@ -36,7 +36,28 @@ I'm working in MindsDB's Cloud Editor for this tutorial, so I'm going to start b
 7. Name your dataset accordingly (no special characters or cases in db name)
 8. Use `SELECT` SQL command to confirm the data was uploaded successfully:
 
+***input:***
+
 ```sql
-SELECT * FROM files.dataset LIMIT 10;
+SELECT * FROM files.dataset LIMIT 5;
 ```
 
+***output:***
+
+```sql
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| labels     | 'text'      | text_hi | text_de | text_fr                                                    |input_text|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| ham   | 'Go until jurong point, crazy.. Available only in bugis n great world la e buffet... Cine there got amore wat... 
+' | `Dakag बिंदु तक जाओ, पागल. केवल Bag Non महान विश्व cag में उपलब्ध है... वहाँ एक अधिक wack मिला...` | `Gehen Sie bis jurong Punkt, verrückt.. Verfügbar nur in buggis n great world la e buffet... Cine there got amore wat...` | `Allez jusqu'à Jurong point, fou.. Disponible seulement dans bugis n grand monde la e buffet... Cine il y a eu plus...
+` |
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| positive   | positive    |{'positive': 0.5315402746200562, 'negative': 0.46845969557762146}|One of the other reviewers......|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| positive   | positive    |{'positive': 0.9874508380889893, 'negative': 0.01254915911704301}|A wonderful little..............|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| positive   | positive    |{'positive': 0.9743621349334717, 'negative': 0.02563784085214138}|I thought this was a ...........|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| positive   | positive    |{'positive': 0.8379427790641785, 'negative': 0.16205716133117676}|Petter Mattei's "Love...........|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+```

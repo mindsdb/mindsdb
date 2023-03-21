@@ -129,4 +129,7 @@ class StatsForecastHandler(BaseMLEngine):
         return get_results_from_nixtla_df(forecast_df, model_args)
 
     def describe(self, attribute=None):
-        return pd.DataFrame({"accuracy": [0.95]})
+        model_args = self.model_storage.json_get("model_args")
+        outputs = model_args["target"]
+        inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]]
+        return pd.DataFrame({"accuracies": [0.95], "outputs": outputs, "inputs": [inputs]})

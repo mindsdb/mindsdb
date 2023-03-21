@@ -154,7 +154,9 @@ class TestStatsForecast(BaseExecutorTest):
 
         # test describe() method
         describe_result = self.run_sql('describe proj.modelx')
-        assert "accuracy" in describe_result.columns
+        assert "accuracies" in describe_result.columns
+        assert describe_result["inputs"][0] == ["y", "ds", ["unique_id"]]
+        assert describe_result["outputs"][0] == "y"
 
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")

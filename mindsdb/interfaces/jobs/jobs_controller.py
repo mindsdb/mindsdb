@@ -222,8 +222,8 @@ class JobsController:
             data.append({
                 'name': record.Jobs.name,
                 'project': project_names[record.Jobs.project_id],
-                'start_at': record.JobsHistory.start_at,
-                'end_at': record.JobsHistory.end_at,
+                'run_start': record.JobsHistory.start_at,
+                'run_end': record.JobsHistory.end_at,
                 'error': record.JobsHistory.error,
                 'query': record.Jobs.query_str,
             })
@@ -272,18 +272,37 @@ class JobsExecutor:
     def lock_record(self, record_id):
         # workaround for several concurrent workers on cloud:
         #  create history record before start of task
-
         record = db.Jobs.query.get(record_id)
 
-        history_record = db.JobsHistory(
-            job_id=record.id,
-            start_at=record.next_run_at,
-            company_id=record.company_id
-        )
+        try:
 
-        db.session.add(history_record)
-        db.session.flush()
-        return history_record.id
+            history_record = db.JobsHistory(
+                job_id=record.id,
+                start_at=record.next_run_at,
+                company_id=record.company_id
+            )
+
+            db.session.add(history_record)
+            db.session.commit()
+
+            return history_record.id
+
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except Exception:
+            db.session.rollback()
+
+            # check if it is an old lock
+            history_record = db.JobsHistory.query.filter_by(
+                job_id=record.id,
+                start_at=record.next_run_at,
+                company_id=record.company_id
+            ).first()
+            if history_record.created_at < dt.datetime.now() - dt.timedelta(seconds=30):
+                db.session.delete(history_record)
+                db.session.commit()
+
+        return None
 
     def execute_task_local(self, record_id, history_id=None):
 
@@ -304,6 +323,9 @@ class JobsExecutor:
             )
             db.session.add(history_record)
             db.session.flush()
+            history_id = history_record.id
+            db.session.commit()
+
         else:
             history_record = db.JobsHistory.query.get(history_id)
 
@@ -318,7 +340,7 @@ class JobsExecutor:
                     # get previous run date
                     history_prev = db.session.query(db.JobsHistory.start_at)\
                         .filter(db.JobsHistory.job_id == record.id,
-                                db.JobsHistory.id != history_record.id)\
+                                db.JobsHistory.id != history_id)\
                         .order_by(db.JobsHistory.id.desc())\
                         .first()
                     if history_prev is None:
@@ -362,6 +384,8 @@ class JobsExecutor:
 
             # stop scheduling
             record.next_run_at = None
+
+        history_record = db.JobsHistory.query.get(history_id)
 
         if error:
             history_record.error = error

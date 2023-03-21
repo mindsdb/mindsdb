@@ -164,21 +164,20 @@ class TweetsTable(APITable):
                 # Post image if column media_url is provided, only do this on last tweet
                 if 'media_url' in params:
                     media_url = params['media_url']
-                    try:
-                        # create an in memory file
-                        r = requests.get(media_url)
-                        inmemoryfile = io.BytesIO(r.content)
-                        
-                        # upload media to twitter
-                        api = self.handler.connect(api_version=1)
-                        content_type = r.headers['Content-Type']
-                        file_type = content_type.split('/')[-1]
-                        media = api.media_upload(filename="somefile.{file_type}".format(file_type=file_type), file=inmemoryfile)
-                        del params['media_url']
-                        params['media_ids'] = [media.media_id]
-                    except ValueError:
-                        del params['media_url']
-                        log.logger.error(f'Error uploading media to Twitter api: {ValueError}!')
+
+                    # create an in memory file
+                    resp = requests.get(media_url)
+                    img = io.BytesIO(resp.content)
+
+                    # upload media to twitter
+                    api_v1 = self.handler.connect(api_version=1)
+                    content_type = resp.headers['Content-Type']
+                    file_type = content_type.split('/')[-1]
+                    media = api_v1.media_upload(filename="img.{file_type}".format(file_type=file_type), file=img)
+
+                    del params['media_url']
+                    params['media_ids'] = [media.media_id]
+
                 self.handler.call_twitter_api('create_tweet', params)
                 continue
 

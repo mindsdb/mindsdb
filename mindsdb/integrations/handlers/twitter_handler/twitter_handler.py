@@ -1,4 +1,5 @@
 import re
+import os
 import datetime as dt
 import ast
 from collections import defaultdict
@@ -8,6 +9,7 @@ import pandas as pd
 import tweepy
 
 from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 
 from mindsdb_sql.parser import ast
 from mindsdb_sql.planner.utils import query_traversal
@@ -141,9 +143,15 @@ class TweetsTable(APITable):
             'in_reply_to_user_username'
         ]
 
-    def insert(self, query:ast.Insert):
+    def insert(self, query: ast.Insert):
         # https://docs.tweepy.org/en/stable/client.html#tweepy.Client.create_tweet
         columns = [col.name for col in query.columns]
+
+        insert_params = ('consumer_key', 'consumer_secret', 'access_token', 'access_token_secret')
+        for p in insert_params:
+            if p not in self.handler.connection_args:
+                raise Exception(f'To insert data into Twitter, you need to provide the following parameters when connecting it to MindsDB: {insert_params}')  # noqa
+
         for row in query.values:
             params = dict(zip(columns, row))
 
@@ -152,7 +160,7 @@ class TweetsTable(APITable):
             text = params['text']
             if len(text) <= 280:
                 self.handler.call_twitter_api('create_tweet', params)
-                return
+                continue
 
             words = re.split('( )', text)
 
@@ -160,7 +168,7 @@ class TweetsTable(APITable):
 
             text2 = ''
             for word in words:
-                if len(text2) + len(word) > max_text_len - 3:  # 3 is for ...
+                if len(text2) + len(word) > max_text_len - 3 - 7:  # 3 is for ..., 7 is for (10/11)
                     messages.append(text2.strip())
 
                     text2 = ''
@@ -170,13 +178,18 @@ class TweetsTable(APITable):
             if text2.strip() != '':
                 messages.append(text2.strip())
 
-            last_mes_num = len(messages) - 1
+            len_messages = len(messages)
             for i, text in enumerate(messages):
-                if i < last_mes_num:
+                if i < len_messages - 1:
                     text += '...'
+                else:
+                    text += ' '
+                text += f'({i + 1}/{len_messages})'
 
                 params['text'] = text
-                self.handler.call_twitter_api('create_tweet', params)
+                ret = self.handler.call_twitter_api('create_tweet', params)
+                inserted_id = ret.id[0]
+                params['in_reply_to_tweet_id'] = inserted_id
 
 
 class TwitterHandler(APIHandler):
@@ -194,10 +207,15 @@ class TwitterHandler(APIHandler):
         args = kwargs.get('connection_data', {})
 
         self.connection_args = {}
+        handler_config = Config().get('twitter_handler', {})
         for k in ['bearer_token', 'consumer_key', 'consumer_secret',
                   'access_token', 'access_token_secret', 'wait_on_rate_limit']:
             if k in args:
                 self.connection_args[k] = args[k]
+            elif f'TWITTER_{k.upper()}' in os.environ:
+                self.connection_args[k] = os.environ[f'TWITTER_{k.upper()}']
+            elif k in handler_config:
+                self.connection_args[k] = handler_config[k]
 
         self.api = None
         self.is_connected = False
@@ -206,7 +224,7 @@ class TwitterHandler(APIHandler):
         self._register_table('tweets', tweets)
 
     def connect(self):
-        """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""
+        """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""  # noqa
 
         if self.is_connected is True:
             return self.api

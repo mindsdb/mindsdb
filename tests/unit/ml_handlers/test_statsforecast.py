@@ -152,6 +152,11 @@ class TestStatsForecast(BaseExecutorTest):
         assert len(mindsdb_result) == prediction_horizon * n_groups
         assert np.allclose(mindsdb_result, package_predictions)
 
+        # test describe() method
+        describe_result = self.run_sql('describe proj.modelx')
+        assert "accuracy" in describe_result.columns
+
+
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_auto_model_selection(self, mock_handler):
         """Tests the argument for auto model selection will pick the

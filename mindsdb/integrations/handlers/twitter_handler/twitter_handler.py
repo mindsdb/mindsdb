@@ -312,6 +312,7 @@ class TwitterHandler(APIHandler):
                 else:
                     params['max_results'] = left
 
+            log.logger.debug(f'>>>twitter in: {method_name}({params})')
             resp = method(**params)
 
             if hasattr(resp, 'includes'):

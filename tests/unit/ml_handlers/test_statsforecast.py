@@ -15,12 +15,12 @@ from tests.unit.executor_test_base import BaseExecutorTest
 
 
 def test_choose_model():
-    # With this data and settings, AutoETS should win
+    # With this data and settings, AutoTheta should win
     model_args = {"horizon": 1, "frequency": "M", "model_name": "auto"}
-    sample_df = AirPassengersDF.iloc[:10]
+    sample_df = AirPassengersDF.iloc[:100]
     results_df = get_insample_cv_results(model_args, sample_df)
     best_model = choose_model(model_args, results_df)
-    assert best_model.alias == "AutoETS"
+    assert best_model.alias == "AutoTheta"
 
 
 class TestStatsForecast(BaseExecutorTest):
@@ -158,7 +158,8 @@ class TestStatsForecast(BaseExecutorTest):
         describe_result = self.run_sql('describe proj.modelx')
         assert describe_result["inputs"][0] == ["y", "ds", ["unique_id"]]
         assert describe_result["outputs"][0] == "y"
-        assert describe_result["accuracies"][0] < 1
+        assert describe_result["accuracies"][0][0][0] == "AutoCES"
+        assert describe_result["accuracies"][0][0][1] < 1
 
         describe_model = self.run_sql('describe proj.modelx.model')
         assert describe_model["model_name"][0] == "AutoCES"
@@ -223,4 +224,6 @@ class TestStatsForecast(BaseExecutorTest):
         assert np.allclose(mindsdb_result, package_predictions)
 
         describe_result = self.run_sql('describe proj.modelx')
-        assert describe_result["accuracies"][0] < 1
+        assert len(describe_result["accuracies"][0]) > 1
+        assert type(describe_result["accuracies"][0][0][0]) == str
+        assert describe_result["accuracies"][0][0][1] < 1

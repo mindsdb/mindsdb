@@ -5,7 +5,8 @@ from mindsdb.integrations.utilities.time_series_utils import (
     transform_to_nixtla_df,
     get_results_from_nixtla_df,
     infer_frequency,
-    get_best_model_from_results_df
+    get_best_model_from_results_df,
+    get_model_accuracy_dict
 )
 from sklearn.metrics import r2_score
 from statsforecast import StatsForecast
@@ -103,12 +104,10 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["model_name"] = DEFAULT_MODEL_NAME if "model_name" not in using_args else using_args["model_name"]
 
         results_df = get_insample_cv_results(model_args, training_df)
+        model_args["accuracies"] = get_model_accuracy_dict(results_df, r2_score)
         model = choose_model(model_args, results_df)
         sf = StatsForecast([model], freq=model_args["frequency"], df=training_df)
         fitted_models = sf.fit().fitted_
-
-        # Get in-sample cross validation accuracy
-        model_args["accuracy"] = r2_score(results_df[model_args["model_name"]], results_df["y"])
 
         ###### persist changes to handler folder
         self.model_storage.json_set("model_args", model_args)
@@ -139,6 +138,7 @@ class StatsForecastHandler(BaseMLEngine):
 
     def describe(self, attribute=None):
         model_args = self.model_storage.json_get("model_args")
+
         if attribute == "model":
             return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "frequency", "season_length"]})
 
@@ -148,6 +148,8 @@ class StatsForecastHandler(BaseMLEngine):
         if attribute == "ensemble":
             raise Exception(f"DESCRIBE {attribute} is not supported by this Handler.")
 
-        outputs = model_args["target"]
-        inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]]
-        return pd.DataFrame({"accuracies": model_args["accuracy"], "outputs": outputs, "inputs": [inputs]})
+        if attribute is None:
+            outputs = model_args["target"]
+            inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]]
+            accuracies = [(model, acc) for model, acc in model_args["accuracies"].items()]
+            return pd.DataFrame({"accuracies": [accuracies], "outputs": outputs, "inputs": [inputs]})

@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import r2_score
 
 DEFAULT_FREQUENCY = "D"
 
@@ -62,14 +62,25 @@ def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
     return inferred_freq if inferred_freq is not None else default
 
 
-def get_best_model_from_results_df(nixtla_results_df, error_metric=mean_absolute_error):
+
+def get_model_accuracy_dict(nixtla_results_df, metric=r2_score):
+    """Calculates accuracy for each model in the nixtla results df."""
+    accuracy_dict = {}
+    for column in nixtla_results_df.columns:
+        if column in ["unique_id", "ds", "y", "cutoff"]:
+            continue
+        model_error = metric(nixtla_results_df[column], nixtla_results_df["y"])
+        accuracy_dict[column] = model_error
+    return accuracy_dict
+
+
+def get_best_model_from_results_df(nixtla_results_df, metric=r2_score):
     """Gets the best model based, on lowest error, from a results df
     with a column for each nixtla model.
     """
-    best_model, current_error = None, np.inf
-    for result_column in nixtla_results_df.columns[3:]:
-        model_error = error_metric(nixtla_results_df[result_column], nixtla_results_df["y"])
-        if model_error < current_error:
-            best_model = result_column
-            current_error = model_error
+    best_model, current_accuracy = None, 0
+    accuracy_dict = get_model_accuracy_dict(nixtla_results_df, metric)
+    for model, accuracy in accuracy_dict.items():
+        if accuracy > current_accuracy:
+            best_model, current_accuracy = model, accuracy
     return best_model

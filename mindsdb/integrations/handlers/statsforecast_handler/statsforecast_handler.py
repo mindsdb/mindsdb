@@ -6,7 +6,7 @@ from mindsdb.integrations.utilities.time_series_utils import (
     get_results_from_nixtla_df,
     infer_frequency,
     get_best_model_from_results_df,
-    get_model_accuracy_dict
+    get_model_accuracy_dict,
 )
 from sklearn.metrics import r2_score
 from statsforecast import StatsForecast
@@ -38,7 +38,7 @@ def get_season_length(frequency):
         "BMS": 12,
         "BQ": 4,
         "BH": 24,
-        }
+    }
     new_freq = frequency.split("-")[0] if "-" in frequency else frequency  # shortens longer frequencies like Q-DEC
     return season_dict[new_freq] if new_freq in season_dict else 1
 
@@ -143,7 +143,9 @@ class StatsForecastHandler(BaseMLEngine):
             return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "frequency", "season_length"]})
 
         if attribute == "features":
-            return pd.DataFrame({"ds": [model_args["order_by"]], "y": model_args["target"], "unique_id": [model_args["group_by"]]})
+            return pd.DataFrame(
+                {"ds": [model_args["order_by"]], "y": model_args["target"], "unique_id": [model_args["group_by"]]}
+            )
 
         if attribute == "ensemble":
             raise Exception(f"DESCRIBE {attribute} is not supported by this Handler.")

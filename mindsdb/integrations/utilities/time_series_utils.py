@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from sklearn.metrics import r2_score
 
 DEFAULT_FREQUENCY = "D"
@@ -60,7 +59,6 @@ def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
     except TypeError:
         inferred_freq = default
     return inferred_freq if inferred_freq is not None else default
-
 
 
 def get_model_accuracy_dict(nixtla_results_df, metric=r2_score):

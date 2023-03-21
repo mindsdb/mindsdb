@@ -8,7 +8,11 @@ from statsforecast.models import AutoCES
 from statsforecast.utils import AirPassengersDF
 from statsforecast import StatsForecast
 from mindsdb.integrations.utilities.time_series_utils import get_best_model_from_results_df
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import choose_model, model_dict, get_insample_cv_results
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import (
+    choose_model,
+    model_dict,
+    get_insample_cv_results,
+)
 from mindsdb_sql import parse_sql
 from tests.unit.ml_handlers.test_time_series_utils import create_mock_df
 from tests.unit.executor_test_base import BaseExecutorTest
@@ -78,7 +82,7 @@ class TestStatsForecast(BaseExecutorTest):
         )
         assert list(round(result_df["target_col"])) == [42, 43, 44]
 
-        describe_result = self.run_sql('describe proj.model_1_group.features')
+        describe_result = self.run_sql("describe proj.model_1_group.features")
         assert describe_result["unique_id"][0] == ["group_col"]
 
         # now add more groups
@@ -106,7 +110,7 @@ class TestStatsForecast(BaseExecutorTest):
         )
         assert list(round(result_df["target_col"])) == [32, 33, 34]
 
-        describe_result = self.run_sql('describe proj.model_multi_group.features')
+        describe_result = self.run_sql("describe proj.model_multi_group.features")
         assert describe_result["unique_id"][0] == ["group_col", "group_col_2", "group_col_3"]
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
@@ -161,26 +165,25 @@ class TestStatsForecast(BaseExecutorTest):
         assert np.allclose(mindsdb_result, package_predictions)
 
         # test describe() method
-        describe_result = self.run_sql('describe proj.modelx')
+        describe_result = self.run_sql("describe proj.modelx")
         assert describe_result["inputs"][0] == ["y", "ds", ["unique_id"]]
         assert describe_result["outputs"][0] == "y"
         assert describe_result["accuracies"][0][0][0] == "AutoCES"
         assert describe_result["accuracies"][0][0][1] < 1
 
-        describe_model = self.run_sql('describe proj.modelx.model')
+        describe_model = self.run_sql("describe proj.modelx.model")
         assert describe_model["model_name"][0] == "AutoCES"
         assert describe_model["frequency"][0] == "H"
         assert describe_model["season_length"][0] == 24
 
-        describe_features = self.run_sql('describe proj.modelx.features')
+        describe_features = self.run_sql("describe proj.modelx.features")
         assert describe_features["ds"][0] == "ds"
         assert describe_features["y"][0] == "y"
         assert describe_features["unique_id"][0] == ["unique_id"]
 
         with pytest.raises(Exception) as e:
-            self.run_sql('describe proj.modelx.ensemble')
+            self.run_sql("describe proj.modelx.ensemble")
             assert "ensemble is not supported" in str(e)
-
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_auto_model_selection(self, mock_handler):
@@ -229,7 +232,7 @@ class TestStatsForecast(BaseExecutorTest):
         mindsdb_result = result_df.iloc[:, -1]
         assert np.allclose(mindsdb_result, package_predictions)
 
-        describe_result = self.run_sql('describe proj.modelx')
+        describe_result = self.run_sql("describe proj.modelx")
         assert len(describe_result["accuracies"][0]) > 1
         assert type(describe_result["accuracies"][0][0][0]) == str
         assert describe_result["accuracies"][0][0][1] < 1

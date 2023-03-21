@@ -279,6 +279,7 @@ class OpenAIHandler(BaseMLEngine):
         def _log_api_call(params, response):
             params2 = params.copy()
             params2.pop('api_key', None)
+            params2.pop('user', None)
             log.logger.debug(f'>>>openai call: {params2}:\n{response}')
 
         def _submit_normal_completion(kwargs, prompts, api_args):

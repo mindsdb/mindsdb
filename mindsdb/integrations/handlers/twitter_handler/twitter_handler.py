@@ -160,7 +160,7 @@ class TweetsTable(APITable):
 
             text2 = ''
             for word in words:
-                if len(text2) + len(word) > max_text_len - 3:  # 3 is for ...
+                if len(text2) + len(word) > max_text_len - 3 - 7:  # 3 is for ..., 7 is for (10/11)
                     messages.append(text2.strip())
 
                     text2 = ''
@@ -170,13 +170,18 @@ class TweetsTable(APITable):
             if text2.strip() != '':
                 messages.append(text2.strip())
 
-            last_mes_num = len(messages) - 1
+            len_messages = len(messages)
             for i, text in enumerate(messages):
-                if i < last_mes_num:
+                if i < len_messages - 1:
                     text += '...'
+                else:
+                    text += ' '
+                text += f'({i + 1}/{len_messages})'
 
                 params['text'] = text
-                self.handler.call_twitter_api('create_tweet', params)
+                ret = self.handler.call_twitter_api('create_tweet', params)
+                inserted_id = ret.id[0]
+                params['in_reply_to_tweet_id'] = inserted_id
 
 
 class TwitterHandler(APIHandler):

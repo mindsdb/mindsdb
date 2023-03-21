@@ -27,7 +27,7 @@ MindsDB locally using
 
 I'm working in MindsDB's Cloud Editor for this tutorial, so I'm going to start by doing the following:
 
-1. Visit [MindsDB Cloud Editor]()
+1. Visit [MindsDB Cloud Editor](https://cloud.mindsdb.com/)
 2. Click 'Login' or 'Create Account' and authenticate
 3. Once logged in, click **Add Data**
 4. Select **"Files"**
@@ -37,21 +37,24 @@ I'm working in MindsDB's Cloud Editor for this tutorial, so I'm going to start b
 8. Use `SELECT` SQL command to confirm the data was uploaded successfully:
 
 ***input:***
-
 ```sql
 SELECT * FROM files.dataset LIMIT 5;
 ```
 
 ***output:***
-
 ```
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
-| labels |             text           |      text_hi   |             text_de  |              text_fr       |
+| labels |             text           |      text_hi   |             text_de  |   text_fr                         |
 +------------+--- ---------+-----------------------------------------------------------------+--------------------------------+
-| ham    | 'Go until jurong, crazy..' | 'Dakag बिंदु तक.'  | 'Gehen bis jurong..'| 'Allez jusqu...'           |
+| ham    | 'Go until jurong, crazy..' | 'Dakag बिंदु तक.'  | 'Gehen bis jurong..'| 'Allez jusqu...'                  |
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
 | ham   | 'Ok lar... Joking wif u...' | `ओके लामर.... `   | `Ok... joking'   | `J'ai fait une blague sur le wif...`|
-+------------+-------------+-----------------------------------------------------------------
-+--------------------------------+
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| spam  | 'Free entry in 2 a wkly...' | 'Fktatatat मई...'| 'Freier Eintrit' | 'Entrée libre dans 2 a wkly comp...'|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
 ```
+
+## Creating a Predictor
+
+Now that our data is ready, we're going to use MindsDB's built-in SQL editor to create our prediction model. 
 

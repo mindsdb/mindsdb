@@ -9,6 +9,7 @@ import pandas as pd
 import tweepy
 
 from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 
 from mindsdb_sql.parser import ast
 from mindsdb_sql.planner.utils import query_traversal
@@ -201,12 +202,15 @@ class TwitterHandler(APIHandler):
         args = kwargs.get('connection_data', {})
 
         self.connection_args = {}
+        handler_config = Config().get('twitter_handler', {})
         for k in ['bearer_token', 'consumer_key', 'consumer_secret',
                   'access_token', 'access_token_secret', 'wait_on_rate_limit']:
             if k in args:
                 self.connection_args[k] = args[k]
             elif f'TWITTER_{k.upper()}' in os.environ:
                 self.connection_args[k] = os.environ[f'TWITTER_{k.upper()}']
+            elif k in handler_config:
+                self.connection_args[k] = handler_config[k]
 
         self.api = None
         self.is_connected = False

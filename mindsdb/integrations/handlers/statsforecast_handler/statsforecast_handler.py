@@ -143,7 +143,7 @@ class StatsForecastHandler(BaseMLEngine):
             return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "frequency", "season_length"]})
 
         if attribute == "features":
-            return pd.DataFrame({"ds": [model_args["order_by"]], "y": model_args["target"], "unique_id": model_args["group_by"]})
+            return pd.DataFrame({"ds": [model_args["order_by"]], "y": model_args["target"], "unique_id": [model_args["group_by"]]})
 
         if attribute == "ensemble":
             raise Exception(f"DESCRIBE {attribute} is not supported by this Handler.")

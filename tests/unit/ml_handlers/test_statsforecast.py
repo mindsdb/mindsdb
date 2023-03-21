@@ -78,6 +78,9 @@ class TestStatsForecast(BaseExecutorTest):
         )
         assert list(round(result_df["target_col"])) == [42, 43, 44]
 
+        describe_result = self.run_sql('describe proj.model_1_group.features')
+        assert describe_result["unique_id"][0] == ["group_col"]
+
         # now add more groups
         self.run_sql(
             """
@@ -102,6 +105,9 @@ class TestStatsForecast(BaseExecutorTest):
         """
         )
         assert list(round(result_df["target_col"])) == [32, 33, 34]
+
+        describe_result = self.run_sql('describe proj.model_multi_group.features')
+        assert describe_result["unique_id"][0] == ["group_col", "group_col_2", "group_col_3"]
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_model_choice(self, mock_handler):
@@ -169,7 +175,7 @@ class TestStatsForecast(BaseExecutorTest):
         describe_features = self.run_sql('describe proj.modelx.features')
         assert describe_features["ds"][0] == "ds"
         assert describe_features["y"][0] == "y"
-        assert describe_features["unique_id"][0] == "unique_id"
+        assert describe_features["unique_id"][0] == ["unique_id"]
 
         with pytest.raises(Exception) as e:
             self.run_sql('describe proj.modelx.ensemble')

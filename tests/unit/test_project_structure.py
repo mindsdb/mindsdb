@@ -546,8 +546,9 @@ class TestJobs(BaseExecutorDummyML):
 
         # run scheduler once
         data_handler.reset_mock()
-        from mindsdb.interfaces.jobs.scheduler import check_timetable
-        check_timetable(config={})
+        from mindsdb.interfaces.jobs.scheduler import Scheduler
+        scheduler = Scheduler({})
+        scheduler.check_timetable()
 
         # check query to integration
         assert data_handler().query.call_args[0][0].to_string() ==\
@@ -566,12 +567,12 @@ class TestJobs(BaseExecutorDummyML):
         assert ret.PROJECT[0] == 'proj2' and ret.NAME[0] == 'j2'
 
         # run once again
-        check_timetable(config={})
+        scheduler.check_timetable()
 
         # job wasn't executed
         ret = self.run_sql('select * from jobs_history', database='proj2')
         assert len(ret) == 1
-        prev_run = ret.START_AT[0]
+        prev_run = ret.RUN_START[0]
 
         # shift 'next run' and run once again
         job = self.db.Jobs.query.filter(self.db.Jobs.name == 'j2').first()
@@ -579,7 +580,7 @@ class TestJobs(BaseExecutorDummyML):
         self.db.session.commit()
 
         data_handler.reset_mock()
-        check_timetable(config={})
+        scheduler.check_timetable()
 
         # check query to integration
         assert data_handler().query.call_args[0][0].to_string() == f"SELECT * FROM tbl1 WHERE tbl1.b > '{prev_run.strftime('%Y-%m-%d %H:%M:%S')}'"

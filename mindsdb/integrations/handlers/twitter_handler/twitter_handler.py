@@ -169,7 +169,8 @@ class TweetsTable(APITable):
                         r = requests.get(media_url)
                         inmemoryfile = io.BytesIO(r.content)
                         # upload media to twitter
-                        media = self.handler.api.media_upload(file=inmemoryfile)
+                        api = self.handler.connect(api_version=1)
+                        media = api.media_upload(file=inmemoryfile)
                         del params['media_url']
                         params['media_ids'] = [media.media_id]
                     except ValueError:
@@ -240,12 +241,23 @@ class TwitterHandler(APIHandler):
         tweets = TweetsTable(self)
         self._register_table('tweets', tweets)
 
-    def connect(self):
+    def connect(self, api_version=2):
         """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""  # noqa
 
         if self.is_connected is True:
             return self.api
-
+        # if version 1, do not hold connection in self.api, simply return api object
+        if api_version == 1:
+            auth = tweepy.OAuthHandler(
+                self.connection_args['consumer_key'],
+                self.connection_args['consumer_secret']
+            )
+            auth.set_access_token(
+                self.connection_args['access_token'],
+                self.connection_args['access_token_secret']
+            )
+            return tweepy.API(auth)
+        
         self.api = tweepy.Client(**self.connection_args)
 
         self.is_connected = True

@@ -14,7 +14,7 @@ from tests.unit.executor_test_base import BaseExecutorTest
 
 
 def test_choose_model():
-    # With this data and settings, AutoTheta should win
+    # With this data and settings, AutoETS should win
     model_args = {"horizon": 1, "frequency": "M", "model_name": "auto"}
     sample_df = AirPassengersDF.iloc[:10]
     best_model = choose_model(model_args, sample_df)

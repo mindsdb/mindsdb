@@ -12,8 +12,10 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 
+
 class DBHandlerException(Exception):
     pass
+
 
 class IntegrationDataNode(DataNode):
     type = 'integration'

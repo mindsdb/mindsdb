@@ -117,6 +117,11 @@ class OpenAIHandler(BaseMLEngine):
             else:
                 raise Exception(f"Invalid operation mode. Please use one of {self.supported_modes}.")  # noqa
 
+        if pred_args.get('prompt_template', False):
+            base_template = pred_args['prompt_template']  # override with predict-time template if available
+        else:
+            base_template = args['prompt_template']
+
         # Image mode
         if args['mode'] == 'image':
             api_args = {
@@ -126,8 +131,14 @@ class OpenAIHandler(BaseMLEngine):
             }
             api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
             model_name = 'image'
-            prompts = list(df[args['question_column']].apply(lambda x: str(x)))
-            empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
+
+            if args.get('question_column'):
+                prompts = list(df[args['question_column']].apply(lambda x: str(x)))
+                empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
+            elif args.get('prompt_template'):
+                prompts, empty_prompt_ids = self._get_templated_prompts(base_template, df)
+            else:
+                raise Exception('Image mode needs either `prompt_template` or `question_column`.')
 
         # Chat or normal completion mode
         else:
@@ -156,37 +167,7 @@ class OpenAIHandler(BaseMLEngine):
                 raise Exception(f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}")  # noqa
 
             if args.get('prompt_template', False):
-                if pred_args.get('prompt_template', False):
-                    base_template = pred_args['prompt_template']  # override with predict-time template if available
-                else:
-                    base_template = args['prompt_template']
-                columns = []
-                spans = []
-                matches = list(re.finditer("{{(.*?)}}", base_template))
-
-                first_span = matches[0].start()
-                last_span = matches[-1].end()
-
-                for m in matches:
-                    columns.append(m[0].replace('{', '').replace('}', ''))
-                    spans.extend((m.start(), m.end()))
-
-                spans = spans[1:-1]
-                template = [base_template[s:e] for s, e in zip(spans, spans[1:])]
-                template.insert(0, base_template[0:first_span])
-                template.append(base_template[last_span:])
-
-                empty_prompt_ids = np.where(df[columns].isna().all(axis=1).values)[0]
-
-                df['__mdb_prompt'] = ''
-                for i in range(len(template)):
-                    atom = template[i]
-                    if i < len(columns):
-                        col = df[columns[i]].replace(to_replace=[None], value='')  # add empty quote if data is missing
-                        df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col
-                    else:
-                        df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
-                prompts = list(df['__mdb_prompt'])
+                prompts, empty_prompt_ids = self._get_templated_prompts(base_template, df)
 
             elif args.get('context_column', False):
                 empty_prompt_ids = np.where(df[[args['context_column'],
@@ -548,3 +529,35 @@ class OpenAIHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
         shutil.rmtree(temp_storage_path)
+
+    @staticmethod
+    def _get_templated_prompts(base_template, df):
+        columns = []
+        spans = []
+        matches = list(re.finditer("{{(.*?)}}", base_template))
+
+        first_span = matches[0].start()
+        last_span = matches[-1].end()
+
+        for m in matches:
+            columns.append(m[0].replace('{', '').replace('}', ''))
+            spans.extend((m.start(), m.end()))
+
+        spans = spans[1:-1]
+        template = [base_template[s:e] for s, e in zip(spans, spans[1:])]
+        template.insert(0, base_template[0:first_span])
+        template.append(base_template[last_span:])
+
+        empty_prompt_ids = np.where(df[columns].isna().all(axis=1).values)[0]
+
+        df['__mdb_prompt'] = ''
+        for i in range(len(template)):
+            atom = template[i]
+            if i < len(columns):
+                col = df[columns[i]].replace(to_replace=[None], value='')  # add empty quote if data is missing
+                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col
+            else:
+                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
+        prompts = list(df['__mdb_prompt'])
+
+        return prompts, empty_prompt_ids

@@ -4,10 +4,10 @@ FROM python:3.7
 RUN apt update && apt-get upgrade -y && apt install -y build-essential
 
 # db2 requirement
-RUN apt install -y libxml2 || true
+RUN apt install -y libxml2 libmagic1 || true
 
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir boto3
+    pip3 install --no-cache-dir boto3 psycopg2-binary 
 
 WORKDIR /
 COPY requirements.txt /requirements.txt

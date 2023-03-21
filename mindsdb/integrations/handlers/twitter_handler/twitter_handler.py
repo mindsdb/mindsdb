@@ -1,12 +1,15 @@
+import re
+import os
 import datetime as dt
-import tweepy
 import ast
 from collections import defaultdict
 import pytz
 
 import pandas as pd
+import tweepy
 
 from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 
 from mindsdb_sql.parser import ast
 from mindsdb_sql.planner.utils import query_traversal
@@ -85,7 +88,7 @@ class TweetsTable(APITable):
             params['max_results'] = query.limit.value
 
         params['expansions'] = ['author_id', 'in_reply_to_user_id']
-        params['tweet_fields'] = ['created_at']
+        params['tweet_fields'] = ['created_at', 'conversation_id']
         params['user_fields'] = ['name', 'username']
 
         if 'query' not in params:
@@ -110,12 +113,19 @@ class TweetsTable(APITable):
 
         if len(columns) == 0:
             columns = self.get_columns()
+
+        # columns to lower case
+        columns = [name.lower() for name in columns]
+
         if len(result) == 0:
             result = pd.DataFrame([], columns=columns)
         else:
             # add absent columns
             for col in set(columns) & set(result.columns) ^ set(columns):
                 result[col] = None
+
+            # filter by columns
+            result = result[columns]
         return result
 
     def get_columns(self):
@@ -127,19 +137,59 @@ class TweetsTable(APITable):
             'author_id',
             'author_name',
             'author_username',
+            'conversation_id',
             'in_reply_to_user_id',
             'in_reply_to_user_name',
             'in_reply_to_user_username'
         ]
 
-    def insert(self, query:ast.Insert):
+    def insert(self, query: ast.Insert):
         # https://docs.tweepy.org/en/stable/client.html#tweepy.Client.create_tweet
         columns = [col.name for col in query.columns]
+
+        insert_params = ('consumer_key', 'consumer_secret', 'access_token', 'access_token_secret')
+        for p in insert_params:
+            if p not in self.handler.connection_args:
+                raise Exception(f'To insert data into Twitter, you need to provide the following parameters when connecting it to MindsDB: {insert_params}')  # noqa
+
         for row in query.values:
             params = dict(zip(columns, row))
 
-            print('create_tweet', params)
-            self.handler.call_twitter_api('create_tweet', params)
+            # split long text over 280 symbols
+            max_text_len = 280
+            text = params['text']
+            if len(text) <= 280:
+                self.handler.call_twitter_api('create_tweet', params)
+                continue
+
+            words = re.split('( )', text)
+
+            messages = []
+
+            text2 = ''
+            for word in words:
+                if len(text2) + len(word) > max_text_len - 3 - 7:  # 3 is for ..., 7 is for (10/11)
+                    messages.append(text2.strip())
+
+                    text2 = ''
+                text2 += word
+
+            # the last message
+            if text2.strip() != '':
+                messages.append(text2.strip())
+
+            len_messages = len(messages)
+            for i, text in enumerate(messages):
+                if i < len_messages - 1:
+                    text += '...'
+                else:
+                    text += ' '
+                text += f'({i + 1}/{len_messages})'
+
+                params['text'] = text
+                ret = self.handler.call_twitter_api('create_tweet', params)
+                inserted_id = ret.id[0]
+                params['in_reply_to_tweet_id'] = inserted_id
 
 
 class TwitterHandler(APIHandler):
@@ -157,10 +207,15 @@ class TwitterHandler(APIHandler):
         args = kwargs.get('connection_data', {})
 
         self.connection_args = {}
+        handler_config = Config().get('twitter_handler', {})
         for k in ['bearer_token', 'consumer_key', 'consumer_secret',
                   'access_token', 'access_token_secret', 'wait_on_rate_limit']:
             if k in args:
                 self.connection_args[k] = args[k]
+            elif f'TWITTER_{k.upper()}' in os.environ:
+                self.connection_args[k] = os.environ[f'TWITTER_{k.upper()}']
+            elif k in handler_config:
+                self.connection_args[k] = handler_config[k]
 
         self.api = None
         self.is_connected = False
@@ -169,7 +224,7 @@ class TwitterHandler(APIHandler):
         self._register_table('tweets', tweets)
 
     def connect(self):
-        """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""
+        """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""  # noqa
 
         if self.is_connected is True:
             return self.api
@@ -238,6 +293,8 @@ class TwitterHandler(APIHandler):
 
         max_page_size = 100
         min_page_size = 10
+        left = None
+
         while True:
             if count_results is not None:
                 left = count_results - len(data)
@@ -262,7 +319,7 @@ class TwitterHandler(APIHandler):
                     includes[table].extend([r.data for r in records])
 
             if isinstance(resp.data, list):
-                data.extend([r.data for r in resp.data])
+                chunk = [r.data for r in resp.data]
             else:
                 if isinstance(resp.data, dict):
                     data.append(resp.data)
@@ -270,6 +327,11 @@ class TwitterHandler(APIHandler):
                     data.append(resp.data.data)
                 break
 
+            # limit output
+            if left is not None:
+                chunk = chunk[:left]
+
+            data.extend(chunk)
             # next page ?
             if count_results is not None and hasattr(resp, 'meta') and 'next_token' in resp.meta:
                 params['next_token'] = resp.meta['next_token']

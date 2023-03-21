@@ -6,7 +6,6 @@ from collections import defaultdict
 import pytz
 import io
 import requests
-from PIL import Image
 
 import pandas as pd
 import tweepy
@@ -169,11 +168,12 @@ class TweetsTable(APITable):
                         # create an in memory file
                         r = requests.get(media_url)
                         inmemoryfile = io.BytesIO(r.content)
-                        img = Image.open(inmemoryfile)
+                        
                         # upload media to twitter
                         api = self.handler.connect(api_version=1)
-                        # only support png urls
-                        media = api.media_upload(filename="somefile.png", file=inmemoryfile)
+                        content_type = r.headers['Content-Type']
+                        file_type = content_type.split('/')[-1]
+                        media = api.media_upload(filename="somefile.{file_type}".format(file_type=file_type), file=inmemoryfile)
                         del params['media_url']
                         params['media_ids'] = [media.media_id]
                     except ValueError:

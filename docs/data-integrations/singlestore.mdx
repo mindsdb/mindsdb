@@ -1,0 +1,35 @@
+---
+title: SingleStore
+sidebarTitle: SingleStore
+---
+
+# SingleStore Handler
+
+This is the implementation of the SingleStore handler for MindsDB.
+
+## SingleStore
+SingleStore is a proprietary, cloud-native database designed for data-intensive applications. A distributed, relational, SQL database management system that features ANSI SQL support, it is known for speed in data ingest, transaction processing, and query processing.
+
+## Implementation
+This handler was implemented using the `mysql-connector-python` library.
+
+The required arguments to establish a connection are,
+* `host`: host name or IP address
+* `port`: port used to make TCP/IP connection
+* `database`: database name
+* `user`: database user
+* `password`: database password
+
+## Usage
+In order to make use of this handler and connect to SingleStore in MindsDB, the following syntax can be used,
+```sql
+CREATE DATABASE singlestore_datasource
+WITH ENGINE = 'singlestore',
+PARAMETERS = {
+  "host": "127.0.0.1",
+  "port": 3306,
+  "database": "singlestore",
+  "user": "root",
+  "password": "password"
+};
+```

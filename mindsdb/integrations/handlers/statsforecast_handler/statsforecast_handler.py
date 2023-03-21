@@ -62,9 +62,9 @@ def choose_model(model_args, training_df):
     """
     if model_args["model_name"] == "auto":
         model_args["model_name"] = find_best_model(model_args["frequency"], model_args["horizon"], training_df)
-    season_length = get_season_length(model_args["frequency"])
+    model_args["season_length"] = get_season_length(model_args["frequency"])
     model = model_dict[model_args["model_name"]]
-    return model(season_length=season_length)
+    return model(season_length=model_args["season_length"])
 
 
 class StatsForecastHandler(BaseMLEngine):
@@ -137,6 +137,15 @@ class StatsForecastHandler(BaseMLEngine):
 
     def describe(self, attribute=None):
         model_args = self.model_storage.json_get("model_args")
+        if attribute == "model":
+            return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "frequency", "season_length"]})
+
+        if attribute == "features":
+            return pd.DataFrame({"ds": [model_args["order_by"]], "y": model_args["target"], "unique_id": model_args["group_by"]})
+
+        if attribute == "ensemble":
+            raise Exception(f"DESCRIBE {attribute} is not supported by this Handler.")
+
         outputs = model_args["target"]
         inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]]
         return pd.DataFrame({"accuracies": model_args["accuracy"], "outputs": outputs, "inputs": [inputs]})

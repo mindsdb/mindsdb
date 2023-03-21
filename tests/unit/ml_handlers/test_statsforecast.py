@@ -158,6 +158,15 @@ class TestStatsForecast(BaseExecutorTest):
         assert describe_result["outputs"][0] == "y"
         assert describe_result["accuracies"][0] < 1
 
+        describe_model = self.run_sql('describe proj.modelx.model')
+        assert describe_model["model_name"][0] == "AutoCES"
+        assert describe_model["frequency"][0] == "H"
+        assert describe_model["season_length"][0] == 24
+
+        describe_features = self.run_sql('describe proj.modelx.features')
+        assert describe_features["ds"][0] == "ds"
+        assert describe_features["y"][0] == "y"
+        assert describe_features["unique_id"][0] == "unique_id"
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_auto_model_selection(self, mock_handler):

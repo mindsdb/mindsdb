@@ -161,6 +161,20 @@ class TweetsTable(APITable):
             max_text_len = 280
             text = params['text']
             if len(text) <= 280:
+                # Post image if column media_url is provided, only do this on last tweet
+                if 'media_url' in params:
+                    media_url = params['media_url']
+                    try:
+                        # create an in memory file
+                        r = requests.get(media_url)
+                        inmemoryfile = io.BytesIO(r.content)
+                        # upload media to twitter
+                        media = self.handler.api.media_upload(file=inmemoryfile)
+                        del params['media_url']
+                        params['media_ids'] = [media.media_id]
+                    except ValueError:
+                        del params['media_url']
+                        log.logger.error(f'Error uploading media to Twitter api: {ValueError}!')
                 self.handler.call_twitter_api('create_tweet', params)
                 continue
 
@@ -186,20 +200,6 @@ class TweetsTable(APITable):
                     text += '...'
                 else:
                     text += ' '
-                    # Post image if column media_url is provided, only do this on last tweet
-                    if 'media_url' in params:
-                        media_url = params['media_url']
-                        try:
-                            # create an in memory file
-                            r = requests.get(media_url)
-                            inmemoryfile = io.BytesIO(r.content)
-                            # upload media to twitter
-                            media = self.handler.api.media_upload(file=inmemoryfile)
-                            del params['media_url']
-                            params['media_ids'] = [media.media_id]
-                        except ValueError:
-                            del params['media_url']
-                            log.logger.error(f'Error uploading media to Twitter api: {ValueError}!')
 
                 text += f'({i + 1}/{len_messages})'
 

@@ -42,18 +42,21 @@ def get_season_length(frequency):
     return season_dict[new_freq] if new_freq in season_dict else 1
 
 
-def find_best_model(frequency, horizon, df):
-    """Finds the best model with in-sample cross-validation."""
-    season_length = get_season_length(frequency)
-    models = [model(season_length=season_length) for model in model_dict.values()]
-    sf = StatsForecast(models, frequency)
-    sf.cross_validation(horizon, df, fitted=True)
+def get_insample_cv_results(model_args, df):
+    """Gets insample cross validation results"""
+    season_length = get_season_length(model_args["frequency"])
+    if model_args["model_name"] == "auto":
+        models = [model(season_length=season_length) for model in model_dict.values()]
+    else:
+        models = [model_dict[model_args["model_name"]](season_length=season_length)]
+
+    sf = StatsForecast(models, model_args["frequency"])
+    sf.cross_validation(model_args["horizon"], df, fitted=True)
     results_df = sf.cross_validation_fitted_values()
-    return get_best_model_from_results_df(results_df)
+    return results_df.rename({"CES": "AutoCES"}, axis=1)  # Fixes a Nixtla bug
 
 
-
-def choose_model(model_args, training_df):
+def choose_model(model_args, results_df):
     """Chooses which model to use in StatsForecast.
 
     If the user passes 'auto' for their model_name, this will choose the best
@@ -61,7 +64,7 @@ def choose_model(model_args, training_df):
     the model_args dictionnary, replacing 'auto' with the best-performing model.
     """
     if model_args["model_name"] == "auto":
-        model_args["model_name"] = find_best_model(model_args["frequency"], model_args["horizon"], training_df)
+        model_args["model_name"] = get_best_model_from_results_df(results_df)
     model_args["season_length"] = get_season_length(model_args["frequency"])
     model = model_dict[model_args["model_name"]]
     return model(season_length=model_args["season_length"])
@@ -98,14 +101,13 @@ class StatsForecastHandler(BaseMLEngine):
         training_df = transform_to_nixtla_df(df, model_args)
 
         model_args["model_name"] = DEFAULT_MODEL_NAME if "model_name" not in using_args else using_args["model_name"]
-        model = choose_model(model_args, training_df)
+
+        results_df = get_insample_cv_results(model_args, training_df)
+        model = choose_model(model_args, results_df)
         sf = StatsForecast([model], freq=model_args["frequency"], df=training_df)
         fitted_models = sf.fit().fitted_
 
         # Get in-sample cross validation accuracy
-        sf.cross_validation(model_args["horizon"], fitted=True)
-        results_df = sf.cross_validation_fitted_values()
-        results_df = results_df.rename({"CES": "AutoCES"}, axis=1)  # Fixes a Nixtla bug
         model_args["accuracy"] = r2_score(results_df[model_args["model_name"]], results_df["y"])
 
         ###### persist changes to handler folder

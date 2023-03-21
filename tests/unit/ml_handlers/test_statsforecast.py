@@ -8,7 +8,7 @@ from statsforecast.models import AutoCES
 from statsforecast.utils import AirPassengersDF
 from statsforecast import StatsForecast
 from mindsdb.integrations.utilities.time_series_utils import get_best_model_from_results_df
-from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import choose_model, model_dict
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import choose_model, model_dict, get_insample_cv_results
 from mindsdb_sql import parse_sql
 from tests.unit.ml_handlers.test_time_series_utils import create_mock_df
 from tests.unit.executor_test_base import BaseExecutorTest
@@ -18,7 +18,8 @@ def test_choose_model():
     # With this data and settings, AutoETS should win
     model_args = {"horizon": 1, "frequency": "M", "model_name": "auto"}
     sample_df = AirPassengersDF.iloc[:10]
-    best_model = choose_model(model_args, sample_df)
+    results_df = get_insample_cv_results(model_args, sample_df)
+    best_model = choose_model(model_args, results_df)
     assert best_model.alias == "AutoETS"
 
 
@@ -220,3 +221,6 @@ class TestStatsForecast(BaseExecutorTest):
         # check against ground truth
         mindsdb_result = result_df.iloc[:, -1]
         assert np.allclose(mindsdb_result, package_predictions)
+
+        describe_result = self.run_sql('describe proj.modelx')
+        assert describe_result["accuracies"][0] < 1

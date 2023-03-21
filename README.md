@@ -1,8 +1,8 @@
 <h1 align="center">
 	<img width="300" src="https://github.com/mindsdb/mindsdb_native/blob/stable/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB">
 	<br>
-
 </h1>
+
 <div align="center">
 
 <a
@@ -19,33 +19,34 @@
     />
 </a>
 
-<br>
+<p>
 	<a href="https://github.com/mindsdb/mindsdb/actions"><img src="https://github.com/mindsdb/mindsdb/workflows/MindsDB%20workflow/badge.svg" alt="MindsDB workflow"></a>
-
-  <a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.7.x%20|%203.8.x|%203.9.x-brightgreen.svg" alt="Python supported"></a>
-   <a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a>
-<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">  <a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
-  <a href="https://www.mindsdb.com/"><img src="https://img.shields.io/website?url=https%3A%2F%2Fwww.mindsdb.com%2F" alt="MindsDB Website"></a>
-    <a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ" target="_blank"><img src="https://img.shields.io/badge/slack-@mindsdbcommunity-brightgreen.svg?logo=slack " alt="MindsDB Community"></a>
-	</br>
+	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.7.x%20|%203.8.x|%203.9.x-brightgreen.svg" alt="Python supported"></a>
+	<a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a>
+	<br />
+	<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">  <a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
+	<a href="https://ossrank.com/p/630"><img src="https://shields.io/endpoint?url=https://ossrank.com/shield/630"></a>
+	<a href="https://www.mindsdb.com/"><img src="https://img.shields.io/website?url=https%3A%2F%2Fwww.mindsdb.com%2F" alt="MindsDB Website"></a>
+	<a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ" target="_blank"><img src="https://img.shields.io/badge/slack-@mindsdbcommunity-brightgreen.svg?logo=slack " alt="MindsDB Community"></a>
+	<br />
 	<a href="https://deepnote.com/project/Machine-Learning-With-SQL-8GDF7bc7SzKlhBLorqoIcw/%2Fmindsdb_demo.ipynb" target="_blank"><img src="https://deepnote.com/buttons/launch-in-deepnote-white.svg" alt="Launch in Deepnote"></a>
-	</br>
+	<br />
 	<a href="https://gitpod.io/#https://github.com/mindsdb/mindsdb" target="_blank"><img src="https://gitpod.io/button/open-in-gitpod.svg" alt="Open in Gitpod"></a>
-	</br>
+</p>
 
-  <h3 align="center">
-    <a href="https://www.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Website</a>
-    <span> | </span>
-    <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
-    <span> | </span>
-    <a href="https://mindsdb.com/joincommunity">Community Slack</a>
-    <span> | </span>
-    <a href="https://github.com/mindsdb/mindsdb/projects?type=classic">Contribute</a>
-    <span> | </span>
-    <a href="https://cloud.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Demo</a>
-    <span> | </span>
-    <a href="https://mindsdb.com/mindsdb-hackathon?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Hackathon</a>
-  </h3>
+<h3 align="center">
+	<a href="https://www.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Website</a>
+	<span> | </span>
+	<a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
+	<span> | </span>
+	<a href="https://mindsdb.com/joincommunity">Community Slack</a>
+	<span> | </span>
+	<a href="https://github.com/mindsdb/mindsdb/projects?type=classic">Contribute</a>
+	<span> | </span>
+	<a href="https://cloud.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Demo</a>
+	<span> | </span>
+	<a href="https://mindsdb.com/mindsdb-hackathon?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Hackathon</a>
+</h3>
 
 </div>
 

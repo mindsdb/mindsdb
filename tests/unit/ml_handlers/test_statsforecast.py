@@ -2,6 +2,7 @@ import time
 from unittest.mock import patch
 import numpy as np
 import pandas as pd
+import pytest
 
 from statsforecast.models import AutoCES
 from statsforecast.utils import AirPassengersDF
@@ -167,6 +168,11 @@ class TestStatsForecast(BaseExecutorTest):
         assert describe_features["ds"][0] == "ds"
         assert describe_features["y"][0] == "y"
         assert describe_features["unique_id"][0] == "unique_id"
+
+        with pytest.raises(Exception) as e:
+            self.run_sql('describe proj.modelx.ensemble')
+            assert "ensemble is not supported" in str(e)
+
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_auto_model_selection(self, mock_handler):

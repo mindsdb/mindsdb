@@ -170,11 +170,10 @@ class TweetsTable(APITable):
                         r = requests.get(media_url)
                         inmemoryfile = io.BytesIO(r.content)
                         img = Image.open(inmemoryfile)
-                        file_format = img.format
-                        filename = 'someimage.{ext}'.format(ext=img.format.lower())
                         # upload media to twitter
                         api = self.handler.connect(api_version=1)
-                        media = api.media_upload(filename=filename, file=inmemoryfile)
+                        # only support png urls
+                        media = api.media_upload(filename="somefile.png", file=inmemoryfile)
                         del params['media_url']
                         params['media_ids'] = [media.media_id]
                     except ValueError:

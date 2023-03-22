@@ -1,7 +1,7 @@
 <h1 align="center">
 	<img width="300" src="https://github.com/mindsdb/mindsdb_native/blob/stable/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB">
 	<br>
-</h1> 
+</h1>
 
 <div align="center">
 

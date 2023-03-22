@@ -10,8 +10,6 @@ except ImportError:
     from ..executor_test_base import BaseExecutorTest
 
 
-# from tests.unit.executor_test_base import BaseExecutorTest
-
 class TestAutoGluon(BaseExecutorTest):
     def setup_method(self):
         super().setup_method()
@@ -58,14 +56,8 @@ class TestAutoGluon(BaseExecutorTest):
         self.set_handler(mock_handler, name='pg', tables={'df': self.df})
 
         # create predictor
-        self.run_sql('''
-           create model proj.modelx
-           from pg (select * from df)
-           predict c
-           using
-             engine='autogluon',
-             tag = 'test_model';
-        ''')
+        self.run_sql('''create model proj.modelx from pg (select * from df) predict c using engine='autogluon', 
+        tag = 'test_model';''')
         self.wait_predictor('proj', 'modelx')
 
         # run predict

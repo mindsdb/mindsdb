@@ -56,7 +56,7 @@ class TestAutoGluon(BaseExecutorTest):
         self.set_handler(mock_handler, name='pg', tables={'df': self.df})
 
         # create predictor
-        self.run_sql('''create model proj.modelx from pg (select * from df) predict c using engine='autogluon', 
+        self.run_sql('''create model proj.modelx from pg (select * from df) predict c using engine='autogluon',
         tag = 'test_model';''')
         self.wait_predictor('proj', 'modelx')
 

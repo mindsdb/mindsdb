@@ -11,7 +11,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-import mindsdb.grpc.db.common_pb2 as common__pb2
+import mindsdb.microservices_grpc.db.common_pb2 as common__pb2
 
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x08\x64\x62.proto\x1a\x0c\x63ommon.proto\"O\n\x0eHandlerContext\x12\x0f\n\x07\x63ontext\x18\x01 \x01(\t\x12\x14\n\x0chandler_type\x18\x02 \x01(\t\x12\x16\n\x0ehandler_params\x18\x03 \x01(\t\"E\n\x12NativeQueryContext\x12 \n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x0f.HandlerContext\x12\r\n\x05query\x18\x02 \x01(\t\"E\n\x12\x42inaryQueryContext\x12 \n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x0f.HandlerContext\x12\r\n\x05query\x18\x02 \x01(\x0c\"A\n\x0e\x43olumnsContext\x12 \n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x0f.HandlerContext\x12\r\n\x05table\x18\x02 \x01(\t2\xdc\x02\n\tDBService\x12-\n\x07\x43onnect\x12\x0f.HandlerContext\x1a\x0f.StatusResponse\"\x00\x12\x35\n\x0f\x43heckConnection\x12\x0f.HandlerContext\x1a\x0f.StatusResponse\"\x00\x12\x30\n\nDisconnect\x12\x0f.HandlerContext\x1a\x0f.StatusResponse\"\x00\x12/\n\x0bNativeQuery\x12\x13.NativeQueryContext\x1a\t.Response\"\x00\x12/\n\x0b\x42inaryQuery\x12\x13.BinaryQueryContext\x1a\t.Response\"\x00\x12)\n\tGetTables\x12\x0f.HandlerContext\x1a\t.Response\"\x00\x12*\n\nGetColumns\x12\x0f.ColumnsContext\x1a\t.Response\"\x00\x62\x06proto3')

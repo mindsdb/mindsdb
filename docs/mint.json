@@ -306,7 +306,7 @@
         },
         {
           "group": "Data Integrations",
-          "pages": [
+          "pages": [         
             "data-integrations/all-data-integrations",
             "data-integrations/twitter",
             "data-integrations/amazon-redshift",
@@ -314,7 +314,12 @@
             "data-integrations/cratedb",
             "data-integrations/cockroachdb",
             "data-integrations/ckan",
-            "data-integrations/databend"
+            "data-integrations/databend",
+            "data-integrations/Apache-Pinot",
+            "data-integrations/cassandra",            
+            "data-integrations/Couchbase",
+            "data-integrations/clickhouse",
+            "data-integrations/Airtable"
           ]
         },
         {

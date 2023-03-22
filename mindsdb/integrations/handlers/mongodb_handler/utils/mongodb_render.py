@@ -2,7 +2,7 @@ import datetime as dt
 
 from mindsdb_sql.parser.ast import *
 
-from .mongodb_query import MongoQuery
+from mindsdb.api.mongo.utilities.mongodb_query import MongoQuery
 
 
 class MongodbRender:

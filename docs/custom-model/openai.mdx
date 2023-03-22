@@ -18,6 +18,12 @@ USING
   api_key = 'YOUR_OPENAI_API_KEY';
 ```
 
+<Info>
+**Default Model**
+
+When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter in the `USING` clause of the `CREATE MODEL` statement.
+</Info>
+
 <Tip>
 Please note that when using MindsDB installation in Docker, it is required to provide own OpenAI API key.
 </Tip>

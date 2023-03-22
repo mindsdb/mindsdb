@@ -102,6 +102,14 @@ db.house_sales.find({
 })
 ```
 
+Append data to collection:
+
+```
+db.house_sales.insert({
+    'real_price': 10000
+})
+```
+
 ## Creating predictor:
 
 From mysql:
@@ -141,6 +149,25 @@ db.predictors.insert(
 }
 )
 ```
+
+Retrain predictor: 
+The same syntax as create model, but using "action": "retrain"
+```
+db.models.insert({
+     "name": "sales_model",
+     "action": "retrain",
+})
+```
+
+Adjust predictor: 
+The same syntax as create model, but using "action": "adjust"
+```
+db.models.insert({
+     "name": "sales_model",
+     "action": "adjust",
+})
+```
+
 
 Parameters of USING operator of sql query are located in training_options of mongo query 
 
@@ -191,6 +218,34 @@ db.sales_model.find(
     }
 })
 ```
+
+Alternative is to use aggregate function:
+
+```
+db.sales_model.aggregate([
+    {'$match': {
+        "collection": "mongo_int.house_sales", 
+        "query":  { 
+            'type': 'house',
+            "sale_date": {"$gt": ISODate("2018-03-31T00:00:00.000Z")}
+        }
+    }},
+    {'$project':  {
+       'house_sales.sale_price': 'real_price',
+       'sales_model.sale_price': 'predicted_price',
+    }},
+    {'$limit': 2},    
+    {'$out': {'db': 'photorep', 'coll': 'aaa', 'append': true}}
+])
+```
+
+'$match' step is required. The other steps are optional
+
+'$out' - stores result to table. Possible values:
+- {$out: 'photorep.aaa'} - create table aaa in integration photorep
+- {$out: {'db': 'photorep', 'coll': 'aaa'}} - the same as above
+- {$out: {'db': 'photorep', 'coll': 'aaa', 'append': true}} - append data to table
+
 
 One more example:
 
@@ -256,6 +311,53 @@ db.sales_model.stats({'scale':'ensemble'})
 ```
 db.predictors.deleteOne({'name': "sales_model"})
 ```
+
+## Jobs
+
+**Create**
+```
+db.jobs.insert({
+    'name': 'job1',
+    'schedule_str': 'every day',
+    'start_at': '2023-03-30',    
+    'end_at': '2023-03-30 11:11:11',
+    'query': "\
+        db.home_rentals_model.aggregate([\
+            {'$match': {\
+                'collection': 'example_db.demo_data.home_rentals',\
+                'query':  {\
+                    'number_of_rooms': 2\
+                }\
+            }},\
+            {'$project':  {\
+            'home_rentals.rental_price': 'real_price',\
+            'home_rentals_model.rental_price': 'predicted_price',\
+            }},\
+            {'$limit': 2},\
+            {'$out': {'db': 'photorep', 'coll': 'aaa', 'append': true}}\
+        ])\
+    "
+})
+```
+schedule_str, start_at, end_at are optional. 
+
+query - can be sql syntax string or mongo syntax string, 
+in case of mongo syntax it will be converted to sql
+
+One more example:
+```
+db.jobs.insert({
+    'name': 'job2',
+    'query': "select * from models"
+})
+```
+
+**Delete**
+
+```
+db.jobs.deleteOne({'name': "job1"})
+```
+
 
 ---
 

@@ -14,6 +14,7 @@ import openai
 import numpy as np
 import pandas as pd
 
+from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff, \
@@ -30,7 +31,10 @@ class OpenAIHandler(BaseMLEngine):
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
-        self.chat_completion_models = ('gpt-3.5-turbo', 'gpt-3.5-turbo-0301')
+        self.chat_completion_models = (
+            'gpt-3.5-turbo', 'gpt-3.5-turbo-0301',
+            'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-4-32k-0314'
+        )
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -272,6 +276,12 @@ class OpenAIHandler(BaseMLEngine):
             else:
                 return _submit_normal_completion(kwargs, prompts, api_args)
 
+        def _log_api_call(params, response):
+            params2 = params.copy()
+            params2.pop('api_key', None)
+            params2.pop('user', None)
+            log.logger.debug(f'>>>openai call: {params2}:\n{response}')
+
         def _submit_normal_completion(kwargs, prompts, api_args):
             def _tidy(comp):
                 tidy_comps = []
@@ -282,7 +292,10 @@ class OpenAIHandler(BaseMLEngine):
 
             kwargs['prompt'] = prompts
             kwargs = {**kwargs, **api_args}
-            return _tidy(openai.Completion.create(**kwargs))
+
+            resp = _tidy(openai.Completion.create(**kwargs))
+            _log_api_call(kwargs, resp)
+            return resp
 
         def _submit_chat_completion(kwargs, prompts, api_args, df, mode='conversational'):
             def _tidy(comp):
@@ -305,12 +318,18 @@ class OpenAIHandler(BaseMLEngine):
                                                                        kwargs['model'],
                                                                        api_args['max_tokens'])
                     pkwargs = {**kwargs, **api_args}
-                    last_completion_content = _tidy(openai.ChatCompletion.create(**pkwargs))
-                    completions.extend(last_completion_content)
+                    resp = _tidy(openai.ChatCompletion.create(**pkwargs))
+                    _log_api_call(pkwargs, resp)
+
+                    completions.extend(resp)
                 elif mode == 'default':
                     kwargs['messages'] = [initial_prompt] + [kwargs['messages'][-1]]
                     pkwargs = {**kwargs, **api_args}
-                    completions.extend(_tidy(openai.ChatCompletion.create(**pkwargs)))
+
+                    resp = _tidy(openai.ChatCompletion.create(**pkwargs))
+                    _log_api_call(pkwargs, resp)
+
+                    completions.extend(resp)
                 else:
                     # in "normal" conversational mode, we request completions only for the last row
                     last_completion_content = None
@@ -356,7 +375,8 @@ class OpenAIHandler(BaseMLEngine):
                                              prompts[i * max_batch_size:(i + 1) * max_batch_size],
                                              api_key,
                                              api_args,
-                                             args)
+                                             args,
+                                             df)
                 if not completion:
                     completion = partial
                 else:
@@ -373,7 +393,8 @@ class OpenAIHandler(BaseMLEngine):
                                              prompts[i * max_batch_size:(i + 1) * max_batch_size],
                                              api_key,
                                              api_args,
-                                             args)
+                                             args,
+                                             df)
                     promises.append({"choices": future})
             completion = None
             for p in promises:

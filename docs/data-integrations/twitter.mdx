@@ -13,75 +13,68 @@ If you don't already have a Twitter developer account, follow the steps in the v
 
 <Accordion title="How to Apply for a Twitter Developer Account" icon="twitter" iconType="thin">
 
-[Begin here to apply for a Twitter developer account](https://developer.twitter.com/apply-for-access)
+  [Begin here to apply for a Twitter developer account](https://developer.twitter.com/apply-for-access)
 
-<div style={{position: "relative", paddingBottom: "59.602649006622514%", height: 0}}><iframe src="https://www.youtube.com/embed/qVe7PeC0sUQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture; web-share" style={{position: "absolute", top: 0, left: 0, width: "100%", height: "100%"}}></iframe></div>
+  <div style={{position: "relative", paddingBottom: "59.602649006622514%", height: 0}}><iframe src="https://www.youtube.com/embed/qVe7PeC0sUQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture; web-share" style={{position: "absolute", top: 0, left: 0, width: "100%", height: "100%"}}></iframe></div>
 
-When presented with questions under *How will you use the Twitter API or Twitter Data?*, use answers similar to the ones below (tweak to fit your exact use case). The more thorough your answers are, the more likely it is your account will get approved.
+  When presented with questions under *How will you use the Twitter API or Twitter Data?*, use answers similar to the ones below (tweak to fit your exact use case). The more thorough your answers are, the more likely it is your account will get approved.
 
-**Intended Usage (In Your Words)**
+  **Intended Usage (In Your Words)**
 
-*I have a blog and want to educate users how to use the Twitter API with MindsDB.*
+  *I have a blog and want to educate users how to use the Twitter API with MindsDB.*
 
-*I will read tweets that mention me and use them with MindsDB machine learning to generate responses. I plan to post tweets 2-3 times a day and keep using Twitter like I normally would.*
+  *I will read tweets that mention me and use them with MindsDB machine learning to generate responses. I plan to post tweets 2-3 times a day and keep using Twitter like I normally would.*
 
-**Are you planning to analyze Twitter data?**
+  **Are you planning to analyze Twitter data?**
 
-*I plan to build machine learning algorithms based on Twitter data. I am interested in doing sentiment analysis and topic analysis.*
+  *I plan to build machine learning algorithms based on Twitter data. I am interested in doing sentiment analysis and topic analysis.*
 
-*I will potentially extract:*
-* *Tweet text*
-* *Favorite count and retweet count*
-* *Hashtags and mentions*
+  *I will potentially extract:*
+  * *Tweet text*
+  * *Favorite count and retweet count*
+  * *Hashtags and mentions*
 
+  **Will your app use Tweet, Retweet, Like, Follow, or Direct Message functionality?**
 
-**Will your app use Tweet, Retweet, Like, Follow, or Direct Message functionality?**
+  *I will use the Twitter API to post responses to tweets that mention me.*
 
-*I will use the Twitter API to post responses to tweets that mention me.*
+  *I will have word filters to make sure that I never share offensive or potentially controversial subjects.*
 
-*I will have word filters to make sure that I never share offensive or potentially controversial subjects.*
+  **Do you plan to display Tweets or aggregate data about Twitter content outside Twitter?**
 
+  *I plan to share aggregate data as examples for users of my upcoming blog. I don't intend to create an automated dashboard that consumes a lot of Twitter API calls.*
 
-**Do you plan to display Tweets or aggregate data about Twitter content outside Twitter?**
+  *Every API call will be done locally, or automated on a simple web server. Aggregate of data will be for educational purposes only.*
 
-*I plan to share aggregate data as examples for users of my upcoming blog. I don't intend to create an automated dashboard that consumes a lot of Twitter API calls.*
+  **Will your product, service, or analysis make Twitter content or derived information available to a government entity?**
 
-*Every API call will be done locally, or automated on a simple web server. Aggregate of data will be for educational purposes only.*
-
-
-**Will your product, service, or analysis make Twitter content or derived information available to a government entity?**
-
-Answer NO to this one.
+  Answer NO to this one.
 </Accordion>
-
-
 
 If you already have a Twitter developer account, you need to generate API keys following the instructions below or heading to the [Twitter developer website](https://developer.twitter.com/en).
 
-<Tip>
-**How to get API keys?**
-
-* Create an application with Read/Write permissions activated:
-  * Open [developer portal](https://developer.twitter.com/en/portal/projects-and-apps).
-  * Select the `Add app` button to create a new app.
-  * Select the `Create new` button.
-  * Select `Production` and give it a name.
-  * Copy and populate the following in the below `CREATE DATABASE` statement:
-    * `Bearer Token` as a value of the `bearer_token` parameter.
-    * `API Key` as a value of the `consumer_key` parameter.
-    * `API Key Secret` as a value of the `consumer_secret` parameter.
-* Setup user authentication settings:
-  * Click `Setup` under `User authentication settings`:
-  * On `Permissions`, select `Read and Write`.
-  * On `Type of app`, select `Web App`, `Automated App or Bot`.
-  * On `App info`, provide any URL for the callback URL and website URL (you can use the URL of this page).
-  * Click `Save`.
-* Generate access tokens:
-  * Once you are back in the app settings, click `Keys and Tokens`:
-  * Generate `Access Token` and `Access Token Secret` and populate it in the below `CREATE DATABASE` statement:
-    * `Access Token` as a value of the `access_token` parameter.
-    * `Access Token Secret` as a value of the `access_token_secret` parameter.
-</Tip>
+<Accordion title="How to Generate API Keys" icon="twitter" iconType="thin">
+  * Create an application with Read/Write permissions activated:
+    * Open [developer portal](https://developer.twitter.com/en/portal/projects-and-apps).
+    * Select the `Add app` button to create a new app.
+    * Select the `Create new` button.
+    * Select `Production` and give it a name.
+    * Copy and populate the following in the below `CREATE DATABASE` statement:
+      * `Bearer Token` as a value of the `bearer_token` parameter.
+      * `API Key` as a value of the `consumer_key` parameter.
+      * `API Key Secret` as a value of the `consumer_secret` parameter.
+  * Setup user authentication settings:
+    * Click `Setup` under `User authentication settings`:
+    * On `Permissions`, select `Read and Write`.
+    * On `Type of app`, select `Web App`, `Automated App or Bot`.
+    * On `App info`, provide any URL for the callback URL and website URL (you can use the URL of this page).
+    * Click `Save`.
+  * Generate access tokens:
+    * Once you are back in the app settings, click `Keys and Tokens`:
+    * Generate `Access Token` and `Access Token Secret` and populate it in the below `CREATE DATABASE` statement:
+      * `Access Token` as a value of the `access_token` parameter.
+      * `Access Token Secret` as a value of the `access_token_secret` parameter.
+</Accordion>
 
 Once you have all the tokens and keys, here is how to connect your Twitter account to MindsDB:
 

@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+from sklearn.metrics import mean_absolute_error
 
 DEFAULT_FREQUENCY = "D"
 
@@ -39,15 +41,15 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
 
     This will return the dataframe to the original format supplied by the MindsDB query.
     """
-    renaming_dict = {"ds": model_args["order_by"], model_args["model_name"]: model_args["target"]}
-    return_df = nixtla_df.reset_index().rename(renaming_dict, axis=1)
+    return_df = nixtla_df.reset_index()
+    return_df.columns = ["unique_id", "ds", model_args["target"]]
     if len(model_args["group_by"]) > 1:
         for i, group in enumerate(model_args["group_by"]):
             return_df[group] = return_df["unique_id"].apply(lambda x: x.split("|")[i])
     else:
         group_by_col = model_args["group_by"][0]
         return_df[group_by_col] = return_df["unique_id"]
-    return return_df.drop(["unique_id"], axis=1)
+    return return_df.drop(["unique_id"], axis=1).rename({"ds": model_args["order_by"]}, axis=1)
 
 
 def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
@@ -58,3 +60,16 @@ def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
     except TypeError:
         inferred_freq = default
     return inferred_freq if inferred_freq is not None else default
+
+
+def get_best_model_from_results_df(nixtla_results_df, error_metric=mean_absolute_error):
+    """Gets the best model based, on lowest error, from a results df
+    with a column for each nixtla model.
+    """
+    best_model, current_error = None, np.inf
+    for result_column in nixtla_results_df.columns[3:]:
+        model_error = error_metric(nixtla_results_df[result_column], nixtla_results_df["y"])
+        if model_error < current_error:
+            best_model = result_column
+            current_error = model_error
+    return best_model

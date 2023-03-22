@@ -130,9 +130,9 @@ select * from proj2.jobs_history  -- in 'proj2' project
 select * from information_schema.jobs_history  -- all jobs from all projects 
 ```
 
-Result columns: NAME, PROJECT, START_AT, END_AT, ERROR, QUERY
-- START_AT - when current execution starts
-- END_AT - when current execution ends
+Result columns: NAME, PROJECT, RUN_START, RUN_END, ERROR, QUERY
+- RUN_START - when current execution starts
+- RUN_END - when current execution ends
 - ERROR - information about error if execution was failed  
 
 ## config

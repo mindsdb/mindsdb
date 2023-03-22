@@ -32,11 +32,6 @@ class TestHTTP:
 
     @classmethod
     def setup_class(cls):
-        cls.config = json.loads(
-            Path(CONFIG_PATH).read_text()
-        )
-
-        cls.initial_integrations_names = list(cls.config['integrations'].keys())
         cls._sql_via_http_context = {}
 
     def sql_via_http(self, request: str, expected_resp_type: str = None, context: dict = None) -> dict:
@@ -61,13 +56,13 @@ class TestHTTP:
         self._sql_via_http_context = response['context']
         return response
 
-    def api_request(self, method, url, payload=None):
+    def api_request(self, method, url, payload=None, headers=None):
         method = method.lower()
 
         fnc = getattr(requests, method)
 
         url = f'{HTTP_API_ROOT}/{url.lstrip("/")}'
-        response = fnc(url, json=payload)
+        response = fnc(url, json=payload, headers=headers)
 
         return response
 
@@ -513,17 +508,19 @@ class TestHTTP:
 
         assert len(response.json()) == 2
 
-    @pytest.mark.parametrize("method,payload,expected_code,result",
+    @pytest.mark.parametrize("method,payload,expected_code,result,headers",
                              [
-                                 ("get", {}, 200, {}),
-                                 ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}),
-                                 ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}),
+                                 ("post", {}, 200, {}, {"company-id": "1"}),
+                                 ("get", {}, 200, {}, {"company-id": "1"}),
+                                 ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}, {"company-id": "1"}),
+                                 ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}, {"company-id": "1"}),
+                                 ("get", {}, 200, {}, {"company-id": "2"}),
                              ]
     )
-    def test_tabs(self, method, payload, expected_code, result):
+    def test_tabs(self, method, payload, expected_code, result, headers):
         uri = '/tabs/'
-        call_desc = f"{method.upper()} - {uri} payload={payload}"
-        resp = self.api_request(method, uri, payload=payload)
+        call_desc = f"{method.upper()} - {uri} payload={payload} headers={headers}"
+        resp = self.api_request(method, uri, payload=payload, headers=headers)
         assert resp.status_code == expected_code, \
                 f"expected to have {expected_code} for {call_desc}, but got {resp.status_code}"
         # no needs to check reponse body for POST request

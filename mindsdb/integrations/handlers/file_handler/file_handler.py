@@ -7,6 +7,8 @@ import traceback
 import tempfile
 from urllib.parse import urlparse
 
+       
+import magic
 import requests
 import pandas as pd
 from charset_normalizer import from_bytes
@@ -141,6 +143,7 @@ class FileHandler(DatabaseHandler):
     @staticmethod
     def _get_data_io(file_path):
         """
+        @TODO: Use python-magic to simplify the function and detect the file types as the xlsx example
         This gets a file either url or local file and defines what the format is as well as dialect
         :param file: file path or url
         :return: data_io, format, dialect
@@ -181,30 +184,11 @@ class FileHandler(DatabaseHandler):
         else:
             print("It's not parquet file. Checking for other formats")
 
-        # try to guess if its an excel file
-        xlsx_sig = b'\x50\x4B\x05\06'
-        # xlsx_sig2 = b'\x50\x4B\x03\x04'
-        xls_sig = b'\x09\x08\x10\x00\x00\x06\x05\x00'
-
-        # different whence, offset, size for different types
-        excel_meta = [('xls', 0, 512, 8), ('xlsx', 2, -22, 4)]
-
-        for filename, whence, offset, size in excel_meta:
-
-            try:
-                data.seek(offset, whence)  # Seek to the offset.
-                bytes = data.read(size)  # Capture the specified number of bytes.
-                data.seek(0)
-                codecs.getencoder('hex')(bytes)
-
-                if bytes == xls_sig:
-                    return data, 'xls', dialect
-                elif bytes == xlsx_sig:
-                    return data, 'xlsx', dialect
-
-            except Exception:
-                data.seek(0)
-
+        file_type = magic.from_file(file_path, mime=True)
+        if file_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']:
+            #for now we send xlsx for all excel types since we use pd.read_excel
+            return data, 'xlsx', dialect
+       
         # if not excel it can be a json file or a CSV, convert from binary to stringio
 
         byte_str = data.read()

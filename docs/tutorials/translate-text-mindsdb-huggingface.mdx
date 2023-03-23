@@ -7,14 +7,16 @@ sidebarTitle: Learn how to connect MindsDB to Hugging Face models for Multilingu
 
 In today's world, just about anything you want to know can be found online. The internet has completely revolutionized the way we share information. Internet reviews, social media comments, forums and messages have become significant. Put simply, the internet is now society's main form of communication... and it holds a lot of valuable data. Thanks to advances in technology, Natural Language Processing (NLP) techniques can now be used to extract meaningful insights from this data. 
 
-In today's tutorial, I'm going to show you how you can perform translation queries on your dataset with MindsDB, PostgreSQL and Hugging Face.
+In this tutorial, I'm going to show you how to use MindsDB and Hugging Face to identify spam in a multilingual dataset.
 
 ## Data Setup
 
-We're going to use this [dataset](https://www.kaggle.com/datasets/rajnathpatel/multilingual-spam-data?resource=download) for the text content in this tutorial. 
-Once we import our data, we're going to use HuggingFace's [BERT multilingual base model](https://huggingface.co/bert-base-multilingual-cased) to translate multilingual spam data (German, English, French) to English.
+We're going to use this [dataset](https://www.kaggle.com/datasets/rajnathpatel/multilingual-spam-data?resource=download) for this tutorial. Our **datasource** will be PostgreSQL.
 
-Make sure you have a working [MindsDB Cloud Acccount](https://cloud.mindsdb.com/) or a local installation of MindsDB running so you can follow along with this tutorial. 
+Make sure you have a working [MindsDB Cloud Acccount](https://cloud.mindsdb.com/) or a local installation of MindsDB running so you can follow along with this tutorial. I'm going to be using Docker to run MindsDB locally. You can learn how to setup Docker for MindsDB using the following resources:
+
+- **Video:** [Setting Up Docker for MindsDB](https://www.youtube.com/watch?v=dadY-cUpUm0&t=39s)
+- **Docs:** [Setup for Docker](https://docs.mindsdb.com/setup/self-hosted/docker)
 
 If you want to learn how to set up your account at MindsDB Cloud, follow
 [this guide](/setup/cloud/). Another way is to set up
@@ -24,7 +26,9 @@ MindsDB locally using
 
 ### Connecting the Data
 
-I'm working in MindsDB's Cloud Editor for this tutorial, so I'm going to start by doing the following:
+#### Adding Data in MindsDB Cloud Editor
+
+The instructions for importing data using MindsDB's Cloud Editor go as follows:
 
 1. Visit [MindsDB Cloud Editor](https://cloud.mindsdb.com/)
 2. Click 'Login' or 'Create Account' and authenticate
@@ -40,6 +44,31 @@ I'm working in MindsDB's Cloud Editor for this tutorial, so I'm going to start b
 SELECT * FROM files.dataset LIMIT 3;
 ```
 
+#### Local Setup
+
+I'm going to be working locally, so I'll start by heading over to [Kaggle](https://www.kaggle.com/) and downloading [this dataset](https://www.kaggle.com/datasets/rajnathpatel/multilingual-spam-data?resource=download). 
+
+### Understanding the Data
+
+The dataset we are working with contains **multilingual spam data** for English, Hindi, German, and French. It is primarily used to test to test the zero-shot transfer for text classification using pretrained language models. The original data was in English and was Machine Translated in Hindi, German and French. The dataset contained the multilingual text and corresponding labels:
+
+- ham- non spam text
+- spam- spam text
+
+Currently, MindsDB supports the following translation models:
+
+ -[x] English to French T5
+ -[x] French to English T5
+ -[x] Spanish to English
+
+{/* This dataset contains a few columns that are not supported by MindsDB at this time, so my next step is to simply open that `.csv` file and remove the following columns:
+-  "text_hi" 
+- "text_de" */}
+
+Now that I have my dataset, I'm going to use it to build my PostgreSQL database:
+
+
+
 ***output:***
 ```
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
@@ -52,45 +81,3 @@ SELECT * FROM files.dataset LIMIT 3;
 | spam  | 'Free entry in 2 a wkly...' | 'Fktatatat मई...'| 'Freier Eintrit' | 'Entrée libre dans 2 a wkly comp...'|
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
 ```
-
-```sql
-CREATE DATABASE nlp_translate
-WITH ENGINE = "postgres",
-PARAMETERS = {
-    "user": "demo_user",
-    "password": "demo_password",
-    "host": "3.220.66.106",
-    "port": "5432",
-    "database": "demo"
-    };
-```
-
-
-## Creating a Predictor
-
-Now that our data is ready, we're going to use MindsDB's built-in SQL editor to create our prediction model. 
-
-```sql
-CREATE MODEL text_translation
-PREDICT translation
-USING
-   engine = 'huggingface',
-   task = 'translation',
-   model_name = "bert/bert-base-multilingual-cased",
-   input_column = 'text',
-   labels = ['text_english','text_french','text_german'];
-```
-
-Upon first running this command I actually received the following output:
-
-```
-401 Client Error. (Request ID: Root=1-641bb7e4-1c00c0800f51a8b75622e267)
-
-Repository Not Found for url: https://huggingface.co/api/models/bert/bert-base-multilingual-cased.
-Please make sure you specified the correct `repo_id` and `repo_type`.
-If you are trying to access a private or gated repo, make sure you are authenticated.
-Invalid username or password.
-```
-
-After seeing this message, I simply copied the link provided by the output <https://huggingface.co/api/models/bert/bert-base-multilingual-cased> and pasted it into Chrrome. I was brought to a login screen, which tells me I need an account with HuggingFace if I want to use this model transformer.
-

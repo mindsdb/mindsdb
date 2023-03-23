@@ -29,7 +29,7 @@ The required arguments to establish a connection are,
 
 ## Usage
 In order to make use of this handler and connect to Matrixone in MindsDB, the following syntax can be used,
-~~~~sql
+```sql
 CREATE DATABASE matrixone_datasource
 WITH
 engine='matrixone',
@@ -40,9 +40,9 @@ parameters={
     "port":6001,
     "database":"mo_catalog"
 };
-~~~~
+```
 
 Now, you can use this established connection to query your database as follows,
-~~~~sql
+```sql
 SELECT * FROM Matrixone_datasource.demo;
-~~~~
+```

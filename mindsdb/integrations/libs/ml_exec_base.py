@@ -58,6 +58,10 @@ import torch.multiprocessing as mp
 mp.get_context('spawn')
 
 
+class MLEngineException(Exception):
+    pass
+
+
 @mark_process(name='learn')
 def learn_process(class_path, engine, context_dump, integration_id,
                   predictor_id, data_integration_ref, fetch_data_query,
@@ -388,7 +392,11 @@ class BaseMLEngineExec:
             args['dtype_dict'] = predictor_record.dtype_dict
             args['learn_args'] = predictor_record.learn_args
 
-        predictions = ml_handler.predict(df, args)
+        try:
+            predictions = ml_handler.predict(df, args)
+        except Exception as e:
+            msg = f'[{self.name}/{model_name}]: {str(e)}'
+            raise MLEngineException(msg) from e
 
         ml_handler.close()
 

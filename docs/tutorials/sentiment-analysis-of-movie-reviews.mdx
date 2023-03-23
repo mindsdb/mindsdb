@@ -1,29 +1,33 @@
----
-title: Sentiment Analysis on Movie Reviews using OpenAI and MongoDB
-sidebarTitle: Sentiment Analysis on Movie Reviews
----
+# Sentiment Analysis on Movie Reviews using OpenAI and MongoDB
 
 ## Introduction
 
-In this blog post, we present how to create OpenAI models within MongoDB. This example is a sentiment analysis where we infer emotions behind a text i.e, Movie Reviews.
+Good Day Devs! In this tutorial, we are going to analyse the sentiment on movie reviews using OpenAi and MongoDB. we'll use Movie Reviews Dataset from [`Hugging Face`](https://huggingface.co/datasets/rotten_tomatoes).
 
-- we'll use datasets from [`Hugging Face`](https://huggingface.co/datasets/rotten_tomatoes)
+- type of sentiment we are going to analyse for movie review
+  - positive
+  - neutral
+  - negative
 
-## Prerequisites
+## Data Setup
 
-To follow along, you can sign up for an account at [cloud.mindsdb.com](https://cloud.mindsdb.com/register/nlp). Alternatively, head to [MindsDB documentation](https://docs.mindsdb.com/) and follow the instructions to manually set up a local instance of MindsDB via [Docker](/setup/self-hosted/docker) or [pip](/setup/self-hosted/pip/source).
+- Download [`MongoDB Compass`](https://www.mongodb.com/try/download/compass) or [`MongoDB Shell`](https://www.mongodb.com/try/download/shell)
+- Download the [`Movie reviews`](https://huggingface.co/datasets/rotten_tomatoes) dataset
+- Run the `MongoDB Compass` or `MongoDB Shell`
 
-## How to Connect MindsDB to a Database
+## Connecting the Database
 
-We use a collection from our MongoDB public movie reviews database, so let’s start by connecting MindsDB to it.
+- Open the MongoDb Compass Or Shell.
+- Connect with URI : `mongodb://cloud.mindsdb.com`.
+- If you are using the MongoDB Shell then shell prompt will ask for `login-email` and `password` then hit `Enter` key to connect.
+- If you are using the MongoDB Compass then,
+  - add `URI` in the URI input area
+  - In `Advanced Connection Options` select `Authentication`
+  - Then select `Username/Password` ,enter credentials in it and hit `Connect` button.
 
-You can use [Mongo Compass](/connect/mongo-compass) or [Mongo Shell](/connect/mongo-shell) to connect your database, which we downloaded from [`Hugging Face`](https://huggingface.co/datasets/rotten_tomatoes), like this:
+After connecting with the MindsDB Cloud, let's bring our database using `insertOne` statement,
 
-## Connecting a Database
-
-We start by connecting a demo database using the CREATE DATABASE statement:
-
-- `host` : connection string for the mongodb
+- `host` : connection string for the mongodb which you can get from `MongoDB Atlas`.
 
 ```bash
 test> use mindsdb
@@ -35,7 +39,6 @@ mindsdb> db.databases.insertOne({
                 "database": "public"
             }
         })
-
 ```
 
 Here is the output:
@@ -47,11 +50,17 @@ Here is the output:
 }
 ```
 
-Let’s look at the data stored in the `movie_reviews` table that contains the input columns for the model:
+// By following these steps you're good to go with further steps i.e, analyse the movie review sentiment.
+
+## Understanding the Data
+
+We use the movie reviews dataset, where each row has a movie review and we'll predication whether the review is positive, negative or neutral.
+
+Let’s look at the data stored in the `movie_reviews` table that contains the input columns for the model.
 
 ```bash
 mindsdb> use mongo_demo_db
-mongo_demo_db> db.movie_reviews.find({}).limit(5)
+mongo_demo_db> db.movie_reviews.find({}).limit(3)
 ```
 
 Here is the output:
@@ -68,23 +77,16 @@ Here is the output:
 {
   _id : "64129d64e24d840208b2e49b",
   review : "ultimately , it ponders the reasons we need stories so much ."
-},
-{
-  _id : "64129d76e24d840208b2e49c",
-  review : "everytime you think undercover brother has run out of steam , it finds a new way to surprise and amuse"
-},
-{
-  _id : "64129d8be24d840208b2e49d",
-  review : "it's a feel-bad ending for a depressing story that throws a bunch of hot-button items in the viewer's face and asks to be seen as hip, winking social commentary."
 }
 ```
 
-## Creating an OpenAI Model
+## Training a Predictor
 
-Our integration automatically manages requests to pre-trained large language models from OpenAI. For example, we can create a model for text sentiment analysis like this:
+We use the `openai` engine to predict the sentiment of the review.
+
+we can create a model for text sentiment analysis like this:
 
 ```bash
-mongo_demo_db> use mindsdb
 mindsdb> db.models.insertOne({
             name: 'sentiment_classifier_openai',
             predict: 'sentiment',
@@ -104,11 +106,11 @@ Here is the output:
 }
 ```
 
-In practice, the CREATE MODEL statement triggers MindsDB to generate an AI table called sentiment_classifier_openai that uses the OpenAI integration to predict a column named sentiment.
+Here, we provided `prompt_template` option with mainly three sentiments, and those are `positive`, `negative` and `neutral`.
 
-The USING clause specifies the parameters that this handler requires. You can check our documentation for detailed explanations of all parameters that can be used when creating various models with the OpenAI engine.
+## Status of a Predictor
 
-Once the above query has started execution, we can check the status of the creation process with the following query:
+The next step is to check the status of a predictor. Once the above query has started execution, we can check the status of the creation process with the following query:
 
 ```bash
 mindsdb> db.getCollection('models').find({
@@ -118,8 +120,12 @@ mindsdb> db.getCollection('models').find({
 
 It may take a while to register as `complete` depending on the internet connection.
 
-Making a Single Prediction
-Once the creation is complete, the behavior is the same as with any other AI table – you can query it either by specifying synthetic data in the actual query:
+## Making Predictions
+
+### Making a Single Prediction
+
+Once the creation is complete, the behavior is the same as with any other AI table.
+Here we are querying by specifying synthetic data in the actual query and the model we created i.e, `sentiment_classifier_openai`:
 
 ```bash
 mindsdb> db.sentiment_classifier_openai.find({
@@ -136,9 +142,9 @@ On execution, we get:
 }
 ```
 
-## Making Batch Predictions
+### Making Batch Predictions
 
-Or by joining with another table for batch predictions:
+Similarly, we can join model with another table for batch predictions with the following query:
 
 ```bash
 mindsdb> db.sentiment_classifier_openai.find(
@@ -179,32 +185,16 @@ On execution, we get:
 
 The `movie_reviews` table is used to make batch predictions. Upon joining the `sentiment_classifier_openai` model with the `movie_reviews` table, the model uses all values from the `review` column.
 
-## Leverage the NLP Capabilities with MindsDB
-
-By integrating databases and OpenAI using MindsDB, developers can easily extract insights from text data with just a few SQL commands. These powerful natural language processing (NLP) models are capable of answering questions with or without context and completing general prompts.
-
-Furthermore, these models are powered by large pre-trained language models from OpenAI, so there is no need for manual development work. Ultimately, this provides developers with an easy way to incorporate powerful NLP capabilities into their applications while saving time and resources compared to traditional ML development pipelines and methods. All in all, MindsDB makes it possible for developers to harness the power of OpenAI efficiently!
-
-MindsDB is now the fastest-growing open-source applied machine-learning platform in the world. Its community continues to contribute to more than 70 data-source and ML-framework integrations. Stay tuned for the upcoming features - including more control over the interface parameters and fine-tuning models directly from MindsDB!
-
-Experiment with OpenAI models within MindsDB and unlock the ML capability over your data in minutes. Remember to [sign-up for a free demo account](https://cloud.mindsdb.com/register/nlp) and follow the tutorials, perhaps this time using your data.
-
-Finally, if MindsDB's vision to democratize ML sounds exciting, head to our [community Slack](https://mindsdb.com/joincommunity), where you can get help and find people to chat about using other available data sources, ML frameworks, or writing a handler to bring your own!
-
-Follow our introduction to MindsDB's OpenAI integration [here](https://mindsdb.com/blog/extract-insights-from-text-inside-databases-using-openai-gpt3-and-mindsdb-integration). Also, we've got a variety of tutorials that use MySQL and MongoDB:
-
-- [Sentiment Analysis in MySQL](/nlp/sentiment-analysis-inside-mysql-with-openai)
-- [Question Answering in MySQL](/nlp/question-answering-inside-mysql-with-openai)
-- [Text Summarization in MySQL](/nlp/text-summarization-inside-mysql-with-openai)
-- [Question Answering in MongoDB](/nlp/question-answering-inside-mongodb-with-openai)
-- [Text Summarization in MongoDB](/nlp/text-summarization-inside-mongodb-with-openai)
-
 ## What's Next?
 
 Have fun while trying it out yourself!
 
 - Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
-- Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register/nlp).
-- Engage with the MindsDB community on [Slack](https://mindsdb.com/joincommunity) or [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and share your ideas and thoughts.
+- Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
+- Engage with the MindsDB community on
+  [Slack](https://mindsdb.com/joincommunity) or
+  [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and
+  share your ideas and thoughts.
 
-If this tutorial was helpful, please give us a GitHub star [here](https://github.com/mindsdb/mindsdb).
+If this tutorial was helpful, please give us a GitHub star
+[here](https://github.com/mindsdb/mindsdb).

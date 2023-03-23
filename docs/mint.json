@@ -321,7 +321,8 @@
             "data-integrations/Couchbase",
             "data-integrations/clickhouse",
             "data-integrations/Airtable",
-            "data-integrations/DynamoDB"
+            "data-integrations/DynamoDB",
+            "data-integrations/databricks"
           ]
         },
         {

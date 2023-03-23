@@ -22,7 +22,6 @@ MindsDB locally using
 [Docker](/setup/self-hosted/docker/) or
 [Python](/setup/self-hosted/pip/source/).
 
-
 ### Connecting the Data
 
 I'm working in MindsDB's Cloud Editor for this tutorial, so I'm going to start by doing the following:
@@ -38,7 +37,7 @@ I'm working in MindsDB's Cloud Editor for this tutorial, so I'm going to start b
 
 ***input:***
 ```sql
-SELECT * FROM files.dataset LIMIT 5;
+SELECT * FROM files.dataset LIMIT 3;
 ```
 
 ***output:***
@@ -54,7 +53,44 @@ SELECT * FROM files.dataset LIMIT 5;
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
 ```
 
+```sql
+CREATE DATABASE nlp_translate
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+    };
+```
+
+
 ## Creating a Predictor
 
 Now that our data is ready, we're going to use MindsDB's built-in SQL editor to create our prediction model. 
+
+```sql
+CREATE MODEL text_translation
+PREDICT translation
+USING
+   engine = 'huggingface',
+   task = 'translation',
+   model_name = "bert/bert-base-multilingual-cased",
+   input_column = 'text',
+   labels = ['text_english','text_french','text_german'];
+```
+
+Upon first running this command I actually received the following output:
+
+```
+401 Client Error. (Request ID: Root=1-641bb7e4-1c00c0800f51a8b75622e267)
+
+Repository Not Found for url: https://huggingface.co/api/models/bert/bert-base-multilingual-cased.
+Please make sure you specified the correct `repo_id` and `repo_type`.
+If you are trying to access a private or gated repo, make sure you are authenticated.
+Invalid username or password.
+```
+
+After seeing this message, I simply copied the link provided by the output <https://huggingface.co/api/models/bert/bert-base-multilingual-cased> and pasted it into Chrrome. I was brought to a login screen, which tells me I need an account with HuggingFace if I want to use this model transformer.
 

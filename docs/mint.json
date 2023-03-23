@@ -308,7 +308,7 @@
         {
           "group": "Application Integrations",
           "pages": [
-            "data-integrations/twitter"
+            "app-integrations/twitter"
           ]
         },
         {

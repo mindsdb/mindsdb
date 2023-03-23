@@ -87,7 +87,8 @@ We use the `openai` engine to predict the sentiment of the review.
 we can create a model for text sentiment analysis like this:
 
 ```bash
-mongo_demo_db> db.models.insertOne({
+mongo_demo_db> use mindsdb
+mindsdb> db.models.insertOne({
             name: 'sentiment_classifier_openai',
             predict: 'sentiment',
             training_options: {
@@ -113,7 +114,7 @@ Here, we provided `prompt_template` option with mainly three sentiments, and tho
 The next step is to check the status of a predictor. Once the above query has started execution, we can check the status of the creation process with the following query:
 
 ```bash
-mongo_demo_db> db.getCollection('models').find({
+mindsdb> db.getCollection('models').find({
             'name': 'sentiment_classifier_openai'
           })
 ```
@@ -128,7 +129,7 @@ Once the creation is complete, the behavior is the same as with any other AI tab
 Here we are querying by specifying synthetic data in the actual query and the model we created i.e, `sentiment_classifier_openai`:
 
 ```bash
-mongo_demo_db> db.sentiment_classifier_openai.find({
+mindsdb> db.sentiment_classifier_openai.find({
             review: "it was good"
           })
 ```
@@ -147,7 +148,7 @@ On execution, we get:
 Similarly, we can join model with another table for batch predictions with the following query:
 
 ```bash
-mongo_demo_db> db.sentiment_classifier_openai.find(
+mindsdb> db.sentiment_classifier_openai.find(
             {
                 'collection': 'mongo_demo_db.movie_reviews'
             },

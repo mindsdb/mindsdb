@@ -94,12 +94,10 @@ To use SQL for data manipulation, we have to load our data into the system. Letâ
 
 ### Understanding the Data
 
-The dataset we are working with contains **multilingual spam data** for English, Hindi, German, and French. It is primarily used to test to test the zero-shot transfer for text classification using pretrained language models. The original data was in English and was Machine Translated in Hindi, German and French. The dataset contained the multilingual text and corresponding labels:
+The dataset we are working with contains **multilingual spam data** for English, Hindi, German, and French. It is primarily used to test the zero-shot transfer for text classification using pretrained language models. The original data was in English and was Machine Translated in Hindi, German and French. The dataset contained the multilingual text and corresponding labels:
 
 - ham- non spam text
 - spam- spam text
-
-Now, upon opening this dataset the first thing I noticed was the 'text' column. Text is a built-in
 
 **input:**
 ```sql
@@ -158,7 +156,7 @@ Now you know how to build a database with PostgreSQL in your command line. Aweso
 **input:**
 ```sql
 SELECT * FROM nlp_spam.mindsdb_1
-LIMIT 10;
+LIMIT 3;
 ```
 
 **output:**
@@ -175,4 +173,53 @@ LIMIT 10;
 ```
 
 ### Creating a Predictor models
+
+Great job so far. We're about to start the most important part of this tutorial. Before we dig into the syntax, I want to go over a few things that I researched and thought out pretty thoroughly. The main goal of this tutorial is to demonstrate how to translate multilingual spam data ( German,Hindi and French) to English using the HuggingFace model and Postgres as a datasource.
+
+Currently, MindsDB supports the following translation models:
+
+ -[x] English to French T5
+ -[x] French to English T5
+ -[x] Spanish to English
+
+```sql
+CREATE MODEL mindsdb.translate_spam
+PREDICT text_enlgish
+USING
+  engine = 'huggingface',
+  task = 'translation',
+  model_name = 't5-base',
+  input_column = 'text_mess',
+  lang_input = 'en',
+  lang_output = 'fr';
+```
+
+```sql
+CREATE MODEL mindsdb.translate_nlp
+PREDICT text_enlgish
+USING
+  engine = 'huggingface',
+  task = 'translation',
+  model_name = 't5-base',
+  input_column = 'text',
+  lang_input = 'en',
+  lang_output = 'fr';
+```
+
+After you create your model, your output should read `Query successfully completed`.
+**Make sure you don't get an error message here. If you do, you may have to edit your code..**
+
+### Checking the Status of a Predictor
+
+Before we go any further, we can use the SELECT statement to check on the status of our predictor. 
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'translator_spam'
+```
+
+If you get an error here, you may have made an error in your SQL syntax or your dataset may be corrupt. Be sure to get this output to read "complete" before moving forward.
+
+
 

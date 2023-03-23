@@ -48,6 +48,50 @@ SELECT * FROM files.dataset LIMIT 3;
 
 I'm going to be working locally, so I'll start by heading over to [Kaggle](https://www.kaggle.com/) and downloading [this dataset](https://www.kaggle.com/datasets/rajnathpatel/multilingual-spam-data?resource=download). 
 
+Now that I have my dataset, I'm going to add it to my PostgreSQL database:
+
+1. Initiate the super user mode: `psql postgres`
+2. Create a user and a database with the user as the owner:
+
+**input:**
+```sql
+CREATE USER pg4e_4c0b06f09f WITH PASSWORD 'pg4e_p_61356298951eb7f';
+```
+**output:**
+`CREATE ROLE`
+
+**input:**
+```sql
+CREATE DATABASE nlp_mindsdb WITH OWNER 'pg4e_4c0b06f09f';
+```
+**output:** 
+`CREATE DATABASE`
+
+3. Next, let's type `\l` to list our PostgreSQL databases and ensure ours was created.
+
+```sql
+                               List of databases
+Name     |      Owner      | Encoding | Collate | Ctype | Access privileges 
+-------------+-----------------+----------+---------+-------+-------------------
+ nlp_mindsdb | pg4e_4c0b06f09f | UTF8     | C       | C     | 
+ postgres    | alissa          | UTF8     | C       | C     | 
+ template0   | alissa          | UTF8     | C       | C     | =c/alissa        +
+             |                 |          |         |       | alissa=CTc/alissa
+ template1   | alissa          | UTF8     | C       | C     | =c/alissa        +
+             |                 |          |         |       | alissa=CTc/alissa
+(4 rows)
+
+```
+
+4. Quit the super user mode:
+ `\q`
+
+5. Access the database as a user:
+`psql -U pg4e_4c0b06f09f nlp_mindsdb`
+
+
+To use SQL for data manipulation, we have to load our data into the system. Let’s look at the CSV file first. 
+
 ### Understanding the Data
 
 The dataset we are working with contains **multilingual spam data** for English, Hindi, German, and French. It is primarily used to test to test the zero-shot transfer for text classification using pretrained language models. The original data was in English and was Machine Translated in Hindi, German and French. The dataset contained the multilingual text and corresponding labels:
@@ -55,21 +99,69 @@ The dataset we are working with contains **multilingual spam data** for English,
 - ham- non spam text
 - spam- spam text
 
-Currently, MindsDB supports the following translation models:
+Now, upon opening this dataset the first thing I noticed was the 'text' column. Text is a built-in
 
- -[x] English to French T5
- -[x] French to English T5
- -[x] Spanish to English
+**input:**
+```sql
+CREATE TABLE mindsdb_1
+ (labels TEXT, text TEXT, text_hi TEXT,
+  text_de TEXT, text_fr TEXT);
+```
 
-{/* This dataset contains a few columns that are not supported by MindsDB at this time, so my next step is to simply open that `.csv` file and remove the following columns:
--  "text_hi" 
-- "text_de" */}
+**output:**
+`CREATE TABLE`
 
-Now that I have my dataset, I'm going to use it to build my PostgreSQL database:
+Great. Now we have our empty table in our database. Let's import our data:
+
+**input:**
+```sql
+\copy mindsdb_1(labels, text, text_hi, text_de, text_fr)
+FROM '/Users/alissa/Downloads/nlp_dataset.csv' WITH DELIMITER ',' CSV;
+```
+
+**output:**
+`COPY 5573`
+
+Let's check if our data loaded in properly:
+
+**input:**
+`SELECT COUNT(*) FROM mindsdb_1;`
+
+**output:**
+`11146`
+
+Nice, we have 11146 rows/records in our new database and we are on our way! 
+
+### Connecting MindsDB to PostgreSQL Database:
+
+Now you know how to build a database with PostgreSQL in your command line. Awesome. Let's dig into some NLP processing with MindsDB.
+
+1. The first thing I'm going to do is navigate to `http://127.0.0.1:47334` and click "Add Data".
+
+2. Next, I'm going to select my datasource, PostgreSQL.
+
+3. Once you select the datasource, you will be prompted to enter your database credentials. 
+
+4. Next, **Test Connection**:
+
+![test](docs/tutorials/test_connect.png)
+
+5. `SHOW DATABASES;`
+
+![showdb](docs/tutorials/data_confirm.png)
+
+6. `USE nlp_spam;`
+
+7. Preview the dataset 
 
 
+**input:**
+```sql
+SELECT * FROM nlp_spam.mindsdb_1
+LIMIT 10;
+```
 
-***output:***
+**output:**
 ```
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
 | labels |             text           |      text_hi   |             text_de  |   text_fr                         |
@@ -81,3 +173,6 @@ Now that I have my dataset, I'm going to use it to build my PostgreSQL database:
 | spam  | 'Free entry in 2 a wkly...' | 'Fktatatat मई...'| 'Freier Eintrit' | 'Entrée libre dans 2 a wkly comp...'|
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
 ```
+
+### Creating a Predictor models
+

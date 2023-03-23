@@ -320,7 +320,7 @@
             "data-integrations/cassandra",            
             "data-integrations/Couchbase",
             "data-integrations/clickhouse",
-            "data-integrations/Airtable"
+            "data-integrations/Airtable",
             "data-integrations/DynamoDB"
           ]
         },

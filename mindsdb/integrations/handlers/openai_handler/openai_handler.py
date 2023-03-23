@@ -136,7 +136,7 @@ class OpenAIHandler(BaseMLEngine):
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))
                 empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
             elif args.get('prompt_template'):
-                prompts, empty_prompt_ids = self._get_templated_prompts(base_template, df)
+                prompts, empty_prompt_ids = self._get_completed_prompts(base_template, df)
             else:
                 raise Exception('Image mode needs either `prompt_template` or `question_column`.')
 
@@ -167,7 +167,7 @@ class OpenAIHandler(BaseMLEngine):
                 raise Exception(f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}")  # noqa
 
             if args.get('prompt_template', False):
-                prompts, empty_prompt_ids = self._get_templated_prompts(base_template, df)
+                prompts, empty_prompt_ids = self._get_completed_prompts(base_template, df)
 
             elif args.get('context_column', False):
                 empty_prompt_ids = np.where(df[[args['context_column'],
@@ -531,7 +531,7 @@ class OpenAIHandler(BaseMLEngine):
         shutil.rmtree(temp_storage_path)
 
     @staticmethod
-    def _get_templated_prompts(base_template, df):
+    def _get_completed_prompts(base_template, df):
         columns = []
         spans = []
         matches = list(re.finditer("{{(.*?)}}", base_template))

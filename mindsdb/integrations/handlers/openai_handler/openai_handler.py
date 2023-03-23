@@ -334,9 +334,9 @@ class OpenAIHandler(BaseMLEngine):
 
         def _submit_image_completion(kwargs, prompts, api_args):
             def _tidy(comp):
-                return [c[0]['url'] for c in comp]
+                return [c[0]['url'] if 'url' in c[0].keys() else c[0]['b64_json'] for c in comp]
             kwargs.pop('model')
-            completions = [openai.Image.create(**{'prompt': p, **kwargs})['data'] for p in prompts]
+            completions = [openai.Image.create(**{'prompt': p, **kwargs, **api_args})['data'] for p in prompts]
             return _tidy(completions)
 
         try:

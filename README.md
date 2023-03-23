@@ -188,6 +188,9 @@ Also, check out the [rewards and community programs](https://mindsdb.com/communi
 <a href="https://github.com/mindsdb/mindsdb/graphs/contributors">
   <img src="https://contributors-img.web.app/image?repo=mindsdb/mindsdb" />
 </a>
+<a href="https://github.com/sunilgiri7">
+  <img src="https://avatars.githubusercontent.com/u/106025724?v=4" />
+</a>
 
 Made with [contributors-img](https://contributors-img.web.app).
 

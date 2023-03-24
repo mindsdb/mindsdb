@@ -19,15 +19,15 @@ Optionally, this may also be set to :memory:, which will create an in-memory dat
 ##Usage
 In order to make use of this handler and connect to a SQLite database in MindsDB, the following syntax can be used,
 
-~~~~sql
+```sql
 CREATE DATABASE sqlite_datasource
 WITH
 engine='sqlite',
 parameters={
     "db_file":"example.db"
 };
-~~~~
+```
 Now, you can use this established connection to query your database as follows,
-~~~~sql
+```sql
 SELECT * FROM sqlite_datasource.example_tbl
-~~~~
+```

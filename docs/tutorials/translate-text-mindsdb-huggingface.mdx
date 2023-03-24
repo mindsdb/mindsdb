@@ -5,7 +5,9 @@ sidebarTitle: Learn how to connect MindsDB to Hugging Face models for Multilingu
 
 ## Introduction
 
-In today's world, just about anything you want to know can be found online. The internet has completely revolutionized the way we share information. Internet reviews, social media comments, forums and messages have become significant. Put simply, the internet is now society's main form of communication... and it holds a lot of valuable data. Thanks to advances in technology, Natural Language Processing (NLP) techniques can now be used to extract meaningful insights from this data. 
+The internet has completely revolutionized the way we communicate. Social media, email and text message have become our primary forms of communication. While this brings a lot of benefits, it also leaves us vulnerable to malicious activities, specifically spam. Spam is defined by Merriam Webster's Dictionary as, "unsolicited usually commercial messages (such as emails, text messages, or Internet postings) sent to a large number of recipients or posted in a large number of places".
+
+Receiving spam messages can cause a lot of concern for digital users. Luckily, advances in Natural Processing Language, or NLP, are being used to combat this 
 
 In this tutorial, I'm going to show you how to use MindsDB and Hugging Face to identify spam in a multilingual dataset.
 
@@ -24,9 +26,16 @@ MindsDB locally using
 [Docker](/setup/self-hosted/docker/) or
 [Python](/setup/self-hosted/pip/source/).
 
-### Connecting the Data
+## Connecting the Data
 
-#### Adding Data in MindsDB Cloud Editor
+### Understanding the Data
+
+The dataset we are working with contains **multilingual spam data** for English, Hindi, German, and French. It is primarily used to test the zero-shot transfer for text classification using pretrained language models. The original data was in English and was Machine Translated in Hindi, German and French. The dataset contains the multilingual text and corresponding labels:
+
+- ham: non spam text
+- spam: spam text
+
+### Adding Data in MindsDB Cloud Editor
 
 The instructions for importing data using MindsDB's Cloud Editor go as follows:
 
@@ -39,14 +48,9 @@ The instructions for importing data using MindsDB's Cloud Editor go as follows:
 7. Name your dataset accordingly (no special characters or cases in db name)
 8. Use `SELECT` SQL command to confirm the data was uploaded successfully:
 
-***input:***
-```sql
-SELECT * FROM files.dataset LIMIT 3;
-```
+### Adding Data Locally
 
-#### Local Setup
-
-I'm going to be working locally, so I'll start by heading over to [Kaggle](https://www.kaggle.com/) and downloading [this dataset](https://www.kaggle.com/datasets/rajnathpatel/multilingual-spam-data?resource=download). 
+I'm working locally, so I'll start by heading over to [Kaggle](https://www.kaggle.com/) and downloading [this dataset](https://www.kaggle.com/datasets/rajnathpatel/multilingual-spam-data?resource=download). 
 
 Now that I have my dataset, I'm going to add it to my PostgreSQL database:
 
@@ -55,14 +59,14 @@ Now that I have my dataset, I'm going to add it to my PostgreSQL database:
 
 **input:**
 ```sql
-CREATE USER pg4e_4c0b06f09f WITH PASSWORD 'pg4e_p_61356298951eb7f';
+CREATE USER username123 WITH PASSWORD 'password123';
 ```
 **output:**
 `CREATE ROLE`
 
 **input:**
 ```sql
-CREATE DATABASE nlp_mindsdb WITH OWNER 'pg4e_4c0b06f09f';
+CREATE DATABASE nlp_mindsdb WITH OWNER 'username123';
 ```
 **output:** 
 `CREATE DATABASE`
@@ -74,13 +78,9 @@ CREATE DATABASE nlp_mindsdb WITH OWNER 'pg4e_4c0b06f09f';
 Name     |      Owner      | Encoding | Collate | Ctype | Access privileges 
 -------------+-----------------+----------+---------+-------+-------------------
  nlp_mindsdb | pg4e_4c0b06f09f | UTF8     | C       | C     | 
- postgres    | alissa          | UTF8     | C       | C     | 
- template0   | alissa          | UTF8     | C       | C     | =c/alissa        +
-             |                 |          |         |       | alissa=CTc/alissa
- template1   | alissa          | UTF8     | C       | C     | =c/alissa        +
-             |                 |          |         |       | alissa=CTc/alissa
-(4 rows)
+ postgres    | user            | UTF8     | C       | C     | 
 
+(4 rows)
 ```
 
 4. Quit the super user mode:
@@ -89,20 +89,12 @@ Name     |      Owner      | Encoding | Collate | Ctype | Access privileges
 5. Access the database as a user:
 `psql -U pg4e_4c0b06f09f nlp_mindsdb`
 
-
 To use SQL for data manipulation, we have to load our data into the system. Let’s look at the CSV file first. 
-
-### Understanding the Data
-
-The dataset we are working with contains **multilingual spam data** for English, Hindi, German, and French. It is primarily used to test the zero-shot transfer for text classification using pretrained language models. The original data was in English and was Machine Translated in Hindi, German and French. The dataset contained the multilingual text and corresponding labels:
-
-- ham- non spam text
-- spam- spam text
 
 **input:**
 ```sql
 CREATE TABLE mindsdb_1
- (labels TEXT, text TEXT, text_hi TEXT,
+ (labels TEXT, text_message TEXT, text_hi TEXT,
   text_de TEXT, text_fr TEXT);
 ```
 
@@ -132,7 +124,7 @@ Nice, we have 11146 rows/records in our new database and we are on our way!
 
 ### Connecting MindsDB to PostgreSQL Database:
 
-Now you know how to build a database with PostgreSQL in your command line. Awesome. Let's dig into some NLP processing with MindsDB.
+Now you know how to build a database with PostgreSQL in your command line. Awesome. Let's connect to it with MindsDB.
 
 1. The first thing I'm going to do is navigate to `http://127.0.0.1:47334` and click "Add Data".
 
@@ -148,15 +140,12 @@ Now you know how to build a database with PostgreSQL in your command line. Aweso
 
 ![showdb](docs/tutorials/data_confirm.png)
 
-6. `USE nlp_spam;`
-
-7. Preview the dataset 
-
+6. Preview the dataset
 
 **input:**
 ```sql
 SELECT * FROM nlp_spam.mindsdb_1
-LIMIT 3;
+LIMIT 3;`
 ```
 
 **output:**
@@ -174,52 +163,54 @@ LIMIT 3;
 
 ### Creating a Predictor models
 
-Great job so far. We're about to start the most important part of this tutorial. Before we dig into the syntax, I want to go over a few things that I researched and thought out pretty thoroughly. The main goal of this tutorial is to demonstrate how to translate multilingual spam data ( German,Hindi and French) to English using the HuggingFace model and Postgres as a datasource.
+Great job so far. We're about to start the most important part of this tutorial. Before we dig into the syntax, I want to go over a few things that I researched and thought out pretty thoroughly. The main goal of this tutorial is to demonstrate how we can use MindsDB and Hugging Face to perform multilingual spam data translations on our dataset.
 
-Currently, MindsDB supports the following translation models:
+The Hugging Face model transformer provided in the cooresponding GitHub issue results in the following output (upon being run many times and in many different ways):
 
- -[x] English to French T5
- -[x] French to English T5
- -[x] Spanish to English
-
+**input:**
 ```sql
-CREATE MODEL mindsdb.translate_spam
-PREDICT text_enlgish
+CREATE MODEL spam_nlp
+PREDICT spam
 USING
-  engine = 'huggingface',
-  task = 'translation',
-  model_name = 't5-base',
-  input_column = 'text_mess',
-  lang_input = 'en',
-  lang_output = 'fr';
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'bert-base-multilingual-cased',
+input_column = 'text',
+labels = ['spam', 'ham'];
+```
+**output:**
+```
+Not supported task for model: fill-mask.
+Should be one of text-classification, zero-shot-classification, translation, summarization
 ```
 
-```sql
-CREATE MODEL mindsdb.translate_nlp
-PREDICT text_enlgish
-USING
-  engine = 'huggingface',
-  task = 'translation',
-  model_name = 't5-base',
-  input_column = 'text',
-  lang_input = 'en',
-  lang_output = 'fr';
-```
+After doing some research, it became apparent that the appropriate model for this task is the[roberta-base-finetuned-sms-spam-detection](https://huggingface.co/mariagrandury/roberta-base-finetuned-sms-spam-detection). This transformer model is a fine-tuned version of roberta-base on the sms_spam dataset.
 
+```sql
+CREATE MODEL spam_translation
+PREDICT spam
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'mariagrandury/roberta-base-finetuned-sms-spam-detection',
+input_column = 'text',
+labels = ['spam', 'ham'];
+```
 After you create your model, your output should read `Query successfully completed`.
 **Make sure you don't get an error message here. If you do, you may have to edit your code..**
 
 ### Checking the Status of a Predictor
 
-Before we go any further, we can use the SELECT statement to check on the status of our predictor. 
+Before we go any further, we can use the SELECT statement to check on the status of our predictor: 
 
 ```sql
 SELECT *
 FROM mindsdb.models
-WHERE name = 'translator_spam'
+WHERE name = 'spam_translation';
 ```
 
-If you get an error here, you may have made an error in your SQL syntax or your dataset may be corrupt. Be sure to get this output to read "complete" before moving forward.
+Make sure this output to reads `complete` before moving forward.
 
+### Training a Predictor
 
-
+Now that we've created our predictor model, let's go ahead and test it out.

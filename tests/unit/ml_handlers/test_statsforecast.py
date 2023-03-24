@@ -236,3 +236,39 @@ class TestStatsForecast(BaseExecutorTest):
         assert len(describe_result["accuracies"][0]) > 1
         assert type(describe_result["accuracies"][0][0][0]) == str
         assert describe_result["accuracies"][0][0][1] < 1
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_hierarchical(self, mock_handler):
+        # create project
+        self.run_sql("create database proj")
+        df = pd.read_csv("AirPanel.csv")  # comes from the NeuralForecast package
+        total_flights = df.groupby("ds").sum()["y"]
+        total_df = pd.DataFrame({"ds": df["ds"].unique(), "unique_id": "total", "y": total_flights})
+        df = pd.concat([df, total_df]).reset_index()
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        self.run_sql(
+            """
+           create model proj.model_1_group
+           from pg (select * from df)
+           predict target_col
+           order by time_col
+           group by group_col
+           horizon 3
+           using
+             engine='statsforecast'
+             hierachy='hierarchy_table'
+        """
+        )
+        self.wait_predictor("proj", "model_1_group")
+
+        # run predict
+        result_df = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.model_1_group as p
+           where t.group_col='b'
+        """
+        )
+        assert list(round(result_df["target_col"])) == [42, 43, 44]

@@ -186,10 +186,10 @@ class TweetsTable(APITable):
             messages = []
 
             text2 = ''
-            patern = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+            pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
             for word in words:
                 # replace the links in word to string with the length as twitter short url (23)
-                word2 = re.sub(patern, '-' * 23, word)
+                word2 = re.sub(pattern, '-' * 23, word)
                 if len(text2) + len(word2) > max_text_len - 3 - 7:  # 3 is for ..., 7 is for (10/11)
                     messages.append(text2.strip())
 

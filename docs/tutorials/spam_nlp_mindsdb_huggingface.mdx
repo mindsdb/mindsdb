@@ -77,7 +77,7 @@ CREATE DATABASE nlp_mindsdb WITH OWNER 'username123';
                                List of databases
 Name     |      Owner      | Encoding | Collate | Ctype | Access privileges 
 -------------+-----------------+----------+---------+-------+-------------------
- nlp_mindsdb | pg4e_4c0b06f09f | UTF8     | C       | C     | 
+ nlp_mindsdb | username123     | UTF8     | C       | C     | 
  postgres    | user            | UTF8     | C       | C     | 
 
 (4 rows)
@@ -87,7 +87,7 @@ Name     |      Owner      | Encoding | Collate | Ctype | Access privileges
  `\q`
 
 5. Access the database as a user:
-`psql -U pg4e_4c0b06f09f nlp_mindsdb`
+`psql -U username123 nlp_mindsdb`
 
 To use SQL for data manipulation, we have to load our data into the system. Let’s look at the CSV file first. 
 
@@ -151,13 +151,13 @@ LIMIT 3;`
 **output:**
 ```
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
-| labels |             text           |      text_hi   |             text_de  |   text_fr                         |
+| labels |       text_input          |    text_de        |   text_fr                         |
 +------------+--- ---------+-----------------------------------------------------------------+--------------------------------+
-| ham    | 'Go until jurong, crazy..' | 'Dakag बिंदु तक.'  | 'Gehen bis jurong..'| 'Allez jusqu...'                  |
+| ham    | 'Go until jurong, crazy..'| 'Gehen bis jurong'| 'Allez jusqu...'                  |
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
-| ham   | 'Ok lar... Joking wif u...' | `ओके लामर.... `   | `Ok... joking'   | `J'ai fait une blague sur le wif...`|
+| ham   | 'Ok lar... Joking wif u...' |  'Ok... joking'   | 'J'ai fait une blague sur le wif'|
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
-| spam  | 'Free entry in 2 a wkly...' | 'Fktatatat मई...'| 'Freier Eintrit' | 'Entrée libre dans 2 a wkly comp...'|
+| spam  | 'Free entry in 2 a wkly...' | 'Freier Eintrit' | 'Entrée libre dans 2 a wkly comp...'|
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
 ```
 
@@ -179,21 +179,25 @@ input_column = 'text',
 labels = ['spam', 'ham'];
 ```
 **output:**
-```
+```sql
 Not supported task for model: fill-mask.
 Should be one of text-classification, zero-shot-classification, translation, summarization
 ```
 
 After doing some research, it became apparent that the appropriate model for this task is the[roberta-base-finetuned-sms-spam-detection](https://huggingface.co/mariagrandury/roberta-base-finetuned-sms-spam-detection). This transformer model is a fine-tuned version of roberta-base on the sms_spam dataset.
 
+Before you start here, be sure to specify which database you're working inside of:
+
+`USE mindsdb;`
+
 ```sql
-CREATE MODEL spam_translation
-PREDICT spam
+CREATE MODEL predictor_spam1
+PREDICT SPAM
 USING
 engine = 'huggingface',
 task = 'text-classification',
 model_name = 'mariagrandury/roberta-base-finetuned-sms-spam-detection',
-input_column = 'text',
+input_column = 'text_input',
 labels = ['spam', 'ham'];
 ```
 After you create your model, your output should read `Query successfully completed`.
@@ -206,11 +210,63 @@ Before we go any further, we can use the SELECT statement to check on the status
 ```sql
 SELECT *
 FROM mindsdb.models
-WHERE name = 'spam_translation';
+WHERE name = 'predictor_spam1';
 ```
 
-Make sure this output to reads `complete` before moving forward.
+```sql
+| NAME | ENGINE | PROJECT | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | CURRENT_TRAINING_PHASE | TOTAL_TRAINING_PHASES | TRAINING_PHASE_NAME | TAG | CREATED_AT |
+| ---- | ------ | ------- | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | ---------------------- | --------------------- | ------------------- | --- | ---------- |
+| predictor_spam1 | huggingface | mindsdb | 1 | complete | [NULL] | SPAM | up_to_date | 23.3.4.0 | [NULL] | [NULL] | {'target': 'SPAM', 'using': {'task': 'text-classification', 'model_name': 'mariagrandury/roberta-base-finetuned-sms-spam-detection', 'input_column': 'text_input', 'labels': ['spam', 'ham']}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-24 13:29:12.709293 |
+```
+
+Make sure this output reads `complete` before moving forward.
 
 ### Training a Predictor
 
-Now that we've created our predictor model, let's go ahead and test it out.
+Now that we've given our model data to learn from and it's training status is complete, let's go ahead and start making some predictions. 
+
+I'm going to plug in some keywords that most of us probably associate with spam and see what our new prediction model thinks:
+
+**input:**
+```sql
+SELECT *
+FROM mindsdb.predictor_spam1
+WHERE text = "Free";
+```
+
+**output:**
+```sql
+| spam | spam_explain | text |
+| ---- | ------------ | ---- |
+| spam | {"ham":0.0039043687283992767,"spam":0.996095597743988} | Free |
+```
+
+
+**input:**
+SELECT *
+FROM mindsdb.predictor_spam1
+WHERE text = "Fast cash!";
+```
+
+```sql
+**output:**
+| spam | spam_explain | text |
+| ---- | ------------ | ---- |
+| spam | {"ham":0.008968036621809006,"spam":0.9910320043563843} | Fast cash! |
+```
+
+Now I'm going to input a few spam-looking messages and see what happens:
+
+```sql
+SELECT *
+FROM mindsdb.predictor_spam1
+WHERE text = "Free entry in 2 a wkly comp to win FA Cup final tkts 21st May 2005. Text FA to 87121 to receive entry question(std txt rate)T&C's apply 08452810075over18's ";
+```
+
+```output
+| SPAM | SPAM_explain | text_input |
+| ---- | ------------ | ---------- |
+| ham | {"ham":0.9993841648101807,"spam":0.0006158568430691957} | NFree entry in 2 a wkly comp to win FA Cup final tkts 21st May 2005. Text FA to 87121 to receive entry question(std txt rate)T&C's apply 08452810075over18's |
+```
+
+Interestingly, our predictor identified this message has "ham". This simply tells us it needs some more training.

@@ -164,10 +164,13 @@ class TestStatsForecast(BaseExecutorTest):
         assert len(mindsdb_result) == prediction_horizon * n_groups
         assert np.allclose(mindsdb_result, package_predictions)
 
-        # test describe() method
+        # test describe() method, which should return a df row with keys
+        # {"inputs": [features], "outputs": <target_name>, "accuracies": [model_accuracies]}
         describe_result = self.run_sql("describe proj.modelx")
         assert describe_result["inputs"][0] == ["y", "ds", ["unique_id"]]
         assert describe_result["outputs"][0] == "y"
+        # The expected format of the "accuracies" key is
+        # [(model_1_name, model_1_accuracy), (model_2_name, model_2_accuracy), ...]
         assert describe_result["accuracies"][0][0][0] == "AutoCES"
         assert describe_result["accuracies"][0][0][1] < 1
 

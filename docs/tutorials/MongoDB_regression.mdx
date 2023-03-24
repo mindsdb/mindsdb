@@ -1,0 +1,114 @@
+# Introduction
+
+  This is a step-by-step tutorial on how to perform regression using MongoDB and MindsDB.
+
+  In this tutorial, we will explore how to use MongoDB and MindsDB to build a regression model that predicts the price of houses in Boston based on various 
+  features.
+
+# Prerequisites
+
+  Before getting started, you will need the following:
+
+  . MongoDB installed on your computer
+  . Python 3.x installed on your computer
+  . The following Python libraries installed: pymongo, mindsdb
+
+# Step 1: Load the Data into MongoDB
+  
+  The first step is to load the Boston housing dataset into MongoDB. You can download the dataset from [Kaggle](https://www.kaggle.com/c/boston-housing) or 
+  use the following command to download it directly:
+
+  ```
+  !wget https://raw.githubusercontent.com/scikit-learn/scikit-learn/main/sklearn/datasets/data/boston_house_prices.csv
+   
+  ```
+  Next, we will write a Python script to load the data into MongoDB. We will use the PyMongo library to connect to the database and insert the data. Here's 
+  the code:
+
+  ```json
+
+  import csv
+  import pymongo
+
+  ###### Connect to MongoDB
+
+  client = pymongo.MongoClient("mongodb://localhost:27017/")
+  db = client["boston_housing"]
+  collection = db["data"]
+
+  ###### Load the data from CSV file
+
+  with open('boston_house_prices.csv', newline='') as csvfile:
+       reader = csv.DictReader(csvfile)
+       for row in reader:
+
+           ###### Insert each row into the database
+
+           collection.insert_one(row)
+
+  ```	   
+  This script will create a new database called "boston_housing" and a collection called "data". It will then load the data from the CSV file and insert each   row into the collection.
+
+# Step 2: Train a Regression Model with MindsDB
+
+  Now that we have loaded the data into MongoDB, we can use MindsDB to train a regression model. MindsDB is an open-source, automated machine learning 
+  platform that makes it easy to train and deploy machine learning models.
+
+  First, let's install MindsDB:
+
+  ```json
+
+  !pip install mindsdb
+  
+  ```
+  Next, we will write a Python script to train the regression model. Here's the code:
+
+  ```json
+
+  import mindsdb
+
+  ###### Connect to MongoDB
+
+  mdb = mindsdb.Predictor(name='boston_housing')
+  mdb.learn(to_predict='MEDV',from_data='mongodb://localhost:27017/boston_housing.data')
+
+  ```
+  This script creates a new MindsDB predictor called "boston_housing". We then call the "learn" method to train the model. We pass in the name of the target 
+  column ("MEDV") and the MongoDB connection string.
+
+  Note that MindsDB will automatically detect the data types of the columns and handle any missing or null values.
+  
+# Step 3: Use the Regression Model to Make Predictions
+
+  Now that we have trained the regression model, we can use it to make predictions on new data. Here's the code to make a prediction:
+
+  ```json
+
+  prediction = mdb.predict(when={'CRIM': 0.00632, 'ZN': 18.0, 'INDUS': 2.31, 'CHAS': 0, 'NOX': 0.538, 'RM': 6.575, 'AGE': 65.2, 'DIS': 4.09, 'RAD': 1, 
+  'TAX': 296.0, 'PTRATIO': 15.3, 'B': 396.9, 'LSTAT': 4.98})
+
+  print(prediction[0]['MEDV'])
+
+  ```
+  In this example, we pass in a dictionary of feature values for a new data point. The keys of the dictionary correspond to the column names in the MongoDB 
+  collection. We then call the "predict" method and print the predict method returns a list of predictions. In this case, we only have one prediction, so we 
+  access it using the [0] index. We then access the predicted value for the target column, "MEDV", using the dictionary key.
+
+# Step 4: Evaluate the Regression Model
+ 
+  To evaluate the performance of the regression model, we can use the MindsDB evaluate method. Here's the code:
+
+  ```json
+
+  evaluation = mdb.evaluate(from_data='mongodb://localhost:27017/boston_housing.data', report=True)
+  print(evaluation['medv']['mae'])
+
+  ```
+  This script evaluates the model on the same data that was used to train it. We pass in the MongoDB connection string and set the report parameter to True to  get a detailed evaluation report. We then print the mean absolute error (MAE) for the target column, "MEDV".
+
+# Conclusion
+
+  In this tutorial, we explored how to use MongoDB and MindsDB to build a regression model that predicts the price of houses in Boston based on various 
+  features. We loaded the data into MongoDB, trained a regression model using MindsDB, made predictions on new data, and evaluated the model's performance.
+
+  This is just a simple example, but you can apply the same approach to build more complex regression models using other datasets and features. Good luck with  your regression modeling!

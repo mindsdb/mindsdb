@@ -69,26 +69,26 @@ class AltibaseHandler(DatabaseHandler):
                 connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, jars=jar_location.split(","))
             else:
                 connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url)
+
+            self.connection = connection
+            self.is_connected = True
         except Exception as e:
             log.logger.error(f"Error while connecting to {self.database}, {e}")
         
-        self.is_connected = True
-        self.connection = connection
         return self.connection
-
 
     def disconnect(self):
         """ Close any existing connections
         Should switch self.is_connected.
         """
-        if self.is_connected is False:
-            return
-        try:
-            self.connection.close()
-            self.is_connected = False
-        except Exception as e:
-            log.logger.error(f"Error while disconnecting to {self.database}, {e}")
-        return 
+        if self.is_connected is True:
+            try:
+                self.connection.close()
+                self.is_connected = False
+            except Exception as e:
+                log.logger.error(f"Error while disconnecting to {self.database}, {e}")
+                return False
+        return True 
 
     def check_connection(self) -> StatusResponse:
         """ Check connection to the handler
@@ -105,9 +105,9 @@ class AltibaseHandler(DatabaseHandler):
             log.logger.error(f'Error connecting to database {self.database}, {e}!')
             responseCode.error_message = str(e)
         finally:
-            if responseCode.success is True and need_to_close:
+            if responseCode.success and need_to_close:
                 self.disconnect()
-            if responseCode.success is False and self.is_connected is True:
+            if not responseCode.success and self.is_connected:
                 self.is_connected = False
 
         return responseCode

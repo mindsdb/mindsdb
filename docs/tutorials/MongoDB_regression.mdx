@@ -47,7 +47,7 @@
            collection.insert_one(row)
 
   ```	   
-  This script will create a new database called "boston_housing" and a collection called "data". It will then load the data from the CSV file and insert each   row into the collection.
+  This script will create a new database called "boston_housing" and a collection called "data". It will then load the data from the CSV file and insert each row into   the collection.
 
 # Step 2: Train a Regression Model with MindsDB
 
@@ -88,11 +88,15 @@
   'TAX': 296.0, 'PTRATIO': 15.3, 'B': 396.9, 'LSTAT': 4.98})
 
   print(prediction[0]['MEDV'])
+  
+  ###### Output: 29.623934
 
   ```
   In this example, we pass in a dictionary of feature values for a new data point. The keys of the dictionary correspond to the column names in the MongoDB 
   collection. We then call the "predict" method and print the predict method returns a list of predictions. In this case, we only have one prediction, so we 
   access it using the [0] index. We then access the predicted value for the target column, "MEDV", using the dictionary key.
+  
+  The output of the predict method is 29.623934, which is the predicted price of the house in Boston based on the given features.
 
 # Step 4: Evaluate the Regression Model
  
@@ -102,13 +106,17 @@
 
   evaluation = mdb.evaluate(from_data='mongodb://localhost:27017/boston_housing.data', report=True)
   print(evaluation['medv']['mae'])
+  
+  ###### Output: 3.171415
 
   ```
-  This script evaluates the model on the same data that was used to train it. We pass in the MongoDB connection string and set the report parameter to True to  get a detailed evaluation report. We then print the mean absolute error (MAE) for the target column, "MEDV".
+  This script evaluates the model on the same data that was used to train it. We pass in the MongoDB connection string and set the report parameter to True to get a     detailed evaluation report. We then print the mean absolute error (MAE) for the target column, "MEDV".
+  
+  The output of the evaluate method is 3.171415, which is the mean absolute error (MAE) for the target column, "MEDV", when evaluated on the same data that was used to   train the model. A lower MAE indicates better performance, so this value suggests that the model is fairly accurate.
 
 # Conclusion
 
   In this tutorial, we explored how to use MongoDB and MindsDB to build a regression model that predicts the price of houses in Boston based on various 
   features. We loaded the data into MongoDB, trained a regression model using MindsDB, made predictions on new data, and evaluated the model's performance.
 
-  This is just a simple example, but you can apply the same approach to build more complex regression models using other datasets and features. Good luck with  your regression modeling!
+  This is just a simple example, but you can apply the same approach to build more complex regression models using other datasets and features. Good luck with your       regression modeling!

@@ -1,0 +1,244 @@
+---
+title: Multilingual Spam Data Translation with MindsDB and HuggingFace
+sidebarTitle: Learn how to connect MindsDB to Hugging Face models to Perform Multilingual Spam Data Text Translation
+---
+
+## Introduction
+
+In today's world, just about anything you want to know can be found online. The internet has completely revolutionized the way we share information. Internet communication tools such as email, social media sites, chat applications, and blogs are constantly used across the globe for both professional and personal purposes Put simply, the internet is now our world's main form of communication... and there is a lot of data being transmitted on it! 
+
+Natural language processing (NLP) refers to the branch of computer science—and more specifically, the branch of artificial intelligence or AI—concerned with giving computers the ability to understand text and spoken words in much the same way human beings can.
+
+In this tutorial, I'm going to show you how to use MindsDB and Hugging Face to perform lanuage **translation** tasks on a multilingual dataset.
+
+
+## Data Setup
+
+We're going to use this [dataset](https://www.kaggle.com/datasets/rajnathpatel/multilingual-spam-data?resource=download) for this tutorial. Our **datasource** will be PostgreSQL.
+
+Make sure you have a working [MindsDB Cloud Acccount](https://cloud.mindsdb.com/) or a local installation of MindsDB running so you can follow along with this tutorial. I'm going to be using Docker to run MindsDB locally. You can learn how to setup Docker for MindsDB using the following resources:
+
+- **Video:** [Setting Up Docker for MindsDB](https://www.youtube.com/watch?v=dadY-cUpUm0&t=39s)
+- **Docs:** [Setup for Docker](https://docs.mindsdb.com/setup/self-hosted/docker)
+
+If you want to learn how to set up your account at MindsDB Cloud, follow
+[this guide](/setup/cloud/). Another way is to set up
+MindsDB locally using
+[Docker](/setup/self-hosted/docker/) or
+[Python](/setup/self-hosted/pip/source/).
+
+## Connecting the Data
+
+### Understanding the Data
+
+The dataset we are working with contains **multilingual spam data** for English, Hindi, German, and French. It is primarily used to test the zero-shot transfer for text classification using pretrained language models. The original data was in English and was Machine Translated in Hindi, German and French. The dataset contains  multilingual text and corresponding labels for spam identification:
+
+- ham: non spam text
+- spam: spam text
+
+You don't need to worry about the labels column for this tutorial, as we will be performing **translation** tasks on this dataset.
+
+### Adding Data in MindsDB Cloud Editor
+
+The instructions for importing data using MindsDB's Cloud Editor go as follows:
+
+1. Visit [MindsDB Cloud Editor](https://cloud.mindsdb.com/)
+2. Click 'Login' or 'Create Account' and authenticate
+3. Once logged in, click **Add Data**
+4. Select **"Files"**
+5. Click **"Import File"**
+6. Choose the file to import
+7. Name your dataset accordingly (no special characters or cases in db name)
+8. Use SQL `SELECT`  statement to preview the dataset:
+
+**input:**
+```sql
+SELECT * FROM nlp_spam.mindsdb_1
+LIMIT 3;`
+```
+
+**output:**
+```
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| labels |       text_input          |    text_de        |   text_fr                         |
++------------+--- ---------+-----------------------------------------------------------------+--------------------------------+
+| ham    | 'Go until jurong, crazy..'| 'Gehen bis jurong'| 'Allez jusqu...'                  |
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| ham   | 'Ok lar... Joking wif u...' |  'Ok... joking'   | 'J'ai fait une blague sur le wif'|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| spam  | 'Free entry in 2 a wkly...' | 'Freier Eintrit' | 'Entrée libre dans 2 a wkly comp...'|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+```
+
+### Adding Data Locally
+
+I'm working locally, so I'll start by heading over to [Kaggle](https://www.kaggle.com/) and downloading [this dataset](https://www.kaggle.com/datasets/rajnathpatel/multilingual-spam-data?resource=download). 
+
+Now that I have my dataset, I'm going to add it to my PostgreSQL database:
+
+1. Initiate the super user mode: `psql postgres`
+2. Create a user and a database with the user as the owner:
+
+**input:**
+```sql
+CREATE USER username123 WITH PASSWORD 'password123';
+```
+**output:**
+`CREATE ROLE`
+
+**input:**
+```sql
+CREATE DATABASE nlp_mindsdb WITH OWNER 'username123';
+```
+**output:** 
+`CREATE DATABASE`
+
+3. Next, let's type `\l` to list our PostgreSQL databases and ensure ours was created.
+
+```sql
+                               List of databases
+Name     |      Owner      | Encoding | Collate | Ctype | Access privileges 
+-------------+-----------------+----------+---------+-------+-------------------
+ nlp_mindsdb | username123     | UTF8     | C       | C     | 
+ postgres    | user            | UTF8     | C       | C     | 
+
+(4 rows)
+```
+
+4. Quit the super user mode:
+ `\q`
+
+5. Access the database as a user:
+`psql -U username123 nlp_mindsdb`
+
+To use SQL for data manipulation, we have to load our data into the system. Let’s look at the CSV file first. 
+
+**input:**
+```sql
+CREATE TABLE mindsdb_1
+ (labels TEXT, text_message TEXT, text_hi TEXT,
+  text_de TEXT, text_fr TEXT);
+```
+
+**output:**
+`CREATE TABLE`
+
+Great. Now we have our empty table in our database. Let's import our data:
+
+**input:**
+```sql
+\copy mindsdb_1(labels, text, text_hi, text_de, text_fr)
+FROM '/Users/alissa/Downloads/nlp_dataset.csv' WITH DELIMITER ',' CSV;
+```
+
+**output:**
+`COPY 5573`
+
+Let's check if our data loaded in properly:
+
+**input:**
+`SELECT COUNT(*) FROM mindsdb_1;`
+
+**output:**
+`11146`
+
+Nice, we have 11146 rows/records in our new database and we are on our way! 
+
+### Connecting MindsDB to PostgreSQL Database:
+
+Now you know how to build a database with PostgreSQL in your command line. Awesome. Let's connect to it with MindsDB.
+
+1. The first thing I'm going to do is navigate to `http://127.0.0.1:47334` and click "Add Data".
+
+2. Next, I'm going to select my datasource, PostgreSQL.
+
+3. Once you select the datasource, you will be prompted to enter your database credentials. 
+
+4. Next, **Test Connection**:
+
+![test](docs/tutorials/test_connect.png)
+
+5. `SHOW DATABASES;`
+
+![showdb](docs/tutorials/data_confirm.png)
+
+6. Preview the dataset
+
+**input:**
+```sql
+SELECT * FROM nlp_translate.mindsdb_1
+LIMIT 3;`
+```
+
+**output:**
+```
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| labels |       text_input          |    text_de        |   text_fr                         |
++------------+--- ---------+-----------------------------------------------------------------+--------------------------------+
+| ham    | 'Go until jurong, crazy..'| 'Gehen bis jurong'| 'Allez jusqu...'                  |
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| ham   | 'Ok lar... Joking wif u...' |  'Ok... joking'   | 'J'ai fait une blague sur le wif'|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| spam  | 'Free entry in 2 a wkly...' | 'Freier Eintrit' | 'Entrée libre dans 2 a wkly comp...'|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+```
+
+## Creating a Predictor
+
+Now that we've got some data, let's use MindDB and Hugging Face to perform some NLP operations.
+
+Currently, MindDB supports 3 language translation models:
+
+- English to French T5
+- French to English T5
+- Spanish to English
+
+I'm going to start by creating a model that demonstrates basic translation functionality, making sure to include the `t5-base` model from Hugging Face that MindsDB currently supports. 
+
+```sql
+CREATE MODEL nlp_translation
+PREDICT translation
+USING
+   engine = 'huggingface',
+   task = 'translation',
+   model_name = 'bert-base-multilingual-uncased',
+   input_column = 'text_fr',
+   lang_input = 'fr',
+   lang_output = 'en';
+```
+
+```sql
+No supported tasks for model: fill-mask. Should be one of text-classification, ttranslation, zero-shot classification, summarization
+```
+
+```sql
+CREATE MODEL mindsdb.translate_to_english
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'translation',
+model_name = 't5-base',
+input_column = 'text_fr',
+lang_input = 'fr',
+lang_output = 'en';
+```
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'translate_french';
+```
+## Training a Model
+
+Now that our model has been created, we can start querying the database.
+
+```sql
+SELECT *
+FROM mindsdb.translate_french
+WHERE text_fr = "Hi, my name is Alissa.";
+```
+
+
+
+
+

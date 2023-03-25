@@ -3,10 +3,13 @@ title: Building a Chatbot for Twitter using MindsDB and GPT-4
 sidebarTitle: Twitter Chatbot
 ---
 
-This is what you will be building:  A custom chatbot using MindsDB’s connectors to Twitter, OpenAI’s GPT-4 and custom prompts.  
+This is what you will be building: A custom chatbot using MindsDB’s connectors to Twitter, OpenAI’s GPT-4 and custom prompts.  
+
 A simple example is this Twitter bot - [@Snoop_Stein](https://twitter.com/snoop_stein) - who will reply with the appropriate context and personality to any tweets which mention him. If you haven’t tried tweeting to SnoopStein yet, check it out and tweet at your new friend and rapping physicist! See what it comes up with.
 
-![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/1difhxou1d12x92gqgcf.png)
+<p align="center">
+  <img src="/assets/TWbot-response2.png" />
+</p>
 
 ## Make your own SnoopStein
 
@@ -19,46 +22,56 @@ _[MindsDB](https://mindsdb.com/?utm_medium=referral&utm_source=devto&utm_campaig
 
 Now let us show you how we built the Snoop_Stein GPT-4 bot and how you can build your own. 
 
-### 1. Create a GPT-4 model!
+### 1. Create a GPT-4 Model!
 
-Let’s first see how simple it is to [create a machine learning model](https://docs.mindsdb.com/nlp/nlp-mindsdb-openai?utm_medium=referral&utm_source=devto&utm_campaign=twitter-chatbot-tutorial-2023-03) represented as a [virtual ‘AI table’ in MindsDB](https://docs.mindsdb.com/sql/tutorials/ai-tables?utm_medium=referral&utm_source=devto&utm_campaign=twitter-chatbot-tutorial-2023-03). In this example, we will call our GPT4 model `gptbot_model`.
+Let’s first see how simple it is to [create a machine learning model](https://docs.mindsdb.com/nlp/nlp-mindsdb-openai?utm_medium=referral&utm_source=devto&utm_campaign=twitter-chatbot-tutorial-2023-03) represented as a [virtual ‘AI table’ in MindsDB](https://docs.mindsdb.com/sql/tutorials/ai-tables?utm_medium=referral&utm_source=devto&utm_campaign=twitter-chatbot-tutorial-2023-03). In this example, we will call our GPT-4 model `gpt_model`.
 
-_(Bear in mind that GPT-4 API is in HIGH demand and is rate limited, so can be slow.  The following steps might each take a few seconds)_
+_(Bear in mind that GPT-4 API is in HIGH demand and is rate limited, so can be slow. The following steps might each take a few seconds.)_
 
-```
+```sql
 CREATE MODEL mindsdb.gpt_model
 PREDICT response
 USING
 engine = 'openai',
--- api_key = 'your openai key', in MindsDB cloud accounts we provide a default key 
-model_name = 'gpt-4', -- you can also use 'text-davinci-003', 'gpt-3.5-turbo'
+-- api_key = 'your openai key', -- in MindsDB cloud accounts we provide a default key 
+model_name = 'gpt-4', -- you can also use 'text-davinci-003' or 'gpt-3.5-turbo'
 prompt_template = 'respond to {{text}} by {{author_username}}'; 
 ```
 
-_**Note:** Optionally, If you are using MindsDB on docker or if you want to use [your own OpenAI API key](https://platform.openai.com/account/api-keys), simply pass the `api_key argument` in the `USING`._
+<Note>
+If you are using MindsDB on Docker or if you want to use [your own OpenAI API key](https://platform.openai.com/account/api-keys), simply pass the `api_key` argument in the `USING` clause.
+</Note>
 
-One important attribute here is `prompt_template`. This is where we tell GPT how to write answers; it is a template because you can pass values from columns, in this case the template contains `{{author_username}}` and `{{text}}`, which will be replaced from the `WHERE` variables in the query. Let’s see in action:
+One important attribute here is `prompt_template`. This is where we tell GPT how to write answers; it is a template because you can pass values from columns, in this case the template contains `{{author_username}}` and `{{text}}`, which will be replaced from the `WHERE` clause variables in the query. Let’s see it in action:
 
+```sql
+SELECT response
+FROM mindsdb.gpt_model
+WHERE author_username = "mindsdb"
+AND text = "why is gravity so different on the sun?";
 ```
-SELECT response from mindsdb.gpt_model WHERE author_username = "mindsdb" AND text="why is gravity so different on the sun?";
-```
 
-![SELECT query response](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/l0te5pexswjrrkknj22h.png)
+<p align="center">
+  <img src="/assets/TWbot-response1.png" />
+</p>
 
-### 2. Create an ML model with personality
+### 2. Create an ML Model with Personality
 
-![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/09rd7hddj3q1s8go14ie.png)
+<p align="center">
+  <img src="/assets/TWbot - hero Snoopstein.png" />
+</p>
 
-As you can see, the previous model gave responses that aren’t that exciting. But we can use some prompt template magic to shape how we want the model to respond. Essentially we use `prompt_template` to explain **in plain english** how we want GPT to formulate its responses. 
-Let's create a model `mindsdb.snoopstein_model` with a prompt template that gives GPT a hybrid personality: he is half-Einstein, half-Snoop Dogg.  A brilliant physicist who owns the rap game. His name is **Snoop Stein**:
+As you can see, the previous model gave responses that aren’t that exciting. But we can use some prompt template magic to shape how we want the model to respond. Essentially we use `prompt_template` to explain **in plain english** how we want GPT to formulate its responses.
 
-```
+Let's create a model called `snoopstein_model` with a prompt template that gives GPT a hybrid personality: he is half-Einstein, half-Snoop Dogg. A brilliant physicist who owns the rap game. His name is **Snoop Stein**:
+
+```sql
 CREATE MODEL mindsdb.snoopstein_model
 PREDICT response
 USING
 engine = 'openai',
 max_tokens = 300,
--- api_key = 'your openai key, in cloud accounts we provide one',
+-- api_key = 'your openai key, -- in MindsDB cloud accounts we provide a default key
 model_name = 'gpt-4', -- you can also use 'text-davinci-003' or 'gpt-3.5-turbo'
 prompt_template = 'From input message: {{text}}\
 by from_user: {{author_username}}\
@@ -68,39 +81,43 @@ Dear @<from_user>, <respond a rhyme as if you were Snoop Dogg but you also were 
 
 Now let’s test this model:
 
-```
-SELECT response from mindsdb.snoopstein_model
-WHERE 
-author_username = "someuser" 
-AND text="@snoop_stein, why is gravity so different on the sun?.";
+```sql
+SELECT response
+FROM mindsdb.snoopstein_model
+WHERE author_username = "someuser" 
+AND text = "@snoop_stein, why is gravity so different on the sun?.";
 ```
 
-![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/z2dktyd5hsxisf21ummr.png)
+<p align="center">
+  <img src="/assets/TWbot-response3.png" />
+</p>
 
 Let’s try another one:
 
+```sql
+SELECT response
+FROM mindsdb.snoopstein_model
+WHERE author_username = "someuser" 
+AND text = "@snoop_stein, Apart from yourself, which rappers would make the best physicists and why?!";
 ```
-SELECT response from mindsdb.snoopstein_model
-WHERE 
-author_username = "someuser" 
-AND text="@snoop_stein, Apart from yourself, which rappers would make the best physicists and why?!";
-```
 
-![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/v3mc5b0ywfbx7mgbd70c.png)
+<p align="center">
+  <img src="/assets/TWbot-response4.png" />
+</p>
 
-### 3. Connect your GPT-4 model to Twitter!
+### 3. Connect your GPT-4 Model to Twitter!
 
-We are going to prepare a MindsDB SQL statement to connect to twitter with read-only access: 
+We are going to prepare a MindsDB SQL statement to connect to Twitter with read-only access: 
 
-```
+```sql
 CREATE DATABASE my_twitter
 WITH ENGINE = 'twitter';
 ```
 
-This creates a database called `my_twitter`. This database ships with a table called tweets that we can use to search for tweets as well as to write tweets.                  
+This creates a database called `my_twitter`. This database ships with a table called `tweets` that we can use to search for tweets as well as to write tweets.                  
 You can use the Twitter API to get a list of tweets with a particular text or hashtag, in the case below `mindsdb` or `#mindsdb`.
 
-```
+```sql
 SELECT 
    id, created_at, author_username, text 
 FROM my_twitter.tweets 
@@ -110,17 +127,17 @@ WHERE
 LIMIT 20;
 ```
 
-Note that the parameter `query` supports anything that the twitter API supports as `query`, for more reference, read (https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query)
+Note that the `query` parameter supports anything that the Twitter API supports as `query`, for more reference, read [here](https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query).
 
-Let’s test that this model can generate outputs based on the Snoop Stein personality on many tweets, by joining the model with the tweets table:
+Let’s test that this model can generate outputs based on the Snoop Stein personality on many tweets, by joining the model with the `tweets` table:
 
-```
+```sql
 SELECT 
-t.id AS in_reply_to_tweet_id, 
-t.text AS input_text, 
-t.author_username, 
-t.created_at, 
-r.response AS text 
+   t.id AS in_reply_to_tweet_id, 
+   t.text AS input_text, 
+   t.author_username, 
+   t.created_at, 
+   r.response AS text 
 FROM my_twitter.tweets t 
 JOIN mindsdb.snoopstein_model r 
 WHERE t.query = '(@snoopstein OR @snoop_stein OR #snoopstein OR #snoop_stein) -is:retweet -from:snoop_stein' 
@@ -128,34 +145,15 @@ AND t.created_at >  '2023-03-20'
 LIMIT 4;
 ```
 
-### 4. Writing tweets using SQL
+### 4. Writing Tweets using SQL
 
 Now we are at the part where we want MindsDB to write responses back into Twitter. For this, you will need to [sign up for a Twitter dev account](https://developer.twitter.com/en/support/twitter-api/developer-account) in order to actually be able to write tweets back into Twitter (write, as opposed to read-only), if you don’t have a Twitter dev account already.
 
-Twitter may take a day or so to approve your new dev account.  Once you are approved, here are the steps to link your Twitter account to MindsDB:
-https://www.youtube.com/watch?v=qVe7PeC0sUQ
-
-- Open [developer portal](https://developer.twitter.com/en/portal/projects-and-apps), 
-- Select the [+ Add app] button to create a new app 
-- Select [Create new]
-- Select “Production”  and give it a name
-- Copy and populate in the query
-   - **API Key (aka. consumer_key)**
-   - **API Key Secret (aka. consumer_secret)**
-   - **Bearer Token**
-- Click Setup on **User authentication settings**
-   - On Permissions Select: Read and Write 
-   - On Type of app Select: Web App, Automated App or Bot 
-   - On App info: provide any url for the callback url and website url
-   - Click Save
-- Once you are back in the app settings, click Keys and Tokens
-   - Generate Access Token and Secret and populate on the query
-     - Access Token
-     - Access Token Secret
+**You can find the details on [how to connect your Twitter developer account to MindsDB here](/data-integrations/twitter).**
 
 You can create a new updated database so it can read and write as follows:
 
-```
+```sql
 CREATE DATABASE mindsdb.my_twitter_v2
 WITH
   PARAMETERS = {
@@ -167,70 +165,71 @@ WITH
   };
 ```
 
-Let's test by tweeting a few things into the MindsDB Twitter account
+Let's test by tweeting a few things into the MindsDB Twitter account:
 
-```
+```sql
 INSERT INTO my_twitter_v2.tweets (in_reply_to_tweet_id, text) 
 VALUES 
  (1633439839491092482, 'MindsDB is great! now its super simple to build ML powered apps using JOBS https://docs.mindsdb.com/sql/tutorials/twitter-chatbot'),
  (1634126825377996800, 'Holy!! MindsDB is such a useful tool for developers doing ML https://docs.mindsdb.com/sql/tutorials/twitter-chatbot');
 ```
 
-Like magic right? Those tweets should be live now on twitter, You can check your tweet responses here:
-https://twitter.com/MindsDB/status/1633439839491092482
-And here:
-https://twitter.com/MindsDB/status/1634126825377996800
+Like magic right? Those tweets should be live now on twitter. You can check your tweet responses here: https://twitter.com/MindsDB/status/1633439839491092482
+And here: https://twitter.com/MindsDB/status/1634126825377996800
 
-Note: you can insert any of the values of the tweepy function create_tweet: https://docs.tweepy.org/en/stable/client.html#tweepy.Client.create_tweet
+<Note>
+You can insert any of the values of the tweepy function `create_tweet`: https://docs.tweepy.org/en/stable/client.html#tweepy.Client.create_tweet
+</Note>
 
-### 5. At last: let's create the JOB
+### 5. At last: Let's Create the JOB
 
-The `CREATE JOB` statement is great because you can use it to automate work. The idea is simple, you give it a query you want to execute and how often.  Let’s set up a job for Snoop Stein!
+The `CREATE JOB` statement is great because you can use it to automate work. The idea is simple, you give it a query you want to execute and how often. Let’s set up a job for Snoop Stein!
 
-Let’s write a JOB called `gpt4_twitter_job`:
+Let’s write a JOB called `gpt4_twitter_job` that does the following:
 
-1. Checks for new tweets
-2. Generates a response using the OpenAI model
-3. Writes the responses back into Twitter
+1. Checks for new tweets.
+2. Generates a response using the OpenAI model.
+3. Writes the responses back into Twitter.
 
-All of this can be written in one SQL command
+All of this can be written in one SQL command:
 
-```
+```sql
 CREATE JOB mindsdb.gpt4_twitter_job AS (
--- insert into tweets the output of joining model and new tweets
-INSERT INTO my_twitter_v2.tweets (in_reply_to_tweet_id, text)
-SELECT
-  t.id AS in_reply_to_tweet_id,
-  r.response AS text
-FROM my_twitter.tweets t
-JOIN mindsdb.snoopstein_model r
-     WHERE
-     t.query = '(@snoopstein OR @snoop_stein OR #snoopstein OR #snoop_stein) -is:retweet -from:snoop_stein'
-     AND t.created_at > "{{PREVIOUS_START_DATETIME}}"
- limit 10
+
+   -- insert into tweets the output of joining model and new tweets
+   INSERT INTO my_twitter_v2.tweets (in_reply_to_tweet_id, text)
+   SELECT
+      t.id AS in_reply_to_tweet_id,
+      r.response AS text
+   FROM my_twitter.tweets t
+   JOIN mindsdb.snoopstein_model r
+      WHERE
+         t.query = '(@snoopstein OR @snoop_stein OR #snoopstein OR #snoop_stein) -is:retweet -from:snoop_stein'
+      AND t.created_at > "{{PREVIOUS_START_DATETIME}}"
+   LIMIT 10
 )
-EVERY hour
+EVERY hour;
 ```
 
 And there it is! Every hour, we will be checking for new tweets that mention MindsDB, and replying with responses generated by OpenAI GPT-4 using the template from step 2 that will respond in a style that combines Albert Einstein and Snoop Dogg.
 
-You can check if your JOB is running effectively
+You can check if your JOB is running effectively:
 
-```
+```sql
 SELECT * FROM jobs WHERE name="gpt4_twitter_job"
 SELECT * FROM jobs_history WHERE name="gpt4_twitter_job"
 ```
 
-You can stop the job as follows
+You can stop the job as follows:
 
-```
+```sql
 DROP JOB gpt4_twitter_job
 ```
 
 ## Conclusion
 
-MindsDB is a powerful software platform that enables developers to easily build machine learning features into their applications. With MindsDB, developers can train machine learning models from different data sources and integration platforms, and output the generated ML results or predictions directly into the DB, queryable as tables, or output via the connected application, in this case, Twitter. This example of building a Twitter chatbot with GPT-4 integration is not the only quick solution that developers can implement in just a few minutes:  MindsDB has many examples, including integration with many other models, including Hugging Face, to build applications that can summarize text, translate, analyze customer sentiment (product reviews) and perform all kinds of business forecasting.  You can find many examples here https://docs.mindsdb.com/nlp/nlp-extended-examples.
+MindsDB is a powerful software platform that enables developers to easily build machine learning features into their applications. With MindsDB, developers can train machine learning models from different data sources and integration platforms, and output the generated ML results or predictions directly into the DB, queryable as tables, or output via the connected application, in this case, Twitter. This example of building a Twitter chatbot with GPT-4 integration is not the only quick solution that developers can implement in just a few minutes: MindsDB has many examples, including integration with many other models, including Hugging Face, to build applications that can summarize text, translate, analyze customer sentiment (product reviews) and perform all kinds of business forecasting. You can find many examples [here](https://docs.mindsdb.com/nlp/nlp-extended-examples).
 
-In pt. 2 of this series on Twitter and GPT integration, out next week, we will walk you through some new features that will allow quick creation of a conversational chatbot, that is able to maintain the state of historical messages and provide appropriate responses in context.  Make sure you don’t miss it by going [here](https://mindsdb.com/blog?utm_medium=referral&utm_source=devto&utm_campaign=twitter-chatbot-tutorial-2023-03) and signing up for our blog updates!
+In pt. 2 of this series on Twitter and GPT integration, out next week, we will walk you through some new features that will allow quick creation of a conversational chatbot, that is able to maintain the state of historical messages and provide appropriate responses in context. Make sure you don’t miss it by going [here](https://mindsdb.com/blog?utm_medium=referral&utm_source=devto&utm_campaign=twitter-chatbot-tutorial-2023-03) and signing up for our blog updates!
 
-Happy coding, and please join our [community Slack](http://mindsdbcommunity.slack.com) for feedback, support, and questions.  We look forward to meeting you there!
+Happy coding, and please join our [community Slack](http://mindsdbcommunity.slack.com) for feedback, support, and questions. We look forward to meeting you there!

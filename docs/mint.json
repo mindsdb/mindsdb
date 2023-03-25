@@ -327,7 +327,8 @@
             "data-integrations/clickhouse",
             "data-integrations/Airtable",
             "data-integrations/Google-BigQuery",
-            "data-integrations/DynamoDB"
+            "data-integrations/DynamoDB",
+            "data-integrations/hive"
           ]
         },
         {

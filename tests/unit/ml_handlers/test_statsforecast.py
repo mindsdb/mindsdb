@@ -3,11 +3,22 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from statsforecast import StatsForecast
 from statsforecast.models import AutoCES
+from statsforecast.utils import AirPassengersDF
+from statsforecast import StatsForecast
+from mindsdb.integrations.utilities.time_series_utils import get_best_model_from_results_df
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import choose_model, model_dict
 from mindsdb_sql import parse_sql
 from tests.unit.ml_handlers.test_time_series_utils import create_mock_df
 from tests.unit.executor_test_base import BaseExecutorTest
+
+
+def test_choose_model():
+    # With this data and settings, AutoETS should win
+    model_args = {"horizon": 1, "frequency": "M", "model_name": "auto"}
+    sample_df = AirPassengersDF.iloc[:10]
+    best_model = choose_model(model_args, sample_df)
+    assert best_model.alias == "AutoETS"
 
 
 class TestStatsForecast(BaseExecutorTest):
@@ -98,8 +109,6 @@ class TestStatsForecast(BaseExecutorTest):
 
         # create project
         self.run_sql("create database proj")
-
-        # mock a time series dataset
         df = pd.read_parquet("https://datasets-nixtla.s3.amazonaws.com/m4-hourly.parquet")
         df = df[df.unique_id.isin(["H1", "H2", "H3"])]  # subset for speed
         n_groups = df["unique_id"].nunique()
@@ -141,4 +150,51 @@ class TestStatsForecast(BaseExecutorTest):
         # check against ground truth
         mindsdb_result = result_df.iloc[:, -1]
         assert len(mindsdb_result) == prediction_horizon * n_groups
+        assert np.allclose(mindsdb_result, package_predictions)
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_auto_model_selection(self, mock_handler):
+        """Tests the argument for auto model selection will pick the
+        model with the lowest error.
+        """
+        # create project
+        self.run_sql("create database proj")
+        self.set_handler(mock_handler, name="pg", tables={"df": AirPassengersDF})
+
+        # generate ground truth predictions from the package - AutoTheta should win here
+        prediction_horizon = 1
+        sf = StatsForecast(models=[m(season_length=12) for m in model_dict.values()], freq="M", df=AirPassengersDF)
+        sf.cross_validation(prediction_horizon, fitted=True)
+        sf_results_df = sf.cross_validation_fitted_values()
+        best_model_name = get_best_model_from_results_df(sf_results_df)
+        package_predictions = sf.forecast(prediction_horizon)[best_model_name]
+
+        # create predictor
+        self.run_sql(
+            f"""
+           create model proj.modelx
+           from pg (select * from df)
+           predict y
+           order by ds
+           group by unique_id
+           horizon {prediction_horizon}
+           using
+             engine='statsforecast',
+             model_name='auto',
+             frequency='M'
+        """
+        )
+        self.wait_predictor("proj", "modelx")
+
+        # run predict
+        result_df = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.modelx as p
+        """
+        )
+
+        # check against ground truth
+        mindsdb_result = result_df.iloc[:, -1]
         assert np.allclose(mindsdb_result, package_predictions)

@@ -96,7 +96,7 @@ On execution, we get:
 
 ```sql
 +------------------------------------+---------+----------------------------+----------------------------+----------------------------+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| NAME                               | PROJECT | START_AT                   | END_AT                     | NEXT_RUN_AT                | SCHEDULE_STR  | QUERY                                                                                                                                                                                                                                   |
+| NAME                               | PROJECT | RUN_START                  | RUN_END                    | NEXT_RUN_AT                | SCHEDULE_STR  | QUERY                                                                                                                                                                                                                                   |
 +------------------------------------+---------+----------------------------+----------------------------+----------------------------+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | drop_model                         | mindsdb | 2023-04-01 00:00:00.000000 | [NULL]                     | 2023-04-01 00:00:00.000000 | [NULL]        | DROP MODEL mindsdb.home_rentals_model                                                                                                                                                                                                   |
 | retrain_model_and_save_predictions | mindsdb | 2023-02-15 19:19:43.210122 | 2023-04-01 00:00:00.000000 | 2023-02-15 19:19:43.210122 | every 2 days  | RETRAIN mindsdb.home_rentals_model USING join_learn_process = true; INSERT INTO my_integration.rentals (SELECT m.rental_price, m.rental_price_explain FROM mindsdb.home_rentals_model AS m JOIN example_db.demo_data.home_rentals AS d) |
@@ -133,7 +133,7 @@ On execution, we get:
 
 ```sql
 +------------------------------------+---------+----------------------------+----------------------------+----------------------------+--------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| NAME                               | PROJECT | START_AT                   | END_AT                     | NEXT_RUN_AT                | ERROR  | QUERY                                                                                                                                                                                                                                   |
+| NAME                               | PROJECT | RUN_START                  | RUN_END                    | NEXT_RUN_AT                | ERROR  | QUERY                                                                                                                                                                                                                                   |
 +------------------------------------+---------+----------------------------+----------------------------+----------------------------+--------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | retrain_model_and_save_predictions | mindsdb | 2023-02-15 19:19:43.210122 | 2023-04-01 00:00:00.000000 | 2023-02-15 19:19:43.210122 | [NULL] | RETRAIN mindsdb.home_rentals_model USING join_learn_process = true; INSERT INTO my_integration.rentals (SELECT m.rental_price, m.rental_price_explain FROM mindsdb.home_rentals_model AS m JOIN example_db.demo_data.home_rentals AS d) |
 | save_predictions                   | mindsdb | 2023-02-15 19:19:48.545580 | [NULL]                     | 2023-02-15 19:19:48.545580 | [NULL] | CREATE TABLE my_integration.`result_{{START_DATETIME}}` (SELECT m.rental_price, m.rental_price_explain FROM mindsdb.home_rentals_model AS m JOIN example_db.demo_data.home_rentals AS d)                                                |
@@ -252,17 +252,19 @@ Follow the [tutorial on how to create a Twitter chatbot](/sql/tutorials/twitter-
 Let's create a job that runs every hour, checks for new tweets, and responds using the OpenAI model.
 
 ```sql
-CREATE JOB auto_respond AS (
+CREATE JOB mindsdb.gpt4_twitter_job AS (
 
-    INSERT INTO my_twitter.tweets (in_reply_to_tweet_id, text)
-        SELECT 
-            t.id AS in_reply_to_tweet_id, 
-            r.response AS text
-        FROM my_twitter.tweets t
-        JOIN mindsdb.twitter_response_model r 
-        WHERE t.query = '(mindsdb OR #mindsdb) -is:retweet -is:reply' 
-        AND t.created_at > "{{PREVIOUS_START_DATETIME}}"
-        LIMIT 2
+   -- insert into tweets the output of joining model and new tweets
+   INSERT INTO my_twitter_v2.tweets (in_reply_to_tweet_id, text)
+   SELECT
+      t.id AS in_reply_to_tweet_id,
+      r.response AS text
+   FROM my_twitter.tweets t
+   JOIN mindsdb.snoopstein_model r
+      WHERE
+         t.query = '(@snoopstein OR @snoop_stein OR #snoopstein OR #snoop_stein) -is:retweet -from:snoop_stein'
+      AND t.created_at > "{{PREVIOUS_START_DATETIME}}"
+   LIMIT 10
 )
 EVERY hour;
 ```

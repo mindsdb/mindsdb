@@ -35,17 +35,17 @@ class EmpressHandlerTest(unittest.TestCase):
         columns = self.handler.get_columns('test')
         assert columns.type is not RESPONSE_TYPE.ERROR
 
-    #def test_4_drop_table(self):
-    #    res = self.handler.native_query("DROP TABLE IF EXISTS test_db.test")
-    #    assert res.type is not RESPONSE_TYPE.ERROR
-    #
-    #def test_5_create_table(self):
-    #    res = self.handler.native_query("CREATE TABLE IF NOT EXISTS test_db.test (id INT, name VARCHAR(255))")
-    #    assert res.type is not RESPONSE_TYPE.ERROR
+    def test_4_drop_table(self):
+        res = self.handler.native_query("DROP TABLE IF EXISTS test_db.test")
+        assert res.type is not RESPONSE_TYPE.ERROR
 
-    #def test_6_insert(self):
-    #    res = self.handler.native_query("INSERT INTO test VALUES (100,'ONE HUNDRED')")
-    #    assert res.type is not RESPONSE_TYPE.ERROR
+    def test_5_create_table(self):
+        res = self.handler.native_query("CREATE TABLE IF NOT EXISTS test_db.test (id INT, name VARCHAR(255))")
+        assert res.type is not RESPONSE_TYPE.ERROR
+
+    def test_6_insert(self):
+        res = self.handler.native_query("INSERT INTO test VALUES (100,'ONE HUNDRED')")
+        assert res.type is not RESPONSE_TYPE.ERROR
 
     def test_7_disconnect(self):
         assert self.handler.disconnect()

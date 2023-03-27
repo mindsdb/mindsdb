@@ -306,10 +306,15 @@
           ]
         },
         {
+          "group": "Application Integrations",
+          "pages": [
+            "app-integrations/twitter"
+          ]
+        },
+        {
           "group": "Data Integrations",
           "pages": [         
             "data-integrations/all-data-integrations",
-            "data-integrations/twitter",
             "data-integrations/amazon-redshift",
             "data-integrations/db2",
             "data-integrations/cratedb",
@@ -320,7 +325,10 @@
             "data-integrations/cassandra",            
             "data-integrations/Couchbase",
             "data-integrations/clickhouse",
-            "data-integrations/Airtable"
+            "data-integrations/Airtable",
+            "data-integrations/Google-BigQuery",
+            "data-integrations/DynamoDB",
+            "data-integrations/hive"
           ]
         },
         {

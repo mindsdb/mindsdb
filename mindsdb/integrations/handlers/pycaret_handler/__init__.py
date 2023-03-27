@@ -1,6 +1,6 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
-from mindsdb.integrations.handlers.pycaret_handler.__about__ import __version__ as version, __description__ as description
+from .__about__ import __version__ as version, __description__ as description
 try:
     from .pycaret_handler import PyCaretHandler as Handler
     import_error = None

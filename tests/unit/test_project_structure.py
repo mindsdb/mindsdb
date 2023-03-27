@@ -664,8 +664,8 @@ class TestJobs(BaseExecutorDummyML):
 
         # run scheduler once
         data_handler.reset_mock()
-        from mindsdb.interfaces.jobs.scheduler import check_timetable
-        check_timetable(config={})
+        from mindsdb.interfaces.jobs.scheduler import Scheduler
+        Scheduler.check_timetable(config={})
 
         # check query to integration
         assert data_handler().query.call_args[0][0].to_string() == "SELECT * FROM tbl1 WHERE tbl1.b > 'null'"

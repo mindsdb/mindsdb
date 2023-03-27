@@ -1,7 +1,10 @@
 from typing import Optional, Dict
 
+import dill
 import pandas as pd
 from pycaret.classification import setup, compare_models, predict_model, finalize_model
+
+from mindsdb.integrations.libs.base import BaseMLEngine
 
 
 class PyCaretHandler(BaseMLEngine):

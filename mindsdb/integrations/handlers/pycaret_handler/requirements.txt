@@ -1,0 +1,3 @@
+pycaret
+dill
+mindsdb-evaluator>=0.0.6

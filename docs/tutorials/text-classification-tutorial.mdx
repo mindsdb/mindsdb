@@ -1,0 +1,69 @@
+---
+title: Use MindsDB To Classify Hate Speech in Your Dataset
+sidebarTitle: Connect MindsDB with Hugging Face and perform text-classification queries on your dataset using SQL
+---
+
+## Introduction
+
+
+## Data Setup
+
+Make sure you have access to a working MindsDB installation, either locally or via [MindsDB Cloud](https://cloud.mindsdb.com/). 
+
+*You can create a **free** MindsDB account and take advantage of their built-in SQL editor [here](https://cloud.mindsdb.com/editor).*
+
+If you want to learn more about creating a free MindsDB Cloud account, follow
+[this guide](/setup/cloud/). Another way is to set up
+MindsDB locally using
+[Docker](/setup/self-hosted/docker/) or
+[Python](/setup/self-hosted/pip/source/).
+
+Let's get started!
+
+## Connecting The Data
+
+Let's start by connecting to MindsDB's MySQL API:
+
+`mysql -h 127.0.0.1 --port 47335 -u mindsdb`
+
+output:
+
+```
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 1
+Server version: 5.7.1-MindsDB-1.0 (MindsDB)
+
+Copyright (c) 2000, 2023, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+```
+
+Now I want to confirm the connection was successful, so I'm just going to display the tables in MindsDB:
+
+` SHOW TABLES;`
+
+The output should display your MindsDB tables:
+
+```
++----------------------+
+| Tables_in_mindsdb    |
++----------------------+
+| models               |
+| models_versions      |
+| jobs                 |
+| jobs_history         |
+| french_en            |
+| french_en_nlp        |
+| nlp_predictor        |
+| nlp_test_model       |
+| translator_spam      |
++----------------------+
+9 rows in set (0.08 sec)
+```
+
+## Training a Predictor
+

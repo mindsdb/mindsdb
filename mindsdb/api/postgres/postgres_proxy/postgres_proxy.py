@@ -1,11 +1,12 @@
 import base64
 import os
+import json
 import socketserver
 from functools import partial
 from typing import Callable, Dict, Type, Any, Iterable, Sequence
 
 from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
-from mindsdb.api.mysql.mysql_proxy.executor import Executor
+from mindsdb.api.postgres.postgres_proxy.executor import Executor
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CHARSET_NUMBERS
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.common.check_auth import check_auth
@@ -14,7 +15,7 @@ from mindsdb.api.postgres.postgres_proxy.postgres_packets.errors import POSTGRES
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import GenericField, PostgresField
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_formats import Terminate, \
     Query, NoticeResponse, AuthenticationClearTextPassword, AuthenticationOk, RowDescriptions, DataRow, CommandComplete, \
-    ReadyForQuery, ConnectionFailure, ParameterStatus, Error
+    ReadyForQuery, ConnectionFailure, ParameterStatus, Error, Execute, Bind, Parse, Sync
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message import PostgresMessage
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_packets import PostgresPacketReader
 from mindsdb.api.postgres.postgres_proxy.utilities import strip_null_byte
@@ -35,6 +36,8 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         self.session = None
         self.client_capabilities = None
         self.user_parameters = None
+        self.last_stmt_id = None
+        self.ready_for_query = True
         super().__init__(request, client_address, server)
 
     def handle(self) -> None:
@@ -43,7 +46,9 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         self.init_session()
         self.message_map: Dict[Type[PostgresMessage], Callable[[Any], bool]] = {
             Terminate: self.terminate,
-            Query: self.query
+            Query: self.query,
+            Parse: self.parse,
+            Execute: self.execute
         }
         self.client_buffer = PostgresPacketReader(self.rfile)
         started = self.start_connection()
@@ -51,6 +56,29 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
             self.logger.debug("connection started")
             self.send_initial_data()
             self.main_loop()
+
+    def parse(self, message: Parse):
+        self.ready_for_query = False
+        executor = Executor(
+            session=self.session,
+            proxy_server=self,
+            charset=self.charset
+        )
+        self.last_stmt_id = self.session.register_stmt(executor)
+        executor.stmt_prepare(sql=message.query)
+        self.last_params = executor.params
+
+
+    def execute(self, message: Execute):
+        #TODO Enable use of more than one stmt_id, currently only using last
+        prepared_stmt = self.session.prepared_stmts[self.last_stmt_id]
+        executor = prepared_stmt['statement']
+        executor.stmt_execute(self.last_params)
+        return self.return_executor_data(executor)
+
+    def sync(self, message: Sync):
+        self.ready_for_query = True
+
 
     def init_session(self):
         self.logger.info('New connection [{ip}:{port}]'.format(
@@ -78,7 +106,8 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
     def process_query(self, sql):
         executor = Executor(
             session=self.session,
-            sqlserver=self
+            proxy_server=self,
+            charset=self.charset
         )
         self.logger.debug("processing query\n%s", sql)
         try:
@@ -89,7 +118,9 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
                 error_message = str(e).encode(self.get_encoding()),
                 error_code = POSTGRES_SYNTAX_ERROR_CODE.encode(self.get_encoding())
             )
+        return self.return_executor_data(executor)
 
+    def return_executor_data(self, executor):
         if executor.data is None:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.OK,
@@ -99,7 +130,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.TABLE,
                 state_track=executor.state_track,
-                columns=executor.to_mysql_columns(executor.columns),
+                columns=executor.to_postgres_columns(executor.columns),
                 data=executor.data,
                 status=executor.server_status
             )
@@ -183,7 +214,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         for column in columns:
             fields.append(GenericField(
                 name=column['name'],
-                object_id=column['type'],
+                object_id=column['type'].value,
                 column_id=i
             ))
             i += 1
@@ -194,8 +225,12 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         for row in rows:
             p_row = []
             for column in row:
-                if type(column) == int or type(column) == float:
+                if column is None:
+                    column = ""
+                elif type(column) == int or type(column) == float:
                     column = str(column)
+                elif type(column) == list or type(column) == dict:
+                    column = json.dumps(column)
                 p_row.append(column.encode(encoding=self.charset))
             p_rows.append(p_row)
         return p_rows
@@ -214,8 +249,9 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
 
     def main_loop(self):
         while True:
-            self.logger.debug("Ready for Query")
-            self.send(ReadyForQuery())
+            if self.ready_for_query:
+                self.logger.debug("Ready for Query")
+                self.send(ReadyForQuery())
             message: PostgresMessage = self.client_buffer.read_message()
             tof = type(message)
             if tof in self.message_map:

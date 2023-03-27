@@ -482,7 +482,19 @@ class Parse(BaseFrontendMessage):
 
     def __init__(self):
         self.identifier = PostgresFrontendMessageIdentifier.PARSE
+        self.destination = None
+        self.query = None
+        #TODO parameters aren't being grabbed
+        self.parameters = None
         super().__init__()
+
+    def read(self, packet_reader: PostgresPacketReader):
+        super().read(packet_reader=packet_reader)
+        elems = self.response.split(b"\x00")
+        self.destination = elems[0]
+        self.query = elems[1]
+        return self
+
 
 class Bind(BaseFrontendMessage):
     """

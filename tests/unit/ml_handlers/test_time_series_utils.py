@@ -64,7 +64,7 @@ def test_statsforecast_df_transformations():
     # Test for multiple groups
     settings_dict["group_by"] = ["group_col", "group_col_2", "group_col_3"]
     nixtla_df = transform_to_nixtla_df(df, settings_dict)
-    assert nixtla_df["unique_id"][0] == "a|a2|a3"
+    assert nixtla_df["unique_id"][0] == "a/a2/a3"
     # Test reversing the transformation
     nixtla_results_df = nixtla_df.rename({"y": model_name}, axis=1).set_index("unique_id")
     mindsdb_results_df = get_results_from_nixtla_df(nixtla_results_df, settings_dict)

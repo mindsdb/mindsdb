@@ -1,5 +1,8 @@
 import pandas as pd
 from sklearn.metrics import r2_score
+from hierarchicalforecast.core import HierarchicalReconciliation
+from hierarchicalforecast.methods import BottomUp, TopDown, MiddleOut
+from hierarchicalforecast.utils import aggregate
 
 DEFAULT_FREQUENCY = "D"
 
@@ -9,7 +12,7 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
 
     Nixtla packages require dataframes to have the following columns:
         unique_id -> the grouping column. If multiple groups are specified then
-        we join them into one name using a | char.
+        we join them into one name using a / char.
         ds -> the date series
         y -> the target variable for prediction
 
@@ -21,7 +24,7 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
     if len(settings_dict["group_by"]) > 1:
         for col in settings_dict["group_by"]:
             nixtla_df[col] = nixtla_df[col].astype(str)
-        nixtla_df["unique_id"] = nixtla_df[settings_dict["group_by"]].agg("|".join, axis=1)
+        nixtla_df["unique_id"] = nixtla_df[settings_dict["group_by"]].agg("/".join, axis=1)
         group_col = "ignore this"
     else:
         group_col = settings_dict["group_by"][0]
@@ -44,7 +47,7 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
     return_df.columns = ["unique_id", "ds", model_args["target"]]
     if len(model_args["group_by"]) > 1:
         for i, group in enumerate(model_args["group_by"]):
-            return_df[group] = return_df["unique_id"].apply(lambda x: x.split("|")[i])
+            return_df[group] = return_df["unique_id"].apply(lambda x: x.split("/")[i])
     else:
         group_by_col = model_args["group_by"][0]
         return_df[group_by_col] = return_df["unique_id"]
@@ -82,3 +85,40 @@ def get_best_model_from_results_df(nixtla_results_df, metric=r2_score):
         if accuracy > current_accuracy:
             best_model, current_accuracy = model, accuracy
     return best_model
+
+
+
+def spec_hierarchy_from_list(col_list):
+    spec = [["Total"]]
+    for i in range(len(col_list)):
+        spec.append(["Total"] + col_list[:i + 1])
+    return spec
+
+
+def get_hierarchy_from_df(df, spec, model_args):
+    nixtla_df = df.rename({model_args["order_by"]: "ds", model_args["target"]: "y"}, axis=1)
+    for col in model_args["group_by"]:
+        nixtla_df[col] = nixtla_df[col].astype(str)
+    nixtla_df.insert(0, "Total", "total")
+    nixtla_df, hier_df, hier_dict = aggregate(nixtla_df, spec)  # returns (nixtla_df, hierarchy_df, hierarchy_dict)
+    return nixtla_df, hier_df, hier_dict
+
+
+def reconcile_forecasts(nixtla_df, forecast_df, hierarchy_df, hierarchy_dict):
+    reconcilers = [BottomUp()]
+    hrec = HierarchicalReconciliation(reconcilers=reconcilers)
+    reconciled_df = hrec.reconcile(Y_hat_df=forecast_df, Y_df=nixtla_df,
+                            S=hierarchy_df, tags=hierarchy_dict)
+    return get_results_from_reconciled_df(reconciled_df, hierarchy_df)
+
+
+def get_results_from_reconciled_df(reconciled_df, hierarchy_df):
+    for col in reconciled_df.columns:
+        if col not in ["ds", "y"]:
+            if "BottomUp" not in col:
+                results_df = reconciled_df.drop(col, axis=1)  # removes original forecast column
+                break
+    lowest_level_ids = hierarchy_df.columns
+    results_df = results_df[results_df.index.isin(lowest_level_ids)]
+    results_df.index = results_df.index.str.replace("total/", "")
+    return results_df

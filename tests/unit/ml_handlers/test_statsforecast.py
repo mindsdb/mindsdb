@@ -2,12 +2,29 @@ import time
 from unittest.mock import patch
 import numpy as np
 import pandas as pd
+import pytest
 
-from statsforecast import StatsForecast
 from statsforecast.models import AutoCES
+from statsforecast.utils import AirPassengersDF
+from statsforecast import StatsForecast
+from mindsdb.integrations.utilities.time_series_utils import get_best_model_from_results_df
+from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import (
+    choose_model,
+    model_dict,
+    get_insample_cv_results,
+)
 from mindsdb_sql import parse_sql
 from tests.unit.ml_handlers.test_time_series_utils import create_mock_df
 from tests.unit.executor_test_base import BaseExecutorTest
+
+
+def test_choose_model():
+    # With this data and settings, AutoTheta should win
+    model_args = {"horizon": 1, "frequency": "M", "model_name": "auto"}
+    sample_df = AirPassengersDF.iloc[:100]
+    results_df = get_insample_cv_results(model_args, sample_df)
+    best_model = choose_model(model_args, results_df)
+    assert best_model.alias == "AutoTheta"
 
 
 class TestStatsForecast(BaseExecutorTest):
@@ -65,6 +82,9 @@ class TestStatsForecast(BaseExecutorTest):
         )
         assert list(round(result_df["target_col"])) == [42, 43, 44]
 
+        describe_result = self.run_sql("describe proj.model_1_group.features")
+        assert describe_result["unique_id"][0] == ["group_col"]
+
         # now add more groups
         self.run_sql(
             """
@@ -90,6 +110,9 @@ class TestStatsForecast(BaseExecutorTest):
         )
         assert list(round(result_df["target_col"])) == [32, 33, 34]
 
+        describe_result = self.run_sql("describe proj.model_multi_group.features")
+        assert describe_result["unique_id"][0] == ["group_col", "group_col_2", "group_col_3"]
+
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_model_choice(self, mock_handler):
         """This tests whether changing the model_name and frequency USING args
@@ -98,8 +121,6 @@ class TestStatsForecast(BaseExecutorTest):
 
         # create project
         self.run_sql("create database proj")
-
-        # mock a time series dataset
         df = pd.read_parquet("https://datasets-nixtla.s3.amazonaws.com/m4-hourly.parquet")
         df = df[df.unique_id.isin(["H1", "H2", "H3"])]  # subset for speed
         n_groups = df["unique_id"].nunique()
@@ -142,3 +163,79 @@ class TestStatsForecast(BaseExecutorTest):
         mindsdb_result = result_df.iloc[:, -1]
         assert len(mindsdb_result) == prediction_horizon * n_groups
         assert np.allclose(mindsdb_result, package_predictions)
+
+        # test describe() method, which should return a df row with keys
+        # {"inputs": [features], "outputs": <target_name>, "accuracies": [model_accuracies]}
+        describe_result = self.run_sql("describe proj.modelx")
+        assert describe_result["inputs"][0] == ["y", "ds", ["unique_id"]]
+        assert describe_result["outputs"][0] == "y"
+        # The expected format of the "accuracies" key is
+        # [(model_1_name, model_1_accuracy), (model_2_name, model_2_accuracy), ...]
+        assert describe_result["accuracies"][0][0][0] == "AutoCES"
+        assert describe_result["accuracies"][0][0][1] < 1
+
+        describe_model = self.run_sql("describe proj.modelx.model")
+        assert describe_model["model_name"][0] == "AutoCES"
+        assert describe_model["frequency"][0] == "H"
+        assert describe_model["season_length"][0] == 24
+
+        describe_features = self.run_sql("describe proj.modelx.features")
+        assert describe_features["ds"][0] == "ds"
+        assert describe_features["y"][0] == "y"
+        assert describe_features["unique_id"][0] == ["unique_id"]
+
+        with pytest.raises(Exception) as e:
+            self.run_sql("describe proj.modelx.ensemble")
+            assert "ensemble is not supported" in str(e)
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_auto_model_selection(self, mock_handler):
+        """Tests the argument for auto model selection will pick the
+        model with the lowest error.
+        """
+        # create project
+        self.run_sql("create database proj")
+        self.set_handler(mock_handler, name="pg", tables={"df": AirPassengersDF})
+
+        # generate ground truth predictions from the package - AutoTheta should win here
+        prediction_horizon = 1
+        sf = StatsForecast(models=[m(season_length=12) for m in model_dict.values()], freq="M", df=AirPassengersDF)
+        sf.cross_validation(prediction_horizon, fitted=True)
+        sf_results_df = sf.cross_validation_fitted_values()
+        best_model_name = get_best_model_from_results_df(sf_results_df)
+        package_predictions = sf.forecast(prediction_horizon)[best_model_name]
+
+        # create predictor
+        self.run_sql(
+            f"""
+           create model proj.modelx
+           from pg (select * from df)
+           predict y
+           order by ds
+           group by unique_id
+           horizon {prediction_horizon}
+           using
+             engine='statsforecast',
+             model_name='auto',
+             frequency='M'
+        """
+        )
+        self.wait_predictor("proj", "modelx")
+
+        # run predict
+        result_df = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.modelx as p
+        """
+        )
+
+        # check against ground truth
+        mindsdb_result = result_df.iloc[:, -1]
+        assert np.allclose(mindsdb_result, package_predictions)
+
+        describe_result = self.run_sql("describe proj.modelx")
+        assert len(describe_result["accuracies"][0]) > 1
+        assert type(describe_result["accuracies"][0][0][0]) == str
+        assert describe_result["accuracies"][0][0][1] < 1

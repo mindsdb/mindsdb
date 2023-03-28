@@ -1,0 +1,50 @@
+---
+title: OpenGauss
+sidebarTitle: OpenGauss
+---
+
+# OpenGauss Handler
+
+  This is the implementation of the OpenGauss handler for MindsDB.
+  
+## OpenGauss
+
+  OpenGauss is an open source relational database management system that is released with the Mulan PSL v2. with the kernel 
+  built on Huawei's years of experience in the database field and continuously provides competitive features tailored to 
+  enterprise-grade scenarios.
+
+## Usage
+  
+  In order to make use of this handler and connect to an Access database in MindsDB, the following syntax can be used,
+
+  ```json
+
+  CREATE DATABASE opengauss_datasource            --- display name for the database
+  WITH ENGINE = 'opengauss',                      --- name of the MindsDB handler
+  PARAMETERS = {
+  "host": " ",                                    --- host name or IP address
+  "port": ,                                       --- port used to make TCP/IP connection
+  "database": " ",                                --- database name
+  "user": " ",                                    --- database user
+  "password": " ",                                --- database password
+  };
+
+  ```
+## Example
+
+  ```json
+
+  CREATE DATABASE opengauss_datasource
+  WITH ENGINE = 'opengauss',
+  PARAMETERS = {
+  "host": "127.0.0.1",
+  "port": 5432,
+  "database": "opengauss",
+  "user": "mindsdb",
+  "password": "password"
+  };
+
+  ```
+
+
+  

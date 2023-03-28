@@ -4,6 +4,8 @@ import datetime as dt
 import ast
 from collections import defaultdict
 import pytz
+import io
+import requests
 
 import pandas as pd
 import tweepy
@@ -159,6 +161,23 @@ class TweetsTable(APITable):
             max_text_len = 280
             text = params['text']
             if len(text) <= 280:
+                # Post image if column media_url is provided, only do this on last tweet
+                if 'media_url' in params:
+                    media_url = params['media_url']
+
+                    # create an in memory file
+                    resp = requests.get(media_url)
+                    img = io.BytesIO(resp.content)
+
+                    # upload media to twitter
+                    api_v1 = self.handler.connect(api_version=1)
+                    content_type = resp.headers['Content-Type']
+                    file_type = content_type.split('/')[-1]
+                    media = api_v1.media_upload(filename="img.{file_type}".format(file_type=file_type), file=img)
+
+                    del params['media_url']
+                    params['media_ids'] = [media.media_id]
+
                 self.handler.call_twitter_api('create_tweet', params)
                 continue
 
@@ -167,8 +186,11 @@ class TweetsTable(APITable):
             messages = []
 
             text2 = ''
+            pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
             for word in words:
-                if len(text2) + len(word) > max_text_len - 3 - 7:  # 3 is for ..., 7 is for (10/11)
+                # replace the links in word to string with the length as twitter short url (23)
+                word2 = re.sub(pattern, '-' * 23, word)
+                if len(text2) + len(word2) > max_text_len - 3 - 7:  # 3 is for ..., 7 is for (10/11)
                     messages.append(text2.strip())
 
                     text2 = ''
@@ -184,6 +206,7 @@ class TweetsTable(APITable):
                     text += '...'
                 else:
                     text += ' '
+
                 text += f'({i + 1}/{len_messages})'
 
                 params['text'] = text
@@ -223,12 +246,23 @@ class TwitterHandler(APIHandler):
         tweets = TweetsTable(self)
         self._register_table('tweets', tweets)
 
-    def connect(self):
+    def connect(self, api_version=2):
         """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""  # noqa
 
         if self.is_connected is True:
             return self.api
-
+        # if version 1, do not hold connection in self.api, simply return api object
+        if api_version == 1:
+            auth = tweepy.OAuthHandler(
+                self.connection_args['consumer_key'],
+                self.connection_args['consumer_secret']
+            )
+            auth.set_access_token(
+                self.connection_args['access_token'],
+                self.connection_args['access_token_secret']
+            )
+            return tweepy.API(auth)
+        
         self.api = tweepy.Client(**self.connection_args)
 
         self.is_connected = True
@@ -245,12 +279,25 @@ class TwitterHandler(APIHandler):
             #   it raises an error in case if auth is not success and returns not-found otherwise
             #   api.get_me() is not exposed for OAuth 2.0 App-only authorisation
             api.get_user(id=1)
-
             response.success = True
 
         except tweepy.Unauthorized as e:
-            log.logger.error(f'Error connecting to Twitter api: {e}!')
-            response.error_message = e
+            response.error_message = f'Error connecting to Twitter api: {e}. Check bearer_token'
+            log.logger.error(response.error_message)
+
+        if response.success is True and len(self.connection_args) > 1:
+            # not only bearer_token, check read-write mode (OAuth 2.0 Authorization Code with PKCE)
+            try:
+                api = self.connect()
+
+                api.get_me()
+
+            except tweepy.Unauthorized as e:
+                keys = 'consumer_key', 'consumer_secret', 'access_token', 'access_token_secret'
+                response.error_message = f'Error connecting to Twitter api: {e}. Check' + ', '.join(keys)
+                log.logger.error(response.error_message)
+
+                response.success = False
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False
@@ -312,6 +359,7 @@ class TwitterHandler(APIHandler):
                 else:
                     params['max_results'] = left
 
+            log.logger.debug(f'>>>twitter in: {method_name}({params})')
             resp = method(**params)
 
             if hasattr(resp, 'includes'):

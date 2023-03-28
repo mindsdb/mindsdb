@@ -24,12 +24,16 @@ N/A - model training is computationally light.
 # To what degree can users control the underlying framework by passing parameters via the USING syntax?
 The forecast horizon with the "horizon" arg.
 
-The predictive model can be specified with the "model_name" arg. Users can choose between "AutoARIMA, AutoETS, AutoCES, AutoTheta". If no choice is made, the default is "AutoARIMA".
+The predictive model can be specified with the "model_name" arg. Users can choose between "AutoARIMA, AutoETS, AutoCES, AutoTheta, auto".
+If no choice is made, the default is "AutoARIMA".
+If users select "auto", it will automatically select the best model from the full list of choices.
+This will likely provide the best results, but raise computation time.
 
 The data frequency can be specified with the "frequency" arg. If no frequency is specified, MindsDB tries to infer this automatically from the dataframe.
 
 # Does this integration offer model explainability or insights via the DESCRIBE syntax?
-Not implemented yet.
+We provide model choice, model accuracy, inferred seasonality and frequency via DESCRIBE.
+See integration test in https://github.com/mindsdb/mindsdb/pull/5113/
 
 # Does this integration support fine-tuning pre-existing models (i.e. is the update() method implemented)? Are there any caveats?
 Not needed - this is not a deep learning framework.
@@ -39,7 +43,7 @@ These models do not require training/testing/split because they have regularisat
 This allows model training and forecasting to take place simultaneously.
 
 # Any directions for future work in subsequent versions of the handler?
-Implement the DESCRIBE method.
+Visualisations of forecasts would help for quickly sense-checking results.
 
 # Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
 See integration test in https://github.com/mindsdb/mindsdb/pull/4398

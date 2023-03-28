@@ -186,8 +186,11 @@ class TweetsTable(APITable):
             messages = []
 
             text2 = ''
+            pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
             for word in words:
-                if len(text2) + len(word) > max_text_len - 3 - 7:  # 3 is for ..., 7 is for (10/11)
+                # replace the links in word to string with the length as twitter short url (23)
+                word2 = re.sub(pattern, '-' * 23, word)
+                if len(text2) + len(word2) > max_text_len - 3 - 7:  # 3 is for ..., 7 is for (10/11)
                     messages.append(text2.strip())
 
                     text2 = ''
@@ -276,12 +279,25 @@ class TwitterHandler(APIHandler):
             #   it raises an error in case if auth is not success and returns not-found otherwise
             #   api.get_me() is not exposed for OAuth 2.0 App-only authorisation
             api.get_user(id=1)
-
             response.success = True
 
         except tweepy.Unauthorized as e:
-            log.logger.error(f'Error connecting to Twitter api: {e}!')
-            response.error_message = e
+            response.error_message = f'Error connecting to Twitter api: {e}. Check bearer_token'
+            log.logger.error(response.error_message)
+
+        if response.success is True and len(self.connection_args) > 1:
+            # not only bearer_token, check read-write mode (OAuth 2.0 Authorization Code with PKCE)
+            try:
+                api = self.connect()
+
+                api.get_me()
+
+            except tweepy.Unauthorized as e:
+                keys = 'consumer_key', 'consumer_secret', 'access_token', 'access_token_secret'
+                response.error_message = f'Error connecting to Twitter api: {e}. Check' + ', '.join(keys)
+                log.logger.error(response.error_message)
+
+                response.success = False
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False

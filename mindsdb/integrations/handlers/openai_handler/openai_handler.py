@@ -153,7 +153,7 @@ class OpenAIHandler(BaseMLEngine):
             model_name = args.get('model_name', self.default_model)
             api_args = {
                 'max_tokens': pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens)),
-                'temperature': min(1.0, max(0.0, args.get('temperature', 0.0))),
+                'temperature': min(1.0, max(0.0, pred_args.get('temperature', args.get('temperature', 0.0)))),
                 'top_p': pred_args.get('top_p', None),
                 'n': pred_args.get('n', None),
                 'stop': pred_args.get('stop', None),

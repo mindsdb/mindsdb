@@ -328,7 +328,8 @@
             "data-integrations/Airtable",
             "data-integrations/Google-BigQuery",
             "data-integrations/DynamoDB",
-            "data-integrations/hive"
+            "data-integrations/hive",
+            "data-integrations/impala"
           ]
         },
         {

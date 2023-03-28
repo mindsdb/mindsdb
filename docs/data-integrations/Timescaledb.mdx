@@ -31,18 +31,19 @@ In order to make use of this handler and connect to a TimescaleDB server in Mind
 ```sql
 CREATE DATABASE timescaledb_datasource
 WITH
-engine='postgres',
+engine='timescaledb',
 parameters={
     "host": "examplehost.timescaledb.com",
     "port": 5432,
-    "database": "example_db",
     "user": "example_user",
-    "password": "my_password"
+    "password": "my_password",
+    "database": "tsdb"
+    
 };
 ```
 
 Now, you can use this established connection to query your database as follows,
 
 ```sql
-SELECT * FROM timescaledb_datasource.example_tbl
+SELECT * FROM timescaledb_datasource.sensor;
 ```

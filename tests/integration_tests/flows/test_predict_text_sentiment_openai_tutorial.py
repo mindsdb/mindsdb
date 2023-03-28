@@ -19,6 +19,7 @@ OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 # make openai handler to use api key
 os.environ["OPENAI_API_KEY"] = OPEN_AI_API_KEY
 
+
 class QueryStorage:
     create_db = """
 CREATE DATABASE mysql_demo_db

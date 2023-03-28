@@ -104,8 +104,7 @@ class StatsForecastHandler(BaseMLEngine):
         )
         model_args["hierarchy"] = using_args["hierarchy"] if "hierarchy" in using_args else False
         if model_args["hierarchy"]:
-            spec = spec_hierarchy_from_list(model_args["hierarchy"])
-            training_df, hier_df, hier_dict = get_hierarchy_from_df(df, spec, model_args)
+            training_df, hier_df, hier_dict = get_hierarchy_from_df(df, model_args)
             self.model_storage.file_set("hier_dict", dill.dumps(hier_dict))
             self.model_storage.file_set("hier_df", dill.dumps(hier_df))
         else:

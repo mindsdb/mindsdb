@@ -89,22 +89,30 @@ def get_best_model_from_results_df(nixtla_results_df, metric=r2_score):
 
 
 def spec_hierarchy_from_list(col_list):
+    """Gets the hierarchy spec from the list of hierarchy cols"""
     spec = [["Total"]]
     for i in range(len(col_list)):
         spec.append(["Total"] + col_list[:i + 1])
     return spec
 
 
-def get_hierarchy_from_df(df, spec, model_args):
+def get_hierarchy_from_df(df, model_args):
+    """Extracts hierarchy from the raw df, using the provided spec and args.
+
+    The hierarchy args is a list of format [<level 1>, <level 2>, ..., <level n>]
+    where each element is a level in the hierarchy.
+    """
+    spec = spec_hierarchy_from_list(model_args["hierarchy"])
     nixtla_df = df.rename({model_args["order_by"]: "ds", model_args["target"]: "y"}, axis=1)
     for col in model_args["group_by"]:
-        nixtla_df[col] = nixtla_df[col].astype(str)
+        nixtla_df[col] = nixtla_df[col].astype(str)  # grouping columns need to be string format
     nixtla_df.insert(0, "Total", "total")
     nixtla_df, hier_df, hier_dict = aggregate(nixtla_df, spec)  # returns (nixtla_df, hierarchy_df, hierarchy_dict)
     return nixtla_df, hier_df, hier_dict
 
 
 def reconcile_forecasts(nixtla_df, forecast_df, hierarchy_df, hierarchy_dict):
+    """Reconciles forecast results according to the hierarchy."""
     reconcilers = [BottomUp()]
     hrec = HierarchicalReconciliation(reconcilers=reconcilers)
     reconciled_df = hrec.reconcile(Y_hat_df=forecast_df, Y_df=nixtla_df,
@@ -113,11 +121,20 @@ def reconcile_forecasts(nixtla_df, forecast_df, hierarchy_df, hierarchy_dict):
 
 
 def get_results_from_reconciled_df(reconciled_df, hierarchy_df):
+    """Formats the reconciled df into a normal Nixtla results df.
+
+    First drops the model output columns that haven't been reconciled.
+    Then drops rows corresponding to higher level predictions that were not
+    in the original dataframe, e.g. the total for each grouping.
+    """
+    #  Drop unnecessary columns
     for col in reconciled_df.columns:
         if col not in ["ds", "y"]:
             if "BottomUp" not in col:
                 results_df = reconciled_df.drop(col, axis=1)  # removes original forecast column
                 break
+
+    #  Drop higher-level rows
     lowest_level_ids = hierarchy_df.columns
     results_df = results_df[results_df.index.isin(lowest_level_ids)]
     results_df.index = results_df.index.str.replace("total/", "")

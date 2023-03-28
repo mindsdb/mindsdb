@@ -289,6 +289,14 @@
                 "rest/tables/delete-table"
               ]
             }
+            	{
+          "group": "Data Integrations",
+          "pages": [
+            "data-integrations/all-data-integrations",
+            "...",
+            "data-integrations/google-sheets"
+          ]
+        }
           ]
         },
         {

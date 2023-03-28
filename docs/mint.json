@@ -139,13 +139,8 @@
                   "group": "Time Series",
                   "pages": [
                     "sql/tutorials/house-sales-forecasting",
-                    "sql/tutorials/time-series-community",
-                    {
-                      "group": "Nixtla",
-                      "pages": [
-                        "nixtla/statsforecast"
-                      ]
-                    }
+                    "nixtla/house-sales-statsforecast",
+                    "sql/tutorials/time-series-community"
                   ]
                 },
                 {
@@ -327,7 +322,9 @@
             "data-integrations/clickhouse",
             "data-integrations/Airtable",
             "data-integrations/Google-BigQuery",
-            "data-integrations/DynamoDB"
+            "data-integrations/DynamoDB",
+            "data-integrations/hive",
+            "data-integrations/impala"
           ]
         },
         {
@@ -354,6 +351,17 @@
                 "custom-model/ray-serve",
                 "custom-model/mlflow"
               ]
+            },
+            {
+              "group": "Time Series",
+              "pages": [
+                {
+                  "group": "Nixtla",
+                  "pages": [
+                    "nixtla/statsforecast"
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -379,13 +387,8 @@
               "group": "Time Series",
               "pages": [
                 "sql/tutorials/house-sales-forecasting",
-                "sql/tutorials/time-series-community",
-                {
-                  "group": "Nixtla",
-                  "pages": [
-                    "nixtla/statsforecast"
-                  ]
-                }
+                "nixtla/house-sales-statsforecast",
+                "sql/tutorials/time-series-community"
               ]
             },
             {

@@ -42,7 +42,9 @@ def delete_learn_mark():
 
 
 @mark_process(name='learn')
-def run_generate(df: DataFrame, predictor_id: int, args: dict = None):
+def run_generate(df: DataFrame, predictor_id: int, model_storage, args: dict = None):
+
+    model_storage.training_state_set(current_state_num=1, total_states=5, state_name='Generating problem definition')
     json_ai_override = args.pop('using', {})
 
     if 'dtype_dict' in json_ai_override:
@@ -58,6 +60,8 @@ def run_generate(df: DataFrame, predictor_id: int, args: dict = None):
                 args['timeseries_settings'][tss_key] = json_ai_override.pop(k)
 
     problem_definition = lightwood.ProblemDefinition.from_dict(args)
+
+    model_storage.training_state_set(current_state_num=2, total_states=5, state_name='Generating JsonAI')
     json_ai = lightwood.json_ai_from_problem(df, problem_definition)
     json_ai = json_ai.to_dict()
     unpack_jsonai_old_args(json_ai_override)
@@ -65,6 +69,7 @@ def run_generate(df: DataFrame, predictor_id: int, args: dict = None):
     rep_recur(json_ai, json_ai_override)
     json_ai = JsonAI.from_dict(json_ai)
 
+    model_storage.training_state_set(current_state_num=3, total_states=5, state_name='Generating code')
     code = lightwood.code_from_json_ai(json_ai)
 
     predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
@@ -78,7 +83,7 @@ def run_generate(df: DataFrame, predictor_id: int, args: dict = None):
 
 
 @mark_process(name='learn')
-def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
+def run_fit(predictor_id: int, df: pd.DataFrame, model_storage) -> None:
     try:
         predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
         assert predictor_record is not None
@@ -86,6 +91,8 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
         predictor_record.data = {'training_log': 'training'}
         predictor_record.status = PREDICTOR_STATUS.TRAINING
         db.session.commit()
+
+        model_storage.training_state_set(current_state_num=4, total_states=5, state_name='Training model')
         predictor: lightwood.PredictorInterface = lightwood.predictor_from_code(predictor_record.code)
         predictor.learn(df)
 
@@ -112,6 +119,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame) -> None:
                 submodel_data[i]["training_time"] = tr_time
         predictor_record.data["submodel_data"] = submodel_data
 
+        model_storage.training_state_set(current_state_num=5, total_states=5, state_name='Complete')
         predictor_record.dtype_dict = predictor.dtype_dict
         db.session.commit()
     except Exception as e:
@@ -147,8 +155,8 @@ def run_learn(df: DataFrame, args: dict, model_storage) -> None:
     predictor_record.training_start_at = datetime.now()
     db.session.commit()
 
-    run_generate(df, predictor_id, args)
-    run_fit(predictor_id, df)
+    run_generate(df, predictor_id, model_storage, args)
+    run_fit(predictor_id, df, model_storage)
 
     predictor_record.status = PREDICTOR_STATUS.COMPLETE
     predictor_record.training_stop_at = datetime.now()

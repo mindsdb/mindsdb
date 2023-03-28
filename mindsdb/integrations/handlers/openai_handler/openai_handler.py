@@ -28,6 +28,7 @@ class OpenAIHandler(BaseMLEngine):
         super().__init__(*args, **kwargs)
         self.default_model = 'gpt-3.5-turbo'
         self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
+        self.supported_modes = ['default', 'conversational', 'conversational-full', 'image']
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
@@ -68,6 +69,8 @@ class OpenAIHandler(BaseMLEngine):
             args['model_name'] = self.default_model
         if not args.get('mode'):
             args['mode'] = self.default_mode
+        elif args['mode'] not in self.supported_modes:
+            raise Exception(f"Invalid operation mode. Please use one of {self.supported_modes}")
 
         self.model_storage.json_set('args', args)
 
@@ -109,114 +112,109 @@ class OpenAIHandler(BaseMLEngine):
         args = self.model_storage.json_get('args')
         df = df.reset_index(drop=True)
 
-        if args.get('question_column', False) and args['question_column'] not in df.columns:
-            raise Exception(f"This model expects a question to answer in the '{args['question_column']}' column.")
-
-        if args.get('context_column', False) and args['context_column'] not in df.columns:
-            raise Exception(f"This model expects context in the '{args['context_column']}' column.")
-
-        # api argument validation
-        model_name = args.get('model_name', self.default_model)
-        api_args = {
-            'max_tokens': pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens)),
-            'temperature': min(1.0, max(0.0, args.get('temperature', 0.0))),
-            'top_p': pred_args.get('top_p', None),
-            'n': pred_args.get('n', None),
-            'stop': pred_args.get('stop', None),
-            'presence_penalty': pred_args.get('presence_penalty', None),
-            'frequency_penalty': pred_args.get('frequency_penalty', None),
-            'best_of': pred_args.get('best_of', None),
-            'logit_bias': pred_args.get('logit_bias', None),
-            'user': pred_args.get('user', None),
-        }
-
         if pred_args.get('mode'):
-            if pred_args['mode'] in ('default', 'conversational', 'conversational-full'):
+            if pred_args['mode'] in self.supported_modes:
                 args['mode'] = pred_args['mode']
             else:
-                raise Exception("Invalid operation mode. Please use one of 'default', 'conversational' or 'conversational-full'.")  # noqa
+                raise Exception(f"Invalid operation mode. Please use one of {self.supported_modes}.")  # noqa
 
-        if args['mode'] != 'default' and model_name not in self.chat_completion_models:
-            raise Exception(f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}")  # noqa
-
-        if args.get('prompt_template', False):
-            if pred_args.get('prompt_template', False):
-                base_template = pred_args['prompt_template']  # override with predict-time template if available
-            else:
-                base_template = args['prompt_template']
-            columns = []
-            spans = []
-            matches = list(re.finditer("{{(.*?)}}", base_template))
-
-            first_span = matches[0].start()
-            last_span = matches[-1].end()
-
-            for m in matches:
-                columns.append(m[0].replace('{', '').replace('}', ''))
-                spans.extend((m.start(), m.end()))
-
-            spans = spans[1:-1]
-            template = [base_template[s:e] for s, e in zip(spans, spans[1:])]
-            template.insert(0, base_template[0:first_span])
-            template.append(base_template[last_span:])
-
-            empty_prompt_ids = np.where(df[columns].isna().all(axis=1).values)[0]
-
-            df['__mdb_prompt'] = ''
-            for i in range(len(template)):
-                atom = template[i]
-                if i < len(columns):
-                    col = df[columns[i]].replace(to_replace=[None], value='')  # add empty quote if data is missing
-                    df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col
-                else:
-                    df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
-            prompts = list(df['__mdb_prompt'])
-
-        elif args.get('context_column', False):
-            empty_prompt_ids = np.where(df[[args['context_column'],
-                                           args['question_column']]].isna().all(axis=1).values)[0]
-            contexts = list(df[args['context_column']].apply(lambda x: str(x)))
-            questions = list(df[args['question_column']].apply(lambda x: str(x)))
-            prompts = [f'Context: {c}\nQuestion: {q}\nAnswer: ' for c, q in zip(contexts, questions)]
-
-        elif args.get('json_struct', False):
-            empty_prompt_ids = np.where(df[[args['input_text']]].isna().all(axis=1).values)[0]
-            prompts = []
-            for i in df.index:
-                if 'json_struct' in df.columns:
-                    if isinstance(df['json_struct'][i], str):
-                        df['json_struct'][i] = json.loads(df['json_struct'][i])
-                    json_struct = ''
-                    for ind, val in enumerate(df['json_struct'][i].values()):
-                        json_struct = json_struct + f'{ind}. {val}\n'
-                else:
-                    json_struct = ''
-                    for ind, val in enumerate(args['json_struct'].values()):
-                        json_struct = json_struct + f'{ind + 1}. {val}\n'
-
-                p = textwrap.dedent(f'''\
-                    Using text starting after 'The text is:', give exactly {len(args['json_struct'])} answers to the questions:
-                    {{{{json_struct}}}}
-
-                    Answers should be in the same order as the questions.
-                    Each answer should start with a question number.
-                    Each answer must end with new line.
-                    If there is no answer to the question in the text, put a -.
-                    Answers should be as short as possible, ideally 1-2 words (unless otherwise specified).
-
-                    The text is:
-                    {{{{{args['input_text']}}}}}
-                ''')
-                p = p.replace('{{json_struct}}', json_struct)
-                for column in df.columns:
-                    if column == 'json_struct':
-                        continue
-                    p = p.replace(f'{{{{{column}}}}}', str(df[column][i]))
-                prompts.append(p)
-
+        if pred_args.get('prompt_template', False):
+            base_template = pred_args['prompt_template']  # override with predict-time template if available
         else:
-            empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
-            prompts = list(df[args['question_column']].apply(lambda x: str(x)))
+            base_template = args['prompt_template']
+
+        # Image mode
+        if args['mode'] == 'image':
+            api_args = {
+                'n': pred_args.get('n', None),
+                'size': pred_args.get('size', None),
+                'response_format': pred_args.get('response_format', None),
+            }
+            api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
+            model_name = 'image'
+
+            if args.get('question_column'):
+                prompts = list(df[args['question_column']].apply(lambda x: str(x)))
+                empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
+            elif args.get('prompt_template'):
+                prompts, empty_prompt_ids = self._get_completed_prompts(base_template, df)
+            else:
+                raise Exception('Image mode needs either `prompt_template` or `question_column`.')
+
+        # Chat or normal completion mode
+        else:
+            if args.get('question_column', False) and args['question_column'] not in df.columns:
+                raise Exception(f"This model expects a question to answer in the '{args['question_column']}' column.")
+
+            if args.get('context_column', False) and args['context_column'] not in df.columns:
+                raise Exception(f"This model expects context in the '{args['context_column']}' column.")
+
+            # api argument validation
+            model_name = args.get('model_name', self.default_model)
+            api_args = {
+                'max_tokens': pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens)),
+                'temperature': min(1.0, max(0.0, pred_args.get('temperature', args.get('temperature', 0.0)))),
+                'top_p': pred_args.get('top_p', None),
+                'n': pred_args.get('n', None),
+                'stop': pred_args.get('stop', None),
+                'presence_penalty': pred_args.get('presence_penalty', None),
+                'frequency_penalty': pred_args.get('frequency_penalty', None),
+                'best_of': pred_args.get('best_of', None),
+                'logit_bias': pred_args.get('logit_bias', None),
+                'user': pred_args.get('user', None),
+            }
+
+            if args['mode'] != 'default' and model_name not in self.chat_completion_models:
+                raise Exception(f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}")  # noqa
+
+            if args.get('prompt_template', False):
+                prompts, empty_prompt_ids = self._get_completed_prompts(base_template, df)
+
+            elif args.get('context_column', False):
+                empty_prompt_ids = np.where(df[[args['context_column'],
+                                               args['question_column']]].isna().all(axis=1).values)[0]
+                contexts = list(df[args['context_column']].apply(lambda x: str(x)))
+                questions = list(df[args['question_column']].apply(lambda x: str(x)))
+                prompts = [f'Context: {c}\nQuestion: {q}\nAnswer: ' for c, q in zip(contexts, questions)]
+
+            elif args.get('json_struct', False):
+                empty_prompt_ids = np.where(df[[args['input_text']]].isna().all(axis=1).values)[0]
+                prompts = []
+                for i in df.index:
+                    if 'json_struct' in df.columns:
+                        if isinstance(df['json_struct'][i], str):
+                            df['json_struct'][i] = json.loads(df['json_struct'][i])
+                        json_struct = ''
+                        for ind, val in enumerate(df['json_struct'][i].values()):
+                            json_struct = json_struct + f'{ind}. {val}\n'
+                    else:
+                        json_struct = ''
+                        for ind, val in enumerate(args['json_struct'].values()):
+                            json_struct = json_struct + f'{ind + 1}. {val}\n'
+
+                    p = textwrap.dedent(f'''\
+                        Using text starting after 'The text is:', give exactly {len(args['json_struct'])} answers to the questions:
+                        {{{{json_struct}}}}
+    
+                        Answers should be in the same order as the questions.
+                        Each answer should start with a question number.
+                        Each answer must end with new line.
+                        If there is no answer to the question in the text, put a -.
+                        Answers should be as short as possible, ideally 1-2 words (unless otherwise specified).
+    
+                        The text is:
+                        {{{{{args['input_text']}}}}}
+                    ''')
+                    p = p.replace('{{json_struct}}', json_struct)
+                    for column in df.columns:
+                        if column == 'json_struct':
+                            continue
+                        p = p.replace(f'{{{{{column}}}}}', str(df[column][i]))
+                    prompts.append(p)
+
+            else:
+                empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
+                prompts = list(df[args['question_column']].apply(lambda x: str(x)))
 
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
@@ -271,7 +269,9 @@ class OpenAIHandler(BaseMLEngine):
                 'api_key': api_key,
                 'organization': args.get('api_organization'),
             }
-            if model_name in self.chat_completion_models:
+            if model_name == 'image':
+                return _submit_image_completion(kwargs, prompts, api_args)
+            elif model_name in self.chat_completion_models:
                 return _submit_chat_completion(kwargs, prompts, api_args, df, mode=args.get('mode', 'conversational'))
             else:
                 return _submit_normal_completion(kwargs, prompts, api_args)
@@ -347,6 +347,13 @@ class OpenAIHandler(BaseMLEngine):
                     kwargs['messages'].append({'role': 'assistant', 'content': last_completion_content[0]})
 
             return completions
+
+        def _submit_image_completion(kwargs, prompts, api_args):
+            def _tidy(comp):
+                return [c[0]['url'] if 'url' in c[0].keys() else c[0]['b64_json'] for c in comp]
+            kwargs.pop('model')
+            completions = [openai.Image.create(**{'prompt': p, **kwargs, **api_args})['data'] for p in prompts]
+            return _tidy(completions)
 
         try:
             # check if simple completion works
@@ -538,3 +545,35 @@ class OpenAIHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
         shutil.rmtree(temp_storage_path)
+
+    @staticmethod
+    def _get_completed_prompts(base_template, df):
+        columns = []
+        spans = []
+        matches = list(re.finditer("{{(.*?)}}", base_template))
+
+        first_span = matches[0].start()
+        last_span = matches[-1].end()
+
+        for m in matches:
+            columns.append(m[0].replace('{', '').replace('}', ''))
+            spans.extend((m.start(), m.end()))
+
+        spans = spans[1:-1]
+        template = [base_template[s:e] for s, e in zip(spans, spans[1:])]
+        template.insert(0, base_template[0:first_span])
+        template.append(base_template[last_span:])
+
+        empty_prompt_ids = np.where(df[columns].isna().all(axis=1).values)[0]
+
+        df['__mdb_prompt'] = ''
+        for i in range(len(template)):
+            atom = template[i]
+            if i < len(columns):
+                col = df[columns[i]].replace(to_replace=[None], value='')  # add empty quote if data is missing
+                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col
+            else:
+                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
+        prompts = list(df['__mdb_prompt'])
+
+        return prompts, empty_prompt_ids

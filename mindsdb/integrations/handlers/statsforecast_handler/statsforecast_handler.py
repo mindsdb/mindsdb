@@ -147,8 +147,10 @@ class StatsForecastHandler(BaseMLEngine):
         if model_args["hierarchy"]:
             hier_df = dill.loads(self.model_storage.file_get("hier_df"))
             hier_dict = dill.loads(self.model_storage.file_get("hier_dict"))
-            results_df = reconcile_forecasts(training_df, forecast_df, hier_df, hier_dict)
-        return get_results_from_nixtla_df(results_df, model_args)
+            reconciled_df = reconcile_forecasts(training_df, forecast_df, hier_df, hier_dict)
+            results_df = reconciled_df[reconciled_df.index.isin(groups_to_keep)]
+        return_df = get_results_from_nixtla_df(results_df, model_args)
+        return return_df
 
     def describe(self, attribute=None):
         model_args = self.model_storage.json_get("model_args")

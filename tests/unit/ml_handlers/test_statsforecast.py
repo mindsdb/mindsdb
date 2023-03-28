@@ -251,7 +251,7 @@ class TestStatsForecast(BaseExecutorTest):
            predict ma
            order by saledate
            group by type, bedrooms
-           horizon 3
+           horizon 4
            using
              engine='statsforecast',
              hierarchy=['type', 'bedrooms']

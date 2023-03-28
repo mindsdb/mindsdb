@@ -325,7 +325,8 @@
             "data-integrations/DynamoDB",
             "data-integrations/hive",
             "data-integrations/impala",
-            "data-integrations/mariadb"
+            "data-integrations/mariadb",
+            "data-integrations/mysql"
           ]
         },
         {

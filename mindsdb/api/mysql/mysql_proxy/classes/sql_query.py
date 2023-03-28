@@ -385,7 +385,9 @@ class ResultSet:
         return self.get_records()
 
     def get_records(self):
-        # in dicts
+        # get records as dicts.
+        # !!! Attention: !!!
+        # if resultSet contents duplicate column name: only one of them will be in output
         names = self.get_column_names()
         records = []
         for row in self._records:
@@ -799,56 +801,52 @@ class SQLQuery():
                 else:
                     data.add_records(subdata.get_records())
         elif type(step) == ApplyPredictorRowStep:
-            try:
-                project_name = step.namespace
-                predictor_name = step.predictor.parts[0]
-                where_data = step.row_dict
-                project_datanode = self.datahub.get(project_name)
 
-                version = None
-                if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
-                    version = int(step.predictor.parts[-1])
+            project_name = step.namespace
+            predictor_name = step.predictor.parts[0]
+            where_data = step.row_dict
+            project_datanode = self.datahub.get(project_name)
 
-                predictions = project_datanode.predict(
-                    model_name=predictor_name,
-                    data=where_data,
-                    version=version,
-                    params=step.params,
-                )
-                columns_dtypes = dict(predictions.dtypes)
-                predictions = predictions.to_dict(orient='records')
+            version = None
+            if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
+                version = int(step.predictor.parts[-1])
 
-                # update predictions with input data
-                for row in predictions:
-                    for k, v in where_data.items():
-                        if k not in row:
-                            row[k] = v
+            predictions = project_datanode.predict(
+                model_name=predictor_name,
+                data=where_data,
+                version=version,
+                params=step.params,
+            )
+            columns_dtypes = dict(predictions.dtypes)
+            predictions = predictions.to_dict(orient='records')
 
-                table_name = get_preditor_alias(step, self.database)
+            # update predictions with input data
+            for row in predictions:
+                for k, v in where_data.items():
+                    if k not in row:
+                        row[k] = v
 
-                result = ResultSet()
-                result.is_prediction = True
-                if len(predictions) > 0:
-                    cols = list(predictions[0].keys())
-                else:
-                    cols = project_datanode.get_table_columns(predictor_name)
+            table_name = get_preditor_alias(step, self.database)
 
-                for col in cols:
-                    result.add_column(Column(
-                        name=col,
-                        table_name=table_name[1],
-                        table_alias=table_name[2],
-                        database=table_name[0],
-                        type=columns_dtypes.get(col)
-                    ))
-                result.add_records(predictions)
+            result = ResultSet()
+            result.is_prediction = True
+            if len(predictions) > 0:
+                cols = list(predictions[0].keys())
+            else:
+                cols = project_datanode.get_table_columns(predictor_name)
 
-                data = result
-            except Exception as e:
-                if isinstance(e, SqlApiException):
-                    raise e
-                else:
-                    raise SqlApiUnknownError(f'error in apply predictor row step: {e}') from e
+            for col in cols:
+                result.add_column(Column(
+                    name=col,
+                    table_name=table_name[1],
+                    table_alias=table_name[2],
+                    database=table_name[0],
+                    type=columns_dtypes.get(col)
+                ))
+            result.add_records(predictions)
+
+            data = result
+
         elif type(step) in (ApplyPredictorStep, ApplyTimeseriesPredictorStep):
             try:
                 # set row_id
@@ -1072,14 +1070,15 @@ class SQLQuery():
                 for col in step_data.columns:
                     step_data2.add_column(col)
 
-                records = step_data.get_records()
+                records = step_data.get_records_raw()
 
                 if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
                     records = records[step.offset.value:]
                 if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
                     records = records[:step.limit.value]
 
-                step_data2.add_records(records)
+                for record in records:
+                    step_data2.add_record_raw(record)
 
                 data = step_data2
 
@@ -1129,7 +1128,14 @@ class SQLQuery():
                             else:
                                 col_list = rs_in.find_columns(column_name, table_alias=table_name_or_alias)
                                 if len(col_list) == 0:
-                                    raise SqlApiException(f'Can not find appropriate table for column {table_name_or_alias}.{column_name}')
+                                    if rs_in.length() > 0:
+                                        raise SqlApiException(f'Can not find appropriate table for column {table_name_or_alias}.{column_name}')
+                                    else:
+                                        # FIXME: made up column if resultSet is empty
+                                        # columns from predictor may not exist if predictor wasn't called
+                                        col = Column(name=table_name_or_alias, table_name=table_name_or_alias)
+                                        col_list = [col]
+                                        rs_in.add_column(col)
 
                                 col_added = rs_in.copy_column_to(col_list[0], rs_out)
                                 col_added.alias = column_alias
@@ -1195,9 +1201,25 @@ class SQLQuery():
                 if step.is_replace:
                     is_replace = True
 
-            data = step.dataframe.result_data
-            integration_name = step.table.parts[0]
-            table_name = Identifier(parts=step.table.parts[1:])
+            if step.dataframe is not None:
+                data = step.dataframe.result_data
+            elif step.query is not None:
+                data = ResultSet()
+                for col in step.query.columns:
+                    data.add_column(Column(col.name))
+
+                for row in step.query.values:
+                    record = [v.value for v in row]
+                    data.add_record_raw(record)
+            else:
+                raise ErLogicError(f'Data not found for insert: {step}')
+
+            if len(step.table.parts) > 1:
+                integration_name = step.table.parts[0]
+                table_name = Identifier(parts=step.table.parts[1:])
+            else:
+                integration_name = self.database
+                table_name = step.table
 
             dn = self.datahub.get(integration_name)
 

@@ -15,6 +15,7 @@ from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.api.postgres.start import start as start_postgres
+from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
@@ -27,6 +28,7 @@ from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.auth import register_oauth_client
 
 
 import torch.multiprocessing as mp
@@ -129,6 +131,13 @@ if __name__ == '__main__':
 
     mp.freeze_support()
     config = Config()
+
+    is_marketplace = config.get('environment') == 'aws_marketplace'
+    if is_marketplace:
+        try:
+            register_oauth_client()
+        except Exception as e:
+            print(f'Something went wrong during client register: {e}')
 
     is_cloud = config.get('cloud', False)
     # need configure migration behavior by env_variables
@@ -266,8 +275,15 @@ if __name__ == '__main__':
         'http': start_http,
         'mysql': start_mysql,
         'mongodb': start_mongo,
-        'postgres': start_postgres
+        'postgres': start_postgres,
+        'jobs': start_scheduler,
     }
+
+    if config.get('jobs', {}).get('disable') is not True:
+        apis['jobs'] = {
+            'process': None,
+            'started': False
+        }
 
     ctx = mp.get_context('spawn')
     for api_name, api_data in apis.items():

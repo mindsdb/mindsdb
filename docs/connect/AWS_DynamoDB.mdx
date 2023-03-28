@@ -1,0 +1,45 @@
+---
+title: MindsDB with AWS DynamoDB
+sidebarTitle: setting up DynamoDB
+---
+
+AWS DynamoDB is one of the most popular NoSQL databases used today. It is a fully-managed database that provides low-latency and high-throughput access to data.
+
+## How to Connect MindsDB with AWS DnamoDB
+
+
+
+### Step 1: Setup AWS Credentials
+
+The first step is to setup your AWS credentials so that Mindsdb can access your DynamoDB database. To do this, go to the AWS IAM Console and create a new user account. Then, create an access key for that user account and copy the Access Key ID and Secret Access Key.
+
+Next, open the Mindsdb dashboard and go to Settings > AWS Credentials. Paste the Access Key ID and Secret Access Key that you just created into the appropriate fields and click Save.
+
+### Step 2: Connect to DynamoDB
+
+Now that your AWS credentials are setup, we can connect to DynamoDB. In the Mindsdb dashboard, go to Data Sources > Add Data Source. Select DynamoDB from the list of available data sources and click Connect.
+
+In the next step, you will need to enter the name of your DynamoDB table. To find the name of your table, open the AWS Console and click on the DynamoDB service. In the left menu, click Tables and then select the table you want to connect to. Copy the table name and paste it into the Mindsdb data source setup window.
+
+### Step 3: Use Mindsdb API
+
+Once you have successfully connected to your DynamoDB table, you can start using the Mindsdb API to read and write data from DynamoDB. To read data from DynamoDB, you can use the Mindsdb.read() function. This function takes a DynamoDB table name and returns the data from that table.
+
+For example, if you want to read data from the “customers” table, your code would look like this:
+
+```
+data = mindsdb.read(“customers”)
+```
+To write data to DynamoDB, you can use the Mindsdb.write() function. This function takes a DynamoDB table name and a data object as parameters and writes the data to the specified table.
+
+For example, if you want to write data to the “customers” table, your code would look like this:
+
+```
+mindsdb.write(“customers”, data)
+```
+## What's next
+- Now that you are all set, we recommend you check out our **Tutorials** and
+**Community Tutorials** sections, where you'll find various examples.
+
+- Article on [How to connect MindsDB with DynamoDB](https://medium.com/@shahneel2409/how-to-connect-mindsdb-with-aws-dynamodb-f8d5b01af43c)
+  by [Neel Shah](https://github.com/neelshah2409)

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+// Represents server ouput without
+// data. like 'OK' or 'ERROR'
+message StatusResponse {
+    bool success = 1;
+    string error_message = 2;
+}
+
+// Represents server output with
+// some data inside. SELECT result for instance
+message Response {
+    string type = 1;
+    bytes data_frame = 2;
+    int32 query = 3;
+    int32 error_code = 4;
+    string error_message = 5;
+}

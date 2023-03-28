@@ -11,13 +11,14 @@ MindsDB lets you create models that utilize features provided by OpenAI GPT-3. C
 - Prompt Completion
 
 <Tip>
-Currently, MindsDB's NLP engine is powered by [Hugging Face](https://huggingface.co/) and [OpenAI](https://openai.com/). But we plan to expand to other NLP options in the future, so stay tuned!
+  Currently, MindsDB's NLP engine is powered by [Hugging
+  Face](https://huggingface.co/) and [OpenAI](https://openai.com/). But we plan
+  to expand to other NLP options in the future, so stay tuned!
 </Tip>
 
 ## How to Bring the OpenAI Model to MindsDB
 
 We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the OpenAI models to MindsDB.
-
 
 Generally, it looks like this:
 
@@ -26,16 +27,37 @@ CREATE MODEL project_name.predictor_name        -- AI TABLE TO STORE THE MODEL
 PREDICT target_column                           -- NAME OF THE COLUMN TO STORE PREDICTED VALUES
 USING
   engine = 'openai',                            -- USING THE OPENAI ENGINE
-  prompt_template = 'promt/task                 
+  prompt_template = 'promt/task
                     {{input_column}}',          -- PROMPT TEMPLATE WITH PLACEHOLDERS FOR INPUT COLUMNS
   model_name = 'model_name',                    -- OPTIONAL, DEFAULT IS THE text-davinci-002 MODEL
   api_key = 'YOUR_OPENAI_API_KEY';              -- OPTIONAL, IF NOT PASSED MINDSDB FETCHES THE
-                                                -- `OPENAI_API_KEY` ENVIRONMENT VARIABLE VALUE  
+                                                -- `OPENAI_API_KEY` ENVIRONMENT VARIABLE VALUE
 ```
 
-## Example
+<Info>
+**Default Model**
+
+When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter in the `USING` clause of the `CREATE MODEL` statement.
+</Info>
+
+MindsDB provides an OpenAI engine by default. But if you want to use your own OpenAI engine, please create it using the command below and passing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai
+FROM openai
+USING
+  api_key = 'YOUR_OPENAI_API_KEY';
+```
+
 <Tip>
-For more examples and explanations, visit our [doc page on OpenAI](/custom-model/openai/).
+Please note that when using MindsDB installation in Docker, it is required to provide own OpenAI API key.
+</Tip>
+
+## Example
+
+<Tip>
+  For more examples and explanations, visit our [doc page on
+  OpenAI](/custom-model/openai/).
 </Tip>
 
 ### Example using SQL
@@ -43,10 +65,10 @@ For more examples and explanations, visit our [doc page on OpenAI](/custom-model
 Let's go through a sentiment classification example to understand better how to bring OpenAI models to MindsDB as AI tables.
 
 ```sql
-CREATE MODEL mindsdb.sentiment_classifier                           
+CREATE MODEL mindsdb.sentiment_classifier
 PREDICT sentiment
 USING
-  engine = 'openai',              
+  engine = 'openai',
   prompt_template = 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral';
 ```
 
@@ -58,16 +80,17 @@ Query successfully completed
 
 Where:
 
-| Expressions      | Values                                                                                               |
-| ---------------- | ---------------------------------------------------------------------------------------------------- |
-| `project_name`   | `mindsdb`                                                                                            |
-| `predictor_name` | `sentiment_classifier`                                                                               |
-| `target_column`  | `sentiment`                                                                                          |
-| `engine`         | `openai`                                                                                             |
-| `prompt_template`| `predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral`     |
+| Expressions       | Values                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| `project_name`    | `mindsdb`                                                                                        |
+| `predictor_name`  | `sentiment_classifier`                                                                           |
+| `target_column`   | `sentiment`                                                                                      |
+| `engine`          | `openai`                                                                                         |
+| `prompt_template` | `predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral` |
 
 <Note>
-In the `prompt_template` parameter, we use a placeholder for a text value that comes from the `review` column, that is, `text:{{review}}`.
+  In the `prompt_template` parameter, we use a placeholder for a text value that
+  comes from the `review` column, that is, `text:{{ review }}`.
 </Note>
 
 Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
@@ -111,6 +134,7 @@ LIMIT 3;
         "database": "demo"
         };
     ```
+
 </Note>
 
 On execution, we get:
@@ -141,12 +165,12 @@ Followed by:
 
 ```bash
 db.databases.insertOne({
-    'name': 'mongo_test_db', 
+    'name': 'mongo_test_db',
     'engine': 'mongodb',
     'connection_args': {
         "host": "mongodb+srv://admin:201287aA@cluster0.myfdu.mongodb.net/admin?authSource=admin&replicaSet=atlas-5koz1i-shard-0&readPreference=primary&appname=MongoDB%20Compass&ssl=true",
         "database": "test_data"
-        }   
+        }
 })
 ```
 
@@ -244,6 +268,22 @@ On execution, we get:
 ```
 
 For the full library of supported examples please go [here](/nlp/nlp-extended-examples).
+
+## Parameter descriptions
+
+MindsDB lets you customize models using parameters provided by OpenAI. Currently, there are eleven parameters to optionally modify:
+
+- model_name: An optional string that identifies the model to use, it defaults to text-davinci-002 model, for a list of models available and their description visit: [Model overview](https://platform.openai.com/docs/models/overview)
+- max_tokens: The maximum number of tokens to generate in the completion. The token count of your prompt plus max_tokens cannot exceed the model's context length.
+- temperature: What sampling temperature to use. Higher values means the model will take more risks.
+- top_p: An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass.
+- n: How many completions to generate for each prompt.
+- stop: Up to 4 sequences where the API will stop generating further tokens. The returned text will not contain the stop sequence.
+- presence_penalty: Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.
+- frequency_penalty: Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim.
+- best_of: Generates best_of completions server-side and returns the "best" (the one with the highest log probability per token). Results cannot be streamed. When used with n, best_of controls the number of candidate completions and n specifies how many to return – best_of must be greater than n.
+- logit_bias: Modify the likelihood of specified tokens appearing in the completion. Accepts a json object that maps tokens (specified by their token ID in the GPT tokenizer) to an associated bias value from -100 to 100. The exact effect will vary per model, but values between -1 and 1 should decrease or increase likelihood of selection; values like -100 or 100 should result in a ban or exclusive selection of the relevant token.
+- user: A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
 
 ## What's Next?
 

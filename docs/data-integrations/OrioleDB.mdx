@@ -1,0 +1,42 @@
+---
+title: OrioleDB
+sidebarTitle: OrioleDB
+---
+
+#OrioleDB Handler
+This is the implementation of the IBM DB2 handler for MindsDB.
+
+#Implementation
+This handler was implemented by extending postres connector.
+
+#Arguments for establishing connection
+| Name               | Description                                                                           
+| ------------------ | ---------------------------------------------------
+| `user`             |  username asscociated with database
+| `password`         |  password to authenticate your access
+| `host`             |  host to server IP Address or hostname                                         
+| `port`             |  port through which TCPIP connection is to be made                  
+| `database`         |  database name connecting to                          
+| ...................|.................................................... 
+
+#Usage
+In order to make use of this handler and connect to a OrioleDB server in 
+MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE orioledb_data
+WITH ENGINE = "orioledb",
+PARAMETERS = { 
+  "user": "root",
+  "password": "root",
+  "host": "hostname",
+  "port": 5432,
+  "database": "postgres"
+}
+```
+
+#Now, you can use this established connection to query your database as follows:
+
+```sql
+SELECT * FROM orioledb_data.loveU LIMIT 10;
+```

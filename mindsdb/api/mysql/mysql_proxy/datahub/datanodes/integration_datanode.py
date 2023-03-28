@@ -13,6 +13,10 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 
 
+class DBHandlerException(Exception):
+    pass
+
+
 class IntegrationDataNode(DataNode):
     type = 'integration'
 
@@ -116,17 +120,26 @@ class IntegrationDataNode(DataNode):
             values=formatted_data
         )
 
-        result = self.integration_handler.query(insert_ast)
+        try:
+            result = self.integration_handler.query(insert_ast)
+        except Exception as e:
+            msg = f'[{self.ds_type}/{self.integration_name}]: {str(e)}'
+            raise DBHandlerException(msg) from e
+
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 
     def query(self, query=None, native_query=None, session=None):
 
-        if query is not None:
-            result = self.integration_handler.query(query)
-        else:
-            # try to fetch native query
-            result = self.integration_handler.native_query(native_query)
+        try:
+            if query is not None:
+                result = self.integration_handler.query(query)
+            else:
+                # try to fetch native query
+                result = self.integration_handler.native_query(native_query)
+        except Exception as e:
+            msg = f'[{self.ds_type}/{self.integration_name}]: {str(e)}'
+            raise DBHandlerException(msg) from e
 
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(f'Error in {self.integration_name}: {result.error_message}')
@@ -134,7 +147,22 @@ class IntegrationDataNode(DataNode):
             return
 
         df = result.data_frame
-        df = df.replace(np.NaN, pd.NA).where(df.notnull(), None)
+        # region clearing df from NaN values
+        # recursion error appears in pandas 1.5.3 https://github.com/pandas-dev/pandas/pull/45749
+        if isinstance(df, pd.Series):
+            df = df.to_frame()
+
+        try:
+            df = df.replace(np.NaN, None)
+        except Exception as e:
+            print(f'Issue with clearing DF from NaN values: {e}')
+
+        try:
+            df = df.where(pd.notnull(df), None)
+        except Exception as e:
+            print(f'Issue with clearing DF from NaN values: {e}')
+        # endregion
+
         columns_info = [
             {
                 'name': k,

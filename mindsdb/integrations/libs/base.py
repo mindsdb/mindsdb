@@ -20,14 +20,11 @@ class BaseHandler:
         self.is_connected: bool = False
         self.name = name
 
-    def connect(self) -> HandlerStatusResponse:
+    def connect(self):
         """ Set up any connections required by the handler
 
-        Should return output of check_connection() method after attempting
-        connection. Should switch self.is_connected.
+        Should return connection
 
-        Returns:
-            HandlerStatusResponse
         """
         raise NotImplementedError()
 
@@ -135,7 +132,7 @@ class BaseMLEngine:
       - Any output produced by the ML engine is then formatted by the wrapper and passed back into the MindsDB executor, which can then morph the data to comply with the original SQL query
     """  # noqa
 
-    def __init__(self, model_storage, engine_storage) -> None:
+    def __init__(self, model_storage, engine_storage, **kwargs) -> None:
         """
         Warning: This method should not be overridden.
 
@@ -146,6 +143,11 @@ class BaseMLEngine:
         """
         self.model_storage = model_storage
         self.engine_storage = engine_storage
+
+        if kwargs.get('base_model_storage'):
+            self.base_model_storage = kwargs['base_model_storage']  # available when updating a model
+        else:
+            self.base_model_storage = None
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """

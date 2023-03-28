@@ -14,6 +14,8 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropDatasource,
     DropPredictor,
     CreateView,
+    CreateJob,
+    DropJob,
 )
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.dialects.mysql import Variable
@@ -75,6 +77,8 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.jobs.jobs_controller import JobsController
+from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.context import context as ctx
 
 
@@ -531,13 +535,8 @@ class ExecuteCommands:
             self.delete_predictor_query(statement)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Insert:
-            if statement.from_select is None:
-                raise ErNotSupportedYet(
-                    "At this moment only 'insert from select' is supported."
-                )
-            else:
-                SQLQuery(statement, session=self.session, execute=True)
-                return ExecuteAnswer(ANSWER_TYPE.OK)
+            SQLQuery(statement, session=self.session, execute=True)
+            return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
             if statement.from_select is None:
                 if statement.table.parts[-1].lower() == "models_versions":
@@ -567,13 +566,40 @@ class ExecuteCommands:
         elif type(statement) == CreateTable:
             # TODO
             return self.answer_apply_predictor(statement)
+        # -- jobs --
+        elif type(statement) == CreateJob:
+            return self.answer_create_job(statement)
+        elif type(statement) == DropJob:
+            return self.answer_drop_job(statement)
         else:
             log.logger.warning(f"Unknown SQL statement: {sql}")
             raise ErNotSupportedYet(f"Unknown SQL statement: {sql}")
 
+    def answer_create_job(self, statement):
+        jobs_controller = JobsController()
+
+        name = statement.name
+        job_name = name.parts[-1]
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+
+        jobs_controller.add(job_name, project_name, statement.query_str,
+                            statement.start_str, statement.end_str, statement.repeat_str)
+
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_drop_job(self, statement):
+        jobs_controller = JobsController()
+
+        name = statement.name
+        job_name = name.parts[-1]
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+        jobs_controller.delete(job_name, project_name)
+
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
     def answer_describe_predictor(self, statement):
         # describe attr
-        predictor_attrs = ("model", "features", "ensemble")
+        predictor_attrs = ("model", "features", "ensemble", "progress")
         attribute = None
         if statement.value.parts[-1] in predictor_attrs:
             attribute = statement.value.parts.pop(-1)
@@ -610,20 +636,23 @@ class ExecuteCommands:
         return model_record
 
     def _sync_predictor_check(self, phase_name):
-        """ Checks if there is already a predictor retraining or adjusting """
+        """ Checks if there is already a predictor retraining or adjusting
+            Do not allow to run retrain if there is another model in training process in less that 1h
+        """
         is_cloud = self.session.config.get('cloud', False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)
-            longest_training = None
-            for p in models:
+            shortest_training = None
+            for model in models:
                 if (
-                        p.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
-                        and p.training_start_at is not None and p.training_stop_at is None
+                        model.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
+                        and model.training_start_at is not None and model.training_stop_at is None
                 ):
-                    training_time = datetime.datetime.now() - p.training_start_at
-                    if longest_training is None or training_time > longest_training:
-                        longest_training = training_time
-            if longest_training is not None and longest_training > datetime.timedelta(hours=1):
+                    training_time = datetime.datetime.now() - model.training_start_at
+                    if shortest_training is None or training_time < shortest_training:
+                        shortest_training = training_time
+
+            if shortest_training is not None and shortest_training < datetime.timedelta(hours=1):
                 raise SqlApiException(
                     f"Can't start {phase_name} process while predictor is in status 'training' or 'generating'"
                 )
@@ -783,9 +812,30 @@ class ExecuteCommands:
         if handler_module_meta.get("import", {}).get("success") is not True:
             raise SqlApiException(f"Can't import engine '{statement.handler}'")
 
-        self.session.integration_controller._add_integration_record(
-            name=name, engine=statement.handler, connection_args=statement.params
+        integration_id = self.session.integration_controller.add(
+            name=name,
+            engine=statement.handler,
+            connection_args=statement.params
         )
+
+        HandlerClass = self.session.integration_controller.handler_modules[handler_module_meta['name']].Handler
+
+        if hasattr(HandlerClass, 'create_engine'):
+            handlerStorage = HandlerStorage(integration_id)
+            ml_handler = HandlerClass(
+                engine_storage=handlerStorage,
+                model_storage=None,
+            )
+
+            try:
+                ml_handler.create_engine(statement.params)
+            except NotImplementedError:
+                pass
+            except Exception as e:
+                # something wrong, drop ml engine
+                ast_drop = DropMLEngine(name=statement.name)
+                self.answer_drop_ml_engine(ast_drop)
+                raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 

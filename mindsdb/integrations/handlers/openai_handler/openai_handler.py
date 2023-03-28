@@ -2,17 +2,23 @@ import os
 import re
 import math
 import json
+import shutil
+import tempfile
+import datetime
 import textwrap
+import subprocess
 import concurrent.futures
-import numpy as np
-import pandas as pd
-from typing import Optional
+from typing import Optional, Dict
 
 import openai
+import numpy as np
+import pandas as pd
 
-from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
-from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
+from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff, \
+    truncate_msgs_for_token_limit
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -20,10 +26,16 @@ class OpenAIHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.default_model = 'text-davinci-002'
+        self.default_model = 'gpt-3.5-turbo'
+        self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
+        self.supported_modes = ['default', 'conversational', 'conversational-full', 'image']
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
+        self.chat_completion_models = (
+            'gpt-3.5-turbo', 'gpt-3.5-turbo-0301',
+            'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-4-32k-0314'
+        )
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -53,15 +65,23 @@ class OpenAIHandler(BaseMLEngine):
         args = args['using']
 
         args['target'] = target
+        if not args.get('model_name'):
+            args['model_name'] = self.default_model
+        if not args.get('mode'):
+            args['mode'] = self.default_mode
+        elif args['mode'] not in self.supported_modes:
+            raise Exception(f"Invalid operation mode. Please use one of {self.supported_modes}")
+
         self.model_storage.json_set('args', args)
 
     def _get_api_key(self, args):
-        # API_KEY preference order:
-        #   1. provided at model creation
-        #   2. provided at engine creation
-        #   3. OPENAI_API_KEY env variable
-        #   4. openai.api_key setting in config.json
-
+        """ 
+        API_KEY preference order:
+            1. provided at model creation
+            2. provided at engine creation
+            3. OPENAI_API_KEY env variable
+            4. openai.api_key setting in config.json
+        """  # noqa
         # 1
         if 'api_key' in args:
             return args['api_key']
@@ -92,99 +112,116 @@ class OpenAIHandler(BaseMLEngine):
         args = self.model_storage.json_get('args')
         df = df.reset_index(drop=True)
 
-        if args.get('question_column', False) and args['question_column'] not in df.columns:
-            raise Exception(f"This model expects a question to answer in the '{args['question_column']}' column.")
-
-        if args.get('context_column', False) and args['context_column'] not in df.columns:
-            raise Exception(f"This model expects context in the '{args['context_column']}' column.")
-
-        # api argument validation
-        model_name = args.get('model_name', self.default_model)
-        api_args = {
-            'max_tokens': pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens)),
-            'temperature': min(1.0, max(0.0, args.get('temperature', 0.0))),
-            'top_p': pred_args.get('top_p', None),
-            'n': pred_args.get('n', None),
-            'stop': pred_args.get('stop', None),
-            'presence_penalty': pred_args.get('presence_penalty', None),
-            'frequency_penalty': pred_args.get('frequency_penalty', None),
-            'best_of': pred_args.get('best_of', None),
-            'logit_bias': pred_args.get('logit_bias', None),
-            'user': pred_args.get('user', None),
-        }
-
-        if args.get('prompt_template', False):
-            if pred_args.get('prompt_template', False):
-                base_template = pred_args['prompt_template']  # override with predict-time template if available
+        if pred_args.get('mode'):
+            if pred_args['mode'] in self.supported_modes:
+                args['mode'] = pred_args['mode']
             else:
-                base_template = args['prompt_template']
-            columns = []
-            spans = []
-            matches = list(re.finditer("{{(.*?)}}", base_template))
+                raise Exception(f"Invalid operation mode. Please use one of {self.supported_modes}.")  # noqa
 
-            first_span = matches[0].start()
-            last_span = matches[-1].end()
-
-            for m in matches:
-                columns.append(m[0].replace('{', '').replace('}', ''))
-                spans.extend((m.start(), m.end()))
-
-            spans = spans[1:-1]
-            template = [base_template[s:e] for s, e in zip(spans, spans[1:])]
-            template.insert(0, base_template[0:first_span])
-            template.append(base_template[last_span:])
-
-            empty_prompt_ids = np.where(df[columns].isna().all(axis=1).values)[0]
-
-            df['__mdb_prompt'] = ''
-            for i in range(len(template)):
-                atom = template[i]
-                if i < len(columns):
-                    col = df[columns[i]].replace(to_replace=[None], value='')  # add empty quote if data is missing
-                    df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col
-                else:
-                    df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
-            prompts = list(df['__mdb_prompt'])
-
-        elif args.get('context_column', False):
-            empty_prompt_ids = np.where(df[[args['context_column'],
-                                           args['question_column']]].isna().all(axis=1).values)[0]
-            contexts = list(df[args['context_column']].apply(lambda x: str(x)))
-            questions = list(df[args['question_column']].apply(lambda x: str(x)))
-            prompts = [f'Context: {c}\nQuestion: {q}\nAnswer: ' for c, q in zip(contexts, questions)]
-
-        elif args.get('json_struct', False):
-            empty_prompt_ids = np.where(df[[args['input_text']]].isna().all(axis=1).values)[0]
-            prompts = []
-            for i in df.index:
-                if 'json_struct' in df.columns:
-                    if isinstance(df['json_struct'][i], str):
-                        df['json_struct'][i] = json.loads(df['json_struct'][i])
-                    json_struct = ', '.join(df['json_struct'][i].values())
-                else:
-                    json_struct = ', '.join(args['json_struct'].values())
-                p = textwrap.dedent(f'''\
-                    From sentence below generate a one-dimensional array with data in it:
-                    {json_struct}.
-                    The sentence is:
-                    {{{{{args['input_text']}}}}}
-                ''')
-                for column in df.columns:
-                    if column == 'json_struct':
-                        continue
-                    p = p.replace(f'{{{{{column}}}}}', df[column][i])
-                prompts.append(p)
-
+        if pred_args.get('prompt_template', False):
+            base_template = pred_args['prompt_template']  # override with predict-time template if available
         else:
-            empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
-            prompts = list(df[args['question_column']].apply(lambda x: str(x)))
+            base_template = args['prompt_template']
+
+        # Image mode
+        if args['mode'] == 'image':
+            api_args = {
+                'n': pred_args.get('n', None),
+                'size': pred_args.get('size', None),
+                'response_format': pred_args.get('response_format', None),
+            }
+            api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
+            model_name = 'image'
+
+            if args.get('question_column'):
+                prompts = list(df[args['question_column']].apply(lambda x: str(x)))
+                empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
+            elif args.get('prompt_template'):
+                prompts, empty_prompt_ids = self._get_completed_prompts(base_template, df)
+            else:
+                raise Exception('Image mode needs either `prompt_template` or `question_column`.')
+
+        # Chat or normal completion mode
+        else:
+            if args.get('question_column', False) and args['question_column'] not in df.columns:
+                raise Exception(f"This model expects a question to answer in the '{args['question_column']}' column.")
+
+            if args.get('context_column', False) and args['context_column'] not in df.columns:
+                raise Exception(f"This model expects context in the '{args['context_column']}' column.")
+
+            # api argument validation
+            model_name = args.get('model_name', self.default_model)
+            api_args = {
+                'max_tokens': pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens)),
+                'temperature': min(1.0, max(0.0, pred_args.get('temperature', args.get('temperature', 0.0)))),
+                'top_p': pred_args.get('top_p', None),
+                'n': pred_args.get('n', None),
+                'stop': pred_args.get('stop', None),
+                'presence_penalty': pred_args.get('presence_penalty', None),
+                'frequency_penalty': pred_args.get('frequency_penalty', None),
+                'best_of': pred_args.get('best_of', None),
+                'logit_bias': pred_args.get('logit_bias', None),
+                'user': pred_args.get('user', None),
+            }
+
+            if args['mode'] != 'default' and model_name not in self.chat_completion_models:
+                raise Exception(f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}")  # noqa
+
+            if args.get('prompt_template', False):
+                prompts, empty_prompt_ids = self._get_completed_prompts(base_template, df)
+
+            elif args.get('context_column', False):
+                empty_prompt_ids = np.where(df[[args['context_column'],
+                                               args['question_column']]].isna().all(axis=1).values)[0]
+                contexts = list(df[args['context_column']].apply(lambda x: str(x)))
+                questions = list(df[args['question_column']].apply(lambda x: str(x)))
+                prompts = [f'Context: {c}\nQuestion: {q}\nAnswer: ' for c, q in zip(contexts, questions)]
+
+            elif args.get('json_struct', False):
+                empty_prompt_ids = np.where(df[[args['input_text']]].isna().all(axis=1).values)[0]
+                prompts = []
+                for i in df.index:
+                    if 'json_struct' in df.columns:
+                        if isinstance(df['json_struct'][i], str):
+                            df['json_struct'][i] = json.loads(df['json_struct'][i])
+                        json_struct = ''
+                        for ind, val in enumerate(df['json_struct'][i].values()):
+                            json_struct = json_struct + f'{ind}. {val}\n'
+                    else:
+                        json_struct = ''
+                        for ind, val in enumerate(args['json_struct'].values()):
+                            json_struct = json_struct + f'{ind + 1}. {val}\n'
+
+                    p = textwrap.dedent(f'''\
+                        Using text starting after 'The text is:', give exactly {len(args['json_struct'])} answers to the questions:
+                        {{{{json_struct}}}}
+    
+                        Answers should be in the same order as the questions.
+                        Each answer should start with a question number.
+                        Each answer must end with new line.
+                        If there is no answer to the question in the text, put a -.
+                        Answers should be as short as possible, ideally 1-2 words (unless otherwise specified).
+    
+                        The text is:
+                        {{{{{args['input_text']}}}}}
+                    ''')
+                    p = p.replace('{{json_struct}}', json_struct)
+                    for column in df.columns:
+                        if column == 'json_struct':
+                            continue
+                        p = p.replace(f'{{{{{column}}}}}', str(df[column][i]))
+                    prompts.append(p)
+
+            else:
+                empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
+                prompts = list(df[args['question_column']].apply(lambda x: str(x)))
 
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
         api_key = self._get_api_key(args)
         api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
-        completion = self._completion(model_name, prompts, api_key, api_args, args)
+        completion = self._completion(model_name, prompts, api_key, api_args, args, df)
 
         # add null completion for empty prompts
         for i in sorted(empty_prompt_ids):
@@ -200,10 +237,13 @@ class OpenAIHandler(BaseMLEngine):
                         json_keys = df['json_struct'][i].keys()
                     else:
                         json_keys = args['json_struct'].keys()
+                    responses = pred_df[args['target']][i].split('\n')
+                    responses = [x[3:] for x in responses]      # del question index
+
                     pred_df[args['target']][i] = {
                         key: val for key, val in zip(
                             json_keys,
-                            json.loads(pred_df[args['target']][i])
+                            responses
                         )
                     }
                 except Exception:
@@ -211,7 +251,7 @@ class OpenAIHandler(BaseMLEngine):
 
         return pred_df
 
-    def _completion(self, model_name, prompts, api_key, api_args, args, parallel=True):
+    def _completion(self, model_name, prompts, api_key, api_args, args, df, parallel=True):
         """
         Handles completion for an arbitrary amount of rows.
 
@@ -222,18 +262,98 @@ class OpenAIHandler(BaseMLEngine):
         Additionally, single completion calls are done with exponential backoff to guarantee all prompts are processed,
         because even with previous checks the tokens-per-minute limit may apply.
         """
-        @retry_with_exponential_backoff
-        def _submit_completion(model_name, prompts, api_key, api_args, args):
-            return openai.Completion.create(
-                model=model_name,
-                prompt=prompts,
-                api_key=api_key,
-                organization=args.get('api_organization'),
-                **api_args
-            )
+        @retry_with_exponential_backoff()
+        def _submit_completion(model_name, prompts, api_key, api_args, args, df):
+            kwargs = {
+                'model': model_name,
+                'api_key': api_key,
+                'organization': args.get('api_organization'),
+            }
+            if model_name == 'image':
+                return _submit_image_completion(kwargs, prompts, api_args)
+            elif model_name in self.chat_completion_models:
+                return _submit_chat_completion(kwargs, prompts, api_args, df, mode=args.get('mode', 'conversational'))
+            else:
+                return _submit_normal_completion(kwargs, prompts, api_args)
 
-        def _tidy(comp):
-            return [c['text'].strip('\n').strip('') for c in comp['choices']]
+        def _log_api_call(params, response):
+            params2 = params.copy()
+            params2.pop('api_key', None)
+            params2.pop('user', None)
+            log.logger.debug(f'>>>openai call: {params2}:\n{response}')
+
+        def _submit_normal_completion(kwargs, prompts, api_args):
+            def _tidy(comp):
+                tidy_comps = []
+                for c in comp['choices']:
+                    if 'text' in c:
+                        tidy_comps.append(c['text'].strip('\n').strip(''))
+                return tidy_comps
+
+            kwargs['prompt'] = prompts
+            kwargs = {**kwargs, **api_args}
+
+            resp = _tidy(openai.Completion.create(**kwargs))
+            _log_api_call(kwargs, resp)
+            return resp
+
+        def _submit_chat_completion(kwargs, prompts, api_args, df, mode='conversational'):
+            def _tidy(comp):
+                tidy_comps = []
+                for c in comp['choices']:
+                    if 'message' in c:
+                        tidy_comps.append(c['message']['content'].strip('\n').strip(''))
+                return tidy_comps
+
+            completions = []
+            initial_prompt = {"role": "system", "content": "You are a helpful assistant. Your task is to continue the chat."}  # noqa
+            kwargs['messages'] = [initial_prompt]
+            last_completion_content = None
+
+            for pidx in range(len(prompts)):
+                kwargs['messages'].append({'role': 'user', 'content': prompts[pidx]})
+
+                if mode == 'conversational-full' or (mode == 'conversational' and pidx == len(prompts) - 1):
+                    kwargs['messages'] = truncate_msgs_for_token_limit(kwargs['messages'],
+                                                                       kwargs['model'],
+                                                                       api_args['max_tokens'])
+                    pkwargs = {**kwargs, **api_args}
+                    resp = _tidy(openai.ChatCompletion.create(**pkwargs))
+                    _log_api_call(pkwargs, resp)
+
+                    completions.extend(resp)
+                elif mode == 'default':
+                    kwargs['messages'] = [initial_prompt] + [kwargs['messages'][-1]]
+                    pkwargs = {**kwargs, **api_args}
+
+                    resp = _tidy(openai.ChatCompletion.create(**pkwargs))
+                    _log_api_call(pkwargs, resp)
+
+                    completions.extend(resp)
+                else:
+                    # in "normal" conversational mode, we request completions only for the last row
+                    last_completion_content = None
+                    if args.get('answer_column') in df.columns:
+                        # insert completion if provided, which saves redundant API calls
+                        completions.extend([df.iloc[pidx][args.get('answer_column')]])
+                    else:
+                        completions.extend([''])
+
+                if args.get('answer_column') in df.columns:
+                    kwargs['messages'].append({'role': 'assistant',
+                                               'content': df.iloc[pidx][args.get('answer_column')]})
+                elif last_completion_content:
+                    # interleave assistant responses with user input
+                    kwargs['messages'].append({'role': 'assistant', 'content': last_completion_content[0]})
+
+            return completions
+
+        def _submit_image_completion(kwargs, prompts, api_args):
+            def _tidy(comp):
+                return [c[0]['url'] if 'url' in c[0].keys() else c[0]['b64_json'] for c in comp]
+            kwargs.pop('model')
+            completions = [openai.Image.create(**{'prompt': p, **kwargs, **api_args})['data'] for p in prompts]
+            return _tidy(completions)
 
         try:
             # check if simple completion works
@@ -242,9 +362,10 @@ class OpenAIHandler(BaseMLEngine):
                 prompts,
                 api_key,
                 api_args,
-                args
+                args,
+                df
             )
-            return _tidy(completion)  
+            return completion
         except openai.error.InvalidRequestError as e:
             # else, we get the max batch size
             e = e.user_message
@@ -261,7 +382,8 @@ class OpenAIHandler(BaseMLEngine):
                                              prompts[i * max_batch_size:(i + 1) * max_batch_size],
                                              api_key,
                                              api_args,
-                                             args)
+                                             args,
+                                             df)
                 if not completion:
                     completion = partial
                 else:
@@ -278,7 +400,8 @@ class OpenAIHandler(BaseMLEngine):
                                              prompts[i * max_batch_size:(i + 1) * max_batch_size],
                                              api_key,
                                              api_args,
-                                             args)
+                                             args,
+                                             df)
                     promises.append({"choices": future})
             completion = None
             for p in promises:
@@ -287,9 +410,10 @@ class OpenAIHandler(BaseMLEngine):
                 else:
                     completion['choices'].extend(p['choices'].result()['choices'])
 
-        return _tidy(completion)
+        return completion
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+        # TODO: Update to use update() artifacts
         args = self.model_storage.json_get('args')
         api_key = self._get_api_key(args)
 
@@ -298,3 +422,158 @@ class OpenAIHandler(BaseMLEngine):
 
         return pd.DataFrame([[meta['id'], meta['object'], meta['owned_by'], meta['permission'], args]],
                             columns=['id', 'object', 'owned_by', 'permission', 'model_args'])
+
+    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        """
+        Fine-tune OpenAI GPT models. Steps are roughly:
+          - Analyze input data and modify it according to suggestions made by the OpenAI utility tool
+          - Get a training and validation file
+          - Determine base model to use
+          - Submit a fine-tuning job via the OpenAI API
+          - Monitor progress with exponential backoff (which has been modified for greater control given a time budget in hours), 
+          - Gather stats once fine-tuning finishes
+          - Modify model metadata so that the new version triggers the fine-tuned version of the model (stored in the user's OpenAI account)
+
+        Caveats: 
+          - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you adjust successively more than once, any fine-tuning other than the most recent one is lost.
+        """  # noqa
+
+        args = args if args else {}
+        using_args = args.pop('using') if 'using' in args else {}
+        prompt_col = using_args.get('prompt_column', 'prompt')
+        completion_col = using_args.get('completion_column', 'completion')
+
+        for col in [prompt_col, completion_col]:
+            if col not in set(df.columns):
+                raise Exception(f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first.")  # noqa
+
+        args = {**using_args, **args}
+        prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
+
+        openai.api_key = self._get_api_key(args)
+        adjust_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
+        temp_storage_path = tempfile.mkdtemp()
+        temp_file_name = f"ft_{adjust_time}"
+        temp_model_storage_path = f"{temp_storage_path}/{temp_file_name}.jsonl"
+        df.to_json(temp_model_storage_path, orient='records', lines=True)
+
+        # TODO avoid subprocess usage once OpenAI enables non-CLI access
+        subprocess.run(
+            [
+                "openai", "tools", "fine_tunes.prepare_data",
+                "-f", temp_model_storage_path,                  # from file
+                '-q'                                            # quiet mode (accepts all suggestions)
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+        )
+
+        file_names = [f'{temp_file_name}.jsonl',
+                      f'{temp_file_name}_prepared_train.jsonl',
+                      f'{temp_file_name}_prepared_valid.jsonl']
+        returns = []
+        for file_name in file_names:
+            if os.path.isfile(os.path.join(temp_storage_path, file_name)):
+                returns.append(openai.File.create(
+                    file=open(f"{temp_storage_path}/{file_name}", "rb"),
+                    purpose='fine-tune')
+                )
+            else:
+                returns.append(None)
+
+        train_file_id = returns[1].id if isinstance(returns[1], openai.File) else returns[0].id
+        val_file_id = returns[2].id if isinstance(returns[2], openai.File) else None
+
+        def _get_model_type(model_name: str):
+            for model_type in ['ada', 'curie', 'babbage', 'davinci']:
+                if model_type in model_name.lower():
+                    return model_type
+            return 'ada'
+
+        # `None` values are internally imputed by OpenAI to `null` or default values
+        ft_params = {
+            'training_file': train_file_id,
+            'validation_file': val_file_id,
+            'model': _get_model_type(prev_model_name),
+            'suffix': 'mindsdb',
+            'n_epochs': using_args.get('n_epochs', None),
+            'batch_size': using_args.get('batch_size', None),
+            'learning_rate_multiplier': using_args.get('learning_rate_multiplier', None),
+            'prompt_loss_weight': using_args.get('prompt_loss_weight', None),
+            'compute_classification_metrics': using_args.get('compute_classification_metrics', None),
+            'classification_n_classes': using_args.get('classification_n_classes', None),
+            'classification_positive_class': using_args.get('classification_positive_class', None),
+            'classification_betas': using_args.get('classification_betas', None),
+        }
+
+        start_time = datetime.datetime.now()
+        ft_result = openai.FineTune.create(**{k: v for k, v in ft_params.items() if v is not None})
+
+        @retry_with_exponential_backoff(hour_budget=args.get('hour_budget', 8))
+        def _check_ft_status(model_id):
+            ft_retrieved = openai.FineTune.retrieve(id=model_id)
+            if ft_retrieved['status'] in ('succeeded', 'failed'):
+                return ft_retrieved
+            else:
+                raise openai.error.OpenAIError('Fine-tuning still pending!')
+
+        ft_stats = _check_ft_status(ft_result.id)
+        ft_model_name = ft_stats['fine_tuned_model']
+
+        if ft_stats['status'] != 'succeeded':
+            raise Exception(f"Fine-tuning did not complete successfully (status: {ft_stats['status']}). Error message: {ft_stats['events'][-1]['message']}")  # noqa
+
+        end_time = datetime.datetime.now()
+        runtime = end_time - start_time
+
+        result_file_id = openai.FineTune.retrieve(id=ft_result.id)['result_files'][0].id
+        name_extension = openai.File.retrieve(id=result_file_id).filename
+        result_path = f'{temp_storage_path}/ft_{adjust_time}_result_{name_extension}'
+        with open(result_path, 'wb') as f:
+            f.write(openai.File.download(id=result_file_id))
+
+        train_stats = pd.read_csv(result_path)
+        if 'validation_token_accuracy' in train_stats.columns:
+            train_stats = train_stats[train_stats['validation_token_accuracy'].notnull()]
+
+        args['model_name'] = ft_model_name
+        args['ft_api_info'] = ft_stats.to_dict_recursive()
+        args['ft_result_stats'] = train_stats.to_dict()
+        args['runtime'] = runtime.total_seconds()
+
+        self.model_storage.json_set('args', args)
+        shutil.rmtree(temp_storage_path)
+
+    @staticmethod
+    def _get_completed_prompts(base_template, df):
+        columns = []
+        spans = []
+        matches = list(re.finditer("{{(.*?)}}", base_template))
+
+        first_span = matches[0].start()
+        last_span = matches[-1].end()
+
+        for m in matches:
+            columns.append(m[0].replace('{', '').replace('}', ''))
+            spans.extend((m.start(), m.end()))
+
+        spans = spans[1:-1]
+        template = [base_template[s:e] for s, e in zip(spans, spans[1:])]
+        template.insert(0, base_template[0:first_span])
+        template.append(base_template[last_span:])
+
+        empty_prompt_ids = np.where(df[columns].isna().all(axis=1).values)[0]
+
+        df['__mdb_prompt'] = ''
+        for i in range(len(template)):
+            atom = template[i]
+            if i < len(columns):
+                col = df[columns[i]].replace(to_replace=[None], value='')  # add empty quote if data is missing
+                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col
+            else:
+                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
+        prompts = list(df['__mdb_prompt'])
+
+        return prompts, empty_prompt_ids

@@ -50,14 +50,20 @@ from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.model.functions import get_model_records
 
+from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
+
 from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
 import torch.multiprocessing as mp
 mp.get_context('spawn')
 
 
+class MLEngineException(Exception):
+    pass
+
+
 @mark_process(name='learn')
-def learn_process(class_path, context_dump, integration_id,
+def learn_process(class_path, engine, context_dump, integration_id,
                   predictor_id, data_integration_ref, fetch_data_query,
                   project_name, problem_definition, set_active,
                   base_predictor_id=None):
@@ -109,13 +115,19 @@ def learn_process(class_path, context_dump, integration_id,
         module_name, class_name = class_path
         module = importlib.import_module(module_name)
         HandlerClass = getattr(module, class_name)
+        HandlerClass = MLClientFactory(handler_class=HandlerClass, engine=engine)
 
         handlerStorage = HandlerStorage(integration_id)
         modelStorage = ModelStorage(predictor_id)
 
+        kwargs = {}
+        if base_predictor_id is not None:
+            kwargs['base_model_storage'] = ModelStorage(base_predictor_id)
+
         ml_handler = HandlerClass(
             engine_storage=handlerStorage,
             model_storage=modelStorage,
+            **kwargs
         )
 
         # create new model
@@ -170,9 +182,9 @@ class BaseMLEngineExec:
         self.storage_factory = kwargs.get('storage_factory')
         self.integration_id = kwargs.get('integration_id')
         self.execution_method = kwargs.get('execution_method')
+        self.engine = kwargs.get("integration_engine")
 
         self.model_controller = ModelController()
-
         self.database_controller = DatabaseController()
 
         self.parser = parse_sql
@@ -180,7 +192,7 @@ class BaseMLEngineExec:
 
         self.is_connected = True
 
-        self.handler_class = kwargs['handler_class']
+        self.handler_class = MLClientFactory(handler_class=kwargs['handler_class'], engine=self.engine)
 
     def _get_ml_handler(self, predictor_id=None):
         # returns instance or wrapper over it
@@ -299,8 +311,11 @@ class BaseMLEngineExec:
         project = self.database_controller.get_project(name=project_name)
 
         # handler-side validation
-        if hasattr(self.handler_class, 'create_validation'):
-            self.handler_class.create_validation(target, args=problem_definition)
+        # self.handler_class is a instance of MLClientFactory
+        # so need to check self.handler_class.handler_class attribute
+        # which is a class of a real MLHandler
+        if hasattr(self.handler_class.handler_class, 'create_validation'):
+            self.handler_class.handler_class.create_validation(target, args=problem_definition)
 
         predictor_record = db.Predictor(
             company_id=ctx.company_id,
@@ -330,6 +345,7 @@ class BaseMLEngineExec:
         p = HandlerProcess(
             learn_process,
             class_path,
+            self.engine,
             ctx.dump(),
             self.integration_id,
             predictor_record.id,
@@ -369,13 +385,18 @@ class BaseMLEngineExec:
             'predict_params': {} if params is None else params
         }
         # FIXME
+        # if self.handler_class.__name__ == 'LightwoodHandler':
         if self.handler_class.__name__ == 'LightwoodHandler':
             args['code'] = predictor_record.code
             args['target'] = predictor_record.to_predict[0]
             args['dtype_dict'] = predictor_record.dtype_dict
             args['learn_args'] = predictor_record.learn_args
 
-        predictions = ml_handler.predict(df, args)
+        try:
+            predictions = ml_handler.predict(df, args)
+        except Exception as e:
+            msg = f'[{self.name}/{model_name}]: {str(e)}'
+            raise MLEngineException(msg) from e
 
         ml_handler.close()
 
@@ -414,6 +435,8 @@ class BaseMLEngineExec:
         predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
 
         base_predictor_record = predictor_records[0]
+        learn_args = base_predictor_record.learn_args
+        learn_args['using'] = args if not learn_args.get('using', False) else {**learn_args['using'], **args}
 
         predictor_record = db.Predictor(
             company_id=ctx.company_id,
@@ -423,7 +446,7 @@ class BaseMLEngineExec:
             fetch_data_query=fetch_data_query,
             mindsdb_version=mindsdb_version,
             to_predict=base_predictor_record.to_predict,
-            learn_args=base_predictor_record.learn_args,
+            learn_args=learn_args,
             data={'name': model_name},
             project_id=project.id,
             training_data_columns_count=None,
@@ -443,6 +466,7 @@ class BaseMLEngineExec:
         p = HandlerProcess(
             learn_process,
             class_path,
+            self.engine,
             ctx.dump(),
             self.integration_id,
             predictor_record.id,

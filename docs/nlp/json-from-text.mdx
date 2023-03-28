@@ -1,0 +1,102 @@
+---
+title: Extract JSON from Text Data
+sidebarTitle: Extract JSON from Text Data
+---
+
+In this example, we use the OpenAI model to extract data in a predefined JSON format from the input text data.
+
+<Info>
+**Default Model**
+
+When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter.
+</Info>
+
+## Example in SQL
+
+Let's create an OpenAI model.
+
+```sql
+CREATE MODEL mindsdb.nlp_model
+PREDICT json
+USING
+    engine = 'openai',
+    json_struct = {
+        'rental_price': 'rental price',
+        'location': 'location',
+        'nob': 'number of bathrooms'
+    },
+    input_text = 'sentence';
+```
+
+We pass three parameters in the `USING` clause:
+
+1. The `engine` parameter ensures we use the OpenAI engine.
+2. The `json_struct` parameter stores a predefined JSON structure used for the output.
+3. The `input_text` parameter contains the name of the column that stores input text.
+
+Now we can query the model, passing the input text stored in the `sentence` column.
+
+```sql
+SELECT json
+FROM mindsdb.nlp_model
+WHERE sentence = 'Amazing 3 bedroom apartment located at the heart of Manhattan, has one full bathrooms and one toilet room for just 3000 a month.';
+```
+
+On execution, we get:
+
+```sql
++----------------------------------------------------------+
+| json                                                     |
++----------------------------------------------------------+
+| {"location":"Manhattan","nob":"1","rental_price":"3000"} |
++----------------------------------------------------------+
+```
+
+## Example in MQL
+
+Please check out our docs on how to connect [Mongo Compass](/connect/mongo-compass) and [Mongo Shell](/connect/mongo-shell) to MindsDB.
+
+To create this model in MQL, run the below command from Mongo Compass or Mongo Shell:
+
+```sql
+db.models.insertOne({
+    name: 'nlp_model',
+    predict: 'json',
+    training_options: {
+        engine: 'openai',
+        input_text: 'sentence',
+        json_struct: {
+            'rental_price': 'rental price',
+            'location': 'location',
+            'nob': 'number of bathrooms'
+        }
+    }
+})
+```
+
+We pass the same three parameters here.
+
+1. The `engine` parameter ensures we use the OpenAI engine.
+2. The `json_struct` parameter stores a predefined JSON structure used for the output.
+3. The `input_text` parameter contains the name of the column that stores input text.
+
+Now we can query the model, passing the input text stored in the `sentence` column.
+
+```sql
+db.nlp_model.find({
+    'sentence': 'Amazing 3 bedroom apartment located at the heart of Manhattan, has one full bathrooms and one toilet room for just 3000 a month.'
+    })
+```
+
+On execution, we get:
+
+```sql
+{
+  json: {
+    rental_price: '3000',
+    location: 'Manhattan',
+    nob: '1'
+  },
+  sentence: 'Amazing 3 bedroom apartment located at the heart of Manhattan, has one full bathrooms and one toilet room for just 3000 a month.'
+}
+```

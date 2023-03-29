@@ -335,7 +335,8 @@
             "data-integrations/PostgreSQL",
             "data-integrations/oceanbase",
             "data-integrations/oracle",
-            "data-integrations/OrioleDB"
+            "data-integrations/OrioleDB",
+            "data-integrations/planet-scale"
           ]
         },
         {

@@ -154,7 +154,7 @@ class StatsForecastHandler(BaseMLEngine):
         model_args = self.model_storage.json_get("model_args")
 
         if attribute == "model":
-            return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "frequency", "season_length"]})
+            return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "frequency", "season_length", "hierarchy"]})
 
         if attribute == "features":
             return pd.DataFrame(

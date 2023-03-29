@@ -273,6 +273,9 @@ class TestStatsForecast(BaseExecutorTest):
         )
         assert len(list(round(mindsdb_result_hier["ma"])))
 
+        describe_result = self.run_sql("describe proj.model_1_group.model")
+        assert describe_result["hierarchy"][0] == ["type", "bedrooms"]
+
         # Check results differ from the default settings
         self.run_sql(
             """

@@ -1,17 +1,19 @@
 ---
-title: NLP With MindsDB & Open AI Can Help You Get Rid of Haters
-sidebarTitle: Use MindsDB and Hugging Face to identify hate speech using SQL
+title: Use MindsDB & Hugging Face To Spot Hate-Speech in Your Data 
+sidebarTitle: Use MindsDB's AI-Tables and Hugging Face Transformer models to identify hate speech
 ---
 
 ## Introduction
 
 In today's world, digital conversation is king. Whether it be text message, email, or social media we do the majority of our communicating in a virtual setting. With all this information spreading around, negativity is bound to happen. Luckily, new advances in NLP bring opportunity to identify (and ween out) the bad, or hateful, text content out there using automated processes.
 
-In this tutorial, I'm going to show you how you can use MindsDB and Hugging Face to classify hate speech in your database. Before we begin, let's go over some core concepts that you should probably know:
+In this tutorial, I'm going to show you how you can use MindsDB and Hugging Face to classify hate speech in your database. Before we begin, let's go over some core concepts:
 
-[MindsDB](https://mindsdb.com/) is is an open-source AI layer for existing databases that allows you to effortlessly develop, train and deploy state-of-the-art machine learning models using SQL queries. 
-[Hugging Face](https://huggingface.co/) is a community and data science platform that provides tools that enables users to build, train and deploy machine learning models based on open source code and technologies. 
-**NLP**, or Natural Language Processing, is a subprocess of artificial intelligence that helps machines process and understand the human langage so that they can automatically perform repetitive tasks. 
+- [MindsDB](https://mindsdb.com/) is is an open-source AI layer for existing databases that allows you to effortlessly develop, train and deploy state-of-the-art machine learning models using SQL queries. 
+
+- [Hugging Face](https://huggingface.co/) is a community and data science platform that provides tools that enables users to build, train and deploy machine learning models based on open source code and technologies. 
+
+- **NLP**, or Natural Language Processing, is a subprocess of artificial intelligence that helps machines process and understand the human langage so that they can automatically perform repetitive tasks. 
 Some examples of NLP include machine translation, summarization, ticket classification, and spell check (or "autocorrect").
 
 ## Data Setup
@@ -26,39 +28,163 @@ MindsDB locally using
 [Docker](/setup/self-hosted/docker/) or
 [Python](/setup/self-hosted/pip/source/).
 
-Let's get started!
+For this tutorial, you can bring in your own dataset or simply use a table from MindsDB's public demo database. I'm going to use this [Hate Speech Dataset](https://raw.githubusercontent.com/hate-alert/HateXplain/master/Data/dataset.json).
 
-## Connecting The Data
+## Creating a MySQL Database
 
-- [ngrok](https://dashboard.ngrok.com/get-started/setup)
+To follow this tutorial, you should have MySQL installed locally.
 
+- Fire up the mysql server `mysql.server start`
+- 
 
-## Training a Predictor
-I'm going to start by creating my predictor, 
+- Create your database:
+
+`CREATE DATABASE nlp_mindsdb;`
+
+- Create your table:
 
 ```sql
-CREATE MODEL hate_predictor
-PREDICT tolerance
+CREATE TABLE tweets (
+  id INTEGER,
+  hate_speech INTEGER,
+  offensive INTEGER,
+  neither INTEGER,
+  tweet VARCHAR(255),
+  PRIMARY KEY (id)
+);
+```
+
+---
+
+Query OK, 0 rows affected (0.03 sec)
+
+mysql> SHOW TABLES;
++-----------------------+
+| Tables_in_nlp_mindsdb |
++-----------------------+
+| tweets                |
++-----------------------+
+1 row in set (0.00 sec)
+
+---
+
+- Next grant your user access to the new database table:
+
+'GRANT ALL PRIVILEGES ON `nlp_mindsdb.tweet` TO user@localhost;'
+
+***output should read:***
+`Query OK, 0 rows affected (0.01 sec)`
+
+---
+
+- Next, load the data from the dataset into the `tweets` table:
+
+```sql
+mysql> LOAD DATA LOCAL INFILE '/Users/alissa/Downloads/tweets.csv' INTO TABLE tweets FIELDS TERMINATED BY `,`;
+```
+
+```
+Query OK, 24784 rows affected, 17300 warnings (0.26 sec)
+Records: 26952  Deleted: 0  Skipped: 2168  Warnings: 17300
+```
+
+---
+
+- Go ahead and confirm your import (I'm only going to )
+
+`SELECT * FROM tweets LIMIT `0`
+
+```sql
+------------------------------------------------------------+
+    -> | id | hate_speech | offensive | neither | tweet                                                                                                                                         |
+    -> +----+-------------+-----------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+    -> |  0 |           0 |         0 |       3 | !!! RT @mayasolovely: As a woman you shouldn't complain about cleaning up your hou |. &amp; as a man you should always take the trash out...
+    '> |  1 |           0 |         3 |       0 | !!!!! RT @mleew17: boy dats cold...tyga dwn bad for cuffin dat hoe in the 1st plac                                                        |
+    '> |  2 |           0 |         3 |       0 | !!!!!!! RT @UrKindOfBrand Dawg!!!! RT @80sbaby4life: You ever fuck a bitch and she                     |confused as shit
+    '> +----+-------------+-----------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+---
+
+## Connecting MySQL to MindsDB
+
+You can use SQL's, `CREATE DATABASE` statement to connect to your local instance of MySQL:
+
+```sql
+CREATE DATABASE twitter_data  --- display name for database.
+WITH ENGINE = 'mysql',        --- name of the mindsdb handler
+PARAMETERS = {
+  "user": "root",                --- Your database user.
+  "host": "localhost",                --- host, it can be an ip or an url.
+  "port": "3306",             --- common port is 3306.
+  "database": "nlp_mindsdb"             --- The name of your database *optional.
+};
+```
+
+You should receive the following output,
+`Query Successfully Executed`
+
+- Go ahead and confirm the new database includes the tweets table you built in your command line:
+
+```sql
+SELECT *
+FROM twitter_data.tweets
+LIMIT 10;
+```
+
+***your output will look like this, but with 10 rows***
+
+| id  | hate_speech | offensive | neither | tweet |
+| --- | ----------- | --------- | ------- | ----- |
+| 0 | 0 | 0 | 3 | !!! RT @mayasolovely: As a woman you shouldn't complain about cleaning up your house. &amp; as a man you should always take the trash out... |
+| 1 | 0 | 3 | 0 | !!!!! RT @mleew17: boy dats cold...tyga dwn bad for cuffin dat hoe in the 1st place!! |
+
+---
+
+## Creating a Predictor
+
+Now that you're connected to MySQL, it's time to create your predictor model.
+
+- First, navigate to the mindsdb database:
+
+ `use mindsdb;`
+
+Your output should read:
+`Query successfully completed`
+
+- Next, you definitely want to make sure your data is there. Go ahead and confirm:
+
+- Now, it's time to create your nlp model!
+
+```sql
+CREATE MODEL mindsdb.hf_test
+PREDICT PRED
 USING
-  engine = 'huggingface',
-  task = 'text-classification',
-  model_name = "Hate-speech-CNERG/bert-base-uncased-hatexplain",
-  input_column = 'comment',
-  labels = ['normal','offensive','hate_speech'];
+engine = 'huggingface',
+task = 'text-classification',
+model_name = "Hate-speech-CNERG/bert-base-uncased-hatexplain",
+input_column = 'tweet',
+labels = ['hate_speech', 'offensive', 'neither'];
 ```
 
-```sql
-| NAME | ENGINE | PROJECT | ACTIVE | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | TAG |
-| ---- | ------ | ------- | ------ | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | --- |
-| hate_predictor | huggingface | mindsdb | true | 1 | generating | [NULL] | tolerance | up_to_date | 23.3.4.0 | [NULL] | [NULL] | {'target': 'tolerance', 'using': {'task': 'text-classification', 'model_name': 'Hate-speech-CNERG/bert-base-uncased-hatexplain', 'input_column': 'comment', 'labels': ['normal', 'offensive', 'hate_speech']}} | [NULL] |
-```
+| hf_test | huggingface | mindsdb | true | 1 | generating | [NULL] | PRED | up_to_date | 23.3.4.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'Hate-speech-CNERG/bert-base-uncased-hatexplain', 'input_column': 'tweet', 'labels': ['hate_speech', 'offensive', 'neither']} | [NULL] |
 
-If your syntax and models are correct, you should see output similar to the above. Your predictor will most likely be in the `generating` phase at this point.
+---
 
-**Make sure the above query does not return an error. This could mean there is an error in your code or you are using an unsupported 3rd party model. If you receive erroneous or unexpected output, reach out to the MindsDB Community on Slack for suppor
+## Checking The Status of a Predictor
+
+- Next up, check the status of your predictor:
 
 ```sql
 SELECT *
 FROM mindsdb.models 
-WHERE name = 'hate_predictor`
+WHERE name = 'hf_test';
 ```
+
+| hf_test | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.3.4.0 | [NULL] | [NULL] | 'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'Hate-speech-CNERG/bert-base-uncased-hatexplain', 'input_column': 'tweet', 'labels': ['hate_speech', 'offensive', 'neither']} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-29 02:41:05.518465 |
+
+
+## Training a Predictor
+
+Now that your model is finished generating, you can use `JOIN` to query the model on the `tweets` data from your dataset:
+

@@ -5,11 +5,15 @@ sidebarTitle: Use MindsDB's, Hugging Face and MySQL Datasource to Peerform NLP Q
 
 ## Introduction
 
-In today's world, digital conversation is king. Whether it be text message, email, or social media we do the majority of our communicating in a virtual setting. With all this information spreading around, negativity is bound to happen. Luckily, new advances in NLP bring opportunity to identify (and ween out) the bad, or hateful, text content out there using automated processes.
+In today's world, digital conversation is king. Whether it be text message, email, or social media, we do the majority of our communicating in a virtual setting. With all this information spreading around, negative language is bound to start showing up. 
 
-In this tutorial, you will learn how to use MindsDB and Hugging Face to classify hate speech while connected to a MySQL database. 
+Hate speech is defined as, 'abusive or threatening speech or writing that expresses prejudice on the basis of ethnicity, religion, sexual orientation, or similar grounds'. This offensie language comes in many forms, including memes, messages, social posts, gestures, and icons (even emojis can be used the wrong way these days).
 
-Before you begin, here are some core concepts to review:
+As most of us know, social media provides a speakerphone for hate & negativity. This causes a major problem for us because, unfortunately, misinformation tends to spread faster when people are upset. Thankfully, new technologies & advances in NLP are providing ways to identify (and ween out) the bad, or hateful, content out there before it spreads.
+
+**In this tutorial, you will learn how to use MindsDB and Hugging Face to run text-classification NLP queries on a MySQL database connection and classify hate speech.**
+
+Before you begin, here are some noteworthy concepts:
 
 - [MindsDB](https://mindsdb.com/) is is an open-source AI layer for existing databases that allows you to effortlessly develop, train and deploy state-of-the-art machine learning models using SQL queries. 
 
@@ -38,9 +42,9 @@ carry out the following tasks in your command line:
 
  `mysql.server start`
 
-- Login 
+- Login:
 
-`mysql -u root -p`
+`mysql -u user -p`
 
 - Create your database:
 
@@ -73,7 +77,7 @@ mysql> SHOW TABLES;
 
 ---
 
-- Next grant your user access to the new database table:
+- Next grant the user access to the new database table:
 
 'GRANT ALL PRIVILEGES ON `nlp_mindsdb.tweets` TO user@localhost;'
 
@@ -84,7 +88,9 @@ mysql> SHOW TABLES;
 
 ## Understanding the Data
 
-The Hugging Face [transformer model]() you will be using for this exercise was pre-trained on an extensive dataset, referenced on the accompanying [GitHub](). You do not need an additional datatset for this tutorial, but this next section will show you how to import data from a dataset into your newly created MySQL table:
+[Hate-speech-CNERG/bert-base-uncased-hatexplain](https://huggingface.co/Hate-speech-CNERG/bert-base-uncased-hatexplain?text=I+like+you.+I+love+you) is the The Hugging Face transormer model you will be using for this exercise.The model is used for classifying a text as Hatespeech, Offensive, or Normal. The model is trained using data from Gab and Twitter and Human Rationales were included as part of the training data to boost the performance. All of the datasets and models pertaining to this model are available [here](https://github.com/hate-alert/HateXplain).
+
+This next section will show you how to import this [dataset file](https://raw.githubusercontent.com/hate-alert/HateXplain/master/Data/dataset.json), which was converted into a .cvs for the purpose of this tutorial, into your local MySQL table you created above:
 
 - Load the data from your dataset into the `tweets` table:
 
@@ -167,9 +173,23 @@ Now that you're connected to MySQL, it's time to create your predictor model.
 Your output should read:
 `Query successfully completed`
 
-- Next, you definitely want to make sure your data is there. Go ahead and confirm:
+- Next, make sure your data is there with SQL's `SELECT` statement in your MindsDB Cloud Editor Instance:
 
-- Now, it's time to create your nlp model!
+```sql
+SELECT *
+FROM twitter_data.tweets
+LIMIT 3;
+```
+***your output will look like this, but with 10 rows***
+
+| id  | hate_speech | offensive | neither | tweet |
+| --- | ----------- | --------- | ------- | ----- |
+| 0 | 0 | 0 | 3 | !!! RT @mayasolovely: As a woman you shouldn't complain about cleaning up your house. &amp; as a man you should always take the trash out... |
+| 1 | 0 | 3 | 0 | !!!!! RT @mleew17: boy dats cold...tyga dwn bad for cuffin dat hoe in the 1st place!! |
+
+---
+
+- Now, it's time to create your prediction model!
 
 ```sql
 CREATE MODEL mindsdb.hf_test
@@ -249,4 +269,25 @@ WHERE text = 'You are a dumb whore';
 
 ## Conclusion
 
-Grreat 
+Great work! By following along with this tutorial, you have successfully done the following things:
+
+- [x] Learned about MindsDB, Hugging Face, and Natural Processing Language
+- [x] Learned how to create a database and table locally with MySQL 
+- [x] Learned how to use `CREATE DATABASE` in MindsDB to connect to a local MySQL connection
+- [x] Learned how to create a prediction model, using the `CREATE PREDICTOR` statement
+- [x] Learned how to connect a Hugging Face model to your predictor
+- [x] Learned how to train a predictor model in MindsDB
+
+Now that you have this knowledge, you're probably eager to try out new models and NLP tasks. Sign up for a free MindsDB cloud account [here](https://cloud.mindsdb.com/) and get started today!
+
+If you want to learn more about MindsDB, checkout these resources:
+
+- [MindsDB](https://mindsdb.com/)
+- [Hugging Face](https://huggingface.co/)
+
+- Engage with the MindsDB community on:
+  [Slack](https://mindsdb.com/joincommunity) or
+  [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and
+  share your ideas and thoughts.
+
+- If this tutorial was helpful, please give us a GitHub star [here](https://github.com/mindsdb/mindsdb).

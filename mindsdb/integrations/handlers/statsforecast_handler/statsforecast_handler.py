@@ -8,7 +8,6 @@ from mindsdb.integrations.utilities.time_series_utils import (
     get_best_model_from_results_df,
     get_model_accuracy_dict,
     reconcile_forecasts,
-    spec_hierarchy_from_list,
     get_hierarchy_from_df
 )
 from sklearn.metrics import r2_score

@@ -7,7 +7,7 @@ import pytest
 from statsforecast.models import AutoCES
 from statsforecast.utils import AirPassengersDF
 from statsforecast import StatsForecast
-from mindsdb.integrations.utilities.time_series_utils import get_best_model_from_results_df
+from mindsdb.integrations.utilities.time_series_utils import get_best_model_from_results_df, get_hierarchy_from_df
 from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import (
     choose_model,
     model_dict,
@@ -263,7 +263,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.wait_predictor("proj", "model_1_group")
 
         # run predict
-        mindsdb_result = self.run_sql(
+        mindsdb_result_hier = self.run_sql(
             """
            SELECT p.*
            FROM pg.df as t
@@ -271,4 +271,30 @@ class TestStatsForecast(BaseExecutorTest):
            where t.type='house'
         """
         )
-        assert len(list(round(mindsdb_result["ma"])))
+        assert len(list(round(mindsdb_result_hier["ma"])))
+
+        # Check results differ from the default settings
+        self.run_sql(
+            """
+           create model proj.model_1
+           from pg (select * from df)
+           predict ma
+           order by saledate
+           group by type, bedrooms
+           horizon 4
+           using
+             engine='statsforecast'
+        """
+        )
+        self.wait_predictor("proj", "model_1")
+
+        mindsdb_result_default = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.model_1 as p
+           where t.type='house'
+        """
+        )
+
+        assert mindsdb_result_hier["ma"].sum() != mindsdb_result_default["ma"].sum()

@@ -308,7 +308,7 @@
         },
         {
           "group": "Data Integrations",
-          "pages": [         
+          "pages": [
             "data-integrations/all-data-integrations",
             "data-integrations/amazon-redshift",
             "data-integrations/db2",
@@ -317,7 +317,7 @@
             "data-integrations/ckan",
             "data-integrations/databend",
             "data-integrations/Apache-Pinot",
-            "data-integrations/cassandra",            
+            "data-integrations/cassandra",
             "data-integrations/Couchbase",
             "data-integrations/clickhouse",
             "data-integrations/Airtable",
@@ -325,8 +325,8 @@
             "data-integrations/DynamoDB",
             "data-integrations/hive",
             "data-integrations/impala",
+            "data-integrations/mysql",
             "data-integrations/microsoft-access"
-
           ]
         },
         {

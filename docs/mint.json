@@ -324,7 +324,6 @@
             "data-integrations/DynamoDB",
             "data-integrations/databricks",
             "data-integrations/Google-BigQuery",
-            "data-integrations/DynamoDB",
             "data-integrations/hive",
             "data-integrations/impala",
             "data-integrations/MonetDB",

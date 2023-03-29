@@ -28,20 +28,22 @@ MindsDB locally using
 [Docker](/setup/self-hosted/docker/) or
 [Python](/setup/self-hosted/pip/source/).
 
-For this tutorial, you can bring in your own dataset or simply use a table from MindsDB's public demo database. I'm going to use this [Hate Speech Dataset](https://raw.githubusercontent.com/hate-alert/HateXplain/master/Data/dataset.json).
 
-## Creating a MySQL Database
+You will need to have MySQL installed locally to carry out the following tasks in your command line:
 
-To follow this tutorial, you should have MySQL installed locally.
+- Fire up the mysql server
 
-- Fire up the mysql server `mysql.server start`
-- 
+ `mysql.server start`
+
+- Login 
+
+`mysql -u root -p`
 
 - Create your database:
 
 `CREATE DATABASE nlp_mindsdb;`
 
-- Create your table:
+- Create a table:
 
 ```sql
 CREATE TABLE tweets (
@@ -70,14 +72,18 @@ mysql> SHOW TABLES;
 
 - Next grant your user access to the new database table:
 
-'GRANT ALL PRIVILEGES ON `nlp_mindsdb.tweet` TO user@localhost;'
+'GRANT ALL PRIVILEGES ON `nlp_mindsdb.tweets` TO user@localhost;'
 
 ***output should read:***
 `Query OK, 0 rows affected (0.01 sec)`
 
 ---
 
-- Next, load the data from the dataset into the `tweets` table:
+## Understanding the Data
+
+The Hugging Face [transformer model]() you will be using for this exercise was pre-trained on an extensive dataset, referenced on the accompanying [GitHub](). You do not need an additional datatset for this tutorial, but this next section will show you how to import data from a dataset into your newly created MySQL table:
+
+- Load the data from your dataset into the `tweets` table:
 
 ```sql
 mysql> LOAD DATA LOCAL INFILE '/Users/alissa/Downloads/tweets.csv' INTO TABLE tweets FIELDS TERMINATED BY `,`;
@@ -90,7 +96,7 @@ Records: 26952  Deleted: 0  Skipped: 2168  Warnings: 17300
 
 ---
 
-- Go ahead and confirm your import (I'm only going to )
+- Go ahead and confirm your import:
 
 `SELECT * FROM tweets LIMIT `0`
 
@@ -103,21 +109,27 @@ Records: 26952  Deleted: 0  Skipped: 2168  Warnings: 17300
     '> |  2 |           0 |         3 |       0 | !!!!!!! RT @UrKindOfBrand Dawg!!!! RT @80sbaby4life: You ever fuck a bitch and she                     |confused as shit
     '> +----+-------------+-----------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------+
 ```
-
 ---
 
-## Connecting MySQL to MindsDB
+## Connecting To MySQL Datsource
 
-You can use SQL's, `CREATE DATABASE` statement to connect to your local instance of MySQL:
+- Now that your MySQL database and table are configured, use *ngrok* to expose your local MySQL server:
+
+`ngrok tcp 3306` 
+
+- Next, head to `https://cloud.mindsdb.com/editor`.
+
+Using SQL's, `CREATE DATABASE` statement and the credentials supplied by `ngrok` output, securely connect to MySQL right inside the MindsDB Cloud Editor:
 
 ```sql
 CREATE DATABASE twitter_data  --- display name for database.
 WITH ENGINE = 'mysql',        --- name of the mindsdb handler
 PARAMETERS = {
-  "user": "root",                --- Your database user.
-  "host": "localhost",                --- host, it can be an ip or an url.
-  "port": "3306",             --- common port is 3306.
-  "database": "nlp_mindsdb"             --- The name of your database *optional.
+  "user": "root",             --- your mysql username
+  "password": "MyN3wP4ssw0rd",    --- your mysql password  
+   "host": "6.tcp.ngrok.io",    ---ngrok host credentials 
+  "port": "10105",                  ---ngrok forwarded port
+  "database": "nlp_mindsdb"          --- database name
 };
 ```
 
@@ -164,12 +176,11 @@ engine = 'huggingface',
 task = 'text-classification',
 model_name = "Hate-speech-CNERG/bert-base-uncased-hatexplain",
 input_column = 'tweet',
-labels = ['hate_speech', 'offensive', 'neither'];
+labels = ['hate_speech', 'neither', 'offensive'];
 ```
 
-| hf_test | huggingface | mindsdb | true | 1 | generating | [NULL] | PRED | up_to_date | 23.3.4.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'Hate-speech-CNERG/bert-base-uncased-hatexplain', 'input_column': 'tweet', 'labels': ['hate_speech', 'offensive', 'neither']} | [NULL] |
+| hf_test | huggingface | mindsdb | true | 1 | generating | [NULL] | PRED | up_to_date | 23.3.4.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'Hate-speech-CNERG/bert-base-uncased-hatexplain', 'input_column': 'tweet', 'labels': ['hate_speech', 'neither', 'offensive']}}  | [NULL] |
 
----
 
 ## Checking The Status of a Predictor
 
@@ -181,10 +192,56 @@ FROM mindsdb.models
 WHERE name = 'hf_test';
 ```
 
-| hf_test | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.3.4.0 | [NULL] | [NULL] | 'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'Hate-speech-CNERG/bert-base-uncased-hatexplain', 'input_column': 'tweet', 'labels': ['hate_speech', 'offensive', 'neither']} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-29 02:41:05.518465 |
+| hf_test | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.3.5.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'Hate-speech-CNERG/bert-base-uncased-hatexplain', 'input_column': 'tweet', 'labels': ['hate_speech', 'neither', 'offensive']}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-29 17:15:38.683663 |
 
+---
+
+`DESCRIBE PREDICTOR mindsdb.hf_test;`
+
+```sql
+{"input_column":"tweet","labels":["hate_speech","neither","offensive"],"labels_map":{"hate speech":"hate_speech","normal":"neither","offensive":"offensive"},"max_length":512,"model_name":"Hate-speech-CNERG/bert-base-uncased-hatexplain","target":"PRED","task":"text-classification","task_proper":"text-classification"}
+```
 
 ## Training a Predictor
 
-Now that your model is finished generating, you can use `JOIN` to query the model on the `tweets` data from your dataset:
+Now that your model is finished generating, you can go ahead and test it out! ***Note: In order to confirm your new model's efficiency, you will most likely use some language you don't like or agree with here. Just keep in mind, you can ultimately use this highly effective technology to do good! Do not follow the tutorial if you intent to use this malicously.***
 
+Test Query Examples:
+
+```sql
+SELECT *
+FROM mindsdb.hf_test
+WHERE text = 'I like you. I love you.';
+```
+
+| PRED | PRED_explain | text |
+| ---- | ------------ | ---- |
+| neither | {"hate_speech":0.03551715984940529,"neither":0.7747423648834229,"offensive":0.18974047899246216} | I like you. I love you. |
+
+---
+
+```sql
+SELECT *
+FROM mindsdb.hf_test
+WHERE text = 'I hate negroes'
+```
+
+| PRED | PRED_explain | text |
+| ---- | ------------ | ---- |
+| hate_speech | {"hate_speech":0.82469242811203,"neither":0.05819767713546753,"offensive":0.11710995435714722} | I hate negroes |
+
+---
+
+```sql
+SELECT *
+FROM mindsdb.hf_test
+WHERE text = 'You are a dumb whore';
+```
+
+| PRED | PRED_explain | text |
+| ---- | ------------ | ---- |
+| offensive | {"hate_speech":0.06079000607132912,"neither":0.35908129811286926,"offensive":0.5801286697387695} | You are a dumb whore |
+
+---
+
+## Conclusion

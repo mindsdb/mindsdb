@@ -120,8 +120,10 @@ class OpenAIHandler(BaseMLEngine):
 
         if pred_args.get('prompt_template', False):
             base_template = pred_args['prompt_template']  # override with predict-time template if available
-        else:
+        elif args.get('prompt_template', False):
             base_template = args['prompt_template']
+        else:
+            base_template = None
 
         # Image mode
         if args.get('mode', self.default_mode) == 'image':

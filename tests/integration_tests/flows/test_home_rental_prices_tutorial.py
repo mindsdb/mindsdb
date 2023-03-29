@@ -63,7 +63,7 @@ JOIN mindsdb.home_rentals_model as m limit 100;
 ADJUST mindsdb.home_rentals_model
 FROM example_db (
     SELECT * FROM demo_data.home_rentals
-);   
+);
     """
 
 

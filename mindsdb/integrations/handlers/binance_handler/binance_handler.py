@@ -1,3 +1,8 @@
+import pandas as pd
+from typing import Dict
+
+from binance.spot import Spot
+
 from mindsdb.integrations.handlers.binance_handler.binance_tables import BinanceAggregatedTradesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -6,11 +11,6 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
-
-from binance.spot import Spot
-
-import pandas as pd
-from typing import Dict
 
 
 class BinanceHandler(APIHandler):
@@ -48,7 +48,7 @@ class BinanceHandler(APIHandler):
 
     def connect(self) -> Spot:
         """Creates a new Binance Spot API client if needed and sets it as the client to use for requests.
-        
+
         Returns newly created Binance Spot API client, or current client if already set.
         """
         if self.is_connected is True and self.client:
@@ -57,14 +57,14 @@ class BinanceHandler(APIHandler):
         if self.api_key and self.api_secret:
             self.client = Spot(key=self.api_key, secret=self.api_secret)
         else:
-          self.client = Spot()
+            self.client = Spot()
 
         self.is_connected = True
         return self.client
 
     def check_connection(self) -> StatusResponse:
         """Checks connection to Binance API by sending a ping request.
-        
+
         Returns StatusResponse indicating whether or not the handler is connected.
         """
 
@@ -86,7 +86,7 @@ class BinanceHandler(APIHandler):
         """Gets aggregate trade data for a symbol based on given parameters
 
         Returns results as a pandas DataFrame.
-        
+
         Args:
             params (Dict): Trade data params (symbol, interval, limit, start_time, end_time)
         """
@@ -131,7 +131,7 @@ class BinanceHandler(APIHandler):
         """Calls the Binance API method with the given params.
 
         Returns results as a pandas DataFrame.
-        
+
         Args:
             method_name (str): Method name to call (e.g. klines)
             params (Dict): Params to pass to the API call

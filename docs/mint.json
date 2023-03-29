@@ -325,6 +325,7 @@
             "data-integrations/DynamoDB",
             "data-integrations/hive",
             "data-integrations/impala",
+            "data-integrations/MonetDB",
             "data-integrations/mysql",
             "data-integrations/microsoft-access",
             "data-integrations/MongoDB"

@@ -3,6 +3,7 @@ from typing import Optional, Dict
 import dill
 import pandas as pd
 import autosklearn.classification as automl
+from autosklearn.metrics import accuracy
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -15,7 +16,12 @@ class AutoSklearnHandler(BaseMLEngine):
     name = 'autosklearn'
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
-        automl_classifier = automl.AutoSklearnClassifier(time_left_for_this_task=600, per_run_time_limit=360, n_jobs=-1)
+        automl_classifier = automl.AutoSklearnClassifier(
+            time_left_for_this_task=600,
+            per_run_time_limit=360,
+            n_jobs=-1,
+            metric=accuracy
+        )
 
         automl_classifier.fit(df.drop(target, axis=1), df[target])
 

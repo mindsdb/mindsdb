@@ -40,6 +40,7 @@ class PostgresPacketReader:
         return self.read_bytes(1)
 
     def read_bytes(self, n):
+        self.logger.debug("about to read")
         data = self.buffer.read(n)
         self.logger.debug("received data: %s", data)
         if not data:
@@ -121,7 +122,11 @@ class PostgresPacketReader:
         return password
 
     def read_message(self):
-        message_type = self.read_byte()
+        try:
+            message_type = self.read_byte()
+        except PostgresEmptyDataException:
+            self.logger.warn("Postgres Proxy: Received empty data string")
+            return None
         try:
             message_type = PostgresFrontendMessageIdentifier(message_type)
         except Exception as _:
@@ -156,17 +161,23 @@ class PostgresPacketBuilder:
         self.length += length
         return self
 
+    def write_char(self, c, write_file: BinaryIO):
+        pack = "!c"
+        l = struct.pack(pack, c)
+        write_file.write(l)
+
     def write(self, write_file: BinaryIO):
         if len(self.identifier) == 0:
             raise Exception("Can't write without identifier.")
         pack = "!c"
-        if self.length > 0:
-            # If we have a length, add it to the pack string struct will take, as well as to the top of pack_args.
-            # Ensures 'i' in pack and self.length in 2nd position of respective variables.
-            # Also adds 4 to length to include int32 rep of length
-            self.length += 4
-            pack += "i"
-            self.pack_args = [self.length] + self.pack_args
+
+        # Send length
+        # Ensures 'i' in pack and self.length in 2nd position of respective variables.
+        # Also adds 4 to length to include int32 rep of length
+        self.length += 4
+        pack += "i"
+        self.pack_args = [self.length] + self.pack_args
+
         pack += self.pack_string
         l = struct.pack(pack, self.identifier, *self.pack_args)
         write_file.write(l)

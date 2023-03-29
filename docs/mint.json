@@ -330,7 +330,8 @@
             "data-integrations/microsoft-access",
             "data-integrations/MongoDB",
             "data-integrations/Apache-Druid",
-            "data-integrations/amazon-s3"
+            "data-integrations/amazon-s3",
+            "data-integrations/elasticsearch"
           ]
         },
         {

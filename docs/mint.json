@@ -334,7 +334,8 @@
             "data-integrations/elasticsearch",
             "data-integrations/PostgreSQL",
             "data-integrations/oceanbase",
-            "data-integrations/oracle"
+            "data-integrations/oracle",
+            "data-integrations/OrioleDB"
           ]
         },
         {

@@ -109,11 +109,11 @@ class ReadyForQuery(PostgresMessage):
 
     transaction_status: bytes
 
-    def __init__(self):
+    def __init__(self, transaction_status = None):
         self.identifier = PostgresBackendMessageIdentifier.READY_FOR_QUERY
         self.backend_capable = True
         self.frontend_capable = False
-        self.transaction_status = b'I'
+        self.transaction_status = transaction_status or b'I'
         super().__init__()
 
     def send(self, write_file: BinaryIO):
@@ -163,6 +163,26 @@ class CommandComplete(PostgresMessage):
             .write(write_file=write_file)
 
 
+class BindComplete(PostgresMessage):
+    """
+    BindComplete (B)
+    Byte1('2')
+    Identifies the message as a Bind-complete indicator.
+
+    Int32(4)
+    Length of message contents in bytes, including self. """
+
+    def __init__(self):
+        self.identifier = PostgresBackendMessageIdentifier.BIND_COMPLETE
+        self.backend_capable = True
+        self.frontend_capable = False
+        super().__init__()
+
+    def send(self, write_file: BinaryIO):
+        self.get_packet_builder() \
+            .write(write_file=write_file)
+
+
 class Error(PostgresMessage):
     """
     ErrorResponse (B)
@@ -206,8 +226,7 @@ class Error(PostgresMessage):
 
     @staticmethod
     def from_answer(error_code: bytes, error_message: bytes):
-        return Error(severity=b"ERROR", code = error_code, message=error_message)
-
+        return Error(severity=b"ERROR", code=error_code, message=error_message)
 
 
 class ConnectionFailure(Error):
@@ -216,6 +235,22 @@ class ConnectionFailure(Error):
             message = "Connection Failure occurred."
         super().__init__(severity="FATAL".encode(encoding=charset), code="08006".encode(encoding=charset),
                          message=message.encode(encoding=charset))
+
+
+class InvalidSQLStatementName(Error):
+    def __init__(self, message: str = None, charset: str = "UTF-8"):
+        if message is None:
+            message = "Invalid SQL Statement Name"
+            super().__init__(severity="FATAL".encode(encoding=charset), code="26000".encode(encoding=charset),
+                             message=message.encode(encoding=charset))
+
+
+class DataException(Error):
+    def __init__(self, message: str = None, charset: str = "UTF-8", code: str = "22000"):
+        if message is None:
+            message = "Data Exception"
+            super().__init__(severity="FATAL".encode(encoding=charset), code=code.encode(encoding=charset),
+                             message=message.encode(encoding=charset))
 
 
 class ParameterStatus(PostgresMessage):
@@ -301,6 +336,38 @@ class RowDescriptions(PostgresMessage):
             .write(write_file=write_file)
 
 
+class ParameterDescription(PostgresMessage):
+    """
+    ParameterDescription (B)
+    Byte1('t')
+    Identifies the message as a parameter description.
+
+    Int32
+    Length of message contents in bytes, including self.
+
+    Int16
+    The number of parameters used by the statement (can be zero).
+
+    Then, for each parameter, there is the following:
+
+    Int32
+    Specifies the object ID of the parameter data type. """
+
+    def __init__(self, parameters: Sequence):
+        self.identifier = PostgresBackendMessageIdentifier.PARAMETER_DESCRIPTION
+        self.backend_capable = True
+        self.frontend_capable = False
+        self.num_params = len(parameters)
+        self.parameters = parameters
+        super().__init__()
+
+    def send(self, write_file: BinaryIO):
+        packet = self.get_packet_builder().add_int16(self.num_params)
+        for param in self.parameters:
+            packet = packet.add_int32(param)
+        packet.write(write_file=write_file)
+
+
 class DataRow(PostgresMessage):
     """
     DataRow (B)
@@ -381,6 +448,26 @@ class NegotiateProtocolVersion(PostgresMessage):
             packet_builder = packet_builder.add_string(self.option_not_recognized)
 
         packet_builder.write(write_file=write_file)
+
+
+class ParseComplete(PostgresMessage):
+    """
+    ParseComplete (B)
+    Byte1('1')
+    Identifies the message as a Parse-complete indicator.
+
+    Int32(4)
+    Length of message contents in bytes, including self. """
+
+    def __init__(self):
+        self.identifier = PostgresBackendMessageIdentifier.PARSE_COMPLETE
+        self.backend_capable = True
+        self.frontend_capable = False
+        super().__init__()
+
+    def send(self, write_file: BinaryIO):
+        self.get_packet_builder() \
+            .write(write_file=write_file)
 
 
 class Query(PostgresMessage):
@@ -482,17 +569,19 @@ class Parse(BaseFrontendMessage):
 
     def __init__(self):
         self.identifier = PostgresFrontendMessageIdentifier.PARSE
-        self.destination = None
+        self.name = None
         self.query = None
-        #TODO parameters aren't being grabbed
-        self.parameters = None
+        self.num_params = None
+        self.parameters = []
         super().__init__()
 
     def read(self, packet_reader: PostgresPacketReader):
-        super().read(packet_reader=packet_reader)
-        elems = self.response.split(b"\x00")
-        self.destination = elems[0]
-        self.query = elems[1]
+        self.length = packet_reader.read_int32()
+        self.name = packet_reader.read_string()
+        self.query = packet_reader.read_string()
+        self.num_params = packet_reader.read_int16()
+        for i in range(self.num_params):
+            self.parameters.append(packet_reader.read_int32())
         return self
 
 
@@ -538,9 +627,37 @@ class Bind(BaseFrontendMessage):
 
     Int16[R]
     The result-column format codes. Each must presently be zero (text) or one (binary). """
+
     def __init__(self):
         self.identifier = PostgresFrontendMessageIdentifier.BIND
+        self.length = None
+        self.name = None
+        self.statement_name = None
+        self.format_codes = []  # 0=text 1=binary
+        self.parameters = []
+        self.result_format_codes = []
+
         super().__init__()
+
+    def read(self, packet_reader: PostgresPacketReader):
+        self.length = packet_reader.read_int32()
+        self.name = packet_reader.read_string()
+        self.statement_name = packet_reader.read_string()
+        num_format_codes = packet_reader.read_int16()
+        for _ in range(num_format_codes):
+            self.format_codes.append(packet_reader.read_int16())
+        num_parameters = packet_reader.read_int16()
+        for _ in range(num_parameters):
+            param_length = packet_reader.read_int32()
+            if param_length == -1:
+                self.format_codes.append(None)
+            else:
+                self.format_codes.append(packet_reader.read_bytes(param_length))
+        num_result_format_codes = packet_reader.read_int16()
+        for _ in range(num_result_format_codes):
+            self.result_format_codes.append(packet_reader.read_int16())
+        return self
+
 
 class Execute(BaseFrontendMessage):
     """
@@ -559,7 +676,17 @@ class Execute(BaseFrontendMessage):
 
     def __init__(self):
         self.identifier = PostgresFrontendMessageIdentifier.EXECUTE
+        self.length = None
+        self.name = None
+        self.max_rows_ret = None
         super().__init__()
+
+    def read(self, packet_reader: PostgresPacketReader):
+        self.length = packet_reader.read_int32()
+        self.name = packet_reader.read_string()
+        self.max_rows_ret = packet_reader.read_int32()
+        return self
+
 
 class Sync(BaseFrontendMessage):
     """
@@ -573,6 +700,7 @@ class Sync(BaseFrontendMessage):
     def __init__(self):
         self.identifier = PostgresFrontendMessageIdentifier.SYNC
         super().__init__()
+
 
 class Describe(BaseFrontendMessage):
     """
@@ -588,16 +716,28 @@ class Describe(BaseFrontendMessage):
 
     String
     The name of the prepared statement or portal to describe (an empty string selects the unnamed prepared statement or portal). """
+
     def __init__(self):
         self.identifier = PostgresFrontendMessageIdentifier.DESCRIBE
+        self.length = None
+        self.describe_type = None
+        self.name = None
         super().__init__()
+
+    def read(self, packet_reader: PostgresPacketReader):
+        self.length = packet_reader.read_int32()
+        self.describe_type = packet_reader.read_byte()
+        self.name = packet_reader.read_string()
+        return self
+
 
 IMPLEMENTED_BACKEND_POSTGRES_MESSAGE_CLASSES = [
     NoticeResponse, AuthenticationOk, AuthenticationClearTextPassword, ReadyForQuery, CommandComplete, Error,
-    RowDescriptions, DataRow, NegotiateProtocolVersion, ParameterStatus
+    RowDescriptions, DataRow, NegotiateProtocolVersion, ParameterStatus, ParseComplete, BindComplete,
+    ParameterDescription
 ]
 IMPLEMENTED_FRONTEND_POSTGRES_MESSAGE_CLASSES = [
-    Query, Terminate, Parse
+    Query, Terminate, Parse, Bind, Execute, Sync, Describe
 ]
 FE_MESSAGE_MAP: Dict[PostgresFrontendMessageIdentifier, Type[PostgresMessage]] = {
     PostgresFrontendMessageIdentifier.QUERY: Query,
@@ -742,14 +882,6 @@ The process ID of this backend.
 
 Int32
 The secret key of this backend. '''
-
-'''
-BindComplete (B)
-Byte1('2')
-Identifies the message as a Bind-complete indicator.
-
-Int32(4)
-Length of message contents in bytes, including self. '''
 
 '''
 CancelRequest (F)
@@ -1029,22 +1161,6 @@ String
 The “payload” string passed from the notifying process. '''
 
 '''
-ParameterDescription (B)
-Byte1('t')
-Identifies the message as a parameter description.
-
-Int32
-Length of message contents in bytes, including self.
-
-Int16
-The number of parameters used by the statement (can be zero).
-
-Then, for each parameter, there is the following:
-
-Int32
-Specifies the object ID of the parameter data type. '''
-
-'''
 Parse (F)
 Byte1('P')
 Identifies the message as a Parse command.
@@ -1065,14 +1181,6 @@ Then, for each parameter, there is the following:
 
 Int32
 Specifies the object ID of the parameter data type. Placing a zero here is equivalent to leaving the type unspecified. '''
-
-'''
-ParseComplete (B)
-Byte1('1')
-Identifies the message as a Parse-complete indicator.
-
-Int32(4)
-Length of message contents in bytes, including self. '''
 
 '''
 PasswordMessage (F)
@@ -1150,5 +1258,3 @@ In addition to the above, other parameters may be listed. Parameter names beginn
 
 String
 The parameter value. '''
-
-

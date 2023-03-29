@@ -11,6 +11,9 @@ class PostgresBackendMessageIdentifier(Enum):
     DATA_ROW = b'D'
     NEGOTIATE_VERSION = b'v'
     PARAMETER = b'S'
+    PARSE_COMPLETE = b'1'
+    BIND_COMPLETE = b'2'
+    PARAMETER_DESCRIPTION = b't'
 
 
 class PostgresFrontendMessageIdentifier(Enum):

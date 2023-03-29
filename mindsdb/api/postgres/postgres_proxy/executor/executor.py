@@ -160,11 +160,14 @@ class Executor:
         self.command_executor.change_default_db(new_db)
 
     def stmt_prepare(self, sql):
+        #Returns True if ready for query afterwards.
         # Check if execute external here
         self.parse(sql)
         params = planner_utils.get_query_params(self.query)
         if len(params) == 0:
-            self.do_execute()
+            pass
+        #    self.do_execute()
+        #    return True
         else:
             # plan query
 

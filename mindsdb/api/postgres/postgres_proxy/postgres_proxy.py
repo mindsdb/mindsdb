@@ -15,7 +15,8 @@ from mindsdb.api.postgres.postgres_proxy.postgres_packets.errors import POSTGRES
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import GenericField, PostgresField
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_formats import Terminate, \
     Query, NoticeResponse, AuthenticationClearTextPassword, AuthenticationOk, RowDescriptions, DataRow, CommandComplete, \
-    ReadyForQuery, ConnectionFailure, ParameterStatus, Error, Execute, Bind, Parse, Sync
+    ReadyForQuery, ConnectionFailure, ParameterStatus, Error, Execute, Bind, Parse, Sync, ParseComplete, \
+    InvalidSQLStatementName, BindComplete, Describe, DataException, ParameterDescription
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message import PostgresMessage
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_packets import PostgresPacketReader
 from mindsdb.api.postgres.postgres_proxy.utilities import strip_null_byte
@@ -36,8 +37,12 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         self.session = None
         self.client_capabilities = None
         self.user_parameters = None
-        self.last_stmt_id = None
+        self.named_statements = {}
+        self.unnamed_statement = None
+        self.named_portals = {}
+        self.unnamed_portal = None
         self.ready_for_query = True
+        self.transaction_status = b'I'  # I: Idle, T: Transaction Block, E: Failed Transaction Block
         super().__init__(request, client_address, server)
 
     def handle(self) -> None:
@@ -48,7 +53,10 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
             Terminate: self.terminate,
             Query: self.query,
             Parse: self.parse,
-            Execute: self.execute
+            Bind: self.bind,
+            Execute: self.execute,
+            Describe: self.describe,
+            Sync: self.sync
         }
         self.client_buffer = PostgresPacketReader(self.rfile)
         started = self.start_connection()
@@ -58,27 +66,95 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
             self.main_loop()
 
     def parse(self, message: Parse):
-        self.ready_for_query = False
+        self.logger.info("Postgres_Proxy: Parsing")
         executor = Executor(
             session=self.session,
             proxy_server=self,
             charset=self.charset
         )
-        self.last_stmt_id = self.session.register_stmt(executor)
+        # TODO: Remove comment if unneeded ot use session since we're storing in this proxy class per session anyway
+        # stmt_id = self.session.register_stmt(executor)
         executor.stmt_prepare(sql=message.query)
-        self.last_params = executor.params
+        statement = {"executor": executor, "parse": message}
+        if message.name:
+            self.named_statements[message.name] = statement
+        else:
+            self.unnamed_statement = statement
+        self.send(ParseComplete())
+        self.ready_for_query = False
+        return True
 
+    def bind(self, message: Bind):
+        self.ready_for_query = False
+        self.logger.info("Postgres_Proxy: Binding")
+        if message.statement_name:
+            statement = self.named_statements[message.statement_name]
+        elif self.unnamed_statement:
+            statement = self.unnamed_statement
+        else:
+            self.send(InvalidSQLStatementName())
+            return True
+
+        # TODO Should check validity of statement here and not at parse stage
+        portal = statement.copy()
+        portal["bind"] = message
+        if message.name:
+            self.named_portals[message.name] = portal
+        else:
+            self.unnamed_portal = portal
+        self.send(BindComplete())
+        return True
+
+    def describe(self, message: Describe):
+        self.ready_for_query = False
+        self.logger.info("Postgres_Proxy: Describing")
+        if message.describe_type == b'P':
+            if message.name:
+                describing = self.named_portals[message.name]
+            elif self.unnamed_statement:
+                describing = self.unnamed_portal
+            else:
+                self.send(InvalidSQLStatementName("Portal Does not Exist"))
+                return True
+        elif message.describe_type == b'S':
+            if message.name:
+                describing = self.named_statements[message.name]
+            elif self.unnamed_statement:
+                describing = self.unnamed_statement
+            else:
+                self.send(InvalidSQLStatementName())
+                return True
+            self.send(ParameterDescription(parameters=describing["parse"]["parameters"]))
+        else:
+            self.send(DataException(message="Describe did not have correct type. Can be 'P' or 'S'"))
+            return True
+
+        fields = self.to_postgres_fields(describing["executor"].columns)
+        self.send(RowDescriptions(fields=fields))
+        return True
 
     def execute(self, message: Execute):
-        #TODO Enable use of more than one stmt_id, currently only using last
-        prepared_stmt = self.session.prepared_stmts[self.last_stmt_id]
-        executor = prepared_stmt['statement']
-        executor.stmt_execute(self.last_params)
-        return self.return_executor_data(executor)
+        self.ready_for_query = False
+        self.logger.info("Postgres_Proxy: Executing")
+        if message.name:
+            portal = self.named_portals[message.name]
+        elif self.unnamed_portal:
+            portal = self.unnamed_portal
+        else:
+            self.send(InvalidSQLStatementName("Portal does not exist"))
+
+        executor = portal["executor"]
+        params = portal["bind"].parameters
+        executor.stmt_execute(param_values=params)
+        sql_answer = self.return_executor_data(executor)
+        self.respond_from_sql_answer(sql=executor.sql, sql_answer=sql_answer, row_descs=False)
+        return True
 
     def sync(self, message: Sync):
+        self.logger.info("Postgres_Proxy: Syncing")
+        # TODO: Close/commit transaction if outside of a block. Maybe no collaries since Proxy
         self.ready_for_query = True
-
+        return True
 
     def init_session(self):
         self.logger.info('New connection [{ip}:{port}]'.format(
@@ -115,8 +191,8 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         except Exception as e:
             resp = SQLAnswer(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message = str(e).encode(self.get_encoding()),
-                error_code = POSTGRES_SYNTAX_ERROR_CODE.encode(self.get_encoding())
+                error_message=str(e).encode(self.get_encoding()),
+                error_code=POSTGRES_SYNTAX_ERROR_CODE.encode(self.get_encoding())
             )
         return self.return_executor_data(executor)
 
@@ -143,6 +219,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         return self.authenticate()
 
     def send(self, message: PostgresMessage):
+        self.logger.debug("Sending message of type %s" % message.__class__.__name__)
         message.send(self.wfile)
 
     def handshake(self):
@@ -172,21 +249,40 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
             return False
 
     def terminate(self, message: Terminate) -> bool:
+        self.logger.info("Postgres_Proxy: Terminating")
         return False
 
     def get_encoding(self) -> str:
         return self.user_parameters.get(b"user_encoding", None) or self.charset
 
-    def return_ok(self, query: Query):
-        encoding = self.get_encoding()
-        sql_command: str = strip_null_byte(query.sql.decode(encoding)).strip(';')
-        self.send(CommandComplete(tag=sql_command.encode(encoding)))
+    def return_ok(self, sql, rows: int = 0):
+        command = self.get_command(sql)
+        if command == "BEGIN":
+            self.transaction_status = b'T'
+        if command == "COMMIT":
+            self.transaction_status = b'I'
+        if command == "CREATE":
+            command = "SELECT"
+        if command in ("INSERT", "DELETE", "UPDATE", "SELECT", "MOVE", "FETCH", "COPY"):
+            command = f"{command} {rows}"
+            self.send(CommandComplete(tag=command.encode(encoding=self.get_encoding())))
         return True
 
-    def return_table(self, sql_answer: SQLAnswer):
+    def get_command(self, sql):
+        sql = self.stringify_sql(sql)
+        return sql.split(" ", 1)[0]
+
+    def stringify_sql(self, sql):
+        if type(sql) == bytes:
+            encoding = self.get_encoding()
+            sql: str = sql.decode(encoding)
+        return strip_null_byte(sql).strip(';')
+
+    def return_table(self, sql_answer: SQLAnswer, row_descs = True):
         fields = self.to_postgres_fields(sql_answer.columns)
         rows = self.to_postgres_rows(sql_answer.data)
-        self.send(RowDescriptions(fields=fields))
+        if row_descs:
+            self.send(RowDescriptions(fields=fields))
         self.send(DataRow(rows=rows))
         encoding = self.get_encoding()
         tag = ('SELECT %s' % str(len(rows))).encode(encoding)
@@ -194,16 +290,24 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         return True
 
     def return_error(self, sql_answer: SQLAnswer):
-        self.send(Error.from_answer(error_code = sql_answer.error_code,error_message = sql_answer.error_message))
+        self.send(Error.from_answer(error_code=sql_answer.error_code, error_message=sql_answer.error_message))
         return True
 
     def query(self, message: Query) -> bool:
-        self.logger.debug("Got query of:\n%s" % message.sql)
-        sql_answer = self.process_query(message.get_parsed_sql())
+        self.logger.debug("Postgres Proxy: Got query of:\n%s" % message.sql)
+        sql = message.get_parsed_sql()
+        sql_answer = self.process_query(sql)
+        return self.respond_from_sql_answer(sql=sql, sql_answer=sql_answer)
+
+    def respond_from_sql_answer(self, sql, sql_answer: SQLAnswer, row_descs = True) -> bool:
+        #TODO Add command complete passthrough for Complex Queries that exceed row limit in one go
+        rows = 0
+        if sql_answer.data:
+            rows = len(sql_answer.data)
         if RESPONSE_TYPE.OK == sql_answer.type:
-            return self.return_ok(message)
+            return self.return_ok(sql, rows=rows)
         elif RESPONSE_TYPE.TABLE == sql_answer.type:
-            return self.return_table(sql_answer)
+            return self.return_table(sql_answer, row_descs=row_descs)
         elif RESPONSE_TYPE.ERROR == sql_answer.type:
             return self.return_error(sql_answer)
 
@@ -236,10 +340,12 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         return p_rows
 
     def send_initial_data(self):
+        server_encoding = self.charset.encode(self.charset)
+        client_encoding = self.user_parameters.get(b'client_encoding', server_encoding)
         # TODO: Send BackendKeyData Here (55.2.1)
         self.send(ParameterStatus(name=b"server_version", value=b"14.6"))
-        self.send(ParameterStatus(name=b"server_encoding", value=self.charset.encode(self.charset)))
-        self.send(ParameterStatus(name=b"client_encoding", value=self.user_parameters[b'client_encoding']))
+        self.send(ParameterStatus(name=b"server_encoding", value=server_encoding))
+        self.send(ParameterStatus(name=b"client_encoding", value=client_encoding))
         # TODO Send Parameters to complete set on 55.2.7 Asynchronous Operations E.G. - At present there is a
         #  hard-wired set of parameters for which ParameterStatus will be generated: they are server_version,
         #  server_encoding, client_encoding, application_name, default_transaction_read_only, in_hot_standby,
@@ -251,7 +357,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         while True:
             if self.ready_for_query:
                 self.logger.debug("Ready for Query")
-                self.send(ReadyForQuery())
+                self.send(ReadyForQuery(transaction_status=self.transaction_status))
             message: PostgresMessage = self.client_buffer.read_message()
             tof = type(message)
             if tof in self.message_map:

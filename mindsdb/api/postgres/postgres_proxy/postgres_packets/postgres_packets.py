@@ -47,6 +47,15 @@ class PostgresPacketReader:
         else:
             return data
 
+    def read_string(self):
+        result = b""
+        while True:
+            b = self.read_byte()
+            if b == b"\x00":
+                break
+            result = result + b
+        return result
+
     #! TODO: Probably unneeded now
     def read_bytes_timeout(self, n, timeout=60):
         cur = time.time()
@@ -60,6 +69,10 @@ class PostgresPacketReader:
             else:
                 return data
         raise PostgresEmptyDataException("Expected data inside of buffer when performing read_bytes")
+
+    def read_int16(self):
+        data = self.read_bytes(2)
+        return struct.unpack("!h", data)[0]
 
     def read_int32(self):
         data = self.read_bytes(4)

@@ -430,7 +430,7 @@ class BaseMLEngineExec:
         )
         predictor_records = [
             x for x in predictor_records
-            if x.training_stop_at is not None
+            if x.training_stop_at is not None and x.status == 'complete'
         ]
         predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
 

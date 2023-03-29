@@ -120,11 +120,13 @@ class OpenAIHandler(BaseMLEngine):
 
         if pred_args.get('prompt_template', False):
             base_template = pred_args['prompt_template']  # override with predict-time template if available
-        else:
+        elif args.get('prompt_template', False):
             base_template = args['prompt_template']
+        else:
+            base_template = None
 
         # Image mode
-        if args['mode'] == 'image':
+        if args.get('mode', self.default_mode) == 'image':
             api_args = {
                 'n': pred_args.get('n', None),
                 'size': pred_args.get('size', None),
@@ -164,7 +166,7 @@ class OpenAIHandler(BaseMLEngine):
                 'user': pred_args.get('user', None),
             }
 
-            if args['mode'] != 'default' and model_name not in self.chat_completion_models:
+            if args.get('mode', self.default_mode) != 'default' and model_name not in self.chat_completion_models:
                 raise Exception(f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}")  # noqa
 
             if args.get('prompt_template', False):
@@ -470,21 +472,19 @@ class OpenAIHandler(BaseMLEngine):
             encoding="utf-8",
         )
 
-        file_names = [f'{temp_file_name}.jsonl',
-                      f'{temp_file_name}_prepared_train.jsonl',
-                      f'{temp_file_name}_prepared_valid.jsonl']
-        returns = []
-        for file_name in file_names:
+        file_names = {'original': f'{temp_file_name}.jsonl',
+                      'base': f'{temp_file_name}_prepared.jsonl',
+                      'train': f'{temp_file_name}_prepared_train.jsonl',
+                      'val': f'{temp_file_name}_prepared_valid.jsonl'}
+        jsons = {k: None for k in file_names.keys()}
+        for split, file_name in file_names.items():
             if os.path.isfile(os.path.join(temp_storage_path, file_name)):
-                returns.append(openai.File.create(
+                jsons[split] = openai.File.create(
                     file=open(f"{temp_storage_path}/{file_name}", "rb"),
                     purpose='fine-tune')
-                )
-            else:
-                returns.append(None)
 
-        train_file_id = returns[1].id if isinstance(returns[1], openai.File) else returns[0].id
-        val_file_id = returns[2].id if isinstance(returns[2], openai.File) else None
+        train_file_id = jsons['train'].id if isinstance(jsons['train'], openai.File) else jsons['base']
+        val_file_id = jsons['val'].id if isinstance(jsons['val'], openai.File) else None
 
         def _get_model_type(model_name: str):
             for model_type in ['ada', 'curie', 'babbage', 'davinci']:
@@ -511,7 +511,9 @@ class OpenAIHandler(BaseMLEngine):
         start_time = datetime.datetime.now()
         ft_result = openai.FineTune.create(**{k: v for k, v in ft_params.items() if v is not None})
 
-        @retry_with_exponential_backoff(hour_budget=args.get('hour_budget', 8))
+        @retry_with_exponential_backoff(
+            hour_budget=args.get('hour_budget', 8),
+            errors=(openai.error.RateLimitError, openai.error.OpenAIError))
         def _check_ft_status(model_id):
             ft_retrieved = openai.FineTune.retrieve(id=model_id)
             if ft_retrieved['status'] in ('succeeded', 'failed'):
@@ -542,6 +544,7 @@ class OpenAIHandler(BaseMLEngine):
         args['ft_api_info'] = ft_stats.to_dict_recursive()
         args['ft_result_stats'] = train_stats.to_dict()
         args['runtime'] = runtime.total_seconds()
+        args['mode'] = self.base_model_storage.json_get('args').get('mode', self.default_mode)
 
         self.model_storage.json_set('args', args)
         shutil.rmtree(temp_storage_path)

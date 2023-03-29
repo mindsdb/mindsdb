@@ -333,7 +333,8 @@
             "data-integrations/amazon-s3",
             "data-integrations/elasticsearch",
             "data-integrations/PostgreSQL",
-            "data-integrations/oceanbase"
+            "data-integrations/oceanbase",
+            "data-integrations/oracle"
           ]
         },
         {

@@ -7,7 +7,7 @@ import pytest
 from statsforecast.models import AutoCES
 from statsforecast.utils import AirPassengersDF
 from statsforecast import StatsForecast
-from mindsdb.integrations.utilities.time_series_utils import get_best_model_from_results_df, get_hierarchy_from_df
+from mindsdb.integrations.utilities.time_series_utils import get_best_model_from_results_df
 from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler import (
     choose_model,
     model_dict,

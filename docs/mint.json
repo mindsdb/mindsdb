@@ -326,7 +326,8 @@
             "data-integrations/hive",
             "data-integrations/impala",
             "data-integrations/mysql",
-            "data-integrations/microsoft-access"
+            "data-integrations/microsoft-access",
+            "data-integrations/MongoDB"
           ]
         },
         {

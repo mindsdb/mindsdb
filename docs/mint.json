@@ -329,6 +329,7 @@
             "data-integrations/mysql",
             "data-integrations/microsoft-access",
             "data-integrations/MongoDB",
+            "data-integrations/Firebird",
             "data-integrations/Apache-Druid",
             "data-integrations/amazon-s3",
             "data-integrations/elasticsearch",
@@ -337,6 +338,7 @@
             "data-integrations/oracle",
             "data-integrations/OrioleDB",
             "data-integrations/planet-scale"
+
           ]
         },
         {

@@ -331,6 +331,7 @@
             "data-integrations/MongoDB",
             "data-integrations/Firebird",
             "data-integrations/elasticsearch"
+            "data-integrations/amazon-s3"
           ]
         },
         {

@@ -5,6 +5,9 @@ from mindsdb.integrations.utilities.time_series_utils import (
     get_results_from_nixtla_df,
     infer_frequency,
     get_best_model_from_results_df,
+    spec_hierarchy_from_list,
+    get_hierarchy_from_df,
+    reconcile_forecasts
 )
 
 
@@ -84,3 +87,46 @@ def test_get_best_model_from_results_df():
     nixtla_df["AutoBadModel"] = nixtla_df["y"] - 2
 
     assert get_best_model_from_results_df(nixtla_df) == "AutoCES"
+
+
+def test_spec_hierarchy_from_list():
+    hierachy_cols = ["col1", "col2"]
+    hierarchy_spec = spec_hierarchy_from_list(hierachy_cols)
+
+    assert len(hierarchy_spec) == 3
+    assert hierarchy_spec[0] == ["Total"]
+    assert hierarchy_spec[1] == ["Total", "col1"]
+    assert hierarchy_spec[2] == ["Total", "col1", "col2"]
+
+
+def test_get_hierarchy_from_df():
+    df = pd.DataFrame({"col1": [1, 2], "col2": [3, 4], "target": [5, 6]})
+    df["time_col"] = pd.date_range(start="1/1/2010", freq="M", periods=2)
+    model_args = {"order_by": "time_col", "group_by": ["col1", "col2"], "target": "target", "hierarchy": ["col1", "col2"]}
+
+    training_df, hier_df, hier_dict = get_hierarchy_from_df(df, model_args)
+    assert training_df.columns.tolist() == ["ds", "y"]
+    assert training_df.index.name == "unique_id"
+    # checks shape of hierarchy matrix, which is a [0, 1] matrix
+    assert hier_df.columns.tolist() == ["total/1/3", "total/2/4"]
+    assert hier_df.index.tolist() == ["total", "total/1", "total/2", "total/1/3", "total/2/4"]
+
+    assert hier_dict["Total"].tolist() == ["total"]
+    assert hier_dict["Total/col1"].tolist() == ["total/1", "total/2"]
+    assert hier_dict["Total/col1/col2"] == ["total/1/3", "total/2/4"]
+
+
+def test_reconcile_forecasts():
+    df = pd.DataFrame({"col1": [1, 2], "col2": [3, 4], "target": [5, 6]})
+    df["time_col"] = pd.date_range(start="1/1/2010", freq="M", periods=1)[0]
+    model_args = {"order_by": "time_col", "group_by": ["col1", "col2"], "target": "target", "hierarchy": ["col1", "col2"]}
+
+    training_df, hier_df, hier_dict = get_hierarchy_from_df(df, model_args)
+    forecast_df = pd.DataFrame({"ARIMA": [15, 8, 7, 8 ,7]}, index=["total", "total/1", "total/2", "total/1/3", "total/2/4"])
+    forecast_df["ds"] = pd.date_range(start="1/3/2010", freq="M", periods=1)[0]
+    forecast_df.index.name = "unique_id"
+    results_df = reconcile_forecasts(training_df, forecast_df, hier_df, hier_dict)
+
+    # Check we keep the hierarchically reconciled results, not the original forecast
+    assert "ARIMA/BottomUp" in results_df.columns
+    assert "ARIMA" not in results_df.columns

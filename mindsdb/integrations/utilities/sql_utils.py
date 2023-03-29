@@ -11,22 +11,6 @@ def make_sql_session():
     return sql_session
 
 
-def get_where_data(where):
-    result = {}
-    if type(where) != BinaryOperation:
-        raise Exception("Wrong 'where' statement")
-    if where.op == '=':
-        if type(where.args[0]) != Identifier or type(where.args[1]) != Constant:
-            raise Exception("Wrong 'where' statement")
-        result[where.args[0].parts[-1]] = where.args[1].value
-    elif where.op == 'and':
-        result.update(get_where_data(where.args[0]))
-        result.update(get_where_data(where.args[1]))
-    else:
-        raise Exception("Wrong 'where' statement")
-    return result
-
-
 def extract_comparison_conditions(binary_op: ASTNode):
     '''Extracts all simple comparison conditions that must be true from an AST node.
     Does NOT support 'or' conditions.

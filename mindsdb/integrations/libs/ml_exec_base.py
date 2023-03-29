@@ -14,7 +14,7 @@ In particular, three big components are included:
 
     - `predict_process` method: handles async dispatch of the `predict` method in an engine.
 
-""" # noqa
+"""  # noqa
 
 import datetime as dt
 import traceback
@@ -264,29 +264,6 @@ class BaseMLEngineExec:
 
     def query_(self, query: ASTNode) -> Response:
         raise Exception('Should not be used')
-
-        """ Intakes a pre-parsed SQL query (via `mindsdb_sql`) and returns the answer given by the ML engine. """
-        statement = query
-
-        if type(statement) == Show:
-            if statement.category.lower() == 'tables':
-                return self.get_tables()
-            else:
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=f"Cant determine how to show '{statement.category}'"
-                )
-            return response
-        elif type(statement) == Select:
-            model_name = statement.from_table.parts[-1]
-            where_data = get_where_data(statement.where)
-            predictions = self.predict(model_name, where_data)
-            return Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=pd.DataFrame(predictions)
-            )
-        else:
-            raise Exception(f"Query type {type(statement)} not supported")
 
     def learn(
         self, model_name, project_name,

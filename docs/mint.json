@@ -296,7 +296,8 @@
             "data-integrations/amazon-redshift",
             "data-integrations/cratedb"
             "data-integrations/cockroachdb",
-            "data-integrations/ckan"
+            "data-integrations/ckan",
+            "data-integrations/PostgreSQL"
           ]
         },
         {

@@ -1,10 +1,11 @@
 import pandas as pd
 from sklearn.metrics import r2_score
 from hierarchicalforecast.core import HierarchicalReconciliation
-from hierarchicalforecast.methods import BottomUp, TopDown, MiddleOut
+from hierarchicalforecast.methods import BottomUp
 from hierarchicalforecast.utils import aggregate
 
 DEFAULT_FREQUENCY = "D"
+DEFAULT_RECONCILER = BottomUp
 
 
 def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
@@ -87,12 +88,11 @@ def get_best_model_from_results_df(nixtla_results_df, metric=r2_score):
     return best_model
 
 
-
 def spec_hierarchy_from_list(col_list):
     """Gets the hierarchy spec from the list of hierarchy cols"""
     spec = [["Total"]]
     for i in range(len(col_list)):
-        spec.append(["Total"] + col_list[:i + 1])
+        spec.append(["Total"] + col_list[: i + 1])
     return spec
 
 
@@ -113,10 +113,9 @@ def get_hierarchy_from_df(df, model_args):
 
 def reconcile_forecasts(nixtla_df, forecast_df, hierarchy_df, hierarchy_dict):
     """Reconciles forecast results according to the hierarchy."""
-    reconcilers = [BottomUp()]
+    reconcilers = [DEFAULT_RECONCILER()]
     hrec = HierarchicalReconciliation(reconcilers=reconcilers)
-    reconciled_df = hrec.reconcile(Y_hat_df=forecast_df, Y_df=nixtla_df,
-                            S=hierarchy_df, tags=hierarchy_dict)
+    reconciled_df = hrec.reconcile(Y_hat_df=forecast_df, Y_df=nixtla_df, S=hierarchy_df, tags=hierarchy_dict)
     return get_results_from_reconciled_df(reconciled_df, hierarchy_df)
 
 

@@ -263,7 +263,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.wait_predictor("proj", "model_1_group")
 
         # run predict
-        result_df = self.run_sql(
+        mindsdb_result = self.run_sql(
             """
            SELECT p.*
            FROM pg.df as t
@@ -271,4 +271,4 @@ class TestStatsForecast(BaseExecutorTest):
            where t.type='house'
         """
         )
-        assert len(list(round(result_df["ma"])))
+        assert len(list(round(mindsdb_result["ma"])))

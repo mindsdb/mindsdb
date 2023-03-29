@@ -99,8 +99,14 @@ def spec_hierarchy_from_list(col_list):
 def get_hierarchy_from_df(df, model_args):
     """Extracts hierarchy from the raw df, using the provided spec and args.
 
-    The hierarchy args is a list of format [<level 1>, <level 2>, ..., <level n>]
+    The "hierarchy" model arg is a list of format
+    [<level 1>, <level 2>, ..., <level n>]
     where each element is a level in the hierarchy.
+
+    We return a tuple (nixtla_df, hier_df, hier_dict) where:
+    nixtla_df is a dataframe in the format nixtla packages uses for training
+    hier_df is a matrix of 0s and 1s showing the hierarchical structure
+    hier_dict is a dictionary with the hierarchical structure
     """
     spec = spec_hierarchy_from_list(model_args["hierarchy"])
     nixtla_df = df.rename({model_args["order_by"]: "ds", model_args["target"]: "y"}, axis=1)

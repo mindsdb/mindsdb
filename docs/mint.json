@@ -328,7 +328,8 @@
             "data-integrations/MonetDB",
             "data-integrations/mysql",
             "data-integrations/microsoft-access",
-            "data-integrations/MongoDB"
+            "data-integrations/MongoDB",
+            "data-integrations/Firebird"
           ]
         },
         {

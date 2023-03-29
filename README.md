@@ -75,7 +75,7 @@ MindsDB automates and integrates top machine learning frameworks (including GPT-
 
 ## Use cases
 
-Here are some popular use cases you can build with MindsDB:
+Here are some popular use cases you can build with MindsDB
 
 * Conversational AI: Leverage MindsDB native integrations with data platforms and pre-trained large language models, like OpenAI's GPT, to quickly build conversational AI solutions without the overhead of managing complex data pipelines.
 * Fraud Detection: MindsDB can help developers build models to detect fraudulent activity in financial transactions, eCommerce platforms etc.

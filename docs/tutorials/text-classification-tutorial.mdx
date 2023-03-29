@@ -15,11 +15,11 @@ As most of us know, social media provides a speakerphone for hate & negativity. 
 
 Before you begin, here are some noteworthy concepts:
 
-- [MindsDB](https://mindsdb.com/) is is an open-source AI layer for existing databases that allows you to effortlessly develop, train and deploy state-of-the-art machine learning models using SQL queries. 
+- [MindsDB](https://mindsdb.com/) is an open-source AI layer for existing databases that allows you to effortlessly develop, train and deploy state-of-the-art machine learning models using SQL queries. 
 
-- [Hugging Face](https://huggingface.co/) is a community and data science platform that provides tools that enables users to build, train and deploy machine learning models based on open source code and technologies. 
+- [Hugging Face](https://huggingface.co/) is a community and data science platform that provides tools that enable users to build, train and deploy machine learning models based on open source code and technologies. 
 
-- **NLP**, or Natural Language Processing, is a subprocess of artificial intelligence that helps machines process and understand the human langage so that they can automatically perform repetitive tasks. 
+- **NLP**, or Natural Language Processing, is a subprocess of artificial intelligence that helps machines process and understand human language so that they can automatically perform repetitive tasks. 
 Some examples of NLP include machine translation, summarization, ticket classification, and spell check (or "autocorrect").
 
 ## Data Setup
@@ -88,9 +88,9 @@ mysql> SHOW TABLES;
 
 ## Understanding the Data
 
-[Hate-speech-CNERG/bert-base-uncased-hatexplain](https://huggingface.co/Hate-speech-CNERG/bert-base-uncased-hatexplain?text=I+like+you.+I+love+you) is the The Hugging Face transormer model you will be using for this exercise.The model is used for classifying a text as Hatespeech, Offensive, or Normal. The model is trained using data from Gab and Twitter and Human Rationales were included as part of the training data to boost the performance. All of the datasets and models pertaining to this model are available [here](https://github.com/hate-alert/HateXplain).
+[Hate-speech-CNERG/bert-base-uncased-hatexplain](https://huggingface.co/Hate-speech-CNERG/bert-base-uncased-hatexplain?text=I+like+you.+I+love+you) is The Hugging Face transformer model you will be using for this exercise. The model is used for classifying a text as Hatespeech, Offensive, or Normal. The model is trained using data from Gab and Twitter and Human Rationales were included as part of the training data to boost the performance. All of the datasets and models for this transformer are available [here](https://github.com/hate-alert/HateXplain).
 
-This next section will show you how to import this [dataset file](https://raw.githubusercontent.com/hate-alert/HateXplain/master/Data/dataset.json), which was converted into a .cvs for the purpose of this tutorial, into your local MySQL table you created above:
+This next section will show you how to import this [dataset file](https://raw.githubusercontent.com/hate-alert/HateXplain/master/Data/dataset.json), which was converted into a .cvs for this tutorial, into your local MySQL table you created above:
 
 - Load the data from your dataset into the `tweets` table:
 

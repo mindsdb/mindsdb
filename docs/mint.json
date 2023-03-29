@@ -329,7 +329,8 @@
             "data-integrations/mysql",
             "data-integrations/microsoft-access",
             "data-integrations/MongoDB",
-            "data-integrations/Apache-Druid"
+            "data-integrations/Apache-Druid",
+            "data-integrations/amazon-s3"
           ]
         },
         {

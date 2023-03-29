@@ -310,6 +310,7 @@
           "group": "Data Integrations",
           "pages": [
             "data-integrations/all-data-integrations",
+            "data-integrations/elasticsearch",
             "data-integrations/amazon-redshift",
             "data-integrations/db2",
             "data-integrations/cratedb",
@@ -328,8 +329,7 @@
             "data-integrations/MonetDB",
             "data-integrations/mysql",
             "data-integrations/microsoft-access",
-            "data-integrations/MongoDB",
-            "data-integrations/Firebird"
+            "data-integrations/MongoDB"
           ]
         },
         {

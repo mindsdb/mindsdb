@@ -331,8 +331,8 @@
             "data-integrations/MongoDB",
             "data-integrations/Firebird",
             "data-integrations/elasticsearch",
-            "data-integrations/google-sheets",
-            "data-integrations/Apache-Druid"
+            "data-integrations/Apache-Druid",
+            "data-integrations/google-sheets"
           ]
         },
         {

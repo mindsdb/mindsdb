@@ -330,7 +330,8 @@
             "data-integrations/microsoft-access",
             "data-integrations/MongoDB",
             "data-integrations/Firebird",
-            "data-integrations/elasticsearch"
+            "data-integrations/elasticsearch",
+            "data-integrations/Apache-Druid"
           ]
         },
         {

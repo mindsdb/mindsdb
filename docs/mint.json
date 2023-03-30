@@ -331,7 +331,8 @@
             "data-integrations/MongoDB",
             "data-integrations/Firebird",
             "data-integrations/elasticsearch",
-            "data-integrations/Apache-Druid"
+            "data-integrations/Apache-Druid",
+            "data-integrations/oceanbase"
           ]
         },
         {

@@ -123,6 +123,7 @@
                 {
                   "group": "NLP",
                   "pages": [
+                    "nlp/nlp-extended-examples",
                     "nlp/nlp-mindsdb-hf",
                     "nlp/nlp-mindsdb-openai",
                     "nlp/sentiment-analysis-inside-mysql-with-openai",
@@ -138,13 +139,8 @@
                   "group": "Time Series",
                   "pages": [
                     "sql/tutorials/house-sales-forecasting",
-                    "sql/tutorials/time-series-community",
-                    {
-                      "group": "Nixtla",
-                      "pages": [
-                        "nixtla/statsforecast"
-                      ]
-                    }
+                    "nixtla/house-sales-statsforecast",
+                    "sql/tutorials/time-series-community"
                   ]
                 },
                 {
@@ -305,17 +301,37 @@
           ]
         },
         {
+          "group": "Application Integrations",
+          "pages": [
+            "app-integrations/twitter"
+          ]
+        },
+        {
           "group": "Data Integrations",
           "pages": [
             "data-integrations/all-data-integrations",
-            "data-integrations/twitter",
             "data-integrations/amazon-redshift",
             "data-integrations/db2",
             "data-integrations/cratedb",
             "data-integrations/cockroachdb",
             "data-integrations/ckan",
             "data-integrations/databend",
-            "data-integrations/Apache-Pinot"
+            "data-integrations/Apache-Pinot",
+            "data-integrations/cassandra",
+            "data-integrations/Couchbase",
+            "data-integrations/clickhouse",
+            "data-integrations/Airtable",
+            "data-integrations/Google-BigQuery",
+            "data-integrations/DynamoDB",
+            "data-integrations/hive",
+            "data-integrations/impala",
+            "data-integrations/MonetDB",
+            "data-integrations/mysql",
+            "data-integrations/microsoft-access",
+            "data-integrations/MongoDB",
+            "data-integrations/Firebird",
+            "data-integrations/elasticsearch",
+            "data-integrations/Apache-Druid"
           ]
         },
         {
@@ -342,6 +358,17 @@
                 "custom-model/ray-serve",
                 "custom-model/mlflow"
               ]
+            },
+            {
+              "group": "Time Series",
+              "pages": [
+                {
+                  "group": "Nixtla",
+                  "pages": [
+                    "nixtla/statsforecast"
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -352,33 +379,23 @@
               "group": "NLP",
               "pages": [
                 "nlp/nlp-extended-examples",
-                {
-                  "group": "NLP Examples with OpenAI",
-                  "pages": [
-                    "nlp/nlp-mindsdb-hf",
-                    "nlp/nlp-mindsdb-openai",
-                    "nlp/sentiment-analysis-inside-mysql-with-openai",
-                    "nlp/question-answering-inside-mysql-with-openai",
-                    "nlp/text-summarization-inside-mysql-with-openai",
-                    "nlp/sentiment-analysis-inside-mongodb-with-openai",
-                    "nlp/question-answering-inside-mongodb-with-openai",
-                    "nlp/text-summarization-inside-mongodb-with-openai",
-                    "nlp/json-from-text"
-                  ]
-                }
+                "nlp/nlp-mindsdb-hf",
+                "nlp/nlp-mindsdb-openai",
+                "nlp/sentiment-analysis-inside-mysql-with-openai",
+                "nlp/question-answering-inside-mysql-with-openai",
+                "nlp/text-summarization-inside-mysql-with-openai",
+                "nlp/sentiment-analysis-inside-mongodb-with-openai",
+                "nlp/question-answering-inside-mongodb-with-openai",
+                "nlp/text-summarization-inside-mongodb-with-openai",
+                "nlp/json-from-text"
               ]
             },
             {
               "group": "Time Series",
               "pages": [
                 "sql/tutorials/house-sales-forecasting",
-                "sql/tutorials/time-series-community",
-                {
-                  "group": "Nixtla",
-                  "pages": [
-                    "nixtla/statsforecast"
-                  ]
-                }
+                "nixtla/house-sales-statsforecast",
+                "sql/tutorials/time-series-community"
               ]
             },
             {

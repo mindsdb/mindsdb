@@ -183,17 +183,121 @@ LIMIT 3;`
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
 ```
 
-## Creating a Predictor
+## Creating Multilingual Predictors
 
-Now that we've got some data, let's use MindDB and Hugging Face to perform some NLP operations.
+Now that you've got some data to work with, it's time to use MindDB and Hugging Face to perform some NLP operations.
 
-Currently, MindDB supports 3 language translation models:
+Currently, MindsDB supports language translation for multiple languages and is expanding the software's ability to perform batch translation operations for multilingual datasets.
 
-- English to French T5
-- French to English T5
-- Spanish to English
+In this next section, you are going to translate 3 different languages and learn the basics of NLP language translation tasks with MindsDB..
 
-I'm going to start by creating a model that demonstrates basic translation functionality, making sure to include the `t5-base` model from Hugging Face that MindsDB currently supports. 
+### Translating French to English
+
+- Start by creating a model to translate French to English:
+
+```sql
+```
+
+### Translating German to English 
+
+- Start by creating a model to translate Spanish to English:
+
+```sql
+CREATE MODEL mindsdb.hf_de_en
+PREDICT PRED
+USING
+engine = 'huggingface',
+model_name = 'Helsinki-NLP/opus-mt-de-en',
+input_column = 'text',
+lang_input ='de',
+lang_output = 'en';
+```
+
+- Check the status:
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'hf_de_en';
+```
+
+| NAME | ENGINE | PROJECT | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | CURRENT_TRAINING_PHASE | TOTAL_TRAINING_PHASES | TRAINING_PHASE_NAME | TAG | CREATED_AT |
+| ---- | ------ | ------- | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | ---------------------- | --------------------- | ------------------- | --- | ---------- |
+| hf_de_en | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.3.5.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'model_name': 'Helsinki-NLP/opus-mt-de-en', 'input_column': 'text', 'lang_input': 'de', 'lang_output': 'en', 'task': 'translation'}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-30 14:31:00.220057 |
+
+- Query the model!
+
+```sql
+SELECT *
+FROM hf_de_en
+WHERE text = 'Hallo, mein Name ist Alissa';
+```
+
+| PRED | text |
+| ---- | ---- |
+| Hello, my name is Alissa | Hallo, mein Name ist Alissa |
+
+
+```sql
+SELECT *
+FROM hf_de_en
+WHERE text = 'Wie spät ist es?';
+```
+
+| PRED | text |
+| ---- | ---- |
+| What time is it? | Wie spät ist es? |
+
+
+### Translating Hindi (Urdu) to English
+
+- Create your predictor model, using the [Helsinki-NLP/opus-mt-hi-en](https://huggingface.co/Helsinki-NLP/opus-mt-hi-en) Hugging Face model.
+
+```sql
+CREATE MODEL mindsdb.hi_en
+PREDICT PRED
+USING
+engine = 'huggingface',
+model_name = 'Helsinki-NLP/opus-mt-hi-en',
+input_column = 'text_hi',
+lang_input ='hi',
+lang_output = 'en';
+```
+
+- Check the status of your model:
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'hi_en  ';
+```
+
+| hi_en | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.3.5.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'model_name': 'Helsinki-NLP/opus-mt-hi-en', 'input_column': 'text_hi', 'lang_input': 'hi', 'lang_output': 'en', 'task': 'translation'}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-30 13:58:04.036313 |
+
+- Query the model to test its' translation capabilities:
+
+```sql
+SELECT *
+FROM hi_en
+WHERE text_hi = 'namaste, aap kaise hain?';
+```
+
+| PRED | text_hi |
+| ---- | ------- |
+| Let me tell you what, do you think? | namaste, aap kaise hain? |
+
+***Keep in mind that foreign sayings don't always translate to English exactly as we'd expect. For example, I was under the i,pression that the Hindi expression below meant, 'I love you'*** 
+
+```sql
+SELECT *
+FROM hi_en
+WHERE text_hi = 'mujhe tumase pyaar hai';
+```
+
+| PRED | text_hi |
+| ---- | ------- |
+| And you're going to have a choice. | mujhe tumase pyaar hai |
+
 
 ```sql
 CREATE MODEL nlp_translation
@@ -212,15 +316,15 @@ No supported tasks for model: fill-mask. Should be one of text-classification, t
 ```
 
 ```sql
-CREATE MODEL mindsdb.translate_to_english
-PREDICT PRED
+CREATE MODEL translation_model_1
+PREDICT translation
 USING
-engine = 'huggingface',
-task = 'translation',
-model_name = 't5-base',
-input_column = 'text_fr',
-lang_input = 'fr',
-lang_output = 'en';
+   engine = 'huggingface',
+   task = 'translation',
+   model_name = 'Helsinki-NLP/opus-mt-fr-en',
+   input_column = 'text_fr',
+   lang_input = 'fr',
+   lang_output = 'en';
 ```
 
 ```sql
@@ -228,6 +332,10 @@ SELECT *
 FROM mindsdb.models
 WHERE name = 'translate_french';
 ```
+
+```
+
+
 ## Training a Model
 
 Now that our model has been created, we can start querying the database.

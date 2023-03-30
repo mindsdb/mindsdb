@@ -334,7 +334,11 @@
             "data-integrations/elasticsearch",
             "data-integrations/Apache-Druid",
             "data-integrations/google-sheets",
-            "data-integrations/oceanbase"
+            "data-integrations/oceanbase",
+            "data-integrations/planet-scale",
+            "data-integrations/solr",
+            "data-integrations/singlestore",
+            "data-integrations/questdb"
           ]
         },
         {

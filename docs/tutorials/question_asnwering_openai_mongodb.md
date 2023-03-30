@@ -7,9 +7,13 @@ In this tutorial, we are going to demonstrate how to build a question answering 
 ## **Data Setup**
 
 To follow along, you need:
+
 1- sign up for an account at [MindsDB](https://cloud.mindsdb.com/register/?_gl=1*1bhrxw8*_ga*MTI4MjkxNDc2NS4xNjc4OTQzMTY2*_ga_7LGFPGV6XV*MTY3OTA3MzQ1NS40LjEuMTY3OTA3NzM2OC42MC4wLjA.) or install it locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [pip](https://docs.mindsdb.com/setup/self-hosted/docker),
+
 2- Download [MongoDB Compass](https://www.mongodb.com/try/download/compass) or [MongoDB Shell](https://www.mongodb.com/try/download/shell),
+
 3- Download the [NQ]("https://huggingface.co/datasets/natural_questions/blob/main/dataset_infos.json) dataset,
+
 4- Run the `MongoDB Compass` or `MongoDB Shell`
 
 ## **Connecting the Data**

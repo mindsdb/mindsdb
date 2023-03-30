@@ -582,8 +582,7 @@ class TestJobs(BaseExecutorDummyML):
         scheduler.check_timetable()
 
         # check query to integration
-        assert data_handler().query.call_args[0][
-                   0].to_string() == f"SELECT * FROM tbl1 WHERE tbl1.b > '{prev_run.strftime('%Y-%m-%d %H:%M:%S')}'"
+        assert data_handler().query.call_args[0][0].to_string() == f"SELECT * FROM tbl1 WHERE tbl1.b > '{prev_run.strftime('%Y-%m-%d %H:%M:%S')}'"
 
         ret = self.run_sql('select * from jobs_history', database='proj2')
         assert len(ret) == 2  # was executed

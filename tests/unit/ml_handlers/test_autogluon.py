@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pandas as pd
 from mindsdb_sql import parse_sql
 
-# PATH ISSUES AGAIN :(
+# added a try except block to deal with relative path import errors
 try:
     from tests.unit.executor_test_base import BaseExecutorTest
 except ImportError:
@@ -91,7 +91,8 @@ class TestAutoGluon(BaseExecutorTest):
             DESCRIBE MODEL proj.modelx.model
             ''')
         # value is greater than 0, since atleast one model has been evaluated
-        assert (len(ret) > 0)
+        assert (len(ret) > 0) and \
+               all(x in ['model', 'score_test', 'fit_order', 'pred_time_test', 'fit_time'] for x in ret.columns)
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_describe_feature(self, mock_handler):
@@ -112,8 +113,9 @@ class TestAutoGluon(BaseExecutorTest):
         ret = self.run_sql('''
             DESCRIBE MODEL proj.modelx.features
             ''')
-        # value is greater than 1, since atleast target and atleast one feature is used
-        assert (len(ret) > 1)
+        # value is greater than 1, since atleast target and atleast one feature is used and the roles feature and
+        # target are present
+        assert (len(ret) > 1) and ret['role'].isin(['feature', 'target']).all()
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_describe_model_noattr(self, mock_handler):
@@ -134,5 +136,6 @@ class TestAutoGluon(BaseExecutorTest):
         ret = self.run_sql('''
             DESCRIBE MODEL proj.modelx
             ''')
-        # value is greater than 0, since atleast one model has been evaluated
-        assert (len(ret) > 0)
+        # value is greater than 0, since atleast one model has been evaluated and relevant colums are present
+        assert len(ret) > 0 and \
+               all(x in ['best_model', 'eval_metric', 'original_features', 'problem_type'] for x in ret.columns)

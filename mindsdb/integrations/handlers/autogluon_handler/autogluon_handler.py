@@ -55,9 +55,7 @@ class AutoGluonHandler(BaseMLEngine):
         y_pred = predictor.predict(df)
         return pd.DataFrame(y_pred)
 
-    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        logging.debug('Update!')
-
+    # Helper methods for Describe Model
     def _get_model_info(self):
         model_info = self.model_storage.json_get("candidate_models")
         return pd.DataFrame(model_info)
@@ -80,6 +78,3 @@ class AutoGluonHandler(BaseMLEngine):
             elif attribute == "features":
                 # features statement displays how the model encoded the data before the training process.
                 return self._get_features_info()
-
-    def create_engine(self, connection_args: dict):
-        logging.debug('Create engine!')

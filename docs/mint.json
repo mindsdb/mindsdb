@@ -297,7 +297,8 @@
             "model-types",
             "sql/table-structure",
             "sql/native-queries",
-            "sql/project"
+            "sql/project",
+            "data-integrations/solr"
           ]
         },
         {

@@ -47,7 +47,9 @@ lib64
 pyvenv.cfg
 .python-version
 .DS_Store
-
+Scripts
+Include
+xgboost
 
 # Docs
 node_modules

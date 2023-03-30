@@ -191,16 +191,61 @@ Currently, MindsDB supports language translation for multiple languages and is e
 
 In this next section, you are going to translate 3 different languages and learn the basics of NLP language translation tasks with MindsDB..
 
-### Translating French to English
+### Creating & Training a Predictor to Translate French to English
 
 - Start by creating a model to translate French to English:
 
 ```sql
+CREATE MODEL mindsdb.hf_fr_en
+PREDICT PRED
+USING
+engine = 'huggingface',
+model_name = 'Helsinki-NLP/opus-mt-de-en',
+input_column = 'text',
+lang_input ='fr',
+lang_output = 'en';
 ```
 
-### Translating German to English 
+- Check the status of the new predictor:
 
-- Start by creating a model to translate Spanish to English:
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'hf_fr_en';
+```
+
+| NAME | ENGINE | PROJECT | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | CURRENT_TRAINING_PHASE | TOTAL_TRAINING_PHASES | TRAINING_PHASE_NAME | TAG | CREATED_AT |
+| ---- | ------ | ------- | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | ---------------------- | --------------------- | ------------------- | --- | ---------- |
+| hf_fr_en | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.3.5.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'model_name': 'Helsinki-NLP/opus-mt-fr-en', 'input_column': 'text', 'lang_input': 'fr', 'lang_output': 'en', 'task': 'translation'}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-30 16:31:29.096920 |
+
+
+- Once your status reads, `complete` it is time to start writing queries:
+
+```sql
+SELECT *
+FROM mindsdb.hf_fr_en
+WHERE text = 'Quelle heure est-il?';
+```
+
+| PRED | text |
+| ---- | ---- |
+| What time is it? | Quelle heure est-il? |
+
+
+```sql
+SELECT *
+FROM mindsdb.hf_fr_en
+WHERE text = "Je m'appelle Alissa";
+```
+
+| PRED | text |
+| ---- | ---- |
+| My name is Alissa. | Je m'appelle Alissa |
+
+
+### Creating & Training a Predictor to Translate German to English 
+
+- Create a predictor model, using the [Helsinki-NLP/opus-mt-de-en](https://huggingface.co/Helsinki-NLP/opus-mt-de-en) Hugging Face model.
 
 ```sql
 CREATE MODEL mindsdb.hf_de_en
@@ -241,15 +286,15 @@ WHERE text = 'Hallo, mein Name ist Alissa';
 ```sql
 SELECT *
 FROM hf_de_en
-WHERE text = 'Wie spät ist es?';
+WHERE text = 'Guten Tag, es ist so schön, Sie zu sehen?';
 ```
 
 | PRED | text |
 | ---- | ---- |
-| What time is it? | Wie spät ist es? |
+| Hello, it's so nice to see you | Guten Tag, es ist so schön, Sie zu sehen |
 
 
-### Translating Hindi (Urdu) to English
+### Creating & Training a Predictor to Translate Hindi (Urdu) to English
 
 - Create your predictor model, using the [Helsinki-NLP/opus-mt-hi-en](https://huggingface.co/Helsinki-NLP/opus-mt-hi-en) Hugging Face model.
 
@@ -297,56 +342,4 @@ WHERE text_hi = 'mujhe tumase pyaar hai';
 | PRED | text_hi |
 | ---- | ------- |
 | And you're going to have a choice. | mujhe tumase pyaar hai |
-
-
-```sql
-CREATE MODEL nlp_translation
-PREDICT translation
-USING
-   engine = 'huggingface',
-   task = 'translation',
-   model_name = 'bert-base-multilingual-uncased',
-   input_column = 'text_fr',
-   lang_input = 'fr',
-   lang_output = 'en';
-```
-
-```sql
-No supported tasks for model: fill-mask. Should be one of text-classification, ttranslation, zero-shot classification, summarization
-```
-
-```sql
-CREATE MODEL translation_model_1
-PREDICT translation
-USING
-   engine = 'huggingface',
-   task = 'translation',
-   model_name = 'Helsinki-NLP/opus-mt-fr-en',
-   input_column = 'text_fr',
-   lang_input = 'fr',
-   lang_output = 'en';
-```
-
-```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'translate_french';
-```
-
-```
-
-
-## Training a Model
-
-Now that our model has been created, we can start querying the database.
-
-```sql
-SELECT *
-FROM mindsdb.translate_french
-WHERE text_fr = "Hi, my name is Alissa.";
-```
-
-
-
-
 

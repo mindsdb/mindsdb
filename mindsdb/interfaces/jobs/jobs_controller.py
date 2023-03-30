@@ -10,6 +10,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 
 
 def split_sql(sql):
@@ -42,17 +43,26 @@ def calc_next_date(schedule_str, base_date: dt.datetime):
         raise Exception(f"Number expected: {value}")
     value = int(value)
     if period in ('minute', 'minutes', 'min'):
-        next_date = base_date + dt.timedelta(minutes=value)
+        delta = dt.timedelta(minutes=value)
     elif period in ('hour', 'hours'):
-        next_date = base_date + dt.timedelta(hours=value)
+        delta = dt.timedelta(hours=value)
     elif period in ('day', 'days'):
-        next_date = base_date + dt.timedelta(days=value)
+        delta = dt.timedelta(days=value)
     elif period in ('week', 'weeks'):
-        next_date = base_date + dt.timedelta(days=value * 7)  # 1 week = 7 days
+        delta = dt.timedelta(days=value * 7)  # 1 week = 7 days
     elif period in ('month', 'months'):
-        next_date = base_date + relativedelta(months=value)
+        delta = relativedelta(months=value)
     else:
         raise Exception(f"Unknown period: {period}")
+
+    config = Config()
+
+    is_cloud = config.get('cloud', False)
+    if is_cloud and ctx.user_class == 0:
+        if delta < dt.timedelta(days=1):
+            raise Exception("Minimal allowed period can't be less than one day")
+
+    next_date = base_date + delta
 
     return next_date
 
@@ -182,6 +192,7 @@ class JobsController:
         }
         for record in query:
             data.append({
+                'id': record.id,
                 'name': record.name,
                 'project': project_names[record.project_id],
                 'start_at': record.start_at,
@@ -211,8 +222,8 @@ class JobsController:
             data.append({
                 'name': record.Jobs.name,
                 'project': project_names[record.Jobs.project_id],
-                'start_at': record.JobsHistory.start_at,
-                'end_at': record.JobsHistory.end_at,
+                'run_start': record.JobsHistory.start_at,
+                'run_end': record.JobsHistory.end_at,
                 'error': record.JobsHistory.error,
                 'query': record.Jobs.query_str,
             })
@@ -261,18 +272,37 @@ class JobsExecutor:
     def lock_record(self, record_id):
         # workaround for several concurrent workers on cloud:
         #  create history record before start of task
-
         record = db.Jobs.query.get(record_id)
 
-        history_record = db.JobsHistory(
-            job_id=record.id,
-            start_at=record.next_run_at,
-            company_id=record.company_id
-        )
+        try:
 
-        db.session.add(history_record)
-        db.session.flush()
-        return history_record.id
+            history_record = db.JobsHistory(
+                job_id=record.id,
+                start_at=record.next_run_at,
+                company_id=record.company_id
+            )
+
+            db.session.add(history_record)
+            db.session.commit()
+
+            return history_record.id
+
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except Exception:
+            db.session.rollback()
+
+            # check if it is an old lock
+            history_record = db.JobsHistory.query.filter_by(
+                job_id=record.id,
+                start_at=record.next_run_at,
+                company_id=record.company_id
+            ).first()
+            if history_record.created_at < dt.datetime.now() - dt.timedelta(seconds=30):
+                db.session.delete(history_record)
+                db.session.commit()
+
+        return None
 
     def execute_task_local(self, record_id, history_id=None):
 
@@ -293,6 +323,9 @@ class JobsExecutor:
             )
             db.session.add(history_record)
             db.session.flush()
+            history_id = history_record.id
+            db.session.commit()
+
         else:
             history_record = db.JobsHistory.query.get(history_id)
 
@@ -307,7 +340,7 @@ class JobsExecutor:
                     # get previous run date
                     history_prev = db.session.query(db.JobsHistory.start_at)\
                         .filter(db.JobsHistory.job_id == record.id,
-                                db.JobsHistory.id != history_record.id)\
+                                db.JobsHistory.id != history_id)\
                         .order_by(db.JobsHistory.id.desc())\
                         .first()
                     if history_prev is None:
@@ -351,6 +384,8 @@ class JobsExecutor:
 
             # stop scheduling
             record.next_run_at = None
+
+        history_record = db.JobsHistory.query.get(history_id)
 
         if error:
             history_record.error = error

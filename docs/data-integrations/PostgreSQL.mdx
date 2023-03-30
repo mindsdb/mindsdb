@@ -1,0 +1,93 @@
+---
+title: PostgreSQL
+sidebarTitle: PostgreSQL
+---
+<br>
+
+This is the implementation of the PostgreSQL handler for MindsDB.
+
+## PostgreSQL
+PostgreSQL is a powerful, open source object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads.
+<br>
+https://www.postgresql.org
+
+## Syntax
+
+MindsDB lets you connect to your favorite databases, data warehouses, data lakes, etc., via the CREATE DATABASE command.
+
+The MindsDB SQL API supports creating connections to integrations by passing the connection parameters specific per integration.
+
+Let’s review the syntax for the CREATE DATABASE command of PostgreSQL.
+
+```sql
+
+CREATE DATABASE psql_datasource         --- display name for the database
+WITH ENGINE = 'postgres',               --- name of the MindsDB handler
+PARAMETERS = {
+  "host": " ",                          --- host name or IP address
+  "port": ,                             --- port used to make TCP/IP connection
+  "database": " ",                      --- database name
+  "user": " ",                          --- database user
+  "password": " "                       --- database password
+};
+
+```
+
+## Example
+
+```sql
+
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+};
+
+
+
+```
+
+Here we connect the **example_db** database, which is a PostgreSQL database.
+
+## Querying
+
+To run PostgreSQL-native code, we must nest it within the SELECT statement like this:
+
+```sql
+
+SELECT * FROM example_db (
+    SELECT 
+        model, 
+        year, 
+        price, 
+        transmission, 
+        mileage, 
+        fueltype, 
+        mpg, -- miles per galon
+        ROUND(CAST((mpg / 2.3521458) AS numeric), 1) AS kml, -- kilometers per liter
+        (date_part('year', CURRENT_DATE)-year) AS years_old, -- age of a car
+        COUNT(*) OVER (PARTITION BY model, year) AS units_to_sell, -- how many units of a certain model are sold in a year
+        ROUND((CAST(tax AS decimal) / price), 3) AS tax_div_price -- value of tax divided by price of a car
+    FROM demo_data.used_car_price
+);
+
+```
+On execution, we get:
+```
++-----+----+-----+------------+-------+--------+----+----+---------+-------------+-------------+
+|model|year|price|transmission|mileage|fueltype|mpg |kml |years_old|units_to_sell|tax_div_price|
++-----+----+-----+------------+-------+--------+----+----+---------+-------------+-------------+
+| A1  |2010|9990 |Automatic   |38000  |Petrol  |53.3|22.7|12       |1            |0.013        |
+| A1  |2011|6995 |Manual      |65000  |Petrol  |53.3|22.7|11       |5            |0.018        |
+| A1  |2011|6295 |Manual      |107000 |Petrol  |53.3|22.7|11       |5            |0.02         |
+| A1  |2011|4250 |Manual      |116000 |Diesel  |70.6|30  |11       |5            |0.005        |
+| A1  |2011|6475 |Manual      |45000  |Diesel  |70.6|30  |11       |5            |0            |
++-----+----+-----+------------+-------+--------+----+----+---------+-------------+-------------+
+```
+
+The first line (SELECT * FROM example_db) informs MindsDB that we select from a PostgreSQL database. After that, we nest a PostgreSQL code within brackets.
+

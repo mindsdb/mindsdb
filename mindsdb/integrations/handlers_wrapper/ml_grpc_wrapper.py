@@ -4,8 +4,8 @@ import traceback
 from concurrent import futures
 
 import grpc
-from mindsdb.grpc.ml import ml_pb2_grpc
-from mindsdb.grpc.ml import ml_pb2, common_pb2
+from mindsdb.microservices_grpc.ml import ml_pb2_grpc
+from mindsdb.microservices_grpc.ml import ml_pb2, common_pb2
 
 from mindsdb.interfaces.storage.fs import (
     FileStorage,

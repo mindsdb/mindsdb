@@ -801,56 +801,52 @@ class SQLQuery():
                 else:
                     data.add_records(subdata.get_records())
         elif type(step) == ApplyPredictorRowStep:
-            try:
-                project_name = step.namespace
-                predictor_name = step.predictor.parts[0]
-                where_data = step.row_dict
-                project_datanode = self.datahub.get(project_name)
 
-                version = None
-                if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
-                    version = int(step.predictor.parts[-1])
+            project_name = step.namespace
+            predictor_name = step.predictor.parts[0]
+            where_data = step.row_dict
+            project_datanode = self.datahub.get(project_name)
 
-                predictions = project_datanode.predict(
-                    model_name=predictor_name,
-                    data=where_data,
-                    version=version,
-                    params=step.params,
-                )
-                columns_dtypes = dict(predictions.dtypes)
-                predictions = predictions.to_dict(orient='records')
+            version = None
+            if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
+                version = int(step.predictor.parts[-1])
 
-                # update predictions with input data
-                for row in predictions:
-                    for k, v in where_data.items():
-                        if k not in row:
-                            row[k] = v
+            predictions = project_datanode.predict(
+                model_name=predictor_name,
+                data=where_data,
+                version=version,
+                params=step.params,
+            )
+            columns_dtypes = dict(predictions.dtypes)
+            predictions = predictions.to_dict(orient='records')
 
-                table_name = get_preditor_alias(step, self.database)
+            # update predictions with input data
+            for row in predictions:
+                for k, v in where_data.items():
+                    if k not in row:
+                        row[k] = v
 
-                result = ResultSet()
-                result.is_prediction = True
-                if len(predictions) > 0:
-                    cols = list(predictions[0].keys())
-                else:
-                    cols = project_datanode.get_table_columns(predictor_name)
+            table_name = get_preditor_alias(step, self.database)
 
-                for col in cols:
-                    result.add_column(Column(
-                        name=col,
-                        table_name=table_name[1],
-                        table_alias=table_name[2],
-                        database=table_name[0],
-                        type=columns_dtypes.get(col)
-                    ))
-                result.add_records(predictions)
+            result = ResultSet()
+            result.is_prediction = True
+            if len(predictions) > 0:
+                cols = list(predictions[0].keys())
+            else:
+                cols = project_datanode.get_table_columns(predictor_name)
 
-                data = result
-            except Exception as e:
-                if isinstance(e, SqlApiException):
-                    raise e
-                else:
-                    raise SqlApiUnknownError(f'error in apply predictor row step: {e}') from e
+            for col in cols:
+                result.add_column(Column(
+                    name=col,
+                    table_name=table_name[1],
+                    table_alias=table_name[2],
+                    database=table_name[0],
+                    type=columns_dtypes.get(col)
+                ))
+            result.add_records(predictions)
+
+            data = result
+
         elif type(step) in (ApplyPredictorStep, ApplyTimeseriesPredictorStep):
             try:
                 # set row_id
@@ -1218,8 +1214,12 @@ class SQLQuery():
             else:
                 raise ErLogicError(f'Data not found for insert: {step}')
 
-            integration_name = step.table.parts[0]
-            table_name = Identifier(parts=step.table.parts[1:])
+            if len(step.table.parts) > 1:
+                integration_name = step.table.parts[0]
+                table_name = Identifier(parts=step.table.parts[1:])
+            else:
+                integration_name = self.database
+                table_name = step.table
 
             dn = self.datahub.get(integration_name)
 

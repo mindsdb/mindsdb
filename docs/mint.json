@@ -333,6 +333,7 @@
             "data-integrations/Firebird",
             "data-integrations/elasticsearch",
             "data-integrations/Apache-Druid",
+            "data-integrations/google-sheets",
             "data-integrations/oceanbase"
           ]
         },

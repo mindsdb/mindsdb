@@ -14,9 +14,10 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
 from mindsdb_sql.parser import ast
-from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from mindsdb.integrations.utilities.date_utils import parse_utc_date
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -25,50 +26,16 @@ from mindsdb.integrations.libs.response import (
 )
 
 
-def extract_conditions(binary_op):
-    conditions = []
-
-    def _extract_conditions(node, **kwargs):
-        if isinstance(node, ast.BinaryOperation):
-            op = node.op.lower()
-            if op == 'and':
-                return
-            elif op == 'or':
-                raise NotImplementedError
-            elif not isinstance(node.args[0], ast.Identifier) or not isinstance(node.args[1], ast.Constant):
-                raise NotImplementedError
-            conditions.append([op, node.args[0].parts[-1], node.args[1].value])
-
-    query_traversal(binary_op, _extract_conditions)
-    return conditions
-
-
-def parse_date(date_str):
-    if isinstance(date_str, dt.datetime):
-        return date_str
-    date_formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
-    date = None
-    for date_format in date_formats:
-        try:
-            date = dt.datetime.strptime(date_str, date_format)
-        except ValueError:
-            pass
-    if date is None:
-        raise ValueError(f"Can't parse date: {date_str}")
-    date = date.astimezone(pytz.utc)
-    return date
-
-
 class TweetsTable(APITable):
-    
+
     def select(self, query: ast.Select) -> Response:
 
-        conditions = extract_conditions(query.where)
+        conditions = extract_comparison_conditions(query.where)
 
         params = {}
         for op, arg1, arg2 in conditions:
             if arg1 == 'created_at':
-                date = parse_date(arg2)
+                date = parse_utc_date(arg2)
                 if op == '>':
                     # "tweets/search/recent" doesn't accept dates earlier than 7 days
                     if (dt.datetime.now(dt.timezone.utc) - date).days > 7:
@@ -314,7 +281,7 @@ class TwitterHandler(APIHandler):
             data_frame=df
         )
 
-    def call_twitter_api(self, method_name:str = None, params:dict = None):
+    def call_twitter_api(self, method_name: str = None, params: dict = None):
 
         # method > table > columns
         expansions_map = {
@@ -398,7 +365,7 @@ class TwitterHandler(APIHandler):
                     continue
 
                 for col_id in expansions[table]:
-                    col = col_id[:-3] # cut _id
+                    col = col_id[:-3]  # cut _id
                     if col_id not in df.columns:
                         continue
 
@@ -411,4 +378,3 @@ class TwitterHandler(APIHandler):
                     df = df.merge(df_ref2, on=col_id, how='left')
 
         return df
-

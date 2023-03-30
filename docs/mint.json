@@ -334,7 +334,8 @@
             "data-integrations/elasticsearch",
             "data-integrations/Apache-Druid",
             "data-integrations/google-sheets",
-            "data-integrations/oceanbase"
+            "data-integrations/oceanbase",
+            "data-integrations/mariadb"
           ]
         },
         {

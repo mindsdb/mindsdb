@@ -679,7 +679,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser.clear_sql(sql)
                     logger.debug(f'COM_QUERY: {sql}')
-                    response = self.process_query(sql)
+                    profiler.set_meta(query=sql, api='mysql', environment=Config().get('environment'))
+                    with profiler.Context('mysql_query_processing'):
+                        response = self.process_query(sql)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
                     sql = self.decode_utf(p.sql.value)
                     self.answer_stmt_prepare(sql)

@@ -25,7 +25,7 @@ class Query(Resource):
         context = request.json.get('context', {})
 
         if context.get('profiling') is True:
-            ctx.enable_profiling()
+            profiler.enable()
 
         error_type = None
         error_code = None
@@ -33,7 +33,7 @@ class Query(Resource):
         error_traceback = None
 
         profiler.set_meta(query=query, api='http', environment=Config().get('environment'))
-        with profiler.Context('http_query_process'):
+        with profiler.Context('http_query_processing'):
             mysql_proxy = FakeMysqlProxy()
             mysql_proxy.set_context(context)
             try:

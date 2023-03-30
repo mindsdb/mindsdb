@@ -483,8 +483,10 @@ class ExecuteCommands:
             if category == "" and type(statement.arg) == BinaryOperation:
                 if statement.arg.args[0].parts[0].lower() == 'profiling':
                     if statement.arg.args[1].value in (1, True):
+                        profiler.enable()
                         self.session.profiling = True
                     else:
+                        profiler.disable()
                         self.session.profiling = False
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             elif category == "autocommit":

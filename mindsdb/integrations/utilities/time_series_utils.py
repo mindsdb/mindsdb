@@ -106,7 +106,8 @@ def get_hierarchy_from_df(df, model_args):
     We return a tuple (nixtla_df, hier_df, hier_dict) where:
     nixtla_df is a dataframe in the format nixtla packages uses for training
     hier_df is a matrix of 0s and 1s showing the hierarchical structure
-    hier_dict is a dictionary with the hierarchical structure
+    hier_dict is a dictionary with the hierarchical structure. See the unit test
+    in tests/unit/ml_handlers/test_time_series_utils.py for an example.
     """
     spec = spec_hierarchy_from_list(model_args["hierarchy"])
     nixtla_df = df.rename({model_args["order_by"]: "ds", model_args["target"]: "y"}, axis=1)

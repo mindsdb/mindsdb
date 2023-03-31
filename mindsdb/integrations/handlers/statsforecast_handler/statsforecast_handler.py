@@ -141,13 +141,16 @@ class StatsForecastHandler(BaseMLEngine):
         sf = StatsForecast(models=[], freq=model_args["frequency"], df=training_df)
         sf.fitted_ = fitted_models
         forecast_df = sf.predict(model_args["horizon"])
-        results_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
 
         if model_args["hierarchy"]:
             hier_df = dill.loads(self.model_storage.file_get("hier_df"))
             hier_dict = dill.loads(self.model_storage.file_get("hier_dict"))
             reconciled_df = reconcile_forecasts(training_df, forecast_df, hier_df, hier_dict)
             results_df = reconciled_df[reconciled_df.index.isin(groups_to_keep)]
+
+        else:
+            results_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
+
         return get_results_from_nixtla_df(results_df, model_args)
 
     def describe(self, attribute=None):

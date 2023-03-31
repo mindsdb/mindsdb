@@ -16,7 +16,7 @@ Vitess is a database solution for deploying, scaling and managing large clusters
 
   In order to make use of this handler and connect to a Vitess database in MindsDB, the following syntax can be used,
 
-  ```json
+  ```sql
 
 CREATE DATABASE vitess_datasource
 WITH ENGINE = 'vitess',
@@ -31,7 +31,7 @@ PARAMETERS = {
   ```
   Now, you can use this established connection to query your table as follows,
 
-  ```json
+  ```sql
 
   SELECT * FROM vitess_datasource.product LIMIT 10;
   ```

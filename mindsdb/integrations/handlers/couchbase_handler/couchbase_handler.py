@@ -86,7 +86,7 @@ class CouchbaseHandler(DatabaseHandler):
         )
         
         # # Wait until the cluster is ready for use.
-        cluster.wait_until_ready(timedelta(seconds=5))
+        cluster.wait_until_ready(timedelta(seconds=timeout))
         
         self.is_connected = cluster.connected
         self.cluster = cluster

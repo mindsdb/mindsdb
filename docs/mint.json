@@ -321,8 +321,9 @@
             "data-integrations/Couchbase",
             "data-integrations/clickhouse",
             "data-integrations/Airtable",
-            "data-integrations/Google-BigQuery",
             "data-integrations/DynamoDB",
+            "data-integrations/databricks",
+            "data-integrations/Google-BigQuery",
             "data-integrations/hive",
             "data-integrations/impala",
             "data-integrations/MonetDB",
@@ -331,7 +332,11 @@
             "data-integrations/MongoDB",
             "data-integrations/Firebird",
             "data-integrations/elasticsearch",
-            "data-integrations/Apache-Druid"
+            "data-integrations/Apache-Druid",
+            "data-integrations/google-sheets",
+            "data-integrations/oceanbase",
+            "data-integrations/mariadb",
+            "data-integrations/amazon-s3"
           ]
         },
         {

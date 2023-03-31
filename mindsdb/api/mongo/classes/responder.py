@@ -16,18 +16,19 @@ class Responder():
 
         return bool
         """
-        if isinstance(self.when, dict):
-            for key, value in self.when.items():
-                if key not in query:
-                    return False
-                if callable(value):
-                    if not value(query[key]):
-                        return False
-                elif value != query[key]:
-                    return False
-            return True
-        else:
+        if not isinstance(self.when, dict):
             return self.when(query)
+        for key, value in self.when.items():
+            if key not in query:
+                return False
+            if (
+                callable(value)
+                and not value(query[key])
+                or not callable(value)
+                and value != query[key]
+            ):
+                return False
+        return True
 
     def handle(self, query, args, env, session):
         """ making answer based on params:

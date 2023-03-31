@@ -50,7 +50,7 @@ class Datum():
                 logger.error('Cant decode integer greater than 8 bytes')
                 return buff[end - 1:]
 
-            for j in range(8 - (end - start)):
+            for _ in range(8 - (end - start)):
                 num_str += b'\0'
 
             if self.var_type == 'int':
@@ -77,16 +77,15 @@ class Datum():
                     break
 
         length = int(length)
+        end = length
         if self.var_type in ['byte', 'string']:
-            end = length
             self.value = buff[:end]
         else:  # if its an integer
-            end = length
             num_str = buff[:end]
             if end > 8:
                 logger.error('cant decode integer greater than 8 bytes')
                 return buff[end:]
-            for j in range(8 - end):
+            for _ in range(8 - end):
                 num_str += b'\0'
             self.value = struct.unpack('Q', num_str)[0]
         if str(self.var_len) == 'NUL':
@@ -99,7 +98,7 @@ class Datum():
             return b'\0'
         if value < NULL_VALUE[0]:
             return struct.pack('i', value)[:1]
-        if value >= NULL_VALUE[0] and byte_count <= 2:
+        if byte_count <= 2:
             return TWO_BYTE_ENC + struct.pack('i', value)[:2]
         if byte_count <= 3:
             return THREE_BYTE_ENC + struct.pack('i', value)[:3]
@@ -128,9 +127,9 @@ class Datum():
                 # little endian format
                 return struct.pack('Q', self.value)[:length]
             if self.var_type == 'string':
-                return struct.pack(self.var_len + 's', bytes(self.value, 'utf-8'))[:length]
+                return struct.pack(f'{self.var_len}s', bytes(self.value, 'utf-8'))[:length]
             if self.var_type == 'byte':
-                return struct.pack(self.var_len + 's', self.value)[:length]
+                return struct.pack(f'{self.var_len}s', self.value)[:length]
 
         elif self.var_len == 'lenenc':
             if self.value is None:
@@ -140,7 +139,7 @@ class Datum():
 
             if self.var_type in ['byte', 'string']:
                 value = self.value.decode() if isinstance(self.value, bytes) else self.value
-                if isinstance(value, str) is False and value is not None:
+                if not isinstance(value, str) and value is not None:
                     value = str(value)
 
                 val_len = len(value.encode('utf8'))
@@ -148,7 +147,7 @@ class Datum():
                 byte_count = int(math.ceil(math.log((val_len + 1), 2) / 8))
                 if val_len < NULL_VALUE[0]:
                     return self.lenencInt(val_len) + bytes(value, 'utf-8')
-                if val_len >= NULL_VALUE[0] and byte_count <= 2:
+                if byte_count <= 2:
                     return TWO_BYTE_ENC + struct.pack('i', val_len)[:2] + bytes(value, 'utf-8')
                 if byte_count <= 3:
                     return THREE_BYTE_ENC + struct.pack('i', val_len)[:3] + bytes(value, 'utf-8')

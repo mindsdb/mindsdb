@@ -33,8 +33,5 @@ def run_sql_command(request_env, ast_query):
         for c in executor.columns
     ]
 
-    data = []
-    for row in executor.data:
-        data.append(dict(zip(column_names, row)))
-
+    data = [dict(zip(column_names, row)) for row in executor.data]
     return data

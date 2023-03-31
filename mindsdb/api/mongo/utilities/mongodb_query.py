@@ -75,9 +75,7 @@ class MongoQuery:
 
         call_str = f'db.{self.collection}'
         for step in self.pipeline:
-            args_str = []
-            for arg in step['args']:
-                args_str.append(MongoJSONEncoder().encode(arg))
+            args_str = [MongoJSONEncoder().encode(arg) for arg in step['args']]
             call_str += f'.{step["method"]}({",".join(args_str)})'
         return call_str
 

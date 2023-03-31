@@ -230,9 +230,7 @@ class Responce(Responder):
                 df = df.drop('_id', axis=1)
 
             data = df.to_dict('split')
-            values = []
-            for row in data['data']:
-                values.append([Constant(i) for i in row])
+            values = [[Constant(i) for i in row] for row in data['data']]
             ast_query = Insert(
                 table=Identifier(table),
                 columns=[TableColumn(c) for c in data['columns']],

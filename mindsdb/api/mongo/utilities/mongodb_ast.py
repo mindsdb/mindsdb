@@ -41,34 +41,25 @@ class MongoToAst:
 
         order_by = None
         if sort is not None:
-            # sort is dict
-            order_by = []
-            for col, direction in sort.items():
-                order_by.append(
-                    OrderBy(
-                        field=Identifier(parts=[col]),
-                        direction='DESC' if direction == -1 else 'ASC'
-                    )
+            order_by = [
+                OrderBy(
+                    field=Identifier(parts=[col]),
+                    direction='DESC' if direction == -1 else 'ASC',
                 )
-
+                for col, direction in sort.items()
+            ]
         if projection is not None:
             targets = []
             for col, alias in projection.items():
                 # it is only identifiers
-                if isinstance(alias, str):
-                    alias = Identifier(parts=[alias])
-                else:
-                    alias = None
+                alias = Identifier(parts=[alias]) if isinstance(alias, str) else None
                 targets.append(
                     Identifier(path_str=col, alias=alias)
                 )
         else:
             targets = [Star()]
 
-        where = None
-        if filter is not None:
-            where = self.convert_filter(filter)
-
+        where = self.convert_filter(filter) if filter is not None else None
         # convert to AST node
         #   collection can be string or list
         if isinstance(collection, list):
@@ -103,10 +94,7 @@ class MongoToAst:
 
                 op = cond_ops[k]
 
-                nodes = []
-                for cond in v:
-                    nodes.append(self.convert_filter(cond))
-
+                nodes = [self.convert_filter(cond) for cond in v]
                 if len(nodes) == 1:
                     return nodes[0]
 
@@ -136,24 +124,24 @@ class MongoToAst:
         return ast_filter
 
     def handle_filter(self, value):
-        ops = {
-            '$ge': '>=',
-            '$gt': '>',
-            '$lt': '<',
-            '$le': '<=',
-            '$ne': '!=',
-            '$eq': '='
-        }
-        in_ops = {
-            '$in': 'in',
-            '$nin': 'not in'
-        }
-
         if isinstance(value, dict):
             key, value = list(value.items())[0]
+            ops = {
+                '$ge': '>=',
+                '$gt': '>',
+                '$lt': '<',
+                '$le': '<=',
+                '$ne': '!=',
+                '$eq': '='
+            }
             if key in ops:
                 op = ops[key]
                 return op, value
+
+            in_ops = {
+                '$in': 'in',
+                '$nin': 'not in'
+            }
 
             if key in in_ops:
                 op = in_ops[key]
@@ -208,10 +196,8 @@ class MongoWhereParser:
             arg2 = self.process(node.comparators[0])
             return BinaryOperation(op=op, args=[arg1, arg2])
 
-        if isinstance(node, py_ast.Name):
-            # is special operator: latest, ...
-            if node.id == 'latest':
-                return Latest()
+        if isinstance(node, py_ast.Name) and node.id == 'latest':
+            return Latest()
 
         if isinstance(node, py_ast.Constant):
             # it is constant

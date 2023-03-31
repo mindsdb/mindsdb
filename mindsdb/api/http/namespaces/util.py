@@ -70,7 +70,7 @@ class Telemetry(Resource):
     def post(self):
         data = request.json
         action = data['action']
-        if str(action).lower() in ["true", "enable", "on"]:
+        if str(action).lower() in {"true", "enable", "on"}:
             enable_telemetry(ca.config_obj['storage_dir'])
         else:
             disable_telemetry(ca.config_obj['storage_dir'])

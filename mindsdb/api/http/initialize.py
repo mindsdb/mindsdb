@@ -86,7 +86,7 @@ def get_last_compatible_gui_version() -> LooseVersion:
             if max_gui_lv is None or max_gui_lv < gui_lv:
                 max_gui_lv = gui_lv
 
-        all_mindsdb_lv = [LooseVersion(x) for x in gui_versions.keys()]
+        all_mindsdb_lv = [LooseVersion(x) for x in gui_versions]
         all_mindsdb_lv.sort()
 
         if current_mindsdb_lv.vstring in gui_versions:
@@ -128,16 +128,14 @@ def download_gui(destignation, version):
     dist_zip_path = str(destignation.joinpath('dist.zip'))
     bucket = "https://mindsdb-web-builds.s3.amazonaws.com/"
 
-    resources = [{
-        'url': bucket + 'dist-V' + version + '.zip',
-        'path': dist_zip_path
-    }]
+    resources = [{'url': f'{bucket}dist-V{version}.zip', 'path': dist_zip_path}]
 
     def get_resources(resource):
         response = requests.get(resource['url'])
         if response.status_code != requests.status_codes.codes.ok:
             raise Exception(f"Error {response.status_code} GET {resource['url']}")
         open(resource['path'], 'wb').write(response.content)
+
     try:
         for r in resources:
             get_resources(r)
@@ -191,9 +189,11 @@ def initialize_static():
         if last_gui_version_lv is False:
             return False
 
-        if current_gui_version_lv is not None:
-            if current_gui_version_lv >= last_gui_version_lv:
-                return True
+        if (
+            current_gui_version_lv is not None
+            and current_gui_version_lv >= last_gui_version_lv
+        ):
+            return True
 
         success = update_static(last_gui_version_lv)
 

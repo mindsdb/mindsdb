@@ -24,14 +24,11 @@ def check_auth() -> bool:
         return True
 
     if config['auth'].get('provider') == 'cloud':
-        if isinstance(session.get('username'), str) is False:
-            return False
-
-        if config['auth']['oauth']['tokens']['expires_at'] < time.time():
-            return False
-
-        return True
-
+        return (
+            config['auth']['oauth']['tokens']['expires_at'] >= time.time()
+            if isinstance(session.get('username'), str)
+            else False
+        )
     return session.get('username') == config['auth']['username']
 
 
@@ -54,8 +51,10 @@ class LoginRoute(Resource):
         username = request.json.get('username')
         password = request.json.get('password')
         if (
-            isinstance(username, str) is False or len(username) == 0
-            or isinstance(password, str) is False or len(password) == 0
+            not isinstance(username, str)
+            or len(username) == 0
+            or not isinstance(password, str)
+            or len(password) == 0
         ):
             return http_error(
                 400, 'Error in username or password',

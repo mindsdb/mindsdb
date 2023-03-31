@@ -39,10 +39,7 @@ class MongodbParser:
         if isinstance(node, py_ast.Call):
             previous_call = None
 
-            args = []
-            for node2 in node.args:
-                args.append(self.process(node2))
-
+            args = [self.process(node2) for node2 in node.args]
             # check functions
             if isinstance(node.func, py_ast.Name):
                 # it is just name
@@ -69,9 +66,7 @@ class MongodbParser:
             return call
 
         if isinstance(node, py_ast.List):
-            elements = []
-            for node2 in node.elts:
-                elements.append(self.process(node2))
+            elements = [self.process(node2) for node2 in node.elts]
             return elements
 
         if isinstance(node, py_ast.Dict):
@@ -87,22 +82,19 @@ class MongodbParser:
 
                 keys.append(value)
 
-            values = []
-            for node2 in node.values:
-                values.append(self.process(node2))
-
+            values = [self.process(node2) for node2 in node.values]
             return dict(zip(keys, values))
 
         if isinstance(node, py_ast.Name):
             # special attributes
             name = node.id
-            if name == 'true':
-                return True
-            elif name == 'false':
+            if name == 'false':
                 return False
             elif name == 'null':
                 return None
 
+            elif name == 'true':
+                return True
         if isinstance(node, py_ast.Constant):
             return node.value
 
@@ -115,10 +107,9 @@ class MongodbParser:
 
         # -----------------------------
 
-        if isinstance(node, py_ast.UnaryOp):
-            if isinstance(node.op, py_ast.USub):
-                value = self.process(node.operand)
-                return -value
+        if isinstance(node, py_ast.UnaryOp) and isinstance(node.op, py_ast.USub):
+            value = self.process(node.operand)
+            return -value
 
         raise NotImplementedError(f'Unknown node {node}')
 

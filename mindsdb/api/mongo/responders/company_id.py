@@ -14,10 +14,7 @@ class Responce(Responder):
         ctx.company_id = company_id
         ctx.user_class = user_class
 
-        if need_response:
-            return {'ok': 1}
-
-        return None
+        return {'ok': 1} if need_response else None
 
 
 responder = Responce()

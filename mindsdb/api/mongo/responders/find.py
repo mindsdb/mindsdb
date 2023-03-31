@@ -107,32 +107,35 @@ class Responce(Responder):
         # add _id for objects
         table_name = None
         obj_idx = {}
-        if isinstance(ast_query, Select) and ast_query.from_table is not None:
-            if isinstance(ast_query.from_table, Identifier):
-                table_name = ast_query.from_table.parts[-1].lower()
+        if (
+            isinstance(ast_query, Select)
+            and ast_query.from_table is not None
+            and isinstance(ast_query.from_table, Identifier)
+        ):
+            table_name = ast_query.from_table.parts[-1].lower()
 
-                if table_name == 'models' or table_name == 'models_versions':
+            if table_name in ['models', 'models_versions']:
 
-                    models = mindsdb_env['model_controller'].get_models(
-                        ml_handler_name=None,
-                        project_name=project_name
-                    )
+                models = mindsdb_env['model_controller'].get_models(
+                    ml_handler_name=None,
+                    project_name=project_name
+                )
 
-                    for model in models:
-                        obj_idx[model['name']] = model['id']
+                for model in models:
+                    obj_idx[model['name']] = model['id']
 
-                    # is select from model without where
-                    if table_name in obj_idx and ast_query.where is None:
-                        # replace query to describe model
-                        ast_query = Describe(ast_query.from_table)
-                elif table_name == 'jobs':
-                    jobs_controller = JobsController()
-                    for job in jobs_controller.get_list(project_name):
-                        obj_idx[job['name']] = job['id']
+                # is select from model without where
+                if table_name in obj_idx and ast_query.where is None:
+                    # replace query to describe model
+                    ast_query = Describe(ast_query.from_table)
+            elif table_name == 'jobs':
+                jobs_controller = JobsController()
+                for job in jobs_controller.get_list(project_name):
+                    obj_idx[job['name']] = job['id']
 
         data = run_sql_command(request_env, ast_query)
 
-        if table_name == 'models' or table_name == 'models_versions':
+        if table_name in ['models', 'models_versions']:
             # for models and models_versions _id is:
             #   - first 20 bytes is version
             #   - next bytes is model id

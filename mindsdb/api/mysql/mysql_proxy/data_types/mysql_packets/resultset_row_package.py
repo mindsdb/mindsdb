@@ -34,11 +34,7 @@ class ResultsetRowPacket(Packet):
     def body(self):
         string = b''
         for x in self.value:
-            if x is NULL_VALUE:
-                string += x
-            else:
-                string += x.toStringPacket()
-
+            string += x if x is NULL_VALUE else x.toStringPacket()
         self.setBody(string)
         return self._body
 

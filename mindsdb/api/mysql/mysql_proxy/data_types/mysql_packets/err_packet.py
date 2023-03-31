@@ -20,14 +20,8 @@ class ErrPacket(Packet):
     '''
 
     def setup(self):
-        err_code = 0
-        if 'err_code' in self._kwargs:
-            err_code = self._kwargs['err_code']
-
-        msg = 'ERROR'
-        if 'msg' in self._kwargs:
-            msg = self._kwargs['msg']
-
+        err_code = self._kwargs['err_code'] if 'err_code' in self._kwargs else 0
+        msg = self._kwargs['msg'] if 'msg' in self._kwargs else 'ERROR'
         self.err_header = Datum('int<1>', 255)
         self.err_code = Datum('int<2>', err_code)
         self.msg = Datum('string<EOF>', msg)

@@ -18,33 +18,23 @@ class Responce(Responder):
             # old behavior
             # NOTE real answer is huge, i removed most data from it.
             res = {
-                'ns': "db.collection",
                 'size': 1,
                 'count': 0,
                 'avgObjSize': 1,
                 'storageSize': 16384,
                 'capped': False,
-                'wiredTiger': {
-                },
+                'wiredTiger': {},
                 'nindexes': 1,
-                'indexDetails': {
-                },
+                'indexDetails': {},
                 'totalIndexSize': 16384,
-                'indexSizes': {
-                    '_id_': 16384
-                },
-                'ok': 1
+                'indexSizes': {'_id_': 16384},
+                'ok': 1,
+                'ns': f"{db}.{collection}",
             }
 
-            res['ns'] = f"{db}.{collection}"
-            if db == 'mindsdb' and collection == 'predictors':
-                res['count'] = len(mindsdb_env['model_controller'].get_models())
         else:
 
-            ident_parts = [collection]
-            if scale is not None:
-                ident_parts.append(scale)
-
+            ident_parts = [collection, scale]
             ast_query = Describe(Identifier(
                 parts=ident_parts
             ))
@@ -54,6 +44,8 @@ class Responce(Responder):
                 'data': data
             }
 
+        if db == 'mindsdb' and collection == 'predictors':
+            res['count'] = len(mindsdb_env['model_controller'].get_models())
         res['ns'] = f"{db}.{collection}"
 
         return res

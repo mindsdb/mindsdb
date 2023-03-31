@@ -90,15 +90,12 @@ class Packet:
         if body is None:
             body = self.body
         print(str(self))
+        part = '[BODY]'
         for i, x in enumerate(body):
-            part = '[BODY]'
             print('''{part}{i}:{h} ({inte}:{actual})'''.format(part=part, i=i + 1, h=hex(ord(x)), inte=ord(x), actual=str(x)))
 
     def isEOF(self):
-        if self.length == 0:
-            return True
-        else:
-            return False
+        return self.length == 0
 
     @property
     def length(self):

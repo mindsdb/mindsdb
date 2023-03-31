@@ -21,13 +21,14 @@ class Responce(Responder):
             }
         ]
 
-        for row in data:
-            databases.append({
+        databases.extend(
+            {
                 'name': list(row.values())[0],  # first value
                 'sizeOnDisk': 1 << 16,
-                'empty': False
-            })
-
+                'empty': False,
+            }
+            for row in data
+        )
         return {
             'databases': databases,
             'ok': 1,

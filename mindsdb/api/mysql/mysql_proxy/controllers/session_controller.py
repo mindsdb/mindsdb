@@ -54,7 +54,7 @@ class SessionController:
     def register_stmt(self, statement):
         i = 1
         while i in self.prepared_stmts and i < 100:
-            i = i + 1
+            i += 1
         if i == 100:
             raise Exception("Too many unclosed queries")
 
@@ -100,7 +100,7 @@ class ServerSessionContorller(SessionController):
     def __del__(self):
         """Terminate the appropriate ServiceSessionController instance as well."""
         if self.executor_url is not None:
-            url = self.executor_url + "/" + "session"
+            url = f"{self.executor_url}/session"
             logger.info(
                 "%s.__del__: delete an appropriate ServiceSessionController with, id - %s on the Executor service side",
                 self.__class__.__name__,

@@ -30,24 +30,22 @@ class CommandPacket(Packet):
         return b, buffer
 
     def read_params(self, buffer, num_params):
-        if not num_params > 0:
+        if num_params <= 0:
             return
 
         # read null-map
         null_bytes = math.floor((num_params + 7) / 8)
         nulls = []
-        for i in range(null_bytes):
+        for _ in range(null_bytes):
             b, buffer = self._read_byte(buffer)
-            for i in range(8):
-                nulls.append(((1 << i) & b) != 0)
-
+            nulls.extend(((1 << i) & b) != 0 for i in range(8))
         # read send-type byte
         b, buffer = self._read_byte(buffer)
 
         types = []
         if b == 1:
             # read types
-            for i in range(num_params):
+            for _ in range(num_params):
                 t, buffer = self._read_byte(buffer)
                 s, buffer = self._read_byte(buffer)
                 types.append(dict(
@@ -72,17 +70,16 @@ class CommandPacket(Packet):
                 continue
 
             datum_type = datumtypes.get(types[i]['type'])
-            if datum_type is not None:
-                x = Datum(datum_type)
-                buffer = x.setFromBuff(buffer)
-                value = x.value
-                if isinstance(value, bytes):
-                    value = value.decode()
-
-                self.parameters.append(value)
-            else:
+            if datum_type is None:
                 # NOTE at this moment all sends as strings and it works
                 raise Exception(f"Unsupported type {types[i]['type']}")
+            x = Datum(datum_type)
+            buffer = x.setFromBuff(buffer)
+            value = x.value
+            if isinstance(value, bytes):
+                value = value.decode()
+
+            self.parameters.append(value)
 
     def setup(self, length=0, count_header=1, body=''):
         if length == 0:

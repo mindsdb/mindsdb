@@ -3,17 +3,11 @@ import operator
 
 
 def f_and(*args):
-    for i in args:
-        if not i:
-            return False
-    return True
+    return all(args)
 
 
 def f_or(*args):
-    for i in args:
-        if i:
-            return True
-    return False
+    return any(args)
 
 
 def f_like(s, p):
@@ -33,15 +27,11 @@ def f_add(*args):
 
 
 def f_ne(a, b):
-    if a is None or b is None:
-        return False
-    return operator.ne(a, b)
+    return False if a is None or b is None else operator.ne(a, b)
 
 
 def f_eq(a, b):
-    if a is None or b is None:
-        return False
-    return operator.eq(a, b)
+    return False if a is None or b is None else operator.eq(a, b)
 
 
 operator_map = {

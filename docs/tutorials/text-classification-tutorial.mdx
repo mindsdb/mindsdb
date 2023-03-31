@@ -115,7 +115,7 @@ Records: 26952  Deleted: 0  Skipped: 2168  Warnings: 17300
     -> +----+-------------+-----------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------+
     -> |  0 |           0 |         0 |       3 | !!! RT @mayasolovely: As a woman you shouldn't complain about cleaning up your hou |. &amp; as a man you should always take the trash out...
     '> |  1 |           0 |         3 |       0 | !!!!! RT @mleew17: boy dats cold...tyga dwn bad for cuffin dat hoe in the 1st plac                                                        |
-    '> |  2 |           0 |         3 |       0 | !!!!!!! RT @UrKindOfBrand Dawg!!!! RT @80sbaby4life: You ever fuck a b*** and she                     |confused as s**t
+    '> |  2 |           0 |         3 |       0 | !!!!!!! RT @UrKindOfBrand Dawg!!!! RT @80sbaby4life: You ever
     '> +----+-------------+-----------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 ---
@@ -242,30 +242,6 @@ WHERE text = 'I like you. I love you.';
 | PRED | PRED_explain | text |
 | ---- | ------------ | ---- |
 | neither | {"hate_speech":0.03551715984940529,"neither":0.7747423648834229,"offensive":0.18974047899246216} | I like you. I love you. |
-
----
-
-```sql
-SELECT *
-FROM mindsdb.hf_test
-WHERE text = 'I hate n******'
-```
-
-| PRED | PRED_explain | text |
-| ---- | ------------ | ---- |
-| hate_speech | {"hate_speech":0.82469242811203,"neither":0.05819767713546753,"offensive":0.11710995435714722} | I hate n******' |
-
----
-
-```sql
-SELECT *
-FROM mindsdb.hf_test
-WHERE text = 'You are a dumb w****';
-```
-
-| PRED | PRED_explain | text |
-| ---- | ------------ | ---- |
-| offensive | {"hate_speech":0.06079000607132912,"neither":0.35908129811286926,"offensive":0.5801286697387695} | You are a dumb w**** |
 
 ---
 

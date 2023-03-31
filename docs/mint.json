@@ -336,8 +336,7 @@
             "data-integrations/google-sheets",
             "data-integrations/oceanbase",
             "data-integrations/mariadb",
-            "data-integrations/amazon-s3",
-            "data-integrations/oracle"
+            "data-integrations/amazon-s3"
           ]
         },
         {

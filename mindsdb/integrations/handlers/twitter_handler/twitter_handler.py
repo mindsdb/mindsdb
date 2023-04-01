@@ -14,9 +14,10 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
 from mindsdb_sql.parser import ast
-from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from mindsdb.integrations.utilities.date_utils import parse_utc_date
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -25,50 +26,16 @@ from mindsdb.integrations.libs.response import (
 )
 
 
-def extract_conditions(binary_op):
-    conditions = []
-
-    def _extract_conditions(node, **kwargs):
-        if isinstance(node, ast.BinaryOperation):
-            op = node.op.lower()
-            if op == 'and':
-                return
-            elif op == 'or':
-                raise NotImplementedError
-            elif not isinstance(node.args[0], ast.Identifier) or not isinstance(node.args[1], ast.Constant):
-                raise NotImplementedError
-            conditions.append([op, node.args[0].parts[-1], node.args[1].value])
-
-    query_traversal(binary_op, _extract_conditions)
-    return conditions
-
-
-def parse_date(date_str):
-    if isinstance(date_str, dt.datetime):
-        return date_str
-    date_formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
-    date = None
-    for date_format in date_formats:
-        try:
-            date = dt.datetime.strptime(date_str, date_format)
-        except ValueError:
-            pass
-    if date is None:
-        raise ValueError(f"Can't parse date: {date_str}")
-    date = date.astimezone(pytz.utc)
-    return date
-
-
 class TweetsTable(APITable):
-    
+
     def select(self, query: ast.Select) -> Response:
 
-        conditions = extract_conditions(query.where)
+        conditions = extract_comparison_conditions(query.where)
 
         params = {}
         for op, arg1, arg2 in conditions:
             if arg1 == 'created_at':
-                date = parse_date(arg2)
+                date = parse_utc_date(arg2)
                 if op == '>':
                     # "tweets/search/recent" doesn't accept dates earlier than 7 days
                     if (dt.datetime.now(dt.timezone.utc) - date).days > 7:
@@ -186,8 +153,11 @@ class TweetsTable(APITable):
             messages = []
 
             text2 = ''
+            pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
             for word in words:
-                if len(text2) + len(word) > max_text_len - 3 - 7:  # 3 is for ..., 7 is for (10/11)
+                # replace the links in word to string with the length as twitter short url (23)
+                word2 = re.sub(pattern, '-' * 23, word)
+                if len(text2) + len(word2) > max_text_len - 3 - 7:  # 3 is for ..., 7 is for (10/11)
                     messages.append(text2.strip())
 
                     text2 = ''
@@ -276,12 +246,25 @@ class TwitterHandler(APIHandler):
             #   it raises an error in case if auth is not success and returns not-found otherwise
             #   api.get_me() is not exposed for OAuth 2.0 App-only authorisation
             api.get_user(id=1)
-
             response.success = True
 
         except tweepy.Unauthorized as e:
-            log.logger.error(f'Error connecting to Twitter api: {e}!')
-            response.error_message = e
+            response.error_message = f'Error connecting to Twitter api: {e}. Check bearer_token'
+            log.logger.error(response.error_message)
+
+        if response.success is True and len(self.connection_args) > 1:
+            # not only bearer_token, check read-write mode (OAuth 2.0 Authorization Code with PKCE)
+            try:
+                api = self.connect()
+
+                api.get_me()
+
+            except tweepy.Unauthorized as e:
+                keys = 'consumer_key', 'consumer_secret', 'access_token', 'access_token_secret'
+                response.error_message = f'Error connecting to Twitter api: {e}. Check' + ', '.join(keys)
+                log.logger.error(response.error_message)
+
+                response.success = False
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False
@@ -298,7 +281,7 @@ class TwitterHandler(APIHandler):
             data_frame=df
         )
 
-    def call_twitter_api(self, method_name:str = None, params:dict = None):
+    def call_twitter_api(self, method_name: str = None, params: dict = None):
 
         # method > table > columns
         expansions_map = {
@@ -382,7 +365,7 @@ class TwitterHandler(APIHandler):
                     continue
 
                 for col_id in expansions[table]:
-                    col = col_id[:-3] # cut _id
+                    col = col_id[:-3]  # cut _id
                     if col_id not in df.columns:
                         continue
 
@@ -395,4 +378,3 @@ class TwitterHandler(APIHandler):
                     df = df.merge(df_ref2, on=col_id, how='left')
 
         return df
-

@@ -315,6 +315,7 @@
             "data-integrations/cratedb",
             "data-integrations/cockroachdb",
             "data-integrations/ckan",
+            "data-integrations/PostgreSQL",
             "data-integrations/databend",
             "data-integrations/Apache-Pinot",
             "data-integrations/cassandra",

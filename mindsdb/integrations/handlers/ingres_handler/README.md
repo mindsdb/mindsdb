@@ -12,35 +12,38 @@ and is known for its scalability, reliability, and security.
 ## Implementation
 
 This handler was implemented using [pyodbc](https://pypi.org/project/pyodbc/)
-and [ingres_sa_dialect](https://pypi.org/project/ingres-sa-dialect/) for the implementation of the Ingres dialect for
+and [ingres_sa_dialect](https://pypi.org/project/ingres-sa-dialect/) for the implementation of the Ingres dialect from
 SQLAlchemy.
 
 The required arguments to establish a connection are:
 
+* `user`: username associated with database
+* `password`: password to authenticate your access
 * `server`: Server to be connected
 * `database`: Database name to be connected
 
 The optional arguments are:
 
-* `user`: username associated with database *(optional)*
-* `password`: password to authenticate your access *(optional)*
 * `servertype`: Server type to be connected *(optional)* (default: `ingres`)
 
 ## Usage
 
 Install the Ingres ODBC driver for your platform. You can find the appropriate driver on the Ingres website.
 
+Information about connecting to Ingres 11.2 using ODBC can be
+found [here](https://docs.actian.com/ingres/11.2/index.html#page/QuickStart_Linux/Connecting_to_Ingres_Using_ODBC.htm#ww306952).
+
 In order to make use of this handler and connect to Ingres in MindsDB, the following syntax can be used:
 
 ~~~~sql
-CREATE DATABASE ingres_db
+CREATE
+DATABASE ingres_db
 WITH engine='ingres',
 parameters={
     "user": "admin",
     "password": "password",
     "server": "myserver.example.com",
-    "database": "test_db",
-    "servertype": "ingres"
+    "database": "test_db"
 };
 ~~~~
 

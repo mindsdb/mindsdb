@@ -103,6 +103,58 @@ class IngresHandler(DatabaseHandler):
         self.is_connected = False
         return self.is_connected
 
+    def native_query(self, query: str) -> Response:
+        """
+        Receive raw query and act upon it somehow.
+        Args:
+            query (str): SQL query to execute.
+        Returns:
+            HandlerResponse
+        """
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+        with connection.cursor() as cursor:
+            try:
+                cursor.execute(query)
+                result = cursor.fetchall()
+                if result:
+                    response = Response(
+                        RESPONSE_TYPE.TABLE,
+                        data_frame=pd.DataFrame.from_records(
+                            result,
+                            columns=[x[0] for x in cursor.description]
+                        )
+                    )
+                else:
+                    response = Response(RESPONSE_TYPE.OK)
+                    connection.commit()
+            except Exception as e:
+                log.logger.error(f'Error running query: {query} on {self.connection_args["database"]}!')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(e)
+                )
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
+
+    def query(self, query: ASTNode) -> Response:
+        """
+        Receive query as AST (abstract syntax tree) and act upon it somehow.
+        Args:
+            query (ASTNode): sql query represented as AST. May be any kind
+                of query: SELECT, INSERT, DELETE, etc
+        Returns:
+            HandlerResponse
+        """
+
+        renderer = SqlalchemyRender(IngresDialect)
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
+
     def get_tables(self) -> Response:
         """
         Gets a list of table names in the database.
@@ -128,3 +180,63 @@ class IngresHandler(DatabaseHandler):
         )
 
         return response
+
+    def get_columns(self, table_name: str) -> Response:
+        """
+        Gets a list of column names in the specified table.
+
+        Args:
+            table_name (str): The name of the table to get column names from.
+
+        Returns:
+            list: A list of column names in the specified table.
+        """
+        conn = self.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT column_name FROM iicolumns WHERE table_name = '{}'".format(table_name))
+        results = cursor.fetchall()
+
+        # construct a pandas dataframe from the query results
+        df = pd.DataFrame(
+            results,
+            columns=['column_name', 'data_type']
+        )
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            df
+        )
+
+        return response
+
+
+connection_args = OrderedDict(
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the Ingres server.'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the Ingres server.'
+    },
+    server={
+        'type': ARG_TYPE.STR,
+        'description': 'The server used to authenticate with the Ingres server.'
+    },
+    database={
+        'type': ARG_TYPE.STR,
+        'description': 'Specify database name to connect Ingres server'
+    },
+    servertype={
+        'type': ARG_TYPE.STR,
+        'description': 'Specify server type to connect Ingres server'
+    }
+)
+
+connection_args_example = OrderedDict(
+    user='admin',
+    password='password',
+    server='(local)',
+    database='test_db',
+    servertype='ingres'
+)

@@ -203,17 +203,6 @@ In this next section, you are going to translate 3 different languages and learn
 
 - Start by creating a model to translate French to English:
 
-```
-CREATE MODEL mindsdb.hf_fr
-PREDICT PRED
-USING
-engine = 'huggingface',
-model_name = 'Helsinki-NLP/opus-mt-fr-en',
-input_column = 'text_fr',
-lang_input ='fr',
-lang_output = 'en';
-```
-
 ```sql
 CREATE MODEL mindsdb.hf_fr_en
 PREDICT PRED
@@ -224,18 +213,6 @@ input_column = 'text',
 lang_input ='fr',
 lang_output = 'en';
 ```
-
-```
-CREATE MODEL mindsdb.hf_fr
-PREDICT PRED
-USING
-engine = 'huggingface',
-model_name = 'Helsinki-NLP/opus-mt-fr-en',
-input_column = 'text_fr',
-lang_input ='fr',
-lang_output = 'en';
-```
-
 
 - Check the status of the new predictor:
 

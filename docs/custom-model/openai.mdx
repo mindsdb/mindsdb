@@ -12,7 +12,7 @@ We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the OpenAI
 MindsDB provides an OpenAI engine by default. But if you want to use your own OpenAI engine, please create it using the command below and passing your OpenAI API key:
 
 ```sql
-CREATE ML_ENGINE openai
+CREATE ML_ENGINE openai2
 FROM openai
 USING
   api_key = 'YOUR_OPENAI_API_KEY';
@@ -23,10 +23,6 @@ USING
 
 When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter in the `USING` clause of the `CREATE MODEL` statement.
 </Info>
-
-<Tip>
-Please note that when using MindsDB installation in Docker, it is required to provide own OpenAI API key.
-</Tip>
 
 Let's go through the available operation modes.
 

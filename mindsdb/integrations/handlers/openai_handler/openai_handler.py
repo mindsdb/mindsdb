@@ -74,7 +74,7 @@ class OpenAIHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
 
-    def _get_api_key(self, args):
+    def _get_api_key(self, args, key_name='openai_api_key', strict=True):
         """ 
         API_KEY preference order:
             1. provided at model creation
@@ -83,24 +83,25 @@ class OpenAIHandler(BaseMLEngine):
             4. openai.api_key setting in config.json
         """  # noqa
         # 1
-        if 'api_key' in args:
-            return args['api_key']
+        if key_name in args:
+            return args[key_name]
         # 2
         connection_args = self.engine_storage.get_connection_args()
-        if 'api_key' in connection_args:
-            return connection_args['api_key']
+        if key_name in connection_args:
+            return connection_args[key_name]
         # 3
-        api_key = os.getenv('OPENAI_API_KEY')
+        api_key = os.getenv(key_name.upper())  # e.g. "OPENAI_API_KEY"
         if api_key is not None:
             return api_key
         # 4
         config = Config()
         openai_cfg = config.get('openai', {})
-        if 'api_key' in openai_cfg:
-            return openai_cfg['api_key']
+        if key_name in openai_cfg:
+            return openai_cfg[key_name]
 
-        raise Exception('Missing API key. Either re-create this ML_ENGINE with your key in the `api_key` parameter,\
-             or re-create this model and pass the API key it with `USING` syntax.')  # noqa
+        if strict:
+            raise Exception(f'Missing API key "{key_name}". Either re-create this ML_ENGINE specifying the `{key_name}` parameter,\
+                 or re-create this model and pass the API key with `USING` syntax.')  # noqa
 
     def predict(self, df, args=None):
         """

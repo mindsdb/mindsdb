@@ -338,6 +338,7 @@
             "data-integrations/oceanbase",
             "data-integrations/mariadb",
             "data-integrations/amazon-s3",
+            "data-integrations/questdb",
             "data-integrations/oracle",
             "data-integrations/singlestore"
           ]

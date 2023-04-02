@@ -340,6 +340,7 @@
             "data-integrations/amazon-s3",
             "data-integrations/questdb",
             "data-integrations/oracle",
+            "data-integrations/OrioleDB",
             "data-integrations/singlestore"
           ]
         },

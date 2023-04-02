@@ -563,10 +563,10 @@ class OpenAIHandler(BaseMLEngine):
             columns.append(m[0].replace('{', '').replace('}', ''))
             spans.extend((m.start(), m.end()))
 
-        spans = spans[1:-1]
-        template = [base_template[s:e] for s, e in zip(spans, spans[1:])]
-        template.insert(0, base_template[0:first_span])
-        template.append(base_template[last_span:])
+        spans = spans[1:-1]  # omit first and last, they are added separately
+        template = [base_template[s:e] for s, e in list(zip(spans, spans[1:]))[::2]]  # take every other to skip spans
+        template.insert(0, base_template[0:first_span])  # add prompt start
+        template.append(base_template[last_span:])  # add prompt end
 
         empty_prompt_ids = np.where(df[columns].isna().all(axis=1).values)[0]
 
@@ -575,7 +575,7 @@ class OpenAIHandler(BaseMLEngine):
             atom = template[i]
             if i < len(columns):
                 col = df[columns[i]].replace(to_replace=[None], value='')  # add empty quote if data is missing
-                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col
+                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col.astype("string")
             else:
                 df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
         prompts = list(df['__mdb_prompt'])

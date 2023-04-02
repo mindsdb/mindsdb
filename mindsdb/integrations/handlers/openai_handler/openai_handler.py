@@ -564,7 +564,7 @@ class OpenAIHandler(BaseMLEngine):
             spans.extend((m.start(), m.end()))
 
         spans = spans[1:-1]  # omit first and last, they are added separately
-        template = [base_template[s:e] for s, e in list(zip(spans, spans[1:]))[::2]]  # take every other to skip spans
+        template = [base_template[s:e] for s, e in list(zip(spans, spans[1:]))[::2]]  # take every other to skip placeholders  # noqa
         template.insert(0, base_template[0:first_span])  # add prompt start
         template.append(base_template[last_span:])  # add prompt end
 

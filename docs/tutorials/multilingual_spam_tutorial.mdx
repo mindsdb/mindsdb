@@ -160,13 +160,13 @@ It's time to connect with MindsDB:
 7. Preview the dataset
 
 **input:**
+```sql
 SELECT * 
 FROM mindsdb.nlp_data
 LIMIT 3;
 ```
 
 **output:**
-```
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
 | labels |       text_input          |    text_de        |   text_fr                         |
 +------------+--- ---------+-----------------------------------------------------------------+--------------------------------+
@@ -176,11 +176,10 @@ LIMIT 3;
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
 | spam  | 'Free entry in 2 a wkly...' | 'Freier Eintrit' | 'Entrée libre dans 2 a wkly comp...'|
 +------------+-------------+-----------------------------------------------------------------+--------------------------------+
-```
 
 - Another way to connect your local PostgreSQL database to MindsDB is by using the, `CREATE DATABASE` statement with your connection details:
 
-```
+```sql
 CREATE DATABASE multilingual
 WITH ENGINE = "postgres",
 PARAMETERS = {

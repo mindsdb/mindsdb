@@ -341,6 +341,7 @@
             "data-integrations/questdb",
             "data-integrations/oracle",
              "data-integrations/solr",
+            "data-integrations/OrioleDB",
             "data-integrations/singlestore"
           ]
         },

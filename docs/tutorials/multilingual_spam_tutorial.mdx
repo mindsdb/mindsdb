@@ -5,11 +5,7 @@ sidebarTitle: Learn how to connect MindsDB to Hugging Face models to Perform Mul
 
 ## Introduction
 
-The internet has completely revolutionized the way we share information. Internet communication tools such as email, social media sites, chat applications, and blogs are used across the globe for both professional and personal reasons. Put simply, the internet is now the world's main way to communicate - and there are a lot of languages being communicated online. 
-
-Nowadays, AI language translation tools use Natural language processing (NLP) to translate written text or spoken words from one source language into a different target language.
-
-In this tutorial, you will learn how to use MindsDB and Hugging Face to perform **translation** tasks on a multilingual dataset.
+The internet has completely revolutionized the way information is shared - and there are a lot of languages being used online. Nowadays, AI language translation tools use Natural language processing (NLP) to translate written text or spoken words from one source language into a different target language. In this tutorial, you will learn how to use MindsDB and Hugging Face to perform **translation** tasks on a multilingual dataset.
 
 ## Data Setup
 
@@ -226,8 +222,7 @@ WHERE name = 'hf_fr_en';
 | ---- | ------ | ------- | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | ---------------------- | --------------------- | ------------------- | --- | ---------- |
 | hf_fr_en | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.3.5.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'model_name': 'Helsinki-NLP/opus-mt-fr-en', 'input_column': 'text', 'lang_input': 'fr', 'lang_output': 'en', 'task': 'translation'}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-30 16:31:29.096920 |
 
-
-- Once your status reads, `complete` it is time to start writing queries:
+- Once your status reads, `complete` it is time to start testing your model with language queries:
 
 ```sql
 SELECT *
@@ -339,19 +334,7 @@ WHERE text_hi = 'namaste, aap kaise hain?';
 | ---- | ------- |
 | Let me tell you what, do you think? | namaste, aap kaise hain? |
 
-***Keep in mind that foreign sayings don't always translate to English exactly as we'd expect. For example, I was under the i,pression that the Hindi expression below meant, 'I love you'*** 
-
-```sql
-SELECT *
-FROM hi_en
-WHERE text_hi = 'mujhe tumase pyaar hai';
-```
-
-| PRED | text_hi |
-| ---- | ------- |
-| And you're going to have a choice. | mujhe tumase pyaar hai |
-
-- Let's really challenge this predictor now and see how it responds when we input Urdu:
+- See how the predictor responds when you input symbols:
 
 ```sql
 SELECT *

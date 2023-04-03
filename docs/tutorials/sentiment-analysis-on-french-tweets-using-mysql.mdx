@@ -1,0 +1,259 @@
+
+
+# Sentiment Analysis on French Tweets using MySQL: Connect MindsDB to Sentiment Analysis on French Tweets using MySQL
+
+## Introduction
+
+[MindsDB](https://mindsdb.com/) is is an open-source AI layer for existing databases that allows you to effortlessly develop, train and deploy state-of-the-art machine learning models using SQL queries. 
+[Hugging Face](https://huggingface.co/) is a community and data science platform that provides tools that enables users to build, train and deploy machine learning models based on open source code and technologies. 
+**NLP**, or Natural Language Processing, is a subprocess of artificial intelligence that helps machines process and understand the human langage so that they can automatically perform repetitive tasks. 
+Some examples of NLP include machine translation, summarization, ticket classification, and spell check (or "autocorrect").
+
+The following four NLP tasks are currently supported by MindsDB:
+
+1. Text Classification
+2. Zero-Shot Classification
+3. Translation
+4. Summarization
+
+**In today's tutorial, I'll show you how to connect MindsDB to Hugging Face and use these technologies to perform NLP queries, specifically text-classication, on your dataset.**
+
+## Data Setup
+
+Make sure you have access to a working MindsDB installation, either locally or via [MindsDB Cloud](https://cloud.mindsdb.com/). 
+
+*You can create a **free** MindsDB account and take advantage of their built-in SQL editor [here](https://cloud.mindsdb.com/editor).*
+
+If you want to learn more about creating a free MindsDB Cloud account, follow
+[this guide](/setup/cloud/). Another way is to set up
+MindsDB locally using
+[Docker](/setup/self-hosted/docker/) or
+[Python](/setup/self-hosted/pip/source/).
+
+Let's get started!
+
+## Loading the MySQL Database
+
+To establish a database connection we will access MindsDB's GUI. MindsDB has a SQL Editor on Cloud.
+
+First we need to connect MindsDB to the database where the French Tweets data are stored:
+
+ - Access MindsDB GUI on cloud.
+ - On the default page, select the button  `Add`  and dropdown appears down, select the `New Datasource` 
+ - Select MySQL Database and fill the data. I had hosted the MySQL database in my local and added the details over there.
+ 
+> Note that: Your hosted MySQL Database should have the data stored in there already. 
+
+Once you added the details correctly, you get the `Saved Connection` popup.  Now we're good to go for next step: Select the model. 
+
+## Load the Model
+
+We are focusing on text classification, we're going to use Hugging Face's [French Sentiment analysis model based on CamemBERT](https://huggingface.co/tblard/tf-allocine/blob/main/README.md?code=true#L7) model. This Hugging Face transformer is a CamemBERT model trained on Allocine dataset.
+
+Run the below query in the MindsDB Cloud Editor:
+```
+CREATE  MODEL french_tweets.sentiment_analyzer
+PREDICT PRED
+USING
+engine =  'huggingface',
+task = 'text-classification',
+model_name = 'tblard/tf-allocine',
+input_column = 'text';
+```
+
+After running the command over, we get the status as shown in the below image:
+
+![screenshot of Image]
+
+Checkout [Hugging Face's](https://huggingface.co/tblard/tf-allocine) documentation to explore more transformer models.
+
+## Training a Predictor
+
+Now that we have our data, we're going to use SQL to create our **predictor model**. 
+
+***Note: If you have been working on multiple projects/databases make sure you move to the correct database for this demo:***
+
+`USE french_tweets;`
+
+Let's create our model now.
+
+**We use the `CREATE MODEL` statement along with the following paramters to access the Hugging Face API and use Hugging Face transofrmers when we train our model and make predictions**
+
+```
+CREATE MODEL nlp_predictor
+PREDICT sentiment
+USING
+  engine = 'huggingface',
+  task = 'text-classification',
+  model_name = "cardiffnlp/twitter-Roberta-base-sentiment",
+  input_column = 'comment',
+  labels = ['negative','neutral','positive'];
+```
+
+## Making predictions
+
+Now that our model is ready, we can actually start using it to make NLP predictions!
+
+Let's input a text statement we know contains negative words and see if our predictor recognizes that:
+
+input:
+
+```
+SELECT * FROM nlp_predictor
+WHERE comment = 'It is really hard to do this';
+```
+
+output:
+
+```sql
++------------+-------------+
+| sentiment     | sentiment_explain
++------------+-------------+
+| negative   |{"negative":0.040196146816015244,"neutral":0.0791015625,"positive":0.8807022571563721}|
++------------+-------------+
+```
+![screeshot](mindsdb/docs/tutorials/images/negative1.png)
+
+Awesome! Let's change the word, "hate" to the word, "love" and see what happens.
+
+input:
+
+```
+SELECT * FROM nlp_predictor1
+WHERE comment = 'I love this world'
+```
+
+output:
+
+```sql
++------------+-------------+
+| sentiment     | sentiment_explain
++------------+-------------+
+| positive   |{"negative":0.040196146816015244,"neutral":0.0791015625,"positive":0.8807022571563721}|
++------------+-------------+
+```
+
+Wow. It looks like our predictor recognizes that this is a postive statement!
+
+Let's really challenge our predictor now and input some neutral comments.
+
+
+input:
+
+```sql
+SELECT * FROM nlp_predictor1
+WHERE comment = 'I do not know how I feel about this world'
+```
+
+output:
+
+```sql
++------------+-------------+
+| sentiment     | sentiment_explain
++------------+-------------+
+| negative
+   |{"negative":0.7529996633529663,"neutral":0.2219237983226776,"positive":0.02507654018700123}|
++------------+-------------+
+```
+
+Interesting, but not quite the answer we were expecting.  
+
+input:
+
+```sql
+SELECT * FROM nlp_predictor1
+WHERE comment = 'I am confused about this'
+```
+
+output:
+
+```sql
++------------+-------------+
+| sentiment     | sentiment_explain
++------------+-------------+
+| negative
+   |{"negative":0.8474223017692566,"neutral":0.131456196308136,"positive":0.02112148143351078}|
++------------+-------------+
+```
+
+Alright, we can see where our predictor model may need some more training. Let's try the actual world 'neutral':
+
+
+input:
+
+```sql
+SELECT * FROM nlp_predictor1
+WHERE comment = 'I am neutral'
+```
+
+output:
+
+```sql
++------------+-------------+
+| sentiment     | sentiment_explain
++------------+-------------+
+| neutral
+   |{"negative":0.20676742494106293,"neutral":0.634432315826416,"positive":0.15880025923252106}|
++------------+-------------+
+```
+
+Nice! Let's use some offical synonyms of 'neutral':
+
+input:
+
+```
+SELECT * FROM nlp_predictor1
+WHERE comment = 'I have a nonbiased opinion about that matter, congressman'
+```
+
+output:
+
+```sql
++------------+-------------+
+| sentiment     | sentiment_explain
++------------+-------------+
+| neutral
+   |{"negative":0.1525232195854187,"neutral":0.7257404923439026,"positive":0.12173626571893692}|
++------------+-------------+
+```
+
+***Interestingly enough, the predictor rated that last comment more neutral than the previous.***
+
+input:
+
+```sql
+SELECT * FROM nlp_predictor1
+WHERE comment = 'I am impartial to dancing'
+```
+
+output:
+
+```sql
++------------+-------------+
+| sentiment     | sentiment_explain
++------------+-------------+
+| neutral
+   |{"negative":0.0975261852145195,"neutral":0.5596098899841309,"positive":0.34286391735076904}|
++------------+-------------+
+```
+
+## Conclusion
+
+By following this tutorial, you just learned how to perform the following tasks with MindsDB:
+
+- [x]  How to load data in database.
+- [x]  How to connect datasource to MindsDB.
+- [x]  Select the data.
+- [x]  Create Model that includes HuggingFace as the engine and the above mentioned model.
+- [x]  Select the model to show the status.
+- [x] Query the model.
+
+Great work!
+
+Got some more ideas about how MindsDB can be used to perform NLP tasks? 
+Sign up for a free MindsDB cloud account [here](https://cloud.mindsdb.com/) and get started today!
+
+Want to learn more about MindsDB? Checkout these resources:
+- [MindsDB](https://mindsdb.com/)
+- [Slack](https://mindsdbcommunity.slack.com/join/shared_invite/zt-1qak5iv6e-csh3EI8mM0iFkqJaNbsCGw#/shared-invite/email)
+- [GitHub](https://github.com/mindsdb/mindsdb/)

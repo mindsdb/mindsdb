@@ -38,6 +38,8 @@ found [here](https://docs.actian.com/ingres/11.2/index.html#page/QuickStart_Linu
 Before you run the Ingres Handler you first need to execute the following commands:
 
 ~~~~shell
+python -m pip install pyodbc sqlalchemy
+git clone https://github.com/ActianCorp/ingres_sa_dialect.git
 cd mindsdb/integrations/handlers/ingres_handler/ingres_sa_dialect
 python -m pip install -e .
 ~~~~

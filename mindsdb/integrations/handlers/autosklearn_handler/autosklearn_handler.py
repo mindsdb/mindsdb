@@ -16,20 +16,16 @@ class AutoSklearnHandler(BaseMLEngine):
     name = 'autosklearn'
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
-        if args is None:
-            args = {}
+        if args['using']['task'] == 'classification':
+            model = automl.AutoSklearnClassifier(
+                time_left_for_this_task=60,
+                per_run_time_limit=360,
+                n_jobs=-1,
+                metric=accuracy
+            )
+            model.fit(df.drop(target, axis=1), df[target])
 
-        args['target'] = target
-
-        automl_classifier = automl.AutoSklearnClassifier(
-            time_left_for_this_task=60,
-            per_run_time_limit=360,
-            n_jobs=-1,
-            metric=accuracy
-        )
-        automl_classifier.fit(df.drop(target, axis=1), df[target])
-
-        self.model_storage.file_set('model', dill.dumps(automl_classifier))
+        self.model_storage.file_set('model', dill.dumps(model))
         self.model_storage.json_set('args', args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:

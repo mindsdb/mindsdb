@@ -2,7 +2,7 @@
 
 ## **Introduction**
 
-In this tutorial, we are going to demonstrate how to build a question answering model with MindsDB and OpenAI. The model's goal is to retrive the answer to a question based on the given context. The [`natural_questions`]("https://huggingface.co/datasets/natural_questions/blob/main/dataset_infos.json) (**NQ**) corpus will be used as an input.
+In this tutorial, we are going to demonstrate how to build a question answering model with MindsDB and OpenAI. The model's goal is to retrieve the answer to a question based on the given context. The [`natural_questions`]("https://huggingface.co/datasets/natural_questions/blob/main/dataset_infos.json) (**NQ**) corpus will be used as an input.
 
 ## **Data Setup**
 

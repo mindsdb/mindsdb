@@ -20,13 +20,13 @@ class TestOpenAIHandler(HTTPHelperMixin):
         """
         self.sql_via_http(query, RESPONSE_TYPE.ERROR)
 
-        def test_invalid_openai_name_parameter(self):
-            query = f"""
-                CREATE MODEL sentiment_classifier_gpt3
-                PREDICT sentiment
-                USING
-                engine = 'openai',
-                api_key = '{OPEN_AI_API_KEY}',
-                model_name = 'invalid_model_name';
-        """
+    def test_invalid_openai_name_parameter(self):
+        query = f"""
+            CREATE MODEL sentiment_classifier_gpt3
+            PREDICT sentiment
+            USING
+            engine = 'openai',
+            api_key = '{OPEN_AI_API_KEY}',
+            model_name = 'invalid_model_name';
+    """
         self.sql_via_http(query, RESPONSE_TYPE.ERROR)

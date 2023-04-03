@@ -33,7 +33,7 @@ The required arguments to establish a connection are,
 ## Usage
 In order to make use of this handler and connect to TDEngine in MindsDB, the following syntax can be used,
 
-~~~~sql
+```sql
 CREATE DATABASE TDEngine_datasource
 WITH
 engine='tdengine',
@@ -43,13 +43,13 @@ parameters={
     "url":"127.0.0.1:6041",
     "database":"test"
 };
-~~~~
+```
 
 
 **Note :-> You can sepecify token instead of user and password while using TDEngine.**
 
 
 Now, you can use this established connection to query your database as follows,
-~~~~sql
+```sql
 SELECT * FROM TDEngine_datasource.d0;
-~~~~
+```

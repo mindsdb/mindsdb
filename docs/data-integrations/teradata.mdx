@@ -27,7 +27,7 @@ The required arguments to establish a connection are,
 Assuming you created a database in Teradata called `HR` and you have a table called `Employees` that was created using
 the following SQL statements:
 
-~~~~sql
+```sql
 CREATE
 DATABASE HR
 AS PERMANENT = 60e6, -- 60MB
@@ -56,11 +56,11 @@ VALUES (101,
         '1980-01-05',
         '2004-08-01',
         01);
-~~~~
+```
 
 In order to make use of this handler and connect to the Teradata database in MindsDB, the following syntax can be used:
 
-~~~~sql
+```sql
 CREATE DATABASE teradata_db
 WITH ENGINE = 'teradata',
 PARAMETERS = {
@@ -70,15 +70,15 @@ PARAMETERS = {
     "database": "HR"
 };
 
-~~~~
+```
 
 **Note**: The above example assumes usage of Teradata Vantage running on Oracle VirtualBox.
 
 Now, you can use this established connection to query your database as follows:
 
-~~~~sql
+```sql
 SELECT * FROM teradata_db.Employees;
-~~~~
+```
 
 |GlobalID | FirstName | LastName   | DateOfBirth | JoinedDate | DepartmentCode |
 |---------|-----------|------------|-------------|------------|----------------|

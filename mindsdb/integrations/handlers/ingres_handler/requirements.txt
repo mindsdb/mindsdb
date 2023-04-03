@@ -1,2 +1,2 @@
 pyodbc
-ingres_sa_dialect
+sqlalchemy < 2.0.0

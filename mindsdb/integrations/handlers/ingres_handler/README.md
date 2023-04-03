@@ -33,6 +33,15 @@ Install the Ingres ODBC driver for your platform. You can find the appropriate d
 Information about connecting to Ingres 11.2 using ODBC can be
 found [here](https://docs.actian.com/ingres/11.2/index.html#page/QuickStart_Linux/Connecting_to_Ingres_Using_ODBC.htm#ww306952).
 
+**Important**:
+
+Before you run the Ingres Handler you first need to execute the following commands:
+
+~~~~shell
+cd mindsdb/integrations/handlers/ingres_handler/ingres_sa_dialect
+python -m pip install -e .
+~~~~
+
 In order to make use of this handler and connect to Ingres in MindsDB, the following syntax can be used:
 
 ~~~~sql

@@ -159,12 +159,12 @@ db.models.insert({
 })
 ```
 
-Adjust predictor: 
-The same syntax as create model, but using "action": "adjust"
+Finetune predictor:
+The same syntax as create model, but using "action": "finetune"
 ```
 db.models.insert({
      "name": "sales_model",
-     "action": "adjust",
+     "action": "finetune",
 })
 ```
 

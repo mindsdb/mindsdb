@@ -1,0 +1,37 @@
+---
+title: Vitess
+sidebarTitle: Vitess
+---
+
+# Vitess Handler
+
+This is the implementation of the Vitess handler for MindsDB.
+
+# Vitess
+
+Vitess is a database solution for deploying, scaling and managing large clusters of open-source database instances. It currently supports MySQL and Percona Server for MySQL. It's architected to run as effectively in a public or private cloud architecture as it does on dedicated hardware. It combines and extends many important SQL features with the scalability of a NoSQL database.
+
+
+# Usage
+
+  In order to make use of this handler and connect to a Vitess database in MindsDB, the following syntax can be used,
+
+  ```sql
+
+CREATE DATABASE vitess_datasource
+WITH ENGINE = 'vitess',
+PARAMETERS = {
+    "host": "127.0.0.1",
+    "user": "vitess_user",
+    "password": "password",
+    "port": 33577,
+    "database": "vitess_db"
+};
+
+  ```
+  Now, you can use this established connection to query your table as follows,
+
+  ```sql
+
+  SELECT * FROM vitess_datasource.product LIMIT 10;
+  ```

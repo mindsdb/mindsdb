@@ -7,31 +7,18 @@
 **1. Testing CREATE DATABASE**
 
 ```
-COMMAND THAT YOU RAN TO CREATE DATABASE.
+CREATE DATABASE wild_fires      --- display name for database.
+WITH ENGINE='sqlite',
+PARAMETERS={
+    "db_file": "/Users/haojunsong/TEMP/FPA_FOD_20170508.sqlite",               --- this points to the database file that the connection is to be made to
+};
 ```
 
-![CREATE_DATABASE](Image URL of the screenshot)
-
-**2. Testing CREATE PREDICTOR**
-
-```
-COMMAND THAT YOU RAN TO CREATE PREDICTOR.
-```
-
-![CREATE_PREDICTOR](Image URL of the screenshot)
-
-**3. Testing SELECT FROM PREDICTOR**
-
-```
-COMMAND THAT YOU RAN TO DO A SELECT FROM.
-```
-
-![SELECT_FROM](Image URL of the screenshot)
-
+![CREATE_DATABASE](error.png)
 ### Results
 
 Drop a remark based on your observation.
 - [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+- [x] There's a Bug 🪲 [5412](https://github.com/mindsdb/mindsdb/issues/5412) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
 
 ---

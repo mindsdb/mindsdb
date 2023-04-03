@@ -39,8 +39,9 @@ Before you run the Ingres Handler you first need to execute the following comman
 
 ~~~~shell
 python -m pip install pyodbc sqlalchemy
+cd mindsdb/integrations/handlers/ingres_handler
 git clone https://github.com/ActianCorp/ingres_sa_dialect.git
-cd mindsdb/integrations/handlers/ingres_handler/ingres_sa_dialect
+cd ingres_sa_dialect
 python -m pip install -e .
 ~~~~
 

@@ -1,17 +1,23 @@
+import re
+import os
 import datetime as dt
-import tweepy
 import ast
 from collections import defaultdict
 import pytz
+import io
+import requests
 
 import pandas as pd
+import tweepy
 
 from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 
 from mindsdb_sql.parser import ast
-from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from mindsdb.integrations.utilities.date_utils import parse_utc_date
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -20,50 +26,16 @@ from mindsdb.integrations.libs.response import (
 )
 
 
-def extract_conditions(binary_op):
-    conditions = []
-
-    def _extract_conditions(node, **kwargs):
-        if isinstance(node, ast.BinaryOperation):
-            op = node.op.lower()
-            if op == 'and':
-                return
-            elif op == 'or':
-                raise NotImplementedError
-            elif not isinstance(node.args[0], ast.Identifier) or not isinstance(node.args[1], ast.Constant):
-                raise NotImplementedError
-            conditions.append([op, node.args[0].parts[-1], node.args[1].value])
-
-    query_traversal(binary_op, _extract_conditions)
-    return conditions
-
-
-def parse_date(date_str):
-    if isinstance(date_str, dt.datetime):
-        return date_str
-    date_formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
-    date = None
-    for date_format in date_formats:
-        try:
-            date = dt.datetime.strptime(date_str, date_format)
-        except ValueError:
-            pass
-    if date is None:
-        raise ValueError(f"Can't parse date: {date_str}")
-    date = date.astimezone(pytz.utc)
-    return date
-
-
 class TweetsTable(APITable):
-    
+
     def select(self, query: ast.Select) -> Response:
 
-        conditions = extract_conditions(query.where)
+        conditions = extract_comparison_conditions(query.where)
 
         params = {}
         for op, arg1, arg2 in conditions:
             if arg1 == 'created_at':
-                date = parse_date(arg2)
+                date = parse_utc_date(arg2)
                 if op == '>':
                     # "tweets/search/recent" doesn't accept dates earlier than 7 days
                     if (dt.datetime.now(dt.timezone.utc) - date).days > 7:
@@ -85,7 +57,7 @@ class TweetsTable(APITable):
             params['max_results'] = query.limit.value
 
         params['expansions'] = ['author_id', 'in_reply_to_user_id']
-        params['tweet_fields'] = ['created_at']
+        params['tweet_fields'] = ['created_at', 'conversation_id']
         params['user_fields'] = ['name', 'username']
 
         if 'query' not in params:
@@ -110,12 +82,19 @@ class TweetsTable(APITable):
 
         if len(columns) == 0:
             columns = self.get_columns()
+
+        # columns to lower case
+        columns = [name.lower() for name in columns]
+
         if len(result) == 0:
             result = pd.DataFrame([], columns=columns)
         else:
             # add absent columns
             for col in set(columns) & set(result.columns) ^ set(columns):
                 result[col] = None
+
+            # filter by columns
+            result = result[columns]
         return result
 
     def get_columns(self):
@@ -127,19 +106,80 @@ class TweetsTable(APITable):
             'author_id',
             'author_name',
             'author_username',
+            'conversation_id',
             'in_reply_to_user_id',
             'in_reply_to_user_name',
             'in_reply_to_user_username'
         ]
 
-    def insert(self, query:ast.Insert):
+    def insert(self, query: ast.Insert):
         # https://docs.tweepy.org/en/stable/client.html#tweepy.Client.create_tweet
         columns = [col.name for col in query.columns]
+
+        insert_params = ('consumer_key', 'consumer_secret', 'access_token', 'access_token_secret')
+        for p in insert_params:
+            if p not in self.handler.connection_args:
+                raise Exception(f'To insert data into Twitter, you need to provide the following parameters when connecting it to MindsDB: {insert_params}')  # noqa
+
         for row in query.values:
             params = dict(zip(columns, row))
 
-            print('create_tweet', params)
-            self.handler.call_twitter_api('create_tweet', params)
+            # split long text over 280 symbols
+            max_text_len = 280
+            text = params['text']
+            if len(text) <= 280:
+                # Post image if column media_url is provided, only do this on last tweet
+                if 'media_url' in params:
+                    media_url = params['media_url']
+
+                    # create an in memory file
+                    resp = requests.get(media_url)
+                    img = io.BytesIO(resp.content)
+
+                    # upload media to twitter
+                    api_v1 = self.handler.connect(api_version=1)
+                    content_type = resp.headers['Content-Type']
+                    file_type = content_type.split('/')[-1]
+                    media = api_v1.media_upload(filename="img.{file_type}".format(file_type=file_type), file=img)
+
+                    del params['media_url']
+                    params['media_ids'] = [media.media_id]
+
+                self.handler.call_twitter_api('create_tweet', params)
+                continue
+
+            words = re.split('( )', text)
+
+            messages = []
+
+            text2 = ''
+            pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+            for word in words:
+                # replace the links in word to string with the length as twitter short url (23)
+                word2 = re.sub(pattern, '-' * 23, word)
+                if len(text2) + len(word2) > max_text_len - 3 - 7:  # 3 is for ..., 7 is for (10/11)
+                    messages.append(text2.strip())
+
+                    text2 = ''
+                text2 += word
+
+            # the last message
+            if text2.strip() != '':
+                messages.append(text2.strip())
+
+            len_messages = len(messages)
+            for i, text in enumerate(messages):
+                if i < len_messages - 1:
+                    text += '...'
+                else:
+                    text += ' '
+
+                text += f'({i + 1}/{len_messages})'
+
+                params['text'] = text
+                ret = self.handler.call_twitter_api('create_tweet', params)
+                inserted_id = ret.id[0]
+                params['in_reply_to_tweet_id'] = inserted_id
 
 
 class TwitterHandler(APIHandler):
@@ -157,10 +197,15 @@ class TwitterHandler(APIHandler):
         args = kwargs.get('connection_data', {})
 
         self.connection_args = {}
+        handler_config = Config().get('twitter_handler', {})
         for k in ['bearer_token', 'consumer_key', 'consumer_secret',
                   'access_token', 'access_token_secret', 'wait_on_rate_limit']:
             if k in args:
                 self.connection_args[k] = args[k]
+            elif f'TWITTER_{k.upper()}' in os.environ:
+                self.connection_args[k] = os.environ[f'TWITTER_{k.upper()}']
+            elif k in handler_config:
+                self.connection_args[k] = handler_config[k]
 
         self.api = None
         self.is_connected = False
@@ -168,12 +213,23 @@ class TwitterHandler(APIHandler):
         tweets = TweetsTable(self)
         self._register_table('tweets', tweets)
 
-    def connect(self):
-        """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""
+    def connect(self, api_version=2):
+        """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""  # noqa
 
         if self.is_connected is True:
             return self.api
-
+        # if version 1, do not hold connection in self.api, simply return api object
+        if api_version == 1:
+            auth = tweepy.OAuthHandler(
+                self.connection_args['consumer_key'],
+                self.connection_args['consumer_secret']
+            )
+            auth.set_access_token(
+                self.connection_args['access_token'],
+                self.connection_args['access_token_secret']
+            )
+            return tweepy.API(auth)
+        
         self.api = tweepy.Client(**self.connection_args)
 
         self.is_connected = True
@@ -190,12 +246,25 @@ class TwitterHandler(APIHandler):
             #   it raises an error in case if auth is not success and returns not-found otherwise
             #   api.get_me() is not exposed for OAuth 2.0 App-only authorisation
             api.get_user(id=1)
-
             response.success = True
 
         except tweepy.Unauthorized as e:
-            log.logger.error(f'Error connecting to Twitter api: {e}!')
-            response.error_message = e
+            response.error_message = f'Error connecting to Twitter api: {e}. Check bearer_token'
+            log.logger.error(response.error_message)
+
+        if response.success is True and len(self.connection_args) > 1:
+            # not only bearer_token, check read-write mode (OAuth 2.0 Authorization Code with PKCE)
+            try:
+                api = self.connect()
+
+                api.get_me()
+
+            except tweepy.Unauthorized as e:
+                keys = 'consumer_key', 'consumer_secret', 'access_token', 'access_token_secret'
+                response.error_message = f'Error connecting to Twitter api: {e}. Check' + ', '.join(keys)
+                log.logger.error(response.error_message)
+
+                response.success = False
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False
@@ -212,7 +281,7 @@ class TwitterHandler(APIHandler):
             data_frame=df
         )
 
-    def call_twitter_api(self, method_name:str = None, params:dict = None):
+    def call_twitter_api(self, method_name: str = None, params: dict = None):
 
         # method > table > columns
         expansions_map = {
@@ -238,6 +307,8 @@ class TwitterHandler(APIHandler):
 
         max_page_size = 100
         min_page_size = 10
+        left = None
+
         while True:
             if count_results is not None:
                 left = count_results - len(data)
@@ -255,6 +326,7 @@ class TwitterHandler(APIHandler):
                 else:
                     params['max_results'] = left
 
+            log.logger.debug(f'>>>twitter in: {method_name}({params})')
             resp = method(**params)
 
             if hasattr(resp, 'includes'):
@@ -262,7 +334,7 @@ class TwitterHandler(APIHandler):
                     includes[table].extend([r.data for r in records])
 
             if isinstance(resp.data, list):
-                data.extend([r.data for r in resp.data])
+                chunk = [r.data for r in resp.data]
             else:
                 if isinstance(resp.data, dict):
                     data.append(resp.data)
@@ -270,6 +342,11 @@ class TwitterHandler(APIHandler):
                     data.append(resp.data.data)
                 break
 
+            # limit output
+            if left is not None:
+                chunk = chunk[:left]
+
+            data.extend(chunk)
             # next page ?
             if count_results is not None and hasattr(resp, 'meta') and 'next_token' in resp.meta:
                 params['next_token'] = resp.meta['next_token']
@@ -288,7 +365,7 @@ class TwitterHandler(APIHandler):
                     continue
 
                 for col_id in expansions[table]:
-                    col = col_id[:-3] # cut _id
+                    col = col_id[:-3]  # cut _id
                     if col_id not in df.columns:
                         continue
 
@@ -301,4 +378,3 @@ class TwitterHandler(APIHandler):
                     df = df.merge(df_ref2, on=col_id, how='left')
 
         return df
-

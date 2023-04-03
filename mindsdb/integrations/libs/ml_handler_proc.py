@@ -60,7 +60,7 @@ class MLHandlerProcess:
                 raise
             except Exception as e:
                 error = traceback.format_exc()
-                self.send_output({'error': str(e), 'trace': error})
+                self.send_output({'protocol_error': str(e), 'trace': error})
                 continue
 
             self.send_output(ret)
@@ -168,7 +168,7 @@ class MLHandlerWrapper:
         ret_enc = self.proc.stdout.read(length)
         ret = pickle.loads(ret_enc)
 
-        if ret is not None and 'error' in ret:
+        if ret is not None and 'protocol_error' in ret:
             raise RuntimeError(ret)
         return ret
 

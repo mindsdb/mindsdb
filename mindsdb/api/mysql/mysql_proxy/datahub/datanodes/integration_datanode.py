@@ -13,6 +13,10 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 
 
+class DBHandlerException(Exception):
+    pass
+
+
 class IntegrationDataNode(DataNode):
     type = 'integration'
 
@@ -116,17 +120,26 @@ class IntegrationDataNode(DataNode):
             values=formatted_data
         )
 
-        result = self.integration_handler.query(insert_ast)
+        try:
+            result = self.integration_handler.query(insert_ast)
+        except Exception as e:
+            msg = f'[{self.ds_type}/{self.integration_name}]: {str(e)}'
+            raise DBHandlerException(msg) from e
+
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 
     def query(self, query=None, native_query=None, session=None):
 
-        if query is not None:
-            result = self.integration_handler.query(query)
-        else:
-            # try to fetch native query
-            result = self.integration_handler.native_query(native_query)
+        try:
+            if query is not None:
+                result = self.integration_handler.query(query)
+            else:
+                # try to fetch native query
+                result = self.integration_handler.native_query(native_query)
+        except Exception as e:
+            msg = f'[{self.ds_type}/{self.integration_name}]: {str(e)}'
+            raise DBHandlerException(msg) from e
 
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(f'Error in {self.integration_name}: {result.error_message}')
@@ -140,7 +153,7 @@ class IntegrationDataNode(DataNode):
             df = df.to_frame()
 
         try:
-            df = df.replace(np.NaN, pd.NA)
+            df = df.replace(np.NaN, None)
         except Exception as e:
             print(f'Issue with clearing DF from NaN values: {e}')
 

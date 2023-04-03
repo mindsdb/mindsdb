@@ -1,0 +1,43 @@
+---
+title: ClickHouse
+sidebarTitle: ClickHouse
+---
+
+## ClickHouse
+ClickHouse is a column-oriented database management system (DBMS) for online analytical processing of queries (OLAP).
+
+https://clickhouse.com/docs/en/intro/
+
+## Implementation
+This handler was implemented using the standard `clickhouse-sqlalchemy` library.
+
+The required arguments to establish a connection are,
+* `protocol`: the protocol to query Databend. Supported: native, http, https. Default: native'.
+* `host`: the host name or IP address of the ClickHouse server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.
+* `port`: the TCP/IP port of the ClickHouse server.
+* `user`: the username used to authenticate with the ClickHouse server.
+* `password`: the password to authenticate the user with the ClickHouse server.
+* `database`: the database name to use when connecting with the ClickHouse server.
+
+There are several optional arguments that can be used as well,
+* `protocol`: The protocol to query the ClickHouse server. Supported: native, http, https. Default: native'.
+
+## Usage
+In order to make use of this handler and connect to ClickHouse in MindsDB, the following syntax can be used,
+```sql
+CREATE DATABASE clickhouse_datasource
+WITH
+engine='clickhouse',
+parameters={
+    "host": "127.0.0.1",
+    "port": "9000",
+    "user": "root",
+    "password": "password",
+    "database": "test_db"
+};
+```
+
+Now, you can use this established connection to query your database as follows,
+```sql
+SELECT * FROM clickhouse_datasource.example_tbl
+```

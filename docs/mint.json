@@ -11,7 +11,7 @@
     "light": "#55D799",
     "dark": "#117866"
   },
-  "openApi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
+  "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
     "baseUrl": [
       "https://alpha.mindsdb.com",
@@ -35,7 +35,7 @@
   },
   "anchors": [
     {
-      "name": "Community",
+      "name": "Join our Slack",
       "icon": "slack",
       "url": "https://mindsdb.com/joincommunity"
     },
@@ -123,20 +123,31 @@
                 {
                   "group": "NLP",
                   "pages": [
+                    "nlp/nlp-extended-examples",
                     "nlp/nlp-mindsdb-hf",
-                    "nlp/nlp-mindsdb-openai"
+                    "nlp/nlp-mindsdb-openai",
+                    "nlp/sentiment-analysis-inside-mysql-with-openai",
+                    "nlp/question-answering-inside-mysql-with-openai",
+                    "nlp/text-summarization-inside-mysql-with-openai",
+                    "nlp/sentiment-analysis-inside-mongodb-with-openai",
+                    "nlp/question-answering-inside-mongodb-with-openai",
+                    "nlp/text-summarization-inside-mongodb-with-openai",
+                    "nlp/json-from-text"
                   ]
                 },
                 {
                   "group": "Time Series",
                   "pages": [
-                    "sql/tutorials/eeg-forecasting"
+                    "sql/tutorials/house-sales-forecasting",
+                    "nixtla/house-sales-statsforecast",
+                    "sql/tutorials/time-series-community"
                   ]
                 },
                 {
                   "group": "Classification",
                   "pages": [
-                    "sql/tutorials/customer-churn"
+                    "sql/tutorials/customer-churn",
+                    "sql/tutorials/classification-community"
                   ]
                 },
                 {
@@ -290,12 +301,49 @@
           ]
         },
         {
+          "group": "Application Integrations",
+          "pages": [
+            "app-integrations/twitter"
+          ]
+        },
+        {
           "group": "Data Integrations",
           "pages": [
             "data-integrations/all-data-integrations",
             "data-integrations/amazon-redshift",
+            "data-integrations/db2",
+            "data-integrations/cratedb",
             "data-integrations/cockroachdb",
-            "data-integrations/ckan"
+            "data-integrations/ckan",
+            "data-integrations/PostgreSQL",
+            "data-integrations/databend",
+            "data-integrations/Apache-Pinot",
+            "data-integrations/cassandra",
+            "data-integrations/Couchbase",
+            "data-integrations/clickhouse",
+            "data-integrations/Airtable",
+            "data-integrations/DynamoDB",
+            "data-integrations/databricks",
+            "data-integrations/Google-BigQuery",
+            "data-integrations/hive",
+            "data-integrations/impala",
+            "data-integrations/MonetDB",
+            "data-integrations/mysql",
+            "data-integrations/microsoft-access",
+            "data-integrations/MongoDB",
+            "data-integrations/Firebird",
+            "data-integrations/elasticsearch",
+            "data-integrations/Apache-Druid",
+            "data-integrations/google-sheets",
+            "data-integrations/oceanbase",
+            "data-integrations/mariadb",
+            "data-integrations/amazon-s3",
+            "data-integrations/planet-scale",
+            "data-integrations/questdb",
+            "data-integrations/oracle",
+             "data-integrations/solr",
+            "data-integrations/OrioleDB",
+            "data-integrations/singlestore"
           ]
         },
         {
@@ -322,6 +370,17 @@
                 "custom-model/ray-serve",
                 "custom-model/mlflow"
               ]
+            },
+            {
+              "group": "Time Series",
+              "pages": [
+                {
+                  "group": "Nixtla",
+                  "pages": [
+                    "nixtla/statsforecast"
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -332,40 +391,40 @@
               "group": "NLP",
               "pages": [
                 "nlp/nlp-extended-examples",
-                {
-                  "group": "NLP Examples with OpenAI",
-                  "pages": [
-                    "nlp/sentiment-analysis-inside-mysql-with-openai",
-                    "nlp/question-answering-inside-mysql-with-openai",
-                    "nlp/text-summarization-inside-mysql-with-openai",
-                    "nlp/sentiment-analysis-inside-mongodb-with-openai",
-                    "nlp/question-answering-inside-mongodb-with-openai",
-                    "nlp/text-summarization-inside-mongodb-with-openai",
-                    "nlp/json-from-text"
-                  ]
-                }
+                "nlp/nlp-mindsdb-hf",
+                "nlp/nlp-mindsdb-openai",
+                "nlp/sentiment-analysis-inside-mysql-with-openai",
+                "nlp/question-answering-inside-mysql-with-openai",
+                "nlp/text-summarization-inside-mysql-with-openai",
+                "nlp/sentiment-analysis-inside-mongodb-with-openai",
+                "nlp/question-answering-inside-mongodb-with-openai",
+                "nlp/text-summarization-inside-mongodb-with-openai",
+                "nlp/json-from-text"
               ]
             },
             {
               "group": "Time Series",
               "pages": [
                 "sql/tutorials/house-sales-forecasting",
-                "sql/tutorials/eeg-forecasting",
+                "nixtla/house-sales-statsforecast",
                 "sql/tutorials/time-series-community"
               ]
             },
             {
               "group": "Classification",
               "pages": [
-                "sql/tutorials/customer-churn"
+                "sql/tutorials/customer-churn",
+                "sql/tutorials/classification-community"
               ]
             },
             {
               "group": "Regression",
               "pages": [
-                "sql/tutorials/home-rentals"
+                "sql/tutorials/home-rentals",
+                "sql/tutorials/regression-community"
               ]
             },
+            "sql/tutorials/twitter-chatbot",
             "tutorials"
           ]
         },
@@ -379,6 +438,7 @@
             "contribute/data-integration-page",
             "contribute/data-handlers",
             "contribute/ml-handlers",
+            "contribute/app-handlers",
             "contribute/docs",
             "docs-rules",
             "contribute/tests",

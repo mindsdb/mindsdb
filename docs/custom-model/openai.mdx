@@ -9,6 +9,21 @@ MindsDB lets you create models that utilize features provided by OpenAI GPT-3.
 
 We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the OpenAI models to MindsDB.
 
+MindsDB provides an OpenAI engine by default. But if you want to use your own OpenAI engine, please create it using the command below and passing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai2
+FROM openai
+USING
+  api_key = 'YOUR_OPENAI_API_KEY';
+```
+
+<Info>
+**Default Model**
+
+When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter in the `USING` clause of the `CREATE MODEL` statement.
+</Info>
+
 Let's go through the available operation modes.
 
 <Tip>
@@ -161,9 +176,9 @@ Where:
 | `project_a.openai_test_c`    | The model name is `openai_test_c` and it resides inside the `project_a` project.                                                     |
 | `answer`                     | It is the value to be predicted.                                                                                                     |
 | `engine`                     | The `openai` engine is used.                                                                                                         |
-| `prompt_template`            | It is the column that stores a query to be answered. *Please note that this parameter can be overriden at prediction time.*            |
-| `max_tokens`                 | It defines the maximum token cost of the prediction. *Please note that this parameter can be overriden at prediction time.*            |
-| `temperature`                | It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overriden at prediction time.*|
+| `prompt_template`            | It is the column that stores a query to be answered. *Please note that this parameter can be overridden at prediction time.*            |
+| `max_tokens`                 | It defines the maximum token cost of the prediction. *Please note that this parameter can be overridden at prediction time.*            |
+| `temperature`                | It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overridden at prediction time.*|
 | `api_key`                    | Optional. If it is left blank, or the `env` value is passed, then MindsDB fetches the `OPENAI_API_KEY` environment variable value.   |
 
 Let's create a model:

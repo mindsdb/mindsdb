@@ -2,12 +2,12 @@ import os
 import pytest
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from integration_tests.flows.http_test_helpers import HTTPHelperMixin
-from integration_tests.flows.conftest import mindsdb_app
 
 OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 
 @pytest.mark.usefixtures("mindsdb_app")
 class TestOpenAIHandler(HTTPHelperMixin):
+
     def test_missing_required_keys(self):
         query = f"""
             CREATE MODEL sentiment_classifier_gpt3

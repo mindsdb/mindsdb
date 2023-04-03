@@ -9,7 +9,7 @@ OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 
 @pytest.mark.usefixtures("mindsdb_app")
 class TestOpenAIHandler(HTTPHelperMixin):
-    
+
     def test_missing_required_keys(self):
         query = f"""
             CREATE MODEL sentiment_classifier_gpt3

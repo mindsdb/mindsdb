@@ -1,4 +1,5 @@
 import os
+import time
 import pytest
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
@@ -48,6 +49,7 @@ class TestOpenAIHandler(HTTPHelperMixin):
             api_key = '{OPEN_AI_API_KEY}';
         """
         self.sql_via_http(query, RESPONSE_TYPE.TABLE)
+        time.sleep(10)  # wait for model registration
 
         query = f"""
         SELECT question, answer
@@ -72,6 +74,7 @@ class TestOpenAIHandler(HTTPHelperMixin):
                 api_key = '{OPEN_AI_API_KEY}';
         """
         self.sql_via_http(query, RESPONSE_TYPE.TABLE)
+        time.sleep(10)  # wait for model registration
 
         query = f"""
         SELECT context, question, answer
@@ -99,6 +102,7 @@ class TestOpenAIHandler(HTTPHelperMixin):
         """
 
         self.sql_via_http(query, RESPONSE_TYPE.TABLE)
+        time.sleep(10)  # wait for model registration
 
         query = f"""
         SELECT context, question, answer

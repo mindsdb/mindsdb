@@ -110,7 +110,7 @@ CREATE TABLE nlp_data (text TEXT, text_hi TEXT,
 **output:**
 `CREATE TABLE`
 
-- Great. Now we have our empty table in our database. Let's import our data:
+- Great. Now you have your empty table in your database. Time to import your data:
 
 ```sql
 \copy mindsdb_1(labels, text, text_hi, text_de, text_fr)
@@ -120,7 +120,7 @@ FROM '/Users/alissa/Downloads/nlp_dataset.csv' WITH DELIMITER ',' CSV;
 **output:**
 `COPY 5573`
 
-Let's check if our data loaded in properly:
+Now make sure your data loaded in properly:
 
 `SELECT COUNT(*) FROM mindsdb_1;`
 

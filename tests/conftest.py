@@ -1,32 +1,35 @@
-import sys
 import os
-import shutil
+import sys
 import time
 import json
+import requests
 import subprocess
 from pathlib import Path
-import requests
+
 import docker
 import pytest
 import netifaces
 import pandas as pd
+
 from mindsdb.utilities.ps import get_child_pids
 
 
 HTTP_API_ROOT = f'http://127.0.0.1:47334/api'
 USE_PERSISTENT_STORAGE = bool(int(os.getenv('USE_PERSISTENT_STORAGE') or "0"))
-TEST_CONFIG = os.path.dirname(os.path.realpath(__file__)) + '/config/config.json'
-TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../').joinpath(
+TEST_CONFIG = os.path.dirname(os.path.realpath(__file__)) + '/integration_tests/flows/config/config.json'
+TEMP_DIR = Path(__file__).parent.absolute().joinpath(
     f'temp/test_storage_{int(time.time()*1000)}/' if not USE_PERSISTENT_STORAGE else 'temp/test_storage/'
 ).resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_PATH = TEMP_DIR.joinpath('config.json')
+
 
 def make_test_csv(name, data):
     test_csv_path = TEMP_DIR.joinpath(f'{name}.csv').resolve()
     df = pd.DataFrame(data)
     df.to_csv(test_csv_path, index=False)
     return str(test_csv_path)
+
 
 def docker_inet_ip():
     if os.environ.get("MICROSERVICE_MODE", False):
@@ -36,6 +39,7 @@ def docker_inet_ip():
     if "docker0" not in netifaces.interfaces():
         raise Exception("Unable to find 'docker' interface. Please install docker first.")
     return netifaces.ifaddresses('docker0')[netifaces.AF_INET][0]['addr']
+
 
 @pytest.fixture(scope="session")
 def temp_dir():
@@ -48,6 +52,7 @@ def temp_dir():
     ).resolve()
     temp_dir.mkdir(parents=True, exist_ok=True)
     return temp_dir
+
 
 @pytest.fixture(scope="module")
 def config(temp_dir):
@@ -84,6 +89,7 @@ def config(temp_dir):
 
     return config_json
 
+
 def override_recursive(a, b):
     """Overrides some elements in json 'a' by elements in json 'b'"""
     for key in b:
@@ -96,6 +102,7 @@ def override_recursive(a, b):
             a[key] = b[key]
         else:
             override_recursive(a[key], b[key])
+
 
 @pytest.fixture(scope="module")
 def mindsdb_app(request, config):
@@ -158,6 +165,7 @@ def mindsdb_app(request, config):
     request.addfinalizer(cleanup)
     return
 
+
 def waitReadiness(container, match_msg, match_number=2, timeout=30):
     """Wait the container readiness.
     Args:
@@ -178,6 +186,7 @@ def waitReadiness(container, match_msg, match_number=2, timeout=30):
             break
         if time.time() > threshold:
             raise Exception("timeout exceeded, container is still not ready")
+
 
 @pytest.fixture(scope="function")
 def postgres_db():

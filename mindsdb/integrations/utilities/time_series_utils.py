@@ -71,7 +71,7 @@ def get_model_accuracy_dict(nixtla_results_df, metric=r2_score):
     for column in nixtla_results_df.columns:
         if column in ["unique_id", "ds", "y", "cutoff"]:
             continue
-        model_error = metric(nixtla_results_df[column], nixtla_results_df["y"])
+        model_error = metric(nixtla_results_df["y"], nixtla_results_df[column])
         accuracy_dict[column] = model_error
     return accuracy_dict
 

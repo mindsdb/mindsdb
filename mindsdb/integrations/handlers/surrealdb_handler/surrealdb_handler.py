@@ -29,13 +29,42 @@ class SurrealDBHandler(DatabaseHandler):
             connection_data (dict): parameters for connecting to the database
             **kwargs: arbitrary keyword arguments.
         """
+        super().__init__(name)
+        self.database = connection_data['database']
+        self.parser = parse_sql
+        self.dialect = "surrealdb"
+        self.kwargs = kwargs
+        self.namespace = connection_data['namespace']
+        self.user = connection_data['user']
+        self.password = connection_data['password']
+        self.host = connection_data['host']
+        self.port = connection_data['port']
 
-    def connect(self) -> HandlerStatusResponse:
+        self.connection = None
+        self.is_connected = False
+
+    def connect(self) -> StatusResponse:
         """
         Establishes a connection to the MindsDB database.
         Returns:
             HandlerStatusResponse
         """
+        if self.is_connected is True:
+            return self.connection
+        try:
+            self.connection = surreal.connect(
+                database=self.database,
+                host=self.host,
+                port=self.port,
+                user=self.user,
+                password=self.password,
+                namespace=self.namespace,
+            )
+            self.is_connected = True
+        except Exception as e:
+            log.logger.error(f"Error while connecting to SurrealDB, {e}")
+
+        return self.connection
 
     def check_connection(self) -> StatusResponse:
         """
@@ -43,11 +72,29 @@ class SurrealDBHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
+        if self.is_connected is False:
+            return
+        try:
+            self.connection.close()
+            self.is_connected = False
+        except Exception as e:
+            log.logger.error(f"Error while disconnecting to SurrealDB, {e}")
+
+        return
 
     def disconnect(self):
         """
         Close the existing connection to the SurrealDB database
         """
+        if self.is_connected is False:
+            return
+        try:
+            self.connection.close()
+            self.is_connected = False
+        except Exception as e:
+            log.error(f"Error while disconnecting to SurrealDB, {e}")
+
+        return self.is_connected
 
     def native_query(self, query: str) -> HandlerResponse:
         """
@@ -82,3 +129,39 @@ class SurrealDBHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
+
+
+connection_args = OrderedDict(
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the SurrealDB server.'
+    },
+    password={
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the SurrealDB server.'
+    },
+    database={
+        'type': ARG_TYPE.STR,
+        'description': 'The database name to use when connecting with the SurrealDB server.'
+    },
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the SurrealDB server. '
+    },
+    port={
+        'type': ARG_TYPE.INT,
+        'description': 'The TCP/IP port of the SurrealDB server. Must be an integer.'
+    },
+    namespace={
+        'type': ARG_TYPE.STR,
+        'description': ''
+    }
+)
+connection_args_example = OrderedDict(
+    host='localhost',
+    port=8000,
+    user='admin',
+    password='password',
+    database='test',
+    namespace='test'
+)

@@ -36,6 +36,7 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
     )
 
     columns_to_keep = ["unique_id", "ds", "y"] + exog_vars
+    nixtla_df["ds"] = pd.to_datetime(nixtla_df["ds"])
     return nixtla_df[columns_to_keep]
 
 

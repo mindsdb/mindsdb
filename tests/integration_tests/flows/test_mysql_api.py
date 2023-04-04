@@ -9,7 +9,7 @@ import pandas as pd
 import requests
 import pytest
 
-from .conftest import docker_inet_ip, TEMP_DIR
+from tests.conftest import docker_inet_ip, TEMP_DIR
 
 
 # used by mindsdb_app fixture in conftest

@@ -4,7 +4,7 @@ import json
 import pytest
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from .conftest import CONFIG_PATH
+from tests.conftest import CONFIG_PATH
 from .http_test_helpers import HTTPHelperMixin
 
 

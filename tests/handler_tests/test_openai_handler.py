@@ -88,6 +88,8 @@ class TestOpenAIHandler(HTTPHelperMixin):
         """
         Replicates docs page example:
             https://docs.mindsdb.com/custom-model/openai#operation-mode-3-prompt-completion
+
+        We use quadruple curly braces to escape them properly to doubles in the query string.
         """
 
         query = f"""
@@ -95,7 +97,7 @@ class TestOpenAIHandler(HTTPHelperMixin):
         PREDICT answer
         USING
             engine = 'openai',
-            prompt_template = 'Context: {{context}}. Question: {{question}}. Answer:',
+            prompt_template = 'Context: {{{{context}}}}. Question: {{{{question}}}}. Answer:',
             max_tokens = 100,
             temperature = 0.3,
             api_key = '{OPEN_AI_API_KEY}';
@@ -118,9 +120,22 @@ class TestOpenAIHandler(HTTPHelperMixin):
         FROM openai_template_model
         WHERE instruction = 'Speculate extensively'
         USING
-            prompt_template = '{{instruction}}. What does Tom Hanks like?',
+            prompt_template = '{{{{instruction}}}}. What does Tom Hanks like?',
             max_tokens = 100,
             temperature = 0.5;
         """
 
         self.sql_via_http(query, RESPONSE_TYPE.TABLE)
+
+        # test invalid template
+        query = f"""
+        SELECT instruction, answer
+        FROM openai_template_model
+        WHERE instruction = 'Speculate extensively'
+        USING
+            prompt_template = 'What does Tom Hanks like?',
+            max_tokens = 100,
+            temperature = 0.5;
+        """
+
+        self.sql_via_http(query, RESPONSE_TYPE.ERROR)

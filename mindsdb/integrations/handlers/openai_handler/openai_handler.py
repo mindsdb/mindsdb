@@ -438,7 +438,7 @@ class OpenAIHandler(BaseMLEngine):
           - Modify model metadata so that the new version triggers the fine-tuned version of the model (stored in the user's OpenAI account)
 
         Caveats: 
-          - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you adjust successively more than once, any fine-tuning other than the most recent one is lost.
+          - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you fine-tune successively more than once, any fine-tuning other than the most recent one is lost.
         """  # noqa
 
         args = args if args else {}
@@ -454,10 +454,10 @@ class OpenAIHandler(BaseMLEngine):
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
 
         openai.api_key = self._get_api_key(args)
-        adjust_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = tempfile.mkdtemp()
-        temp_file_name = f"ft_{adjust_time}"
+        temp_file_name = f"ft_{finetune_time}"
         temp_model_storage_path = f"{temp_storage_path}/{temp_file_name}.jsonl"
         df.to_json(temp_model_storage_path, orient='records', lines=True)
 
@@ -533,7 +533,7 @@ class OpenAIHandler(BaseMLEngine):
 
         result_file_id = openai.FineTune.retrieve(id=ft_result.id)['result_files'][0].id
         name_extension = openai.File.retrieve(id=result_file_id).filename
-        result_path = f'{temp_storage_path}/ft_{adjust_time}_result_{name_extension}'
+        result_path = f'{temp_storage_path}/ft_{finetune_time}_result_{name_extension}'
         with open(result_path, 'wb') as f:
             f.write(openai.File.download(id=result_file_id))
 
@@ -556,6 +556,8 @@ class OpenAIHandler(BaseMLEngine):
         spans = []
         matches = list(re.finditer("{{(.*?)}}", base_template))
 
+        assert len(matches) > 0, 'No placeholders found in the prompt, please provide a valid prompt template.'
+
         first_span = matches[0].start()
         last_span = matches[-1].end()
 
@@ -563,10 +565,10 @@ class OpenAIHandler(BaseMLEngine):
             columns.append(m[0].replace('{', '').replace('}', ''))
             spans.extend((m.start(), m.end()))
 
-        spans = spans[1:-1]
-        template = [base_template[s:e] for s, e in zip(spans, spans[1:])]
-        template.insert(0, base_template[0:first_span])
-        template.append(base_template[last_span:])
+        spans = spans[1:-1]  # omit first and last, they are added separately
+        template = [base_template[s:e] for s, e in list(zip(spans, spans[1:]))[::2]]  # take every other to skip placeholders  # noqa
+        template.insert(0, base_template[0:first_span])  # add prompt start
+        template.append(base_template[last_span:])  # add prompt end
 
         empty_prompt_ids = np.where(df[columns].isna().all(axis=1).values)[0]
 
@@ -575,7 +577,7 @@ class OpenAIHandler(BaseMLEngine):
             atom = template[i]
             if i < len(columns):
                 col = df[columns[i]].replace(to_replace=[None], value='')  # add empty quote if data is missing
-                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col
+                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col.astype("string")
             else:
                 df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
         prompts = list(df['__mdb_prompt'])

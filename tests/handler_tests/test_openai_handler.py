@@ -51,7 +51,7 @@ class TestOpenAIHandler(HTTPHelperMixin):
         self.sql_via_http(query, RESPONSE_TYPE.TABLE)
         time.sleep(10)  # wait for model registration
 
-        query = f"""
+        query = """
         SELECT question, answer
         FROM qa_no_context
         WHERE question = 'Where is Stockholm located?';
@@ -76,7 +76,7 @@ class TestOpenAIHandler(HTTPHelperMixin):
         self.sql_via_http(query, RESPONSE_TYPE.TABLE)
         time.sleep(10)  # wait for model registration
 
-        query = f"""
+        query = """
         SELECT context, question, answer
         FROM qa_context
         WHERE context = 'Answer with a joke'
@@ -106,7 +106,7 @@ class TestOpenAIHandler(HTTPHelperMixin):
         self.sql_via_http(query, RESPONSE_TYPE.TABLE)
         time.sleep(10)  # wait for model registration
 
-        query = f"""
+        query = """
         SELECT context, question, answer
         FROM openai_template_model
         WHERE context = 'Answer accurately'
@@ -115,7 +115,7 @@ class TestOpenAIHandler(HTTPHelperMixin):
 
         self.sql_via_http(query, RESPONSE_TYPE.TABLE)
 
-        query = f"""
+        query = """
         SELECT instruction, answer
         FROM openai_template_model
         WHERE instruction = 'Speculate extensively'
@@ -128,7 +128,7 @@ class TestOpenAIHandler(HTTPHelperMixin):
         self.sql_via_http(query, RESPONSE_TYPE.TABLE)
 
         # test invalid template
-        query = f"""
+        query = """
         SELECT instruction, answer
         FROM openai_template_model
         WHERE instruction = 'Speculate extensively'

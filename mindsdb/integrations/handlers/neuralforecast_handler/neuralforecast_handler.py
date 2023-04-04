@@ -69,7 +69,7 @@ class NeuralForecastHandler(BaseMLEngine):
         model = choose_model(num_trials, time_settings["horizon"], time_settings["window"])
         nixtla_df = transform_to_nixtla_df(df, model_args, exog_vars)
         nf = NeuralForecast(models=[model], freq=model_args["frequency"])
-        nf.fit(nixtla_df)
+        nf.cross_validation(nixtla_df)
         nf.save(model_args["model_folder"], overwrite=True)
 
         ###### persist changes to handler folder

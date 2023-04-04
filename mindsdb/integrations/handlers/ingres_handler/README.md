@@ -35,7 +35,8 @@ found [here](https://docs.actian.com/ingres/11.2/index.html#page/QuickStart_Linu
 
 **Important**:
 
-Before you run the Ingres Handler you first need to execute the following commands:
+Before you run the Ingres Handler you first need to execute the following commands
+in order to install the newest version Ingres dialect for SQLAlchemy:
 
 ~~~~shell
 python -m pip install pyodbc sqlalchemy

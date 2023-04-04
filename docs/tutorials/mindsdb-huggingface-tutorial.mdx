@@ -7,7 +7,7 @@ sidebarTitle: Connect MindsDB with Hugging Face and perform text-classification 
 
 [MindsDB](https://mindsdb.com/) is is an open-source AI layer for existing databases that allows you to effortlessly develop, train and deploy state-of-the-art machine learning models using SQL queries. 
 [Hugging Face](https://huggingface.co/) is a community and data science platform that provides tools that enables users to build, train and deploy machine learning models based on open source code and technologies. 
-**NLP**, or Natural Language Processing, is a subprocess of artificial intelligence that helps machines process and understand the human langage so that they can automatically perform repetitive tasks. 
+**NLP**, or Natural Language Processing, is a subprocess of artificial intelligence that helps machines process and understand the human language so that they can automatically perform repetitive tasks. 
 Some examples of NLP include machine translation, summarization, ticket classification, and spell check (or "autocorrect").
 
 The following four NLP tasks are currently supported by MindsDB:
@@ -17,7 +17,7 @@ The following four NLP tasks are currently supported by MindsDB:
 3. Translation
 4. Summarization
 
-**In today's tutorial, I'll show you how to connect MindsDB to Hugging Face and use these technologies to perform NLP queries, specifically text-classication, on your dataset.**
+**In today's tutorial, I'll show you how to connect MindsDB to Hugging Face and use these technologies to perform NLP queries, specifically text-classification, on your dataset.**
 
 ## Data Setup
 
@@ -39,7 +39,7 @@ The main goal of this tutorial is to show you how to connect your dataset to Hug
 The dataset we're using comes from MindsDB's public PostgreSQL demo. We're using this particular dataset because we know it holds text comments, which are perfect for text-classification operations. 
 
 Because we are focusing on text classification, we're going to use Hugging Face's [Twitter-roBERTa-base for Sentiment Analysis](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment) model.
-This Hugging Face transformer is a roBERTa-base model trained on ~58M tweets and finetuned for sentiment analysis with the TweetEval benchmark.
+This Hugging Face transformer is a roBERTa-base model trained on ~58M tweets and fine-tuned for sentiment analysis with the TweetEval benchmark.
 
 To connect to our data we're going to use the SQL `CREATE DATABASE` statement.
 
@@ -73,7 +73,7 @@ Now that we have our data, we're going to use SQL to create our **predictor mode
 
 Let's create our model now.
 
-**We use the `CREATE MODEL` statement along with the following paramters to access the Hugging Face API and use Hugging Face transofrmers when we train our model and make predictions**
+**We use the `CREATE MODEL` statement along with the following parameters to access the Hugging Face API and use Hugging Face transformers when we train our model and make predictions**
 
 ```
 CREATE MODEL nlp_predictor
@@ -119,7 +119,7 @@ output:
 | negative   |{"negative":0.040196146816015244,"neutral":0.0791015625,"positive":0.8807022571563721}|
 +------------+-------------+
 ```
-![screeshot](mindsdb/docs/tutorials/images/negative1.png)
+![screenshot](mindsdb/docs/tutorials/images/negative1.png)
 
 Awesome! Let's change the word, "hate" to the word, "love" and see what happens.
 
@@ -140,7 +140,7 @@ output:
 +------------+-------------+
 ```
 
-Wow. It looks like our predictor recognizes that this is a postive statement!
+Wow. It looks like our predictor recognizes that this is a positive statement!
 
 Let's really challenge our predictor now and input some neutral comments.
 
@@ -204,7 +204,7 @@ output:
 +------------+-------------+
 ```
 
-Nice! Let's use some offical synonyms of 'neutral':
+Nice! Let's use some official synonyms of 'neutral':
 
 input:
 

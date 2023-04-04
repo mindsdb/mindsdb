@@ -556,6 +556,8 @@ class OpenAIHandler(BaseMLEngine):
         spans = []
         matches = list(re.finditer("{{(.*?)}}", base_template))
 
+        assert len(matches) > 0, 'No placeholders found in the prompt, please provide a valid prompt template.'
+
         first_span = matches[0].start()
         last_span = matches[-1].end()
 

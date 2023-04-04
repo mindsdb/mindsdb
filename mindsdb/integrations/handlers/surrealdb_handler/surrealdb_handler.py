@@ -73,14 +73,14 @@ class SurrealDBHandler(DatabaseHandler):
             HandlerStatusResponse
         """
         if self.is_connected is False:
-            return
+            return self.connection
         try:
             self.connection.close()
             self.is_connected = False
         except Exception as e:
             log.logger.error(f"Error while disconnecting to SurrealDB, {e}")
 
-        return
+        return self.connection
 
     def disconnect(self):
         """
@@ -92,11 +92,11 @@ class SurrealDBHandler(DatabaseHandler):
             self.connection.close()
             self.is_connected = False
         except Exception as e:
-            log.error(f"Error while disconnecting to SurrealDB, {e}")
+            log.logger.error(f"Error while disconnecting to SurrealDB, {e}")
 
         return self.is_connected
 
-    def native_query(self, query: str) -> HandlerResponse:
+    def native_query(self, query: str) -> Response:
         """
         Receive raw query and act upon it somehow.
         Args:
@@ -104,31 +104,92 @@ class SurrealDBHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
+        need_to_close = self.is_connected is False
+        conn = self.connect()
+        cur = conn.cursor()
+        try:
+            cur.execute(query)
+            result = cur.fetchall()
+            if result:
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.DataFrame(
+                        result,
+                        columns=[x[0] for x in cur.description],
+                    )
+                )
+            else:
+                response = Response(RESPONSE_TYPE.OK)
+        except Exception as e:
+            log.logger.error(f'Error running query: {query} on SurrealDB!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
 
-    def query(self, query: ASTNode) -> HandlerResponse:
+        cur.close()
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
+
+    def query(self, query: ASTNode) -> Response:
         """
         Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
-            query (ASTNode): sql query represented as AST. May be any kind
+            query (ASTNode): sql query represented as AST. It may be any kind
                 of query: SELECT, INSERT, DELETE, etc
         Returns:
             HandlerResponse
         """
+        query_string = query.to_string()
+        last_word = query_string.split()[-1]
+        query_string = query_string.replace(last_word + '.', "")
+        return self.native_query(query_string)
 
-    def get_tables(self) -> HandlerResponse:
+    def get_tables(self) -> Response:
         """
         Get list of tables from the database that will be accessible.
         Returns:
             HandlerResponse
         """
+        conn = self.connect()
+        query = "INFO for DB"
+        dict_1 = conn.query(query)
+        dict_2 = dict_1['tb']
+        tables = list(dict_2.keys())
+        df = pd.DataFrame(tables, columns=['table_name'])
+        response = Response(
+            RESPONSE_TYPE.TABLE, df
+        )
+        return response
 
-    def get_columns(self, table: str) -> HandlerResponse:
+    def get_columns(self, table: str) -> Response:
         """ Return list of columns in table
         Args:
             table (str): name of the table to get column names and types from.
         Returns:
             HandlerResponse
         """
+        conn = self.connect()
+        query = "INFO FOR TABLE " + table
+        dict_1 = conn.query(query)
+        dict_2 = dict_1['fd']
+        tables = list(dict_2.keys())
+        types = []
+
+        for value in dict_2.values():
+            a = value.split('TYPE ', 1)[1]
+            type = a.split()[0]
+            types.append(type)
+        df = pd.DataFrame(tables, columns=['table_name'])
+        df['data_type'] = types
+
+        response = Response(
+            RESPONSE_TYPE.TABLE, df
+        )
+        return response
 
 
 connection_args = OrderedDict(

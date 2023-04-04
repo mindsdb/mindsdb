@@ -3,37 +3,48 @@ title: Airtable
 sidebarTitle: Airtable
 ---
 
-# Airtable Handler
+This is the implementation of the Airtable data handler for MindsDB.
 
-  This is the implementation of the Airtable handler for MindsDB.
+[Airtable](https://www.airtable.com/lp/campaign/database) is a platform that makes it easy to build powerful, custom applications. These tools can streamline just about any process, workflow, or project. And best of all, you can build them without ever learning to write a single line of code.
 
-# Airtable
+## Implementation
 
-  In short, Airtable is a platform that makes it easy to build powerful, custom applications. These tools can streamline just about any process, workflow, or project and best of all, you can build them without ever learning to write a single line of code.
+This handler is implemented using `duckdb`, a library that allows SQL queries to be executed on `pandas` DataFrames.
 
-# Usage
+In essence, when querying a particular table, the entire table is first pulled into a `pandas` DataFrame using the [Airtable API](https://airtable.com/api). Once this is done, SQL queries can be run on the DataFrame using `duckdb`.
 
-  In order to make use of this handler and connect to an Access database in MindsDB, the following syntax can be used,
+<Tip>
+Since the entire table needs to be pulled into memory first (DataFrame), it is recommended to be somewhat careful when querying large tables so as not to overload your machine.
+</Tip>
 
-  ```json
+The required arguments to establish a connection are as follows:
 
-  CREATE DATABASE airtable_datasource
-  WITH
-  engine='airtable',
-  parameters={
+* `base_id` is the Airtable base ID.
+* `table_name` is the Airtable table name.
+* `api_key` is the API key for the Airtable API.
+
+## Usage
+
+In order to make use of this handler and connect to the Airtable database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE airtable_datasource
+WITH
+  engine = 'airtable',
+  parameters = {
     "base_id": "dqweqweqrwwqq",
     "table_name": "iris",
     "api_key": "knlsndlknslk"
   };
+```
 
-  ```
-  Now, you can use this established connection to query your table as follows,
+You can use this established connection to query your table as follows:
 
-  ```json
+```sql
+SELECT *
+FROM airtable_datasource.example_tbl;
+```
 
-  SELECT * FROM airtable_datasource.example_tbl
-
-  ```
-  At the moment, only ***SELECT*** queries are allowed to be executed through ***duckdb***. This, however, has no restriction on running machine learning algorithms against your data in Airtable using
-  ***CREATE PREDICTOR*** statements.
-
+<Warning>
+At the moment, only the `SELECT` statemet is allowed to be executed through `duckdb`. This, however, has no restriction on running machine learning algorithms against your data in Airtable using the `CREATE PREDICTOR` statement.
+</Warning>

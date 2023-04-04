@@ -1,7 +1,7 @@
 import sys
 sys.path.append("..")  # noqa: F405
 
-from ..integration_tests.flows.conftest import *  # noqa: F403
+from ..integration_tests.flows.conftest import *  # noqa: F401, F403, E402
 
 """
 Temporary workaround to import these fixtures, but ideally they would

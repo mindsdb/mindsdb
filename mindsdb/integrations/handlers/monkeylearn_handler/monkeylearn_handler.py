@@ -49,11 +49,20 @@ class monkeylearnHandler(BaseMLEngine):
         def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
             args = self.model_storage.json_get('args')
             ml = MonkeyLearn(args['YOUR_API_KEY'])
+            response = ml.classifiers.detail(args['MODEL_ID'])
+            description={}
+            description['name'] = response.body['name']
+            description['model_version'] = response.body['model_version']
+            description['date_created'] = response.body['created']
+            description['industries'] = response.body['industries']
 
-
-
-
-
+            # Extract dict inside a dict
+            models_dict = response.body['model']
+            tag = models_dict['tags']
+            tag_names = [name['name'] for name in tag]
+            description['tags'] = tag_names
+            des_df = pd.DataFrame([description])
+            return des_df
 
 
 

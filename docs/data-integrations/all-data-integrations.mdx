@@ -3,21 +3,15 @@ title: Supported Integrations
 sidebarTitle: Supported Integrations
 ---
 
-The list of databases supported by MindsDB keeps growing. Here are the currently
-supported integrations:
+The list of databases supported by MindsDB keeps growing. Here are the currently supported integrations:
 
 <p align="center">
   <img src="/assets/supported_integrations.png" />
 </p>
 
-You can find particular
-[databases' handler files here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers)
-to see their connection arguments. For example, to see the latest updates to the
-Oracle handler, check
-[Oracle's `readme.md` file here](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/oracle_handler/README.md).
+You can find particular [databases' handler files here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers) to see their connection arguments. For example, to see the latest updates to the Oracle handler, check [Oracle's `readme.md` file here](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/oracle_handler/README.md).
 
-Let's look at sample codes showing how to connect to each of the supported
-integrations.
+Let's look at sample codes showing how to connect to each of the supported integrations.
 
 <Tip>
 **From Our Community**
@@ -58,6 +52,33 @@ Check out the video guides created by our community:
     </Tab>
 </Tabs>
 
+## Amazon DynamoDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE dynamodb_datasource       --- display name for the database
+    WITH ENGINE = 'dynamodb',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "aws_access_key_id": " ",               --- the AWS access key
+      "aws_secret_access_key": " ",           --- the AWS secret access key
+      "region_name": " "                      --- the AWS region
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE dynamodb_datasource
+    WITH ENGINE = 'dynamodb',
+    PARAMETERS = {
+      "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
+      "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
+      "region_name": "us-east-1"
+    };
+    ```
+    </Tab>
+</Tabs>
+
 ## Amazon Redshift
 
 <Tabs>
@@ -89,34 +110,40 @@ Check out the video guides created by our community:
     </Tab>
 </Tabs>
 
-## AWS DynamoDB
+## Amazon S3
 
 <Tabs>
     <Tab title="Template">
     ```sql
-    CREATE DATABASE dynamodb_datasource       --- display name for the database
-    WITH ENGINE = 'dynamodb',                 --- name of the MindsDB handler
+    CREATE DATABASE amazons3_datasource     --- display name for the database
+    WITH ENGINE = 's3',                     --- name of the MindsDB handler
     PARAMETERS = {
-      "aws_access_key_id": " ",               --- the AWS access key
-      "aws_secret_access_key": " ",           --- the AWS secret access key
-      "region_name": " "                      --- the AWS region
+      "aws_access_key_id": " ",             --- the AWS access key
+      "aws_secret_access_key": " ",         --- the AWS secret access key
+      "region_name": " ",                   --- the AWS region
+      "bucket": " ",                        --- name of the S3 bucket
+      "key": " ",                           --- key of the object to be queried
+      "input_serialization": " "            --- format of the data to be queried
     };
     ```
     </Tab>
     <Tab title="Example">
     ```sql
-    CREATE DATABASE dynamodb_datasource
-    WITH ENGINE = 'dynamodb',
+    CREATE DATABASE amazons3_datasource
+    WITH ENGINE = 's3',
     PARAMETERS = {
-      "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
-      "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
-      "region_name": "us-east-1"
+        "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
+        "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
+        "region_name": "us-east-1",
+        "bucket": "mindsdb-bucket",
+        "key": "iris.csv",
+        "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
     };
     ```
     </Tab>
 </Tabs>
 
-## Cassandra
+## Apache Cassandra
 
 <Tabs>
     <Tab title="Template">
@@ -147,6 +174,170 @@ Check out the video guides created by our community:
       "password": "password",
       "keyspace": "test_data",
       "protocol_version": 4
+    };
+    ```
+    </Tab>
+</Tabs>
+
+## Apache Druid
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE druid_datasource        --- display name for the database
+    WITH ENGINE = 'druid',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address of Apache Druid
+      "port": ,                             --- port where Apache Druid runs
+      "user": " ",                          --- optional, user to authenticate with Apache Druid
+      "password": " ",                      --- optional, password used to authenticate with Apache Druid
+      "path": " ",                          --- query path
+      "scheme": " "                         --- the URI scheme (defaults to `http` if left blank)
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE druid_datasource
+    WITH ENGINE = 'druid',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 8888,
+      "path": "/druid/v2/sql/",
+      "scheme": "http"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+## Apache Hive
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE hive_datasource   --- display name for the database
+    WITH ENGINE = 'hive',             --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                    --- database user
+      "password": " ",                --- database password
+      "host": " ",                    --- host name or IP address
+      "port": ,                       --- port used to make TCP/IP connection
+      "database": " ",                --- database name
+      "auth": " "                     --- defaults to CUSTOM if not provided; check for options here: https://pypi.org/project/PyHive/
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE hive_datasource
+    WITH ENGINE = 'hive',
+    PARAMETERS = {
+      "user": "hive",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 10000,
+      "database": "hive_db",
+      "auth": "CUSTOM"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+## Apache Impala
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE impala_datasource      --- display name for the database
+    WITH ENGINE = 'impala',                --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                         --- database user
+      "password": " ",                     --- database password
+      "host": " ",                         --- host name or IP address
+      "port": ,                            --- port used to make TCP/IP connection
+      "database": " "                      --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE impala_datasource
+    WITH ENGINE = 'impala',
+    PARAMETERS = {
+      "user": "impala_user",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 21050,
+      "database": "impala_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+## Apache Pinot
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE pinot_datasource        --- display name for the database
+    WITH ENGINE = 'pinot',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address of the Apache Pinot cluster
+      "broker_port": ,                      --- port where the broker of the Apache Pinot cluster runs
+      "controller_port": ,                  --- port where the controller of the Apache Pinot cluster runs
+      "path": " ",                          --- query path
+      "scheme": " ",                        --- scheme (defaults to `http` if left blank)
+      "username": " ",                      --- optional, user
+      "password": " ",                      --- optional, password
+      "verify_ssl": " "                     --- optional, verify SSL
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE pinot_datasource
+    WITH ENGINE = 'pinot',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "broker_port": 8000,
+      "controller_port": 9000,
+      "path": "/query/sql",
+      "scheme": "http"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+## Apache Solr
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE solr_datasource   --- display name for the database
+    WITH ENGINE = 'solr',             --- name of the MindsDB handler
+    PARAMETERS = {
+      "username": " ",                --- optional, username used to authenticate with the Solr server
+      "password": " ",                --- optional, password used to authenticate with the Solr server
+      "host": " ",                    --- host name or IP address of the Solr serve
+      "port": ,                       --- port number of the Solr server
+      "server_path": " ",             --- defaults to `solr` if left blank
+      "collection": " ",              --- Solr Collection name
+      "use_ssl": " "                  --- defaults to `false` if left blank; refer to https://pypi.org/project/sqlalchemy-solr/
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE solr_datasource
+    WITH ENGINE = 'solr',
+    PARAMETERS = {
+      "username": "solr_user",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 8981,
+      "server_path": "solr",
+      "collection": "collection_name",
+      "use_ssl": "false"
     };
     ```
     </Tab>
@@ -238,7 +429,7 @@ Check out the video guides created by our community:
     </Tab>
 </Tabs>
 
-## Cockroach Labs
+## CockroachDB
 
 <Tabs>
     <Tab title="Template">
@@ -437,7 +628,7 @@ Check out the video guides created by our community:
     </Tab>
 </Tabs>
 
-## Datastax
+## DataStax
 
 <Tabs>
     <Tab title="Template">
@@ -474,70 +665,6 @@ Check out the video guides created by our community:
     </Tab>
 </Tabs>
 
-## DB2
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE db2_datasource        --- display name for the database
-    WITH ENGINE = 'DB2',                  --- name of the MindsDB handler
-    PARAMETERS = {
-      "host": " ",                        --- host name or IP address
-      "port": ,                           --- port used to make TCP/IP connection
-      "database": " ",                    --- database name
-      "user": " ",                        --- database user
-      "password": " ",                    --- database password
-      "schema_name": " "                  --- database schema name
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE db2_datasource
-    WITH ENGINE = 'DB2',
-    PARAMETERS = {
-      "host": "127.0.0.1",
-      "port": 25000,
-      "database": "BOOKS",
-      "user": "db2admin",
-      "password": "password",
-      "schema_name": "db2admin"
-    };
-    ```
-    </Tab>
-</Tabs>
-
-## Druid
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE druid_datasource        --- display name for the database
-    WITH ENGINE = 'druid',                  --- name of the MindsDB handler
-    PARAMETERS = {
-      "host": " ",                          --- host name or IP address of Apache Druid
-      "port": ,                             --- port where Apache Druid runs
-      "user": " ",                          --- optional, user to authenticate with Apache Druid
-      "password": " ",                      --- optional, password used to authenticate with Apache Druid
-      "path": " ",                          --- query path
-      "scheme": " "                         --- the URI scheme (defaults to `http` if left blank)
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE druid_datasource
-    WITH ENGINE = 'druid',
-    PARAMETERS = {
-      "host": "127.0.0.1",
-      "port": 8888,
-      "path": "/druid/v2/sql/",
-      "scheme": "http"
-    };
-    ```
-    </Tab>
-</Tabs>
-
 ## DuckDB
 
 <Tabs>
@@ -563,7 +690,7 @@ Check out the video guides created by our community:
     </Tab>
 </Tabs>
 
-## Elastic Search
+## Elasticsearch
 
 <Tabs>
     <Tab title="Template">
@@ -684,71 +811,40 @@ Check out the video guides created by our community:
     </Tab>
 </Tabs>
 
-## Hive
+## IBM Db2
 
 <Tabs>
     <Tab title="Template">
     ```sql
-    CREATE DATABASE hive_datasource   --- display name for the database
-    WITH ENGINE = 'hive',             --- name of the MindsDB handler
+    CREATE DATABASE db2_datasource        --- display name for the database
+    WITH ENGINE = 'DB2',                  --- name of the MindsDB handler
     PARAMETERS = {
-      "user": " ",                    --- database user
-      "password": " ",                --- database password
-      "host": " ",                    --- host name or IP address
-      "port": ,                       --- port used to make TCP/IP connection
-      "database": " ",                --- database name
-      "auth": " "                     --- defaults to CUSTOM if not provided; check for options here: https://pypi.org/project/PyHive/
+      "host": " ",                        --- host name or IP address
+      "port": ,                           --- port used to make TCP/IP connection
+      "database": " ",                    --- database name
+      "user": " ",                        --- database user
+      "password": " ",                    --- database password
+      "schema_name": " "                  --- database schema name
     };
     ```
     </Tab>
     <Tab title="Example">
     ```sql
-    CREATE DATABASE hive_datasource
-    WITH ENGINE = 'hive',
+    CREATE DATABASE db2_datasource
+    WITH ENGINE = 'DB2',
     PARAMETERS = {
-      "user": "hive",
-      "password": "password",
       "host": "127.0.0.1",
-      "port": 10000,
-      "database": "hive_db",
-      "auth": "CUSTOM"
+      "port": 25000,
+      "database": "BOOKS",
+      "user": "db2admin",
+      "password": "password",
+      "schema_name": "db2admin"
     };
     ```
     </Tab>
 </Tabs>
 
-## Impala
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE impala_datasource      --- display name for the database
-    WITH ENGINE = 'impala',                --- name of the MindsDB handler
-    PARAMETERS = {
-      "user": " ",                         --- database user
-      "password": " ",                     --- database password
-      "host": " ",                         --- host name or IP address
-      "port": ,                            --- port used to make TCP/IP connection
-      "database": " "                      --- database name
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE impala_datasource
-    WITH ENGINE = 'impala',
-    PARAMETERS = {
-      "user": "impala_user",
-      "password": "password",
-      "host": "127.0.0.1",
-      "port": 21050,
-      "database": "impala_db"
-    };
-    ```
-    </Tab>
-</Tabs>
-
-## Informix
+## IBM Informix
 
 <Tabs>
     <Tab title="Template">
@@ -866,7 +962,7 @@ Check out the video guides created by our community:
 
 For more information on how to connect MariaDB SkySQL and MindsDB, visit our [doc page here](/connect/connect-mariadb-skysql/).
 
-## Matrix One
+## MatrixOne
 
 <Tabs>
     <Tab title="Template">
@@ -998,13 +1094,12 @@ For more information on how to connect MariaDB SkySQL and MindsDB, visit our [do
 
 <Warning>
 
-**For this connection, we strongly suggest using the Mongo API instead of the SQL API**
+**For this connection, we recommend to use the Mongo API instead of the SQL API**
 
 MindsDB has a dedicated [Mongo API](/mongo/collection-structure/) that allows you to use the full power of the MindsDB platform.
-Using the Mongo API will feel more natural for MongoDB users and allow you to use all the features of MindsDB.
+Using the Mongo API feels more natural for MongoDB users and allows you to use all the features of MindsDB.
 
-You can find the instructions on how to connect MindsDB to [MongoDB Compass here](/connect/mongo-compass)
-or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API documentation](/mongo/collection-structure/) for further details.
+You can find the instructions on how to connect MindsDB to [MongoDB Compass](/connect/mongo-compass) or [MongoDB Shell](/connect/mongo-shell) and proceed with the [Mongo API documentation](/mongo/collection-structure/) for further details.
 
 </Warning>
 
@@ -1204,40 +1299,6 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## Pinot
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE pinot_datasource        --- display name for the database
-    WITH ENGINE = 'pinot',                  --- name of the MindsDB handler
-    PARAMETERS = {
-      "host": " ",                          --- host name or IP address of the Apache Pinot cluster
-      "broker_port": ,                      --- port where the broker of the Apache Pinot cluster runs
-      "controller_port": ,                  --- port where the controller of the Apache Pinot cluster runs
-      "path": " ",                          --- query path
-      "scheme": " ",                        --- scheme (defaults to `http` if left blank)
-      "username": " ",                      --- optional, user
-      "password": " ",                      --- optional, password
-      "verify_ssl": " "                     --- optional, verify SSL
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE pinot_datasource
-    WITH ENGINE = 'pinot',
-    PARAMETERS = {
-      "host": "127.0.0.1",
-      "broker_port": 8000,
-      "controller_port": 9000,
-      "path": "/query/sql",
-      "scheme": "http"
-    };
-    ```
-    </Tab>
-</Tabs>
-
 ## PlanetScale
 
 <Tabs>
@@ -1332,39 +1393,6 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## S3
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE amazons3_datasource     --- display name for the database
-    WITH ENGINE = 's3',                     --- name of the MindsDB handler
-    PARAMETERS = {
-      "aws_access_key_id": " ",             --- the AWS access key
-      "aws_secret_access_key": " ",         --- the AWS secret access key
-      "region_name": " ",                   --- the AWS region
-      "bucket": " ",                        --- name of the S3 bucket
-      "key": " ",                           --- key of the object to be queried
-      "input_serialization": " "            --- format of the data to be queried
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE amazons3_datasource
-    WITH ENGINE = 's3',
-    PARAMETERS = {
-        "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
-        "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
-        "region_name": "us-east-1",
-        "bucket": "mindsdb-bucket",
-        "key": "iris.csv",
-        "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
-    };
-    ```
-    </Tab>
-</Tabs>
-
 ## SAP HANA
 
 <Tabs>
@@ -1398,7 +1426,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## Scylla
+## ScyllaDB
 
 <Tabs>
     <Tab title="Template">
@@ -1512,41 +1540,6 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
       "schema": "public",
       "protocol": "https",
       "warehouse": "warehouse"
-    };
-    ```
-    </Tab>
-</Tabs>
-
-## Solr
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE solr_datasource   --- display name for the database
-    WITH ENGINE = 'solr',             --- name of the MindsDB handler
-    PARAMETERS = {
-      "username": " ",                --- optional, username used to authenticate with the Solr server
-      "password": " ",                --- optional, password used to authenticate with the Solr server
-      "host": " ",                    --- host name or IP address of the Solr serve
-      "port": ,                       --- port number of the Solr server
-      "server_path": " ",             --- defaults to `solr` if left blank
-      "collection": " ",              --- Solr Collection name
-      "use_ssl": " "                  --- defaults to `false` if left blank; refer to https://pypi.org/project/sqlalchemy-solr/
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE solr_datasource
-    WITH ENGINE = 'solr',
-    PARAMETERS = {
-      "username": "solr_user",
-      "password": "password",
-      "host": "127.0.0.1",
-      "port": 8981,
-      "server_path": "solr",
-      "collection": "collection_name",
-      "use_ssl": "false"
     };
     ```
     </Tab>
@@ -1670,7 +1663,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## TDEngine
+## TDengine
 
 <Tabs>
     <Tab title="Template">
@@ -1763,7 +1756,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## Timescaledb
+## TimescaleDB
 
 <Tabs>
     <Tab title="Template">
@@ -1912,7 +1905,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## Yugabyte
+## YugabyteDB
 
 <Tabs>
     <Tab title="Template">

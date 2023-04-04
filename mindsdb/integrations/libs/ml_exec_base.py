@@ -134,7 +134,7 @@ def learn_process(class_path, engine, context_dump, integration_id,
         if base_predictor_id is None:
             ml_handler.create(target, df=training_data_df, args=problem_definition)
 
-        # adjust (partially train) existing model
+        # fine-tune (partially train) existing model
         else:
             # load model from previous version, use it as starting point
             problem_definition['base_model_id'] = base_predictor_id

@@ -19,7 +19,6 @@ class SurrealDBHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the SurrealDB statements.
     """
-
     name = 'surrealdb'
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
@@ -43,7 +42,7 @@ class SurrealDBHandler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
 
-    def connect(self) -> StatusResponse:
+    def connect(self):
         """
         Establishes a connection to the MindsDB database.
         Returns:
@@ -72,15 +71,21 @@ class SurrealDBHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
-        if self.is_connected is False:
-            return self.connection
+        responseCode = StatusResponse(False)
+        need_to_close = self.is_connected is False
         try:
-            self.connection.close()
-            self.is_connected = False
+            self.connect()
+            responseCode.success = True
         except Exception as e:
-            log.logger.error(f"Error while disconnecting to SurrealDB, {e}")
+            log.logger.error(f'Error connecting to SurrealDB, {e}!')
+            responseCode.error_message = str(e)
+        finally:
+            if responseCode.success is True and need_to_close:
+                self.disconnect()
+            if responseCode.success is False and self.is_connected is True:
+                self.is_connected = False
 
-        return self.connection
+        return responseCode
 
     def disconnect(self):
         """
@@ -94,7 +99,7 @@ class SurrealDBHandler(DatabaseHandler):
         except Exception as e:
             log.logger.error(f"Error while disconnecting to SurrealDB, {e}")
 
-        return self.is_connected
+        return
 
     def native_query(self, query: str) -> Response:
         """

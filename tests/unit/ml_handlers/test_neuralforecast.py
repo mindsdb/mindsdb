@@ -98,7 +98,6 @@ class TestNeuralForecast(BaseExecutorTest):
             self.run_sql("describe proj.modelx.ensemble")
             assert "ensemble is not supported" in str(e)
 
-
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_with_exog_vars(self, mock_handler):
         # create project

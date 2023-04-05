@@ -180,7 +180,7 @@ We would appreciate your feedback regarding usage & feature roadmap for the abov
 
         5. Create a new blank class for your handler in the `{HandlerName}_handler.py` file. Like for other handlers, this should be a subclass of the `BaseMLEngine` class.
 
-        6. Add your new handler class to the testing DB. In the `tests/unit/executor_test_base.py` file starting at line 91, you can see how other handlers are added with `db.session.add(...)`. Copy that and modify it to add your handler. Please note to add your handler before Lighwood, otherwise the CI will break.
+        6. Add your new handler class to the testing DB. In the `tests/unit/executor_test_base.py` file starting at line 91, you can see how other handlers are added with `db.session.add(...)`. Copy that and modify it to add your handler. Please note to add your handler before Lightwood, otherwise the CI will break.
 
         7. Run your new test. Please note that it should still fail but with a different exception message.
 

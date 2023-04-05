@@ -34,7 +34,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb import __version__ as mindsdb_version
+from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.model.functions import (
@@ -134,7 +134,7 @@ def learn_process(class_path, engine, context_dump, integration_id,
         if base_predictor_id is None:
             ml_handler.create(target, df=training_data_df, args=problem_definition)
 
-        # adjust (partially train) existing model
+        # fine-tune (partially train) existing model
         else:
             # load model from previous version, use it as starting point
             problem_definition['base_model_id'] = base_predictor_id

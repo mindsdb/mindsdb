@@ -1,3 +1,4 @@
+import os
 import base64
 import shutil
 import tempfile
@@ -417,6 +418,12 @@ class IntegrationController:
     def _load_handler_modules(self):
         mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent
         handlers_path = mindsdb_path.joinpath('integrations/handlers')
+
+        # edge case: running from tests directory, find_spec finds the base folder instead of actual package
+        if not os.path.isdir(handlers_path):
+            mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent.joinpath('mindsdb')
+            handlers_path = mindsdb_path.joinpath('integrations/handlers')
+
         self.handler_modules = {}
         self.handlers_import_status = {}
         for handler_dir in handlers_path.iterdir():

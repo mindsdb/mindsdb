@@ -112,7 +112,7 @@ class GithubIssuesTable(APITable):
                     if an_issue.pull_request:
                         continue
 
-                    logger.error(f"Processing issue {an_issue.number}")
+                    logger.debug(f"Processing issue {an_issue.number}")
 
                     github_issues_df = pd.concat(
                         [

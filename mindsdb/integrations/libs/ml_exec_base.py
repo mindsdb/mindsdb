@@ -369,7 +369,7 @@ class BaseMLEngineExec:
             args['dtype_dict'] = predictor_record.dtype_dict
             args['learn_args'] = predictor_record.learn_args
 
-        if self.handler_class.__name__ in ('LangchainHandler',):
+        if self.handler_class.__name__ in ('LangChainHandler',):
             args['executor'] = params['__mdb_executor']
 
         try:

@@ -3,7 +3,8 @@ from typing import Optional, Dict
 import dill
 import pandas as pd
 import autosklearn.classification as automl
-from autosklearn.metrics import accuracy
+
+from .config import ClassificationConfig
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -16,13 +17,12 @@ class AutoSklearnHandler(BaseMLEngine):
     name = 'autosklearn'
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
+        config_args = {key: val for key, val in args['using'].items() if key != 'task'}
+
         if args['using']['task'] == 'classification':
-            model = automl.AutoSklearnClassifier(
-                time_left_for_this_task=60,
-                per_run_time_limit=360,
-                n_jobs=-1,
-                metric=accuracy
-            )
+            config = ClassificationConfig(**config_args)
+
+            model = automl.AutoSklearnClassifier(**vars(config))
             model.fit(df.drop(target, axis=1), df[target])
 
         self.model_storage.file_set('model', dill.dumps(model))

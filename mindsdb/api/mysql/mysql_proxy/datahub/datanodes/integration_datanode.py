@@ -114,6 +114,10 @@ class IntegrationDataNode(DataNode):
                 new_row.append(value)
             formatted_data.append(new_row)
 
+        if len(formatted_data) == 0:
+            # not need to insert
+            return
+
         insert_ast = Insert(
             table=table_name,
             columns=insert_columns,

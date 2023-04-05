@@ -2,7 +2,7 @@ import requests
 import time
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from tests.conftest import HTTP_API_ROOT
+from .conftest import HTTP_API_ROOT
 
 
 class HTTPHelperMixin:

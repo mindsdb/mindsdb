@@ -1,34 +1,32 @@
-import os
 import sys
+import os
+import shutil
 import time
 import json
-import requests
 import subprocess
 from pathlib import Path
-
+import requests
 import docker
 import pytest
 import netifaces
 import pandas as pd
-
 from mindsdb.utilities.ps import get_child_pids
 
-HTTP_API_ROOT = 'http://127.0.0.1:47334/api'
+
+HTTP_API_ROOT = f'http://127.0.0.1:47334/api'
 USE_PERSISTENT_STORAGE = bool(int(os.getenv('USE_PERSISTENT_STORAGE') or "0"))
-TEST_CONFIG = os.path.dirname(os.path.realpath(__file__)) + '/integration_tests/flows/config/config.json'
-TEMP_DIR = Path(__file__).parent.absolute().joinpath(
-    f'temp/test_storage_{int(time.time() * 1000)}/' if not USE_PERSISTENT_STORAGE else 'temp/test_storage/'
+TEST_CONFIG = os.path.dirname(os.path.realpath(__file__)) + '/config/config.json'
+TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../').joinpath(
+    f'temp/test_storage_{int(time.time()*1000)}/' if not USE_PERSISTENT_STORAGE else 'temp/test_storage/'
 ).resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_PATH = TEMP_DIR.joinpath('config.json')
-
 
 def make_test_csv(name, data):
     test_csv_path = TEMP_DIR.joinpath(f'{name}.csv').resolve()
     df = pd.DataFrame(data)
     df.to_csv(test_csv_path, index=False)
     return str(test_csv_path)
-
 
 def docker_inet_ip():
     if os.environ.get("MICROSERVICE_MODE", False):
@@ -39,7 +37,6 @@ def docker_inet_ip():
         raise Exception("Unable to find 'docker' interface. Please install docker first.")
     return netifaces.ifaddresses('docker0')[netifaces.AF_INET][0]['addr']
 
-
 @pytest.fixture(scope="session")
 def temp_dir():
     """Create temp directory to store mindsdb data inside it.
@@ -47,11 +44,10 @@ def temp_dir():
     See 'scope' fixture parameter
     """
     temp_dir = Path(__file__).parent.absolute().joinpath('../../').joinpath(
-        f'temp/test_storage_{int(time.time() * 1000)}/' if not USE_PERSISTENT_STORAGE else 'temp/test_storage/'
+        f'temp/test_storage_{int(time.time()*1000)}/' if not USE_PERSISTENT_STORAGE else 'temp/test_storage/'
     ).resolve()
     temp_dir.mkdir(parents=True, exist_ok=True)
     return temp_dir
-
 
 @pytest.fixture(scope="module")
 def config(temp_dir):
@@ -61,7 +57,7 @@ def config(temp_dir):
     """
     if os.environ.get("MICROSERVICE_MODE", False):
         config_json = {
-            "api":
+                "api":
                 {
                     "http": {
                         "host": "127.0.0.1",
@@ -88,7 +84,6 @@ def config(temp_dir):
 
     return config_json
 
-
 def override_recursive(a, b):
     """Overrides some elements in json 'a' by elements in json 'b'"""
     for key in b:
@@ -101,7 +96,6 @@ def override_recursive(a, b):
             a[key] = b[key]
         else:
             override_recursive(a[key], b[key])
-
 
 @pytest.fixture(scope="module")
 def mindsdb_app(request, config):
@@ -152,7 +146,7 @@ def mindsdb_app(request, config):
                 raise Exception("unable to launch mindsdb app in 60 seconds")
 
     def cleanup():
-        print("Stopping Application")
+        print(f"Stopping Application")
         if os.environ.get("MICROSERVICE_MODE", False):
             cmd = 'docker-compose -f ./docker/docker-compose-ci.yml down'
             subprocess.run(cmd, shell=True)
@@ -161,10 +155,8 @@ def mindsdb_app(request, config):
             for ch in get_child_pids(app.pid):
                 ch.kill()
             app.kill()
-
     request.addfinalizer(cleanup)
     return
-
 
 def waitReadiness(container, match_msg, match_number=2, timeout=30):
     """Wait the container readiness.
@@ -179,45 +171,44 @@ def waitReadiness(container, match_msg, match_number=2, timeout=30):
     ready_msg = match_msg
     while True:
         lines = container.logs().decode()
-        # container fully ready
-        # because it reloads the db server during initialization
-        # need to check that the 'ready for connections' has found second time
+            # container fully ready
+            # because it reloads the db server during initialization
+            # need to check that the 'ready for connections' has found second time
         if lines.count(ready_msg) >= 2:
             break
         if time.time() > threshold:
             raise Exception("timeout exceeded, container is still not ready")
 
-
 @pytest.fixture(scope="function")
 def postgres_db():
     if os.environ.get("MICROSERVICE_MODE", False):
         connection_args = {
-            "host": "postgres_db",
-            "port": "5432",
-            "user": "postgres",
-            "password": "supersecret",
-            "database": "test",
-        }
+                            "host": "postgres_db",
+                            "port": "5432",
+                            "user": "postgres",
+                            "password": "supersecret",
+                            "database": "test",
+                          }
     else:
         image_name = "mindsdb/postgres-handler-test"
         docker_client = docker.from_env()
         container = None
 
         connection_args = {
-            "host": "localhost",
-            "port": "15432",
-            "user": "postgres",
-            "password": "supersecret",
-            "database": "test",
-        }
+                            "host": "localhost",
+                            "port": "15432",
+                            "user": "postgres",
+                            "password": "supersecret",
+                            "database": "test",
+                          }
 
         try:
             container = docker_client.containers.run(
-                image_name,
-                detach=True,
-                environment={"POSTGRES_PASSWORD": "supersecret"},
-                ports={"5432/tcp": 15432},
-            )
+                        image_name,
+                        detach=True,
+                        environment={"POSTGRES_PASSWORD":"supersecret"},
+                        ports={"5432/tcp": 15432},
+                    )
             waitReadiness(container, "database system is ready to accept connections")
         except Exception as e:
             if container is not None:
@@ -236,35 +227,35 @@ def postgres_db():
 def mysql_db():
     if os.environ.get("MICROSERVICE_MODE", False):
         connection_args = {
-            "host": "mysql_db",
-            "port": "13306",
-            "user": "root",
-            "password": "supersecret",
-            "database": "test",
-            "ssl": False
-        }
+                            "host": "mysql_db",
+                            "port": "13306",
+                            "user": "root",
+                            "password": "supersecret",
+                            "database": "test",
+                            "ssl": False
+                          }
     else:
         image_name = "mindsdb/mysql-handler-test"
         docker_client = docker.from_env()
         container = None
 
         connection_args = {
-            "host": "localhost",
-            "port": "13306",
-            "user": "root",
-            "password": "supersecret",
-            "database": "test",
-            "ssl": False
-        }
+                            "host": "localhost",
+                            "port": "13306",
+                            "user": "root",
+                            "password": "supersecret",
+                            "database": "test",
+                            "ssl": False
+                          }
 
         try:
             container = docker_client.containers.run(
-                image_name,
-                command="--secure-file-priv=/",
-                detach=True,
-                environment={"MYSQL_ROOT_PASSWORD": "supersecret"},
-                ports={"3306/tcp": 13306},
-            )
+                        image_name,
+                        command="--secure-file-priv=/",
+                        detach=True,
+                        environment={"MYSQL_ROOT_PASSWORD":"supersecret"},
+                        ports={"3306/tcp": 13306},
+                    )
             waitReadiness(container, "/usr/sbin/mysqld: ready for connections. Version: '8.0.27'")
         except Exception as e:
             if container is not None:
@@ -283,35 +274,35 @@ def mysql_db():
 def maria_db():
     if os.environ.get("MICROSERVICE_MODE", False):
         connection_args = {
-            "host": "maria_db",
-            "port": "3306",
-            "user": "root",
-            "password": "supersecret",
-            "database": "test",
-            "ssl": False
-        }
+                            "host": "maria_db",
+                            "port": "3306",
+                            "user": "root",
+                            "password": "supersecret",
+                            "database": "test",
+                            "ssl": False
+                          }
     else:
         image_name = "mindsdb/mariadb-handler-test"
         docker_client = docker.from_env()
         container = None
 
         connection_args = {
-            "host": "localhost",
-            "port": "13307",
-            "user": "root",
-            "password": "supersecret",
-            "database": "test",
-            "ssl": False
-        }
+                            "host": "localhost",
+                            "port": "13307",
+                            "user": "root",
+                            "password": "supersecret",
+                            "database": "test",
+                            "ssl": False
+                          }
 
         try:
             container = docker_client.containers.run(
-                image_name,
-                command="--secure-file-priv=/",
-                detach=True,
-                environment={"MARIADB_ROOT_PASSWORD": "supersecret"},
-                ports={"3306/tcp": 13307},
-            )
+                        image_name,
+                        command="--secure-file-priv=/",
+                        detach=True,
+                        environment={"MARIADB_ROOT_PASSWORD":"supersecret"},
+                        ports={"3306/tcp": 13307},
+                    )
             waitReadiness(container, "mariadbd: ready for connections")
         except Exception as e:
             if container is not None:

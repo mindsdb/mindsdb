@@ -344,8 +344,8 @@ class JobsExecutor:
                         .order_by(db.JobsHistory.id.desc())\
                         .first()
                     if history_prev is None:
-                        # very old date
-                        value = dt.datetime(1900, 1, 1)
+                        # start date of the job
+                        value = record.created_at
                     else:
                         value = history_prev.start_at
                     value = value.strftime("%Y-%m-%d %H:%M:%S")

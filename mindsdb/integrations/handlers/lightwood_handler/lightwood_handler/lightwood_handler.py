@@ -17,7 +17,7 @@ from mindsdb.interfaces.model.functions import get_model_record
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.integrations.libs.base import BaseMLEngine
 
-from .functions import run_learn, run_adjust
+from .functions import run_learn, run_finetune
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -71,7 +71,7 @@ class LightwoodHandler(BaseMLEngine):
         )
 
     def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        run_adjust(
+        run_finetune(
             df,
             args,
             self.model_storage

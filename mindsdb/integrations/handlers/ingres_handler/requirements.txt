@@ -1,0 +1,3 @@
+pyodbc
+sqlalchemy<2.0.0
+ingres_sa_dialect==0.3

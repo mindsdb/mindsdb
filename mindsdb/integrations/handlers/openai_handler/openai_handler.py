@@ -65,8 +65,12 @@ class OpenAIHandler(BaseMLEngine):
         args = args['using']
 
         args['target'] = target
+        available_models = [m.openai_id for m in openai.Model.list().data]
         if not args.get('model_name'):
             args['model_name'] = self.default_model
+        elif args['model_name'] not in available_models:
+            raise Exception(f"Invalid model name. Please use one of {available_models}")
+
         if not args.get('mode'):
             args['mode'] = self.default_mode
         elif args['mode'] not in self.supported_modes:

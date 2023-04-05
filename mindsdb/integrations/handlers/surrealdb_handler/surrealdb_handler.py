@@ -10,6 +10,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from .utils.surreal_get_info import *
 
 import pysurrealdb as surreal
 import pandas as pd
@@ -71,21 +72,21 @@ class SurrealDBHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
-        responseCode = StatusResponse(False)
+        response_code = StatusResponse(False)
         need_to_close = self.is_connected is False
         try:
             self.connect()
-            responseCode.success = True
+            response_code.success = True
         except Exception as e:
             log.logger.error(f'Error connecting to SurrealDB, {e}!')
-            responseCode.error_message = str(e)
+            response_code.error_message = str(e)
         finally:
-            if responseCode.success is True and need_to_close:
+            if response_code.success is True and need_to_close:
                 self.disconnect()
-            if responseCode.success is False and self.is_connected is True:
+            if response_code.success is False and self.is_connected is True:
                 self.is_connected = False
 
-        return responseCode
+        return response_code
 
     def disconnect(self):
         """
@@ -149,6 +150,8 @@ class SurrealDBHandler(DatabaseHandler):
             HandlerResponse
         """
         query_string = query.to_string()
+
+        # ensure the correct query is passed
         last_word = query_string.split()[-1]
         query_string = query_string.replace(last_word + '.', "")
         return self.native_query(query_string)
@@ -160,11 +163,12 @@ class SurrealDBHandler(DatabaseHandler):
             HandlerResponse
         """
         conn = self.connect()
-        query = "INFO for DB"
-        dict_1 = conn.query(query)
-        dict_2 = dict_1['tb']
-        tables = list(dict_2.keys())
+        # get table names
+        tables = table_names(conn)
+
+        # construct pandas dataframe
         df = pd.DataFrame(tables, columns=['table_name'])
+
         response = Response(
             RESPONSE_TYPE.TABLE, df
         )
@@ -178,17 +182,11 @@ class SurrealDBHandler(DatabaseHandler):
             HandlerResponse
         """
         conn = self.connect()
-        query = "INFO FOR TABLE " + table
-        dict_1 = conn.query(query)
-        dict_2 = dict_1['fd']
-        tables = list(dict_2.keys())
-        types = []
+        # get name and type of each column in the table
+        columns, types = column_info(conn, table)
 
-        for value in dict_2.values():
-            a = value.split('TYPE ', 1)[1]
-            type = a.split()[0]
-            types.append(type)
-        df = pd.DataFrame(tables, columns=['table_name'])
+        # construct pandas dataframe
+        df = pd.DataFrame(columns, columns=['table_name'])
         df['data_type'] = types
 
         response = Response(

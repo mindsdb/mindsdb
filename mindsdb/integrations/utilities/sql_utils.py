@@ -24,7 +24,7 @@ def extract_comparison_conditions(binary_op: ASTNode):
                 return
             elif not isinstance(node.args[0], ast.Identifier) or not isinstance(node.args[1], ast.Constant):
                 # Only support [identifier] =/</>/>=/<=/etc [constant] comparisons.
-                raise NotImplementedError
+                raise NotImplementedError(f'Not implemented operation: {op}')
             conditions.append([op, node.args[0].parts[-1], node.args[1].value])
 
     query_traversal(binary_op, _extract_comparison_conditions)

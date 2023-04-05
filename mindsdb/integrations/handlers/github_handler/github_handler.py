@@ -1,5 +1,3 @@
-# from collections import OrderedDict
-
 import github
 
 from mindsdb.integrations.handlers.github_handler.github_tables import GithubIssuesTable
@@ -8,7 +6,6 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 
-# from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.utilities.log import get_log
 from mindsdb_sql import parse_sql
 
@@ -88,21 +85,3 @@ class GithubHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
-
-
-# connection_args = OrderedDict(
-#     repository={
-#         "type": ARG_TYPE.STR,
-#         "description": "GitHub repository to pull data from (e.g. 'mindsdb/mindsdb')",
-#     },
-#     api_key={
-#         "type": ARG_TYPE.STR,
-#         "description": "Optional API key to be used with the GitHub API",
-#     },
-#     github_url={
-#         "type": ARG_TYPE.STR,
-#         "description": "Optional GitHub URL to connect to GitHub Enterprise",
-#     },
-# )
-
-# connection_args_example = OrderedDict(repository="mindsdb/mindsdb")

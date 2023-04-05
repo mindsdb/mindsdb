@@ -812,6 +812,7 @@ class SQLQuery():
             if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                 version = int(step.predictor.parts[-1])
 
+            # temporarily add executor (used with LLM agents)
             if step.params is not None:
                 params = {**step.params, '__mdb_executor': self.executor}
             else:
@@ -823,6 +824,9 @@ class SQLQuery():
                 version=version,
                 params=params,
             )
+
+            params.pop('__mdb_executor')
+
             columns_dtypes = dict(predictions.dtypes)
             predictions = predictions.to_dict(orient='records')
 

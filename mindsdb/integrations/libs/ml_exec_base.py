@@ -369,6 +369,9 @@ class BaseMLEngineExec:
             args['dtype_dict'] = predictor_record.dtype_dict
             args['learn_args'] = predictor_record.learn_args
 
+        if self.handler_class.__name__ in ('LangchainHandler',):
+            args['executor'] = params['__mdb_executor']
+
         try:
             predictions = ml_handler.predict(df, args)
         except Exception as e:

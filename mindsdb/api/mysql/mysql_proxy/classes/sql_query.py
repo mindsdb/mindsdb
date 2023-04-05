@@ -402,7 +402,7 @@ class ResultSet:
 
 
 class SQLQuery():
-    def __init__(self, sql, session, execute=True):
+    def __init__(self, sql, session, execute=True, executor=None):
         self.session = session
         self.database = None if session.database == '' else session.database.lower()
         self.datahub = session.datahub
@@ -410,6 +410,7 @@ class SQLQuery():
         self.row_id = 0
         self.columns_list = None
         self.model_types = {}
+        self.executor = executor  # used in ML engines that expose LLM agents that may autonomously execute queries
 
         self.mindsdb_database_name = 'mindsdb'
 
@@ -811,11 +812,16 @@ class SQLQuery():
             if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                 version = int(step.predictor.parts[-1])
 
+            if step.params is not None:
+                params = {**step.params, '__mdb_executor': self.executor}
+            else:
+                params = {'__mdb_executor': self.executor}
+
             predictions = project_datanode.predict(
                 model_name=predictor_name,
                 data=where_data,
                 version=version,
-                params=step.params,
+                params=params,
             )
             columns_dtypes = dict(predictions.dtypes)
             predictions = predictions.to_dict(orient='records')

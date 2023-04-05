@@ -68,12 +68,13 @@ class NeuralForecastHandler(BaseMLEngine):
         # Train model
         model = choose_model(num_trials, time_settings["horizon"], time_settings["window"])
         nixtla_df = transform_to_nixtla_df(df, model_args, model_args["exog_vars"])
-        nf = NeuralForecast(models=[model], freq=model_args["frequency"])
-        results_df = nf.cross_validation(nixtla_df)
+        neural = NeuralForecast(models=[model], freq=model_args["frequency"])
+        results_df = neural.cross_validation(nixtla_df)
+        # Get model accuracy
         model_args["accuracies"] = get_model_accuracy_dict(results_df, r2_score)
 
         ###### persist changes to handler folder
-        nf.save(model_args["model_folder"], overwrite=True)
+        neural.save(model_args["model_folder"], overwrite=True)
         self.model_storage.json_set("model_args", model_args)
 
     def predict(self, df, args={}):
@@ -90,8 +91,8 @@ class NeuralForecastHandler(BaseMLEngine):
         prediction_df = transform_to_nixtla_df(df, model_args)
         groups_to_keep = prediction_df["unique_id"].unique()
 
-        nf = NeuralForecast.load(model_args["model_folder"])
-        forecast_df = nf.predict(prediction_df)
+        neural = NeuralForecast.load(model_args["model_folder"])
+        forecast_df = neural.predict(prediction_df)
         forecast_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
         return get_results_from_nixtla_df(forecast_df, model_args)
 

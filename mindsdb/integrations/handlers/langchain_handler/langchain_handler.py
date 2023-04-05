@@ -62,8 +62,11 @@ class LangChainHandler(OpenAIHandler):
         Dispatch is performed depending on the underlying model type. Currently, only the default text completion
         is supported.
         """
+        executor = args['executor']  # used as tool in custom tool for the agent to have mindsdb-wide access
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
+        args['executor'] = executor
+
         df = df.reset_index(drop=True)
 
         if 'prompt_template' not in args and 'prompt_template' not in pred_args:
@@ -113,7 +116,7 @@ class LangChainHandler(OpenAIHandler):
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 
         # langchain tool setup
-        tools = self._setup_tools(model_kwargs, pred_args)
+        tools = self._setup_tools(model_kwargs, pred_args, args['executor'])
 
         # langchain agent setup
         llm = OpenAI(**model_kwargs)  # TODO: use ChatOpenAI for chat models
@@ -179,7 +182,19 @@ class LangChainHandler(OpenAIHandler):
 
         return pred_df
 
-    def _setup_tools(self, model_kwargs, pred_args):
+    def _setup_tools(self, model_kwargs, pred_args, executor):
+        def _mdb_exec_call(query: str) -> str:
+            """ We define it like this to pass the executor through the closure, as custom classes don't allow custom field assignment. """  # noqa
+            executor.query_execute(query)
+            data = executor.data  # list of lists
+            data = '\n'.join(['\t'.join(row) for row in data])
+            return data
+
+        mdb_tool = Tool(
+                name="MindsDB",
+                func=_mdb_exec_call,
+                description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query."  # noqa
+            )
         toolkit = pred_args.get('tools', self.default_agent_tools)
         tools = load_tools(toolkit)
         if model_kwargs.get('serper_api_key', False):
@@ -189,6 +204,10 @@ class LangChainHandler(OpenAIHandler):
                 func=search.run,
                 description="useful for when you need to ask with search"
             ))
+
+        # add connection to mindsdb  # TODO: should limit to read only access
+        tools.append(mdb_tool)
+
         return tools
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:

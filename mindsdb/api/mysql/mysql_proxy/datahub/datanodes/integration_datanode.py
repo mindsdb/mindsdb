@@ -138,7 +138,10 @@ class IntegrationDataNode(DataNode):
                 # try to fetch native query
                 result = self.integration_handler.native_query(native_query)
         except Exception as e:
-            msg = f'[{self.ds_type}/{self.integration_name}]: {str(e)}'
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            msg = f'[{self.ds_type}/{self.integration_name}]: {msg}'
             raise DBHandlerException(msg) from e
 
         if result.type == RESPONSE_TYPE.ERROR:

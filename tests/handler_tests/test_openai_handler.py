@@ -66,7 +66,40 @@ def handler():
 
 
 class TestOpenAIHandler:
-    def test_01_qa_no_context_flow(self, handler):
+    def test_missing_required_keys(self, handler):
+        with pytest.raises(Exception) as e:
+            handler.learn(
+                model_name='sentiment_classifier_gpt3',
+                project_name='mindsdb',
+                join_learn_process=True,
+                problem_definition={
+                    'target': 'sentiment',
+                    'using': {
+                        'openai_api_key': OPEN_AI_API_KEY,
+                    }
+                }
+            )  # fails at create validation, throws exception immediately
+            assert 'One of `question_column`, `prompt_template` or `json_struct` is required' in e.value.args[0]
+
+    def test_invalid_openai_name_parameter(self, handler):
+        predictor_record = handler.learn(
+            model_name='sentiment_classifier_gpt3',
+            project_name='mindsdb',
+            join_learn_process=True,
+            problem_definition={
+                'target': 'sentiment',
+                'using': {
+                    'openai_api_key': OPEN_AI_API_KEY,
+                    'question_column': 'question',
+                    'model_name': 'invalid_model_name'
+                }
+            }
+        )
+        time.sleep(5)
+        assert isinstance(predictor_record, db.Predictor)
+        assert predictor_record.status == PREDICTOR_STATUS.ERROR
+
+    def test_qa_no_context_flow(self, handler):
         predictor_record = handler.learn(
             model_name='test_openai_qa_no_context',
             project_name='mindsdb',

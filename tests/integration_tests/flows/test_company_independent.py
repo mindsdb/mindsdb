@@ -7,7 +7,7 @@ import pytest
 from pymongo import MongoClient
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from tests.conftest import CONFIG_PATH
+from .conftest import CONFIG_PATH
 
 # used by mindsdb_app fixture in conftest
 OVERRIDE_CONFIG = {

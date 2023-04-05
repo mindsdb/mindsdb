@@ -2,7 +2,7 @@ from typing import Optional, Dict
 
 import dill
 import pandas as pd
-import autosklearn.classification as automl
+import autosklearn.classification as automl_classification
 
 from .config import ClassificationConfig
 
@@ -22,7 +22,7 @@ class AutoSklearnHandler(BaseMLEngine):
         if args['using']['task'] == 'classification':
             config = ClassificationConfig(**config_args)
 
-            model = automl.AutoSklearnClassifier(**vars(config))
+            model = automl_classification.AutoSklearnClassifier(**vars(config))
             model.fit(df.drop(target, axis=1), df[target])
 
         self.model_storage.file_set('model', dill.dumps(model))

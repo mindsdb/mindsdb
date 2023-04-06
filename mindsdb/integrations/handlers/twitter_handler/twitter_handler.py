@@ -2,6 +2,7 @@ import re
 import os
 import datetime as dt
 import ast
+import time
 from collections import defaultdict
 import pytz
 import io
@@ -35,6 +36,7 @@ class TweetsTable(APITable):
         params = {}
         filters = []
         for op, arg1, arg2 in conditions:
+
             if arg1 == 'created_at':
                 date = parse_utc_date(arg2)
                 if op == '>':
@@ -47,21 +49,33 @@ class TweetsTable(APITable):
                     params['end_time'] = date
                 else:
                     raise NotImplementedError
-                continue
 
-            if op in ('==', '=', '<>', '!=', 'in', 'not in'):
+            elif arg1 == 'query':
+                if op == '=':
+                    params[arg1] = arg2
+                else:
+                    NotImplementedError(f'Unknown op: {op}')
+
+            elif arg1 == 'id':
+                if op == '>':
+                    params['since_id'] = arg2
+                elif op == '>=':
+                    raise NotImplementedError("Please use 'id > value'")
+                elif op == '<':
+                    params['until_id'] = arg2
+                elif op == '<=':
+                    raise NotImplementedError("Please use 'id < value'")
+                else:
+                    NotImplementedError('Search with "id=" is not implemented')
+
+            else:
                 filters.append([op, arg1, arg2])
-                continue
-            elif op != '=':
-                raise NotImplementedError
-
-            params[arg1] = arg2
 
         if query.limit is not None:
             params['max_results'] = query.limit.value
 
         params['expansions'] = ['author_id', 'in_reply_to_user_id']
-        params['tweet_fields'] = ['created_at', 'conversation_id']
+        params['tweet_fields'] = ['created_at', 'conversation_id', 'referenced_tweets']
         params['user_fields'] = ['name', 'username']
 
         if 'query' not in params:
@@ -73,6 +87,22 @@ class TweetsTable(APITable):
             params=params,
             filters=filters
         )
+
+        if 'referenced_tweets' in result.columns:
+            # fill reply column
+            def _get_reference(ref_type):
+                def fnc(value):
+                    if isinstance(value, dict):
+                        if value.get('type') == ref_type:
+                            return value['id']
+                        else:
+                            return None
+
+                return fnc
+
+            result['in_reply_to_tweet_id'] = result.referenced_tweets.str[0].apply(_get_reference('replied_to'))
+            result['in_retweeted_to_tweet_id'] = result.referenced_tweets.str[0].apply(_get_reference('retweeted'))
+            result['in_quote_to_tweet_id'] = result.referenced_tweets.str[0].apply(_get_reference('quoted'))
 
         # filter targets
         columns = []
@@ -112,9 +142,12 @@ class TweetsTable(APITable):
             'author_name',
             'author_username',
             'conversation_id',
+            'in_reply_to_tweet_id',
+            'in_retweeted_to_tweet_id',
+            'in_quote_to_tweet_id',
             'in_reply_to_user_id',
             'in_reply_to_user_name',
-            'in_reply_to_user_username'
+            'in_reply_to_user_username',
         ]
 
     def insert(self, query: ast.Insert):
@@ -295,11 +328,14 @@ class TwitterHandler(APIHandler):
             add = False
             for op, key, value in filters:
                 value2 = row.get(key)
+                if isinstance(value, int):
+                    # twitter returns ids as string
+                    value = str(value)
 
                 if op in ('!=', '<>'):
                     if value == value2:
                         break
-                elif op in ('==', '!='):
+                elif op in ('==', '='):
                     if value != value2:
                         break
                 elif op == 'in':
@@ -308,6 +344,8 @@ class TwitterHandler(APIHandler):
                 elif op == 'not in':
                     if value2 in value:
                         break
+                else:
+                    raise NotImplementedError(f'Unknown filter: {op}')
                 # only if there wasn't breaks
                 add = True
             if add:
@@ -342,7 +380,12 @@ class TwitterHandler(APIHandler):
         min_page_size = 10
         left = None
 
+        limit_exec_time = time.time() + 60
+
         while True:
+            if time.time() > limit_exec_time:
+                raise RuntimeError('Handler request timeout error')
+
             if count_results is not None:
                 left = count_results - len(data)
                 if left == 0:
@@ -394,7 +437,7 @@ class TwitterHandler(APIHandler):
         expansions = expansions_map.get(method_name)
         if expansions is not None:
             for table, records in includes.items():
-                df_ref = pd.DataFrame(records).drop_duplicates()
+                df_ref = pd.DataFrame(records)
 
                 if table not in expansions:
                     continue
@@ -409,6 +452,7 @@ class TwitterHandler(APIHandler):
                         for col_ref in df_ref.columns
                     }
                     df_ref2 = df_ref.rename(columns=col_map)
+                    df_ref2 = df_ref2.drop_duplicates(col_id)
 
                     df = df.merge(df_ref2, on=col_id, how='left')
 

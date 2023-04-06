@@ -61,10 +61,14 @@ class CouchbaseHandler(DatabaseHandler):
         endpoint = self.connection_data.get('host')
         username = self.connection_data.get('user')
         password = self.connection_data.get('password')
-        bucket_name = self.connection_data.get('bucket')
+
+        try:
+            timeout = int(self.connection_data.get('timeout'))
+        except Exception:
+            timeout = 10
         # Connect options - global timeout opts
-        timeout_opts = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=10))
-        
+        timeout_opts = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=timeout))
+
         auth = PasswordAuthenticator(
             username,
             password,
@@ -73,11 +77,16 @@ class CouchbaseHandler(DatabaseHandler):
             # cert_path=cert_path
         )
 
-
-        cluster = Cluster.connect(f'couchbase://{endpoint}', ClusterOptions(auth))
+        cluster = Cluster.connect(
+            f'couchbase://{endpoint}',
+            ClusterOptions(
+                authenticator=auth,
+                timeout_options=timeout_opts
+            )
+        )
         
         # # Wait until the cluster is ready for use.
-        cluster.wait_until_ready(timedelta(seconds=5))
+        cluster.wait_until_ready(timedelta(seconds=timeout))
         
         self.is_connected = cluster.connected
         self.cluster = cluster

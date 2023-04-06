@@ -1,8 +1,8 @@
 name: MindsDB Release Candidate Acceptance Tests
 
 on:
-  release:
-    types: [created]
+  pull_request:
+    branches: [stable]
     paths-ignore:
       - 'docs/**'
       - 'README.md'

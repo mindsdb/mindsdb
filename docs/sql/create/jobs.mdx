@@ -32,7 +32,7 @@ Where:
 | `<mindsdb_sql_query_1>[; <mindsdb_sql_query_2>]`    | One or more queries separated by `;` to be executed by the job.                                                                                                     |
 | `[START <date>]`                                    | Optional. The date when the job starts its periodical or one-time execution. If not set, it is the current system date.                                             |
 | `[END <date>]`                                      | Optional. The date when the job ends its periodical or one-time execution. If it is not set (and the repetition rules are set), then the job repeats forever.       |
-| `[EVERY [number] <period>]`                         | Optional. The repeatition rules for the job. If not set, the job runs once, not considering the end date value. If the `number` value is not set, it defaults to 1. |
+| `[EVERY [number] <period>]`                         | Optional. The repetition rules for the job. If not set, the job runs once, not considering the end date value. If the `number` value is not set, it defaults to 1. |
 
 <Info>
 **Available `<date>` formats**

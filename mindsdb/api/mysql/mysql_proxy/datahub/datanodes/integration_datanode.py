@@ -160,7 +160,7 @@ class IntegrationDataNode(DataNode):
             df = df.to_frame()
 
         try:
-            df = df.replace(np.NaN, None)
+            df = df.replace(np.NaN, pd.NA)
         except Exception as e:
             print(f'Issue with clearing DF from NaN values: {e}')
 

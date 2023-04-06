@@ -169,8 +169,13 @@ class LangChainHandler(OpenAIHandler):
         def _completion(agent, prompts):
             # TODO: ensure that agent completion plus prompt match the maximum allowed by the user
             # TODO: use async API if possible for parallelized completion
-            completion = [agent.run(prompt) for prompt in prompts]
-            return [c for c in completion]
+            completions = []
+            for prompt in prompts:
+                try:
+                    completions.append(agent.run(prompt))
+                except Exception as e:
+                    completions.append(f'agent failed with error:\n{str(e)[:50]}...')
+            return [c for c in completions]
 
         completion = _completion(agent, prompts)
 
@@ -185,9 +190,16 @@ class LangChainHandler(OpenAIHandler):
     def _setup_tools(self, model_kwargs, pred_args, executor):
         def _mdb_exec_call(query: str) -> str:
             """ We define it like this to pass the executor through the closure, as custom classes don't allow custom field assignment. """  # noqa
-            executor.query_execute(query)
-            data = executor.data  # list of lists
-            data = '\n'.join(['\t'.join(row) for row in data])
+            try:
+                executor.query_execute(query)
+                data = executor.data  # list of lists
+                data = '\n'.join([  # rows
+                    '\t'.join(      # columns
+                        str(row) if isinstance(row, str) else [str(value) for value in row]
+                    ) for row in data
+                ])
+            except Exception as e:
+                data = f"mindsdb tool failed with error:\n{str(e)}"   # let the agent know
             return data
 
         mdb_tool = Tool(

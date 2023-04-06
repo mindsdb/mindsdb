@@ -33,6 +33,7 @@ class TweetsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
 
         params = {}
+        filters = []
         for op, arg1, arg2 in conditions:
             if arg1 == 'created_at':
                 date = parse_utc_date(arg2)
@@ -48,7 +49,10 @@ class TweetsTable(APITable):
                     raise NotImplementedError
                 continue
 
-            if op != '=':
+            if op in ('==', '=', '<>', '!=', 'in', 'not in'):
+                filters.append([op, arg1, arg2])
+                continue
+            elif op != '=':
                 raise NotImplementedError
 
             params[arg1] = arg2
@@ -66,7 +70,8 @@ class TweetsTable(APITable):
 
         result = self.handler.call_twitter_api(
             method_name='search_recent_tweets',
-            params=params
+            params=params,
+            filters=filters
         )
 
         # filter targets
@@ -281,7 +286,35 @@ class TwitterHandler(APIHandler):
             data_frame=df
         )
 
-    def call_twitter_api(self, method_name: str = None, params: dict = None):
+    def _apply_filters(self, data, filters):
+        if not filters:
+            return data
+
+        data2 = []
+        for row in data:
+            add = False
+            for op, key, value in filters:
+                value2 = row.get(key)
+
+                if op in ('!=', '<>'):
+                    if value == value2:
+                        break
+                elif op in ('==', '!='):
+                    if value != value2:
+                        break
+                elif op == 'in':
+                    if value2 not in value:
+                        break
+                elif op == 'not in':
+                    if value2 in value:
+                        break
+                # only if there wasn't breaks
+                add = True
+            if add:
+                data2.append(row)
+        return data2
+
+    def call_twitter_api(self, method_name: str = None, params: dict = None, filters: list = None):
 
         # method > table > columns
         expansions_map = {
@@ -346,6 +379,8 @@ class TwitterHandler(APIHandler):
             if left is not None:
                 chunk = chunk[:left]
 
+            if filters:
+                chunk = self._apply_filters(chunk, filters)
             data.extend(chunk)
             # next page ?
             if count_results is not None and hasattr(resp, 'meta') and 'next_token' in resp.meta:

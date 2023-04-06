@@ -3,8 +3,9 @@ from typing import Optional, Dict
 import dill
 import pandas as pd
 import autosklearn.classification as automl_classification
+import autosklearn.regression as automl_regression
 
-from .config import ClassificationConfig
+from .config import ClassificationConfig, RegressionConfig
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -23,7 +24,13 @@ class AutoSklearnHandler(BaseMLEngine):
             config = ClassificationConfig(**config_args)
 
             model = automl_classification.AutoSklearnClassifier(**vars(config))
-            model.fit(df.drop(target, axis=1), df[target])
+
+        elif args['using']['task'] == 'regression':
+            config = RegressionConfig(**config_args)
+
+            model = automl_regression.AutoSklearnRegressor(**vars(config))
+
+        model.fit(df.drop(target, axis=1), df[target])
 
         self.model_storage.file_set('model', dill.dumps(model))
         self.model_storage.json_set('args', args)

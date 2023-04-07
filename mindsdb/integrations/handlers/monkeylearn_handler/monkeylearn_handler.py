@@ -28,17 +28,17 @@ class monkeylearnHandler(BaseMLEngine):
         if model_id not in models_list:
             raise Exception(f"Model_id {model_id} not found in MonkeyLearn pre-trained models")
 
-        self.model_storage.json_set('args',args)
+        self.model_storage.json_set('args', args)
 
         def predict(self, df, args=None):
             args = self.model_storage.json_get('args')
             input_list = df[args['input_column']]
             ml = MonkeyLearn(args['YOUR_API_KEY'])
-            classifier_response = ml.classifiers.classify(args['MODEL_ID'],input_list)
+            classifier_response = ml.classifiers.classify(args['MODEL_ID'], input_list)
             df_dict = []
             for res_dict in classifier_response.body:
                 text = res_dict['text']
-                pred_dict = res_dict['classifications'][0]  #Only add the one which model is more confident about
+                pred_dict = res_dict['classifications'][0]  # Only add the one which model is more confident about
                 pred_dict['text'] = text
                 df_dict.append(pred_dict)
             pred_df = pd.DataFrame(df_dict)
@@ -48,7 +48,7 @@ class monkeylearnHandler(BaseMLEngine):
             args = self.model_storage.json_get('args')
             ml = MonkeyLearn(args['YOUR_API_KEY'])
             response = ml.classifiers.detail(args['MODEL_ID'])
-            description={}
+            description = {}
             description['name'] = response.body['name']
             description['model_version'] = response.body['model_version']
             description['date_created'] = response.body['created']

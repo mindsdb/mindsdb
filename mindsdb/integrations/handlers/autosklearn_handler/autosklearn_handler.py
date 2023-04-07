@@ -2,6 +2,7 @@ from typing import Optional, Dict
 
 import dill
 import pandas as pd
+from type_infer.infer import infer_types
 import autosklearn.classification as automl_classification
 import autosklearn.regression as automl_regression
 
@@ -18,14 +19,16 @@ class AutoSklearnHandler(BaseMLEngine):
     name = 'autosklearn'
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
-        config_args = {key: val for key, val in args['using'].items() if key != 'task'}
+        config_args = args['using']
 
-        if args['using']['task'] == 'classification':
+        target_dtype = infer_types(df, 0).to_dict()["dtypes"][target]
+
+        if target_dtype in ['binary', 'categorical', 'tags']:
             config = ClassificationConfig(**config_args)
 
             model = automl_classification.AutoSklearnClassifier(**vars(config))
 
-        elif args['using']['task'] == 'regression':
+        elif target_dtype in ['integer', 'float', 'quantity']:
             config = RegressionConfig(**config_args)
 
             model = automl_regression.AutoSklearnRegressor(**vars(config))

@@ -1,0 +1,189 @@
+---
+title: Sentiment Ananlysis using OpenAI GPT-3
+sidebarTitle: Analysing the sentiments of Donald Trump's tweets using MindsDB and OpenAI GPT-3
+---
+
+# Introduction
+
+Sentiment analysis is the process of determining the emotional tone of a piece of text. In this tutorial, we will be using MindsDB Cloud Editor and OpenAI GPT-3 to perform sentiment analysis on Donald Trump's tweets. We will first set up the data and create an OpenAI GPT-3 model, then we will make sentiment predictions on individual tweets and batches of tweets.
+
+# Data Setup
+
+There are various ways to connect our data to the MindsDB cloud instance. But in this tutorial, we will use a CSV file to do the same. We can find a CSV file containing the tweets of Donald Trump either from [Kaggle](https://www.kaggle.com/) or from the [Trump Twitter Archive](https://www.thetrumparchive.com/).
+
+### **Connecting the data**
+
+We are going to use this [Donald Trump Tweets](https://www.kaggle.com/datasets/codebreaker619/donald-trump-tweets-dataset?select=tweets.csv) Dataset from Kaggle. We will follow the steps below to create our table from the above CSV file.
+
+* Click on the `Add` button on the MindsDB Cloud Editor and then select `Upload File` from the dropdown that appears.
+    
+    ![Add Data](https://cdn.hashnode.com/res/hashnode/image/upload/v1680779540100/e73369fb-6c57-45aa-8d21-676d01bb16da.png)
+    
+* Now select the CSV file that we just downloaded, and provide a name in the `Datasource Name` field i.e., the name of the Table and then click on the `Save and Continue` button.
+    
+    ![Create Table](https://cdn.hashnode.com/res/hashnode/image/upload/v1680780019105/84147e90-850f-4c01-a5a8-58981d04d92d.png)
+    
+* Once the file is uploaded successfully, the MindsDB cloud Editor opens up and you can find two basic queries. Execute the first one to list out the available tables.
+    
+    ![](https://cdn.hashnode.com/res/hashnode/image/upload/v1680780133015/08671e97-c03c-4ebe-beff-53116c6b4be1.png)
+    
+
+```sql
+SHOW TABLES FROM files;
+```
+
+This should return the list of tables.
+
+![List of Tables](https://cdn.hashnode.com/res/hashnode/image/upload/v1680584405493/8b74c173-583f-4b5c-a302-d38d7e16e48a.png)
+
+### Understanding the data
+
+Now that we have connected the data, we can explore it to understand its structure. Let's execute the `Select` query to fetch the table records.
+
+```sql
+Select * from files.TrumpTweets LIMIT 10;
+```
+
+This should return the first 10 records from the table `TrumpTweets`.
+
+![First 10 records from the Table TrumpTweets](https://cdn.hashnode.com/res/hashnode/image/upload/v1680584674857/3bd2f332-d414-40f2-9690-9e31bb5c6f43.png)
+
+The table contains the following columns:
+
+* **id:** contains the tweet id
+    
+* **text:** contains the body of the tweet
+    
+* **isRetweet:** set to `t` if it's a retweet or `f` if it's not
+    
+* **isDeleted:** set to `t` if it's deleted or `f` if it's not
+    
+* **device:** mentions the device used to post the tweet
+    
+* **favorites:** shows the number of people who marked the tweet as favourite
+    
+* **retweets:** shows the number of retweets of the tweet
+    
+* **date:** shows the date of the tweet
+    
+* **isFlagged:** set to `t` if it breaks the community posting guidelines or `f` if it's not
+    
+
+For this tutorial, we will only be using the `text` column containing each tweet's text.
+
+## **Creating an OpenAI GPT-3 Model**
+
+Now that we have our data set up, we can create an OpenAI GPT-3 model using MindsDB Cloud Editor.
+
+With MindsDB, we can achieve everything with the ease of simple SQL statements.
+
+```sql
+CREATE MODEL MODEL_NAME
+PREDICT Target_Column
+USING
+engine = 'name_of_the_engine',
+prompt_template = 'describe the Target_Column of the data
+strictly as "Type X", "Type Y", or "Type Z".
+"Example_Input":Type X
+"Example_Input":Type Y
+"{{Input_Data}}.":';
+```
+
+In the above template, we need to provide the following details in order to train the model.
+
+* **MODEL\_NAME**: Provide the name of the model you want.
+    
+* **Target\_Column**: Name the column you want to predict i.e., `sentiment` here.
+    
+* **name\_of\_the\_engine**: Specify the engine for the model i.e., `openai` here.
+    
+* **prompt\_template**: Specify a template that the model can use as a reference.
+    
+
+Now if we replace the placeholders in the above query, the actual query should look something like this.
+
+```sql
+CREATE MODEL trump_sentiments_classifier
+PREDICT sentiment
+USING
+engine = 'openai',
+prompt_template = 'describe the sentiment of the tweets
+strictly as "positive", "neutral", or "negative".
+"I love the product":positive
+"It is a scam":negative
+"{{text}}.":';
+```
+
+This should return the following upon successful execution.
+
+![](https://cdn.hashnode.com/res/hashnode/image/upload/v1680810374339/7f48f028-6eb6-44c8-b873-64f40ede2a6b.png)
+
+# Status of the Model
+
+Once the model is created, you can check its status by using the simple SQL query given below. We have to wait for the status to return `complete` before we can use it for sentiment analysis.
+
+```sql
+SELECT status FROM models
+WHERE name = 'trump_sentiments_classifier';
+```
+
+This returns the status of the model `trump_sentiments_classifier`.
+
+![Status of the Model](https://cdn.hashnode.com/res/hashnode/image/upload/v1680585286345/9d52ffe7-ba24-421c-a276-fdc3bbd54ffe.png)
+
+# **Making Sentiment Analysis**
+
+Now that our model is ready, we can use it to make predictions on new data. In this case, we'll use it to predict the sentiment of Donald Trump's tweets. We will predict the sentiments in two ways one after the other.
+
+### Making a Single Prediction
+
+To make a single prediction, we'll first need to provide an input text and ask the model to return its sentiment.
+
+To do this, we can use MindsDB's `Select` function to make a prediction based on the input text.
+
+This will output the predicted sentiment of the text, which should be either "Positive," "Negative," or "Neutral."
+
+```sql
+SELECT text, sentiment
+FROM trump_sentiments_classifier
+WHERE text = 'You are stupid.';
+```
+
+This should return the sentiment of the above text which is `negative`.
+
+![Single Sentiment Analysis](https://cdn.hashnode.com/res/hashnode/image/upload/v1680586156280/629538e6-31a4-4c8f-b47d-a0827c298981.png)
+
+### Making Batch Predictions
+
+Now we will try to predict the sentiment of each tweet in the table. This is what we call a `Batch Prediction`.
+
+Here's an example of how we can do that.
+
+```sql
+SELECT input.text, output.sentiment
+FROM files.TrumpTweets AS input
+JOIN trump_sentiment_classifier AS output 
+LIMIT 10;
+```
+
+Here, we are asking the model to return two rows back in the form of a table that contains the `text` column which has the tweets and the `sentiment` column that contains the predicted sentiment of each of these tweets.
+
+The result should look something like this.
+
+![Batch Predictions](https://cdn.hashnode.com/res/hashnode/image/upload/v1680891171839/2b590dad-13c7-49ff-95f3-265e19595a5c.png)
+
+One thing to notice here is that the model clearly identifies the `links` in these tweets and clearly mention that in the `sentiment` column, marking them as `neutral` .
+
+# **Conclusion**
+
+In this tutorial, we've shown how to use MindsDB Cloud Editor and OpenAI GPT-3 to perform sentiment analysis on Donald Trump's tweets. We started by setting up our data, connecting it to MindsDB Cloud Editor, and creating an OpenAI GPT-3 model for sentiment analysis. Then, we learnt how to make predictions using both a single input and a batch of inputs.
+
+MindsDB Cloud Editor and OpenAI GPT-3 are potent tools for sentiment analysis and machine learning in general. By following the steps outlined in this tutorial, you should now have a good foundation for using these tools to perform your own sentiment analysis on other datasets.
+
+Lastly, before you leave, don't forget to shower your love on this article by liking it and sharing it on your socials or by dropping a comment below.
+
+> **MindsDB** has recently organized a ***Hackathon*** in collaboration with **Hashnode**. You can check all the details by clicking on the banner below.
+> 
+> [![MindsDB Hashnode Hackathon](https://cdn.hashnode.com/res/hashnode/image/upload/v1680586846221/9b18ee53-2fd7-4434-9003-0b9a155f0dc5.png)](https://hashnode.com/hackathons/mindsdb)
+
+[![Sponsor Banner](https://cdn.hashnode.com/res/hashnode/image/upload/v1680776931016/43a52520-516c-4afe-a6e4-1579bb0f8dc5.png)](https://github.com/sponsors/Rutam21)

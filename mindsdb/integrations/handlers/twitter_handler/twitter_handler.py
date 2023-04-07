@@ -37,6 +37,8 @@ class TweetsTable(APITable):
         filters = []
         for op, arg1, arg2 in conditions:
 
+            if op == 'or':
+                raise NotImplementedError(f'OR is not supported')
             if arg1 == 'created_at':
                 date = parse_utc_date(arg2)
                 if op == '>':
@@ -87,22 +89,6 @@ class TweetsTable(APITable):
             params=params,
             filters=filters
         )
-
-        if 'referenced_tweets' in result.columns:
-            # fill reply column
-            def _get_reference(ref_type):
-                def fnc(value):
-                    if isinstance(value, dict):
-                        if value.get('type') == ref_type:
-                            return value['id']
-                        else:
-                            return None
-
-                return fnc
-
-            result['in_reply_to_tweet_id'] = result.referenced_tweets.str[0].apply(_get_reference('replied_to'))
-            result['in_retweeted_to_tweet_id'] = result.referenced_tweets.str[0].apply(_get_reference('retweeted'))
-            result['in_quote_to_tweet_id'] = result.referenced_tweets.str[0].apply(_get_reference('quoted'))
 
         # filter targets
         columns = []
@@ -339,9 +325,13 @@ class TwitterHandler(APIHandler):
                     if value != value2:
                         break
                 elif op == 'in':
+                    if not isinstance(value, list):
+                        value = [value]
                     if value2 not in value:
                         break
                 elif op == 'not in':
+                    if not isinstance(value, list):
+                        value = [value]
                     if value2 in value:
                         break
                 else:
@@ -382,6 +372,10 @@ class TwitterHandler(APIHandler):
 
         limit_exec_time = time.time() + 60
 
+        if filters:
+            # if we have filters: do big page requests
+            params['max_results'] = max_page_size
+
         while True:
             if time.time() > limit_exec_time:
                 raise RuntimeError('Handler request timeout error')
@@ -418,12 +412,25 @@ class TwitterHandler(APIHandler):
                     data.append(resp.data.data)
                 break
 
+            # unwind columns
+            for row in chunk:
+                if 'referenced_tweets' in row:
+                    refs = row['referenced_tweets']
+                    if isinstance(refs, list) and len(refs) > 0:
+                        if refs[0]['type'] == 'replied_to':
+                            row['in_reply_to_tweet_id'] = refs[0]['id']
+                        if refs[0]['type'] == 'retweeted':
+                            row['in_retweeted_to_tweet_id'] = refs[0]['id']
+                        if refs[0]['type'] == 'quoted':
+                            row['in_quote_to_tweet_id'] = refs[0]['id']
+
+            if filters:
+                chunk = self._apply_filters(chunk, filters)
+
             # limit output
             if left is not None:
                 chunk = chunk[:left]
 
-            if filters:
-                chunk = self._apply_filters(chunk, filters)
             data.extend(chunk)
             # next page ?
             if count_results is not None and hasattr(resp, 'meta') and 'next_token' in resp.meta:

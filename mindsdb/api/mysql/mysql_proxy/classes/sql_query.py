@@ -546,7 +546,7 @@ class SQLQuery():
             def fill_params(node, **kwargs):
                 if isinstance(node, Parameter):
                     rs = steps_data[node.value.step_num]
-                    items = [i[0] for i in rs.get_records_raw()]
+                    items = [Constant(i[0]) for i in rs.get_records_raw()]
                     return Tuple(items)
 
             query_traversal(query, fill_params)

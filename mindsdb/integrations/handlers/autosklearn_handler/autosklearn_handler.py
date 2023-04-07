@@ -30,6 +30,9 @@ class AutoSklearnHandler(BaseMLEngine):
 
             model = automl_regression.AutoSklearnRegressor(**vars(config))
 
+        else:
+            raise Exception('This task is not supported!')
+
         model.fit(df.drop(target, axis=1), df[target])
 
         self.model_storage.file_set('model', dill.dumps(model))

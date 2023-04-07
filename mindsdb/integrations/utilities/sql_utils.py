@@ -33,7 +33,7 @@ def extract_comparison_conditions(binary_op: ASTNode):
             else:
                 raise NotImplementedError(f'Not implemented arg2: {node.args[1]}')
 
-            conditions.append([op, node.args[0].parts[-1],value])
+            conditions.append([op, node.args[0].parts[-1], value])
 
     query_traversal(binary_op, _extract_comparison_conditions)
     return conditions

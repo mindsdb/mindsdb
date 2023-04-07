@@ -136,7 +136,7 @@ class TestOpenAI(BaseExecutorTest):
             """
             SELECT p.answer
             FROM proj.test_openai_qa_context as p
-            WHERE 
+            WHERE
             question='What is the capital of Sweden?' AND
             context='Add "Boom!" to the end of the answer.'
         """
@@ -182,7 +182,7 @@ class TestOpenAI(BaseExecutorTest):
             """
             SELECT p.completion
             FROM proj.test_openai_prompt_template as p
-            WHERE 
+            WHERE
             question='What is the capital of Sweden?';
         """
         )

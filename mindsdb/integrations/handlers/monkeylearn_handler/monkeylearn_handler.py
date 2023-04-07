@@ -13,14 +13,12 @@ class monkeylearnHandler(BaseMLEngine):
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         args = args['using']
-        model_id = args['MODEL_ID']
-        API_key = args['YOUR_API_KEY']
-        # if 'production_model' in args:
-        #     raise Exception("Custom models are not supported currently")
+        model_id = args['model_id']
+        api_key = args['api_key']
 
         # Check whether the model_id given by user exists in the user account or monkeylearn pre-trained models
         url = 'https://api.monkeylearn.com/v3/classifiers/'
-        response = requests.get(url, headers={'Authorization': 'Token {}'.format(API_key)})
+        response = requests.get(url, headers={'Authorization': 'Token {}'.format(api_key)})
         if response.status_code == 200:
             models = response.json()
             models_list = [model['id'] for model in models]
@@ -63,8 +61,3 @@ class monkeylearnHandler(BaseMLEngine):
             description['tags'] = tag_names
             des_df = pd.DataFrame([description])
             return des_df
-
-
-
-
-

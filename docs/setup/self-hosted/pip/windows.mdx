@@ -31,6 +31,12 @@ Or you could try to install MindsDB with
 [Anaconda](https://www.anaconda.com/products/individual) and run the
 installation from the **Anaconda prompt**.
 
+In addition, for Windows systems with default languages other than English, your system 
+might not have UTF-8 as the default encoding standard, which will cause encoding errors 
+when installing dependencies. To solve this issue, go to 
+`Control Panel` > `Clock and Region` > `Region` > `Administrative tab` > 
+`Change system locale button` and enable `Beta: Use Unicode UTF-8 for worldwide language support`.
+
 ### Installing torch or torchvision
 
 If the installation fails when installing **torch** or **torchvision**, try to

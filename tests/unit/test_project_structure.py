@@ -551,8 +551,9 @@ class TestJobs(BaseExecutorDummyML):
         scheduler.check_timetable()
 
         # check query to integration
-        assert data_handler().query.call_args[0][0].to_string() ==\
-               "SELECT * FROM tbl1 WHERE tbl1.b > '1900-01-01 00:00:00'"
+        job = self.db.Jobs.query.filter(self.db.Jobs.name == 'j2').first()
+        create_at_str = job.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        assert data_handler().query.call_args[0][0].to_string() == f"SELECT * FROM tbl1 WHERE tbl1.b > '{create_at_str}'"
 
         # check jobs table
         ret = self.run_sql('select * from jobs', database='proj2')

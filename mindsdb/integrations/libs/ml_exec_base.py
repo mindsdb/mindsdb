@@ -372,7 +372,10 @@ class BaseMLEngineExec:
         try:
             predictions = ml_handler.predict(df, args)
         except Exception as e:
-            msg = f'[{self.name}/{model_name}]: {str(e)}'
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            msg = f'[{self.name}/{model_name}]: {msg}'
             raise MLEngineException(msg) from e
 
         ml_handler.close()

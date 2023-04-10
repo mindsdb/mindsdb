@@ -161,7 +161,7 @@ class TweetsTable(APITable):
                     img = io.BytesIO(resp.content)
 
                     # upload media to twitter
-                    api_v1 = self.handler.connect(api_version=1)
+                    api_v1 = self.handler.create_connection(api_version=1)
                     content_type = resp.headers['Content-Type']
                     file_type = content_type.split('/')[-1]
                     media = api_v1.media_upload(filename="img.{file_type}".format(file_type=file_type), file=img)
@@ -237,12 +237,7 @@ class TwitterHandler(APIHandler):
         tweets = TweetsTable(self)
         self._register_table('tweets', tweets)
 
-    def connect(self, api_version=2):
-        """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""  # noqa
-
-        if self.is_connected is True:
-            return self.api
-        # if version 1, do not hold connection in self.api, simply return api object
+    def create_connection(self, api_version=2):
         if api_version == 1:
             auth = tweepy.OAuthHandler(
                 self.connection_args['consumer_key'],
@@ -253,8 +248,16 @@ class TwitterHandler(APIHandler):
                 self.connection_args['access_token_secret']
             )
             return tweepy.API(auth)
-        
-        self.api = tweepy.Client(**self.connection_args)
+
+        return tweepy.Client(**self.connection_args)
+
+    def connect(self, api_version=2):
+        """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""  # noqa
+
+        if self.is_connected is True:
+            return self.api
+
+        self.api = self.create_connection()
 
         self.is_connected = True
         return self.api

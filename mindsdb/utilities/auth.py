@@ -21,8 +21,10 @@ def get_aws_meta_data() -> dict:
             timeout=1
         )
         if resp.status_code != 200:
-            raise Exception()
+            continue
         aws_meta_data[key] = resp.text
+    if aws_meta_data['instance-id'] is None:
+        raise Exception('That is not an AWS environment')
     return aws_meta_data
 
 

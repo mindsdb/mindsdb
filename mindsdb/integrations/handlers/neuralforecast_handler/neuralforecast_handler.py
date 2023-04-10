@@ -1,12 +1,12 @@
-import os
+from sklearn.metrics import r2_score
+import pandas as pd
 import tempfile
-import string
-import random
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.time_series_utils import (
     transform_to_nixtla_df,
     get_results_from_nixtla_df,
     infer_frequency,
+    get_model_accuracy_dict
 )
 from neuralforecast import NeuralForecast
 from neuralforecast.models import NHITS
@@ -62,17 +62,19 @@ class NeuralForecastHandler(BaseMLEngine):
         )
         model_args["model_name"] = DEFAULT_MODEL_NAME
         num_trials = int(DEFAULT_TRIALS * using_args["train_time"]) if "train_time" in using_args else DEFAULT_TRIALS
-        exog_vars = using_args["exogenous_vars"] if "exogenous_vars" in using_args else []
+        model_args["exog_vars"] = using_args["exogenous_vars"] if "exogenous_vars" in using_args else []
         model_args["model_folder"] = tempfile.mkdtemp()
 
         # Train model
         model = choose_model(num_trials, time_settings["horizon"], time_settings["window"])
-        nixtla_df = transform_to_nixtla_df(df, model_args, exog_vars)
-        nf = NeuralForecast(models=[model], freq=model_args["frequency"])
-        nf.fit(nixtla_df)
-        nf.save(model_args["model_folder"], overwrite=True)
+        nixtla_df = transform_to_nixtla_df(df, model_args, model_args["exog_vars"])
+        neural = NeuralForecast(models=[model], freq=model_args["frequency"])
+        results_df = neural.cross_validation(nixtla_df)
+        # Get model accuracy
+        model_args["accuracies"] = get_model_accuracy_dict(results_df, r2_score)
 
         ###### persist changes to handler folder
+        neural.save(model_args["model_folder"], overwrite=True)
         self.model_storage.json_set("model_args", model_args)
 
     def predict(self, df, args={}):
@@ -89,7 +91,27 @@ class NeuralForecastHandler(BaseMLEngine):
         prediction_df = transform_to_nixtla_df(df, model_args)
         groups_to_keep = prediction_df["unique_id"].unique()
 
-        nf = NeuralForecast.load(model_args["model_folder"])
-        forecast_df = nf.predict(prediction_df)
+        neural = NeuralForecast.load(model_args["model_folder"])
+        forecast_df = neural.predict(prediction_df)
         forecast_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
         return get_results_from_nixtla_df(forecast_df, model_args)
+
+    def describe(self, attribute=None):
+        model_args = self.model_storage.json_get("model_args")
+
+        if attribute == "model":
+            return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "frequency"]})
+
+        if attribute == "features":
+            return pd.DataFrame(
+                {"ds": [model_args["order_by"]], "y": model_args["target"], "unique_id": [model_args["group_by"]], "exog_vars": [model_args["exog_vars"]]}
+            )
+
+        if attribute == "ensemble":
+            raise Exception(f"DESCRIBE {attribute} is not supported by this Handler.")
+
+        if attribute is None:
+            outputs = model_args["target"]
+            inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]] + model_args["exog_vars"]
+            accuracies = [(model, acc) for model, acc in model_args["accuracies"].items()]
+            return pd.DataFrame({"accuracies": [accuracies], "outputs": outputs, "inputs": [inputs]})

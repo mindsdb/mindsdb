@@ -1,7 +1,11 @@
 import pandas as pd
 from sklearn.metrics import r2_score
+from hierarchicalforecast.core import HierarchicalReconciliation
+from hierarchicalforecast.methods import BottomUp
+from hierarchicalforecast.utils import aggregate
 
 DEFAULT_FREQUENCY = "D"
+DEFAULT_RECONCILER = BottomUp
 
 
 def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
@@ -9,7 +13,7 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
 
     Nixtla packages require dataframes to have the following columns:
         unique_id -> the grouping column. If multiple groups are specified then
-        we join them into one name using a | char.
+        we join them into one name using a / char.
         ds -> the date series
         y -> the target variable for prediction
 
@@ -21,7 +25,7 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
     if len(settings_dict["group_by"]) > 1:
         for col in settings_dict["group_by"]:
             nixtla_df[col] = nixtla_df[col].astype(str)
-        nixtla_df["unique_id"] = nixtla_df[settings_dict["group_by"]].agg("|".join, axis=1)
+        nixtla_df["unique_id"] = nixtla_df[settings_dict["group_by"]].agg("/".join, axis=1)
         group_col = "ignore this"
     else:
         group_col = settings_dict["group_by"][0]
@@ -32,6 +36,7 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
     )
 
     columns_to_keep = ["unique_id", "ds", "y"] + exog_vars
+    nixtla_df["ds"] = pd.to_datetime(nixtla_df["ds"])
     return nixtla_df[columns_to_keep]
 
 
@@ -44,7 +49,7 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
     return_df.columns = ["unique_id", "ds", model_args["target"]]
     if len(model_args["group_by"]) > 1:
         for i, group in enumerate(model_args["group_by"]):
-            return_df[group] = return_df["unique_id"].apply(lambda x: x.split("|")[i])
+            return_df[group] = return_df["unique_id"].apply(lambda x: x.split("/")[i])
     else:
         group_by_col = model_args["group_by"][0]
         return_df[group_by_col] = return_df["unique_id"]
@@ -67,7 +72,7 @@ def get_model_accuracy_dict(nixtla_results_df, metric=r2_score):
     for column in nixtla_results_df.columns:
         if column in ["unique_id", "ds", "y", "cutoff"]:
             continue
-        model_error = metric(nixtla_results_df[column], nixtla_results_df["y"])
+        model_error = metric(nixtla_results_df["y"], nixtla_results_df[column])
         accuracy_dict[column] = model_error
     return accuracy_dict
 
@@ -82,3 +87,62 @@ def get_best_model_from_results_df(nixtla_results_df, metric=r2_score):
         if accuracy > current_accuracy:
             best_model, current_accuracy = model, accuracy
     return best_model
+
+
+def spec_hierarchy_from_list(col_list):
+    """Gets the hierarchy spec from the list of hierarchy cols"""
+    spec = [["Total"]]
+    for i in range(len(col_list)):
+        spec.append(["Total"] + col_list[: i + 1])
+    return spec
+
+
+def get_hierarchy_from_df(df, model_args):
+    """Extracts hierarchy from the raw df, using the provided spec and args.
+
+    The "hierarchy" model arg is a list of format
+    [<level 1>, <level 2>, ..., <level n>]
+    where each element is a level in the hierarchy.
+
+    We return a tuple (nixtla_df, hier_df, hier_dict) where:
+    nixtla_df is a dataframe in the format nixtla packages uses for training
+    hier_df is a matrix of 0s and 1s showing the hierarchical structure
+    hier_dict is a dictionary with the hierarchical structure. See the unit test
+    in tests/unit/ml_handlers/test_time_series_utils.py for an example.
+    """
+    spec = spec_hierarchy_from_list(model_args["hierarchy"])
+    nixtla_df = df.rename({model_args["order_by"]: "ds", model_args["target"]: "y"}, axis=1)
+    for col in model_args["group_by"]:
+        nixtla_df[col] = nixtla_df[col].astype(str)  # grouping columns need to be string format
+    nixtla_df.insert(0, "Total", "total")
+    nixtla_df, hier_df, hier_dict = aggregate(nixtla_df, spec)  # returns (nixtla_df, hierarchy_df, hierarchy_dict)
+    return nixtla_df, hier_df, hier_dict
+
+
+def reconcile_forecasts(nixtla_df, forecast_df, hierarchy_df, hierarchy_dict):
+    """Reconciles forecast results according to the hierarchy."""
+    reconcilers = [DEFAULT_RECONCILER()]
+    hrec = HierarchicalReconciliation(reconcilers=reconcilers)
+    reconciled_df = hrec.reconcile(Y_hat_df=forecast_df, Y_df=nixtla_df, S=hierarchy_df, tags=hierarchy_dict)
+    return get_results_from_reconciled_df(reconciled_df, hierarchy_df)
+
+
+def get_results_from_reconciled_df(reconciled_df, hierarchy_df):
+    """Formats the reconciled df into a normal Nixtla results df.
+
+    First drops the model output columns that haven't been reconciled.
+    Then drops rows corresponding to higher level predictions that were not
+    in the original dataframe, e.g. the total for each grouping.
+    """
+    #  Drop unnecessary columns
+    for col in reconciled_df.columns:
+        if col not in ["ds", "y"]:
+            if "BottomUp" not in col:
+                results_df = reconciled_df.drop(col, axis=1)  # removes original forecast column
+                break
+
+    #  Drop higher-level rows
+    lowest_level_ids = hierarchy_df.columns
+    results_df = results_df[results_df.index.isin(lowest_level_ids)]
+    results_df.index = results_df.index.str.replace("total/", "")
+    return results_df

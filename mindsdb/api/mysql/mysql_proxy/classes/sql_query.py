@@ -33,6 +33,8 @@ from mindsdb_sql.parser.ast import (
     Delete,
     Latest,
     BetweenOperation,
+    Parameter,
+    Tuple
 )
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
@@ -521,7 +523,7 @@ class SQLQuery():
             'result': result
         }
 
-    def _fetch_dataframe_step(self, step):
+    def _fetch_dataframe_step(self, step, steps_data):
         dn = self.datahub.get(step.integration)
         query = step.query
 
@@ -539,6 +541,15 @@ class SQLQuery():
         else:
             table_alias = get_table_alias(step.query.from_table, self.database)
             # TODO for information_schema we have 'database' = 'mindsdb'
+
+            # fill params
+            def fill_params(node, **kwargs):
+                if isinstance(node, Parameter):
+                    rs = steps_data[node.value.step_num]
+                    items = [Constant(i[0]) for i in rs.get_records_raw()]
+                    return Tuple(items)
+
+            query_traversal(query, fill_params)
 
             data, columns_info = dn.query(
                 query=query,
@@ -563,14 +574,14 @@ class SQLQuery():
 
         return result
 
-    def _multiple_steps(self, steps):
+    def _multiple_steps(self, steps, steps_data):
         data = ResultSet()
         for substep in steps:
-            sub_data = self._fetch_dataframe_step(substep)
+            sub_data = self._fetch_dataframe_step(substep, steps_data)
             data = join_query_data(data, sub_data)
         return data
 
-    def _multiple_steps_reduce(self, step, vars):
+    def _multiple_steps_reduce(self, step, vars, steps_data):
         if step.reduce != 'union':
             raise ErLogicError(f'Unknown MultipleSteps type: {step.reduce}')
 
@@ -590,7 +601,7 @@ class SQLQuery():
             for name, value in var_group.items():
                 for substep in steps2:
                     replaceQueryVar(substep.query.where, value, name)
-            sub_data = self._multiple_steps(steps2)
+            sub_data = self._multiple_steps(steps2, steps_data)
             data = join_query_data(data, sub_data)
 
         return data
@@ -719,7 +730,7 @@ class SQLQuery():
                 ))
 
         elif type(step) == FetchDataframeStep:
-            data = self._fetch_dataframe_step(step)
+            data = self._fetch_dataframe_step(step, steps_data)
         elif type(step) == UnionStep:
             left_result = steps_data[step.left.step_num]
             right_result = steps_data[step.right.step_num]
@@ -776,7 +787,7 @@ class SQLQuery():
                         markQueryVar(query.where)
                         for name, value in var_group.items():
                             replaceQueryVar(query.where, value, name)
-                        sub_data = self._fetch_dataframe_step(substep)
+                        sub_data = self._fetch_dataframe_step(substep, steps_data)
                         if len(data.columns) == 0:
                             data = sub_data
                         else:
@@ -784,7 +795,7 @@ class SQLQuery():
 
                         unmarkQueryVar(query.where)
                 elif type(substep) == MultipleSteps:
-                    data = self._multiple_steps_reduce(substep, vars)
+                    data = self._multiple_steps_reduce(substep, vars, steps_data)
                 else:
                     raise ErLogicError(f'Unknown step type: {step.step}')
 
@@ -804,8 +815,20 @@ class SQLQuery():
 
             project_name = step.namespace
             predictor_name = step.predictor.parts[0]
-            where_data = step.row_dict
+            where_data0 = step.row_dict
             project_datanode = self.datahub.get(project_name)
+
+            # fill params
+            where_data = {}
+            for key, value in where_data0.items():
+                if isinstance(value, Parameter):
+                    rs = steps_data[value.value.step_num]
+                    if rs.length() == 1:
+                        # one value, don't do list
+                        value = rs.get_records_raw()[0][0]
+                    else:
+                        value = [i[0] for i in rs.get_records_raw()]
+                where_data[key] = value
 
             version = None
             if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():

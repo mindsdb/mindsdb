@@ -1,0 +1,2 @@
+monkeylearn
+mindsdb>=22.10.2.1

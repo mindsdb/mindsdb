@@ -1,5 +1,6 @@
 from typing import Optional, Dict
 
+import json
 import dill
 import pandas as pd
 from type_infer.infer import infer_types
@@ -20,3 +21,19 @@ class HuggingFaceInferenceHandler(BaseMLEngine):
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         pass
+
+    def _query(self, api_url, api_token, inputs, parameters=None, options=None):
+        headers = {
+            "Authorization": f"Bearer {api_token}"
+        }
+
+        data = json.dumps(
+            {
+                "inputs": inputs,
+                "parameters": parameters,
+                "options": options
+            }
+        )
+
+        response = requests.request("POST", api_url, headers=headers, data=data)
+        return json.loads(response.content.decode("utf-8"))

@@ -227,6 +227,17 @@ class LightwoodHandler(BaseMLEngine):
                     if isinstance(date_values, list) is False:
                         date_values = [date_values]
 
+                if pred_args.get('force_ts_infer') is True:
+                    # last row contains one additional prediction (used for cases like date > '2020-10-10').
+                    # Extract that prediction from there, join to previous row and increase horizon.
+                    rows[-2][order_by_column].append(rows[-1][order_by_column][-1])
+                    rows[-2][target].append(rows[-1][target][-1])
+                    for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                        explanations[-2][target][col].append(explanations[-1][target][col][-1])
+                    rows.pop()
+                    explanations.pop()
+                    horizon = horizon + 1
+
                 for i in range(len(rows) - 1):
                     if horizon > 1:
                         rows[i][target] = rows[i][target][0]
@@ -246,7 +257,6 @@ class LightwoodHandler(BaseMLEngine):
                             new_row[order_by_column] = new_row[order_by_column][i]
                     if '__mindsdb_row_id' in new_row and (i > 0 or forecast_offset):
                         new_row['__mindsdb_row_id'] = None
-                    rows.append(new_row)
 
                     new_explanation = copy.deepcopy(last_explanation)
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
@@ -255,6 +265,8 @@ class LightwoodHandler(BaseMLEngine):
                     if i != 0:
                         new_explanation[target]['anomaly'] = None
                         new_explanation[target]['truth'] = None
+
+                    rows.append(new_row)
                     explanations.append(new_explanation)
 
             pred_dicts = []

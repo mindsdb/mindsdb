@@ -875,6 +875,8 @@ class SQLQuery():
                 # set row_id
                 data = steps_data[step.dataframe.step_num]
 
+                params = step.params or {}
+
                 for table in data.get_tables():
                     row_id_col = Column(
                         name='__mindsdb_row_id',
@@ -908,6 +910,7 @@ class SQLQuery():
                         _mdb_forecast_offset = 0
                     else:
                         # normal mode -- emit a forecast ($HORIZON data points on each) for each provided timestamp
+                        params['force_ts_infer'] = True
                         _mdb_forecast_offset = None
                     for row in where_data:
                         if '__mdb_forecast_offset' not in row:
@@ -947,7 +950,7 @@ class SQLQuery():
                             model_name=predictor_name,
                             data=where_data,
                             version=version,
-                            params=step.params,
+                            params=params
                         )
                         data = predictions.to_dict(orient='records')
                         columns_dtypes = dict(predictions.dtypes)

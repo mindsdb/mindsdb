@@ -115,6 +115,10 @@ class IntegrationDataNode(DataNode):
                 new_row.append(value)
             formatted_data.append(new_row)
 
+        if len(formatted_data) == 0:
+            # not need to insert
+            return
+
         insert_ast = Insert(
             table=table_name,
             columns=insert_columns,
@@ -139,7 +143,10 @@ class IntegrationDataNode(DataNode):
                 # try to fetch native query
                 result = self.integration_handler.native_query(native_query)
         except Exception as e:
-            msg = f'[{self.ds_type}/{self.integration_name}]: {str(e)}'
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            msg = f'[{self.ds_type}/{self.integration_name}]: {msg}'
             raise DBHandlerException(msg) from e
 
         if result.type == RESPONSE_TYPE.ERROR:
@@ -154,7 +161,7 @@ class IntegrationDataNode(DataNode):
             df = df.to_frame()
 
         try:
-            df = df.replace(np.NaN, None)
+            df = df.replace(np.NaN, pd.NA)
         except Exception as e:
             print(f'Issue with clearing DF from NaN values: {e}')
 

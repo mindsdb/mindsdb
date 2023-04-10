@@ -35,5 +35,5 @@ pyarrow >= 9.0.0, < 10.0.0
 dataprep_ml
 grpcio-tools
 python-magic >= 0.4.27
-python-magic-bin==0.4.14
+python-magic-bin == 0.4.14
 openpyxl >= 3.1.1

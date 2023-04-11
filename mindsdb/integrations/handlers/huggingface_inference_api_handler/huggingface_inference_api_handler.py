@@ -4,7 +4,7 @@ import json
 import pandas as pd
 import requests
 
-from config_parser import ConfigParser
+from .config_parser import ConfigParser
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -16,7 +16,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
 
     name = 'huggingface_inference'
 
-    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
+    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         if 'using' not in args:
             raise Exception("Hugging Face Inference engine requires a USING clause! Refer to its documentation for more details.")
 
@@ -26,7 +26,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
         self.model_storage.json_set('config_args', config_args)
 
-    def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
+    def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         args = self.model_storage.json_get('args')
         config_args = self.model_storage.json_get('config_args')
 

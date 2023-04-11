@@ -60,5 +60,8 @@ class HuggingFaceInferenceHandler(BaseMLEngine):
     def _parse_inputs(self):
         pass
 
-    def _parse_response(self):
-        pass
+    def _parse_response(self, df, response, task, target):
+        if task == 'text-classification':
+            df[target] = [item[0]['label'] for item in response]
+
+        return df

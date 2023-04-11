@@ -67,8 +67,26 @@ class GithubHandler(APIHandler):
         StatusResponse
             Status confirmation
         """
+        response = StatusResponse(False)
 
-        return StatusResponse(True)
+        try:
+            self.connect()
+            if self.connection_data.get("api_key", None):
+                current_user = self.connection.get_user().name
+                logger.info(f"Authenticated as user {current_user}")
+            else:
+                logger.info("Proceeding without an API key")
+
+            current_limit = self.connection.get_rate_limit()
+            logger.info(f"Current rate limit: {current_limit}")
+            response.success = True
+        except Exception as e:
+            logger.error(f"Error connecting to GitHub API: {e}!")
+            response.error_message = e
+
+        self.is_connected = response.success
+
+        return response
 
     def native_query(self, query: str) -> StatusResponse:
         """Receive and process a raw query.

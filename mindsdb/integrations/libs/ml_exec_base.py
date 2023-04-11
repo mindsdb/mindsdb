@@ -138,7 +138,7 @@ def learn_process(class_path, engine, context_dump, integration_id,
         else:
             # load model from previous version, use it as starting point
             problem_definition['base_model_id'] = base_predictor_id
-            ml_handler.update(df=training_data_df, args=problem_definition)
+            ml_handler.finetune(df=training_data_df, args=problem_definition)
 
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
         db.session.commit()

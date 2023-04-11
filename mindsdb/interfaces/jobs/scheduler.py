@@ -103,7 +103,7 @@ class Scheduler:
                 except queue.Empty:
                     # update last date:
                     history_record = db.JobsHistory.query.get(history_id)
-                    history_record.created_at = dt.datetime.now()
+                    history_record.updated_at = dt.datetime.now()
                     db.session.commit()
 
         else:

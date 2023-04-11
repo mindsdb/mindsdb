@@ -298,7 +298,7 @@ class JobsExecutor:
                 start_at=record.next_run_at,
                 company_id=record.company_id
             ).first()
-            if history_record.created_at < dt.datetime.now() - dt.timedelta(seconds=30):
+            if history_record.updated_at < dt.datetime.now() - dt.timedelta(seconds=30):
                 db.session.delete(history_record)
                 db.session.commit()
 

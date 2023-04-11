@@ -1,6 +1,5 @@
 from typing import Optional, Dict
 import pandas as pd
-import transformers
 import requests
 
 from monkeylearn import MonkeyLearn
@@ -13,8 +12,8 @@ class monkeylearnHandler(BaseMLEngine):
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         args = args['using']
-        model_id = args['model_id']
-        api_key = args['api_key']
+        model_id = args['MODEL_ID']
+        api_key = args['API_KEY']
 
         # Check whether the model_id given by user exists in the user account or monkeylearn pre-trained models
         url = 'https://api.monkeylearn.com/v3/classifiers/'
@@ -33,7 +32,7 @@ class monkeylearnHandler(BaseMLEngine):
         def predict(self, df, args=None):
             args = self.model_storage.json_get('args')
             input_list = df[args['input_column']]
-            ml = MonkeyLearn(args['YOUR_API_KEY'])
+            ml = MonkeyLearn(args['API_KEY'])
             classifier_response = ml.classifiers.classify(args['MODEL_ID'], input_list)
             df_dict = []
             for res_dict in classifier_response.body:
@@ -46,7 +45,7 @@ class monkeylearnHandler(BaseMLEngine):
 
         def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
             args = self.model_storage.json_get('args')
-            ml = MonkeyLearn(args['YOUR_API_KEY'])
+            ml = MonkeyLearn(args['API_KEY'])
             response = ml.classifiers.detail(args['MODEL_ID'])
             description = {}
             description['name'] = response.body['name']

@@ -343,7 +343,8 @@
             "data-integrations/oracle",
              "data-integrations/solr",
             "data-integrations/OrioleDB",
-            "data-integrations/singlestore"
+            "data-integrations/singlestore",
+            "data-integrations/scylladb"
           ]
         },
         {

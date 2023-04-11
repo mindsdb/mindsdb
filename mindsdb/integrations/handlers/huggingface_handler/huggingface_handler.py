@@ -1,8 +1,15 @@
-from typing import Optional
+from typing import Optional, Dict
 
+
+import numpy as np
 import pandas as pd
+import evaluate
 import transformers
+from datasets import Dataset
 from huggingface_hub import HfApi
+from transformers import AutoTokenizer
+from transformers import TrainingArguments, Trainer
+from transformers import AutoModelForSequenceClassification
 
 from mindsdb.utilities import log
 
@@ -262,3 +269,44 @@ class HuggingFaceHandler(BaseMLEngine):
         metadata = hf_api.model_info(args['model_name'])
 
         return pd.DataFrame([[args, metadata.__dict__]], columns=['model_args', 'metadata'])
+
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        def _tokenize_fn(examples):
+            return tokenizer(examples[args['input_column']], padding="max_length", truncation=True)
+
+        finetune_args = args if args else {}
+        args = self.base_model_storage.json_get('args')
+        model_name = args['model_name']
+        base_model_name = model_name
+        hf_model_storage_path = self.engine_storage.folder_get(model_name)
+
+        tokenizer_from = args.get('tokenizer_from', 'bert-base-cased')
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_from)  # TODO: load from pre-trained model folder
+        dataset = Dataset.from_pandas(df)
+        tokenized_datasets = dataset.map(_tokenize_fn, batched=True)
+        train_ds, eval_ds = tokenized_datasets.shuffle(seed=42).train_test_split(test_size=args.get('eval_size', 0.1))
+
+        task = args['task']
+        if task == 'text-classification':
+            n_labels = len(args['labels_map'])
+            model = AutoModelForSequenceClassification.from_pretrained(base_model_name, num_labels=n_labels)
+            metric = evaluate.load("accuracy")
+
+            def _compute_metrics(eval_pred):
+                logits, labels = eval_pred
+                predictions = np.argmax(logits, axis=-1)
+                return metric.compute(predictions=predictions, references=labels)
+
+            # use defaults for now TODO: let user set them
+            training_args = TrainingArguments(output_dir=hf_model_storage_path, evaluation_strategy="epoch")
+
+            trainer = Trainer(
+                model=model,
+                args=training_args,
+                train_dataset=train_ds,
+                eval_dataset=eval_ds,
+                compute_metrics=_compute_metrics,
+            )
+
+            trainer.train()
+            self.model_storage.folder_sync(hf_model_storage_path)

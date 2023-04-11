@@ -219,7 +219,7 @@ class LangChainHandler(OpenAIHandler):
         description = pd.DataFrame(info)
         return description
 
-    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         raise NotImplementedError('Update is not supported for LangChain models')
 
     def sql_agent_completion(self, df, args=None):

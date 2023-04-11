@@ -71,7 +71,7 @@ class LightwoodHandler(BaseMLEngine):
             self.model_storage
         )
 
-    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         run_finetune(
             df,
             args,

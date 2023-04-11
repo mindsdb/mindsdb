@@ -9,7 +9,7 @@ from config_parser import ConfigParser
 from mindsdb.integrations.libs.base import BaseMLEngine
 
 
-class HuggingFaceInferenceHandler(BaseMLEngine):
+class HuggingFaceInferenceAPIHandler(BaseMLEngine):
     """
     Integration with the Hugging Face Inference API.
     """

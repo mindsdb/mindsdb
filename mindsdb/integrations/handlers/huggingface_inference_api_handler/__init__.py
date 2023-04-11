@@ -2,7 +2,7 @@ from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 from mindsdb.integrations.handlers.autosklearn_handler.__about__ import __version__ as version, __description__ as description
 try:
-    from .huggingface_inference_handler import HuggingFaceInferenceHandler as Handler
+    from .huggingface_inference_api_handler import HuggingFaceInferenceAPIHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None

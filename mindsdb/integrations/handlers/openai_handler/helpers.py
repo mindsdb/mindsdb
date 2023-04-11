@@ -13,7 +13,7 @@ def retry_with_exponential_backoff(
         hour_budget: float = 0.3,
         jitter: bool = False,
         exponential_base: int = 2,
-        errors: tuple = (openai.error.RateLimitError,),
+        errors: tuple = (openai.error.RateLimitError, openai.error.APIConnectionError),
 ):
     """
     Wrapper to enable optional arguments. It means this decorator always needs to be called with parenthesis:

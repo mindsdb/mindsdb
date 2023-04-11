@@ -426,7 +426,7 @@ class OpenAIHandler(BaseMLEngine):
         return pd.DataFrame([[meta['id'], meta['object'], meta['owned_by'], meta['permission'], args]],
                             columns=['id', 'object', 'owned_by', 'permission', 'model_args'])
 
-    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
         Fine-tune OpenAI GPT models. Steps are roughly:
           - Analyze input data and modify it according to suggestions made by the OpenAI utility tool

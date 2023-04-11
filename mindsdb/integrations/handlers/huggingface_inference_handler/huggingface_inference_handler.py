@@ -30,16 +30,17 @@ class HuggingFaceInferenceHandler(BaseMLEngine):
         args = self.model_storage.json_get('args')
         config_args = self.model_storage.json_get('config_args')
 
-        inputs = self._parse_inputs(args['using']['inputs'])
+        inputs = self._parse_inputs(df, args['using']['inputs'])
 
         response = self._query(
             f"{config_args['BASE_URL']}/{config_args['TASK_MODEL_MAP'][args['using']['task']]}",
             args['using']['api_key'],
+            inputs,
             args['using']['parameters'] if 'parameters' in args['using'] else None,
             args['using']['options'] if 'options' in args['using'] else None
         )
 
-        return self._parse_response(df, response)
+        return self._parse_response(df, response, args['using']['task'], args['target'])
 
     def _query(self, api_url, api_token, inputs, parameters=None, options=None):
         headers = {
@@ -57,8 +58,9 @@ class HuggingFaceInferenceHandler(BaseMLEngine):
         response = requests.request("POST", api_url, headers=headers, data=data)
         return json.loads(response.content.decode("utf-8"))
 
-    def _parse_inputs(self):
-        pass
+    def _parse_inputs(self, df, inputs, task):
+        if task == 'text-classification':
+            return df[inputs['column']].tolist()
 
     def _parse_response(self, df, response, task, target):
         if task == 'text-classification':

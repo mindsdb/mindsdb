@@ -165,6 +165,8 @@ def initialize_static():
 
 
 def initialize_app(config, no_studio, with_nlp):
+    static_root = config['paths']['static']
+    gui_exists = Path(static_root).joinpath('index.html').is_file()
     init_static_thread = None
     if (
         no_studio is False
@@ -179,9 +181,6 @@ def initialize_app(config, no_studio, with_nlp):
     app, api = initialize_flask(config, init_static_thread, no_studio)
     Compress(app)
     initialize_interfaces(app)
-
-    static_root = config['paths']['static']
-    gui_exists = Path(static_root).joinpath('index.html').is_file()
 
     if os.path.isabs(static_root) is False:
         static_root = os.path.join(os.getcwd(), static_root)

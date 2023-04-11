@@ -11,12 +11,12 @@ from mindsdb.utilities.config import Config
 @pytest.fixture(scope="session", autouse=True)
 def app():
     with TemporaryDirectory(prefix='projects_test_') as temp_dir:
-      db_path = 'sqlite:///' + os.path.join(temp_dir, 'mindsdb.sqlite3.db')
-      db.init(db_path)
-      migrate.migrate_to_head()
-      app = initialize_app(Config(), True, False)
+        db_path = 'sqlite:///' + os.path.join(temp_dir, 'mindsdb.sqlite3.db')
+        db.init(db_path)
+        migrate.migrate_to_head()
+        app = initialize_app(Config(), True, False)
 
-      yield app
+        yield app
 
 
 @pytest.fixture()

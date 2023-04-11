@@ -23,7 +23,7 @@ class ProjectsList(Resource):
 
 
 @ns_conf.route('/<project_name>')
-class ProjectsList(Resource):
+class ProjectsGet(Resource):
     @ns_conf.doc('get_project')
     def get(self, project_name):
         '''Gets a project by name'''

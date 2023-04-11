@@ -1,10 +1,10 @@
 from typing import Optional, Dict
 
 import json
-import dill
 import pandas as pd
-from type_infer.infer import infer_types
 import requests
+
+from config_parser import ConfigParser
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -17,7 +17,14 @@ class HuggingFaceInferenceHandler(BaseMLEngine):
     name = 'huggingface_inference'
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
-        pass
+        if 'using' not in args:
+            raise Exception("Hugging Face Inference engine requires a USING clause! Refer to its documentation for more details.")
+
+        config = ConfigParser('config.yaml')
+        config_args = config.get_config_dict()
+
+        self.model_storage.json_set('args', args)
+        self.model_storage.json_set('config_args', config_args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         pass

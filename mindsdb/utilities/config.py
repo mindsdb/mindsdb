@@ -113,6 +113,7 @@ class Config():
                 "autoupdate": True
             },
             "debug": False,
+            "environment": "local",
             "integrations": {},
             "api": {
                 "http": {

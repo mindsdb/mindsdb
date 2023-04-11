@@ -5,6 +5,8 @@ import math
 import openai
 import tiktoken
 
+import mindsdb.utilities.profiler as profiler
+
 
 def retry_with_exponential_backoff(
         initial_delay: float = 1,
@@ -21,6 +23,7 @@ def retry_with_exponential_backoff(
     
     """  # noqa
 
+    @profiler.profile()
     def _retry_with_exponential_backoff(func):
         """
         Exponential backoff to retry requests on a rate-limited API call, as recommended by OpenAI.

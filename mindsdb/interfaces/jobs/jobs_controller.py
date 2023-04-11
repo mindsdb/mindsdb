@@ -225,7 +225,7 @@ class JobsController:
                 'run_start': record.JobsHistory.start_at,
                 'run_end': record.JobsHistory.end_at,
                 'error': record.JobsHistory.error,
-                'query': record.Jobs.query_str,
+                'query': record.JobsHistory.query_str,
             })
         return data
 
@@ -333,6 +333,7 @@ class JobsExecutor:
 
         project_controller = ProjectController()
         project = project_controller.get(record.project_id)
+        executed_sql = ''
         for sql in split_sql(record.query_str):
             try:
                 #  fill template variables
@@ -367,6 +368,8 @@ class JobsExecutor:
 
                 command_executor = ExecuteCommands(sql_session, executor=None)
 
+                executed_sql += sql + '; '
+
                 ret = command_executor.execute_command(query)
                 if ret.error_code is not None:
                     error = ret.error_message
@@ -390,5 +393,6 @@ class JobsExecutor:
         if error:
             history_record.error = error
         history_record.end_at = dt.datetime.now()
+        history_record.query_str = executed_sql
 
         db.session.commit()

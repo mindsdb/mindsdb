@@ -12,7 +12,6 @@ title = 'MonkeyLearn'
 name = 'monkeylearn'
 type = HANDLER_TYPE.ML
 permanent = True
-execution_method = 'subprocess_keep'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error'

@@ -102,16 +102,17 @@ class NeuralForecastHandler(BaseMLEngine):
         if attribute == "model":
             return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "frequency"]})
 
-        if attribute == "features":
+        elif attribute == "features":
             return pd.DataFrame(
                 {"ds": [model_args["order_by"]], "y": model_args["target"], "unique_id": [model_args["group_by"]], "exog_vars": [model_args["exog_vars"]]}
             )
 
-        if attribute == "ensemble":
-            raise Exception(f"DESCRIBE {attribute} is not supported by this Handler.")
-
-        if attribute is None:
+        elif attribute == 'info':
             outputs = model_args["target"]
             inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]] + model_args["exog_vars"]
             accuracies = [(model, acc) for model, acc in model_args["accuracies"].items()]
             return pd.DataFrame({"accuracies": [accuracies], "outputs": outputs, "inputs": [inputs]})
+
+        else:
+            tables = ['info', 'features', 'model']
+            return pd.DataFrame(tables, columns=['tables'])

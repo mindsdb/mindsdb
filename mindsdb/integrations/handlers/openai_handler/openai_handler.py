@@ -417,14 +417,19 @@ class OpenAIHandler(BaseMLEngine):
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         # TODO: Update to use update() artifacts
+
         args = self.model_storage.json_get('args')
-        api_key = self._get_openai_api_key(args)
 
-        model_name = args.get('model_name', self.default_model)
-        meta = openai.Model.retrieve(model_name, api_key=api_key)
-
-        return pd.DataFrame([[meta['id'], meta['object'], meta['owned_by'], meta['permission'], args]],
-                            columns=['id', 'object', 'owned_by', 'permission', 'model_args'])
+        if attribute == 'args':
+            return pd.DataFrame(args.items(), columns=['key', 'value'])
+        elif attribute == 'metadata':
+            api_key = self._get_openai_api_key(args)
+            model_name = args.get('model_name', self.default_model)
+            meta = openai.Model.retrieve(model_name, api_key=api_key)
+            return pd.DataFrame(meta.items(), columns=['key', 'value'])
+        else:
+            tables = ['args', 'metadata']
+            return pd.DataFrame(tables, columns=['tables'])
 
     def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """

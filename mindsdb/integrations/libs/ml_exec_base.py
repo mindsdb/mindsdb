@@ -25,7 +25,7 @@ import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Identifier, Select, Show, Star, NativeQuery
+from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
 
 from mindsdb.integrations.utilities.sql_utils import make_sql_session
 from mindsdb.utilities.config import Config

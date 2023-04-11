@@ -1,6 +1,5 @@
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast import Identifier, Constant, BinaryOperation
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.planner.utils import query_traversal
 

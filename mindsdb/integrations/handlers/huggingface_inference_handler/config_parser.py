@@ -2,11 +2,10 @@ import configparser
 import yaml
 
 
-class ConfigParser(configparser.ConfigParser):
-    def read_yaml(self, filepath):
-        with open(filepath, 'r') as f:
-            yaml_config = yaml.load(f, Loader=yaml.FullLoader)
-            for section, options in yaml_config.items():
-                self.add_section(section)
-                for option, value in options.items():
-                    self.set(section, option, str(value))
+class ConfigParser():
+    def __init__(self, file_path):
+        with open(file_path, 'r') as f:
+            self.config_dict = yaml.safe_load(f)
+
+    def get_config_dict(self):
+        return self.config_dict

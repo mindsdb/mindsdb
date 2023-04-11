@@ -347,6 +347,12 @@
           ]
         },
         {
+          "group": "Data Integrations",
+          "pages": [
+            "data-integrations/scylladb"
+          ]
+        },
+        {
           "group": "ML Engines",
           "pages": [
             {

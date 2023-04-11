@@ -1,6 +1,8 @@
 from flask import request
 from flask_restx import Resource, abort
 
+from sqlalchemy.exc import NoResultFound
+
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
@@ -18,6 +20,23 @@ class ProjectsList(Resource):
             for i in session.datahub.get_projects_names()
         ]
         return projects
+
+
+@ns_conf.route('/<project_name>')
+class ProjectsList(Resource):
+    @ns_conf.doc('get_project')
+    def get(self, project_name):
+        '''Gets a project by name'''
+        session = SessionController()
+
+        try:
+            project = session.database_controller.get_project(project_name)
+        except NoResultFound:
+            abort(404, f'Project name {project_name} does not exist')
+
+        return {
+            'name': project.name
+        }
 
 
 @ns_conf.route('/<project_name>/models')

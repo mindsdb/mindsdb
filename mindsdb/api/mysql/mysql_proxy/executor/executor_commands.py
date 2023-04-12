@@ -488,6 +488,11 @@ class ExecuteCommands:
                     else:
                         profiler.disable()
                         self.session.profiling = False
+                elif statement.arg.args[0].parts[0].lower() == 'predictor_cache':
+                    if statement.arg.args[1].value in (1, True):
+                        self.session.predictor_cache = True
+                    else:
+                        self.session.predictor_cache = False
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             elif category == "autocommit":
                 return ExecuteAnswer(ANSWER_TYPE.OK)

@@ -254,7 +254,7 @@ class JobsHistory(Base):
 
     job_id = Column(Integer)
 
-    query_str = Column(String, nullable=False)
+    query_str = Column(String)
     start_at = Column(DateTime)
     end_at = Column(DateTime)
 

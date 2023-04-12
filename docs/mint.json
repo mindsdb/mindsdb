@@ -344,7 +344,7 @@
              "data-integrations/solr",
             "data-integrations/OrioleDB",
             "data-integrations/singlestore",
-            "data-integrations/scylladb"
+            "data-integrations/tdengine"
           ]
         },
         {

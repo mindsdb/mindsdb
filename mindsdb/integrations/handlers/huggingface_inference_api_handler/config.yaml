@@ -1,3 +1,4 @@
 BASE_URL: https://api-inference.huggingface.co/models
 TASK_MODEL_MAP:
   text-classification: distilbert-base-uncased-finetuned-sst-2-english
+  fill-mask: bert-base-uncased

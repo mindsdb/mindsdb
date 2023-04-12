@@ -9,7 +9,7 @@ except Exception as e:
     import_error = e
 
 title = 'Hugging Face Inference API'
-name = 'huggingface_iference_api'
+name = 'huggingface_inference_api'
 type = HANDLER_TYPE.ML
 permanent = True
 

@@ -62,11 +62,17 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
         return json.loads(response.content.decode("utf-8"))
 
     def _parse_inputs(self, df, inputs, task):
-        if task == 'text-classification':
+        if task in ['text-classification', 'fill-mask']:
             return df[inputs['column']].tolist()
 
     def _parse_response(self, df, response, task, target):
         if task == 'text-classification':
             df[target] = [item[0]['label'] for item in response]
+
+        elif task == 'fill-mask':
+            if any(isinstance(item, list) for item in response):
+                df[target] = [item[0]['sequence'] for item in response]
+            else:
+                df[target] = [response[0]['sequence']]
 
         return df

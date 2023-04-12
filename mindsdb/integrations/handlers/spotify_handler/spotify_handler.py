@@ -22,15 +22,29 @@ class TwitterHandler(APIHandler):
         self.api = None
         self.is_connected = False
 
+        self._tables = {}
+
     def create_connection(self, api_version=2):
         pass
 
     def connect(self):
+            """ Set up any connections required by the handler
+    Should return output of check_connection() method after attempting
+    connection. Should switch self.is_connected.
+    Returns:
+        HandlerStatusResponse
+    """
         pass
 
     def check_connection(self) -> StatusResponse:
 
         response = StatusResponse(False)
+        pass
 
     def call_spotify_api(self, method_name: str = None, params: dict = None, filters: list = None):
+        pass
+
+    def _register_table(self, table_name: str, table_class: Any):
+        self._tables[table_name] = table_class
+
         pass

@@ -29,7 +29,8 @@ class HuggingFaceHandler(BaseMLEngine):
         supported_tasks = ['text-classification',
                            'zero-shot-classification',
                            'translation',
-                           'summarization']
+                           'summarization',
+                           'text2text-generation']
 
         if metadata.pipeline_tag not in supported_tasks:
             raise Exception(f'Not supported task for model: {metadata.pipeline_tag}.\
@@ -178,6 +179,12 @@ class HuggingFaceHandler(BaseMLEngine):
             final[args['target']] = result['summary_text']
 
             return final
+        
+        def tidy_output_text2text(args, result):
+            final = {}
+            final[args['target']] = result['generated_text']
+
+            return final
 
         ###### get stuff from model folder
         args = self.model_storage.json_get('args')
@@ -230,6 +237,11 @@ class HuggingFaceHandler(BaseMLEngine):
                                          min_length=args['min_output_length'],
                                          max_length=args['max_output_length'])
             output_list_tidy = [tidy_output_summarization(args, x) for x in output_list_messy]
+
+        elif task == 'text2text-generation':
+            output_list_messy = pipeline(input_list_str, max_length=args['max_length'])
+            output_list_tidy = [tidy_output_text2text(args, x) for x in output_list_messy]
+
         else:
             raise RuntimeError(f'Unknown task: {task}')
 

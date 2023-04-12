@@ -10,12 +10,10 @@ installation. Please have a look at them below.
 
 ### Pip and Python Versions
 
-Due to some of our dependencies having issues with the latest versions of Python
-3.9.x, we suggest using **Python 3.7.x or 3.8.x versions** for now. We are
-working on Python 3.9.x to be supported soon.
+We suggest using **Python 3.7.x, 3.8.x, or 3.9.x versions** for now.
 
 To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
-that **Python >= 3.7** and **pip >= 19.3**. You can check the pip and python
+that **Python >= 3.7** and **pip >= 20.3**. You can check the pip and python
 versions by running the `pip --version` and
 `python --version` commands.
 
@@ -32,6 +30,12 @@ issues.
 Or you could try to install MindsDB with
 [Anaconda](https://www.anaconda.com/products/individual) and run the
 installation from the **Anaconda prompt**.
+
+In addition, for Windows systems with default languages other than English, your system 
+might not have UTF-8 as the default encoding standard, which will cause encoding errors 
+when installing dependencies. To solve this issue, go to 
+`Control Panel` > `Clock and Region` > `Region` > `Administrative tab` > 
+`Change system locale button` and enable `Beta: Use Unicode UTF-8 for worldwide language support`.
 
 ### Installing torch or torchvision
 

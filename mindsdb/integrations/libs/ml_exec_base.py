@@ -14,7 +14,7 @@ In particular, three big components are included:
 
     - `predict_process` method: handles async dispatch of the `predict` method in an engine.
 
-""" # noqa
+"""  # noqa
 
 import datetime as dt
 import traceback
@@ -25,9 +25,9 @@ import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Identifier, Select, Show, Star, NativeQuery
+from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
 
-from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
+from mindsdb.integrations.utilities.sql_utils import make_sql_session
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.response import (
@@ -134,11 +134,11 @@ def learn_process(class_path, engine, context_dump, integration_id,
         if base_predictor_id is None:
             ml_handler.create(target, df=training_data_df, args=problem_definition)
 
-        # adjust (partially train) existing model
+        # fine-tune (partially train) existing model
         else:
             # load model from previous version, use it as starting point
             problem_definition['base_model_id'] = base_predictor_id
-            ml_handler.update(df=training_data_df, args=problem_definition)
+            ml_handler.finetune(df=training_data_df, args=problem_definition)
 
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
         db.session.commit()
@@ -269,29 +269,6 @@ class BaseMLEngineExec:
     def query_(self, query: ASTNode) -> Response:
         raise Exception('Should not be used')
 
-        """ Intakes a pre-parsed SQL query (via `mindsdb_sql`) and returns the answer given by the ML engine. """
-        statement = query
-
-        if type(statement) == Show:
-            if statement.category.lower() == 'tables':
-                return self.get_tables()
-            else:
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=f"Cant determine how to show '{statement.category}'"
-                )
-            return response
-        elif type(statement) == Select:
-            model_name = statement.from_table.parts[-1]
-            where_data = get_where_data(statement.where)
-            predictions = self.predict(model_name, where_data)
-            return Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=pd.DataFrame(predictions)
-            )
-        else:
-            raise Exception(f"Query type {type(statement)} not supported")
-
     def learn(
         self, model_name, project_name,
         data_integration_ref=None,
@@ -395,7 +372,10 @@ class BaseMLEngineExec:
         try:
             predictions = ml_handler.predict(df, args)
         except Exception as e:
-            msg = f'[{self.name}/{model_name}]: {str(e)}'
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            msg = f'[{self.name}/{model_name}]: {msg}'
             raise MLEngineException(msg) from e
 
         ml_handler.close()
@@ -430,7 +410,7 @@ class BaseMLEngineExec:
         )
         predictor_records = [
             x for x in predictor_records
-            if x.training_stop_at is not None
+            if x.training_stop_at is not None and x.status == 'complete'
         ]
         predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
 

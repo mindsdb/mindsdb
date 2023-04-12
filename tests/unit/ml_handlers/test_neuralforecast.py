@@ -174,7 +174,6 @@ class TestNeuralForecast(BaseExecutorTest):
            where t.type='house'
         """
         )
-        print(mindsdb_result_hier)
         assert len(list(round(mindsdb_result_hier["ma"])))
 
         describe_result = self.run_sql("describe proj.model_1_group.model")

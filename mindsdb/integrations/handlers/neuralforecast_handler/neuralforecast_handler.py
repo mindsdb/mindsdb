@@ -99,7 +99,6 @@ class NeuralForecastHandler(BaseMLEngine):
         """
         # Load model arguments
         model_args = self.model_storage.json_get("model_args")
-        training_df = dill.loads(self.model_storage.file_get("training_df"))
 
         prediction_df = transform_to_nixtla_df(df, model_args)
         groups_to_keep = prediction_df["unique_id"].unique()
@@ -107,6 +106,7 @@ class NeuralForecastHandler(BaseMLEngine):
         neural = NeuralForecast.load(model_args["model_folder"])
         forecast_df = neural.predict()
         if model_args["hierarchy"]:
+            training_df = dill.loads(self.model_storage.file_get("training_df"))
             hier_df = dill.loads(self.model_storage.file_get("hier_df"))
             hier_dict = dill.loads(self.model_storage.file_get("hier_dict"))
             reconciled_df = reconcile_forecasts(training_df, forecast_df, hier_df, hier_dict)

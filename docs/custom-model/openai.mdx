@@ -176,9 +176,9 @@ Where:
 | `project_a.openai_test_c`    | The model name is `openai_test_c` and it resides inside the `project_a` project.                                                     |
 | `answer`                     | It is the value to be predicted.                                                                                                     |
 | `engine`                     | The `openai` engine is used.                                                                                                         |
-| `prompt_template`            | It is the column that stores a query to be answered. *Please note that this parameter can be overriden at prediction time.*            |
-| `max_tokens`                 | It defines the maximum token cost of the prediction. *Please note that this parameter can be overriden at prediction time.*            |
-| `temperature`                | It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overriden at prediction time.*|
+| `prompt_template`            | It is the column that stores a query to be answered. *Please note that this parameter can be overridden at prediction time.*            |
+| `max_tokens`                 | It defines the maximum token cost of the prediction. *Please note that this parameter can be overridden at prediction time.*            |
+| `temperature`                | It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overridden at prediction time.*|
 | `api_key`                    | Optional. If it is left blank, or the `env` value is passed, then MindsDB fetches the `OPENAI_API_KEY` environment variable value.   |
 
 Let's create a model:

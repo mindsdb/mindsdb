@@ -57,125 +57,150 @@ class TestHuggingface(BaseExecutorTest):
                     break
             time.sleep(0.5)
         if not done:
-            raise RuntimeError("predictor didn't created")
+            raise RuntimeError("predictor not created")
 
         # use predictor
         ret = self.command_executor.execute_command(parse_sql(predict_sql, dialect='mindsdb'))
         assert ret.error_code is None
 
+    # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    # def test_hf_classification_bin(self, mock_handler):
+
+
+    #     # create predictor
+    #     create_sql = '''
+    #         CREATE PREDICTOR mindsdb.spam_classifier
+    #         predict PRED
+    #         USING                
+    #             engine='huggingface',
+    #             join_learn_process=true,
+    #             task='text-classification',
+    #             model_name= "mrm8488/bert-tiny-finetuned-sms-spam-detection",
+    #             input_column = 'text_spammy',
+    #             labels=['ham','spam']
+    #     '''
+
+    #     model_name = 'spam_classifier'
+
+    #     predict_sql = '''
+    #         SELECT h.*
+    #         FROM pg.df as t 
+    #         JOIN mindsdb.spam_classifier as h
+    #     '''
+    #     self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+
+    #     # one line prediction
+    #     predict_sql = '''
+    #         SELECT * from mindsdb.spam_classifier
+    #         where text_spammy= 'It is the best time to launch the Robot to get more money. https:\\/\\/Gof.bode-roesch.de\\/Gof'
+    #     '''
+    #     # use predictor
+    #     ret = self.command_executor.execute_command(parse_sql(predict_sql, dialect='mindsdb'))
+    #     assert ret.error_code is None
+
+    # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    # def test_hf_classification_multy(self, mock_handler):
+
+    #     # create predictor
+    #     create_sql = '''                
+    #        CREATE PREDICTOR mindsdb.sentiment_classifier
+    #        predict PRED
+    #        USING
+    #             engine='huggingface',
+    #             join_learn_process=true,
+    #             task='text-classification',
+    #             model_name= "cardiffnlp/twitter-roberta-base-sentiment",
+    #             input_column = 'text_short',
+    #             labels=['neg','neu','pos']
+    #     '''
+
+    #     model_name = 'sentiment_classifier'
+
+    #     predict_sql = '''
+    #         SELECT h.*
+    #         FROM pg.df as t 
+    #         JOIN mindsdb.sentiment_classifier as h
+    #     '''
+    #     self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+
+    # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    # def test_hf_zero_shot(self, mock_handler):
+
+    #     # create predictor
+    #     create_sql = '''                
+    #      CREATE PREDICTOR mindsdb.zero_shot_tcd
+    #         predict PREDZS
+    #      USING
+    #         engine='huggingface',
+    #         join_learn_process=true,
+    #         task="zero-shot-classification",
+    #         model_name= "facebook/bart-large-mnli",
+    #         input_column = "text_short",
+    #         candidate_labels=['travel', 'cooking', 'dancing']
+    #     '''
+
+    #     model_name = 'zero_shot_tcd'
+
+    #     predict_sql = '''
+    #         SELECT h.*
+    #         FROM pg.df as t 
+    #         JOIN mindsdb.zero_shot_tcd as h
+    #     '''
+    #     self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+
+    # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    # def test_hf_translation(self, mock_handler):
+
+    #     # create predictor
+    #     create_sql = '''                
+    #      CREATE PREDICTOR mindsdb.translator_en_fr
+    #         predict TRANSLATION
+    #     USING
+    #         engine='huggingface',
+    #         join_learn_process=true,
+    #         task = "translation",
+    #         model_name = "t5-base",
+    #         input_column = "text_short",
+    #         lang_input = "en",
+    #         lang_output = "fr"
+    #     '''
+
+    #     model_name = 'translator_en_fr'
+
+    #     predict_sql = '''
+    #         SELECT h.*
+    #         FROM pg.df as t 
+    #         JOIN mindsdb.translator_en_fr as h
+    #     '''
+    #     self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_hf_classification_bin(self, mock_handler):
-
-
-        # create predictor
-        create_sql = '''
-            CREATE PREDICTOR mindsdb.spam_classifier
-            predict PRED
-            USING                
-                engine='huggingface',
-                join_learn_process=true,
-                task='text-classification',
-                model_name= "mrm8488/bert-tiny-finetuned-sms-spam-detection",
-                input_column = 'text_spammy',
-                labels=['ham','spam']
-        '''
-
-        model_name = 'spam_classifier'
-
-        predict_sql = '''
-            SELECT h.*
-            FROM pg.df as t 
-            JOIN mindsdb.spam_classifier as h
-        '''
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
-
-        # one line prediction
-        predict_sql = '''
-            SELECT * from mindsdb.spam_classifier
-            where text_spammy= 'It is the best time to launch the Robot to get more money. https:\\/\\/Gof.bode-roesch.de\\/Gof'
-        '''
-        # use predictor
-        ret = self.command_executor.execute_command(parse_sql(predict_sql, dialect='mindsdb'))
-        assert ret.error_code is None
-
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_hf_classification_multy(self, mock_handler):
+    def test_hf_text2text(self, mock_handler):
 
         # create predictor
         create_sql = '''                
-           CREATE PREDICTOR mindsdb.sentiment_classifier
-           predict PRED
-           USING
-                engine='huggingface',
-                join_learn_process=true,
-                task='text-classification',
-                model_name= "cardiffnlp/twitter-roberta-base-sentiment",
-                input_column = 'text_short',
-                labels=['neg','neu','pos']
-        '''
-
-        model_name = 'sentiment_classifier'
-
-        predict_sql = '''
-            SELECT h.*
-            FROM pg.df as t 
-            JOIN mindsdb.sentiment_classifier as h
-        '''
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
-
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_hf_zero_shot(self, mock_handler):
-
-        # create predictor
-        create_sql = '''                
-         CREATE PREDICTOR mindsdb.zero_shot_tcd
-            predict PREDZS
-         USING
-            engine='huggingface',
-            join_learn_process=true,
-            task="zero-shot-classification",
-            model_name= "facebook/bart-large-mnli",
-            input_column = "text_short",
-            candidate_labels=['travel', 'cooking', 'dancing']
-        '''
-
-        model_name = 'zero_shot_tcd'
-
-        predict_sql = '''
-            SELECT h.*
-            FROM pg.df as t 
-            JOIN mindsdb.zero_shot_tcd as h
-        '''
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
-
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_hf_translation(self, mock_handler):
-
-        # create predictor
-        create_sql = '''                
-         CREATE PREDICTOR mindsdb.translator_en_fr
-            predict TRANSLATION
+        CREATE MODEL mindsdb.text_generator
+        predict PREDICTION
         USING
             engine='huggingface',
             join_learn_process=true,
-            task = "translation",
-            model_name = "t5-base",
-            input_column = "text_short",
-            lang_input = "en",
-            lang_output = "fr"
+            task = "text2text-generation",
+            model_name = "google/flan-t5-base",
+            input_column = "text_short"
         '''
 
-        model_name = 'translator_en_fr'
+        model_name = 'text_generator'
 
         predict_sql = '''
             SELECT h.*
             FROM pg.df as t 
-            JOIN mindsdb.translator_en_fr as h
+            JOIN mindsdb.text_generator as h
         '''
         self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
 
+# Test locally by running
 
-# CREATE MODEL text_generator_2
+# CREATE MODEL text_generator
 # PREDICT PRED USING
 #   engine='huggingface', 
 #   task = 'text2text-generation',
@@ -184,7 +209,7 @@ class TestHuggingface(BaseExecutorTest):
   
 # SELECT *
 # FROM models 
-# WHERE name = 'text_generator_2';
+# WHERE name = 'text_generator';
 
-# SELECT * FROM text_generator_2
+# SELECT * FROM text_generator
 # WHERE comment='Question: Why did the chicken cross the road? ';

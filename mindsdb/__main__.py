@@ -27,7 +27,7 @@ from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.utilities.fs import create_dirs_recursive
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.auth import register_oauth_client
+from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 
 
 import torch.multiprocessing as mp
@@ -131,12 +131,20 @@ if __name__ == '__main__':
     mp.freeze_support()
     config = Config()
 
-    is_marketplace = config.get('environment') == 'aws_marketplace'
-    if is_marketplace:
+    environment = config.get('environment')
+    if environment == 'aws_marketplace':
         try:
             register_oauth_client()
         except Exception as e:
             print(f'Something went wrong during client register: {e}')
+    elif environment != 'local':
+        try:
+            aws_meta_data = get_aws_meta_data()
+            Config().update({
+                'aws_meta_data': aws_meta_data
+            })
+        except Exception:
+            pass
 
     is_cloud = config.get('cloud', False)
     # need configure migration behavior by env_variables

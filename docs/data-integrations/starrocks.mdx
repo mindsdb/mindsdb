@@ -1,0 +1,38 @@
+---
+title: StarRocks
+sidebarTitle: StarRocks
+---
+
+# StarRocks Handler
+
+This is the implementation of the StarRocks handler for MindsDB.
+
+# StarRocks
+
+StarRocks is the next-generation data platform designed to make data-intensive real-time analytics fast and easy. It delivers query speeds 5 to 10 times faster than other popular solutions. StarRocks can perform real-time analytics well while updating historical records. It can also enhance real-time analytics with historical data from data lakes easily. With StarRocks, you can get rid of the de-normalized tables and get the best performance and flexibility.
+
+
+# Usage
+
+  In order to make use of this handler and connect to a StarRocks database in MindsDB, the following syntax can be used,
+
+  ```sql
+
+CREATE DATABASE starrocks_datasource
+WITH ENGINE = 'starrocks',
+PARAMETERS = {
+  "host": "127.0.0.1",
+  "user": "starrocks_user",
+  "password": "password",
+  "port": 8030,
+  "database": "starrocks_db"
+};
+
+  ```
+  Now, you can use this established connection to query your table as follows,
+
+  ```sql
+  
+SELECT * FROM starrocks_datasource.loveU LIMIT 10;
+
+  ```

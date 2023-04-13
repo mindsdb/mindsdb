@@ -29,7 +29,8 @@ class HuggingFaceHandler(BaseMLEngine):
         supported_tasks = ['text-classification',
                            'zero-shot-classification',
                            'translation',
-                           'summarization']
+                           'summarization',
+                           'fill-mask']
 
         if metadata.pipeline_tag not in supported_tasks:
             raise Exception(f'Not supported task for model: {metadata.pipeline_tag}.\
@@ -179,6 +180,14 @@ class HuggingFaceHandler(BaseMLEngine):
 
             return final
 
+        def tidy_output_fill_mask(args, result):
+            final = {}
+            final[args['target']] = result[0]['sequence']
+            explain = {elem['sequence']: elem['score'] for elem in result}
+            final[f"{args['target']}_explain"] = explain
+
+            return final
+
         ###### get stuff from model folder
         args = self.model_storage.json_get('args')
 
@@ -230,6 +239,10 @@ class HuggingFaceHandler(BaseMLEngine):
                                          min_length=args['min_output_length'],
                                          max_length=args['max_output_length'])
             output_list_tidy = [tidy_output_summarization(args, x) for x in output_list_messy]
+
+        elif task == 'fill-mask':
+            output_list_messy = pipeline(input_list_str)
+            output_list_tidy = [tidy_output_fill_mask(args, x) for x in output_list_messy]
         else:
             raise RuntimeError(f'Unknown task: {task}')
 

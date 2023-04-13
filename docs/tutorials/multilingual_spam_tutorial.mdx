@@ -1,0 +1,363 @@
+---
+title: Multilingual Spam Data Translation with MindsDB and HuggingFace
+sidebarTitle: Learn how to connect MindsDB to Hugging Face models to Perform Multilingual Spam Data Text Translation
+---
+
+## Introduction
+
+The internet has completely revolutionized the way information is shared across the globe. Nowadays, AI language translation tools use Natural language processing (NLP) to translate written text or spoken words from one source language into a different target language. In this tutorial, you will learn how to use MindsDB and Hugging Face to perform **translation** tasks on a multilingual dataset.
+
+## Data Setup
+
+If you want to follow along, download this [dataset](https://www.kaggle.com/datasets/rajnathpatel/multilingual-spam-data?resource=download).
+
+Make sure you have a working [MindsDB Cloud Acccount](https://cloud.mindsdb.com/) or a local installation of MindsDB running so you can follow along with this tutorial:
+
+- **Video:** [Setting Up Docker for MindsDB](https://www.youtube.com/watch?v=dadY-cUpUm0&t=39s)
+- **Docs:** [Setup for Docker](https://docs.mindsdb.com/setup/self-hosted/docker)
+
+If you want to learn how to set up your account at MindsDB Cloud, follow
+[this guide](/setup/cloud/). Another way is to set up
+MindsDB locally using
+[Docker](/setup/self-hosted/docker/) or
+[Python](/setup/self-hosted/pip/source/).
+
+### Understanding the Data
+
+The [dataset](https://www.kaggle.com/datasets/rajnathpatel/multilingual-spam-data?resource=download) you are working with contains **multilingual spam data** for English, Hindi, German, and French. It is primarily used to test the zero-shot transfer for text classification using pre-trained language models. The original data was in English and was Machine Translated into Hindi, German, and French. Today, you will be using this dataset to learn how to use MindsDB to perform text translation tasks.
+
+You don't need to worry about the labels column ("ham"/"spam") for this tutorial, as we will be performing **translation** tasks on this dataset.
+
+### Adding Data in MindsDB Cloud Editor
+
+The instructions for importing data using MindsDB's Cloud Editor go as follows:
+
+1. Visit [MindsDB Cloud Editor](https://cloud.mindsdb.com/)
+2. Click 'Login' or 'Create Account' and authenticate
+3. Once logged in, click **Add Data**
+4. Select **"Files"**
+5. Click **"Import File"**
+6. Choose the file to import
+7. Name your dataset accordingly (no special characters or cases in db name)
+8. Use SQL `SELECT`  statement to preview the dataset:
+
+**input:**
+```sql
+SELECT * FROM files.your_file
+LIMIT 3;
+```
+
+**output:**
+```
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| labels |       text_input          |    text_de        |   text_fr                         |
++------------+--- ---------+-----------------------------------------------------------------+--------------------------------+
+| ham    | 'Go until jurong, crazy..'| 'Gehen bis jurong'| 'Allez jusqu...'                  |
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| ham   | 'Ok lar... Joking wif u...' |  'Ok... joking'   | 'J'ai fait une blague sur le wif'|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| spam  | 'Free entry in 2 a wkly...' | 'Freier Eintrit' | 'Entrée libre dans 2 a wkly comp...'|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+```
+
+### Adding Data to PostgreSQL Locally
+
+Start by heading over to [Kaggle](https://www.kaggle.com/) and downloading [this dataset](https://www.kaggle.com/datasets/rajnathpatel/multilingual-spam-data?resource=download). 
+
+Next, go ahead and run postgresql in your command line:
+
+1. Initiate the super user mode: `psql postgres`
+2. Create a user and a database with the user as the owner:
+
+**input:**
+```sql
+CREATE USER username123 WITH PASSWORD 'password123';
+```
+**output:**
+`CREATE ROLE`
+
+**input:**
+```sql
+CREATE DATABASE nlp_mindsdb WITH OWNER 'username123';
+```
+**output:** 
+`CREATE DATABASE`
+
+3. Next, type `\l` to list your PostgreSQL databases and ensure the new one was created.
+
+```sql
+                               List of databases
+Name     |      Owner      | Encoding | Collate | Ctype | Access privileges 
+-------------+-----------------+----------+---------+-------+-------------------
+ nlp_mindsdb | username123     | UTF8     | C       | C     | 
+ postgres    | user            | UTF8     | C       | C     | 
+
+(4 rows)
+```
+
+4. Quit the super user mode:
+ `\q`
+
+5. Access the database as a user:
+`psql -U username123 nlp_mindsdb`
+
+- Now, create a table to store your first multilingual dataset:
+
+```sql
+CREATE TABLE nlp_data (text TEXT, text_hi TEXT,
+  text_de TEXT, text_fr TEXT);
+```
+**output:**
+`CREATE TABLE`
+
+- Great. Now you have your empty table in your database. Time to import your data:
+
+```sql
+\copy mindsdb_1(labels, text, text_hi, text_de, text_fr)
+FROM '/Users/alissa/Downloads/nlp_dataset.csv' WITH DELIMITER ',' CSV;
+```
+
+**output:**
+`COPY 5573`
+
+Now make sure your data loaded in properly:
+
+`SELECT COUNT(*) FROM mindsdb_1;`
+
+`11146`
+
+Nice, you have 11146 rows/records in your new database and you're on your way!
+
+## Connecting the Data
+
+Now you know how to build and copy data to a table with PostgreSQL in your command line. 
+It's time to connect with MindsDB:
+
+1. The first thing you should do is expose your PostgreSQL port:
+
+`ngrok tcp 5432`
+
+2. Now, navigate to `http://127.0.0.1:47334` and click "Add Data".
+
+3. Next, select the datasource, PostgreSQL.
+
+4. Once you select the datasource, you will be prompted to enter your database credentials. Fill this out using the host and port provided by `ngrok`:
+
+![ngrok](docs/tutorials/ngrok.png)
+
+5. Next, **Test Connection**:
+
+![test](docs/tutorials/postgresql.png)
+
+6. Run the `SHOW DATABASES;` command to ensure your data is there:
+
+![showdb](docs/tutorials/show_databases.png)
+
+7. Preview the dataset
+
+**input:**
+```sql
+SELECT * 
+FROM mindsdb.nlp_data
+LIMIT 3;
+```
+
+**output:**
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| labels |       text_input          |    text_de        |   text_fr                         |
++------------+--- ---------+-----------------------------------------------------------------+--------------------------------+
+| ham    | 'Go until jurong, crazy..'| 'Gehen bis jurong'| 'Allez jusqu...'                  |
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| ham   | 'Ok lar... Joking wif u...' |  'Ok... joking'   | 'J'ai fait une blague sur le wif'|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+| spam  | 'Free entry in 2 a wkly...' | 'Freier Eintrit' | 'Entrée libre dans 2 a wkly comp...'|
++------------+-------------+-----------------------------------------------------------------+--------------------------------+
+
+- Another way to connect your local PostgreSQL database to MindsDB is by using the, `CREATE DATABASE` statement with your connection details:
+
+```sql
+CREATE DATABASE multilingual
+WITH ENGINE = "postgres",
+PARAMETERS = {
+  "user": "username123",
+  "password": "password123",
+  "host": "6.tcp.ngrok.io",
+  "port": "11462",
+  "database": "nlp_mindsdb"
+  };
+``` 
+
+## Creating Multilingual Predictors
+
+Now that you've got some data to work with, it's time to use MindsDB and Hugging Face to perform NLP operations.
+
+Currently, MindsDB supports language translation for multiple languages and is expanding the software's ability to perform batch translation operations for multilingual datasets.
+
+In this next section, you are going to translate 3 different languages and learn the basics of NLP language translation tasks with MindsDB.
+
+### Creating & Training a Predictor to Translate French to English
+
+- Start by creating a model to translate French to English:
+
+```sql
+CREATE MODEL mindsdb.hf_fr_en
+PREDICT PRED
+USING
+engine = 'huggingface',
+model_name = 'Helsinki-NLP/opus-mt-fr-en',
+input_column = 'text',
+lang_input ='fr',
+lang_output = 'en';
+```
+
+- Check the status of the new predictor:
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'hf_fr_en';
+```
+
+| NAME | ENGINE | PROJECT | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | CURRENT_TRAINING_PHASE | TOTAL_TRAINING_PHASES | TRAINING_PHASE_NAME | TAG | CREATED_AT |
+| ---- | ------ | ------- | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | ---------------------- | --------------------- | ------------------- | --- | ---------- |
+| hf_fr_en | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.3.5.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'model_name': 'Helsinki-NLP/opus-mt-fr-en', 'input_column': 'text', 'lang_input': 'fr', 'lang_output': 'en', 'task': 'translation'}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-30 16:31:29.096920 |
+
+- Once your status reads, `complete` it is time to start testing your model with language queries:
+
+```sql
+SELECT *
+FROM mindsdb.hf_fr_en
+WHERE text = 'Quelle heure est-il?';
+```
+
+| PRED | text |
+| ---- | ---- |
+| What time is it? | Quelle heure est-il? |
+
+```sql
+SELECT *
+FROM mindsdb.hf_fr_en
+WHERE text = "Je m'appelle Alissa";
+```
+
+| PRED | text |
+| ---- | ---- |
+| My name is Alissa. | Je m'appelle Alissa |
+
+### Creating & Training a Predictor to Translate German to English 
+
+- Create a predictor model, using the [Helsinki-NLP/opus-mt-de-en](https://huggingface.co/Helsinki-NLP/opus-mt-de-en) Hugging Face model.
+
+```sql
+CREATE MODEL mindsdb.hf_de_en
+PREDICT PRED
+USING
+engine = 'huggingface',
+model_name = 'Helsinki-NLP/opus-mt-de-en',
+input_column = 'text',
+lang_input ='de',
+lang_output = 'en';
+```
+
+- Check the status:
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'hf_de_en';
+```
+
+| NAME | ENGINE | PROJECT | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | CURRENT_TRAINING_PHASE | TOTAL_TRAINING_PHASES | TRAINING_PHASE_NAME | TAG | CREATED_AT |
+| ---- | ------ | ------- | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | ---------------------- | --------------------- | ------------------- | --- | ---------- |
+| hf_de_en | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.3.5.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'model_name': 'Helsinki-NLP/opus-mt-de-en', 'input_column': 'text', 'lang_input': 'de', 'lang_output': 'en', 'task': 'translation'}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-30 14:31:00.220057 |
+
+- Query the model!
+
+```sql
+SELECT *
+FROM hf_de_en
+WHERE text = 'Hallo, mein Name ist Alissa';
+```
+
+| PRED | text |
+| ---- | ---- |
+| Hello, my name is Alissa | Hallo, mein Name ist Alissa |
+
+
+```sql
+SELECT *
+FROM hf_de_en
+WHERE text = 'Guten Tag, es ist so schön, Sie zu sehen?';
+```
+
+| PRED | text |
+| ---- | ---- |
+| Hello, it's so nice to see you | Guten Tag, es ist so schön, Sie zu sehen |
+
+
+### Creating & Training a Predictor to Translate Hindi (Urdu) to English
+
+- Create your predictor model, using the [Helsinki-NLP/opus-mt-hi-en](https://huggingface.co/Helsinki-NLP/opus-mt-hi-en) Hugging Face model.
+
+```sql
+CREATE MODEL mindsdb.hi_en
+PREDICT PRED
+USING
+engine = 'huggingface',
+model_name = 'Helsinki-NLP/opus-mt-hi-en',
+input_column = 'text_hi',
+lang_input ='hi',
+lang_output = 'en';
+```
+
+- Check the status of your model:
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'hi_en';
+```
+
+| hi_en | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.3.5.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'model_name': 'Helsinki-NLP/opus-mt-hi-en', 'input_column': 'text_hi', 'lang_input': 'hi', 'lang_output': 'en', 'task': 'translation'}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-30 13:58:04.036313 |
+
+- Query the model to test its' translation capabilities:
+
+```sql
+SELECT *
+FROM hi_en
+WHERE text_hi = 'namaste, aap kaise hain?';
+```
+
+| PRED | text_hi |
+| ---- | ------- |
+| Let me tell you what, do you think? | namaste, aap kaise hain? |
+
+- See how the predictor responds when you input symbols:
+
+```sql
+SELECT *
+FROM hi_en
+WHERE text_hi = 'मेरा भाई भी मेरे साथ बातें करना नहीं चाहता; वे मेरे साथ सहायक की नाई बर्ताव करते हैं।';
+```
+
+| PRED | text_hi |
+| ---- | ------- |
+| My brother also wouldn't speak with me. They treat me as a helper. | मेरा भाई भी मेरे साथ बातें करना नहीं चाहता; वे मेरे साथ सहायक की नाई बर्ताव करते हैं। |
+
+## Conclusion
+
+As can be seen in this tutorial, MindsDB's integration with Hugging Face gives you the power to perform Natural Language Processing tasks quickly and easily using the database language, SQL. In just a few steps, you've already learned how you can connect MindsDB with Hugging Face transformer models and use them to translate multilingual data into English. 
+
+As you probably already know, there are tons of real-world scenarios where this newfound knowledge will be useful. Now that you've got your hands dirty, what are some more ways you can use MindsDB for NLP? 
+
+Check out these resources to learn more about MindsDB and how to connect with the community:
+
+- Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
+- Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
+- Engage with the MindsDB community on
+  [Slack](https://mindsdb.com/joincommunity) or
+  [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and
+  share your ideas and thoughts.
+
+If this tutorial was helpful, please give us a GitHub star
+[here](https://github.com/mindsdb/mindsdb).

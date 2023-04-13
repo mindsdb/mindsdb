@@ -33,6 +33,8 @@ from mindsdb_sql.parser.ast import (
     Delete,
     Latest,
     BetweenOperation,
+    Parameter,
+    Tuple
 )
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
@@ -75,6 +77,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlWrongArguments
 )
 from mindsdb.utilities.cache import get_cache, json_checksum
+import mindsdb.utilities.profiler as profiler
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -441,6 +444,7 @@ class SQLQuery():
             self.prepare_query(prepare=False)
             self.execute_query()
 
+    @profiler.profile()
     def create_planner(self):
         databases_names = self.session.database_controller.get_list()
         databases_names = [x['name'] for x in databases_names]
@@ -521,7 +525,7 @@ class SQLQuery():
             'result': result
         }
 
-    def _fetch_dataframe_step(self, step):
+    def _fetch_dataframe_step(self, step, steps_data):
         dn = self.datahub.get(step.integration)
         query = step.query
 
@@ -539,6 +543,15 @@ class SQLQuery():
         else:
             table_alias = get_table_alias(step.query.from_table, self.database)
             # TODO for information_schema we have 'database' = 'mindsdb'
+
+            # fill params
+            def fill_params(node, **kwargs):
+                if isinstance(node, Parameter):
+                    rs = steps_data[node.value.step_num]
+                    items = [Constant(i[0]) for i in rs.get_records_raw()]
+                    return Tuple(items)
+
+            query_traversal(query, fill_params)
 
             data, columns_info = dn.query(
                 query=query,
@@ -563,14 +576,14 @@ class SQLQuery():
 
         return result
 
-    def _multiple_steps(self, steps):
+    def _multiple_steps(self, steps, steps_data):
         data = ResultSet()
         for substep in steps:
-            sub_data = self._fetch_dataframe_step(substep)
+            sub_data = self._fetch_dataframe_step(substep, steps_data)
             data = join_query_data(data, sub_data)
         return data
 
-    def _multiple_steps_reduce(self, step, vars):
+    def _multiple_steps_reduce(self, step, vars, steps_data):
         if step.reduce != 'union':
             raise ErLogicError(f'Unknown MultipleSteps type: {step.reduce}')
 
@@ -590,7 +603,7 @@ class SQLQuery():
             for name, value in var_group.items():
                 for substep in steps2:
                     replaceQueryVar(substep.query.where, value, name)
-            sub_data = self._multiple_steps(steps2)
+            sub_data = self._multiple_steps(steps2, steps_data)
             data = join_query_data(data, sub_data)
 
         return data
@@ -639,7 +652,8 @@ class SQLQuery():
         steps_data = []
         try:
             for step in self.planner.execute_steps(params):
-                data = self.execute_step(step, steps_data)
+                with profiler.Context(f'step: {step.__class__.__name__}'):
+                    data = self.execute_step(step, steps_data)
                 step.set_result(data)
                 steps_data.append(data)
         except PlanningException as e:
@@ -719,7 +733,7 @@ class SQLQuery():
                 ))
 
         elif type(step) == FetchDataframeStep:
-            data = self._fetch_dataframe_step(step)
+            data = self._fetch_dataframe_step(step, steps_data)
         elif type(step) == UnionStep:
             left_result = steps_data[step.left.step_num]
             right_result = steps_data[step.right.step_num]
@@ -776,7 +790,7 @@ class SQLQuery():
                         markQueryVar(query.where)
                         for name, value in var_group.items():
                             replaceQueryVar(query.where, value, name)
-                        sub_data = self._fetch_dataframe_step(substep)
+                        sub_data = self._fetch_dataframe_step(substep, steps_data)
                         if len(data.columns) == 0:
                             data = sub_data
                         else:
@@ -784,7 +798,7 @@ class SQLQuery():
 
                         unmarkQueryVar(query.where)
                 elif type(substep) == MultipleSteps:
-                    data = self._multiple_steps_reduce(substep, vars)
+                    data = self._multiple_steps_reduce(substep, vars, steps_data)
                 else:
                     raise ErLogicError(f'Unknown step type: {step.step}')
 
@@ -801,56 +815,64 @@ class SQLQuery():
                 else:
                     data.add_records(subdata.get_records())
         elif type(step) == ApplyPredictorRowStep:
-            try:
-                project_name = step.namespace
-                predictor_name = step.predictor.parts[0]
-                where_data = step.row_dict
-                project_datanode = self.datahub.get(project_name)
 
-                version = None
-                if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
-                    version = int(step.predictor.parts[-1])
+            project_name = step.namespace
+            predictor_name = step.predictor.parts[0]
+            where_data0 = step.row_dict
+            project_datanode = self.datahub.get(project_name)
 
-                predictions = project_datanode.predict(
-                    model_name=predictor_name,
-                    data=where_data,
-                    version=version,
-                    params=step.params,
-                )
-                columns_dtypes = dict(predictions.dtypes)
-                predictions = predictions.to_dict(orient='records')
+            # fill params
+            where_data = {}
+            for key, value in where_data0.items():
+                if isinstance(value, Parameter):
+                    rs = steps_data[value.value.step_num]
+                    if rs.length() == 1:
+                        # one value, don't do list
+                        value = rs.get_records_raw()[0][0]
+                    else:
+                        value = [i[0] for i in rs.get_records_raw()]
+                where_data[key] = value
 
-                # update predictions with input data
-                for row in predictions:
-                    for k, v in where_data.items():
-                        if k not in row:
-                            row[k] = v
+            version = None
+            if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
+                version = int(step.predictor.parts[-1])
 
-                table_name = get_preditor_alias(step, self.database)
+            predictions = project_datanode.predict(
+                model_name=predictor_name,
+                data=where_data,
+                version=version,
+                params=step.params,
+            )
+            columns_dtypes = dict(predictions.dtypes)
+            predictions = predictions.to_dict(orient='records')
 
-                result = ResultSet()
-                result.is_prediction = True
-                if len(predictions) > 0:
-                    cols = list(predictions[0].keys())
-                else:
-                    cols = project_datanode.get_table_columns(predictor_name)
+            # update predictions with input data
+            for row in predictions:
+                for k, v in where_data.items():
+                    if k not in row:
+                        row[k] = v
 
-                for col in cols:
-                    result.add_column(Column(
-                        name=col,
-                        table_name=table_name[1],
-                        table_alias=table_name[2],
-                        database=table_name[0],
-                        type=columns_dtypes.get(col)
-                    ))
-                result.add_records(predictions)
+            table_name = get_preditor_alias(step, self.database)
 
-                data = result
-            except Exception as e:
-                if isinstance(e, SqlApiException):
-                    raise e
-                else:
-                    raise SqlApiUnknownError(f'error in apply predictor row step: {e}') from e
+            result = ResultSet()
+            result.is_prediction = True
+            if len(predictions) > 0:
+                cols = list(predictions[0].keys())
+            else:
+                cols = project_datanode.get_table_columns(predictor_name)
+
+            for col in cols:
+                result.add_column(Column(
+                    name=col,
+                    table_name=table_name[1],
+                    table_alias=table_name[2],
+                    database=table_name[0],
+                    type=columns_dtypes.get(col)
+                ))
+            result.add_records(predictions)
+
+            data = result
+
         elif type(step) in (ApplyPredictorStep, ApplyTimeseriesPredictorStep):
             try:
                 # set row_id
@@ -1218,8 +1240,12 @@ class SQLQuery():
             else:
                 raise ErLogicError(f'Data not found for insert: {step}')
 
-            integration_name = step.table.parts[0]
-            table_name = Identifier(parts=step.table.parts[1:])
+            if len(step.table.parts) > 1:
+                integration_name = step.table.parts[0]
+                table_name = Identifier(parts=step.table.parts[1:])
+            else:
+                integration_name = self.database
+                table_name = step.table
 
             dn = self.datahub.get(integration_name)
 

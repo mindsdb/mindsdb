@@ -58,6 +58,10 @@ import torch.multiprocessing as mp
 mp.get_context('spawn')
 
 
+class MLEngineException(Exception):
+    pass
+
+
 @mark_process(name='learn')
 def learn_process(class_path, engine, context_dump, integration_id,
                   predictor_id, data_integration_ref, fetch_data_query,
@@ -130,11 +134,11 @@ def learn_process(class_path, engine, context_dump, integration_id,
         if base_predictor_id is None:
             ml_handler.create(target, df=training_data_df, args=problem_definition)
 
-        # adjust (partially train) existing model
+        # fine-tune (partially train) existing model
         else:
             # load model from previous version, use it as starting point
             problem_definition['base_model_id'] = base_predictor_id
-            ml_handler.update(df=training_data_df, args=problem_definition)
+            ml_handler.finetune(df=training_data_df, args=problem_definition)
 
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
         db.session.commit()
@@ -365,7 +369,14 @@ class BaseMLEngineExec:
             args['dtype_dict'] = predictor_record.dtype_dict
             args['learn_args'] = predictor_record.learn_args
 
-        predictions = ml_handler.predict(df, args)
+        try:
+            predictions = ml_handler.predict(df, args)
+        except Exception as e:
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            msg = f'[{self.name}/{model_name}]: {msg}'
+            raise MLEngineException(msg) from e
 
         ml_handler.close()
 
@@ -399,7 +410,7 @@ class BaseMLEngineExec:
         )
         predictor_records = [
             x for x in predictor_records
-            if x.training_stop_at is not None
+            if x.training_stop_at is not None and x.status == 'complete'
         ]
         predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
 

@@ -18,8 +18,11 @@ class monkeylearnHandler(BaseMLEngine):
         if "api_key" not in args:
             raise Exception("API_KEY not found")
 
-        if "cl_" not in args["model_id"]:
-            raise Exception("Classifier tasks are only supported currently")
+        if "model_id" in args:
+            if "cl_" not in args["model_id"]:
+                raise Exception("Classifier tasks are only supported currently")
+        else:
+            raise Exception("Enter the model_id of model you want use")
 
         # Check whether the model_id given by user exists in the user account or monkeylearn pre-trained models
         url = 'https://api.monkeylearn.com/v3/classifiers/'

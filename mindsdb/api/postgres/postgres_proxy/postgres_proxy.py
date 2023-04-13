@@ -1,4 +1,5 @@
 import base64
+import datetime
 import os
 import json
 import socketserver
@@ -84,7 +85,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         return True
 
     def bind(self, message: Bind):
-        self.logger.info("Postgres_Proxy: Binding")
+        self.logger.info(f"Postgres_Proxy: Binding {message.name} with params {message.parameters}")
         if message.statement_name:
             statement = self.named_statements[message.statement_name]
         elif self.unnamed_statement:
@@ -335,6 +336,19 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
                     column = str(column)
                 elif type(column) == list or type(column) == dict:
                     column = json.dumps(column)
+                if isinstance(column, datetime.date) or isinstance(column, datetime.datetime):
+                    try:
+                        column = datetime.datetime.strftime(column, '%Y-%m-%d')
+                    except ValueError:
+                        try:
+                            column = datetime.datetime.strftime(column, '%Y-%m-%dT%H:%M:%S')
+                        except ValueError:
+                            column = datetime.datetime.strptime(column, '%Y-%m-%dT%H:%M:%S.%f')
+                if isinstance(column, bool):
+                    if column:
+                        column = "true"
+                    else:
+                        column = "false"
                 p_row.append(column.encode(encoding=self.charset))
             p_rows.append(p_row)
         return p_rows

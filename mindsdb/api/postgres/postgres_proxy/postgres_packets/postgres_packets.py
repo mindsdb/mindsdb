@@ -42,7 +42,7 @@ class PostgresPacketReader:
     def read_bytes(self, n):
         self.logger.debug("about to read")
         data = self.buffer.read(n)
-        self.logger.debug("received data: %s", data)
+        #self.logger.debug("received data: %s", data)
         if not data:
             raise PostgresEmptyDataException("Expected data inside of buffer when performing read_bytes")
         else:

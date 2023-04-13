@@ -354,6 +354,16 @@ class ExecuteCommands:
                 return ExecuteAnswer(
                     answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data
                 )
+            elif sql_category == "search_path":
+                return ExecuteAnswer(
+                    answer_type=ANSWER_TYPE.TABLE,
+                    columns = [
+                        Column(
+                            name="search_path", table_name="search_path", type="str"
+                        )
+                    ],
+                    data=[["public,public,\"$user\""]]
+                )
             elif "show status like 'ssl_version'" in sql_lower:
                 return ExecuteAnswer(
                     answer_type=ANSWER_TYPE.TABLE,
@@ -1115,6 +1125,7 @@ class ExecuteCommands:
                     "current_user": self.session.username,
                     "user": self.session.username,
                     "version": "8.0.17",
+                    "current_schema":"public"
                 }
 
                 column_name = f"{target.op}()"
@@ -1134,7 +1145,11 @@ class ExecuteCommands:
                 column_alias = "NULL"
             elif target_type == Identifier:
                 result = ".".join(target.parts)
-                raise Exception(f"Unknown column '{result}'")
+                if result == "session_user":
+                    column_name = result
+                    result = self.session.username
+                else:
+                    raise Exception(f"Unknown column '{result}'")
             else:
                 raise ErSqlWrongArguments(f"Unknown constant type: {target_type}")
 

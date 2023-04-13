@@ -1,4 +1,7 @@
+import base64
 import os
+import json
+from bs4 import BeautifulSoup
 from typing import Any
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -51,17 +54,47 @@ class GmailHandler(APIHandler):
                 token.write(self.credentials.to_json())
             self.service = build('gmail', 'v1', credentials=self.credentials)
 
-
-
-
     def check_connection(self) -> StatusResponse:
         pass
 
     def native_query(self, query: Any) -> Response:
         pass
 
+    def call_gmail_api(self, method: str = None):
+        self.connect()
+        api_method = getattr(self.service.users(), method)
+        return api_method().list(userId='me', maxResults=15)
+
+    def htmlToText(self,decoded_data):
+        html_content = decoded_data.decode('UTF-8')
+        # Parse the HTML content using Beautiful Soup
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Extract all the text from the HTML content
+        text = soup.get_text()
+
+        # Print the extracted text
+        print(text)
+
 
 gmail = GmailHandler(name="gmail")
 gmail.credentials_file = "credentials.json"
-gmail.scopes=['https://www.googleapis.com/auth/gmail.readonly']
-gmail.connect()
+gmail.scopes = ['https://www.googleapis.com/auth/gmail.readonly']
+messages = gmail.call_gmail_api("messages").execute()
+messages = messages['messages']
+for message in messages:
+    msg = gmail.service.users().messages().get(userId="me", id=message['id']).execute()
+    encoded_data = msg['payload']['body'].get('data')
+    if encoded_data!=None:
+        decoded_data = base64.urlsafe_b64decode(encoded_data.encode('ASCII'))
+        gmail.htmlToText(decoded_data)
+
+
+
+    # parts = msg['payload'].get('parts')
+    # # encoded_data = msg['body']['data']
+    # # decoded_data = base64.urlsafe_b64decode(encoded_data.encode('ASCII'))
+    # # print(decoded_data.decode('UTF-8'))
+    # print(json.dumps(parts, indent=4))  # takes the email and prints the email in a json
+
+

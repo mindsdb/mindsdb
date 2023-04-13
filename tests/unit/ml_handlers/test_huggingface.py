@@ -175,3 +175,16 @@ class TestHuggingface(BaseExecutorTest):
         self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
 
 
+# CREATE MODEL text_generator_2
+# PREDICT PRED USING
+#   engine='huggingface', 
+#   task = 'text2text-generation',
+#   model_name= 'google/flan-t5-base',
+#   input_column = 'comment';
+  
+# SELECT *
+# FROM models 
+# WHERE name = 'text_generator_2';
+
+# SELECT * FROM text_generator_2
+# WHERE comment='Question: Why did the chicken cross the road? ';

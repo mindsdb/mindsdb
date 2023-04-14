@@ -15,9 +15,11 @@ class SpotifyArtistsTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         pass
 
+
 class SpotifyAlbumsTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         pass
+
 
 class SpotifyPlaylistsTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:

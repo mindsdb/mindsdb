@@ -21,6 +21,7 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.http.namespaces.auth import ns_conf as auth_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
+from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
 from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
@@ -206,7 +207,8 @@ def initialize_app(config, no_studio, with_nlp):
         analysis_ns,
         handlers_ns,
         tree_ns,
-        projects_ns
+        projects_ns,
+        databases_ns
     ]
     if with_nlp:
         protected_namespaces.append(nlp_ns)

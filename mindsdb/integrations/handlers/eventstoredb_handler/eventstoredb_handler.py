@@ -12,6 +12,7 @@ from .utils.helpers import *
 import requests
 import pandas as pd
 
+
 class EventStoreDB(DatabaseHandler):
     """
     Handler for EventStoreDB
@@ -29,13 +30,13 @@ class EventStoreDB(DatabaseHandler):
     But once there is better ESDB Python support for gRPC, we should move this integration from AtomPub to gRPC.
     """
     name = 'eventstoredb'
-    #defaults to an insecure localhost single node
+    # defaults to an insecure localhost single node
     scheme = 'http'
     host = 'localhost'
     port = '2113'
     is_connected = None
     basic_url = ""
-    read_batch_size = 500 #should be adjusted based on use case
+    read_batch_size = 500  # should be adjusted based on use case
     headers = {
         'Accept': 'application/json',
         'ES-ResolveLinkTo': "True"
@@ -46,8 +47,8 @@ class EventStoreDB(DatabaseHandler):
         super().__init__(name)
         connection_data = kwargs['connection_data']
         self.host = connection_data.get('host')
-        if connection_data.get('tls') is not None and isinstance(connection_data.get('tls') , bool) \
-                and connection_data.get('tls') == True:
+        if connection_data.get('tls') is not None and isinstance(connection_data.get('tls'), bool) \
+                and connection_data.get('tls'):
             self.scheme = 'https'
         if connection_data.get('port') is not None and isinstance(connection_data.get('port'), int):
             self.port = connection_data.get('port')
@@ -90,7 +91,7 @@ class EventStoreDB(DatabaseHandler):
 
     def query(self, query: ASTNode) -> Response:
         if type(query) == Select:
-            stream_name = query.from_table.parts[-1] #i.e. table name
+            stream_name = query.from_table.parts[-1]  # i.e. table name
             params = {
                 'embed': 'tryharder'
             }
@@ -98,24 +99,24 @@ class EventStoreDB(DatabaseHandler):
             response = requests.get(stream_endpoint, params=params, headers=self.headers, verify=self.tlsverify)
             entries = []
             if response is not None and response.status_code == 200:
-                jsonResponse = response.json()
-                for entry in jsonResponse["entries"]:
+                json_response = response.json()
+                for entry in json_response["entries"]:
                     entry = entry_to_df(entry)
                     entries.append(entry)
                 while True:
-                    endOfStream = True
-                    if 'links' in jsonResponse:
-                        for link in jsonResponse['links']:
+                    end_of_stream = True
+                    if 'links' in json_response:
+                        for link in json_response['links']:
                             if 'relation' in link:
                                 if link['relation'] == 'next':
-                                    endOfStream = False
-                                    response = requests.get(build_next_url(link['uri'],self.read_batch_size),
+                                    end_of_stream = False
+                                    response = requests.get(build_next_url(link['uri'], self.read_batch_size),
                                                             params=params, headers=self.headers, verify=self.tlsverify)
-                                    jsonResponse = response.json()
-                                    for entry in jsonResponse["entries"]:
+                                    json_response = response.json()
+                                    for entry in json_response["entries"]:
                                         entry = entry_to_df(entry)
                                         entries.append(entry)
-                    if endOfStream:
+                    if end_of_stream:
                         break
 
             df = pd.concat(entries)
@@ -141,24 +142,24 @@ class EventStoreDB(DatabaseHandler):
         response = requests.get(stream_endpoint, params=params, headers=self.headers, verify=self.tlsverify)
         streams = []
         if response is not None and response.status_code == 200:
-            jsonResponse = response.json()
-            for entry in jsonResponse["entries"]:
+            json_response = response.json()
+            for entry in json_response["entries"]:
                 if "title" in entry:
                     streams.append(entry["title"].split('@')[1])
             while True:
-                endOfStream = True
-                if 'links' in jsonResponse:
-                    for link in jsonResponse['links']:
+                end_of_stream = True
+                if 'links' in json_response:
+                    for link in json_response['links']:
                         if 'relation' in link:
                             if link['relation'] == 'next':
-                                endOfStream = False
-                                response = requests.get(build_next_url(link['uri'],self.read_batch_size),
+                                end_of_stream = False
+                                response = requests.get(build_next_url(link['uri'], self.read_batch_size),
                                                         params=params, headers=self.headers, verify=self.tlsverify)
-                                jsonResponse = response.json()
-                                for entry in jsonResponse["entries"]:
+                                json_response = response.json()
+                                for entry in json_response["entries"]:
                                     if "title" in entry:
                                         streams.append(entry["title"].split('@')[1])
-                if endOfStream:
+                if end_of_stream:
                     break
 
         df = pd.DataFrame(streams,
@@ -169,9 +170,26 @@ class EventStoreDB(DatabaseHandler):
         )
 
     def get_columns(self, table_name) -> Response:
-        # TODO: get the last event from the stream: table_name
-        # TODO: infer type?
+        params = {
+            'embed': 'tryharder'
+        }
+        stream_endpoint = build_stream_url_last_event(self.basic_url, table_name)
+        response = requests.get(stream_endpoint, params=params, headers=self.headers, verify=self.tlsverify)
+        entry = None
+        if response is not None and response.status_code == 200:
+            json_response = response.json()
+            if json_response is not None and len(json_response) > 0:
+                entry = entry_to_df(json_response["entries"][0])
+        if entry is None:
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                "Could not retrieve JSON event data to infer column types."
+            )
+        data = []
+        for k, v in entry.items():
+            data.append([k, v.dtypes.name])
+        df = pd.DataFrame(data, columns=['Field', 'Type'])
         return Response(
-            RESPONSE_TYPE.OK,
-            error_message="Not implemented yet"
+            RESPONSE_TYPE.TABLE,
+            df
         )

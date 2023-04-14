@@ -254,11 +254,13 @@ class JobsHistory(Base):
 
     job_id = Column(Integer)
 
+    query_str = Column(String)
     start_at = Column(DateTime)
     end_at = Column(DateTime)
 
     error = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now)
 
     __table_args__ = (
         UniqueConstraint('job_id', 'start_at', name='uniq_job_history_job_id_start'),

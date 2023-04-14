@@ -47,6 +47,8 @@ class monkeylearnHandler(BaseMLEngine):
         classifier_response = ml.classifiers.classify(args['MODEL_ID'], input_list)
         df_dict = []
         for res_dict in classifier_response.body:
+            if res_dict.get("error") is True:
+                raise Exception(res_dict["error_detail"])
             text = res_dict['text']
             pred_dict = res_dict['classifications'][0]  # Only add the one which model is more confident about
             pred_dict['text'] = text

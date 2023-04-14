@@ -1,4 +1,8 @@
+from mindsdb.integrations.handlers.github_handler.github_tables import SpotifyAritistsTable, SpotifyAlbumsTable, SpotifyPlaylistsTale
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+
+from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -7,18 +11,21 @@ from mindsdb.integrations.libs.response import (
 )
 
 
-class TwitterHandler(APIHandler):
-    """A class for handling connections and interactions with the Twitter API.
+class SpotifHandler(APIHandler):
+    """A class for handling connections and interactions with the Spotify API.
+
     Attributes:
-        bearer_token (str): The consumer key for the Twitter app.
-        api (tweepy.API): The `tweepy.API` object for interacting with the Twitter API.
+        bearer_token (str): The consumer key for the Spotify app.
+        api (tweepy.API): The `tweepy.API` object for interacting with the Spotify API.
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name=None, **kwargs):
         super().__init__(name)
+
         args = kwargs.get('connection_data', {})
         self.connection_args = {}
-        handler_config = Config().get('twitter_handler', {})
+
+        handler_config = Config().get('spotify_handler', {})
         self.api = None
         self.is_connected = False
 
@@ -28,12 +35,14 @@ class TwitterHandler(APIHandler):
         pass
 
     def connect(self):
-            """ Set up any connections required by the handler
-    Should return output of check_connection() method after attempting
-    connection. Should switch self.is_connected.
-    Returns:
+        """ Set up any connections required by the handler
+        Should return output of check_connection() method after attempting
+        connection. Should switch self.is_connected.
+        Returns:
         HandlerStatusResponse
-    """
+        """
+
+
         pass
 
     def check_connection(self) -> StatusResponse:

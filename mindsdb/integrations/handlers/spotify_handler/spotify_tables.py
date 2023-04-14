@@ -8,7 +8,7 @@ from mindsdb.utilities.log import get_log
 
 from mindsdb_sql.parser import ast
 
-logger = get_log("integrations.github_handler")
+logger = get_log("integrations.spotify_handler")
 
 
 class SpotifyArtistsTable(APITable):

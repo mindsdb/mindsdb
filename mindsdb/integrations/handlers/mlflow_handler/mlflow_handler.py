@@ -48,24 +48,29 @@ class MLflowHandler(BaseMLEngine):
         return predictions
 
     def describe(self, key: Optional[str] = None) -> pd.DataFrame:
-        args = self.model_storage.json_get('args')
-        connection = MlflowClient(args['mlflow_server_url'], args['self.mlflow_server_path'])
-        models = {model.name: model for model in connection.search_registered_models()}
-        model = models[key]
-        latest_version = model.latest_versions[-1]
-        description = {
-            'NAME': [model.name],
-            'USER_DESCRIPTION': [model.description],
-            'LAST_STATUS': [latest_version.status],
-            'CREATED_AT': [datetime.fromtimestamp(model.creation_timestamp//1000).strftime("%m/%d/%Y, %H:%M:%S")],
-            'LAST_UPDATED': [datetime.fromtimestamp(model.last_updated_timestamp//1000).strftime("%m/%d/%Y, %H:%M:%S")],
-            'TAGS': [model.tags],
-            'LAST_RUN_ID': [latest_version.run_id],
-            'LAST_SOURCE_PATH': [latest_version.source],
-            'LAST_USER_ID': [latest_version.user_id],
-            'LAST_VERSION': [latest_version.version],
-        }
-        return pd.DataFrame.from_dict(description)
+        if key == 'info':
+            args = self.model_storage.json_get('args')
+            connection = MlflowClient(args['mlflow_server_url'], args['self.mlflow_server_path'])
+            models = {model.name: model for model in connection.search_registered_models()}
+            model = models[key]
+            latest_version = model.latest_versions[-1]
+            description = {
+                'NAME': [model.name],
+                'USER_DESCRIPTION': [model.description],
+                'LAST_STATUS': [latest_version.status],
+                'CREATED_AT': [datetime.fromtimestamp(model.creation_timestamp//1000).strftime("%m/%d/%Y, %H:%M:%S")],
+                'LAST_UPDATED': [datetime.fromtimestamp(model.last_updated_timestamp//1000).strftime("%m/%d/%Y, %H:%M:%S")],
+                'TAGS': [model.tags],
+                'LAST_RUN_ID': [latest_version.run_id],
+                'LAST_SOURCE_PATH': [latest_version.source],
+                'LAST_USER_ID': [latest_version.user_id],
+                'LAST_VERSION': [latest_version.version],
+            }
+            return pd.DataFrame.from_dict(description)
+        else:
+            tables = ['info']
+            return pd.DataFrame(tables, columns=['tables'])
+
 
     @staticmethod
     def _check_model_url(url):

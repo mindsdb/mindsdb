@@ -36,22 +36,33 @@ class EventStoreDB(DatabaseHandler):
     is_connected = None
     basic_url = ""
     read_batch_size = 500 #should be adjusted based on use case
+    headers = {
+        'Accept': 'application/json',
+        'ES-ResolveLinkTo': "True"
+    }
+    tlsverify = False
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
         connection_data = kwargs['connection_data']
         self.host = connection_data.get('host')
-        if connection_data.get('tls') is not None and connection_data.get('tls') == 'True':
+        if connection_data.get('tls') is not None and isinstance(connection_data.get('tls') , bool) \
+                and connection_data.get('tls') == True:
             self.scheme = 'https'
-        if connection_data.get('port') is not None:
+        if connection_data.get('port') is not None and isinstance(connection_data.get('port'), int):
             self.port = connection_data.get('port')
         if connection_data.get('page_size') is not None:
             if isinstance(connection_data.get('page_size'), int) and connection_data.get('page_size') > 0:
                 self.read_batch_size = connection_data.get('page_size')
+        log.logger.debug(f'scheme: {self.scheme} host: {self.host}  port:{self.port} page: {self.read_batch_size}')
+        if connection_data.get('username') is not None and connection_data.get('password') is not None:
+            if isinstance(connection_data.get('username'), str) and isinstance(connection_data.get('password'), str):
+                self.headers['authorization'] = get_auth_string(connection_data.get('username'),
+                                                                connection_data.get('password'))
+        if connection_data.get('tlsverify') is not None and isinstance(connection_data.get('tlsverify'), bool):
+            self.tlsverify = connection_data.get('tlsverify')
 
-        log.logger.info(f'scheme: {self.scheme} host: {self.host}  port:{self.port} page: {self.read_batch_size}')
         self.basic_url = build_basic_url(self.scheme, self.host, self.port)
-
 
     def __del__(self):
         if self.is_connected is True:
@@ -70,26 +81,21 @@ class EventStoreDB(DatabaseHandler):
 
     def check_connection(self) -> StatusResponse:
         try:
-            response = requests.get(build_health_url(self.basic_url))
+            response = requests.get(build_health_url(self.basic_url), verify=self.tlsverify)
             if response.status_code == 204:
                 return StatusResponse(True)
         except Exception as e:
-            log.logger.Error(f'{self.name} check connection failed with: {e}!')
+            log.logger.error(f'{self.name} check connection failed with: {e}!')
         return StatusResponse(False)
 
     def query(self, query: ASTNode) -> Response:
         if type(query) == Select:
             stream_name = query.from_table.parts[-1] #i.e. table name
-            headers = {
-                'Accept': 'application/json',
-                'ES-ResolveLinkTo': "True"
-            }
-
             params = {
                 'embed': 'tryharder'
             }
             stream_endpoint = build_stream_url(self.basic_url, stream_name)
-            response = requests.get(stream_endpoint, params=params, headers=headers)
+            response = requests.get(stream_endpoint, params=params, headers=self.headers, verify=self.tlsverify)
             entries = []
             if response is not None and response.status_code == 200:
                 jsonResponse = response.json()
@@ -104,7 +110,7 @@ class EventStoreDB(DatabaseHandler):
                                 if link['relation'] == 'next':
                                     endOfStream = False
                                     response = requests.get(build_next_url(link['uri'],self.read_batch_size),
-                                                            params=params, headers=headers)
+                                                            params=params, headers=self.headers, verify=self.tlsverify)
                                     jsonResponse = response.json()
                                     for entry in jsonResponse["entries"]:
                                         entry = entry_to_df(entry)
@@ -128,16 +134,11 @@ class EventStoreDB(DatabaseHandler):
         """
         List all streams i.e tables
         """
-        headers = {
-            'Accept': 'application/json',
-            'ES-ResolveLinkTo': "True"
-        }
-
         params = {
             'embed': 'tryharder'
         }
         stream_endpoint = build_streams_url(self.basic_url)
-        response = requests.get(stream_endpoint, params=params, headers=headers)
+        response = requests.get(stream_endpoint, params=params, headers=self.headers, verify=self.tlsverify)
         streams = []
         if response is not None and response.status_code == 200:
             jsonResponse = response.json()
@@ -152,7 +153,7 @@ class EventStoreDB(DatabaseHandler):
                             if link['relation'] == 'next':
                                 endOfStream = False
                                 response = requests.get(build_next_url(link['uri'],self.read_batch_size),
-                                                        params=params, headers=headers)
+                                                        params=params, headers=self.headers, verify=self.tlsverify)
                                 jsonResponse = response.json()
                                 for entry in jsonResponse["entries"]:
                                     if "title" in entry:

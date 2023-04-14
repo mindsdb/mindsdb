@@ -2,12 +2,13 @@ from urllib.parse import urlunparse, urljoin
 import re
 import pandas as pd
 import json
+import base64
 """
 From connection settings in MindsDB to an EventStoreDB AtomPub HTTP URL
 #https://python.readthedocs.io/en/stable/library/urllib.parse.html#urllib.parse.urlunparse
 """
 def build_basic_url(scheme, host, port):
-    netloc = host + ":" + port
+    netloc = host + ":" + str(port)
     url = urlunparse([
         scheme,
         netloc,
@@ -36,3 +37,7 @@ def entry_to_df(entry):
                       columns=fields)
     data = pd.json_normalize(json.loads(entry['data']))
     return df.merge(data, how='cross')
+
+def get_auth_string(username, password):
+    credentials = username + ':' + password
+    return 'Basic ' + str(base64.b64encode(credentials.encode('utf-8')).decode('utf-8'))

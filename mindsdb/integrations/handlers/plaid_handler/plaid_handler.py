@@ -55,7 +55,7 @@ class PlaidHandler(APIHandler):
         self.is_connected = False
 
         balance = BalanceTable(self)
-        transactions=TransactionTable(self)
+        transactions = TransactionTable(self)
         self._register_table('balance', balance)
         self._register_table('transactions', transactions)
 
@@ -128,7 +128,7 @@ class PlaidHandler(APIHandler):
 
         return result
 
-    def get_balance(self, params={}):
+    def get_balance(self, params=None):
         '''Filters data from Plaid API's balance endpoint and returns a DataFrame with the required information.
 
         Args:
@@ -141,7 +141,9 @@ class PlaidHandler(APIHandler):
         self.connect()
         if params.get('last_updated_datetime') is not None:
             options = AccountsBalanceGetRequestOptions(
-                min_last_updated_datetime = datetime.strptime( params.get('last_updated_datetime') )
+                min_last_updated_datetime=datetime.strptime( 
+                    params.get('last_updated_datetime')
+                    )
             )
 
             response = self.api.accounts_balance_get(
@@ -183,12 +185,11 @@ class PlaidHandler(APIHandler):
         '''
         self.connect()
         if params.get('start_date') and params.get('end_date'):
-            start_date =datetime.strptime(params.get('start_date'),'%Y-%m-%d').date()
-            end_date =datetime.strptime(params.get('end_date'),'%Y-%m-%d').date()
+            start_date = datetime.strptime(params.get('start_date'), '%Y-%m-%d').date()
+            end_date = datetime.strptime(params.get('end_date'), '%Y-%m-%d').date()
         else:
             raise Exception('start_date and end_date is required in format YYYY-MM-DD ')
-        
-    
+      
         request = TransactionsGetRequest(
             access_token=self.access_token,
             start_date=start_date,
@@ -214,9 +215,8 @@ class PlaidHandler(APIHandler):
         transactions.extend(parse_transaction(response['transactions']))
 
         # Converting date column from str 
-        df =pd.DataFrame(transactions)
-        for i in [ 'date', 'authorized_date' ]:
+        df = pd.DataFrame(transactions)
+        for i in ['date', 'authorized_date']:
             df[i] = pd.to_datetime(df[i]).dt.date
 
         return df
-

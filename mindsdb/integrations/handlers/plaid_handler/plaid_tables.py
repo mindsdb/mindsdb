@@ -4,7 +4,6 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 from mindsdb_sql.parser import ast
 
 
-
 class BalanceTable(APITable):
     '''A class representing the balance table.
 
@@ -17,7 +16,6 @@ class BalanceTable(APITable):
 
     '''
     
-
     def select(self, query: ast.Select) :
         '''Select data from the balance table and return it as a pandas DataFrame.
 
@@ -29,14 +27,15 @@ class BalanceTable(APITable):
         '''
 
         conditions = extract_comparison_conditions(query.where)
-        params={}
+        params = {}
         for i in conditions:
-            if i[1]=='last_updated_datetime':
-                if i[0]== '=':
+            if i[1] == 'last_updated_datetime':
+                if i[0] == '=':
                     params[i[1]] = i[2]
                 else:
                     raise Exception("Only equals to '=' is Supported with 'last_updated_datetime'")
-        result=self.handler.call_plaid_api(method_name='get_balance', params=params)
+                
+        result = self.handler.call_plaid_api(method_name='get_balance', params=params)
 
         self.filter_columns(query=query, result=result)
         return result
@@ -61,7 +60,7 @@ class BalanceTable(APITable):
             'balance_current',
             'balance_limit' 
         ]
-    
+
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
         columns = []
         if query is not None:
@@ -73,9 +72,8 @@ class BalanceTable(APITable):
                     columns.append(target.parts[-1])
                 else:
                     raise NotImplementedError
-            else:
-                columns = self.get_columns()
-
+        else:
+            columns = self.get_columns()
 
         columns = [name.lower() for name in columns]
 
@@ -84,14 +82,12 @@ class BalanceTable(APITable):
         else:
             for col in set(columns) & set(result.columns) ^ set(columns):
                 result[col] = None
-
             result = result[columns]
-        
+
         if query is not None and query.limit is not None:
             return result.head(query.limit.value)
-        
-        return result
 
+        return result
 
 
 class TransactionTable(APITable):
@@ -116,29 +112,29 @@ class TransactionTable(APITable):
             pandas.DataFrame: A pandas DataFrame containing the selected data.
         '''
         all_conditions = extract_comparison_conditions(query.where)
-        condition=[]
-        params={}
+        condition = []
+        params = {}
         for op, v, c in all_conditions:
 
             op = '==' if op == '=' else op  # converting '=' to '=='
 
-            if(v=='start_date' or v=='end_date'):
-                params[v]=c
+            if (v == 'start_date' or v == 'end_date'):
+                params[v] = c
 
-            elif v in [ 'date', 'authorized_date' ] or isinstance(c,str):
+            elif v in ['date', 'authorized_date'] or isinstance(c, str):
                 condition.append(f"({v}{op}'{c}')")
 
             else:
                 condition.append(f"({v}{op}{c})")
-        
-        merge_condition =' and '.join(condition)
 
-        result=self.handler.call_plaid_api(method_name='get_transactions',params=params)
+        merge_condition = ' and '.join(condition)
+
+        result = self.handler.call_plaid_api(method_name='get_transactions', params=params)
         if merge_condition != '':
-            result=result.query(merge_condition)
-        
+            result = result.query(merge_condition)
+
         result = self.filter_columns(query=query, result=result)
-        return result    
+        return result
 
     def get_columns(self):
         '''Get the list of column names for the transaction table.
@@ -158,8 +154,9 @@ class TransactionTable(APITable):
             'payment_channel',
             'pending',
         ]
-    
+
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
+
         columns = []
         if query is not None:
             for target in query.targets:
@@ -180,12 +177,10 @@ class TransactionTable(APITable):
         else:
             for col in set(columns) & set(result.columns) ^ set(columns):
                 result[col] = None
-
             result = result[columns]
-        
+    
         if query is not None and query.limit is not None:
             return result.head(query.limit.value)
 
         return result
-        
- 
+    

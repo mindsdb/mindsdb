@@ -408,7 +408,7 @@ class ResultSet:
 
 
 class SQLQuery():
-    def __init__(self, sql, session, execute=True):
+    def __init__(self, sql, session, execute=True, prepare=False):
         self.session = session
         self.database = None if session.database == '' else session.database.lower()
         self.datahub = session.datahub
@@ -444,7 +444,7 @@ class SQLQuery():
         # self._process_query(sql)
         self.create_planner()
         if execute:
-            self.prepare_query(prepare=False)
+            self.prepare_query(prepare=prepare)
             self.execute_query()
 
     @profiler.profile()

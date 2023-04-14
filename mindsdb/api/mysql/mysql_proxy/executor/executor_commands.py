@@ -615,7 +615,7 @@ class ExecuteCommands:
     def answer_evaluate_metric(self, statement):
         # metric_name = statement.name.parts[-1]
         # evaluate_accuracy(statement.dataframe, metric_name)
-        SQLQuery(statement, session=self.session, execute=True)
+        SQLQuery(statement, session=self.session, execute=True, prepare=True)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_describe_predictor(self, statement):

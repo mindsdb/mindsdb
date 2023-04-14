@@ -1,134 +1,61 @@
 import os
 import praw
-
-import datetime as dt
-import ast
-from collections import defaultdict
-
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+import json
+import pandas as pd
+from praw.models import MoreComments
+from mindsdb_sql.parser import ast
+from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.utilities.config import Config
-from mindsdb.utilities.log import get_log
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
+    HandlerStatusResponse ,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+class RedditPostsTable(APITable):
 
-log = get_log()
-
-class RedditTable(APITable):
-    def __init__(self, handler):
-        self.handler = handler
-        self.reddit = self.handler.connect()
-
-    def select(self, query: ast.Select) -> Response:
-        subreddit = self.reddit.subreddit(query.from_table)
-
+    def select(self, query: ast.Select) -> pd.DataFrame:
         conditions = extract_comparison_conditions(query.where)
 
-        params = {}
+        subreddits = []
+        search_keys = []
+        post_limit = 10
+
         for op, arg1, arg2 in conditions:
-            if arg1 == 'created_utc':
-                date = dt.datetime.fromtimestamp(int(arg2))
-                if op == '>':
-                    params['after'] = int(date.timestamp())
-                elif op == '<':
-                    params['before'] = int(date.timestamp())
-                else:
-                    raise NotImplementedError
-                continue
+            if op == '=':
+                if arg1 == 'subreddit':
+                    subreddits.append(arg2)
+                elif arg1 == 'search_key':
+                    search_keys.append(arg2)
+                elif arg1 == 'post_limit':
+                    post_limit = int(arg2)
 
-            if op != '=':
-                raise NotImplementedError
+        post_list = []
 
-            params[arg1] = arg2
+        for sr in subreddits:
+            ml_subreddit = self.handler.reddit.subreddit(sr)
 
-        if query.limit is not None:
-            params['limit'] = query.limit.value
+            for kw in search_keys:
+                relevant_posts = ml_subreddit.search(kw, limit=post_limit)
 
-        if 'sort' in params:
-            if params['sort'] == 'top':
-                params['sort_type'] = 'top'
-            elif params['sort'] == 'new':
-                params['sort_type'] = 'new'
-            elif params['sort'] == 'hot':
-                params['sort_type'] = 'hot'
-            else:
-                raise ValueError('Invalid sort value')
+                for post in relevant_posts:
+                    post_dict = {
+                        'title': post.title,
+                        'author': post.author.name,
+                        'created_utc': post.created_utc,
+                        'selftext': post.selftext,
+                        'comments': []
+                    }
 
-            del params['sort']
+                    for top_level_comment in post.comments:
+                        if isinstance(top_level_comment, MoreComments):
+                            continue
+                        post_dict['comments'].append(top_level_comment.body)
 
-        result = []
-        for post in subreddit.search(**params):
-            post_data = defaultdict(lambda: None)
-            post_data.update({
-                'id': post.id,
-                'created_utc': post.created_utc,
-                'title': post.title,
-                'selftext': post.selftext,
-                'score': post.score,
-                'author': post.author.name,
-                'subreddit': post.subreddit.display_name,
-                'num_comments': post.num_comments,
-                'permalink': f'https://www.reddit.com{post.permalink}'
-            })
-            result.append(post_data)
+                    post_list.append(post_dict)
 
-        # filter targets
-        columns = []
-        for target in query.targets:
-            if isinstance(target, ast.Star):
-                columns = []
-                break
-            elif isinstance(target, ast.Identifier):
-                columns.append(target.parts[-1])
-            else:
-                raise NotImplementedError
+        return pd.DataFrame(post_list)
 
-        if len(columns) == 0:
-            columns = self.get_columns()
-
-        # columns to lower case
-        columns = [name.lower() for name in columns]
-
-        if len(result) == 0:
-            result = pd.DataFrame([], columns=columns)
-        else:
-            # add absent columns
-            for col in set(columns) & set(result[0].keys()) ^ set(columns):
-                for post_data in result:
-                    post_data[col] = None
-
-            # filter by columns
-            result = [{col: post_data[col] for col in columns} for post_data in result]
-
-        return result
-
-    def get_columns(self):
-        return [
-            'id',
-            'created_utc',
-            'title',
-            'selftext',
-            'score',
-            'author',
-            'subreddit',
-            'num_comments',
-            'permalink'
-        ]
-    
 class RedditHandler(APIHandler):
-    """A class for handling connections and interactions with the Reddit API.
-
-    Attributes:
-        client_id (str): The client ID for the Reddit app.
-        client_secret (str): The client secret for the Reddit app.
-        username (str): The Reddit account's username.
-        password (str): The Reddit account's password.
-        api (praw.Reddit): The `praw.Reddit` object for interacting with the Reddit API.
-
-    """
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
@@ -136,8 +63,9 @@ class RedditHandler(APIHandler):
         args = kwargs.get('connection_data', {})
 
         self.connection_args = {}
-        handler_config = Config().get('reddit_handler', {})
-        for k in ['client_id', 'client_secret', 'username', 'password']:
+        handler_config = {'client_id': 'YOUR_CLIENT_ID', 'client_secret': 'YOUR_CLIENT_SECRET', 'user_agent': 'YOUR_USER_AGENT'}
+
+        for k in ['client_id', 'client_secret', 'user_agent']:
             if k in args:
                 self.connection_args[k] = args[k]
             elif f'REDDIT_{k.upper()}' in os.environ:
@@ -145,69 +73,28 @@ class RedditHandler(APIHandler):
             elif k in handler_config:
                 self.connection_args[k] = handler_config[k]
 
-        self.api = None
-        self.is_connected = False
+        self.reddit = None
 
-        posts = RedditTable(self)
-        self._register_table('posts', posts)
+        reddit_posts = RedditPostsTable(self)
+        self._register_table('reddit_posts', reddit_posts)
 
     def connect(self):
-        """Authenticate with the Reddit API using the client ID, client secret, username, and password."""
+        if self.reddit is not None:
+            return self.reddit
 
-        if self.is_connected is True:
-            return self.api
-
-        self.api = praw.Reddit(
+        self.reddit = praw.Reddit(
             client_id=self.connection_args['client_id'],
             client_secret=self.connection_args['client_secret'],
-            username=self.connection_args['username'],
-            password=self.connection_args['password'],
-            user_agent=f"{self.connection_args['username']}-api-handler"
+            user_agent=self.connection_args['user_agent']
         )
 
-        self.is_connected = True
-        return self.api
+        return self.reddit
 
-    def check_connection(self) -> StatusResponse:
-
-        response = StatusResponse(False)
-
+    def check_connection(self):
         try:
-            api = self.connect()
-            api.user.me()
-
-            response.success = True
-
+            reddit = self.connect()
+            reddit.user.me()
+            return HandlerStatusResponse(success=True, error_message=None)
         except Exception as e:
-            response.error_message = f'Error connecting to Reddit API: {e}'
-            log.logger.error(response.error_message)
-
-        if response.success is False and self.is_connected is True:
-            self.is_connected = False
-
-        return response
-
-    def native_query(self, query_string: str = None):
-        method_name, params = FuncParser().from_string(query_string)
-
-        df = self.call_reddit_api(method_name, params)
-
-        return Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
-
-    def call_reddit_api(self, method_name: str = None, params: dict = None):
-        api = self.connect()
-        try:
-            if method_name is not None:
-                if params is not None:
-                    response = api.request(method_name, params)
-                else:
-                    response = api.request(method_name)
-                return response
-            else:
-                raise ValueError("Method name cannot be None")
-        except RequestException as e:
-            print(f"An error occurred while calling the Reddit API: {e}")
-
+            print(f"Error connecting to Reddit: {e}")
+            return HandlerStatusResponse(success=False, error_message=f"Error connecting to Reddit: {e}")

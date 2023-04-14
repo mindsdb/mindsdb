@@ -18,7 +18,7 @@ PARAMETERS = {
 };
 ```
 
-![CREATE_DATABASE](https://github.com/ShruAgarwal/mindsdb/blob/staging/mindsdb/integrations/handlers/mariadb_handler/create-db.png)
+![CREATE_DATABASE](create-db.png)
 
 **2. Testing CREATE PREDICTOR**
 
@@ -29,7 +29,7 @@ FROM mariadb_test (
 ) PREDICT species;
 ```
 
-![CREATE_PREDICTOR](https://github.com/ShruAgarwal/mindsdb/blob/staging/mindsdb/integrations/handlers/mariadb_handler/predictor.png)
+![CREATE_PREDICTOR](predictor.png)
 
 **3. Testing SELECT FROM PREDICTOR**
 
@@ -39,7 +39,7 @@ FROM mindsdb.models
 WHERE name='iris_predictor';
 ```
 
-![SELECT_FROM](https://github.com/ShruAgarwal/mindsdb/blob/staging/mindsdb/integrations/handlers/mariadb_handler/predict-db.png)
+![SELECT_FROM](predict-db.png)
 
 ### Results
 

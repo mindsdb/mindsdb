@@ -92,10 +92,10 @@ class LocalFSStore(BaseFSStore):
 
     def get(self, local_name, base_dir):
         remote_name = local_name
-        copy(
-            os.path.join(self.storage, remote_name),
-            os.path.join(base_dir, local_name)
-        )
+        src = os.path.join(self.storage, remote_name)
+        dest = os.path.join(base_dir, local_name)
+        if not os.path.exists(dest) or os.path.getsize(src) != os.path.getsize(dest):
+            copy(src, dest)
 
     def put(self, local_name, base_dir):
         remote_name = local_name

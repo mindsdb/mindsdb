@@ -1,9 +1,14 @@
 import pandas as pd
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
-from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
 
+from datetime import datetime
 import plaid
 from plaid.api import plaid_api
 from plaid.model.accounts_balance_get_request import AccountsBalanceGetRequest
@@ -25,7 +30,7 @@ class PlaidHandler(APIHandler):
     '''A class for handling connections and interactions with the Twitter API.
 
     Attributes:
-        plaid_env (str): Enviroment used by user { 'sandbox'(default) OR 'development' OR 'production' }.
+        plaid_env (str): Enviroment used by user [ 'sandbox'(default) OR 'development' OR 'production' ].
         client_id (str): Your Plaid API client_id. 
         secret (str): Your Plaid API secret
         access_token (str): The access token for the Plaid account.
@@ -38,8 +43,10 @@ class PlaidHandler(APIHandler):
 
         self.plaid_config = plaid.Configuration(
             host=PLAID_ENV[args.get('plaid_env', 'sandbox')],
-            api_key={'clientId': args.get('client_id'),
-                     'secret': args.get('secret')}
+            api_key={
+                'clientId': args.get('client_id'),
+                'secret': args.get('secret')
+            }
         )
 
         self.access_token = args.get('access_token')
@@ -95,8 +102,12 @@ class PlaidHandler(APIHandler):
             HandlerResponse
         '''
 
-        ast = parse_sql(query_string, dialect='mindsdb')
-        return self.query(ast)
+        method_name, params = FuncParser().from_string(query_string)
+        df = self.call_plaid_api(method_name, params)
+        return Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=df
+        )
 
     def call_plaid_api(self, method_name: str = None, params: dict = {}):
         '''Receive query as AST (abstract syntax tree) and act upon it somehow.
@@ -106,12 +117,14 @@ class PlaidHandler(APIHandler):
             DataFrame
         '''
 
-
-
+        result=pd.DataFrame()
         if method_name == 'get_balance':
             result = self.get_balance(params=params)
+            result = BalanceTable(self).filter_columns(result=result)
+
         elif method_name == 'get_transactions':
             result = self.get_transactions(params=params)
+            result = TransactionTable(self).filter_columns(result=result)
 
         return result
 
@@ -128,7 +141,7 @@ class PlaidHandler(APIHandler):
         self.connect()
         if params.get('last_updated_datetime') is not None:
             options = AccountsBalanceGetRequestOptions(
-                min_last_updated_datetime=params.get('last_updated_datetime')
+                min_last_updated_datetime = datetime.strptime( params.get('last_updated_datetime') )
             )
 
             response = self.api.accounts_balance_get(
@@ -169,8 +182,12 @@ class PlaidHandler(APIHandler):
             pandas.DataFrame: A DataFrame containing the filtered data.
         '''
         self.connect()
-        start_date = params.get('start_date')
-        end_date = params.get('end_date')
+        if params.get('start_date') and params.get('end_date'):
+            start_date =datetime.strptime(params.get('start_date'),'%Y-%m-%d').date()
+            end_date =datetime.strptime(params.get('end_date'),'%Y-%m-%d').date()
+        else:
+            raise Exception('start_date and end_date is required in format YYYY-MM-DD ')
+        
     
         request = TransactionsGetRequest(
             access_token=self.access_token,

@@ -11,8 +11,8 @@ WITH
     PARAMETERS = {
       "client_id": "YOUR_CLIENT_ID",
       "secret": "YOUR_SECRET",
-      "public_key": "YOUR_PUBLIC_KEY",
-      "environment": "sandbox"
+      "access_token": "YOUR_PUBLIC_KEY",
+      "plaid_env": "ENV"
     };
 ```
 
@@ -42,7 +42,6 @@ This will retrieve the latest transactions for the given account
 ```sql
 SELECT * FROM my_plaid (
   get_transactions(
-    access_token = 'YOUR_ACCESS_TOKEN',
     start_date = '2022-01-01',
     end_date = '2022-02-01'
   )
@@ -54,9 +53,9 @@ Now that we have our data, let's build a machine learning model that can predict
 
 ```sql
 CREATE MODEL mindsdb.expense_prediction
-FROM plaid3 (
+FROM my_plaid (
 SELECT  merchant_name, date, amount 
-FROM plaid3.transactions 
+FROM transactions 
 WHERE start_date='2023-01-01' 
 AND end_date='2023-04-11'; )
 PREDICT amount;

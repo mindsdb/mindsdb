@@ -1,4 +1,3 @@
-from datetime import datetime
 import pandas as pd
 from mindsdb.integrations.libs.api_handler import  APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
@@ -30,33 +29,16 @@ class BalanceTable(APITable):
         '''
 
         conditions = extract_comparison_conditions(query.where)
-        print(conditions)
-        result=self.handler.call_plaid_api(method_name='get_balance')
+        params={}
+        for i in conditions:
+            if i[1]=='last_updated_datetime':
+                if i[0]== '=':
+                    params[i[1]] = i[2]
+                else:
+                    raise Exception("Only equals to '=' is Supported with 'last_updated_datetime'")
+        result=self.handler.call_plaid_api(method_name='get_balance', params=params)
 
-
-        columns = []
-        for target in query.targets:
-            if isinstance(target, ast.Star):
-                columns = self.get_columns()
-                break
-            elif isinstance(target, ast.Identifier):
-                columns.append(target.parts[-1])
-            else:
-                raise NotImplementedError
-
-        columns = [name.lower() for name in columns]
-
-        if len(result) == 0:
-            result = pd.DataFrame([], columns=columns)
-        else:
-            for col in set(columns) & set(result.columns) ^ set(columns):
-                result[col] = None
-
-            result = result[columns]
-        
-        if query.limit is None:
-            return result.head(query.limit)
-
+        self.filter_columns(query=query, result=result)
         return result
     
     def get_columns(self):
@@ -79,6 +61,37 @@ class BalanceTable(APITable):
             'balance_current',
             'balance_limit' 
         ]
+    
+    def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
+        columns = []
+        if query is not None:
+            for target in query.targets:
+                if isinstance(target, ast.Star):
+                    columns = self.get_columns()
+                    break
+                elif isinstance(target, ast.Identifier):
+                    columns.append(target.parts[-1])
+                else:
+                    raise NotImplementedError
+            else:
+                columns = self.get_columns()
+
+
+        columns = [name.lower() for name in columns]
+
+        if len(result) == 0:
+            result = pd.DataFrame([], columns=columns)
+        else:
+            for col in set(columns) & set(result.columns) ^ set(columns):
+                result[col] = None
+
+            result = result[columns]
+        
+        if query is not None and query.limit is not None:
+            return result.head(query.limit.value)
+        
+        return result
+
 
 
 class TransactionTable(APITable):
@@ -110,7 +123,7 @@ class TransactionTable(APITable):
             op = '==' if op == '=' else op  # converting '=' to '=='
 
             if(v=='start_date' or v=='end_date'):
-                params[v]=datetime.strptime(c, '%Y-%m-%d').date()
+                params[v]=c
 
             elif v in [ 'date', 'authorized_date' ] or isinstance(c,str):
                 condition.append(f"({v}{op}'{c}')")
@@ -123,30 +136,9 @@ class TransactionTable(APITable):
         result=self.handler.call_plaid_api(method_name='get_transactions',params=params)
         if merge_condition != '':
             result=result.query(merge_condition)
-        columns = []
-        for target in query.targets:
-            if isinstance(target, ast.Star):
-                columns = self.get_columns()
-                break
-            elif isinstance(target, ast.Identifier):
-                columns.append(target.parts[-1])
-            else:
-                raise NotImplementedError
-
-        columns = [name.lower() for name in columns]
-
-        if len(result) == 0:
-            result = pd.DataFrame([], columns=columns)
-        else:
-            for col in set(columns) & set(result.columns) ^ set(columns):
-                result[col] = None
-
-            result = result[columns]
         
-        if query.limit is None:
-            return result.head(query.limit)
-
-        return result
+        result = self.filter_columns(query=query, result=result)
+        return result    
 
     def get_columns(self):
         '''Get the list of column names for the transaction table.
@@ -167,6 +159,33 @@ class TransactionTable(APITable):
             'pending',
         ]
     
+    def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
+        columns = []
+        if query is not None:
+            for target in query.targets:
+                if isinstance(target, ast.Star):
+                    columns = self.get_columns()
+                    break
+                elif isinstance(target, ast.Identifier):
+                    columns.append(target.parts[-1])
+                else:
+                    raise NotImplementedError
+        else:
+            columns = self.get_columns()
 
+        columns = [name.lower() for name in columns]
+
+        if len(result) == 0:
+            result = pd.DataFrame([], columns=columns)
+        else:
+            for col in set(columns) & set(result.columns) ^ set(columns):
+                result[col] = None
+
+            result = result[columns]
+        
+        if query is not None and query.limit is not None:
+            return result.head(query.limit.value)
+
+        return result
         
  

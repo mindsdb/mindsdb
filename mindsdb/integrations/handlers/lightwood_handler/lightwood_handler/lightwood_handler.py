@@ -420,7 +420,8 @@ class LightwoodHandler(BaseMLEngine):
         return pd.DataFrame([progress_info], columns=["current", "total", "name"])
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        if attribute is None:
+
+        if attribute == 'info':
 
             model_description = {}
 
@@ -443,19 +444,21 @@ class LightwoodHandler(BaseMLEngine):
 
             return pd.DataFrame([model_description])
 
+        elif attribute == "features":
+            return self._get_features_info()
+
+        elif attribute == "model":
+            return self._get_model_info()
+
+        elif attribute == "jsonai":
+            return self._get_ensemble_data()
+
+        elif attribute == "progress":
+            # todo remove?
+            return self._get_progress_data()
+
         else:
-            if attribute == "features":
-                return self._get_features_info()
+            tables = ['info', 'features', 'model', 'jsonai']
+            return pd.DataFrame(tables, columns=['tables'])
 
-            elif attribute == "model":
-                return self._get_model_info()
-
-            elif attribute == "ensemble":
-                return self._get_ensemble_data()
-
-            elif attribute == "progress":
-                return self._get_progress_data()
-
-            else:
-                raise Exception("DESCRIBE '%s' predictor attribute is not supported yet" % attribute)
 

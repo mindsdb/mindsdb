@@ -258,7 +258,13 @@ class HuggingFaceHandler(BaseMLEngine):
 
         args = self.model_storage.json_get('args')
 
-        hf_api = HfApi()
-        metadata = hf_api.model_info(args['model_name'])
-
-        return pd.DataFrame([[args, metadata.__dict__]], columns=['model_args', 'metadata'])
+        if attribute == 'args':
+            return pd.DataFrame(args.items(), columns=['key', 'value'])
+        elif attribute == 'metadata':
+            hf_api = HfApi()
+            metadata = hf_api.model_info(args['model_name'])
+            data = metadata.__dict__
+            return pd.DataFrame(list(data.items()), columns=['key', 'value'])
+        else:
+            tables = ['args', 'metadata']
+            return pd.DataFrame(tables, columns=['tables'])

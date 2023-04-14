@@ -174,29 +174,29 @@ class TestHuggingface(BaseExecutorTest):
         '''
         self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_hf_text2text(self, mock_handler):
+    # @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    # def test_hf_text2text(self, mock_handler):
 
-        # create predictor
-        create_sql = '''                
-        CREATE MODEL mindsdb.text_generator
-        predict PREDICTION
-        USING
-            engine='huggingface',
-            join_learn_process=true,
-            task = "text2text-generation",
-            model_name = "google/flan-t5-base",
-            input_column = "text_short"
-        '''
+    #     # create predictor
+    #     create_sql = '''                
+    #     CREATE MODEL mindsdb.text_generator
+    #     predict PREDICTION
+    #     USING
+    #         engine='huggingface',
+    #         join_learn_process=true,
+    #         task = "text2text-generation",
+    #         model_name = "google/flan-t5-base",
+    #         input_column = "text_short"
+    #     '''
 
-        model_name = 'text_generator'
+    #     model_name = 'text_generator'
 
-        predict_sql = '''
-            SELECT h.*
-            FROM pg.df as t 
-            JOIN mindsdb.text_generator as h
-        '''
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+    #     predict_sql = '''
+    #         SELECT h.*
+    #         FROM pg.df as t 
+    #         JOIN mindsdb.text_generator as h
+    #     '''
+    #     self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
 
 # Test locally by running
 

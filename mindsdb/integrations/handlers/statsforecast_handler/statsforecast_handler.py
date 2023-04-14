@@ -7,6 +7,8 @@ from mindsdb.integrations.utilities.time_series_utils import (
     infer_frequency,
     get_best_model_from_results_df,
     get_model_accuracy_dict,
+    reconcile_forecasts,
+    get_hierarchy_from_df
 )
 from sklearn.metrics import r2_score
 from statsforecast import StatsForecast
@@ -99,7 +101,13 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["frequency"] = (
             using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
         )
-        training_df = transform_to_nixtla_df(df, model_args)
+        model_args["hierarchy"] = using_args["hierarchy"] if "hierarchy" in using_args else False
+        if model_args["hierarchy"]:
+            training_df, hier_df, hier_dict = get_hierarchy_from_df(df, model_args)
+            self.model_storage.file_set("hier_dict", dill.dumps(hier_dict))
+            self.model_storage.file_set("hier_df", dill.dumps(hier_df))
+        else:
+            training_df = transform_to_nixtla_df(df, model_args)
 
         model_args["model_name"] = DEFAULT_MODEL_NAME if "model_name" not in using_args else using_args["model_name"]
 
@@ -133,14 +141,23 @@ class StatsForecastHandler(BaseMLEngine):
         sf = StatsForecast(models=[], freq=model_args["frequency"], df=training_df)
         sf.fitted_ = fitted_models
         forecast_df = sf.predict(model_args["horizon"])
-        forecast_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
-        return get_results_from_nixtla_df(forecast_df, model_args)
+
+        if model_args["hierarchy"]:
+            hier_df = dill.loads(self.model_storage.file_get("hier_df"))
+            hier_dict = dill.loads(self.model_storage.file_get("hier_dict"))
+            reconciled_df = reconcile_forecasts(training_df, forecast_df, hier_df, hier_dict)
+            results_df = reconciled_df[reconciled_df.index.isin(groups_to_keep)]
+
+        else:
+            results_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
+
+        return get_results_from_nixtla_df(results_df, model_args)
 
     def describe(self, attribute=None):
         model_args = self.model_storage.json_get("model_args")
 
         if attribute == "model":
-            return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "frequency", "season_length"]})
+            return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "frequency", "season_length", "hierarchy"]})
 
         if attribute == "features":
             return pd.DataFrame(

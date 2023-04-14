@@ -10,9 +10,7 @@ installation. Please have a look at them below.
 
 ### Pip and Python Versions
 
-Due to some of our dependencies having issues with the latest versions of Python
-3.9.x, we suggest using **Python 3.7.x or 3.8.x versions** for now. We are
-working on Python 3.9.x to be supported soon.
+We suggest using **Python 3.7.x, 3.8.x, or 3.9.x versions** for now.
 
 To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
 that **Python >= 3.7** and **pip >= 20.3**. You can check the pip and python
@@ -111,6 +109,11 @@ export CPPFLAGS="-I/usr/local/opt/libomp/include"
     python -m mindsdb
     ```
 
+By default, MindsDB will always start the `http` and `mysqul` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
+
+   ```bash
+   python -m mindsdb --api=http,mongodb,mysql
+   ```
 
 ## Using Anaconda
 

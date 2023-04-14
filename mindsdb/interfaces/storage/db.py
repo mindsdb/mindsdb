@@ -85,7 +85,7 @@ class PREDICTOR_STATUS:
     __slots__ = ()
     COMPLETE = 'complete'
     TRAINING = 'training'
-    ADJUSTING = 'adjusting'
+    FINETUNING = 'finetuning'
     GENERATING = 'generating'
     ERROR = 'error'
     VALIDATION = 'validation'

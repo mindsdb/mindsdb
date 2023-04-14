@@ -16,8 +16,9 @@ from mindsdb.utilities.functions import cast_row_types
 from mindsdb.interfaces.model.functions import get_model_record
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.integrations.libs.base import BaseMLEngine
+import mindsdb.utilities.profiler as profiler
 
-from .functions import run_learn, run_adjust
+from .functions import run_learn, run_finetune
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -70,13 +71,14 @@ class LightwoodHandler(BaseMLEngine):
             self.model_storage
         )
 
-    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        run_adjust(
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        run_finetune(
             df,
             args,
             self.model_storage
         )
 
+    @profiler.profile('LightwoodHandler.predict')
     def predict(self, df, args=None):
         pred_format = args['pred_format']
         predictor_code = args['code']
@@ -84,13 +86,17 @@ class LightwoodHandler(BaseMLEngine):
         pred_args = args.get('predict_params', {})
         self.model_storage.fileStorage.pull()
 
-        predictor = lightwood.predictor_from_state(
-            self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name,
-            predictor_code
-        )
+        with profiler.Context('load model'):
+            predictor = lightwood.predictor_from_state(
+                self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name,
+                predictor_code
+            )
+
         dtype_dict = predictor.dtype_dict
 
-        predictions = predictor.predict(df, args=pred_args)
+        with profiler.Context('predict'):
+            predictions = predictor.predict(df, args=pred_args)
+
         predictions = predictions.to_dict(orient='records')
 
         # TODO!!!

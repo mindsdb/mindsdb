@@ -16,6 +16,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateView,
     CreateJob,
     DropJob,
+    Evaluate
 )
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.dialects.mysql import Variable
@@ -49,6 +50,8 @@ from mindsdb_sql.parser.ast import (
     Union,
 )
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+
+from mindsdb_evaluator.accuracy.general import evaluate_accuracy
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities import log
@@ -580,6 +583,9 @@ class ExecuteCommands:
             return self.answer_create_job(statement)
         elif type(statement) == DropJob:
             return self.answer_drop_job(statement)
+        elif type(statement) == Evaluate:
+            statement.data = parse_sql(statement.query_str, dialect='mindsdb')
+            return self.answer_evaluate_metric(statement)
         else:
             log.logger.warning(f"Unknown SQL statement: {sql}")
             raise ErNotSupportedYet(f"Unknown SQL statement: {sql}")
@@ -604,6 +610,12 @@ class ExecuteCommands:
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
         jobs_controller.delete(job_name, project_name)
 
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_evaluate_metric(self, statement):
+        # metric_name = statement.name.parts[-1]
+        # evaluate_accuracy(statement.dataframe, metric_name)
+        SQLQuery(statement, session=self.session, execute=True)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_describe_predictor(self, statement):

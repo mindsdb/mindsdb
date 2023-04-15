@@ -11,6 +11,7 @@ from mindsdb.integrations.libs.response import (
 from .utils.helpers import *
 import requests
 import pandas as pd
+from mindsdb_sql import parse_sql, get_lexer_parser
 
 
 class EventStoreDB(DatabaseHandler):
@@ -29,6 +30,7 @@ class EventStoreDB(DatabaseHandler):
     Third reason, there is no official Python client at the moment of writing of this handler.
     But once there is better ESDB Python support for gRPC, we should move this integration from AtomPub to gRPC.
     """
+
     name = 'eventstoredb'
     # defaults to an insecure localhost single node
     scheme = 'http'
@@ -45,6 +47,7 @@ class EventStoreDB(DatabaseHandler):
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
+        self.parser = parse_sql
         connection_data = kwargs['connection_data']
         self.host = connection_data.get('host')
         if connection_data.get('tls') is not None and isinstance(connection_data.get('tls'), bool) \
@@ -131,6 +134,10 @@ class EventStoreDB(DatabaseHandler):
                 error_message="Only 'select' queries are supported for EventStoreDB"
             )
 
+    def native_query(self, query: str) -> Response:
+        ast = self.parser(query, dialect='mindsdb')
+        return self.query(ast)
+
     def get_tables(self) -> Response:
         """
         List all streams i.e tables
@@ -193,3 +200,13 @@ class EventStoreDB(DatabaseHandler):
             RESPONSE_TYPE.TABLE,
             df
         )
+
+
+def parse_sql(sql, dialect='sqlite'):
+    # remove ending semicolon and spaces
+    sql = re.sub(r'[\s;]+$', '', sql)
+
+    lexer, parser = get_lexer_parser(dialect)
+    tokens = lexer.tokenize(sql)
+    ast = parser.parse(tokens)
+    return ast

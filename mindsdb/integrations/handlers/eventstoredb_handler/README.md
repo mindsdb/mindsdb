@@ -2,7 +2,7 @@
 # EventStoreDBHandler 
 
 ### How it works?
-This handlers treats EventStoreDB streams as tables and every JSON Event's data key as column.
+This handler treats EventStoreDB streams as tables and every JSON Event's data key as column.
 Events with nested JSON are flattened with underscore as the separator.
 
 ### Prerequisites

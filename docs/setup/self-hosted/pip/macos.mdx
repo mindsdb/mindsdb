@@ -109,6 +109,11 @@ export CPPFLAGS="-I/usr/local/opt/libomp/include"
     python -m mindsdb
     ```
 
+By default, MindsDB will always start the `http` and `mysqul` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
+
+   ```bash
+   python -m mindsdb --api=http,mongodb,mysql
+   ```
 
 ## Using Anaconda
 

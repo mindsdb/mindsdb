@@ -211,13 +211,18 @@ class LangChainHandler(OpenAIHandler):
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         info = self.model_storage.json_get('description')
 
-        if info is None:
-            # we do this due to the huge amount of params that can be changed at prediction time to customize behavior.
-            # for them, we report the last observed value
-            raise Exception('This model needs to be used before it can be described.')
+        if attribute == 'info':
+            if info is None:
+                # we do this due to the huge amount of params that can be changed
+                #  at prediction time to customize behavior.
+                # for them, we report the last observed value
+                raise Exception('This model needs to be used before it can be described.')
 
-        description = pd.DataFrame(info)
-        return description
+            description = pd.DataFrame(info)
+            return description
+        else:
+            tables = ['info']
+            return pd.DataFrame(tables, columns=['tables'])
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         raise NotImplementedError('Fine-tuning is not supported for LangChain models')

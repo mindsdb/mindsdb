@@ -128,26 +128,48 @@ class SubredditTable(APITable):
 
         reddit = self.handler.connect()
 
-        conditions = extract_comparison_conditions(query.where)
-        params = {}
-        for condition in conditions:
-            if condition[0] == '=':
-                params[condition[1]] = condition[2]
+        where_clause = query.where
+        if where_clause is not None:
+            # Parse the where clause to extract the comparison conditions
+            condition = where_clause.conditions[0]
+            column_name = condition.left.parts[-1]
+            column_value = condition.right.value
+            operator = condition.operator
+
+            # Filter the subreddits based on the comparison condition
+            if operator == '=':
+                subreddits = reddit.subreddit(column_value)
             else:
                 raise Exception('Only equals to "=" is supported')
 
-        result = []
-        for subreddit in reddit.search_subreddits(**params):
-            data = {
-                'subreddit_id': subreddit.id,
-                'name': subreddit.display_name,
-                'title': subreddit.title,
-                'description': subreddit.public_description,
-                'url': subreddit.url,
-                'subscribers': subreddit.subscribers,
-                'created_utc': subreddit.created_utc,
-            }
-            result.append(data)
+            result = []
+            for subreddit in subreddits:
+                data = {
+                    'subreddit_id': subreddit.id,
+                    'name': subreddit.display_name,
+                    'title': subreddit.title,
+                    'description': subreddit.public_description,
+                    'url': subreddit.url,
+                    'subscribers': subreddit.subscribers,
+                    'created_utc': subreddit.created_utc,
+                }
+                result.append(data)
+
+        else:
+            # If there is no where clause, select all subreddits
+            subreddits = reddit.subreddits()
+            result = []
+            for subreddit in subreddits:
+                data = {
+                    'subreddit_id': subreddit.id,
+                    'name': subreddit.display_name,
+                    'title': subreddit.title,
+                    'description': subreddit.public_description,
+                    'url': subreddit.url,
+                    'subscribers': subreddit.subscribers,
+                    'created_utc': subreddit.created_utc,
+                }
+                result.append(data)
 
         result = pd.DataFrame(result)
         self.filter_columns(query=query, result=result)
@@ -199,23 +221,8 @@ class SubredditTable(APITable):
 
         return result
 
-
 class SubmissionTable(APITable):
-    '''A class representing the submission table.
-
-    This class inherits from APITable and provides functionality to select data
-    from the submission endpoint of the Reddit API and return it as a pandas DataFrame.
-
-    Methods:
-        select(ast.Select): Select data from the submission table and return it as a pandas DataFrame.
-        get_columns(): Get the list of column names for the submission table.
-
-    '''
-
-
-
-
-    def select(self, query: ast.Select):
+    def select(self, query: ast.Select) -> pd.DataFrame:
         '''Select data from the submission table and return it as a pandas DataFrame.
 
         Args:
@@ -226,16 +233,18 @@ class SubmissionTable(APITable):
         '''
 
         reddit = self.handler.connect()
-        params = {}
 
-        if query.where:
-            for condition in query.where.conditions:
-                if isinstance(condition, ast.Equals):
-                    params[condition.column.lower()] = condition.value.value
-                else:
-                    raise ValueError(f"Unsupported condition type {type(condition)} in WHERE clause")
+        subreddit_name = None
+        conditions = extract_comparison_conditions(query.where)
+        for condition in conditions:
+            if condition[0] == '=' and condition[1] == 'subreddit':
+                subreddit_name = condition[2]
+                break
 
-        submissions = reddit.subreddit('all').hot(limit=100)
+        if subreddit_name is None:
+            raise ValueError('Subreddit name is missing in the SQL query')
+
+        submissions = reddit.subreddit(subreddit_name).hot(limit=100)
 
         result = []
         for submission in submissions:
@@ -246,13 +255,20 @@ class SubmissionTable(APITable):
                 'created_utc': submission.created_utc,
                 'score': submission.score,
                 'num_comments': submission.num_comments,
-                'permalink': submission.permalink
+                'permalink': submission.permalink,
+                'url': submission.url,
+                'ups': submission.ups,
+                'downs': submission.downs,
+                'num_crossposts': submission.num_crossposts,
+                'subreddit': submission.subreddit.display_name,
+                'selftext': submission.selftext,
             }
             result.append(data)
 
         result = pd.DataFrame(result)
         self.filter_columns(result, query)
         return result
+
 
     def get_columns(self):
         '''Get the list of column names for the submission table.

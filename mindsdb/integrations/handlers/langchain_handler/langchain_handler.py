@@ -1,4 +1,5 @@
 import re
+import os
 from typing import Optional, Dict
 
 import numpy as np
@@ -46,6 +47,22 @@ class LangChainHandler(OpenAIHandler):
         self.default_max_tokens = _DEFAULT_MAX_TOKENS
         self.default_agent_model = _DEFAULT_AGENT_MODEL
         self.default_agent_tools = _DEFAULT_AGENT_TOOLS
+
+    def _get_serper_api_key(self, args, strict=True):
+        if 'serper_api_key' in args:
+            return args['serper_api_key']
+        # 2
+        connection_args = self.engine_storage.get_connection_args()
+        if 'serper_api_key' in connection_args:
+            return connection_args['serper_api_key']
+        # 3
+        api_key = os.getenv('SERPER_API_KEY')  # e.g. "OPENAI_API_KEY"
+        if api_key is not None:
+            return api_key
+
+        if strict:
+            raise Exception(f'Missing API key serper_api_key. Either re-create this ML_ENGINE specifying the `serper_api_key` parameter,\
+                 or re-create this model and pass the API key with `USING` syntax.')  # noqa
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -107,8 +124,8 @@ class LangChainHandler(OpenAIHandler):
             'best_of': pred_args.get('best_of', None),
             'request_timeout': pred_args.get('request_timeout', None),
             'logit_bias': pred_args.get('logit_bias', None),
-            'openai_api_key': self._get_api_key(args, key_name='openai_api_key', strict=True),
-            'serper_api_key': self._get_api_key(args, key_name='serper_api_key', strict=False),
+            'openai_api_key': self._get_openai_api_key(args, strict=True),
+            'serper_api_key': self._get_serper_api_key(args, strict=False),
         }
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 
@@ -194,16 +211,21 @@ class LangChainHandler(OpenAIHandler):
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         info = self.model_storage.json_get('description')
 
-        if info is None:
-            # we do this due to the huge amount of params that can be changed at prediction time to customize behavior.
-            # for them, we report the last observed value
-            raise Exception('This model needs to be used before it can be described.')
+        if attribute == 'info':
+            if info is None:
+                # we do this due to the huge amount of params that can be changed
+                #  at prediction time to customize behavior.
+                # for them, we report the last observed value
+                raise Exception('This model needs to be used before it can be described.')
 
-        description = pd.DataFrame(info)
-        return description
+            description = pd.DataFrame(info)
+            return description
+        else:
+            tables = ['info']
+            return pd.DataFrame(tables, columns=['tables'])
 
-    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        raise NotImplementedError('Update is not supported for LangChain models')
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        raise NotImplementedError('Fine-tuning is not supported for LangChain models')
 
     def sql_agent_completion(self, df, args=None):
         """This completion will be used to answer based on information passed by any MindsDB DB or API engine."""

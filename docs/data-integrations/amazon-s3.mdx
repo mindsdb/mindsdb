@@ -52,4 +52,4 @@ Queries to objects in S3 are issued using S3 Select, https://aws.amazon.com/blog
 This feature is used in boto3 as described here, https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.select_object_content
 The required format of the InputSerialization parameter described here (which translates to the input_serialization parameter of the handler) will be of special importance. This describes how to specify the format of the data in the object that is to be queried.
 
-At the moment, S3 Select does not allow multiple files to be queried. Therefore, queries can be issued only to the    object that is passed in as a paramter (key). This object should always be referred to as S3Object when writing       queries as shown in the example given above.
+At the moment, S3 Select does not allow multiple files to be queried. Therefore, queries can be issued only to the    object that is passed in as a parameter (key). This object should always be referred to as S3Object when writing       queries as shown in the example given above.

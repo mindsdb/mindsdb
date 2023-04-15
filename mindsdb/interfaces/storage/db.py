@@ -14,12 +14,14 @@ Base = declarative_base()
 session, engine = None, None
 
 
-def init():
+def init(connection_str: str = None):
     global Base, session, engine
-    if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
-        engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
+    if connection_str is None:
+        connection_str = os.environ['MINDSDB_DB_CON']
+    if connection_str.startswith('sqlite:'):
+        engine = create_engine(connection_str, echo=False)
     else:
-        engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
+        engine = create_engine(connection_str, convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
     Base.query = session.query_property()
 
@@ -85,7 +87,7 @@ class PREDICTOR_STATUS:
     __slots__ = ()
     COMPLETE = 'complete'
     TRAINING = 'training'
-    ADJUSTING = 'adjusting'
+    FINETUNING = 'finetuning'
     GENERATING = 'generating'
     ERROR = 'error'
     VALIDATION = 'validation'
@@ -254,11 +256,13 @@ class JobsHistory(Base):
 
     job_id = Column(Integer)
 
+    query_str = Column(String)
     start_at = Column(DateTime)
     end_at = Column(DateTime)
 
     error = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now)
 
     __table_args__ = (
         UniqueConstraint('job_id', 'start_at', name='uniq_job_history_job_id_start'),

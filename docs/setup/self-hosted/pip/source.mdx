@@ -12,9 +12,7 @@ installation. Please have a look at them below.
 
 ### Pip and Python Versions
 
-Due to some of our dependencies having issues with the latest versions of Python
-3.9.x, we suggest using **Python 3.7.x or 3.8.x versions** for now. We are
-working on Python 3.9.x to be supported soon.
+We suggest using **Python 3.7.x, 3.8.x, or 3.9.x versions** for now.
 
 To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
 that **Python >= 3.7** and **pip >= 20.3**. You can check the pip and python
@@ -88,6 +86,12 @@ error, please report it on our
    python -m mindsdb
    ```
 
+By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
+
+   ```bash
+   python -m mindsdb --api=http,mongodb,mysql
+   ```
+
 6. Now, you can access the following:
 
 <CodeGroup>
@@ -105,7 +109,7 @@ mysql -h 127.0.0.1 --port 3306 -u mindsdb -p
 ## Further Issues?
 
 You can try to use
-[Docker setup](/setup/self-hosted/docker/) in case you are expiriencing issues using pip.
+[Docker setup](/setup/self-hosted/docker/) in case you are experiencing issues using pip.
 
 Also, please create an issue with detailed description in the
 [MindsDB GitHub repository](https://github.com/mindsdb/mindsdb/issues) so we can

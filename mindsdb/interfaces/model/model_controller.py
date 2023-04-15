@@ -81,7 +81,24 @@ class ModelController():
         if not hasattr(ml_handler, 'describe'):
             raise Exception("ML handler doesn't support description")
 
-        return ml_handler.describe(attribute)
+        df = ml_handler.describe(attribute)
+
+        if attribute is None:
+            # show model record
+            model_info = self.get_model_info(model_record)
+
+            # expecting list of attributes in first column df
+            attributes = []
+            if len(df) > 0 and len(df.columns) > 0:
+                attributes = list(df[df.columns[0]])
+                if len(attributes) == 1 and isinstance(attributes[0], list):
+                    # first cell already has a list
+                    attributes = attributes[0]
+
+            model_info.insert(0, 'tables', [attributes])
+            return model_info
+        else:
+            return df
 
     def get_models(self, with_versions=False, ml_handler_name=None, integration_id=None,
                    project_name=None):
@@ -337,7 +354,7 @@ class ModelController():
         if base_predictor_record is None:
             raise Exception(f"Error: model '{model_name}' does not exist")
 
-        params['version'] = self._get_retrain_adjust_version(model_name, params['project_name'], base_predictor_record)
+        params['version'] = self._get_retrain_finetune_version(model_name, params['project_name'], base_predictor_record)
 
         if params['data_integration_ref'] is None:
             params['data_integration_ref'] = base_predictor_record.data_integration_ref
@@ -355,7 +372,7 @@ class ModelController():
         return self.get_model_info(predictor_record)
 
     @staticmethod
-    def _get_retrain_adjust_version(model_name, project_name, base_predictor_record):
+    def _get_retrain_finetune_version(model_name, project_name, base_predictor_record):
         if base_predictor_record is None:
             raise Exception(f"Error: model '{model_name}' does not exist")
 
@@ -373,7 +390,7 @@ class ModelController():
 
         return last_version + 1
 
-    def prepare_adjust_statement(self, statement, database_controller):
+    def prepare_finetune_statement(self, statement, database_controller):
         project_name = statement.name.parts[0].lower()
         model_name = statement.name.parts[1].lower()
         data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement, database_controller)
@@ -391,7 +408,7 @@ class ModelController():
             project_name=project_name,
             active=True
         )
-        version = self._get_retrain_adjust_version(model_name, project_name, base_predictor_record)
+        version = self._get_retrain_finetune_version(model_name, project_name, base_predictor_record)
 
         if data_integration_ref is None:
             data_integration_ref = base_predictor_record.data_integration_ref
@@ -409,7 +426,7 @@ class ModelController():
             label=label
         )
 
-    def adjust_model(self, statement, ml_handler):
+    def finetune_model(self, statement, ml_handler):
         # active setting
         set_active = True
         if statement.using is not None:
@@ -417,7 +434,7 @@ class ModelController():
             if set_active in ('0', 0, None):
                 set_active = False
 
-        params = self.prepare_adjust_statement(statement, ml_handler.database_controller)
+        params = self.prepare_finetune_statement(statement, ml_handler.database_controller)
 
         params['set_active'] = set_active
         predictor_record = ml_handler.update(**params)

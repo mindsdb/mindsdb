@@ -53,12 +53,17 @@ Now that we have our data, let's build a machine learning model that can predict
 
 ```sql
 CREATE MODEL mindsdb.expense_prediction
-FROM my_plaid (
-SELECT  merchant_name, date, amount 
-FROM transactions 
-WHERE start_date='2023-01-01' 
-AND end_date='2023-04-11'; )
-PREDICT amount;
+FROM my_plaid 
+    ( SELECT  merchant_name, date, amount 
+      FROM transactions 
+      WHERE start_date='2023-01-01' 
+      AND end_date='2023-04-11'; )
+PREDICT amount
+ORDER BY date
+GROUP BY merchant_name
+WINDOW 25
+HORIZON 15
+USING ENGINE = 'statsforecast';
 ```
 This creates a virtual table called expense_prediction. We can use this table to make predictions on future transactions:
 

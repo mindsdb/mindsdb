@@ -613,10 +613,29 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_evaluate_metric(self, statement):
-        # metric_name = statement.name.parts[-1]
-        # evaluate_accuracy(statement.dataframe, metric_name)
-        SQLQuery(statement, session=self.session, execute=True, prepare=True)
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        try:
+            sqlquery = SQLQuery(statement.data, session=self.session)
+        except Exception as e:
+            raise Exception(f'Nested query failed to execute with error: "{e}", please check and try again.')
+        result = sqlquery.fetch(self.session.datahub)
+        df = pd.DataFrame.from_dict(result["result"])
+        df.columns = [str(t.alias) if hasattr(t, 'alias') else str(t.parts[-1]) for t in statement.data.targets]
+
+        for col in ['actual', 'prediction']:
+            assert col in df.columns, f'`{col}` column was not provided, please try again.'
+            assert df[col].isna().sum() == 0, f'There are missing values in the `{col}` column, please try again.'
+
+        metric_name = statement.name.parts[-1]
+        target_series = df.pop('prediction')
+        metric_value = evaluate_accuracy(df, target_series, metric_name,
+                                         target='actual',
+                                         ts_analysis=statement.using.get('ts_analysis', {}),  # will be deprecated soon
+                                         n_decimals=statement.using.get('n_decimals', None))
+        return ExecuteAnswer(
+            answer_type=ANSWER_TYPE.TABLE,
+            columns=[Column(name=metric_name, table_name='', type='str')],
+            data=[[metric_value]]
+        )
 
     def answer_describe_predictor(self, statement):
         # describe attr

@@ -47,7 +47,6 @@ from mindsdb_sql.planner.steps import (
     MapReduceStep,
     MultipleSteps,
     ProjectStep,
-    EvaluateStep,
     SaveToTable,
     InsertToTable,
     UpdateToTable,
@@ -63,8 +62,6 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
 from mindsdb_sql.parser.ast.base import ASTNode
-
-from mindsdb_evaluator.accuracy.general import evaluate_accuracy
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.interfaces.model.functions import (
@@ -1340,10 +1337,6 @@ class SQLQuery():
                 dn.query(query=update_query, session=self.session)
 
             data = ResultSet()
-
-        elif type(step) == EvaluateStep:
-            metric_name = step.metric
-            evaluate_accuracy(step.dataframe.result_data, metric_name)
 
         else:
             raise ErLogicError(F'Unknown planner step: {step}')

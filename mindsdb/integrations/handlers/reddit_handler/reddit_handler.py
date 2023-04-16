@@ -14,110 +14,11 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 from mindsdb.integrations.utilities.date_utils import parse_utc_date
 
 from mindsdb_sql.parser.ast import Select
-class RedditTable(APITable):
-    '''A class representing a table for Reddit API data.
-
-    This class inherits from APITable and provides functionality to select data
-    from the Reddit API and return it as a pandas DataFrame.
-
-    Methods:
-        select(ast.Select): Select data from the Reddit table and return it as a pandas DataFrame.
-        get_columns(): Get the list of column names for the Reddit table.
-
-    '''
-
-    def select(self, query: ast.Select) :
-        '''Select data from the Reddit table and return it as a pandas DataFrame.
-
-        Args:
-            query (ast.Select): The SQL query to be executed.
-
-        Returns:
-            pandas.DataFrame: A pandas DataFrame containing the selected data.
-        '''
-        # Extract the subreddit name from the query
-        subreddit = query.from_table.table_name
-
-        # Initialize the Reddit handler
-        handler = self.handler
-
-        # Connect to the Reddit API
-        reddit = praw.Reddit(
-            client_id=handler.client_id,
-            client_secret=handler.client_secret,
-            user_agent=handler.user_agent
-        )
-
-        # Create an empty list to store the data
-        data = []
-
-        # Retrieve the submissions from the subreddit
-        for submission in reddit.subreddit(subreddit).new(limit=query.limit.value if query.limit else None):
-            # Extract the data from the submission
-            record = {
-                'id': submission.id,
-                'created_utc': datetime.fromtimestamp(submission.created_utc),
-                'author': submission.author.name if submission.author else None,
-                'title': submission.title,
-                'body': submission.selftext,
-                'subreddit': submission.subreddit.display_name,
-            }
-            # Append the data to the list
-            data.append(record)
-
-        # Create a DataFrame from the data
-        df = pd.DataFrame(data)
-
-        # Filter the DataFrame based on the query conditions
-        if query.where is not None:
-            for condition in query.where.conditions:
-                column = condition.left.value
-                operator = condition.operator.value
-                value = condition.right.value
-                if operator == '=':
-                    df = df[df[column] == value]
-                elif operator == '>':
-                    df = df[df[column] > value]
-                elif operator == '>=':
-                    df = df[df[column] >= value]
-                elif operator == '<':
-                    df = df[df[column] < value]
-                elif operator == '<=':
-                    df = df[df[column] <= value]
-                elif operator == 'LIKE':
-                    df = df[df[column].str.contains(value)]
-
-        # Filter the DataFrame based on the query columns
-        if isinstance(query.targets[0], ast.Identifier):
-            columns = [target.value for target in query.targets]
-            df = df[columns]
-
-        return df
-
-    def get_columns(self):
-        '''Get the list of column names for the Reddit table.
-
-        Returns:
-            list: A list of column names for the Reddit table.
-        '''
-        return ['id', 'created_utc', 'author', 'title', 'body', 'subreddit']
 
 
-
-class SubredditTable(APITable):
-    '''A class representing the subreddit table.
-
-    This class inherits from APITable and provides functionality to select data
-    from the subreddit endpoint of the Reddit API and return it as a pandas DataFrame.
-
-    Methods:
-        select(ast.Select): Select data from the subreddit table and return it as a pandas DataFrame.
-        get_columns(): Get the list of column names for the subreddit table.
-
-    '''
-
-    def select(self, query: ast.Select):
-        '''Select data from the subreddit table and return it as a pandas DataFrame.
+class CommentTable(APITable):
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        '''Select data from the comment table and return it as a pandas DataFrame.
 
         Args:
             query (ast.Select): The SQL query to be executed.
@@ -128,68 +29,55 @@ class SubredditTable(APITable):
 
         reddit = self.handler.connect()
 
-        where_clause = query.where
-        if where_clause is not None:
-            # Parse the where clause to extract the comparison conditions
-            condition = where_clause.conditions[0]
-            column_name = condition.left.parts[-1]
-            column_value = condition.right.value
-            operator = condition.operator
+        submission_id = None
+        conditions = extract_comparison_conditions(query.where)
+        for condition in conditions:
+            if condition[0] == '=' and condition[1] == 'submission_id':
+                submission_id = condition[2]
+                break
 
-            # Filter the subreddits based on the comparison condition
-            if operator == '=':
-                subreddits = reddit.subreddit(column_value)
-            else:
-                raise Exception('Only equals to "=" is supported')
+        if submission_id is None:
+            raise ValueError('Submission ID is missing in the SQL query')
 
-            result = []
-            for subreddit in subreddits:
-                data = {
-                    'subreddit_id': subreddit.id,
-                    'name': subreddit.display_name,
-                    'title': subreddit.title,
-                    'description': subreddit.public_description,
-                    'url': subreddit.url,
-                    'subscribers': subreddit.subscribers,
-                    'created_utc': subreddit.created_utc,
-                }
-                result.append(data)
+        submission = reddit.submission(id=submission_id)
+        submission.comments.replace_more(limit=None)
 
-        else:
-            # If there is no where clause, select all subreddits
-            subreddits = reddit.subreddits()
-            result = []
-            for subreddit in subreddits:
-                data = {
-                    'subreddit_id': subreddit.id,
-                    'name': subreddit.display_name,
-                    'title': subreddit.title,
-                    'description': subreddit.public_description,
-                    'url': subreddit.url,
-                    'subscribers': subreddit.subscribers,
-                    'created_utc': subreddit.created_utc,
-                }
-                result.append(data)
+        result = []
+        for comment in submission.comments.list():
+            data = {
+                'id': comment.id,
+                'body': comment.body,
+                'author': comment.author.name if comment.author else None,
+                'created_utc': comment.created_utc,
+                'score': comment.score,
+                'permalink': comment.permalink,
+                'ups': comment.ups,
+                'downs': comment.downs,
+                'subreddit': comment.subreddit.display_name,
+            }
+            result.append(data)
 
         result = pd.DataFrame(result)
-        self.filter_columns(query=query, result=result)
+        self.filter_columns(result, query)
         return result
 
+
     def get_columns(self):
-        '''Get the list of column names for the subreddit table.
+        '''Get the list of column names for the comment table.
 
         Returns:
-            list: A list of column names for the subreddit table.
+            list: A list of column names for the comment table.
         '''
-
         return [
-            'subreddit_id',
-            'name',
-            'title',
-            'description',
-            'url',
-            'subscribers',
+            'id',
+            'body',
+            'author',
             'created_utc',
+            'permalink',
+            'score',
+            'ups',
+            'downs',
+            'subreddit',
         ]
 
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
@@ -200,26 +88,9 @@ class SubredditTable(APITable):
                     columns = self.get_columns()
                     break
                 elif isinstance(target, ast.Identifier):
-                    columns.append(target.parts[-1])
-                else:
-                    raise NotImplementedError
-        else:
-            columns = self.get_columns()
-
-        columns = [name.lower() for name in columns]
-
-        if len(result) == 0:
-            result = pd.DataFrame([], columns=columns)
-        else:
-            for col in set(columns) & set(result.columns) ^ set(columns):
-                result[col] = None
-
+                    columns.append(target.value)
+        if len(columns) > 0:
             result = result[columns]
-
-        if query is not None and query.limit is not None:
-            return result.head(query.limit.value)
-
-        return result
 
 class SubmissionTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
@@ -342,8 +213,8 @@ class RedditHandler(APIHandler):
         self.reddit = None
         self.is_connected = False
 
-        subreddit = SubredditTable(self)
-        self._register_table('subreddit', subreddit)
+        comment = CommentTable(self)
+        self._register_table('comment', comment)
 
         submission = SubmissionTable(self)
         self._register_table('submission', submission)

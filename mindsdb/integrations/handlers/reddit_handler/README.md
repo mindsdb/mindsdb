@@ -2,8 +2,7 @@
 ```
 SELECT *
 FROM my_red.submission
-WHERE subreddit = 'MachineLearning'
-LIMIT 10;
+WHERE subreddit = 'MachineLearning' AND sort_type = 'top' AND items = 5;
 ```
 
 ```

@@ -106,16 +106,31 @@ class SubmissionTable(APITable):
         reddit = self.handler.connect()
 
         subreddit_name = None
+        sort_type = None
         conditions = extract_comparison_conditions(query.where)
         for condition in conditions:
             if condition[0] == '=' and condition[1] == 'subreddit':
                 subreddit_name = condition[2]
-                break
+            elif condition[0] == '=' and condition[1] == 'sort_type':
+                sort_type = condition[2]
+            elif condition[0] == '=' and condition[1] == 'items':
+                items = int(condition[2])
 
-        if subreddit_name is None:
-            raise ValueError('Subreddit name is missing in the SQL query')
+        if not sort_type:
+            sort_type = 'hot'
+        if not subreddit_name:
+            return pd.DataFrame()
 
-        submissions = reddit.subreddit(subreddit_name).hot(limit=100)
+        if sort_type == 'new':
+            submissions = reddit.subreddit(subreddit_name).new(limit=items)
+        elif sort_type == 'rising':
+            submissions = reddit.subreddit(subreddit_name).rising(limit=items)
+        elif sort_type == 'controversial':
+            submissions = reddit.subreddit(subreddit_name).controversial(limit=items)
+        elif sort_type == 'top':
+            submissions = reddit.subreddit(subreddit_name).top(limit=items)
+        else:
+            submissions = reddit.subreddit(subreddit_name).hot(limit=items)
 
         result = []
         for submission in submissions:
@@ -153,7 +168,6 @@ class SubmissionTable(APITable):
             'author',
             'created_utc',
             'permalink',
-            'url',
             'num_comments',
             'score',
             'ups',
@@ -233,27 +247,6 @@ class RedditHandler(APIHandler):
         self.is_connected = True
         return self.reddit
 
-    def check_connection(self) -> StatusResponse:
-
-        response = StatusResponse(False)
-
-        try:
-            reddit = self.connect()
-
-            # Try to get the front page of reddit
-            reddit.front
-
-            response.success = True
-
-        except praw.exceptions.PRAWException as e:
-            response.error_message = f'Error connecting to Reddit api: {e}'
-            log.logger.error(response.error_message)
-
-        if response.success is False and self.is_connected is True:
-            self.is_connected = False
-
-        return response
-
 
     def check_connection(self) -> StatusResponse:
         '''It evaluates if the connection with Reddit API is alive and healthy.
@@ -299,15 +292,5 @@ class RedditHandler(APIHandler):
             data_frame=df
         )
 
-    def parse_native_query(self, query_string: str):
-        query_parts = query_string.split('.')
-        method_name = query_parts[-1]
-        if method_name not in ['get_submission', 'get_subreddit']:
-            raise ValueError(f"Method '{method_name}' not supported by RedditHandler")
-        params_str = query_parts[-2].split('(')[-1].split(')')[0]
-        params = {}
-        if params_str:
-            for p in params_str.split(','):
-                key, value = p.split('=')
-                params[key.strip()] = value.strip()
+
 

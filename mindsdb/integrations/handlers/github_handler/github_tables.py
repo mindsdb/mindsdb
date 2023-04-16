@@ -254,7 +254,7 @@ class GithubIssuesTable(APITable):
                     logger.debug(
                         f"Milestone \"{a_value['milestone']}\" not found, creating it"
                     )
-                    self.handler.connection.get_repo(
+                    insert_kwargs["milestone"] = self.handler.connection.get_repo(
                         self.handler.repository
                     ).create_milestone(a_value["milestone"])
                 else:

@@ -182,13 +182,13 @@ class GithubIssuesTable(APITable):
 
         return github_issues_df
 
-    def insert(self, query: ast.Select):
+    def insert(self, query: ast.Insert):
         """Inserts data into the GitHub "Create an issue" API
 
         Parameters
         ----------
-        query : ast.Select
-           Given SQL SELECT query
+        query : ast.Insert
+           Given SQL INSERT query
 
         Raises
         ------

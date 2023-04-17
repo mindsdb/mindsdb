@@ -8,6 +8,7 @@ from mindsdb.api.http.initialize import initialize_app
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.functions import init_lexer_parsers
 
 
 def start(verbose, no_studio, with_nlp):
@@ -16,6 +17,8 @@ def start(verbose, no_studio, with_nlp):
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
     db.init()
     log.initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
+
+    init_lexer_parsers()
 
     app = initialize_app(config, no_studio, with_nlp)
 

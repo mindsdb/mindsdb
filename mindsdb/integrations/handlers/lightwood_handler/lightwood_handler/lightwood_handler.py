@@ -3,6 +3,7 @@ import json
 import copy
 from typing import Optional, Dict
 from datetime import datetime
+from functools import lru_cache
 
 import pandas as pd
 from type_infer.dtype import dtype
@@ -71,12 +72,18 @@ class LightwoodHandler(BaseMLEngine):
             self.model_storage
         )
 
-    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         run_finetune(
             df,
             args,
             self.model_storage
         )
+
+    @staticmethod
+    @lru_cache(maxsize=5)
+    def get_predictor(predictor_path, predictor_code):
+        predictor = lightwood.predictor_from_state(predictor_path, predictor_code)
+        return predictor
 
     @profiler.profile('LightwoodHandler.predict')
     def predict(self, df, args=None):
@@ -87,10 +94,8 @@ class LightwoodHandler(BaseMLEngine):
         self.model_storage.fileStorage.pull()
 
         with profiler.Context('load model'):
-            predictor = lightwood.predictor_from_state(
-                self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name,
-                predictor_code
-            )
+            predictor_path = self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name
+            predictor = LightwoodHandler.get_predictor(predictor_path, predictor_code)
 
         dtype_dict = predictor.dtype_dict
 
@@ -420,7 +425,8 @@ class LightwoodHandler(BaseMLEngine):
         return pd.DataFrame([progress_info], columns=["current", "total", "name"])
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        if attribute is None:
+
+        if attribute == 'info':
 
             model_description = {}
 
@@ -443,19 +449,21 @@ class LightwoodHandler(BaseMLEngine):
 
             return pd.DataFrame([model_description])
 
+        elif attribute == "features":
+            return self._get_features_info()
+
+        elif attribute == "model":
+            return self._get_model_info()
+
+        elif attribute == "jsonai":
+            return self._get_ensemble_data()
+
+        elif attribute == "progress":
+            # todo remove?
+            return self._get_progress_data()
+
         else:
-            if attribute == "features":
-                return self._get_features_info()
+            tables = ['info', 'features', 'model', 'jsonai']
+            return pd.DataFrame(tables, columns=['tables'])
 
-            elif attribute == "model":
-                return self._get_model_info()
-
-            elif attribute == "ensemble":
-                return self._get_ensemble_data()
-
-            elif attribute == "progress":
-                return self._get_progress_data()
-
-            else:
-                raise Exception("DESCRIBE '%s' predictor attribute is not supported yet" % attribute)
 

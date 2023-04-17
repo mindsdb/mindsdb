@@ -3,6 +3,7 @@ import json
 import copy
 from typing import Optional, Dict
 from datetime import datetime
+from functools import lru_cache
 
 import pandas as pd
 from type_infer.dtype import dtype
@@ -78,6 +79,12 @@ class LightwoodHandler(BaseMLEngine):
             self.model_storage
         )
 
+    @staticmethod
+    @lru_cache(maxsize=5)
+    def get_predictor(predictor_path, predictor_code):
+        predictor = lightwood.predictor_from_state(predictor_path, predictor_code)
+        return predictor
+
     @profiler.profile('LightwoodHandler.predict')
     def predict(self, df, args=None):
         pred_format = args['pred_format']
@@ -87,10 +94,8 @@ class LightwoodHandler(BaseMLEngine):
         self.model_storage.fileStorage.pull()
 
         with profiler.Context('load model'):
-            predictor = lightwood.predictor_from_state(
-                self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name,
-                predictor_code
-            )
+            predictor_path = self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name
+            predictor = LightwoodHandler.get_predictor(predictor_path, predictor_code)
 
         dtype_dict = predictor.dtype_dict
 

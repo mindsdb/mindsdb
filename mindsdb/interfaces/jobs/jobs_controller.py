@@ -225,7 +225,7 @@ class JobsController:
                 'run_start': record.JobsHistory.start_at,
                 'run_end': record.JobsHistory.end_at,
                 'error': record.JobsHistory.error,
-                'query': record.Jobs.query_str,
+                'query': record.JobsHistory.query_str,
             })
         return data
 
@@ -298,7 +298,7 @@ class JobsExecutor:
                 start_at=record.next_run_at,
                 company_id=record.company_id
             ).first()
-            if history_record.created_at < dt.datetime.now() - dt.timedelta(seconds=30):
+            if history_record.updated_at < dt.datetime.now() - dt.timedelta(seconds=30):
                 db.session.delete(history_record)
                 db.session.commit()
 
@@ -333,6 +333,7 @@ class JobsExecutor:
 
         project_controller = ProjectController()
         project = project_controller.get(record.project_id)
+        executed_sql = ''
         for sql in split_sql(record.query_str):
             try:
                 #  fill template variables
@@ -344,8 +345,8 @@ class JobsExecutor:
                         .order_by(db.JobsHistory.id.desc())\
                         .first()
                     if history_prev is None:
-                        # very old date
-                        value = dt.datetime(1900, 1, 1)
+                        # start date of the job
+                        value = record.created_at
                     else:
                         value = history_prev.start_at
                     value = value.strftime("%Y-%m-%d %H:%M:%S")
@@ -366,6 +367,8 @@ class JobsExecutor:
                 sql_session.database = project.name
 
                 command_executor = ExecuteCommands(sql_session, executor=None)
+
+                executed_sql += sql + '; '
 
                 ret = command_executor.execute_command(query)
                 if ret.error_code is not None:
@@ -390,5 +393,6 @@ class JobsExecutor:
         if error:
             history_record.error = error
         history_record.end_at = dt.datetime.now()
+        history_record.query_str = executed_sql
 
         db.session.commit()

@@ -47,6 +47,7 @@ class SessionController:
 
         self.prepared_stmts = {}
         self.packet_sequence_number = 0
+        self.profiling = False
 
     def inc_packet_sequence_number(self):
         self.packet_sequence_number = (self.packet_sequence_number + 1) % 256

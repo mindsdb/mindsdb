@@ -140,3 +140,41 @@ class TestNeuralForecast(BaseExecutorTest):
 
         describe_features = self.run_sql("describe proj.model_exog_var.features")
         assert describe_features["exog_vars"][0] == ["exog_var_1"]
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_hierarchical(self, mock_handler):
+        # create project
+        self.run_sql("create database proj")
+        df = pd.read_csv("tests/unit/ml_handlers/data/house_sales.csv")  # comes mindsdb docs forecast example
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        self.run_sql(
+            """
+           create model proj.model_1_group
+           from pg (select * from df)
+           predict ma
+           order by saledate
+           group by type, bedrooms
+           horizon 4
+           window 8
+           using
+             engine='neuralforecast',
+             hierarchy=['type', 'bedrooms'],
+             train_time=0.01
+        """
+        )
+        self.wait_predictor("proj", "model_1_group")
+
+        # run predict
+        mindsdb_result_hier = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.model_1_group as p
+           where t.type='house'
+        """
+        )
+        assert len(list(round(mindsdb_result_hier["ma"])))
+
+        describe_result = self.run_sql("describe proj.model_1_group.model")
+        assert describe_result["hierarchy"][0] == ["type", "bedrooms"]

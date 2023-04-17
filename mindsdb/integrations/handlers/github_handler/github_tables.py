@@ -202,6 +202,7 @@ class GithubIssuesTable(APITable):
             )
 
         self.handler.connect()
+        current_repo = self.handler.connection.get_repo(self.handler.repository)
 
         columns = [col.name for col in query.columns]
 
@@ -239,9 +240,7 @@ class GithubIssuesTable(APITable):
                     insert_kwargs["assignees"].append(github_user)
 
             if a_value.get("milestone", None):
-                current_milestones = self.handler.connection.get_repo(
-                    self.handler.repository
-                ).get_milestones()
+                current_milestones = current_repo.get_milestones()
 
                 found_existing_milestone = False
                 for a_milestone in current_milestones:
@@ -254,9 +253,9 @@ class GithubIssuesTable(APITable):
                     logger.debug(
                         f"Milestone \"{a_value['milestone']}\" not found, creating it"
                     )
-                    insert_kwargs["milestone"] = self.handler.connection.get_repo(
-                        self.handler.repository
-                    ).create_milestone(a_value["milestone"])
+                    insert_kwargs["milestone"] = current_repo.create_milestone(
+                        a_value["milestone"]
+                    )
                 else:
                     logger.debug(f"Milestone \"{a_value['milestone']}\" already exists")
 
@@ -268,9 +267,7 @@ class GithubIssuesTable(APITable):
                     a_label = a_label.replace(" ", "")
                     inserted_labels.append(a_label)
 
-                existing_labels = self.handler.connection.get_repo(
-                    self.handler.repository
-                ).get_labels()
+                existing_labels = current_repo.get_labels()
 
                 existing_labels_set = set([label.name for label in existing_labels])
 
@@ -282,18 +279,14 @@ class GithubIssuesTable(APITable):
                         "Inserting new labels: " + ", ".join(new_inserted_labels)
                     )
                     for a_new_label in new_inserted_labels:
-                        self.handler.connection.get_repo(
-                            self.handler.repository
-                        ).create_label(a_new_label, "000000")
+                        current_repo.create_label(a_new_label, "000000")
 
                 for a_label in existing_labels:
                     if a_label.name in inserted_labels:
                         insert_kwargs["labels"].append(a_label)
 
             try:
-                self.handler.connection.get_repo(self.handler.repository).create_issue(
-                    a_value["title"], **insert_kwargs
-                )
+                current_repo.create_issue(a_value["title"], **insert_kwargs)
             except Exception as e:
                 raise ValueError(
                     f"Encountered an exception creating an issue in GitHub: "

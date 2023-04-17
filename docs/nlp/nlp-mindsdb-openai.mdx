@@ -35,6 +35,7 @@ USING
 ```
 
 <Info>
+  
 **Default Model**
 
 When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter in the `USING` clause of the `CREATE MODEL` statement.
@@ -48,6 +49,13 @@ FROM openai
 USING
   api_key = 'YOUR_OPENAI_API_KEY';
 ```
+<Tip>
+
+**MindsDB Pro**
+
+Please note that it is required to provide an OpenAI API key when using MindsDB Pro version.
+
+</Tip>
 
 ## Example
 

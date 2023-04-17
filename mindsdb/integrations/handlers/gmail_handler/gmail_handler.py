@@ -1,6 +1,7 @@
 import base64
 import os
-import json
+import pandas as pd
+
 from bs4 import BeautifulSoup
 from typing import Any
 from google.auth.transport.requests import Request
@@ -60,41 +61,69 @@ class GmailHandler(APIHandler):
     def native_query(self, query: Any) -> Response:
         pass
 
-    def call_gmail_api(self, method: str = None):
+    def get_last_n_emails(self,numberOfEmails):
+        self.credentials_file = "credentials.json"
+        self.scopes = ['https://www.googleapis.com/auth/gmail.readonly']
+        method = "list"
+        params = {'userId': 'me', 'maxResults': numberOfEmails}
+        result = self.call_gmail_api(method, **params)
+        messages = result.execute()
+        messages = messages['messages']
+        data = []
+        for message in messages:
+            msg = self.service.users().messages().get(userId="me", id=message['id']).execute()
+            payload = msg['payload']
+            headers = payload['headers']
+            subject = ''
+            sender = ''
+            date = ''
+            for header in headers:
+                if header['name'] == 'Subject':
+                    subject = header['value']
+                elif header['name'] == 'From':
+                    sender = header['value']
+                elif header['name'] == 'Date':
+                    date = header['value']
+            # get the email body
+            parts = payload.get('parts')
+            text = ''
+            if parts:
+                for part in parts:
+                    if part['mimeType'].startswith('text'):
+                        body = part['body'].get('data')
+                        if body:
+                            text = gmail.extract_text_from_email_body(body, part['mimeType'])
+            data.append({'Subject': subject, 'From': sender, 'Date': date, 'Body': text})
+        return pd.DataFrame(data)
+
+    def call_gmail_api(self, method: str = None, **kwargs):
         self.connect()
-        api_method = getattr(self.service.users(), method)
-        return api_method().list(userId='me', maxResults=15)
+        # TODO check connection
+        parts = method.split('.')
+        api_method = self.service.users().messages()
+        for part in parts:
+            api_method = getattr(api_method, part)
+        return api_method(**kwargs)
 
-    def htmlToText(self,decoded_data):
-        html_content = decoded_data.decode('UTF-8')
-        # Parse the HTML content using Beautiful Soup
-        soup = BeautifulSoup(html_content, 'html.parser')
+    def extract_text_from_email_body(self,email_body, mime_type):
+        if mime_type == 'text/plain':
+            # if MIME type is plain text, simply print the decoded body
+            decoded_data = base64.urlsafe_b64decode(email_body.encode('ASCII'))
+            return decoded_data.decode('UTF-8')
+        elif mime_type == 'text/html':
+            # if MIME type is HTML, extract text content using beautifulsoup4
+            decoded_data = base64.urlsafe_b64decode(email_body.encode('ASCII'))
+            soup = BeautifulSoup(decoded_data.decode('UTF-8'), 'html.parser')
+            text = soup.get_text()
+            text = "\n".join([line.strip() for line in text.split("\n") if line.strip()])
+            return text
+        else:
+            # handle other MIME types here as necessary
+            return None
 
-        # Extract all the text from the HTML content
-        text = soup.get_text()
+gmail = GmailHandler("gmail")
+emails =gmail.get_last_n_emails(10)
+print(emails)
 
-        # Print the extracted text
-        print(text)
-
-
-gmail = GmailHandler(name="gmail")
-gmail.credentials_file = "credentials.json"
-gmail.scopes = ['https://www.googleapis.com/auth/gmail.readonly']
-messages = gmail.call_gmail_api("messages").execute()
-messages = messages['messages']
-for message in messages:
-    msg = gmail.service.users().messages().get(userId="me", id=message['id']).execute()
-    encoded_data = msg['payload']['body'].get('data')
-    if encoded_data!=None:
-        decoded_data = base64.urlsafe_b64decode(encoded_data.encode('ASCII'))
-        gmail.htmlToText(decoded_data)
-
-
-
-    # parts = msg['payload'].get('parts')
-    # # encoded_data = msg['body']['data']
-    # # decoded_data = base64.urlsafe_b64decode(encoded_data.encode('ASCII'))
-    # # print(decoded_data.decode('UTF-8'))
-    # print(json.dumps(parts, indent=4))  # takes the email and prints the email in a json
 
 

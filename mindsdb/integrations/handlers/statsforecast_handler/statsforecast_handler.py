@@ -34,6 +34,7 @@ def get_season_length(frequency):
     season_dict = {  # https://pandas.pydata.org/docs/user_guide/timeseries.html#timeseries-offset-aliases
         "H": 24,
         "M": 12,
+        "MS": 12,
         "Q": 4,
         "SM": 24,
         "BM": 12,

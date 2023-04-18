@@ -5,7 +5,7 @@ from functools import reduce
 
 import pandas as pd
 from mindsdb_sql.parser.dialects.mindsdb import (
-    CreateDatasource,
+    CreateDatabase,
     RetrainPredictor,
     CreatePredictor,
     FinetunePredictor,
@@ -145,7 +145,7 @@ class ExecuteCommands:
             sql = self.executor.sql
             sql_lower = self.executor.sql_lower
 
-        if type(statement) == CreateDatasource:
+        if type(statement) == CreateDatabase:
             return self.answer_create_database(statement)
         elif type(statement) == CreateMLEngine:
             return self.answer_create_ml_engine(statement)
@@ -871,7 +871,10 @@ class ExecuteCommands:
             statement (ASTNode): data for creating database/project
         """
 
-        database_name = statement.name
+        if len(statement.name.parts) != 1:
+            raise Exception("Database name should contain only 1 part.")
+
+        database_name = statement.name.parts[0]
         engine = statement.engine
         if engine is None:
             engine = "mindsdb"

@@ -142,6 +142,11 @@ class Executor:
             elif field_type == dtype.integer:
                 column_type = POSTGRES_TYPES.LONG
 
+            if "()" in column_record.alias:
+                column_record.alias = column_record.alias.strip("()")
+            if "()" in column_record.name:
+                column_record.name = column_record.name.strip("()")
+
             result.append(
                 {
                     "database": column_record.database or database,

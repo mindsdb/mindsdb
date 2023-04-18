@@ -362,7 +362,7 @@ class ExecuteCommands:
                             name="search_path", table_name="search_path", type="str"
                         )
                     ],
-                    data=[["public,public,\"$user\""]]
+                    data=[["\"$user\", public"]]
                 )
             elif "show status like 'ssl_version'" in sql_lower:
                 return ExecuteAnswer(

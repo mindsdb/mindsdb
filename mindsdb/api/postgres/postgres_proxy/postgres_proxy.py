@@ -186,7 +186,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         try:
             executor.query_execute(sql)
         except Exception as e:
-            resp = SQLAnswer(
+            return SQLAnswer(
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=str(e).encode(self.get_encoding()),
                 error_code=POSTGRES_SYNTAX_ERROR_CODE.encode(self.get_encoding())

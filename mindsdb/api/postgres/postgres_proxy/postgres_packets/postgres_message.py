@@ -15,7 +15,12 @@ class PostgresMessage:
         pass
 
     def send(self, write_file: BinaryIO):
-        pass
+        #with open("test_write.txt", "a") as f:
+        #    f.write(str(type(self)))
+        return self.send_internal(write_file=write_file)
+
+    def send_internal(self, write_file: BinaryIO):
+        raise NotImplementedError("Must implement send_internal in sub-class")
 
     def read(self, packet_reader: PostgresPacketReader):
         pass

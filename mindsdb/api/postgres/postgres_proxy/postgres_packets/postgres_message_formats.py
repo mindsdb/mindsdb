@@ -41,7 +41,7 @@ class NoticeResponse(PostgresMessage):
         self.frontend_capable = False
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         self.get_packet_builder().write(write_file=write_file)
 
 
@@ -63,7 +63,7 @@ class AuthenticationOk(PostgresMessage):
         self.frontend_capable = False
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         self.get_packet_builder() \
             .add_int32(0) \
             .write(write_file=write_file)
@@ -87,7 +87,7 @@ class AuthenticationClearTextPassword(PostgresMessage):
         self.frontend_capable = False
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         self.get_packet_builder() \
             .add_int32(3) \
             .write(write_file=write_file)
@@ -116,7 +116,7 @@ class ReadyForQuery(PostgresMessage):
         self.transaction_status = transaction_status or b'I'
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         self.get_packet_builder() \
             .add_char(self.transaction_status) \
             .write(write_file=write_file)
@@ -157,7 +157,7 @@ class CommandComplete(PostgresMessage):
         self.frontend_capable = False
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         self.get_packet_builder() \
             .add_string(self.tag) \
             .write(write_file=write_file)
@@ -178,7 +178,7 @@ class BindComplete(PostgresMessage):
         self.frontend_capable = False
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         self.get_packet_builder() \
             .write(write_file=write_file)
 
@@ -214,14 +214,15 @@ class Error(PostgresMessage):
         self.message = message
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         self.get_packet_builder() \
             .add_char(b'S') \
             .add_string(self.severity) \
-            .add_string(b'C') \
+            .add_char(b'C') \
             .add_string(self.code) \
             .add_char(b'M') \
             .add_string(self.message) \
+            .add_char(b'\x00') \
             .write(write_file=write_file)
 
     @staticmethod
@@ -276,7 +277,7 @@ class ParameterStatus(PostgresMessage):
         self.value = value
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         self.get_packet_builder() \
             .add_string(self.name) \
             .add_string(self.value) \
@@ -329,7 +330,7 @@ class RowDescriptions(PostgresMessage):
         self.fields = fields
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         self.get_packet_builder() \
             .add_int16(len(self.fields)) \
             .add_fields(self.fields) \
@@ -361,7 +362,7 @@ class ParameterDescription(PostgresMessage):
         self.parameters = parameters
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         packet = self.get_packet_builder().add_int16(self.num_params)
         for param in self.parameters:
             packet = packet.add_int32(param)
@@ -403,7 +404,7 @@ class DataRow(PostgresMessage):
         self.rows = rows
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         for row in self.rows:
             self.get_packet_builder() \
                 .add_int16(self.num_cols) \
@@ -440,7 +441,7 @@ class NegotiateProtocolVersion(PostgresMessage):
         self.option_not_recognized = option_not_recognized
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         packet_builder = self.get_packet_builder() \
             .add_int32(self.major_version) \
             .add_int32(self.minor_version)
@@ -465,7 +466,7 @@ class ParseComplete(PostgresMessage):
         self.frontend_capable = False
         super().__init__()
 
-    def send(self, write_file: BinaryIO):
+    def send_internal(self, write_file: BinaryIO):
         self.get_packet_builder() \
             .write(write_file=write_file)
 
@@ -650,9 +651,9 @@ class Bind(BaseFrontendMessage):
         for _ in range(num_parameters):
             param_length = packet_reader.read_int32()
             if param_length == -1:
-                self.format_codes.append(None)
+                self.parameters.append(None)
             else:
-                self.format_codes.append(packet_reader.read_bytes(param_length))
+                self.parameters.append(packet_reader.read_bytes(param_length))
         num_result_format_codes = packet_reader.read_int16()
         for _ in range(num_result_format_codes):
             self.result_format_codes.append(packet_reader.read_int16())

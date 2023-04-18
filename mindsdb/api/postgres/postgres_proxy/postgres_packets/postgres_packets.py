@@ -40,9 +40,9 @@ class PostgresPacketReader:
         return self.read_bytes(1)
 
     def read_bytes(self, n):
-        self.logger.debug("about to read")
         data = self.buffer.read(n)
-        #self.logger.debug("received data: %s", data)
+        self.logger.debug("received data:")
+        self.logger.debug(data.hex())
         if not data:
             raise PostgresEmptyDataException("Expected data inside of buffer when performing read_bytes")
         else:
@@ -84,12 +84,14 @@ class PostgresPacketReader:
         return data.split(b'\x00')
 
     def read_verify_ssl_request(self):
+        self.logger.debug("reading ssl")
         length = self.read_int32()
         code = self.read_int32()
         if length != 8 and code != 80877103:
             raise UnsupportedSSLRequest("Code %s of len %s" % (code, length))
 
     def read_startup_message(self) -> Dict[bytes, bytes]:
+        self.logger.debug("reading startup message")
         length = self.read_int32()
         version = self.read_int32()
         major_version = version >> 16
@@ -133,6 +135,7 @@ class PostgresPacketReader:
             raise UnsupportedPostgresMessageType("%s is not a supported frontend message identifier" % message_type)
 
         if message_type in self.fe_message_map:
+            self.logger.debug("reading message type %s" % str(message_type.name))
             return self.fe_message_map[message_type]().read(self)
         else:
             raise UnsupportedPostgresMessageType("%s is not a supported frontend message identifier" % message_type.value)
@@ -145,6 +148,7 @@ class PostgresPacketBuilder:
     pack_args: List[Any]
 
     def __init__(self):
+        self.logger = get_log('postgres_proxy')
         self.reset()
 
     def reset(self):
@@ -179,6 +183,12 @@ class PostgresPacketBuilder:
         self.pack_args = [self.length] + self.pack_args
 
         pack += self.pack_string
+        self.logger.debug("writing:")
+        self.logger.debug("pack string: %s" % self.pack_string)
+        self.logger.debug("identifier: %s" % self.pack_string)
+        self.logger.debug("pack args:")
+        for arg in self.pack_args:
+            self.logger.debug("arg: %s" % str(arg))
         l = struct.pack(pack, self.identifier, *self.pack_args)
         write_file.write(l)
 

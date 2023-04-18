@@ -655,6 +655,8 @@ class SQLQuery():
                 steps_data.append(data)
         except PlanningException as e:
             raise ErLogicError(e)
+        except Exception as e:
+            raise e
 
         # save updated query
         self.query = self.planner.query

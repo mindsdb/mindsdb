@@ -1,11 +1,8 @@
-import os.path
 from typing import Optional, Dict
 
-import json
 import pandas as pd
-import requests
 
-from .config_parser import ConfigParser
+from hugging_py_face import NLP, ComputerVision, AudioProcessing
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -21,61 +18,40 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
         if 'using' not in args:
             raise Exception("Hugging Face Inference engine requires a USING clause! Refer to its documentation for more details.")
 
-        config = ConfigParser(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.yaml'))
-        config_args = config.get_config_dict()
-
         self.model_storage.json_set('args', args)
-        self.model_storage.json_set('config_args', config_args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         args = self.model_storage.json_get('args')
-        config_args = self.model_storage.json_get('config_args')
 
-        inputs = self._parse_inputs(df, args['using']['inputs'], args['using']['task'])
+        if args['using']['task'] == 'text-classification':
+            nlp = NLP(args['using']['api_key'])
+            result_df = nlp.text_classification_in_df(
+                df,
+                args['using']['column'],
+                args['using']['options'] if 'options' in args['using'] else None,
+                args['using']['model'] if 'model' in args['using'] else None
+            )
 
-        response = self._query(
-            f"{config_args['BASE_URL']}/{config_args['TASK_MODEL_MAP'][args['using']['task']]}",
-            args['using']['api_key'],
-            inputs,
-            args['using']['parameters'] if 'parameters' in args['using'] else None,
-            args['using']['options'] if 'options' in args['using'] else None
-        )
+        elif args['using']['task'] == 'fill-mask':
+            nlp = NLP(args['using']['api_key'])
+            result_df = nlp.fill_mask_in_df(
+                df,
+                args['using']['column'],
+                args['using']['options'] if 'options' in args['using'] else None,
+                args['using']['model'] if 'model' in args['using'] else None
+            )
 
-        return self._parse_response(df, response, args['using']['task'], args['target'])
+        elif args['using']['task'] == 'summarization':
+            nlp = NLP(args['using']['api_key'])
+            result_df = nlp.summarization_in_df(
+                df,
+                args['using']['column'],
+                args['using']['options'] if 'options' in args['using'] else None,
+                args['using']['model'] if 'model' in args['using'] else None
+            )
 
-    def _query(self, api_url, api_token, inputs, parameters=None, options=None):
-        headers = {
-            "Authorization": f"Bearer {api_token}"
-        }
+        else:
+            raise Exception(f"Task {args['using']['task']} is not supported!")
 
-        data = {
-            "inputs": inputs
-        }
-
-        if parameters is not None:
-            data['parameters'] = parameters
-
-        if options is not None:
-            data['options'] = options
-
-        response = requests.request("POST", api_url, headers=headers, data=json.dumps(data))
-        return json.loads(response.content.decode("utf-8"))
-
-    def _parse_inputs(self, df, inputs, task):
-        if task in ['text-classification', 'fill-mask', 'summarization']:
-            return df[inputs['column']].tolist()
-
-    def _parse_response(self, df, response, task, target):
-        if task == 'text-classification':
-            df[target] = [item[0]['label'] for item in response]
-
-        elif task == 'fill-mask':
-            if any(isinstance(item, list) for item in response):
-                df[target] = [item[0]['sequence'] for item in response]
-            else:
-                df[target] = [response[0]['sequence']]
-
-        elif task == 'summarization':
-            df[target] = [item['summary_text'] for item in response]
-
-        return df
+        result_df = result_df.rename(columns={'predictions': args['target']})
+        return result_df

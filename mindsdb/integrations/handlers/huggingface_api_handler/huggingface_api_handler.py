@@ -61,6 +61,14 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 args['using']['model'] if 'model' in args['using'] else None
             )
 
+        elif args['using']['task'] == 'image-classification':
+            cp = ComputerVision(args['using']['api_key'])
+            result_df = cp.image_classification_in_df(
+                df,
+                args['using']['column'],
+                args['using']['model'] if 'model' in args['using'] else None
+            )
+
         else:
             raise Exception(f"Task {args['using']['task']} is not supported!")
 

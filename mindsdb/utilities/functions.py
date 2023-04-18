@@ -101,4 +101,3 @@ def get_versions_where_predictors_become_obsolete():
 def init_lexer_parsers():
     get_lexer_parser('mindsdb')
     get_lexer_parser('mysql')
-    get_lexer_parser('sqlite')

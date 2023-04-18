@@ -284,16 +284,15 @@ class LightwoodHandler(BaseMLEngine):
                 last_explanation = explanations.pop()
                 for i in range(horizon):
                     new_row = copy.deepcopy(last_row)
-                    if horizon > 1:
-                        new_row[target] = new_row[target][i]
-                        if isinstance(new_row[order_by_column], list):
-                            new_row[order_by_column] = new_row[order_by_column][i]
+                    new_row[target] = new_row[target][i]
+                    if isinstance(new_row[order_by_column], list):
+                        new_row[order_by_column] = new_row[order_by_column][i]
                     if '__mindsdb_row_id' in new_row and (i > 0 or forecast_offset):
                         new_row['__mindsdb_row_id'] = None
 
                     new_explanation = copy.deepcopy(last_explanation)
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if horizon > 1 and col in new_explanation[target]:
+                        if col in new_explanation[target]:
                             new_explanation[target][col] = new_explanation[target][col][i]
                     if i != 0:
                         new_explanation[target]['anomaly'] = None

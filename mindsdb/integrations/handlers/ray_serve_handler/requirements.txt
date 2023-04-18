@@ -1,0 +1,2 @@
+ray[serve]
+mindsdb>=23.3.5.0

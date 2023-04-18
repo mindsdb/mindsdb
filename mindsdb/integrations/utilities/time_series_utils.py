@@ -36,6 +36,7 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
     )
 
     columns_to_keep = ["unique_id", "ds", "y"] + exog_vars
+    nixtla_df["ds"] = pd.to_datetime(nixtla_df["ds"])
     return nixtla_df[columns_to_keep]
 
 
@@ -71,7 +72,7 @@ def get_model_accuracy_dict(nixtla_results_df, metric=r2_score):
     for column in nixtla_results_df.columns:
         if column in ["unique_id", "ds", "y", "cutoff"]:
             continue
-        model_error = metric(nixtla_results_df[column], nixtla_results_df["y"])
+        model_error = metric(nixtla_results_df["y"], nixtla_results_df[column])
         accuracy_dict[column] = model_error
     return accuracy_dict
 
@@ -110,10 +111,13 @@ def get_hierarchy_from_df(df, model_args):
     in tests/unit/ml_handlers/test_time_series_utils.py for an example.
     """
     spec = spec_hierarchy_from_list(model_args["hierarchy"])
+
     nixtla_df = df.rename({model_args["order_by"]: "ds", model_args["target"]: "y"}, axis=1)
+    nixtla_df["ds"] = pd.to_datetime(nixtla_df["ds"])
     for col in model_args["group_by"]:
         nixtla_df[col] = nixtla_df[col].astype(str)  # grouping columns need to be string format
     nixtla_df.insert(0, "Total", "total")
+
     nixtla_df, hier_df, hier_dict = aggregate(nixtla_df, spec)  # returns (nixtla_df, hierarchy_df, hierarchy_dict)
     return nixtla_df, hier_df, hier_dict
 

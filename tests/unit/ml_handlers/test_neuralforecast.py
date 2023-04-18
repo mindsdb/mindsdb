@@ -1,4 +1,5 @@
 import time
+import pytest
 from unittest.mock import patch
 import pandas as pd
 
@@ -76,6 +77,27 @@ class TestNeuralForecast(BaseExecutorTest):
         )
         assert list(round(result_df["target_col"])) == [42, 43, 44]
 
+        describe_result = self.run_sql("describe proj.model_multi_group")
+        assert describe_result["inputs"][0] == ["target_col", "time_col", ["group_col", "group_col_2", "group_col_3"]]
+        assert describe_result["outputs"][0] == "target_col"
+        # The expected format of the "accuracies" key is
+        # [(model_1_name, model_1_accuracy), (model_2_name, model_2_accuracy), ...]
+        assert describe_result["accuracies"][0][0][0] == "NHITS"
+        assert describe_result["accuracies"][0][0][1] < 1
+
+        describe_model = self.run_sql("describe proj.model_multi_group.model")
+        assert describe_model["model_name"][0] == "NHITS"
+        assert describe_model["frequency"][0] == "Q"
+
+        describe_features = self.run_sql("describe proj.model_multi_group.features")
+        assert describe_features["ds"][0] == "time_col"
+        assert describe_features["y"][0] == "target_col"
+        assert describe_features["unique_id"][0] == ["group_col", "group_col_2", "group_col_3"]
+
+        with pytest.raises(Exception) as e:
+            self.run_sql("describe proj.modelx.ensemble")
+            assert "ensemble is not supported" in str(e)
+
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_with_exog_vars(self, mock_handler):
         # create project
@@ -112,3 +134,47 @@ class TestNeuralForecast(BaseExecutorTest):
         """
         )
         assert list(round(result_df["target_col"])) == [42, 43, 44]
+
+        describe_result = self.run_sql("describe proj.model_exog_var")
+        assert describe_result["inputs"][0] == ["target_col", "time_col", ["group_col", "group_col_2", "group_col_3"], "exog_var_1"]
+
+        describe_features = self.run_sql("describe proj.model_exog_var.features")
+        assert describe_features["exog_vars"][0] == ["exog_var_1"]
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_hierarchical(self, mock_handler):
+        # create project
+        self.run_sql("create database proj")
+        df = pd.read_csv("tests/unit/ml_handlers/data/house_sales.csv")  # comes mindsdb docs forecast example
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        self.run_sql(
+            """
+           create model proj.model_1_group
+           from pg (select * from df)
+           predict ma
+           order by saledate
+           group by type, bedrooms
+           horizon 4
+           window 8
+           using
+             engine='neuralforecast',
+             hierarchy=['type', 'bedrooms'],
+             train_time=0.01
+        """
+        )
+        self.wait_predictor("proj", "model_1_group")
+
+        # run predict
+        mindsdb_result_hier = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.model_1_group as p
+           where t.type='house'
+        """
+        )
+        assert len(list(round(mindsdb_result_hier["ma"])))
+
+        describe_result = self.run_sql("describe proj.model_1_group.model")
+        assert describe_result["hierarchy"][0] == ["type", "bedrooms"]

@@ -1,20 +1,20 @@
 ---
-title: ADJUST Statement
-sidebarTitle: ADJUST
+title: FINETUNE Statement
+sidebarTitle: FINETUNE
 ---
 
 ## Description
 
-The `ADJUST` statement lets you retrain a model with additional training data.
+The `FINETUNE` statement lets you retrain a model with additional training data.
 
-Imagine you have a model that was trained with a certain dataset. Now there is more training data available and you wish to retrain this model with a new dataset. The `ADJUST` statement lets you partially retrain the model, so it takes less time and resources than the [`RETRAIN`](/sql/api/retrain) statement. In the machine learning literature, this is also referred to as *fine-tuning* a model.
+Imagine you have a model that was trained with a certain dataset. Now there is more training data available and you wish to retrain this model with a new dataset. The `FINETUNE` statement lets you partially retrain the model, so it takes less time and resources than the [`RETRAIN`](/sql/api/retrain) statement. In the machine learning literature, this is also referred to as *fine-tuning* a model.
 
 ## Syntax
 
 Here is the syntax:
 
 ```sql
-ADJUST project_name.model_name
+FINETUNE project_name.model_name
 FROM integration_name
     (SELECT column_name, ... FROM table_name)
 [USING
@@ -30,7 +30,7 @@ Where:
 | `model_name`                                | Name of the model to be retrained.                                                                                 |
 | `integration_name`                          | Name of the integration created using the [`CREATE DATABASE`](/sql/create/databases) statement or file upload.    |
 | `(SELECT column_name, ... FROM table_name)` | Selecting additional data to be used for retraining.                                                               |
-| `USING key = value`                         | Optional. The `USING` clause lets you pass multiple parameters to the `ADJUST` statement.                          |
+| `USING key = value`                         | Optional. The `USING` clause lets you pass multiple parameters to the `FINETUNE` statement.                          |
 
 <Info>
 **Model Versions**
@@ -114,7 +114,7 @@ On execution, we get:
 Let’s adjust this model with more training data. Now we consider properties that have been on the market for 10 or more days.
 
 ```sql
-ADJUST mindsdb.adjust_home_rentals_model
+FINETUNE mindsdb.adjust_home_rentals_model
 FROM example_db
     (SELECT * 
     FROM demo_data.home_rentals 
@@ -225,7 +225,7 @@ On execution, we get:
 Let’s adjust this model with more training data. Now we also consider male customers.
 
 ```sql
-ADJUST mindsdb.adjust_customer_churn_model
+FINETUNE mindsdb.adjust_customer_churn_model
 FROM example_db
     (SELECT *
     FROM demo_data.customer_churn

@@ -191,11 +191,11 @@ class Error(PostgresMessage):
     Int32
     Length of message contents in bytes, including self.
 
-    The message body consists of one or more identified fields, followed by a zero byte as a terminator. Fields can 
+    The message body consists of one or more identified fields, followed by a zero byte as a terminator. Fields can
     appear in any order. For each field there is the following:
 
-    Byte1 A code identifying the field type; if zero, this is the message terminator and no string follows. The 
-    presently defined field types are listed in Section 55.8. Since more field types might be added in future, 
+    Byte1 A code identifying the field type; if zero, this is the message terminator and no string follows. The
+    presently defined field types are listed in Section 55.8. Since more field types might be added in future,
     frontends should silently ignore fields of unrecognized type.
 
     String
@@ -315,9 +315,9 @@ class RowDescriptions(PostgresMessage):
     Int32
     The type modifier (see pg_attribute.atttypmod). The meaning of the modifier is type-specific.
 
-    Int16 
-    The format code being used for the field. Currently will be zero (text) or one (binary). In a 
-    RowDescription returned from the statement variant of Describe, the format code is not yet known and will always 
+    Int16
+    The format code being used for the field. Currently will be zero (text) or one (binary). In a
+    RowDescription returned from the statement variant of Describe, the format code is not yet known and will always
     be zero."""  # noqa
 
     fields: Sequence[PostgresField]
@@ -383,7 +383,7 @@ class DataRow(PostgresMessage):
     Next, the following pair of fields appear for each column:
 
     Int32
-     The length of the column value, in bytes (this count does not include itself). Can be zero. As a special 
+     The length of the column value, in bytes (this count does not include itself). Can be zero. As a special
     case, -1 indicates a NULL column value. No value bytes follow in the NULL case.
 
     Byten
@@ -836,7 +836,7 @@ Length of message contents in bytes, including self.
 Int32(10)
 Specifies that SASL authentication is required.
 
-The message body is a list of SASL authentication mechanisms, in the server's order of preference. A zero byte is 
+The message body is a list of SASL authentication mechanisms, in the server's order of preference. A zero byte is
 required as terminator after the last authentication mechanism name. For each mechanism, there is the following:
 
 String
@@ -870,7 +870,7 @@ Specifies that SASL authentication has completed.
 Byten
 SASL outcome "additional data", specific to the SASL mechanism being used. '''
 
-'''BackendKeyData (B) Byte1('K') Identifies the message as cancellation key data. The frontend must save these values 
+'''BackendKeyData (B) Byte1('K') Identifies the message as cancellation key data. The frontend must save these values
 if it wishes to be able to issue CancelRequest messages later.
 
 Int32(12)
@@ -887,8 +887,8 @@ CancelRequest (F)
 Int32(16)
 Length of message contents in bytes, including self.
 
-Int32(80877102) The cancel request code. The value is chosen to contain 1234 in the most significant 16 bits, 
-and 5678 in the least significant 16 bits. (To avoid confusion, this code must not be the same as any protocol 
+Int32(80877102) The cancel request code. The value is chosen to contain 1234 in the most significant 16 bits,
+and 5678 in the least significant 16 bits. (To avoid confusion, this code must not be the same as any protocol
 version number.)
 
 Int32
@@ -908,7 +908,7 @@ Length of message contents in bytes, including self.
 Byte1
 'S' to close a prepared statement; or 'P' to close a portal.
 
-String The name of the prepared statement or portal to close (an empty string selects the unnamed prepared statement 
+String The name of the prepared statement or portal to close (an empty string selects the unnamed prepared statement
 or portal).'''
 
 '''
@@ -930,8 +930,8 @@ Length of message contents in bytes, including self.
 String
 The command tag. This is usually a single word that identifies which SQL command was completed.
 
-For an INSERT command, the tag is INSERT oid rows, where rows is the number of rows inserted. oid used to be the 
-object ID of the inserted row if rows was 1 and the target table had OIDs, but OIDs system columns are not supported 
+For an INSERT command, the tag is INSERT oid rows, where rows is the number of rows inserted. oid used to be the
+object ID of the inserted row if rows was 1 and the target table had OIDs, but OIDs system columns are not supported
 anymore; therefore oid is always 0.
 
 For a DELETE command, the tag is DELETE rows where rows is the number of rows deleted.
@@ -944,7 +944,7 @@ For a MOVE command, the tag is MOVE rows where rows is the number of rows the cu
 
 For a FETCH command, the tag is FETCH rows where rows is the number of rows that have been retrieved from the cursor.
 
-For a COPY command, the tag is COPY rows where rows is the number of rows copied. (Note: the row count appears only 
+For a COPY command, the tag is COPY rows where rows is the number of rows copied. (Note: the row count appears only
 in PostgreSQL 8.2 and later.)'''
 
 '''
@@ -955,13 +955,13 @@ Identifies the message as COPY data.
 Int32
 Length of message contents in bytes, including self.
 
-Byten Data that forms part of a COPY data stream. Messages sent from the backend will always correspond to single 
+Byten Data that forms part of a COPY data stream. Messages sent from the backend will always correspond to single
 data rows, but messages sent by frontends might divide the data stream arbitrarily.'''
 
 '''
 CopyDone (F & B)
 Byte1('c')
-Identifies the message as a COPY-complete indicator. 
+Identifies the message as a COPY-complete indicator.
 
 Int32(4)
 Length of message contents in bytes, including self. '''
@@ -977,20 +977,20 @@ Length of message contents in bytes, including self.
 String
 An error message to report as the cause of failure. '''
 
-'''CopyInResponse (B) Byte1('G') Identifies the message as a Start Copy In response. The frontend must now send 
+'''CopyInResponse (B) Byte1('G') Identifies the message as a Start Copy In response. The frontend must now send
 copy-in data (if not prepared to do so, send a CopyFail message).
 
 Int32
 Length of message contents in bytes, including self.
 
-Int8 0 indicates the overall COPY format is textual (rows separated by newlines, columns separated by separator 
-characters, etc.). 1 indicates the overall copy format is binary (similar to DataRow format). See COPY for more 
+Int8 0 indicates the overall COPY format is textual (rows separated by newlines, columns separated by separator
+characters, etc.). 1 indicates the overall copy format is binary (similar to DataRow format). See COPY for more
 information.
 
 Int16
 The number of columns in the data to be copied (denoted N below).
 
-Int16[N] The format codes to be used for each column. Each must presently be zero (text) or one (binary). All must be 
+Int16[N] The format codes to be used for each column. Each must presently be zero (text) or one (binary). All must be
 zero if the overall copy format is textual.'''
 
 '''
@@ -1001,14 +1001,14 @@ Identifies the message as a Start Copy Out response. This message will be follow
 Int32
 Length of message contents in bytes, including self.
 
-Int8 0 indicates the overall COPY format is textual (rows separated by newlines, columns separated by separator 
-characters, etc.). 1 indicates the overall copy format is binary (similar to DataRow format). See COPY for more 
+Int8 0 indicates the overall COPY format is textual (rows separated by newlines, columns separated by separator
+characters, etc.). 1 indicates the overall copy format is binary (similar to DataRow format). See COPY for more
 information.
 
 Int16
 The number of columns in the data to be copied (denoted N below).
 
-Int16[N] The format codes to be used for each column. Each must presently be zero (text) or one (binary). All must be 
+Int16[N] The format codes to be used for each column. Each must presently be zero (text) or one (binary). All must be
 zero if the overall copy format is textual.'''
 
 '''
@@ -1019,14 +1019,14 @@ Identifies the message as a Start Copy Both response. This message is used only 
 Int32
 Length of message contents in bytes, including self.
 
-Int8 0 indicates the overall COPY format is textual (rows separated by newlines, columns separated by separator 
-characters, etc.). 1 indicates the overall copy format is binary (similar to DataRow format). See COPY for more 
+Int8 0 indicates the overall COPY format is textual (rows separated by newlines, columns separated by separator
+characters, etc.). 1 indicates the overall copy format is binary (similar to DataRow format). See COPY for more
 information.
 
 Int16
 The number of columns in the data to be copied (denoted N below).
 
-Int16[N] The format codes to be used for each column. Each must presently be zero (text) or one (binary). All must be 
+Int16[N] The format codes to be used for each column. Each must presently be zero (text) or one (binary). All must be
 zero if the overall copy format is textual.'''
 
 '''
@@ -1040,7 +1040,7 @@ Length of message contents in bytes, including self.
 Byte1
 'S' to describe a prepared statement; or 'P' to describe a portal.
 
-String The name of the prepared statement or portal to describe (an empty string selects the unnamed prepared 
+String The name of the prepared statement or portal to describe (an empty string selects the unnamed prepared
 statement or portal).'''
 
 '''
@@ -1062,7 +1062,7 @@ Length of message contents in bytes, including self.
 String
 The name of the portal to execute (an empty string selects the unnamed portal).
 
-Int32 Maximum number of rows to return, if portal contains a query that returns rows (ignored otherwise). Zero 
+Int32 Maximum number of rows to return, if portal contains a query that returns rows (ignored otherwise). Zero
 denotes “no limit”.'''
 
 '''
@@ -1084,8 +1084,8 @@ Length of message contents in bytes, including self.
 Int32
 Specifies the object ID of the function to call.
 
-Int16 The number of argument format codes that follow (denoted C below). This can be zero to indicate that there are 
-no arguments or that the arguments all use the default format (text); or one, in which case the specified format code 
+Int16 The number of argument format codes that follow (denoted C below). This can be zero to indicate that there are
+no arguments or that the arguments all use the default format (text); or one, in which case the specified format code
 is applied to all arguments; or it can equal the actual number of arguments.
 
 Int16[C]
@@ -1096,7 +1096,7 @@ Specifies the number of arguments being supplied to the function.
 
 Next, the following pair of fields appear for each argument:
 
-Int32 The length of the argument value, in bytes (this count does not include itself). Can be zero. As a special 
+Int32 The length of the argument value, in bytes (this count does not include itself). Can be zero. As a special
 case, -1 indicates a NULL argument value. No value bytes follow in the NULL case.
 
 Byten
@@ -1115,7 +1115,7 @@ Identifies the message as a function call result.
 Int32
 Length of message contents in bytes, including self.
 
-Int32 The length of the function result value, in bytes (this count does not include itself). Can be zero. As a 
+Int32 The length of the function result value, in bytes (this count does not include itself). Can be zero. As a
 special case, -1 indicates a NULL function result. No value bytes follow in the NULL case.
 
 Byten
@@ -1126,11 +1126,11 @@ GSSENCRequest (F)
 Int32(8)
 Length of message contents in bytes, including self.
 
-Int32(80877104) The GSSAPI Encryption request code. The value is chosen to contain 1234 in the most significant 16 
-bits, and 5680 in the least significant 16 bits. (To avoid confusion, this code must not be the same as any protocol 
+Int32(80877104) The GSSAPI Encryption request code. The value is chosen to contain 1234 in the most significant 16
+bits, and 5680 in the least significant 16 bits. (To avoid confusion, this code must not be the same as any protocol
 version number.)'''
 
-'''GSSResponse (F) Byte1('p') Identifies the message as a GSSAPI or SSPI response. Note that this is also used for 
+'''GSSResponse (F) Byte1('p') Identifies the message as a GSSAPI or SSPI response. Note that this is also used for
 SASL and password response messages. The exact message type can be deduced from the context.
 
 Int32
@@ -1178,15 +1178,15 @@ The name of the destination prepared statement (an empty string selects the unna
 String
 The query string to be parsed.
 
-Int16 The number of parameter data types specified (can be zero). Note that this is not an indication of the number 
+Int16 The number of parameter data types specified (can be zero). Note that this is not an indication of the number
 of parameters that might appear in the query string, only the number that the frontend wants to prespecify types for.
 
 Then, for each parameter, there is the following:
 
-Int32 Specifies the object ID of the parameter data type. Placing a zero here is equivalent to leaving the type 
+Int32 Specifies the object ID of the parameter data type. Placing a zero here is equivalent to leaving the type
 unspecified.'''
 
-'''PasswordMessage (F) Byte1('p') Identifies the message as a password response. Note that this is also used for 
+'''PasswordMessage (F) Byte1('p') Identifies the message as a password response. Note that this is also used for
 GSSAPI, SSPI and SASL response messages. The exact message type can be deduced from the context.
 
 Int32
@@ -1195,13 +1195,13 @@ Length of message contents in bytes, including self.
 String
 The password (encrypted, if requested). '''
 
-'''PortalSuspended (B) Byte1('s') Identifies the message as a portal-suspended indicator. Note this only appears if 
+'''PortalSuspended (B) Byte1('s') Identifies the message as a portal-suspended indicator. Note this only appears if
 an Execute message's row-count limit was reached.
 
 Int32(4)
 Length of message contents in bytes, including self. '''
 
-'''SASLInitialResponse (F) Byte1('p') Identifies the message as an initial SASL response. Note that this is also used 
+'''SASLInitialResponse (F) Byte1('p') Identifies the message as an initial SASL response. Note that this is also used
 for GSSAPI, SSPI and password response messages. The exact message type is deduced from the context.
 
 Int32
@@ -1216,7 +1216,7 @@ Length of SASL mechanism specific "Initial Client Response" that follows, or -1 
 Byten
 SASL mechanism specific "Initial Response". '''
 
-'''SASLResponse (F) Byte1('p') Identifies the message as a SASL response. Note that this is also used for GSSAPI, 
+'''SASLResponse (F) Byte1('p') Identifies the message as a SASL response. Note that this is also used for GSSAPI,
 SSPI and password response messages. The exact message type can be deduced from the context.
 
 Int32
@@ -1230,12 +1230,12 @@ StartupMessage (F)
 Int32
 Length of message contents in bytes, including self.
 
-Int32(196608) The protocol version number. The most significant 16 bits are the major version number (3 for the 
-protocol described here). The least significant 16 bits are the minor version number (0 for the protocol described 
+Int32(196608) The protocol version number. The most significant 16 bits are the major version number (3 for the
+protocol described here). The least significant 16 bits are the minor version number (0 for the protocol described
 here).
 
-The protocol version number is followed by one or more pairs of parameter name and value strings. A zero byte is 
-required as a terminator after the last name/value pair. Parameters can appear in any order. user is required, 
+The protocol version number is followed by one or more pairs of parameter name and value strings. A zero byte is
+required as a terminator after the last name/value pair. Parameters can appear in any order. user is required,
 others are optional. Each parameter is specified as:
 
 String
@@ -1247,17 +1247,17 @@ The database user name to connect as. Required; there is no default.
 database
 The database to connect to. Defaults to the user name.
 
-options Command-line arguments for the backend. (This is deprecated in favor of setting individual run-time 
+options Command-line arguments for the backend. (This is deprecated in favor of setting individual run-time
 parameters.) Spaces within this string are considered to separate arguments, unless escaped with a backslash
 write to represent a literal backslash.
 
-replication Used to connect in streaming replication mode, where a small set of replication commands can be issued 
-instead of SQL statements. Value can be true, false, or database, and the default is false. See Section 55.4 for 
+replication Used to connect in streaming replication mode, where a small set of replication commands can be issued
+instead of SQL statements. Value can be true, false, or database, and the default is false. See Section 55.4 for
 details.
 
-In addition to the above, other parameters may be listed. Parameter names beginning with _pq_. are reserved for use 
-as protocol extensions, while others are treated as run-time parameters to be set at backend start time. Such 
-settings will be applied during backend start (after parsing the command-line arguments if any) and will act as 
+In addition to the above, other parameters may be listed. Parameter names beginning with _pq_. are reserved for use
+as protocol extensions, while others are treated as run-time parameters to be set at backend start time. Such
+settings will be applied during backend start (after parsing the command-line arguments if any) and will act as
 session defaults.
 
 String

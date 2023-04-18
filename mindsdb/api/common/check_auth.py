@@ -1,9 +1,7 @@
 import traceback
 
 
-def check_auth(username, password, scramble_func, salt, company_id, config, logger = None):
-    '''
-    '''
+def check_auth(username, password, scramble_func, salt, company_id, config, logger=None):
     if logger is None:
         from mindsdb.api.mysql.mysql_proxy.utilities import logger
 

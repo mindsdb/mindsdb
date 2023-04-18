@@ -80,8 +80,8 @@ class Executor:
         self.do_execute()
 
     def do_execute(self):
-        # it can be already run at prepare state
         self.logger.info("%s.do_execute", self.__class__.__name__)
+        # it can be already run at prepare state
         if self.is_executed:
             return
 

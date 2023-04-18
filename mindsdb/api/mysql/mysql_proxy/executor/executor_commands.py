@@ -83,10 +83,10 @@ from mindsdb.utilities.context import context as ctx
 
 
 def _get_show_where(
-    statement: ASTNode,
-    from_name: Optional[str] = None,
-    like_name: Optional[str] = None,
-    initial: Optional[ASTNode] = None,
+        statement: ASTNode,
+        from_name: Optional[str] = None,
+        like_name: Optional[str] = None,
+        initial: Optional[ASTNode] = None,
 ) -> ASTNode:
     """combine all possible show filters to single 'where' condition
     SHOW category [FROM name] [LIKE filter] [WHERE filter]
@@ -312,10 +312,10 @@ class ExecuteCommands:
                 query = SQLQuery(new_statement, session=self.session)
                 return self.answer_select(query)
             elif sql_category in (
-                "variables",
-                "session variables",
-                "session status",
-                "global variables",
+                    "variables",
+                    "session variables",
+                    "session status",
+                    "global variables",
             ):
                 new_statement = Select(
                     targets=[
@@ -333,7 +333,7 @@ class ExecuteCommands:
                     if is_session and var_name.startswith("session.") is False:
                         continue
                     if var_name.startswith("session.") or var_name.startswith(
-                        "GLOBAL."
+                            "GLOBAL."
                     ):
                         name = var_name.replace("session.", "").replace("GLOBAL.", "")
                         data[name] = var_data[0]
@@ -357,7 +357,7 @@ class ExecuteCommands:
             elif sql_category == "search_path":
                 return ExecuteAnswer(
                     answer_type=ANSWER_TYPE.TABLE,
-                    columns = [
+                    columns=[
                         Column(
                             name="search_path", table_name="search_path", type="str"
                         )
@@ -481,9 +481,9 @@ class ExecuteCommands:
             else:
                 raise ErNotSupportedYet(f"Statement not implemented: {sql}")
         elif type(statement) in (
-            StartTransaction,
-            CommitTransaction,
-            RollbackTransaction,
+                StartTransaction,
+                CommitTransaction,
+                RollbackTransaction,
         ):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Set:
@@ -532,8 +532,8 @@ class ExecuteCommands:
             if statement.table.parts[-1].lower() == "models_versions":
                 return self.answer_delete_model_version(statement)
             if (
-                self.session.database != "mindsdb"
-                and statement.table.parts[0] != "mindsdb"
+                    self.session.database != "mindsdb"
+                    and statement.table.parts[0] != "mindsdb"
             ):
                 raise ErBadTableError(
                     "Only 'DELETE' from database 'mindsdb' is possible at this moment"
@@ -557,9 +557,9 @@ class ExecuteCommands:
                 SQLQuery(statement, session=self.session, execute=True)
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif (
-            type(statement) == Alter
-            and ("disable keys" in sql_lower)
-            or ("enable keys" in sql_lower)
+                type(statement) == Alter
+                and ("disable keys" in sql_lower)
+                or ("enable keys" in sql_lower)
         ):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Select:
@@ -1045,11 +1045,11 @@ class ExecuteCommands:
             self.session.datahub["mindsdb"].delete_predictor(predictor_name)
 
     def answer_show_columns(
-        self,
-        target: Identifier,
-        where: Optional[Operation] = None,
-        like: Optional[str] = None,
-        is_full=False,
+            self,
+            target: Identifier,
+            where: Optional[Operation] = None,
+            like: Optional[str] = None,
+            is_full=False,
     ):
         if len(target.parts) > 1:
             db = target.parts[0]
@@ -1125,7 +1125,7 @@ class ExecuteCommands:
                     "current_user": self.session.username,
                     "user": self.session.username,
                     "version": "8.0.17",
-                    "current_schema":"public"
+                    "current_schema": "public"
                 }
 
                 column_name = f"{target.op}()"

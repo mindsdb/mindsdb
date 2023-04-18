@@ -15,7 +15,7 @@ from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.errors import POSTGRES_SYNTAX_ERROR_CODE
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import GenericField, PostgresField
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message_formats import Terminate, \
-    Query, NoticeResponse, AuthenticationClearTextPassword, AuthenticationOk, RowDescriptions, DataRow, CommandComplete, \
+    Query, AuthenticationClearTextPassword, AuthenticationOk, RowDescriptions, DataRow, CommandComplete, \
     ReadyForQuery, ConnectionFailure, ParameterStatus, Error, Execute, Bind, Parse, Sync, ParseComplete, \
     InvalidSQLStatementName, BindComplete, Describe, DataException, ParameterDescription
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_message import PostgresMessage
@@ -392,10 +392,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         server.connection_id = 0
         server.mindsdb_config = config
         server.check_auth = partial(check_auth, config=config)
-        try:
-            server.serve_forever()
-        except:
-            server.shutdown()
+        server.serve_forever()
 
 
 class TcpServer(socketserver.TCPServer):

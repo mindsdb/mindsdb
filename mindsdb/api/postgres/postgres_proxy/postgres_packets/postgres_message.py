@@ -15,7 +15,7 @@ class PostgresMessage:
         pass
 
     def send(self, write_file: BinaryIO):
-        #with open("test_write.txt", "a") as f:
+        # with open("test_write.txt", "a") as f:
         #    f.write(str(type(self)))
         return self.send_internal(write_file=write_file)
 

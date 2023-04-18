@@ -1,5 +1,5 @@
 import struct
-from typing import List, Any, BinaryIO, Sequence, Union, Dict
+from typing import List, Any, BinaryIO, Sequence, Dict
 
 from mindsdb.api.postgres.postgres_proxy.utilities import strip_null_byte
 from mindsdb.utilities.log import get_log
@@ -57,11 +57,10 @@ class PostgresPacketReader:
             result = result + b
         return result
 
-    #! TODO: Probably unneeded now
     def read_bytes_timeout(self, n, timeout=60):
         cur = time.time()
         end = cur + timeout
-        #This is a reason to switch from socketserver to asyncio
+        # This is a reason to switch from socketserver to asyncio
         while cur < end:
             cur = time.time()
             data = self.buffer.read(n)
@@ -111,7 +110,7 @@ class PostgresPacketReader:
         try:
             auth_type = self.read_byte()
         except PostgresEmptyDataException:
-            #No authentication parameters specified. Which is fine if we're local on a mindsdbuser
+            # No authentication parameters specified. Which is fine if we're local on a mindsdbuser
             return ''
         try:
             auth_type = PostgresAuthType(auth_type)
@@ -131,14 +130,16 @@ class PostgresPacketReader:
             return None
         try:
             message_type = PostgresFrontendMessageIdentifier(message_type)
-        except Exception as _:
-            raise UnsupportedPostgresMessageType("%s is not a supported frontend message identifier" % message_type)
+        except Exception as e:
+            raise UnsupportedPostgresMessageType(
+                "%s is not a supported frontend message identifier:\n%s" % (message_type, str(e)))
 
         if message_type in self.fe_message_map:
             self.logger.debug("reading message type %s" % str(message_type.name))
             return self.fe_message_map[message_type]().read(self)
         else:
-            raise UnsupportedPostgresMessageType("%s is not a supported frontend message identifier" % message_type.value)
+            raise UnsupportedPostgresMessageType(
+                "%s is not a supported frontend message identifier" % message_type.value)
 
 
 class PostgresPacketBuilder:
@@ -167,8 +168,8 @@ class PostgresPacketBuilder:
 
     def write_char(self, c, write_file: BinaryIO):
         pack = "!c"
-        l = struct.pack(pack, c)
-        write_file.write(l)
+        packed_binary = struct.pack(pack, c)
+        write_file.write(packed_binary)
 
     def write(self, write_file: BinaryIO):
         if len(self.identifier) == 0:
@@ -189,8 +190,8 @@ class PostgresPacketBuilder:
         self.logger.debug("pack args:")
         for arg in self.pack_args:
             self.logger.debug("arg: %s" % str(arg))
-        l = struct.pack(pack, self.identifier, *self.pack_args)
-        write_file.write(l)
+        packed_binary = struct.pack(pack, self.identifier, *self.pack_args)
+        write_file.write(packed_binary)
 
     def add_char(self, s: bytes):
         self.pack_string += 'c'

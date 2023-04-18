@@ -29,5 +29,3 @@ class PostgresFrontendMessageIdentifier(Enum):
 
 class PostgresAuthType(Enum):
     PASSWORD = b'p'
-
-

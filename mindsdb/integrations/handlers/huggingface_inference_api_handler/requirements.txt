@@ -1,2 +1,1 @@
-requests
-pyyaml
+hugging_py_face

@@ -69,6 +69,22 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 args['using']['model'] if 'model' in args['using'] else None
             )
 
+        elif args['using']['task'] == 'speech-recognition':
+            ap = AudioProcessing(args['using']['api_key'])
+            result_df = ap.speech_recognition_in_df(
+                df,
+                args['using']['column'],
+                args['using']['model'] if 'model' in args['using'] else None
+            )
+
+        elif args['using']['task'] == 'audio-classification':
+            ap = AudioProcessing(args['using']['api_key'])
+            result_df = ap.audio_classification_in_df(
+                df,
+                args['using']['column'],
+                args['using']['model'] if 'model' in args['using'] else None
+            )
+
         else:
             raise Exception(f"Task {args['using']['task']} is not supported!")
 

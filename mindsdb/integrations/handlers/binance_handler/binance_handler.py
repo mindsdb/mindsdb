@@ -12,6 +12,8 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
+_BASE_BINANCE_US_URL = 'https://api.binance.us'
+
 
 class BinanceHandler(APIHandler):
     """A class for handling connections and interactions with the Binance API.
@@ -55,9 +57,9 @@ class BinanceHandler(APIHandler):
             return self.client
 
         if self.api_key and self.api_secret:
-            self.client = Spot(key=self.api_key, secret=self.api_secret)
+            self.client = Spot(key=self.api_key, secret=self.api_secret, base_url=_BASE_BINANCE_US_URL)
         else:
-            self.client = Spot()
+            self.client = Spot(base_url=_BASE_BINANCE_US_URL)
 
         self.is_connected = True
         return self.client

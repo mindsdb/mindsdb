@@ -1,9 +1,11 @@
+import os
 from typing import Optional, Dict
 
 import pandas as pd
 
 from hugging_py_face import NLP, ComputerVision, AudioProcessing
 
+from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
 
 
@@ -22,9 +24,10 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         args = self.model_storage.json_get('args')
+        api_key = self._get_huggingface_api_key(args)
 
         if args['using']['task'] == 'text-classification':
-            nlp = NLP(args['using']['api_key'])
+            nlp = NLP(api_key)
             result_df = nlp.text_classification_in_df(
                 df,
                 args['using']['column'],
@@ -33,7 +36,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'fill-mask':
-            nlp = NLP(args['using']['api_key'])
+            nlp = NLP(api_key)
             result_df = nlp.fill_mask_in_df(
                 df,
                 args['using']['column'],
@@ -42,7 +45,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'summarization':
-            nlp = NLP(args['using']['api_key'])
+            nlp = NLP(api_key)
             result_df = nlp.summarization_in_df(
                 df,
                 args['using']['column'],
@@ -52,7 +55,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'text-generation':
-            nlp = NLP(args['using']['api_key'])
+            nlp = NLP(api_key)
             result_df = nlp.text_generation_in_df(
                 df,
                 args['using']['column'],
@@ -62,7 +65,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'image-classification':
-            cp = ComputerVision(args['using']['api_key'])
+            cp = ComputerVision(api_key)
             result_df = cp.image_classification_in_df(
                 df,
                 args['using']['column'],
@@ -70,7 +73,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'speech-recognition':
-            ap = AudioProcessing(args['using']['api_key'])
+            ap = AudioProcessing(api_key)
             result_df = ap.speech_recognition_in_df(
                 df,
                 args['using']['column'],
@@ -78,7 +81,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'audio-classification':
-            ap = AudioProcessing(args['using']['api_key'])
+            ap = AudioProcessing(api_key)
             result_df = ap.audio_classification_in_df(
                 df,
                 args['using']['column'],
@@ -90,3 +93,32 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
 
         result_df = result_df.rename(columns={'predictions': args['target']})
         return result_df
+
+    def _get_huggingface_api_key(self, args, strict=True):
+        """ 
+        API_KEY preference order:
+            1. provided at model creation
+            2. provided at engine creation
+            3. HUGGINGFACE_API_KEY env variable
+            4. huggingface.api_key setting in config.json
+        """  # noqa
+        # 1
+        if 'api_key' in args:
+            return args['api_key']
+        # 2
+        connection_args = self.engine_storage.get_connection_args()
+        if 'api_key' in connection_args:
+            return connection_args['api_key']
+        # 3
+        api_key = os.getenv('HUGGINGFACE_API_KEY')
+        if api_key is not None:
+            return api_key
+        # 4
+        config = Config()
+        openai_cfg = config.get('huggingface', {})
+        if 'api_key' in openai_cfg:
+            return openai_cfg['api_key']
+
+        if strict:
+            raise Exception(f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
+                 or re-create this model and pass the API key with `USING` syntax.')  # noqa

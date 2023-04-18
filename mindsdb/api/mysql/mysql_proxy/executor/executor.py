@@ -182,26 +182,43 @@ class Executor:
 
     @profiler.profile()
     def parse(self, sql):
+        print('parse')
         logger.info("%s.parse: sql - %s", self.__class__.__name__, sql)
         self.sql = sql
         sql_lower = sql.lower()
         self.sql_lower = sql_lower.replace("`", "")
 
-        try:
-            self.query = parse_sql(sql, dialect="mindsdb")
-        except Exception as mdb_error:
-            try:
-                self.query = parse_sql(sql, dialect="mysql")
-            except Exception:
-                # not all statements are parsed by parse_sql
-                logger.warning(f"SQL statement is not parsed by mindsdb_sql: {sql}")
+        from mindsdb_text_to_sql import TextToSQL
 
-                raise SqlApiException(
-                    f"SQL statement cannot be parsed by mindsdb_sql - {sql}: {mdb_error}"
-                ) from mdb_error
+        text_to_sql = TextToSQL('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')
+        query = text_to_sql.convert_text_to_sql(sql)
+        self.query = parse_sql(query, dialect="mindsdb")
+        print(self.query)
 
-                # == a place for workarounds ==
-                # or run sql in integration without parsing
+        # try:
+        #     self.query = parse_sql(sql, dialect="mindsdb")
+        # except Exception as mdb_error:
+        #     try:
+        #         self.query = parse_sql(sql, dialect="mysql")
+        #     except Exception:
+        #         try:
+        #             from mindsdb_text_to_sql import TextToSQL
+        #
+        #             text_to_sql = TextToSQL('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')
+        #             query = text_to_sql.convert_text_to_sql(sql)
+        #             print(query)
+        #             self.query = query
+        #
+        #         except Exception:
+        #             # not all statements are parsed by parse_sql
+        #             logger.warning(f"SQL statement is not parsed by mindsdb_sql: {sql}")
+        #
+        #             raise SqlApiException(
+        #                 f"SQL statement cannot be parsed by mindsdb_sql - {sql}: {mdb_error}"
+        #             ) from mdb_error
+
+                    # == a place for workarounds ==
+                    # or run sql in integration without parsing
 
     @profiler.profile()
     def do_execute(self):

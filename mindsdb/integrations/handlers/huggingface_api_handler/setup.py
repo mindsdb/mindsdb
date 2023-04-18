@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from mindsdb.integrations.handlers.huggingface_inference_api_handler.__about__ import __title__, __version__, __github__, __pypi__, __license__, __author__, __description__
+from mindsdb.integrations.handlers.huggingface_api_handler.__about__ import __title__, __version__, __github__, __pypi__, __license__, __author__, __description__
 
 with open('requirements.txt') as req_file:
     requirements = [req.strip() for req in req_file.read().splitlines()]

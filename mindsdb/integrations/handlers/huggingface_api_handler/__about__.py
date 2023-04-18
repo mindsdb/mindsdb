@@ -1,5 +1,5 @@
-__title__ = 'MindsDB Hugging Face Inference API handler'
-__package_name__ = 'mindsdb_huggingface_inference_api_handler'
+__title__ = 'MindsDB Hugging Face API handler'
+__package_name__ = 'mindsdb_huggingface_api_handler'
 __version__ = '0.0.1'
 __description__ = "MindsDB handler for Hugging Face Inference API"
 __author__ = 'Minura Punchihewa'

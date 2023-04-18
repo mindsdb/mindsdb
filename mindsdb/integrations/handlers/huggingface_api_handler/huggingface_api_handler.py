@@ -51,6 +51,16 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 args['using']['model'] if 'model' in args['using'] else None
             )
 
+        elif args['using']['task'] == 'text-generation':
+            nlp = NLP(args['using']['api_key'])
+            result_df = nlp.text_generation_in_df(
+                df,
+                args['using']['column'],
+                args['using']['parameters'] if 'parameters' in args['parameters'] else None,
+                args['using']['options'] if 'options' in args['using'] else None,
+                args['using']['model'] if 'model' in args['using'] else None
+            )
+
         else:
             raise Exception(f"Task {args['using']['task']} is not supported!")
 

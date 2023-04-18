@@ -199,28 +199,50 @@ class LightwoodHandler(BaseMLEngine):
                 order_by_column = order_by_column[0]
             horizon = timeseries_settings['horizon']
 
-            groups = set()
-            for row in pred_dicts:
-                groups.add(
-                    tuple([row[x] for x in group_by])
-                )
+            # region convert values to lists in case of horizon==1.
+            # That needs to make processing below unified for any case.
+            if horizon == 1:
+                for row in pred_dicts:
+                    if isinstance(row[order_by_column], list) is False:
+                        row[order_by_column] = [row[order_by_column]]
+                    if isinstance(row[target], list) is False:
+                        row[target] = [row[target]]
+                for row in explain_arr:
+                    for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                        if isinstance(row[target][col], list) is False:
+                            row[target][col] = [row[target][col]]
+            # endregion
 
-            # split rows by groups
-            rows_by_groups = {}
-            for group in groups:
-                rows_by_groups[group] = {
-                    'rows': [],
-                    'explanations': []
+            if len(group_by) == 0:
+                rows_by_groups = {
+                    (): {
+                        'rows': pred_dicts,
+                        'explanations': explain_arr
+                    }
                 }
-                for row_index, row in enumerate(pred_dicts):
-                    is_wrong_group = False
-                    for i, group_by_key in enumerate(group_by):
-                        if row[group_by_key] != group[i]:
-                            is_wrong_group = True
-                            break
-                    if not is_wrong_group:
-                        rows_by_groups[group]['rows'].append(row)
-                        rows_by_groups[group]['explanations'].append(explain_arr[row_index])
+            else:
+                groups = set()
+                for row in pred_dicts:
+                    groups.add(
+                        tuple([row[x] for x in group_by])
+                    )
+
+                # split rows by groups
+                rows_by_groups = {}
+                for group in groups:
+                    rows_by_groups[group] = {
+                        'rows': [],
+                        'explanations': []
+                    }
+                    for row_index, row in enumerate(pred_dicts):
+                        is_wrong_group = False
+                        for i, group_by_key in enumerate(group_by):
+                            if row[group_by_key] != group[i]:
+                                is_wrong_group = True
+                                break
+                        if not is_wrong_group:
+                            rows_by_groups[group]['rows'].append(row)
+                            rows_by_groups[group]['explanations'].append(explain_arr[row_index])
 
             for group, data in rows_by_groups.items():
                 rows = data['rows']

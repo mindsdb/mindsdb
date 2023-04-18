@@ -752,7 +752,7 @@ SUPPORTED_AUTH_TYPES = [PostgresAuthType.PASSWORD]
 
 # Below Lies Unimplemented Messages
 
-
+"""
 '''
 AuthenticationKerberosV5 (B)
 Byte1('R')
@@ -1262,3 +1262,4 @@ session defaults.
 
 String
 The parameter value. '''
+"""

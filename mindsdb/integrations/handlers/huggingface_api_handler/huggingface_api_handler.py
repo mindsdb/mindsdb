@@ -49,7 +49,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             result_df = nlp.summarization_in_df(
                 df,
                 args['using']['column'],
-                args['using']['parameters'] if 'parameters' in args['parameters'] else None,
+                args['using']['parameters'] if 'parameters' in args['using'] else None,
                 args['using']['options'] if 'options' in args['using'] else None,
                 args['using']['model'] if 'model' in args['using'] else None
             )
@@ -59,7 +59,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             result_df = nlp.text_generation_in_df(
                 df,
                 args['using']['column'],
-                args['using']['parameters'] if 'parameters' in args['parameters'] else None,
+                args['using']['parameters'] if 'parameters' in args['using'] else None,
                 args['using']['options'] if 'options' in args['using'] else None,
                 args['using']['model'] if 'model' in args['using'] else None
             )

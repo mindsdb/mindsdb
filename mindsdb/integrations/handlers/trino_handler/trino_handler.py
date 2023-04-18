@@ -129,7 +129,7 @@ class TrinoHandler(DatabaseHandler):
             connection = self.connect()
             cur = connection.cursor()
             result = cur.execute(query)
-            if result:
+            if result and cur.description:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.DataFrame(

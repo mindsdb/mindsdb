@@ -83,7 +83,7 @@ And here are the optional methods that you can implement alongside the mandatory
 * [The update() method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L171) is used to update, fine-tune, or adjust an existing model without resetting its internal state.
 
 ```py
-def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
         Optional.
         Used to update/fine-tune/adjust a pre-existing model without resetting its internal state (e.g. weights).

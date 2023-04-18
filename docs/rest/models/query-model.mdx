@@ -36,9 +36,9 @@ curl --request POST \
 ```python Python
 import requests
 url = 'https://cloud.mindsdb.com/projects/{projectName}/models/{modelName}/predict'
-cookies = '{session=273trgsehgrui3i2riurwehe}'
+cookies = {'session': '273trgsehgrui3i2riurwehe'}
 data = { 'data': [{'sqft': '1000'}, {'sqft': '500'}],'params': {}}
-resp = requests.post(url, data=data, cookies=cookies})
+resp = requests.post(url, data=data, cookies=cookies)
 ```
 
 </RequestExample>

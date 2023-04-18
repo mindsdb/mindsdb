@@ -33,6 +33,10 @@ Users can specify `train_time` as a USING arg (see example in PR). `train_time` 
 
 Users can define `exogenous_vars` as a USING arg. These are complementary variables in the table that may improve forecast accuracy. Pass this as a list of strings e.g. `USING exogenous_vars=['var_1', 'var_2']`
 
+Users can optionally define a hierarchy to the data, with the "hierarchy" arg.
+The model will reconcile forecasts according to the hierarchy, which may improve their accuracy.
+This is further explained in https://github.com/mindsdb/mindsdb/pull/5605
+
 # Does this integration offer model explainability or insights via the DESCRIBE syntax?
 Yes - see https://github.com/mindsdb/mindsdb/pull/5445 for an example of how to call the DESCRIBE method.
 

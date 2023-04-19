@@ -170,7 +170,7 @@
                   "group": "CREATE",
                   "pages": [
                     "sql/create/databases",
-                    "sql/create/predictor",
+                    "sql/create/model",
                     "sql/create/table",
                     "sql/create/view",
                     "sql/create/ml-engine",

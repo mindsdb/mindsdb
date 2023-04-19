@@ -99,7 +99,7 @@ jobs:
           pytest -vx -k 'not TestMySqlApi' tests/integration_tests/flows/test_mysql_bin_api.py
 
           # echo -e "\n===============TS predictions===============\n"
-          pytest -svx tests/integration_tests/test_ts_predictions.py
+          pytest -svx tests/integration_tests/flows/test_ts_predictions.py
 
           # HTTP
           echo -e "\n===============test HTTP===============\n"

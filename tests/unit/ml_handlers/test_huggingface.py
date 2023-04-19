@@ -186,30 +186,13 @@ class TestHuggingface(BaseExecutorTest):
             join_learn_process=true,
             task = "text2text-generation",
             model_name = "google/flan-t5-base",
-            input_column = "text_short"
+            input_column = 'comment'
         '''
 
         model_name = 'text_generator'
 
         predict_sql = '''
-            SELECT h.*
-            FROM pg.df as t 
-            JOIN mindsdb.text_generator as h
+            SELECT * FROM text_generator
+            WHERE comment='Question: Why did the chicken cross the road?' 
         '''
         self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
-
-# Test locally by running
-
-# CREATE MODEL text_generator
-# PREDICT PRED USING
-#   engine='huggingface', 
-#   task = 'text2text-generation',
-#   model_name= 'google/flan-t5-base',
-#   input_column = 'comment';
-  
-# SELECT *
-# FROM models 
-# WHERE name = 'text_generator';
-
-# SELECT * FROM text_generator
-# WHERE comment='Question: Why did the chicken cross the road? ';

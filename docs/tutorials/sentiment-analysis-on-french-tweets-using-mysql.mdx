@@ -34,7 +34,7 @@ We have many ways to do this. But I recommend this one if you're learning.
 1. Create [Railway Account](https://railway.app/) and add My SQL Database in it.
 ![Railway App and uploaded the file](https://drive.google.com/file/d/1k6_gs82T7v_XGf2c5kj_Ax6vuMLBvNXV/view?usp=share_link)
 2. Note the details listed in `Available Variables`
-![Railway details](mindsdb/tutorials/images/sentiment-analysis-on-french-tweets/railwaydetails.png)
+![Railway details](images/sentiment-analysis-on-french-tweets/railwaydetails.png)
 3. Install MySQL Workbench in your local, connect your MySQL Server which is hosted in the Railway App.
 4. Download [French Tweets](https://www.kaggle.com/datasets/hbaflast/french-twitter-sentiment-analysis?resource=download) dataset from Kaggle.
 5. In Workbench, create schema in name of `french_tweets`  in your database in Workbench. Then upload the downloaded CSV file to it. 
@@ -67,7 +67,7 @@ Select *
 FROM mysql.french_tweets;
 ```
 Your output would be like :
-![select query output](mindsdb/tutorials/images/sentiment-analysis-on-french-tweets/query.png)
+![select query output](images/sentiment-analysis-on-french-tweets/query.png)
 
 ## Load the Model
 
@@ -119,7 +119,7 @@ The above query should analyze the text and give the output as below:
 | --------- | ----------------- | ---- |
 | NEGATIVE | {"NEGATIVE":0.8531917929649353,"POSITIVE":0.14680825173854828} | Je vais me crier après avoir regardé Marley et moi. |
 ```
-![query the model](mindsdb/tutorials/images/sentiment-analysis-on-french-tweets/querythemodel.png)
+![query the model](images/sentiment-analysis-on-french-tweets/querythemodel.png)
 
 
 ## Conclusion

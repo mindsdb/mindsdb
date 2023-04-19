@@ -2,8 +2,12 @@ import base64
 import datetime
 import os
 import json
+import select
 import socketserver
+import struct
+import sys
 from functools import partial
+import socket
 from typing import Callable, Dict, Type, Any, Iterable, Sequence
 
 from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
@@ -41,6 +45,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         self.user_parameters = None
         self.named_statements = {}
         self.unnamed_statement = None
+        self.is_cloud = False
         self.named_portals = {}
         self.unnamed_portal = None
         self.transaction_status = b'I'  # I: Idle, T: Transaction Block, E: Failed Transaction Block
@@ -50,6 +55,13 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
 
         ctx.set_default()
         self.init_session()
+        self.logger.debug('handle new incoming connection')
+        cloud_connection = self.is_cloud_connection()
+        if cloud_connection["is_cloud"]:
+            ctx.company_id = cloud_connection.get('company_id')
+            self.is_cloud = True
+
+
         self.message_map: Dict[Type[PostgresMessage], Callable[[Any], bool]] = {
             Terminate: self.terminate,
             Query: self.query,
@@ -60,11 +72,72 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
             Sync: self.sync
         }
         self.client_buffer = PostgresPacketReader(self.rfile)
-        started = self.start_connection()
+        if self.is_cloud:
+            started = True # We already have a connection started through the gateway.
+        else:
+            started = self.start_connection()
         if started:
             self.logger.debug("connection started")
             self.send_initial_data()
             self.main_loop()
+
+    def is_cloud_connection(self):
+        """ Determine source of connection. Must be call before handshake.
+                Idea based on: real mysql connection does not send anything before server handshake, so
+                socket should be in 'out' state. In opposite, clout connection sends '0000' right after
+                connection. '0000' selected because in real mysql connection it should be length of package,
+                and it can not be 0.
+
+                Copied from mysql_proxy
+                TODO: Extract method into common
+            """
+        config = Config()
+        is_cloud = config.get('cloud', False)
+
+        if sys.platform != 'linux' or is_cloud is False:
+            return {
+                'is_cloud': False
+            }
+
+        read_poller = select.poll()
+        read_poller.register(self.request, select.POLLIN)
+        events = read_poller.poll(30)
+
+        if len(events) == 0:
+            return {
+                'is_cloud': False
+            }
+
+        first_byte = self.request.recv(4, socket.MSG_PEEK)
+        if first_byte == b'\x00\x00\x00\x00':
+            self.request.recv(4)
+            client_capabilities = self.request.recv(8)
+            client_capabilities = struct.unpack('L', client_capabilities)[0]
+
+            company_id = self.request.recv(4)
+            company_id = struct.unpack('I', company_id)[0]
+
+            user_class = self.request.recv(1)
+            user_class = struct.unpack('B', user_class)[0]
+
+            database_name_len = self.request.recv(2)
+            database_name_len = struct.unpack('H', database_name_len)[0]
+
+            database_name = ''
+            if database_name_len > 0:
+                database_name = self.request.recv(database_name_len).decode()
+
+            return {
+                'is_cloud': True,
+                'client_capabilities': client_capabilities,
+                'company_id': company_id,
+                'user_class': user_class,
+                'database': database_name
+            }
+
+        return {
+            'is_cloud': False
+        }
 
     def parse(self, message: Parse):
         self.logger.info("Postgres_Proxy: Parsing")

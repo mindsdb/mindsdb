@@ -25,219 +25,106 @@ Make sure you have access to a working MindsDB installation, either locally or v
 *You can create a **free** MindsDB account and take advantage of their built-in SQL editor [here](https://cloud.mindsdb.com/editor).*
 
 If you want to learn more about creating a free MindsDB Cloud account, follow
-[this guide](/setup/cloud/). Another way is to set up
-MindsDB locally using
-[Docker](/setup/self-hosted/docker/) or
-[Python](/setup/self-hosted/pip/source/).
+[this guide](/setup/cloud/). Another way is to set up MindsDB locally using [Docker](/setup/self-hosted/docker/) or [Python](/setup/self-hosted/pip/source/).
 
 Let's get started!
 
-## Loading the MySQL Database
+##  Create MySQL Server and upload the data:
+We have many ways to do this. But I recommend this one if you're learning. 
+1. Create [Railway Account](https://railway.app/) and add My SQL Database in it.
+![Railway App and uploaded the file](https://drive.google.com/file/d/1k6_gs82T7v_XGf2c5kj_Ax6vuMLBvNXV/view?usp=share_link)
+2. Note the details listed in `Available Variables`
+![Railway details](docs/tutorials/images/sentiment-analysis-on-french-tweets/railwaydetails.png)
+3. Install MySQL Workbench in your local, connect your MySQL Server which is hosted in the Railway App.
+4. Download [French Tweets](https://www.kaggle.com/datasets/hbaflast/french-twitter-sentiment-analysis?resource=download) dataset from Kaggle.
+5. In Workbench, create schema in name of `french_tweets`  in your database in Workbench. Then upload the downloaded CSV file to it. 
 
-To establish a database connection we will access MindsDB's GUI. MindsDB has a SQL Editor on Cloud.
+
+## Connect MySQL Database to MindsDB Web
+
+To establish a database connection we will access MindsDB's GUI. MindsDB has MySQL Database Integration.
 
 First we need to connect MindsDB to the database where the French Tweets data are stored:
 
  - Access MindsDB GUI on cloud.
  - On the default page, select the button  `Add`  and dropdown appears down, select the `New Datasource` 
- - Select MySQL Database and fill the data. I had hosted the MySQL database in my local and added the details over there.
- 
-> Note that: Your hosted MySQL Database should have the data stored in there already. 
+ - Select MySQL Database and fill the data connection details such as:
+	   - Database Alias Connection name as mysql
+	   - Database connection name (check railway dashboard)
+	   - Host name (check railway dashboard)
+	   - Port (check railway dashboard)
+	   - Username (check railway dashboard)
+	   - Password (check railway dashboard)
+- Once you entered the details, check for test connection.
 
-Once you added the details correctly, you get the `Saved Connection` popup.  Now we're good to go for next step: Select the model. 
+ 
+ ## Check whether MySQL Server had connected or not
+
+Once you added the details correctly, you get the `Saved Connection` popup.  In the MindsDB Web, the sidebar display list of databases. You would have created your database in `alias connection` , check for that name in the list and when you click on it, automatically the MindsDB queries the output. 
+
+```
+Select * 
+FROM mysql.french_tweets;
+```
+Your output would be like :
+![select query output](docs/tutorials/images/sentiment-analysis-on-french-tweets/query.png)
 
 ## Load the Model
 
-We are focusing on text classification, we're going to use Hugging Face's [French Sentiment analysis model based on CamemBERT](https://huggingface.co/tblard/tf-allocine/blob/main/README.md?code=true#L7) model. This Hugging Face transformer is a CamemBERT model trained on Allocine dataset.
+We are focusing on text classification, we're going to use Hugging Face's [French Sentiment analysis model based on CamemBERT](https://huggingface.co/philschmid/pt-tblard-tf-allocine/tree/main) pytorch supported model. This Hugging Face transformer is a CamemBERT model trained on Allocine dataset.
 
-Run the below query in the MindsDB Cloud Editor:
+Our Hugging Face integration automatically manages downloading and deploying of pre-trained transformers from Hugging Face's hub. For example, we can download a transformer which has been trained to analyze the sentiment of text:
 ```
-CREATE  MODEL french_tweets.sentiment_analyzer
-PREDICT PRED
-USING
-engine =  'huggingface',
-task = 'text-classification',
-model_name = 'tblard/tf-allocine',
-input_column = 'text';
-```
-
-After running the command over, we get the status as shown in the below image:
-
-![screenshot of Image]
-
-Checkout [Hugging Face's](https://huggingface.co/tblard/tf-allocine) documentation to explore more transformer models.
-
-## Training a Predictor
-
-Now that we have our data, we're going to use SQL to create our **predictor model**. 
-
-***Note: If you have been working on multiple projects/databases make sure you move to the correct database for this demo:***
-
-`USE french_tweets;`
-
-Let's create our model now.
-
-**We use the `CREATE MODEL` statement along with the following paramters to access the Hugging Face API and use Hugging Face transofrmers when we train our model and make predictions**
-
-```
-CREATE MODEL nlp_predictor
+CREATE  MODEL mindsdb.sentiment_analyzer
 PREDICT sentiment
 USING
-  engine = 'huggingface',
-  task = 'text-classification',
-  model_name = "cardiffnlp/twitter-Roberta-base-sentiment",
-  input_column = 'comment',
-  labels = ['negative','neutral','positive'];
+engine  =  'huggingface',
+task =  'text-classification',
+model_name =  'philschmid/pt-tblard-tf-allocine',
+input_column =  'text';
 ```
+To create a model in MindsDB, we first specify our chosen model name (sentiment_classifier) with **CREATE MODEL mindsdb.sentiment_analyzer.**
+
+Next, we choose the name of the column we would like to predict (sentiment) with **PREDICT sentiment**. Hugging Face models are already trained, so we don’t need to select a column from our training data - we can name our column whatever we like.
+
+Finally, we specify all the additional variables we need after **USING**. Each ML handler has slightly different parameters (for more details on Hugging Face you can check our [documentation](https://docs.mindsdb.com/custom-model/huggingface?_gl=1*dxyiz5*_ga*MjEyNzE5MjgzMy4xNjY4Nzg5OTkz*_ga_7LGFPGV6XV*MTY3MDkwMjEwOS41Mi4xLjE2NzA5MDI4ODYuNjAuMC4w).) In this case, we specify:  
+
+-   **engine = ‘huggingface’**  - the name of the ML framework to be used. Other options include ‘lightwood’ and ‘luwig’
+-   **model_name = 'philschmid/pt-tblard-tf-allocine'**  - the name of the model from  [Hugging Face](https://huggingface.co/models)
+-   **input_column = 'text'**  - the name of the input column that has your text.
+
+We currently support four of the Hugging Face NLP tasks: ‘text-classification’, ‘zero-shot-classification’, ‘translation’, and ‘summarization’. This model is ‘text-classification’.
+
+Once the above query is executed, we can check the status of the creation process:
+```
+SELECT  *
+FROM mindsdb.models
+WHERE  name='sentiment_analyzer';
+```
+After a few seconds you should see the status change from **generating** to **complete.**
 
 ## Making predictions
 
-Now that our model is ready, we can actually start using it to make NLP predictions!
-
-Let's input a text statement we know contains negative words and see if our predictor recognizes that:
-
-input:
+Once the status is complete, the behavior is the same as with any other AI table you can query it or by directly specifying your inputs, like so:
 
 ```
-SELECT * FROM nlp_predictor
-WHERE comment = 'It is really hard to do this';
+SELECT  *  FROM mindsdb.sentiment_analyzer
+WHERE  text='Je vais me crier après avoir regardé Marley et moi.';
 ```
 
-output:
+The above query should analyze the text and give the output as below:
 
 ```sql
-+------------+-------------+
-| sentiment     | sentiment_explain
-+------------+-------------+
-| negative   |{"negative":0.040196146816015244,"neutral":0.0791015625,"positive":0.8807022571563721}|
-+------------+-------------+
+| sentiment | sentiment_explain | text |
+| --------- | ----------------- | ---- |
+| NEGATIVE | {"NEGATIVE":0.8531917929649353,"POSITIVE":0.14680825173854828} | Je vais me crier après avoir regardé Marley et moi. |
 ```
-![screeshot](mindsdb/docs/tutorials/images/negative1.png)
+![screeshot](docs/tutorials/images/sentiment-analysis-on-french-tweets/querythemodel.png)
 
-Awesome! Let's change the word, "hate" to the word, "love" and see what happens.
-
-input:
-
-```
-SELECT * FROM nlp_predictor1
-WHERE comment = 'I love this world'
-```
-
-output:
-
-```sql
-+------------+-------------+
-| sentiment     | sentiment_explain
-+------------+-------------+
-| positive   |{"negative":0.040196146816015244,"neutral":0.0791015625,"positive":0.8807022571563721}|
-+------------+-------------+
-```
-
-Wow. It looks like our predictor recognizes that this is a postive statement!
-
-Let's really challenge our predictor now and input some neutral comments.
-
-
-input:
-
-```sql
-SELECT * FROM nlp_predictor1
-WHERE comment = 'I do not know how I feel about this world'
-```
-
-output:
-
-```sql
-+------------+-------------+
-| sentiment     | sentiment_explain
-+------------+-------------+
-| negative
-   |{"negative":0.7529996633529663,"neutral":0.2219237983226776,"positive":0.02507654018700123}|
-+------------+-------------+
-```
-
-Interesting, but not quite the answer we were expecting.  
-
-input:
-
-```sql
-SELECT * FROM nlp_predictor1
-WHERE comment = 'I am confused about this'
-```
-
-output:
-
-```sql
-+------------+-------------+
-| sentiment     | sentiment_explain
-+------------+-------------+
-| negative
-   |{"negative":0.8474223017692566,"neutral":0.131456196308136,"positive":0.02112148143351078}|
-+------------+-------------+
-```
-
-Alright, we can see where our predictor model may need some more training. Let's try the actual world 'neutral':
-
-
-input:
-
-```sql
-SELECT * FROM nlp_predictor1
-WHERE comment = 'I am neutral'
-```
-
-output:
-
-```sql
-+------------+-------------+
-| sentiment     | sentiment_explain
-+------------+-------------+
-| neutral
-   |{"negative":0.20676742494106293,"neutral":0.634432315826416,"positive":0.15880025923252106}|
-+------------+-------------+
-```
-
-Nice! Let's use some offical synonyms of 'neutral':
-
-input:
-
-```
-SELECT * FROM nlp_predictor1
-WHERE comment = 'I have a nonbiased opinion about that matter, congressman'
-```
-
-output:
-
-```sql
-+------------+-------------+
-| sentiment     | sentiment_explain
-+------------+-------------+
-| neutral
-   |{"negative":0.1525232195854187,"neutral":0.7257404923439026,"positive":0.12173626571893692}|
-+------------+-------------+
-```
-
-***Interestingly enough, the predictor rated that last comment more neutral than the previous.***
-
-input:
-
-```sql
-SELECT * FROM nlp_predictor1
-WHERE comment = 'I am impartial to dancing'
-```
-
-output:
-
-```sql
-+------------+-------------+
-| sentiment     | sentiment_explain
-+------------+-------------+
-| neutral
-   |{"negative":0.0975261852145195,"neutral":0.5596098899841309,"positive":0.34286391735076904}|
-+------------+-------------+
-```
 
 ## Conclusion
+
+MindsDB enables in-database ML with your favorite frameworks, you just need a handler for it. If this sounds exciting, head over to the community slack and we will be happy to guide you on using other handlers or writing your own!
 
 By following this tutorial, you just learned how to perform the following tasks with MindsDB:
 

@@ -612,20 +612,20 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_describe_predictor(self, statement):
-        # describe attr
-        predictor_attrs = ("model", "features", "ensemble", "progress")
+
+        # try full name
         attribute = None
-        if statement.value.parts[-1] in predictor_attrs:
-            attribute = statement.value.parts.pop(-1)
+        model_info = self._get_model_info(statement.value)
+        if model_info is None:
+            parts = statement.value.parts.copy()
+            attribute = parts.pop(-1)
+            model_info = self._get_model_info(Identifier(parts=parts))
+            if model_info is None:
+                raise SqlApiException(f'Model not found: {statement.value}')
 
-        if len(statement.value.parts) > 1:
-            project_name = statement.value.parts[0]
-        else:
-            project_name = self.session.database
-
-        model_name = statement.value.parts[-1]
-
-        df = self.session.model_controller.describe_model(self.session, project_name, model_name, attribute)
+        df = self.session.model_controller.describe_model(
+            self.session, model_info['project_name'], model_info['model_record'].name, attribute
+        )
 
         df_dict = df.to_dict('split')
 
@@ -639,15 +639,24 @@ class ExecuteCommands:
             data=df_dict['data']
         )
 
-    def _get_model_record(self, statement):
-        if len(statement.name.parts) == 1:
-            statement.name.parts = [self.session.database, statement.name.parts[0]]
-        database_name, model_name = statement.name.parts
+    def _get_model_info(self, identifier, except_absent=True):
+        if len(identifier.parts) == 1:
+            identifier.parts = [self.session.database, identifier.parts[0]]
+
+        if len(identifier.parts) == 2:
+            database_name, model_name = identifier.parts[-2:]
+        else:
+            return None
 
         model_record = get_model_record(
-            name=model_name, project_name=database_name, except_absent=True
+            name=model_name, project_name=database_name, except_absent=except_absent
         )
-        return model_record
+        if not model_record:
+            return None
+        return {
+            'model_record': model_record,
+            'project_name': database_name
+        }
 
     def _sync_predictor_check(self, phase_name):
         """ Checks if there is already a predictor retraining or fine-tuning
@@ -672,7 +681,7 @@ class ExecuteCommands:
                 )
 
     def answer_retrain_predictor(self, statement):
-        model_record = self._get_model_record(statement)
+        model_record = self._get_model_info(statement.name)['model_record']
 
         if statement.integration_name is None:
             if model_record.data_integration_ref is None:
@@ -719,7 +728,7 @@ class ExecuteCommands:
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
 
     def answer_finetune_predictor(self, statement):
-        model_record = self._get_model_record(statement)
+        model_record = self._get_model_info(statement.name)['model_record']
 
         if statement.using is not None:
             # repack using with lower names

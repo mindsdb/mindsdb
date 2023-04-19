@@ -11,6 +11,10 @@
     "light": "#55D799",
     "dark": "#117866"
   },
+  "feedback": {
+    "suggestEdit": true,
+    "raiseIssue": true
+  },
   "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
     "baseUrl": [
@@ -343,7 +347,8 @@
             "data-integrations/oracle",
              "data-integrations/solr",
             "data-integrations/OrioleDB",
-            "data-integrations/singlestore"
+            "data-integrations/singlestore",
+            "data-integrations/tdengine"
           ]
         },
         {

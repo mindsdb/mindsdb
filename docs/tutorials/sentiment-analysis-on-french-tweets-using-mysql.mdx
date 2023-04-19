@@ -105,7 +105,7 @@ After a few seconds you should see the status change from **generating** to **co
 
 ## Making predictions
 
-Once the status is complete, the behavior is the same as with any other AI table you can query it or by directly specifying your inputs, like so:
+Once the status is complete, the behavior is the same as with any other AI table you can query it or by directly specifying your inputs, You can query it directly by specifying your inputs:
 
 ```
 SELECT  *  FROM mindsdb.sentiment_analyzer
@@ -120,6 +120,16 @@ The above query should analyze the text and give the output as below:
 | NEGATIVE | {"NEGATIVE":0.8531917929649353,"POSITIVE":0.14680825173854828} | Je vais me crier après avoir regardé Marley et moi. |
 ```
 ![query the model](images/sentiment-analysis-on-french-tweets/querythemodel.png)
+
+Or by joining with the data table for batch predictions:
+
+```
+SELECT * FROM mindsdb.sentiment_analyzer as p
+JOIN mysql.french_tweets as d;
+```
+![batch query](images/sentiment-analysis-on-french-tweets/batch.png)
+
+
 
 
 ## Conclusion

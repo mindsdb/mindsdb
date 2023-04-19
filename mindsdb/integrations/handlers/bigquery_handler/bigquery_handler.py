@@ -65,6 +65,10 @@ class BigQueryHandler(DatabaseHandler):
         try:
             client = self.connect()
             client.query('SELECT 1;')
+
+            # check dataset exists
+            client.get_dataset(self.connection_data['dataset'])
+
             response.success = True
         except Exception as e:
             log.logger.error(f'Error connecting to BigQuery {self.connection_data["project_id"]}, {e}!')
@@ -83,7 +87,8 @@ class BigQueryHandler(DatabaseHandler):
         """
         client = self.connect()
         try:
-            query = client.query(query)
+            job_config = bigquery.QueryJobConfig(default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}")
+            query = client.query(query, job_config=job_config)
             result = query.to_dataframe()
             if not result.empty:
                 response = Response(
@@ -108,21 +113,21 @@ class BigQueryHandler(DatabaseHandler):
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    def get_tables(self, dataset) -> Response:
+    def get_tables(self) -> Response:
         """
         Get a list with all of the tabels in BigQuery
         """
         q = f"SELECT table_name, table_type, FROM \
-             `{self.connection_data['project_id']}.{dataset}.INFORMATION_SCHEMA.TABLES`"
+             `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES`"
         result = self.native_query(q)
         return result
 
-    def get_columns(self, dataset, table_name) -> Response:
+    def get_columns(self, table_name) -> Response:
         """
         Show details about the table
         """
         q = f"SELECT column_name, data_type, FROM \
-            `{self.connection_data['project_id']}.{dataset}.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = '{table_name}'"
+            `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = '{table_name}'"
         result = self.native_query(q)
         return result
 

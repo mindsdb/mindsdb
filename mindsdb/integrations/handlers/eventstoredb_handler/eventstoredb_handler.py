@@ -49,6 +49,8 @@ class EventStoreDB(DatabaseHandler):
         super().__init__(name)
         self.parser = parse_sql
         connection_data = kwargs['connection_data']
+        username = connection_data.get('username')
+        password = connection_data.get('password')
         self.host = connection_data.get('host')
         if connection_data.get('tls') is not None and isinstance(connection_data.get('tls'), bool) \
                 and connection_data.get('tls'):
@@ -58,11 +60,9 @@ class EventStoreDB(DatabaseHandler):
         if connection_data.get('page_size') is not None:
             if isinstance(connection_data.get('page_size'), int) and connection_data.get('page_size') > 0:
                 self.read_batch_size = connection_data.get('page_size')
-        log.logger.debug(f'scheme: {self.scheme} host: {self.host}  port:{self.port} page: {self.read_batch_size}')
-        if connection_data.get('username') is not None and connection_data.get('password') is not None:
-            if isinstance(connection_data.get('username'), str) and isinstance(connection_data.get('password'), str):
-                self.headers['authorization'] = get_auth_string(connection_data.get('username'),
-                                                                connection_data.get('password'))
+        if username is not None and password is not None:
+            if isinstance(username, str) and isinstance(password, str):
+                self.headers['authorization'] = get_auth_string(username, password)
         if connection_data.get('tlsverify') is not None and isinstance(connection_data.get('tlsverify'), bool):
             self.tlsverify = connection_data.get('tlsverify')
 

@@ -262,27 +262,31 @@ class LightwoodHandler(BaseMLEngine):
 
                 if pred_args.get('force_ts_infer') is True:
                     # last row contains one additional prediction (used for cases like date > '2020-10-10').
-                    # Extract that prediction from there, join to previous row and increase horizon.
+                    # Extract that prediction from there and join to previous row
+                    rows[-2][order_by_column] = rows[-2][order_by_column].copy()
+                    rows[-2][target] = rows[-2][target].copy()
+
                     rows[-2][order_by_column].append(rows[-1][order_by_column][-1])
                     rows[-2][target].append(rows[-1][target][-1])
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
                         explanations[-2][target][col].append(explanations[-1][target][col][-1])
                     rows.pop()
                     explanations.pop()
-                    horizon = horizon + 1
+                    # horizon = horizon + 1
 
                 for i in range(len(rows) - 1):
-                    if horizon > 1:
+                    row_horizon = len(rows[i][target])
+                    if row_horizon > 1:
                         rows[i][target] = rows[i][target][0]
                         if isinstance(rows[i][order_by_column], list):
                             rows[i][order_by_column] = rows[i][order_by_column][0]
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if horizon > 1 and col in explanations[i][target]:
+                        if row_horizon > 1 and col in explanations[i][target]:
                             explanations[i][target][col] = explanations[i][target][col][0]
 
                 last_row = rows.pop()
                 last_explanation = explanations.pop()
-                for i in range(horizon):
+                for i in range(len(last_row[target])):
                     new_row = copy.deepcopy(last_row)
                     new_row[target] = new_row[target][i]
                     if isinstance(new_row[order_by_column], list):

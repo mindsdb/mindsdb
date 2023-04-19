@@ -107,6 +107,9 @@ jobs:
           echo -e "\n===============test MySQL binary API===============\n"
           pytest -vx -k 'not TestMySqlApi' tests/integration_tests/flows/test_mysql_bin_api.py
 
+          # echo -e "\n===============TS predictions===============\n"
+          pytest -svx tests/integration_tests/test_ts_predictions.py
+
           # HTTP
           echo -e "\n===============test HTTP===============\n"
           pytest -vx tests/integration_tests/flows/test_http.py

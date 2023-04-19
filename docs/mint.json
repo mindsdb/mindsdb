@@ -170,6 +170,7 @@
                   "group": "CREATE",
                   "pages": [
                     "sql/create/databases",
+                    "sql/create/project",
                     "sql/create/model",
                     "sql/create/table",
                     "sql/create/view",

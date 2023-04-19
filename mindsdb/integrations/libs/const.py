@@ -14,6 +14,7 @@ class HANDLER_CONNECTION_ARG_TYPE:
     BOOL = 'bool'
     URL = 'url'
     PATH = 'path'
+    DICT = 'dict'
 
 
 HANDLER_CONNECTION_ARG_TYPE = HANDLER_CONNECTION_ARG_TYPE()

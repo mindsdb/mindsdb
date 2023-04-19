@@ -194,7 +194,7 @@
                   ]
                 },
                 "sql/api/use",
-                "sql/api/adjust"
+                "sql/api/finetune"
               ]
             }
           ]

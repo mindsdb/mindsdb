@@ -627,10 +627,11 @@ class ExecuteCommands:
 
         metric_name = statement.name.parts[-1]
         target_series = df.pop('prediction')
+        using_clause = statement.using if statement.using is not None else {}
         metric_value = evaluate_accuracy(df, target_series, metric_name,
                                          target='actual',
-                                         ts_analysis=statement.using.get('ts_analysis', {}),  # will be deprecated soon
-                                         n_decimals=statement.using.get('n_decimals', None))
+                                         ts_analysis=using_clause.get('ts_analysis', {}),  # will be deprecated soon
+                                         n_decimals=using_clause.get('n_decimals', 3))  # 3 decimals by default
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
             columns=[Column(name=metric_name, table_name='', type='str')],

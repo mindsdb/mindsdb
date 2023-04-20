@@ -133,7 +133,7 @@ class Config():
                     "database": "mindsdb"
                 },
                 "postgres": {
-                    "host": "127.0.0.1",
+                    "host": api_host,
                     "port": "55432",
                     "database": "mindsdb"
                 }

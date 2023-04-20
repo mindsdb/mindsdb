@@ -61,7 +61,6 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
             ctx.company_id = cloud_connection.get('company_id')
             self.is_cloud = True
 
-
         self.message_map: Dict[Type[PostgresMessage], Callable[[Any], bool]] = {
             Terminate: self.terminate,
             Query: self.query,
@@ -73,7 +72,8 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         }
         self.client_buffer = PostgresPacketReader(self.rfile)
         if self.is_cloud:
-            started = True # We already have a connection started through the gateway.
+            # We already have a connection started through the gateway.
+            started = True
         else:
             started = self.start_connection()
         if started:

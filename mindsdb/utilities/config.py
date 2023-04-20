@@ -131,6 +131,11 @@ class Config():
                     "host": api_host,
                     "port": "47336",
                     "database": "mindsdb"
+                },
+                "postgres": {
+                    "host": api_host,
+                    "port": "55432",
+                    "database": "mindsdb"
                 }
             },
             "cache": {

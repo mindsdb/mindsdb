@@ -1,7 +1,8 @@
 # Briefly describe what ML framework does this handler integrate to MindsDB, and how?
 StatsForecast is a ML package for time series forecasting.
-We have integrated the AutoARIMA model from this package.
-This automatically tunes the classical Auto-regressive Integrated Moving Average ("ARIMA") forecasting algorithm.
+We have integrated the AutoETS, AutoARIMA, AutoTheta and AutoCES models from this package.
+These models automatically tune their corresponding classical methods.
+For example, AutoARIMA will tune the AutoRegressive Integrated Moving Average ("ARIMA") forecasting algorithm.
 
 Call this handler by
 `USING ENGINE="statsforecast"` - you can see a full example in https://github.com/mindsdb/mindsdb/pull/4398
@@ -10,6 +11,11 @@ Call this handler by
 StatsForecast uses classical methods, rather than deep learning, so models require little training time and are far less prone to overfitting.
 The ideal use case is forecasting univariate time series, such as predicting the price each stock in an index like the S&P 500.
 These models will also perform well in cases with short time-series, as they require little data to fit accurately relative to deep learning models.
+
+This handler will also be useful when data has a hierarchical structure (for example: you have a series for each region in a certain country).
+Users can supply an optional argument to perform hierarchical reconciliation during forecasting with Nixtla's HierarchicalForecast package.
+Reconciliation may improve forecast accuracy, by accounting for the hierarchical structure in the data.
+You can learn more about this package at https://nixtla.github.io/hierarchicalforecast/
 
 Do not use this integration for non time-series data.
 

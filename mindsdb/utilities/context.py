@@ -15,7 +15,13 @@ class Context:
     def set_default(self) -> None:
         self._storage.set({
             'company_id': None,
-            'user_class': 0
+            'user_class': 0,
+            'profiling': {
+                'level': 0,
+                'enabled': False,
+                'pointer': None,
+                'tree': None
+            }
         })
 
     def __getattr__(self, name: str) -> Any:

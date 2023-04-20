@@ -34,6 +34,7 @@ def get_season_length(frequency):
     season_dict = {  # https://pandas.pydata.org/docs/user_guide/timeseries.html#timeseries-offset-aliases
         "H": 24,
         "M": 12,
+        "MS": 12,
         "Q": 4,
         "SM": 24,
         "BM": 12,
@@ -159,16 +160,17 @@ class StatsForecastHandler(BaseMLEngine):
         if attribute == "model":
             return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "frequency", "season_length", "hierarchy"]})
 
-        if attribute == "features":
+        elif attribute == "features":
             return pd.DataFrame(
                 {"ds": [model_args["order_by"]], "y": model_args["target"], "unique_id": [model_args["group_by"]]}
             )
 
-        if attribute == "ensemble":
-            raise Exception(f"DESCRIBE {attribute} is not supported by this Handler.")
-
-        if attribute is None:
+        elif attribute == 'info':
             outputs = model_args["target"]
             inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]]
             accuracies = [(model, acc) for model, acc in model_args["accuracies"].items()]
             return pd.DataFrame({"accuracies": [accuracies], "outputs": outputs, "inputs": [inputs]})
+
+        else:
+            tables = ['info', 'features', 'model']
+            return pd.DataFrame(tables, columns=['tables'])

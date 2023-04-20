@@ -272,23 +272,30 @@ class HuggingFaceHandler(BaseMLEngine):
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         def _tokenize_fn(examples):
-            return tokenizer(examples[args['input_column']], padding="max_length", truncation=True)
+            return tokenizer(examples['text'], padding="max_length", truncation=True)
 
         finetune_args = args if args else {}
         args = self.base_model_storage.json_get('args')
         model_name = args['model_name']
         base_model_name = model_name
         hf_model_storage_path = self.engine_storage.folder_get(model_name)
+        task = args['task']
+
+        # rename columns to properly finetune, depends on use case
+        if task == 'text-classification':
+            df.rename(columns={args['target']: 'labels', args['input_column']: 'text'}, inplace=True)
 
         tokenizer_from = args.get('tokenizer_from', 'bert-base-cased')
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_from)  # TODO: load from pre-trained model folder
         dataset = Dataset.from_pandas(df)
         tokenized_datasets = dataset.map(_tokenize_fn, batched=True)
-        train_ds, eval_ds = tokenized_datasets.shuffle(seed=42).train_test_split(test_size=args.get('eval_size', 0.1))
+        ds = tokenized_datasets.shuffle(seed=42).train_test_split(test_size=args.get('eval_size', 0.1))
+        train_ds = ds['train']
+        eval_ds = ds['test']
 
-        task = args['task']
         if task == 'text-classification':
             n_labels = len(args['labels_map'])
+            assert n_labels == df['labels'].nunique(), f'Label mismatch! Ensure labels match what the model was originally trained on. Found {df["labels"].nunique()} classes, expected {n_labels}.'  # noqa
             model = AutoModelForSequenceClassification.from_pretrained(base_model_name, num_labels=n_labels)
             metric = evaluate.load("accuracy")
 
@@ -297,8 +304,11 @@ class HuggingFaceHandler(BaseMLEngine):
                 predictions = np.argmax(logits, axis=-1)
                 return metric.compute(predictions=predictions, references=labels)
 
-            # use defaults for now TODO: let user set them
-            training_args = TrainingArguments(output_dir=hf_model_storage_path, evaluation_strategy="epoch")
+            training_args = TrainingArguments(
+                output_dir=hf_model_storage_path,
+                evaluation_strategy="epoch",
+                **finetune_args
+            )
 
             trainer = Trainer(
                 model=model,
@@ -308,5 +318,9 @@ class HuggingFaceHandler(BaseMLEngine):
                 compute_metrics=_compute_metrics,
             )
 
-            trainer.train()
-            self.model_storage.folder_sync(hf_model_storage_path)
+            try:
+                trainer.train()
+            except Exception as e:
+                log.logger.debug(f'Finetune failed with error: {str(e)}')
+
+            self.engine_storage.folder_sync(model_name)

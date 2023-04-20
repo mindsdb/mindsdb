@@ -1,4 +1,4 @@
-# Postgres API [WIP]
+# Postgres API
 
 ## Description
 
@@ -29,24 +29,23 @@ psql -h localhost -p 55432 -d mindsdb -U mindsdb
 There are many things that aren't supported yet. 
 
 Right now you can use psql to connect to a local mindsdb instance.
+You can also use psycopg and other clients, although DBeaver is finicky.
 
-You can run simple one off queries using this psql client. However, all queries are currently interpreted just the same as MySQL queries. This will be changed shortly once the Postgresql dialect is fully implemented.
-
-Things that don't work as of now include running transactions, Postgres specific SQL, or any other message type other than a query.
+You can run simple one off queries using this psql client, and BEGIN COMMIT blocks should work. Dialect support for Postgres is ongoing, we currently back up into our generic SQL / MySQL parser.
 
 ### Remaining Implementation Goals
 
 Enough Protocol Support
-: Right now we are not responding well to things like BIND, PARSE, DESCRIBE, transactions, etc.
+: Right now we are not responding well to things like BIND, PARSE, DESCRIBE, etc.
 : We are faking our version as well. This was assigned pretty arbitrarily
 : SSL Support is needed.
 
 Cloud / Dependent Code
-: Refactoring there will be needed with all the changes of code location (offshored lots of code to mindsdb.api.common package)
+: Support still needs to be added internally for cloud.
 
 Dialect Support
-: Support for Postgresql dialect needs to be implemented. Right now we rely on the SqlStatementParser of mindsdb.api.mysql. That will need to be changed.
-: There is also additions needed to mindsdb_sql to support the Postgresql Dialect
+: Support for Postgresql dialect needs to be more fleshed out.
+: There is also more additions needed to mindsdb_sql to support the Postgresql Dialect
 : These changes go hand in hand with some protocol functionalities around transactions. 
 
 

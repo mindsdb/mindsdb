@@ -8,18 +8,14 @@ In this handler. python client of api is used and more information about this py
 
 
 ## Implementation
-This handler was implemented using `duckdb`, a library that allows SQL queries to be executed on `pandas` DataFrames.
+This handler was implemented as per the MindsDB API Handler documentation.
 
-In essence, when querying a particular table, the entire table will first be pulled into a `pandas` DataFrame using the Jira API. Once this is done, SQL queries can be run on the DataFrame using `duckdb`.
-
-Note: Since the entire table needs to be pulled into memory first (DataFrame), it is recommended to be somewhat careful when querying large tables so as not to overload your machine.
 
 The required arguments to establish a connection are,
-* `table_name`: Sample Jira table name.
-* `jira_url`: Jira  url
-* `user_id`: Jira User ID.
-* `api_key`: API key for the Jira API.
-* `jira_query`: Jira Search Query
+* `jira_url`: Jira  hosted url instance
+* `jira_api_token`: API key for acessing the Jira url instance
+* `project`: Jira project name 
+
 
 ## Usage
 In order to make use of this handler and connect to an Jira in MindsDB, the following syntax can be used,
@@ -29,15 +25,28 @@ WITH
 engine='Jira',
 parameters={
     "jira_url": "https://jira.linuxfoundation.org",
-    "user_id": "balaceg",
-    "api_key": "4Rhq&Ehd#KV4an!",
-    "jira_query": "project = RELENG and status != Done"
+     "jira_api_token": "Bearer NDU4OTIzMDE2MTgxOkU5CjVFV7L01piwU8WDYiEwuiOL",
+     "project": "RELENG"   
 };
 ~~~~
 
+## Implemented Features
+
+- [x] Jira project table for a given Jira hosted url instance
+  - [x] Support LIMIT
+  - [x] Support ORDER BY
+  - [x] Support column selection
+
 Now, you can use this established connection to query your table as follows,
 ~~~~sql
-SELECT * FROM jira_source.example_tbl
+SELECT * FROM jira_source.project
 ~~~~
 
-At the moment, only `SELECT` queries are allowed to be executed through `duckdb`. This, however, has no restriction on running machine learning algorithms against your data in Jira using `CREATE PREDICTOR` statements.
+Advanced queries for the jira handler
+
+~~~~sql
+SELECT key,summary,status
+FROM jira_source.project
+ORDER BY key ASC
+LIMIT 10
+~~~~ 

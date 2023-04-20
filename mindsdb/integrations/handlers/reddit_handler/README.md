@@ -33,7 +33,12 @@ The Reddit handler is initialized with the following parameters:
 - `client_secret`: a required Reddit API client secret
 - `user_agent`: a required user agent string to identify your application
 
-Read about creating a Reddit API application [here](https://www.reddit.com/prefs/apps).
+## How to get your Reddit credentials.
+
+1. Visit Reddit App Preferences (https://www.reddit.com/prefs/apps) or [https://old.reddit.com/prefs/apps/](https://old.reddit.com/prefs/apps/)
+2. Scroll to the bottom and click "create another app..."
+3. Fill out the name, description, and redirect url for your app, then click "create app"
+4. Now you should be able to see the personal use script, secret, and name of your app. Store those as environment variables CLIENT_ID, CLIENT_SECRET, and USER_AGENT respecitvely.
 
 ## Implemented Features
 
@@ -61,8 +66,12 @@ After setting up the Reddit Handler, you can use SQL queries to fetch data from 
 ```sql
 SELECT *
 FROM my_red.submission
-WHERE subreddit = 'MachineLearning' AND sort_type = 'top' AND limit = 5;
+WHERE subreddit = 'MachineLearning' AND sort_type = 'top' AND items = 5;
 ```
+
+`items`: Number of items to fetch from the subreddit.
+
+`sort_type`: Sorting type for the subreddit. Can be one of `hot`, `new`, `top`, `controversial`, `gilded`, `wiki`, `mod`, `rising`.
 
 Each Post in a subreddit has a unique ID. You can use this ID to fetch comments for a particular post.
 

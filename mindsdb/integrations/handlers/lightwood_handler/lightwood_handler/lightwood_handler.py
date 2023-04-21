@@ -3,6 +3,7 @@ import json
 import copy
 from typing import Optional, Dict
 from datetime import datetime
+from functools import lru_cache
 
 import pandas as pd
 from type_infer.dtype import dtype
@@ -16,6 +17,7 @@ from mindsdb.utilities.functions import cast_row_types
 from mindsdb.interfaces.model.functions import get_model_record
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.integrations.libs.base import BaseMLEngine
+import mindsdb.utilities.profiler as profiler
 
 from .functions import run_learn, run_finetune
 
@@ -70,13 +72,20 @@ class LightwoodHandler(BaseMLEngine):
             self.model_storage
         )
 
-    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         run_finetune(
             df,
             args,
             self.model_storage
         )
 
+    @staticmethod
+    @lru_cache(maxsize=5)
+    def get_predictor(predictor_path, predictor_code):
+        predictor = lightwood.predictor_from_state(predictor_path, predictor_code)
+        return predictor
+
+    @profiler.profile('LightwoodHandler.predict')
     def predict(self, df, args=None):
         pred_format = args['pred_format']
         predictor_code = args['code']
@@ -84,13 +93,15 @@ class LightwoodHandler(BaseMLEngine):
         pred_args = args.get('predict_params', {})
         self.model_storage.fileStorage.pull()
 
-        predictor = lightwood.predictor_from_state(
-            self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name,
-            predictor_code
-        )
+        with profiler.Context('load model'):
+            predictor_path = self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name
+            predictor = LightwoodHandler.get_predictor(predictor_path, predictor_code)
+
         dtype_dict = predictor.dtype_dict
 
-        predictions = predictor.predict(df, args=pred_args)
+        with profiler.Context('predict'):
+            predictions = predictor.predict(df, args=pred_args)
+
         predictions = predictions.to_dict(orient='records')
 
         # TODO!!!
@@ -188,28 +199,50 @@ class LightwoodHandler(BaseMLEngine):
                 order_by_column = order_by_column[0]
             horizon = timeseries_settings['horizon']
 
-            groups = set()
-            for row in pred_dicts:
-                groups.add(
-                    tuple([row[x] for x in group_by])
-                )
+            # region convert values to lists in case of horizon==1.
+            # That needs to make processing below unified for any case.
+            if horizon == 1:
+                for row in pred_dicts:
+                    if isinstance(row[order_by_column], list) is False:
+                        row[order_by_column] = [row[order_by_column]]
+                    if isinstance(row[target], list) is False:
+                        row[target] = [row[target]]
+                for row in explain_arr:
+                    for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                        if isinstance(row[target][col], list) is False:
+                            row[target][col] = [row[target][col]]
+            # endregion
 
-            # split rows by groups
-            rows_by_groups = {}
-            for group in groups:
-                rows_by_groups[group] = {
-                    'rows': [],
-                    'explanations': []
+            if len(group_by) == 0:
+                rows_by_groups = {
+                    (): {
+                        'rows': pred_dicts,
+                        'explanations': explain_arr
+                    }
                 }
-                for row_index, row in enumerate(pred_dicts):
-                    is_wrong_group = False
-                    for i, group_by_key in enumerate(group_by):
-                        if row[group_by_key] != group[i]:
-                            is_wrong_group = True
-                            break
-                    if not is_wrong_group:
-                        rows_by_groups[group]['rows'].append(row)
-                        rows_by_groups[group]['explanations'].append(explain_arr[row_index])
+            else:
+                groups = set()
+                for row in pred_dicts:
+                    groups.add(
+                        tuple([row[x] for x in group_by])
+                    )
+
+                # split rows by groups
+                rows_by_groups = {}
+                for group in groups:
+                    rows_by_groups[group] = {
+                        'rows': [],
+                        'explanations': []
+                    }
+                    for row_index, row in enumerate(pred_dicts):
+                        is_wrong_group = False
+                        for i, group_by_key in enumerate(group_by):
+                            if row[group_by_key] != group[i]:
+                                is_wrong_group = True
+                                break
+                        if not is_wrong_group:
+                            rows_by_groups[group]['rows'].append(row)
+                            rows_by_groups[group]['explanations'].append(explain_arr[row_index])
 
             for group, data in rows_by_groups.items():
                 rows = data['rows']
@@ -227,34 +260,49 @@ class LightwoodHandler(BaseMLEngine):
                     if isinstance(date_values, list) is False:
                         date_values = [date_values]
 
+                if pred_args.get('force_ts_infer') is True:
+                    # last row contains one additional prediction (used for cases like date > '2020-10-10').
+                    # Extract that prediction from there and join to previous row
+                    rows[-2][order_by_column] = rows[-2][order_by_column].copy()
+                    rows[-2][target] = rows[-2][target].copy()
+
+                    rows[-2][order_by_column].append(rows[-1][order_by_column][-1])
+                    rows[-2][target].append(rows[-1][target][-1])
+                    for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                        explanations[-2][target][col].append(explanations[-1][target][col][-1])
+                    rows.pop()
+                    explanations.pop()
+                    # horizon = horizon + 1
+
                 for i in range(len(rows) - 1):
-                    if horizon > 1:
+                    row_horizon = len(rows[i][target])
+                    if row_horizon > 1:
                         rows[i][target] = rows[i][target][0]
                         if isinstance(rows[i][order_by_column], list):
                             rows[i][order_by_column] = rows[i][order_by_column][0]
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if horizon > 1 and col in explanations[i][target]:
+                        if row_horizon > 1 and col in explanations[i][target]:
                             explanations[i][target][col] = explanations[i][target][col][0]
 
                 last_row = rows.pop()
                 last_explanation = explanations.pop()
-                for i in range(horizon):
+                for i in range(len(last_row[target])):
                     new_row = copy.deepcopy(last_row)
-                    if horizon > 1:
-                        new_row[target] = new_row[target][i]
-                        if isinstance(new_row[order_by_column], list):
-                            new_row[order_by_column] = new_row[order_by_column][i]
+                    new_row[target] = new_row[target][i]
+                    if isinstance(new_row[order_by_column], list):
+                        new_row[order_by_column] = new_row[order_by_column][i]
                     if '__mindsdb_row_id' in new_row and (i > 0 or forecast_offset):
                         new_row['__mindsdb_row_id'] = None
-                    rows.append(new_row)
 
                     new_explanation = copy.deepcopy(last_explanation)
                     for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if horizon > 1 and col in new_explanation[target]:
+                        if col in new_explanation[target]:
                             new_explanation[target][col] = new_explanation[target][col][i]
                     if i != 0:
                         new_explanation[target]['anomaly'] = None
                         new_explanation[target]['truth'] = None
+
+                    rows.append(new_row)
                     explanations.append(new_explanation)
 
             pred_dicts = []
@@ -414,7 +462,8 @@ class LightwoodHandler(BaseMLEngine):
         return pd.DataFrame([progress_info], columns=["current", "total", "name"])
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        if attribute is None:
+
+        if attribute == 'info':
 
             model_description = {}
 
@@ -437,19 +486,21 @@ class LightwoodHandler(BaseMLEngine):
 
             return pd.DataFrame([model_description])
 
+        elif attribute == "features":
+            return self._get_features_info()
+
+        elif attribute == "model":
+            return self._get_model_info()
+
+        elif attribute == "jsonai":
+            return self._get_ensemble_data()
+
+        elif attribute == "progress":
+            # todo remove?
+            return self._get_progress_data()
+
         else:
-            if attribute == "features":
-                return self._get_features_info()
+            tables = ['info', 'features', 'model', 'jsonai']
+            return pd.DataFrame(tables, columns=['tables'])
 
-            elif attribute == "model":
-                return self._get_model_info()
-
-            elif attribute == "ensemble":
-                return self._get_ensemble_data()
-
-            elif attribute == "progress":
-                return self._get_progress_data()
-
-            else:
-                raise Exception("DESCRIBE '%s' predictor attribute is not supported yet" % attribute)
 

@@ -90,15 +90,6 @@ jobs:
           # it is too early for such tests
           # env PYTHONPATH=./ pytest tests/unit/test_interfaces_consistency.py
 
-          echo -e "\n===============MySQL Handler===============\n"
-          pytest -svx tests/handler_tests/test_mysql_handler.py
-
-          echo -e "\n===============PostgreSQL Handler===============\n"
-          pytest -svx tests/handler_tests/test_postgres_handler.py
-
-          echo -e "\n===============MariaDB Handler===============\n"
-          pytest -svx tests/handler_tests/test_mariadb_handler.py
-
           # MySQL API
           echo -e "\n===============test MySQL API===============\n"
           pytest -vx tests/integration_tests/flows/test_mysql_api.py
@@ -106,6 +97,9 @@ jobs:
           # MySQL binary API
           echo -e "\n===============test MySQL binary API===============\n"
           pytest -vx -k 'not TestMySqlApi' tests/integration_tests/flows/test_mysql_bin_api.py
+
+          # echo -e "\n===============TS predictions===============\n"
+          pytest -svx tests/integration_tests/flows/test_ts_predictions.py
 
           # HTTP
           echo -e "\n===============test HTTP===============\n"

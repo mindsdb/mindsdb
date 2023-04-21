@@ -226,7 +226,10 @@ class HuggingFaceHandler(BaseMLEngine):
         pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
                                          tokenizer=hf_model_storage_path)
 
-        input_list = df[args['input_column']]
+        input_column = args['input_column']
+        if input_column not in df.columns:
+            raise RuntimeError(f'Column "{input_column}" not found in input data')
+        input_list = df[input_column]
 
         max_tokens = pipeline.tokenizer.model_max_length
 

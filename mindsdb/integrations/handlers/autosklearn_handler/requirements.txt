@@ -1,0 +1,3 @@
+auto-sklearn
+mindsdb-evaluator>=0.0.6
+dill

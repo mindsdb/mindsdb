@@ -46,12 +46,19 @@ Run the command below to start MindsDB in Docker.
 docker run -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
 
+If you would like to persist your models & configurations in the host machine, run the following commands:
+```bash
+mkdir mdb_data
+docker run -p 47334:47334 -p 47335:47335 -v $(pwd)/mdb_data:/root/mdb_storage mindsdb/mindsdb
+```
+
 Let's analyze this command part by part:
 
 - `docker run` is a native Docker command used to start a container
 - `-p 47334:47334` publishes port 47334 to access MindsDB GUI and HTTP
   API
 - `-p 47335:47335` publishes port 47335 to access MindsDB MySQL API
+- `-v $(pwd)/mdb_data:/root/mdb_storage` maps the newly created folder mdb_data on the host machine to the /root/mdb_storage inside the container.
 - `mindsdb/mindsdb` is the container we want to start
 
 ## Default Configuration

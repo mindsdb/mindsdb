@@ -57,7 +57,7 @@ class TestHuggingface(BaseExecutorTest):
                     break
             time.sleep(0.5)
         if not done:
-            raise RuntimeError("predictor didn't created")
+            raise RuntimeError("predictor not created")
 
         # use predictor
         ret = self.command_executor.execute_command(parse_sql(predict_sql, dialect='mindsdb'))
@@ -174,4 +174,25 @@ class TestHuggingface(BaseExecutorTest):
         '''
         self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_hf_text2text(self, mock_handler):
 
+        # create predictor
+        create_sql = '''                
+        CREATE MODEL mindsdb.text_generator
+        predict PREDICTION
+        USING
+            engine='huggingface',
+            join_learn_process=true,
+            task = "text2text-generation",
+            model_name = "google/flan-t5-base",
+            input_column = 'comment'
+        '''
+
+        model_name = 'text_generator'
+
+        predict_sql = '''
+            SELECT * FROM text_generator
+            WHERE comment='Question: Why did the chicken cross the road?' 
+        '''
+        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)

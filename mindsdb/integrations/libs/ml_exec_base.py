@@ -138,7 +138,7 @@ def learn_process(class_path, engine, context_dump, integration_id,
         else:
             # load model from previous version, use it as starting point
             problem_definition['base_model_id'] = base_predictor_id
-            ml_handler.update(df=training_data_df, args=problem_definition)
+            ml_handler.finetune(df=training_data_df, args=problem_definition)
 
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
         db.session.commit()
@@ -375,7 +375,10 @@ class BaseMLEngineExec:
         try:
             predictions = ml_handler.predict(df, args)
         except Exception as e:
-            msg = f'[{self.name}/{model_name}]: {str(e)}'
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            msg = f'[{self.name}/{model_name}]: {msg}'
             raise MLEngineException(msg) from e
 
         ml_handler.close()

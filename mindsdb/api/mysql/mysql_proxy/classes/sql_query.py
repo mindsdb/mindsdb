@@ -33,6 +33,8 @@ from mindsdb_sql.parser.ast import (
     Delete,
     Latest,
     BetweenOperation,
+    Parameter,
+    Tuple
 )
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
@@ -75,6 +77,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlWrongArguments
 )
 from mindsdb.utilities.cache import get_cache, json_checksum
+import mindsdb.utilities.profiler as profiler
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -442,6 +445,7 @@ class SQLQuery():
             self.prepare_query(prepare=False)
             self.execute_query()
 
+    @profiler.profile()
     def create_planner(self):
         databases_names = self.session.database_controller.get_list()
         databases_names = [x['name'] for x in databases_names]
@@ -522,7 +526,7 @@ class SQLQuery():
             'result': result
         }
 
-    def _fetch_dataframe_step(self, step):
+    def _fetch_dataframe_step(self, step, steps_data):
         dn = self.datahub.get(step.integration)
         query = step.query
 
@@ -540,6 +544,15 @@ class SQLQuery():
         else:
             table_alias = get_table_alias(step.query.from_table, self.database)
             # TODO for information_schema we have 'database' = 'mindsdb'
+
+            # fill params
+            def fill_params(node, **kwargs):
+                if isinstance(node, Parameter):
+                    rs = steps_data[node.value.step_num]
+                    items = [Constant(i[0]) for i in rs.get_records_raw()]
+                    return Tuple(items)
+
+            query_traversal(query, fill_params)
 
             data, columns_info = dn.query(
                 query=query,
@@ -564,14 +577,14 @@ class SQLQuery():
 
         return result
 
-    def _multiple_steps(self, steps):
+    def _multiple_steps(self, steps, steps_data):
         data = ResultSet()
         for substep in steps:
-            sub_data = self._fetch_dataframe_step(substep)
+            sub_data = self._fetch_dataframe_step(substep, steps_data)
             data = join_query_data(data, sub_data)
         return data
 
-    def _multiple_steps_reduce(self, step, vars):
+    def _multiple_steps_reduce(self, step, vars, steps_data):
         if step.reduce != 'union':
             raise ErLogicError(f'Unknown MultipleSteps type: {step.reduce}')
 
@@ -591,7 +604,7 @@ class SQLQuery():
             for name, value in var_group.items():
                 for substep in steps2:
                     replaceQueryVar(substep.query.where, value, name)
-            sub_data = self._multiple_steps(steps2)
+            sub_data = self._multiple_steps(steps2, steps_data)
             data = join_query_data(data, sub_data)
 
         return data
@@ -640,11 +653,14 @@ class SQLQuery():
         steps_data = []
         try:
             for step in self.planner.execute_steps(params):
-                data = self.execute_step(step, steps_data)
+                with profiler.Context(f'step: {step.__class__.__name__}'):
+                    data = self.execute_step(step, steps_data)
                 step.set_result(data)
                 steps_data.append(data)
         except PlanningException as e:
             raise ErLogicError(e)
+        except Exception as e:
+            raise e
 
         # save updated query
         self.query = self.planner.query
@@ -720,7 +736,7 @@ class SQLQuery():
                 ))
 
         elif type(step) == FetchDataframeStep:
-            data = self._fetch_dataframe_step(step)
+            data = self._fetch_dataframe_step(step, steps_data)
         elif type(step) == UnionStep:
             left_result = steps_data[step.left.step_num]
             right_result = steps_data[step.right.step_num]
@@ -777,7 +793,7 @@ class SQLQuery():
                         markQueryVar(query.where)
                         for name, value in var_group.items():
                             replaceQueryVar(query.where, value, name)
-                        sub_data = self._fetch_dataframe_step(substep)
+                        sub_data = self._fetch_dataframe_step(substep, steps_data)
                         if len(data.columns) == 0:
                             data = sub_data
                         else:
@@ -785,7 +801,7 @@ class SQLQuery():
 
                         unmarkQueryVar(query.where)
                 elif type(substep) == MultipleSteps:
-                    data = self._multiple_steps_reduce(substep, vars)
+                    data = self._multiple_steps_reduce(substep, vars, steps_data)
                 else:
                     raise ErLogicError(f'Unknown step type: {step.step}')
 
@@ -805,8 +821,20 @@ class SQLQuery():
 
             project_name = step.namespace
             predictor_name = step.predictor.parts[0]
-            where_data = step.row_dict
+            where_data0 = step.row_dict
             project_datanode = self.datahub.get(project_name)
+
+            # fill params
+            where_data = {}
+            for key, value in where_data0.items():
+                if isinstance(value, Parameter):
+                    rs = steps_data[value.value.step_num]
+                    if rs.length() == 1:
+                        # one value, don't do list
+                        value = rs.get_records_raw()[0][0]
+                    else:
+                        value = [i[0] for i in rs.get_records_raw()]
+                where_data[key] = value
 
             version = None
             if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
@@ -862,6 +890,8 @@ class SQLQuery():
                 # set row_id
                 data = steps_data[step.dataframe.step_num]
 
+                params = step.params or {}
+
                 for table in data.get_tables():
                     row_id_col = Column(
                         name='__mindsdb_row_id',
@@ -895,6 +925,7 @@ class SQLQuery():
                         _mdb_forecast_offset = 0
                     else:
                         # normal mode -- emit a forecast ($HORIZON data points on each) for each provided timestamp
+                        params['force_ts_infer'] = True
                         _mdb_forecast_offset = None
                     for row in where_data:
                         if '__mdb_forecast_offset' not in row:
@@ -934,7 +965,7 @@ class SQLQuery():
                             model_name=predictor_name,
                             data=where_data,
                             version=version,
-                            params=step.params,
+                            params=params
                         )
                         data = predictions.to_dict(orient='records')
                         columns_dtypes = dict(predictions.dtypes)

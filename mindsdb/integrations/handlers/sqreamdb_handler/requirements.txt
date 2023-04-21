@@ -1,0 +1,2 @@
+pysqream>=3.2.5
+pysqream_sqlalchemy>=0.8

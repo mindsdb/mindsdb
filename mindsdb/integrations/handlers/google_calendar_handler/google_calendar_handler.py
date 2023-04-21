@@ -117,11 +117,11 @@ class GoogleCalendarHandler(APIHandler):
         events = pd.DataFrame(columns=self.events.get_columns())
         while True:
             events_result = service.events().list(calendarId='primary', pageToken=page_token, **params).execute()
-            #events = pd.concat(
-            #    [events, pd.DataFrame(events_result.get('items', []), columns=self.events.get_columns())],
-            #    ignore_index=True
-            #)
-            events = events.append(pd.DataFrame(events_result.get('items', []), columns=self.events.get_columns()), ignore_index=True)
+            events = pd.concat(
+                [events, pd.DataFrame(events_result.get('items', []), columns=self.events.get_columns())],
+                ignore_index=True
+            )
+            #events = events.append(pd.DataFrame(events_result.get('items', []), columns=self.events.get_columns()), ignore_index=True)
             page_token = events_result.get('nextPageToken')
             if not page_token:
                 break
@@ -204,7 +204,8 @@ class GoogleCalendarHandler(APIHandler):
             if params['attendees']:
                 event['attendees'] = [{'email': attendee} for attendee in params['attendees'].split(',')]
             updated_event = service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
-            df = df.append({'eventId': updated_event['id'], 'status': 'updated'}, ignore_index=True)
+            df = pd.concat([df, pd.DataFrame([{'eventId': updated_event['id'], 'status': 'updated'}])], ignore_index=True)
+            #df = df.append({'eventId': updated_event['id'], 'status': 'updated'}, ignore_index=True)
 
         return df
 
@@ -231,7 +232,8 @@ class GoogleCalendarHandler(APIHandler):
                 end_id = int(params['end_id'])
             for i in range(start_id, end_id):
                 service.events().delete(calendarId='primary', eventId=str(i)).execute()
-                df = df.append({'eventId': str(i), 'status': 'deleted'}, ignore_index=True)
+                df = pd.concat([df, pd.DataFrame([{'eventId': str(i), 'status': 'deleted'}])], ignore_index=True)
+                #df = df.append({'eventId': str(i), 'status': 'deleted'}, ignore_index=True)
             return df
 
     def call_application_api(self, method_name: str = None, params: dict = None) -> DataFrame:

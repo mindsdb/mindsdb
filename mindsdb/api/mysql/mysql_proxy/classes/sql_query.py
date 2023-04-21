@@ -405,7 +405,7 @@ class ResultSet:
 
 
 class SQLQuery():
-    def __init__(self, sql, session, execute=True, prepare=False):
+    def __init__(self, sql, session, execute=True):
         self.session = session
         self.database = None if session.database == '' else session.database.lower()
         self.datahub = session.datahub
@@ -441,7 +441,7 @@ class SQLQuery():
         # self._process_query(sql)
         self.create_planner()
         if execute:
-            self.prepare_query(prepare=prepare)
+            self.prepare_query(prepare=False)
             self.execute_query()
 
     @profiler.profile()
@@ -1337,7 +1337,6 @@ class SQLQuery():
                 dn.query(query=update_query, session=self.session)
 
             data = ResultSet()
-
         else:
             raise ErLogicError(F'Unknown planner step: {step}')
         return data

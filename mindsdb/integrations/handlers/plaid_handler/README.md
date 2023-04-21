@@ -33,8 +33,8 @@ SELECT
    id, merchant_name, authorized_date, amount ,payment_channel
 FROM my_plaid.transactions 
 WHERE 
-   start_date = '2023-01-01' 
-   AND start_date = '2022-04-11' 
+   start_date = '2022-01-01' 
+   AND end_date = '2023-04-11' 
 LIMIT 20;
 ```
 

@@ -3,7 +3,7 @@
 It is fast and provides completely automatic forecasts that can be tuned by hand by data scientists and analysts.
 
 Call this handler by
-`USING ENGINE="fbprophet"` - you can see a full example in
+`USING ENGINE="fbprophet"` - you can see a full example in [PR#5759](https://github.com/mindsdb/mindsdb/pull/5759)
 
 # Why is this integration useful? What does the ideal predictive use case for this integration look like? When would you definitely not use this integration?
 Prophet is very easy to use, and have useful features such as changepoint detection, holidays, decomposition of seasonality and trend, with no or minimal tuning.
@@ -39,4 +39,4 @@ NA
 
 
 # Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
-See integration test in
+See integration test in [PR#5759](https://github.com/mindsdb/mindsdb/pull/5759)

@@ -45,7 +45,7 @@
 	<span> | </span>
 	<a href="https://cloud.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Demo</a>
 	<span> | </span>
-	<a href="https://mindsdb.com/mindsdb-hackathon?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Hackathon</a>
+	<a href="https://hashnode.com/hackathons/mindsdb?source=hncounter-feed">Hackathon</a>
 </h3>
 
 </div>

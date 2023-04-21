@@ -7,12 +7,14 @@ import pandas as pd
 
 from langchain.llms import OpenAI
 # from langchain.chat_models import ChatOpenAI  # TODO: enable chat models (including GPT4)
-from langchain.agents import initialize_agent, load_tools, Tool
+from langchain.agents import initialize_agent, load_tools, Tool, create_sql_agent
 from langchain.prompts import PromptTemplate
 from langchain.utilities import GoogleSerperAPIWrapper
+from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryMemory
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
+from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
 
 
 _DEFAULT_MODEL = 'text-davinci-003'
@@ -93,12 +95,15 @@ class LangChainHandler(OpenAIHandler):
         if 'stops' in pred_args:
             self.stops = pred_args['stops']
 
+        # TODO: offload creation to the `create` method instead for faster inference?
         modal_dispatch = {
             'default': 'default_completion',
             'sql_agent': 'sql_agent_completion',
         }
 
-        return getattr(self, modal_dispatch.get(args.get('mode', 'default'), 'default_completion'))(df, args, pred_args)
+        agent_creation_method = modal_dispatch.get(args.get('modal_dispatch', 'default'), 'default_completion')
+        agent = getattr(self, agent_creation_method)(df, args, pred_args)
+        return self.run_agent(df, agent, args, pred_args)
 
     def default_completion(self, df, args=None, pred_args=None):
         """
@@ -158,6 +163,9 @@ class LangChainHandler(OpenAIHandler):
         description.pop('openai_api_key', None)
         self.model_storage.json_set('description', description)
 
+        return agent
+
+    def run_agent(self, df, agent, pred_args, args):
         # TODO abstract prompt templating into a common utility method, this is also used in vanilla OpenAI
         if pred_args.get('prompt_template', False):
             base_template = pred_args['prompt_template']  # override with predict-time template if available
@@ -258,7 +266,18 @@ class LangChainHandler(OpenAIHandler):
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         raise NotImplementedError('Fine-tuning is not supported for LangChain models')
 
-    def sql_agent_completion(self, df, args=None):
+    def sql_agent_completion(self, df, args=None, pred_args=None):
         """This completion will be used to answer based on information passed by any MindsDB DB or API engine."""
         # TODO: figure out best way to pass DB/API dataframes to LLM handlers
-        raise NotImplementedError()
+        db = MindsDBSQL(
+            engine=args['executor'],
+            schema=None,  # TODO ?
+            include_tables=[]  # args['include_tables'],  # TODO get from data query instead, or model creation perhaps?
+        )
+        toolkit = SQLDatabaseToolkit(db=db)
+        agent = create_sql_agent(
+            llm=OpenAI(temperature=0),
+            toolkit=toolkit,
+            verbose=True
+        )
+        return agent

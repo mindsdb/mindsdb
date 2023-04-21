@@ -61,8 +61,8 @@ class JiraProjectsTable(APITable):
                     raise ValueError(
                         f"Order by unknown column {an_order.field.parts[1]}"
                     )
-
-        jira_project_df = self.call_jira_api('RELENG')
+        project = self.handler.connection_data['project']
+        jira_project_df = self.call_jira_api(project)
         
         selected_columns = []
         for target in query.targets:

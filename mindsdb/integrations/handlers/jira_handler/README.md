@@ -25,7 +25,7 @@ WITH
 engine='Jira',
 parameters={
     "jira_url": "https://jira.linuxfoundation.org",
-     "jira_api_token": "Bearer NDU4OTIzMDE2MTgxOkU5CjVFV7L01piwU8WDYiEwuiOL",
+     "jira_api_token": "Bearer <your-jira-api-token>",
      "project": "RELENG"   
 };
 ~~~~

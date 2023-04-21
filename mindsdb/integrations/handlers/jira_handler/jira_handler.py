@@ -121,8 +121,3 @@ class JiraHandler(APIHandler):
         Str
         """
         return 'project = ' + str(self.connection_data['project'])
-
-
-
-
-

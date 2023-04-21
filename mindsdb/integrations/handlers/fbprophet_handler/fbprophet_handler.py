@@ -40,8 +40,7 @@ class FBProphetHandler(BaseMLEngine):
         Requires specifying the target column to predict and time series arguments for
         prediction horizon, time column (order by) and grouping column(s).
 
-        Saves args, models params, and the formatted training df to disk. The training df
-        is used later in the predict() method.
+        Saves args, models params is used later in the predict() method.
         """
         time_settings = args["timeseries_settings"]
         using_args = args["using"]
@@ -62,19 +61,13 @@ class FBProphetHandler(BaseMLEngine):
         # trainig_df contains 3 columns -- unique_id, ds, y
         training_df = transform_to_nixtla_df(df, model_args)
 
-        # results_df = get_insample_cv_results(model_args, training_df)
-        # model_args["accuracies"] = get_model_accuracy_dict(results_df, r2_score)
-        # model = choose_model(model_args, results_df)
-        # sf = StatsForecast([model], freq=model_args["frequency"], df=training_df)
-        # fitted_models = sf.fit().fitted_
-
         # fitting the model
         # since fbprophet can only handle one group at a time, we need to fit a model for each group
         # and store the fitted models in a dictionary
         fitted_models = {}
         for group in training_df["unique_id"].unique():
             fitted_models[group] = self._fit_for_group(training_df, group, model_args)
-            # TODO: to support cross validation. This is very expensive for now.
+            # TODO: to support cross validation. This is very expensive for now and will drastically slow down the training process
 
         ###### persist changes to handler folder
         self.model_storage.json_set("model_args", model_args)
@@ -125,5 +118,8 @@ class FBProphetHandler(BaseMLEngine):
         return result
 
     def describe(self, attribute=None):
-        # TODO
+        """
+        Describe the metrics of the model
+        """
+        # TODO: this is not implemented yet, since CV is very expensive
         pass

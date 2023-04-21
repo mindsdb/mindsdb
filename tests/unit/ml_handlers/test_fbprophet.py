@@ -54,7 +54,6 @@ class TestFBProphet(BaseExecutorTest):
            using
              engine='fbprophet',
              frequency='Q',
-             train_time=0.01
         """
         )
         self.wait_predictor("proj", "model_multi_group")
@@ -78,3 +77,5 @@ class TestFBProphet(BaseExecutorTest):
         """
         )
         assert list(round(result_df["target_col"])) == [42, 43, 44]
+
+        # TODO: test describe model

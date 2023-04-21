@@ -61,7 +61,7 @@ class PlaidHandler(APIHandler):
 
     def connect(self):
         '''Authenticate with the Plaid API using the API keys and secrets stored in the `plaid_env`, `client_id`, `secret` , and `access_token`  attributes.'''  # noqa
-        
+
         if self.is_connected is True:
             return self.api
 
@@ -213,8 +213,8 @@ class PlaidHandler(APIHandler):
                         offset=len(transactions)
                     )
             )
-        response = self.api.transactions_get(request)
-        transactions.extend(parse_transaction(response['transactions']))
+            response = self.api.transactions_get(request)
+            transactions.extend(parse_transaction(response['transactions']))
 
         # Converting date column from str 
         df = pd.DataFrame(transactions)

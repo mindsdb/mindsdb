@@ -62,6 +62,7 @@ class BalanceTable(APITable):
         ]
 
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
+        
         columns = []
         if query is not None:
             for target in query.targets:
@@ -90,7 +91,7 @@ class BalanceTable(APITable):
         return result
 
 
-class TransactionTable(APITable):
+class TransactionTable(BalanceTable):
     '''A class representing the transaction table.
 
     This class inherits from APITable and provides functionality to select data
@@ -155,32 +156,4 @@ class TransactionTable(APITable):
             'pending',
         ]
 
-    def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
-
-        columns = []
-        if query is not None:
-            for target in query.targets:
-                if isinstance(target, ast.Star):
-                    columns = self.get_columns()
-                    break
-                elif isinstance(target, ast.Identifier):
-                    columns.append(target.parts[-1])
-                else:
-                    raise NotImplementedError
-        else:
-            columns = self.get_columns()
-
-        columns = [name.lower() for name in columns]
-
-        if len(result) == 0:
-            result = pd.DataFrame([], columns=columns)
-        else:
-            for col in set(columns) & set(result.columns) ^ set(columns):
-                result[col] = None
-            result = result[columns]
-    
-        if query is not None and query.limit is not None:
-            return result.head(query.limit.value)
-
-        return result
     

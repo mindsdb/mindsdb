@@ -1,6 +1,5 @@
 import os
 from mindsdb.integrations.handlers_client.db_grpc_client import DBClientGRPC
-from mindsdb.integrations.libs.handler_helpers import get_handler
 from mindsdb.utilities.log import get_log
 
 

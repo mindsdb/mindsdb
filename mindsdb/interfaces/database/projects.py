@@ -1,6 +1,5 @@
 import datetime
 from typing import List
-from copy import deepcopy
 from collections import OrderedDict
 
 import sqlalchemy as sa

@@ -7,12 +7,12 @@ from .__about__ import __version__ as version, __description__ as description
 
 try:
     from .confluence_handler import ConfluenceHandler as Handler
-    logger.error("No error Importing Confluence API")
+    logger.info("No error Importing Confluence API Handler")
     import_error = None
 except Exception as e:
     Handler = None
     import_error = e
-    logger.error(f"Error Importing Confluence API: {e}!")
+    logger.info(f"Error Importing Confluence API Handler: {e}!")
 
 title = "Confluence"
 name = "confluence"

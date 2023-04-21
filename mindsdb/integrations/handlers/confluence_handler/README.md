@@ -6,13 +6,14 @@ Confluence handler for MindsDB provides interfaces to connect with Confluence vi
 
 Confluence is a collaborative documentation tool,it can be used to host Wiki pages. In this handler,python client of api is used and more information about this python client can be found (here)[https://pypi.org/project/atlassian-python-api/]
 
-
 ## Confluence Handler Initialization
 
 The Confluence handler is initialized with the following parameters:
 
 - `url`: Confluence hosted url instance
 - `confluence_api_token`: Confluence API key to use for authentication
+
+Please follow this (link)[https://docs.searchunify.com/Content/Content-Sources/Atlassian-Jira-Confluence-Authentication-Create-API-Token.htm] to generate the token for accessing confluence API
 
 ## Implemented Features
 

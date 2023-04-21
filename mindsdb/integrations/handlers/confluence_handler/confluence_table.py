@@ -70,7 +70,8 @@ class ConfluenceSpacesTable(APITable):
             else:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
 
-        confluence_spaces_df = pd.json_normalize(self.handler.connect().get_all_spaces(start=0,limit=total_results)["results"])
+        confluence_spaces_records = self.handler.connect().get_all_spaces(start=0,limit=total_results)
+        confluence_spaces_df = pd.json_normalize(confluence_spaces_records["results"])
         confluence_spaces_df = confluence_spaces_df[self.get_columns()]
 
         if "type" in spaces_kwargs:

@@ -61,6 +61,7 @@ class PlaidHandler(APIHandler):
 
     def connect(self):
         '''Authenticate with the Plaid API using the API keys and secrets stored in the `plaid_env`, `client_id`, `secret` , and `access_token`  attributes.'''  # noqa
+        
         if self.is_connected is True:
             return self.api
 
@@ -183,6 +184,7 @@ class PlaidHandler(APIHandler):
         Returns:
             pandas.DataFrame: A DataFrame containing the filtered data.
         '''
+
         self.connect()
         if params.get('start_date') and params.get('end_date'):
             start_date = datetime.strptime(params.get('start_date'), '%Y-%m-%d').date()

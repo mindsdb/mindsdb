@@ -1,6 +1,10 @@
+import os
+
 import mindsdb_sql
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import utils as planner_utils
+
+from mindsdb.utilities.config import Config
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column, SQLQuery
 from mindsdb.api.mysql.mysql_proxy.utilities import (
@@ -182,43 +186,55 @@ class Executor:
 
     @profiler.profile()
     def parse(self, sql):
-        print('parse')
         logger.info("%s.parse: sql - %s", self.__class__.__name__, sql)
         self.sql = sql
         sql_lower = sql.lower()
         self.sql_lower = sql_lower.replace("`", "")
 
-        from mindsdb_text_to_sql import TextToSQL
+        try:
+            self.query = parse_sql(sql, dialect="mindsdb")
+        except Exception as mdb_error:
+            try:
+                self.query = parse_sql(sql, dialect="mysql")
+            except Exception:
+                try:
+                    from mindsdb_text_to_sql import GPTTextToSQL
 
-        text_to_sql = TextToSQL('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')
-        query = text_to_sql.convert_text_to_sql(sql)
-        self.query = parse_sql(query, dialect="mindsdb")
-        print(self.query)
+                    text_to_sql = GPTTextToSQL(os.getenv('OPENAI_API_KEY'))
+                    query = text_to_sql.convert_text_to_sql(sql)
+                    logger.info("%s.parse: converted query - %s", self.__class__.__name__, query)
+                    self.query = parse_sql(query, dialect="mindsdb")
 
-        # try:
-        #     self.query = parse_sql(sql, dialect="mindsdb")
-        # except Exception as mdb_error:
-        #     try:
-        #         self.query = parse_sql(sql, dialect="mysql")
-        #     except Exception:
-        #         try:
-        #             from mindsdb_text_to_sql import TextToSQL
-        #
-        #             text_to_sql = TextToSQL('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')
-        #             query = text_to_sql.convert_text_to_sql(sql)
-        #             print(query)
-        #             self.query = query
-        #
-        #         except Exception:
-        #             # not all statements are parsed by parse_sql
-        #             logger.warning(f"SQL statement is not parsed by mindsdb_sql: {sql}")
-        #
-        #             raise SqlApiException(
-        #                 f"SQL statement cannot be parsed by mindsdb_sql - {sql}: {mdb_error}"
-        #             ) from mdb_error
+                except Exception:
+                    # not all statements are parsed by parse_sql
+                    logger.warning(f"SQL statement is not parsed by mindsdb_sql: {sql}")
+
+                    raise SqlApiException(
+                        f"SQL statement cannot be parsed by mindsdb_sql - {sql}: {mdb_error}"
+                    ) from mdb_error
 
                     # == a place for workarounds ==
                     # or run sql in integration without parsing
+
+    def _get_openai_api_key(self, strict=True):
+        """ 
+        API_KEY preference order:
+            1. OPENAI_API_KEY env variable
+            3. openai.api_key setting in config.json
+        """  # noqa
+        # 1
+        api_key = os.getenv('OPENAI_API_KEY')
+        if api_key is not None:
+            return api_key
+        # 2
+        config = Config()
+        openai_cfg = config.get('openai', {})
+        if 'api_key' in openai_cfg:
+            return openai_cfg['api_key']
+
+        if strict:
+            raise Exception(f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
+                 or re-create this model and pass the API key with `USING` syntax.')
 
     @profiler.profile()
     def do_execute(self):

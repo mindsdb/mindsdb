@@ -4,6 +4,9 @@ Are you tired of manually processing financial data? With MindsDB and Plaid, you
 
 First, connect your Plaid account by following these steps. Once you have your client ID, secret, and public key, create a database in MindsDB:
 
+> Get client_id, secret and plaid_env from [here](https://dashboard.plaid.com/team/keys)
+> and access_token can be generated with help of docs [here](https://plaid.com/docs/api/tokens/#itempublic_tokenexchange)
+
 ```sql
 CREATE DATABASE my_plaid 
 WITH 
@@ -15,6 +18,7 @@ WITH
       "plaid_env": "ENV"
     };
 ```
+
 
 This creates a database called my_plaid. This database comes with a table called **transactions**  and **balance** which we can use to search for and analyze transactions
 

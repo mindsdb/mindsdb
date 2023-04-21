@@ -109,6 +109,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='lightwood', data={}, engine='lightwood')
         db.session.add(r)
+        r = db.Integration(name='fbprophet', data={}, engine='fbprophet')
+        db.session.add(r)
         db.session.flush()
         self.lw_integration_id = r.id
 

@@ -203,7 +203,7 @@ class GoogleCalendarHandler(APIHandler):
             if params['attendees']:
                 event['attendees'] = [{'email': attendee} for attendee in params['attendees'].split(',')]
             updated_event = service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
-            df.loc[i] = [i, updated_event['status']]
+            df = df.append({'eventId': updated_event['id'], 'status': 'updated'}, ignore_index=True)
 
         return df
 

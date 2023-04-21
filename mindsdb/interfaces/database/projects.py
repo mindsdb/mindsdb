@@ -119,7 +119,7 @@ class Project:
         data = []
 
         for predictor_record, integraion_record in query.all():
-            predictor_data = deepcopy(predictor_record.data) or {}
+            predictor_data = predictor_record.data or {}
             predictor_meta = {
                 'type': 'model',
                 'id': predictor_record.id,
@@ -141,7 +141,7 @@ class Project:
                 'total_training_phases': predictor_record.training_phase_total,
                 'training_phase_name': predictor_record.training_phase_name,
             }
-            if predictor_data is not None and predictor_data.get('accuracies', None) is not None:
+            if predictor_data.get('accuracies', None) is not None:
                 if len(predictor_data['accuracies']) > 0:
                     predictor_meta['accuracy'] = float(np.mean(list(predictor_data['accuracies'].values())))
             data.append({

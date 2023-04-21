@@ -172,7 +172,6 @@ class ViewResource(Resource):
     def delete(self, project_name, view_name):
         '''Deletes a view by name'''
         session = SessionController()
-        session = SessionController()
         try:
             project = session.database_controller.get_project(project_name)
         except NoResultFound:

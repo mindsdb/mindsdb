@@ -21,7 +21,7 @@ from mindsdb.utilities.functions import args_parse, get_versions_where_predictor
 from mindsdb.utilities import log
 from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
-from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.integrations import integration_controller
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.utilities.fs import create_dirs_recursive
@@ -167,7 +167,6 @@ if __name__ == '__main__':
         # Figure this one out later
         pass
 
-    integration_controller = IntegrationController()
     if args.install_handlers is not None:
         handlers_list = [s.strip() for s in args.install_handlers.split(',')]
         # import_meta = handler_meta.get('import', {})

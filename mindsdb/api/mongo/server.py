@@ -17,7 +17,7 @@ from mindsdb.api.mongo.classes import RespondersCollection, Session
 from mindsdb.api.mongo.utilities import logger
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.model.model_controller import ModelController
-from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.utilities.context import context as ctx
@@ -344,7 +344,7 @@ class MongoServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self.mindsdb_env = {
             'config': config,
             'model_controller': ModelController(),
-            'integration_controller': IntegrationController(),
+            'integration_controller': integration_controller,
             'project_controller': ProjectController(),
             'database_controller': DatabaseController()
         }

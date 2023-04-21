@@ -41,7 +41,7 @@ class PostgresHandler(DatabaseHandler):
     @profiler.profile()
     def connect(self):
         """
-        Handles the connection to a PostgreSQL database insance.
+        Handles the connection to a PostgreSQL database instance.
         """
         if self.is_connected is True:
             return self.connection
@@ -53,6 +53,9 @@ class PostgresHandler(DatabaseHandler):
             'password': self.connection_args.get('password'),
             'dbname': self.connection_args.get('database')
         }
+
+        if self.connection_args.get('sslmode'):
+            config['sslmode'] = self.connection_args.get('sslmode')
 
         if self.connection_args.get('schema'):
             config['options'] = f'-c search_path={self.connection_args.get("schema")},public'
@@ -142,7 +145,7 @@ class PostgresHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
+        List all tables in PostgreSQL without the system tables information_schema and pg_catalog
         """
         query = """
             SELECT

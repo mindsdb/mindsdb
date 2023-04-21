@@ -8,8 +8,9 @@ from googleapiclient.discovery import build
 from mindsdb_sql import parse_sql
 from pandas import DataFrame
 
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from .google_calendar_tables import GoogleCalendarEventsTable
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -101,8 +102,16 @@ class GoogleCalendarHandler(APIHandler):
         Returns:
             HandlerResponse
         """
-        ast = parse_sql(query, dialect='mindsdb')
-        return self.query(ast)
+        method_name, params = FuncParser().from_string(query)
+
+        df = self.call_application_api(method_name, params)
+
+        return Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=df
+        )
+        #ast = parse_sql(query, dialect='mindsdb')
+        #return self.query(ast)
 
     def get_events(self, params: dict = None) -> DataFrame:
         """

@@ -52,7 +52,7 @@ class ModelsList(Resource):
 
 
 @ns_conf.route('/<project_name>/views')
-class ModelsList(Resource):
+class ViewsList(Resource):
     @ns_conf.doc('list_views')
     def get(self, project_name):
         '''List all views'''
@@ -108,7 +108,7 @@ class ModelsList(Resource):
 @ns_conf.route('/<project_name>/views/<view_name>')
 @ns_conf.param('project_name', 'Name of the project')
 @ns_conf.param('view_name', 'Name of the view')
-class ModelsList(Resource):
+class ViewResource(Resource):
     @ns_conf.doc('get_view')
     def get(self, project_name, view_name):
         '''Get a view by name'''

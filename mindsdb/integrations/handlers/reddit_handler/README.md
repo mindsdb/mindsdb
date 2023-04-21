@@ -65,7 +65,7 @@ After setting up the Reddit Handler, you can use SQL queries to fetch data from 
 
 ```sql
 SELECT *
-FROM my_red.submission
+FROM my_reddit.submission
 WHERE subreddit = 'MachineLearning' AND sort_type = 'top' AND items = 5;
 ```
 
@@ -77,6 +77,6 @@ Each Post in a subreddit has a unique ID. You can use this ID to fetch comments 
 
 ```
 SELECT *
-FROM my_red.comment
+FROM my_reddit.comment
 WHERE submission_id = '12gls93'
 ```

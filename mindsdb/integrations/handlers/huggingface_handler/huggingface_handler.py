@@ -145,7 +145,7 @@ class HuggingFaceHandler(BaseMLEngine):
     def predict_text_classification(self, pipeline, item, args):
         top_k = args.get('top_k', 1000)
 
-        result = pipeline(item, top_k=top_k, truncation=True, max_length=args['max_length'])
+        result = pipeline([item], top_k=top_k, truncation=True, max_length=args['max_length'])[0]
 
         final = {}
         explain = {}
@@ -163,8 +163,8 @@ class HuggingFaceHandler(BaseMLEngine):
     def predict_zero_shot(self, pipeline, item, args):
         top_k = args.get('top_k', 1000)
 
-        result = pipeline(item, candidate_labels=args['candidate_labels'],
-                                     truncation=True, top_k=top_k, max_length=args['max_length'])
+        result = pipeline([item], candidate_labels=args['candidate_labels'],
+                                     truncation=True, top_k=top_k, max_length=args['max_length'])[0]
 
         final = {}
         final[args['target']] = result['labels'][0]
@@ -175,7 +175,7 @@ class HuggingFaceHandler(BaseMLEngine):
         return final
 
     def predict_translation(self, pipeline, item, args):
-        result = pipeline(item, max_length=args['max_length'])
+        result = pipeline([item], max_length=args['max_length'])[0]
 
         final = {}
         final[args['target']] = result['translation_text']
@@ -184,7 +184,7 @@ class HuggingFaceHandler(BaseMLEngine):
 
     def predict_summarization(self, pipeline, item, args):
 
-        result = pipeline(item, min_length=args['min_output_length'], max_length=args['max_output_length'])
+        result = pipeline([item], min_length=args['min_output_length'], max_length=args['max_output_length'])[0]
 
         final = {}
         final[args['target']] = result['summary_text']
@@ -192,7 +192,7 @@ class HuggingFaceHandler(BaseMLEngine):
         return final
 
     def predict_fill_mask(self, pipeline, item, args):
-        result = pipeline(item)
+        result = pipeline([item])[0]
 
         final = {}
         final[args['target']] = result[0]['sequence']

@@ -117,10 +117,11 @@ class GoogleCalendarHandler(APIHandler):
         events = pd.DataFrame(columns=self.events.get_columns())
         while True:
             events_result = service.events().list(calendarId='primary', pageToken=page_token, **params).execute()
-            events = pd.concat(
-                [events, pd.DataFrame(events_result.get('items', []), columns=self.events.get_columns())],
-                ignore_index=True
-            )
+            #events = pd.concat(
+            #    [events, pd.DataFrame(events_result.get('items', []), columns=self.events.get_columns())],
+            #    ignore_index=True
+            #)
+            events = events.append(pd.DataFrame(events_result.get('items', []), columns=self.events.get_columns()), ignore_index=True)
             page_token = events_result.get('nextPageToken')
             if not page_token:
                 break

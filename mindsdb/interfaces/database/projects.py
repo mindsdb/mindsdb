@@ -94,6 +94,19 @@ class Project:
             project_name=self.name
         )
 
+    def update_view(self, name: str, query: str):
+        ViewController().update(
+            name,
+            query=query,
+            project_name=self.name
+        )
+
+    def delete_view(self, name: str):
+        ViewController().delete(
+            name,
+            project_name=self.name
+        )
+
     def query_view(self, query: ASTNode) -> ASTNode:
         view_name = query.from_table.parts[-1]
         view_meta = ViewController().get(
@@ -163,6 +176,7 @@ class Project:
         )
         data = [{
             'name': view_record.name,
+            'query': view_record.query,
             'metadata': {
                 'type': 'view',
                 'id': view_record.id,
@@ -171,6 +185,24 @@ class Project:
             for view_record in records
         ]
         return data
+
+    def get_view(self, name):
+        view_record = db.session.query(db.View).filter_by(
+            project_id=self.id,
+            company_id=ctx.company_id,
+            name=name
+        ).one_or_none()
+        if view_record is None:
+            return view_record
+        return {
+            'name': view_record.name,
+            'query': view_record.query,
+            'metadata': {
+                'type': 'view',
+                'id': view_record.id,
+                'deletable': True
+            }
+        }
 
     def get_tables(self):
         data = OrderedDict()
